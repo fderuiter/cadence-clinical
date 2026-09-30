@@ -34,6 +34,26 @@
 
       <!-- Action Controls -->
       <div class="section-header-right" @click.stop>
+        <div class="section-reorder-controls">
+          <button
+            class="btn-move-up btn-section-move-up"
+            :disabled="isFirst"
+            title="Move section up"
+            aria-label="Move section up"
+            @click.stop="$emit('move-section-up')"
+          >
+            ▲
+          </button>
+          <button
+            class="btn-move-down btn-section-move-down"
+            :disabled="isLast"
+            title="Move section down"
+            aria-label="Move section down"
+            @click.stop="$emit('move-section-down')"
+          >
+            ▼
+          </button>
+        </div>
         <button class="btn-add-field btn-add-item" @click="addNewItem">
           <span>➕</span> Add Field
         </button>
@@ -59,12 +79,15 @@
         item-key="id"
         group="fields"
         handle=".field-drag-handle"
+        :force-fallback="true"
+        :fallback-tolerance="5"
+        scroll-sensitivity="30"
         class="crf-grid-container"
         :class="{ 'dragging-active': isDragging }"
         @start="isDragging = true"
         @end="isDragging = false"
       >
-        <template #item="{ element: field }">
+        <template #item="{ element: field, index }">
           <div
             :class="gridSpanClass(field.gridSpan)"
             class="field-item-wrapper"
@@ -74,9 +97,15 @@
               :selected-field-id="selectedFieldId"
               :has-warning="fieldHasWarning(field)"
               :warning-message="getFieldWarningMessage(field)"
+              :field-index="index"
+              :total-fields="items.length"
+              :is-first="index === 0"
+              :is-last="index === items.length - 1"
               @select-field="onSelectField"
               @delete-field="onDeleteField"
               @duplicate-field="onDuplicateField"
+              @move-field-up="moveFieldUp(index)"
+              @move-field-down="moveFieldDown(index)"
             />
           </div>
         </template>
@@ -108,9 +137,30 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  sectionIndex: {
+    type: Number,
+    default: 0,
+  },
+  totalSections: {
+    type: Number,
+    default: 1,
+  },
+  isFirst: {
+    type: Boolean,
+    default: false,
+  },
+  isLast: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["select-field", "update-section"]);
+const emit = defineEmits([
+  "select-field",
+  "update-section",
+  "move-section-up",
+  "move-section-down",
+]);
 
 const designerStore = useDesignerStore();
 const isDragging = ref(false);
@@ -242,6 +292,24 @@ function onDuplicateField(fieldId) {
       emit("select-field", newId);
     }
   }
+}
+
+function moveFieldUp(index) {
+  if (index <= 0) return;
+  const currentItems = [...items.value];
+  const temp = currentItems[index];
+  currentItems[index] = currentItems[index - 1];
+  currentItems[index - 1] = temp;
+  items.value = currentItems;
+}
+
+function moveFieldDown(index) {
+  if (index < 0 || index >= items.value.length - 1) return;
+  const currentItems = [...items.value];
+  const temp = currentItems[index];
+  currentItems[index] = currentItems[index + 1];
+  currentItems[index + 1] = temp;
+  items.value = currentItems;
 }
 </script>
 
