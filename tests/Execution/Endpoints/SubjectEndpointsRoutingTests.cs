@@ -248,6 +248,20 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     // ================================================================================================
 
     [Fact]
+    public async Task ListSubjects_PassesQueryParametersThroughAndReturnsThePage()
+    {
+        var response = await _client.GetAsync(
+            "/api/v1/execution/subjects?study_id=STUDY-001&site_id=SITE-001&status=ENROLLED&limit=10&offset=20",
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _factory.Service.LastListArguments.Should().Be(((string?, string?, string?, int?, int?)?)("STUDY-001", "SITE-001", "ENROLLED", 10, 20));
+        var body = await response.Content.ReadFromJsonAsync<SubjectListResponse>(JsonOptions, TestContext.Current.CancellationToken);
+        body!.Total.Should().Be(1);
+        body.Items.Should().ContainSingle().Which.SubjectId_.Value.Should().Be("SUBJ-001");
+    }
+
+    [Fact]
     public async Task GetSubjectDetail_GivenValidRequest_Returns200WithDetailBody()
     {
         var response = await _client.GetAsync("/api/v1/execution/subjects/SUBJ-001", TestContext.Current.CancellationToken);
@@ -657,6 +671,18 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
             var body = new SubjectDetailResponse(new SubjectCode(subjectId), new StudyCode("STUDY-001"), "ENROLLED",
                 new SiteCode("SITE-001"), isBlindedCaller ? null : "ARM-A", RandomizationSeed: null, InvestigationalProductId: null);
             return Task.FromResult(Result<SubjectDetailResponse>.Success(body));
+        }
+
+        public (string? StudyId, string? SiteId, string? Status, int? Limit, int? Offset)? LastListArguments { get; private set; }
+
+        public Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit,
+            int? offset, CancellationToken ct)
+        {
+            LastListArguments = (studyId, siteId, status, limit, offset);
+            ct.ThrowIfCancellationRequested();
+            var item = new SubjectSummaryResponse(SubjectId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"),
+                new SiteCode("SITE-001"), "ENROLLED", "1.0.0", 0);
+            return Task.FromResult(Result<SubjectListResponse>.Success(new SubjectListResponse([item], 1, 50, 0)));
         }
 
         public Task<Result<SubjectResponse>> EvaluateAndTransitionScreeningAsync(string subjectId, CancellationToken ct) =>

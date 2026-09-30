@@ -103,6 +103,33 @@ public sealed class SubjectRepository(ExecutionDbContext context, ResiliencePipe
             .ConfigureAwait(false);
     }
 
+    public async Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken)
+    {
+        var query = Context.ClinicalSubjects.AsNoTracking()
+            .Where(s => s.StudyCode == criteria.StudyCode);
+
+        if (criteria.SiteCode is { } siteCode)
+        {
+            query = query.Where(s => s.SiteCode == siteCode);
+        }
+
+        if (criteria.Status is { } status)
+        {
+            query = query.Where(s => s.Status == status);
+        }
+
+        int total = await query.CountAsync(cancellationToken).ConfigureAwait(false);
+        var items = await query
+            .OrderBy(s => s.EnrollmentIndex)
+            .ThenBy(s => s.SubjectCode)
+            .Skip(criteria.Offset)
+            .Take(criteria.Limit)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return new SubjectPage(items, total);
+    }
+
     public async Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken) =>
         await Context.ClinicalSubjects.AddAsync(subject, cancellationToken).ConfigureAwait(false);
 }

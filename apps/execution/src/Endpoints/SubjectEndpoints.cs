@@ -139,6 +139,12 @@ public static partial class SubjectEndpoints
             .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
+        group.MapGet("/", ListSubjectsAsync)
+            .WithName("ListSubjects")
+            .WithSummary("Lists one page of a study's subjects in enrollment order.")
+            .Produces<SubjectListResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
         group.MapGet("/{subjectId}", GetSubjectDetailAsync)
             .WithName("GetSubjectDetail")
             .Produces<SubjectDetailResponse>(StatusCodes.Status200OK)
@@ -223,6 +229,23 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.AdvanceStateAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
+        return result.Match(Results.Ok, e => e.ToProblemResult());
+    }
+
+    /// <summary>
+    /// <c>GET /api/v1/execution/subjects?study_id=&amp;site_id=&amp;status=&amp;limit=&amp;offset=</c>. The list
+    /// carries no treatment group, so it needs no blinding check.
+    /// </summary>
+    public static async Task<IResult> ListSubjectsAsync(
+        [FromQuery(Name = "study_id")] string? studyId,
+        [FromQuery(Name = "site_id")] string? siteId,
+        [FromQuery(Name = "status")] string? status,
+        [FromQuery(Name = "limit")] int? limit,
+        [FromQuery(Name = "offset")] int? offset,
+        ISubjectApplicationService svc,
+        CancellationToken ct)
+    {
+        var result = await svc.ListAsync(studyId, siteId, status, limit, offset, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 

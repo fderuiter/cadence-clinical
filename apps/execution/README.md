@@ -18,6 +18,10 @@ Implements clinical domain services and application workflows within `apps/execu
 
 Service routes and contract interfaces:
 - `HTTP` endpoints under `/api/v1/execution`
+- `GET /api/v1/execution/subjects?study_id=` lists a study's subjects in enrollment order. `site_id` and `status`
+  narrow it; `limit` (default 50, at most 200) and `offset` page it, and `total` counts every match. The list
+  carries no treatment group or demographics, so a blinded caller can see it; the subject detail is
+  `GET /api/v1/execution/subjects/{subjectId}`.
 
 ---
 

@@ -204,6 +204,82 @@
             }
           }
         }
+      },
+      "get": {
+        "tags": [
+          "Subjects"
+        ],
+        "summary": "Lists one page of a study\u0027s subjects in enrollment order.",
+        "operationId": "ListSubjects",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_SubjectListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/execution/subjects/{subjectId}/consent": {
@@ -2814,6 +2890,47 @@
       "Execution_SubjectId": {
         "type": "string"
       },
+      "Execution_SubjectListResponse": {
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_SubjectSummaryResponse"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "limit": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "offset": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "Execution_SubjectResponse": {
         "required": [
           "id",
@@ -2893,6 +3010,53 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Execution_SubjectSummaryResponse": {
+        "required": [
+          "id",
+          "subject_id",
+          "study_id",
+          "site_id",
+          "status",
+          "active_protocol_version",
+          "enrollment_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/Execution_SubjectId"
+          },
+          "subject_id": {
+            "$ref": "#/components/schemas/Execution_SubjectCode"
+          },
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "site_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_SiteCode"
+              }
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "active_protocol_version": {
+            "type": "string"
+          },
+          "enrollment_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       }

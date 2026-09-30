@@ -110,6 +110,10 @@ public class EConsentCompletedConsumerTests
         public Task<ClinicalSubject?> GetByCodeAsync(string code, CancellationToken cancellationToken) =>
             Task.FromResult(unitOfWork.Subjects.SingleOrDefault(s => s.SubjectCode.Value == code));
 
+        // The consumer never lists subjects; the fake only has to satisfy the port.
+        public Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("EConsentCompletedConsumer does not list subjects.");
+
         public Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken)
         {
             unitOfWork.StageSubject(subject);
