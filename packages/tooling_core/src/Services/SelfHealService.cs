@@ -16,7 +16,7 @@ public static class SelfHealService
         bool ok = p is { ExitCode: 0 };
 
         Console.WriteLine("\n  2. Validating ADRs...");
-        ok &= AdrValidatorService.ValidateAdrs(checkGitDiff: false);
+        ok &= AdrValidatorService.ValidateAdrs(checkGitDiff: false, fix: true);
 
         Console.WriteLine("\n  3. Synchronizing OpenAPI Specifications & Documentation...");
         ok &= OpenApiSyncService.SyncOpenApiSpec(validate: false, repoRoot) == 0;

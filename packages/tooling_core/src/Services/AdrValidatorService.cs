@@ -153,11 +153,53 @@ public static class AdrValidatorService
         return Directory.GetCurrentDirectory();
     }
 
-    public static bool ValidateAdrs(bool checkGitDiff = true, string[]? targets = null)
+    public static bool ValidateAdrs(bool checkGitDiff = true, string[]? targets = null, bool fix = false)
     {
         string repoRoot = FindRepoRoot();
         string adrDir = Path.Combine(repoRoot, "docs", "adr");
         AnsiConsole.MarkupLine("[cyan]Validating Architectural Decision Records (ADRs)...[/]");
+
+        string pythonScript = Path.Combine(repoRoot, "scripts", "validate_adrs.py");
+        if (File.Exists(pythonScript))
+        {
+            try
+            {
+                string pythonExe = OperatingSystem.IsWindows() ? "python" : "python3";
+                string args = fix ? $"\"{pythonScript}\" --fix" : $"\"{pythonScript}\"";
+                var psi = new ProcessStartInfo(pythonExe, args)
+                {
+                    WorkingDirectory = repoRoot,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                };
+                using var proc = Process.Start(psi);
+                if (proc != null)
+                {
+                    string stdout = proc.StandardOutput.ReadToEnd();
+                    string stderr = proc.StandardError.ReadToEnd();
+                    proc.WaitForExit();
+
+                    if (!string.IsNullOrWhiteSpace(stdout))
+                    {
+                        AnsiConsole.WriteLine(stdout.Trim());
+                    }
+                    if (!string.IsNullOrWhiteSpace(stderr))
+                    {
+                        AnsiConsole.MarkupLine($"[red]{Markup.Escape(stderr.Trim())}[/]");
+                    }
+
+                    if (proc.ExitCode != 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Warning: Failed to execute python ADR validator: {Markup.Escape(ex.Message)}[/]");
+            }
+        }
 
         if (!Directory.Exists(adrDir))
         {
