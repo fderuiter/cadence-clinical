@@ -316,8 +316,11 @@ onMounted(() => {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 440px;
-  max-width: 90vw;
+  width: var(
+    --semantic-drawer-width-sm,
+    var(--drawer-width-sm, min(100vw, 440px))
+  );
+  max-width: 100vw;
   background-color: var(--surface, #ffffff);
   border-left: 1px solid var(--border, #e2e8f0);
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
@@ -666,5 +669,54 @@ onMounted(() => {
   font-size: 0.85rem;
   background-color: var(--surface, #ffffff);
   color: var(--text-primary, #0f172a);
+  max-width: 100%;
+}
+
+/* Mobile Breakpoint Overrides (max-width: 640px) */
+@media (max-width: 640px) {
+  .readability-drawer {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .drawer-header,
+  .drawer-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-bar {
+    flex-direction: column;
+  }
+
+  .action-bar .btn {
+    width: 100%;
+    min-height: var(--semantic-touch-target-min, 48px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .diff-view {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .arrow {
+    text-align: center;
+  }
+
+  .btn-apply-single,
+  .btn-success {
+    min-height: var(--semantic-touch-target-min, 48px);
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 </style>

@@ -2,6 +2,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Testing;
 using Cadence.Testing.Time;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -17,30 +18,6 @@ namespace Cadence.UnitTests.Execution.Security;
 /// </summary>
 public class DemographicsNormalizationServiceTests
 {
-    private sealed class FakeEncryptionService : IDemographicsEncryptionService
-    {
-        private readonly IReadOnlyDictionary<string, object?>? _payload;
-        private readonly bool _throwsOnDecrypt;
-
-        private FakeEncryptionService(IReadOnlyDictionary<string, object?>? payload, bool throwsOnDecrypt)
-        {
-            _payload = payload;
-            _throwsOnDecrypt = throwsOnDecrypt;
-        }
-
-        public static FakeEncryptionService ReturningPayload(IReadOnlyDictionary<string, object?> payload) =>
-            new(payload, throwsOnDecrypt: false);
-
-        public static FakeEncryptionService ThrowingOnDecrypt() => new(null, throwsOnDecrypt: true);
-
-        public string Encrypt(IReadOnlyDictionary<string, object?> demographics) =>
-            throw new NotSupportedException("Not needed by these tests.");
-
-        public IReadOnlyDictionary<string, object?> Decrypt(string ciphertext) => _throwsOnDecrypt
-            ? throw new DemographicsDecryptionFailedException("Demographics ciphertext could not be decrypted.")
-            : _payload!;
-    }
-
     private sealed class SubjectWithEncryptedDemographics(string? encryptedDemographics)
     {
         public string? EncryptedDemographics { get; } = encryptedDemographics;
@@ -49,7 +26,7 @@ public class DemographicsNormalizationServiceTests
     private static DemographicsNormalizationService CreateService(
         IDemographicsEncryptionService? encryptionService = null, DateTimeOffset? utcNow = null) =>
         new(
-            encryptionService ?? FakeEncryptionService.ThrowingOnDecrypt(),
+            encryptionService ?? FakeDemographicsEncryptionService.ThrowingOnDecrypt(),
             new FakeClock(utcNow ?? new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero)));
 
     public static TheoryData<string, string> GenderMappingTable => new()
@@ -158,7 +135,7 @@ public class DemographicsNormalizationServiceTests
     [Fact]
     public void GetSafeDemographics_GivenDecryptFailure_ReturnsDefaultShapeAndDoesNotThrow()
     {
-        var service = CreateService(FakeEncryptionService.ThrowingOnDecrypt());
+        var service = CreateService(FakeDemographicsEncryptionService.ThrowingOnDecrypt());
 
         var act = () => service.GetSafeDemographics("some-ciphertext");
 
@@ -171,7 +148,7 @@ public class DemographicsNormalizationServiceTests
     {
         var payload = new Dictionary<string, object?> { ["gender"] = "FEMALE", ["birthdate"] = "2000-01-01" };
         var service = CreateService(
-            FakeEncryptionService.ReturningPayload(payload),
+            FakeDemographicsEncryptionService.ReturningPayload(payload),
             utcNow: new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero));
 
         SafeDemographics result = service.GetSafeDemographics("ciphertext");
@@ -184,7 +161,7 @@ public class DemographicsNormalizationServiceTests
     public void GetSafeDemographics_GivenDictionaryShapeWithEncryptedDemographicsKey_DecryptsAndDerivesResult()
     {
         var payload = new Dictionary<string, object?> { ["gender"] = "M", ["birthdate"] = "1990-05-15" };
-        var service = CreateService(FakeEncryptionService.ReturningPayload(payload));
+        var service = CreateService(FakeDemographicsEncryptionService.ReturningPayload(payload));
         var subject = new Dictionary<string, object?> { ["encrypted_demographics"] = "ciphertext" };
 
         SafeDemographics result = service.GetSafeDemographics(subject);
@@ -197,7 +174,7 @@ public class DemographicsNormalizationServiceTests
     public void GetSafeDemographics_GivenObjectShapeWithEncryptedDemographicsProperty_DecryptsAndDerivesResult()
     {
         var payload = new Dictionary<string, object?> { ["sex"] = "F" };
-        var service = CreateService(FakeEncryptionService.ReturningPayload(payload));
+        var service = CreateService(FakeDemographicsEncryptionService.ReturningPayload(payload));
         var subject = new SubjectWithEncryptedDemographics("ciphertext");
 
         SafeDemographics result = service.GetSafeDemographics(subject);
@@ -219,7 +196,7 @@ public class DemographicsNormalizationServiceTests
     public void GetSafeDemographics_GivenGenderKeyAbsent_FallsBackToSexKey()
     {
         var payload = new Dictionary<string, object?> { ["sex"] = "MALE" };
-        var service = CreateService(FakeEncryptionService.ReturningPayload(payload));
+        var service = CreateService(FakeDemographicsEncryptionService.ReturningPayload(payload));
 
         service.GetSafeDemographics("ciphertext").Gender.Should().Be("M");
     }
@@ -228,7 +205,7 @@ public class DemographicsNormalizationServiceTests
     public void GetSafeDemographics_GivenPreserveCustomTrue_ForwardsFlagToNormalizeGender()
     {
         var payload = new Dictionary<string, object?> { ["gender"] = "NB" };
-        var service = CreateService(FakeEncryptionService.ReturningPayload(payload));
+        var service = CreateService(FakeDemographicsEncryptionService.ReturningPayload(payload));
 
         service.GetSafeDemographics("ciphertext", preserveCustom: true).Gender.Should().Be("NB");
         service.GetSafeDemographics("ciphertext", preserveCustom: false).Gender.Should().Be("U");
@@ -238,7 +215,7 @@ public class DemographicsNormalizationServiceTests
     public void GetSafeDemographics_GivenNoBirthDateKeyPresent_ReturnsNullAge()
     {
         var payload = new Dictionary<string, object?> { ["gender"] = "M" };
-        var service = CreateService(FakeEncryptionService.ReturningPayload(payload));
+        var service = CreateService(FakeDemographicsEncryptionService.ReturningPayload(payload));
 
         service.GetSafeDemographics("ciphertext").Age.Should().BeNull();
     }
@@ -248,7 +225,7 @@ public class DemographicsNormalizationServiceTests
     {
         var payload = new Dictionary<string, object?> { ["birthdate"] = "2000-06-15T08:30:00Z" };
         var service = CreateService(
-            FakeEncryptionService.ReturningPayload(payload),
+            FakeDemographicsEncryptionService.ReturningPayload(payload),
             utcNow: new DateTimeOffset(2000, 6, 16, 0, 0, 0, TimeSpan.Zero));
 
         SafeDemographics result = service.GetSafeDemographics("ciphertext");
@@ -261,7 +238,7 @@ public class DemographicsNormalizationServiceTests
     {
         var payload = new Dictionary<string, object?> { ["date_of_birth"] = "1990-05-15 not-a-real-time" };
         var service = CreateService(
-            FakeEncryptionService.ReturningPayload(payload),
+            FakeDemographicsEncryptionService.ReturningPayload(payload),
             utcNow: new DateTimeOffset(1991, 5, 15, 0, 0, 0, TimeSpan.Zero));
 
         SafeDemographics result = service.GetSafeDemographics("ciphertext");
@@ -273,7 +250,7 @@ public class DemographicsNormalizationServiceTests
     public void GetSafeDemographics_GivenBirthDateFailingBothParseAttempts_ReturnsNullAgeWithoutThrowing()
     {
         var payload = new Dictionary<string, object?> { ["dob"] = "not-a-date-at-all" };
-        var service = CreateService(FakeEncryptionService.ReturningPayload(payload));
+        var service = CreateService(FakeDemographicsEncryptionService.ReturningPayload(payload));
 
         var act = () => service.GetSafeDemographics("ciphertext");
 

@@ -491,8 +491,11 @@ onUnmounted(() => {
 
 .drawer-panel {
   background-color: white;
-  width: 100%;
-  max-width: 420px;
+  width: var(
+    --semantic-drawer-width-sm,
+    var(--drawer-width-sm, min(100vw, 440px))
+  );
+  max-width: 100vw;
   height: 100vh;
   box-shadow: -6px 0 28px rgba(0, 0, 0, 0.18);
   display: flex;
