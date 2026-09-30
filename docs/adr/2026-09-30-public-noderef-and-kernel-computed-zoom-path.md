@@ -99,18 +99,21 @@ Example: `study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@3`.
 The kernel computes the presentation path from a reference (`IKernelNavigator.GetZoomPathAsync`):
 
 ```
-tenant (portfolio) → study → [country] → study_site → participant → clinical event (visit) → observation
+tenant (portfolio) → study → [country] → study_site → enrollment → clinical event (visit) → observation
 tenant (portfolio) → organization → site
 ```
 
-- A participant sits under its **responsible study site** when it has one, and **directly under its study** when
-  it has none (`ZoomRules.ParticipantParent`). No level assumes that activity happens at a site.
+- A participant appears in a study as its **enrollment** (amended 2026-09-30 after ADR-2453). The Participant
+  is identity only and can be enrolled in several studies, so it has no single place in a study's hierarchy. The
+  enrollment names the study, the study site and the subject code, which is its title.
+- An enrollment sits under its **responsible study site** when it has one, and **directly under its study** when
+  it has none (`ZoomRules.EnrollmentParent`). No level assumes that activity happens at a site.
 - `country` is a grouping level, not an object: it groups a study's sites by the country recorded on the site.
   It has a label and no reference.
 - The path is presentation only. It never grants, implies or narrows authority. What an actor may read or do comes
   from Grants and Delegations (§9.3), and an object that the actor may not read will be returned masked under the
   D1 contract (#4840), never silently dropped from the path.
-- Levels below participant (clinical event, assessment, observation) are added by the slices that map those
+- Levels below enrollment (clinical event, assessment, observation) are added by the slices that map those
   objects (#4776, #4727). The path algorithm does not change; each slice supplies the parent of its kind.
 
 ### 4.4 Summaries and children
@@ -118,8 +121,8 @@ tenant (portfolio) → organization → site
 - `IKernelNavigator.ResolveAsync(tenant, ref)` returns a `NodeSummary` (reference pinned to the version read, title,
   human code, status). This is the summary card for the inspector, palette and trace links.
 - `IKernelNavigator.GetChildrenAsync(tenant, ref)` returns the object's zoom children, each with the number of its
-  own children when that level is queryable, and `null` when it is not yet (for example participants per study
-  site before #4776). The navigator never shows an invented count.
+  own children when that level is queryable, and `null` when it is not yet (for example visits per enrollment
+  before #4727). A study site counts its enrollments. The navigator never shows an invented count.
 - All three reads are tenant-bound and read-only.
 
 ### 4.5 Where NodeRefs appear

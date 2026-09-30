@@ -214,8 +214,9 @@ Without a version the reference means "as of the read's `(valid_at, known_at)`".
 - **K-ID-6** Each object version has exactly one NodeRef string; parsing accepts only the canonical form, and every
   kernel identifier type has a registered kind.
 - **K-ID-7** The presentation zoom path is computed by the kernel from a NodeRef:
-  `tenant → study → [country] → study_site → participant → clinical event → observation`, and
-  `tenant → organization → site`. A participant without a responsible study site sits directly under its study.
+  `tenant → study → [country] → study_site → enrollment → clinical event → observation`, and
+  `tenant → organization → site`. A participant appears in a study as its enrollment (ADR-2453), titled by its
+  subject code; an enrollment without a responsible study site sits directly under its study.
   Protocol versions and study standards profiles sit under their study, and an attestation under the object it
   signs (ADR-2485). The zoom path is presentation only and never implies authority (§9.3).
 - **K-ID-8** Search (ADR-2484) finds kernel objects by code and title within one tenant and returns NodeRefs. It

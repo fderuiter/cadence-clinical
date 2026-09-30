@@ -255,10 +255,11 @@ canonical string, and `NodeRef.For(studySiteId)` builds one from a typed id. Whe
 Every event envelope carries `Subject`, the NodeRef of the aggregate the command changed at its new version.
 
 `IKernelNavigator` (`AddKernelNavigation()` in Application, `AddKernelScopeGraph()` in Persistence) resolves a NodeRef
-to a `NodeSummary`, computes its zoom path (`tenant → study → country → study_site → participant`, or
-`tenant → organization → site`) and lists its children with counts. A participant with no responsible study site
-sits directly under its study (`ZoomRules.ParticipantParent`). When a slice maps a new kind, add its case to
-`KernelScopeGraph` with the kind's zoom parent.
+to a `NodeSummary`, computes its zoom path (`tenant → study → country → study_site → enrollment`, or
+`tenant → organization → site`) and lists its children with counts. A participant appears in a study as its
+enrollment, titled by its subject code; an enrollment with no responsible study site sits directly under its study
+(`ZoomRules.EnrollmentParent`). Protocol versions and study standards sit under their study, and an attestation under
+the object it signs. When a slice maps a new kind, add its case to `KernelScopeGraph` with the kind's zoom parent.
 
 ## Standards Registry and MDR (ADR-2460)
 

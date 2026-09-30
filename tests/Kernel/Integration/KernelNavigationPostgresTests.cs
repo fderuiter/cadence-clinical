@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -8,6 +9,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.References;
@@ -54,7 +56,7 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
             (NodeKinds.StudySite, "NAVA-S1"));
 
         var studyChildren = await navigator.GetChildrenAsync(world.Tenant, NodeRef.For(world.Study), ct);
-        studyChildren.Should().ContainSingle().Which.Should().Be(new ScopeChild(summary!, ChildCount: null, Group: "DE"));
+        studyChildren.Should().ContainSingle().Which.Should().Be(new ScopeChild(summary!, ChildCount: 0, Group: "DE"));
 
         var tenantChildren = await navigator.GetChildrenAsync(world.Tenant, NodeRef.For(world.Tenant), ct);
         tenantChildren!.Select(c => (c.Node.Ref.Kind, c.Node.Code, c.ChildCount)).Should().Equal(
@@ -63,6 +65,55 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
 
         var sitePath = await navigator.GetZoomPathAsync(world.Tenant, NodeRef.For(world.Site), ct);
         sitePath!.Select(s => s.Level).Should().Equal(NodeKinds.Tenant, NodeKinds.Organization, NodeKinds.Site);
+    }
+
+    /// <summary>
+    /// A participant appears in a study as its enrollment: it zooms portfolio → study → country → study site →
+    /// enrollment under its subject code, and a study site's children are its enrollments, counted on the study.
+    /// </summary>
+    [Fact(DisplayName = "Navigation_EnrollmentSitsUnderItsStudySite")]
+    public async Task NavigationEnrollmentSitsUnderItsStudySite()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var scenario = new KernelProtocolScenario(fixture);
+        var (tenant, study) = await scenario.NewStudyAsync(ct);
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
+            var site = new Site(SiteId.New(), tenant, sponsor, $"NAVE-{Guid.NewGuid():N}"[..20], "Enrolling Clinic", "FR", KernelPostgresFixture.ActorId, Reason);
+            await fixture.SeedAsync(site, new StudySite(StudySiteId.New(), tenant, study, site.Id, "Selected", KernelPostgresFixture.ActorId, Reason));
+        }
+
+        StudySiteId studySite;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            studySite = await db.StudySites.AsNoTracking().Where(s => s.StudyId == study).Select(s => s.Id).SingleAsync(ct);
+        }
+
+        var enrollments = new List<EnrollmentId>();
+        foreach (var code in new[] { "FR-002", "FR-001" })
+        {
+            var participant = await scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), Reason), ct);
+            SubjectCode.TryFrom(code, out var subjectCode).Should().BeTrue();
+            var state = await scenario.OkAsync(
+                new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, subjectCode, fixture.Clock.UtcNow.AddMinutes(-1), KernelProtocolScenario.Key(), Reason),
+                ct);
+            enrollments.Add(state.EnrollmentId);
+        }
+
+        var navigator = new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts));
+
+        var path = await navigator.GetZoomPathAsync(tenant, NodeRef.For(enrollments[0]), ct);
+        var siteChildren = await navigator.GetChildrenAsync(tenant, NodeRef.For(studySite), ct);
+        var studyChildren = await navigator.GetChildrenAsync(tenant, NodeRef.For(study), ct);
+
+        path!.Select(s => s.Level).Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment);
+        path![^1].Label.Should().Be("FR-002");
+        siteChildren!.Select(c => (c.Node.Title, c.Node.Status, c.ChildCount)).Should().Equal(
+            ("FR-001", "Screening", (int?)null),
+            ("FR-002", "Screening", (int?)null));
+        studyChildren.Should().ContainSingle().Which.ChildCount.Should().Be(2);
     }
 
     /// <summary>

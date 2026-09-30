@@ -10,6 +10,7 @@ using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Persistence.Activity;
 using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Navigation;
@@ -150,6 +151,44 @@ public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) :
         (await Projector().ProjectAsync(tenant, ct)).Should().Be(1);
         (await ReadAsync(tenant, new ActivityQuery(Scope: NodeRef.For(late)), ct)).Entries.Should().ContainSingle()
             .Which.Recorded.Should().Be(now.AddMinutes(-2));
+    }
+
+    /// <summary>
+    /// A participant's screening sits in its study's and study site's activity through its enrollment, while the
+    /// participant's registration, which belongs to no single study, is in the tenant's activity only.
+    /// </summary>
+    [Fact(DisplayName = "Projection_ScopesEnrollmentEventsUnderTheirStudySite")]
+    public async Task ProjectionScopesEnrollmentEventsUnderTheirStudySite()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var scenario = new KernelProtocolScenario(fixture);
+        var (tenant, study) = await scenario.NewStudyAsync(ct);
+        StudySiteId studySite;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
+            var site = new Site(SiteId.New(), tenant, sponsor, $"ACT-{Guid.NewGuid():N}"[..20], "Activity Clinic", "NL", KernelPostgresFixture.ActorId, KernelProtocolScenario.Reason);
+            var link = new StudySite(StudySiteId.New(), tenant, study, site.Id, "Selected", KernelPostgresFixture.ActorId, KernelProtocolScenario.Reason);
+            await fixture.SeedAsync(site, link);
+            studySite = link.Id;
+        }
+
+        var participant = await scenario.OkAsync(new RegisterParticipant(tenant, ParticipantId.New(), KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        SubjectCode.TryFrom("NL-001", out var code).Should().BeTrue();
+        await scenario.OkAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), participant, studySite, code, fixture.Clock.UtcNow.AddMinutes(-1), KernelProtocolScenario.Key(), KernelProtocolScenario.Reason),
+            ct);
+        await Projector().ProjectAsync(tenant, ct);
+
+        var inSite = await ReadAsync(tenant, new ActivityQuery(Scope: NodeRef.For(studySite)), ct);
+        var inStudy = await ReadAsync(tenant, new ActivityQuery(Scope: NodeRef.For(study), Families: [EventFamily.Execution]), ct);
+        var inTenant = await ReadAsync(tenant, new ActivityQuery(Families: [EventFamily.Execution]), ct);
+
+        inSite.Entries.Select(e => e.Type).Should().Equal("ParticipantScreened");
+        inSite.Entries[0].SubjectKind.Should().Be(NodeKinds.Enrollment);
+        inStudy.Entries.Select(e => e.Type).Should().Equal("ParticipantScreened");
+        inTenant.Entries.Select(e => e.Type).Should().Contain(["ParticipantRegistered", "ParticipantScreened"]);
     }
 
     /// <summary>

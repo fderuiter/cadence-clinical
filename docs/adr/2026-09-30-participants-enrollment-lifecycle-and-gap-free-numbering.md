@@ -152,8 +152,8 @@ withdrawal is proven, and how the database enforces the lifecycle.
   - Eligibility (spec §7.4, G3) is not checked yet: `Screening → Enrolled` does not require a complete set of
     `Eligibility` Assertions until Assertions exist (#4727).
   - Screening is not gated on an active StudySite until Effectivity and StudySite activation land (#4777).
-  - The navigator (ADR-2481) does not show participants yet; whether a study site's zoom children are participants
-    or their enrollments is decided with the navigator.
+  - The navigator (ADR-2481, amended) shows a participant in a study as its enrollment, under its study site and
+    titled by its subject code.
   - Unblinding and arm assignment are RTSM Assertions (spec §7.4) and are not modelled here.
 - **Mitigation Strategy:**
   - The handlers are the only writers, and each deferred rule has an issue that adds it at the command.

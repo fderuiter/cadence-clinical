@@ -31,17 +31,18 @@ public interface IKernelScopeGraph
 
 /// <summary>
 /// The presentation hierarchy the zoom path follows (ADR-2481 §4.3):
-/// <c>tenant → study → [country] → study_site → participant</c>, and <c>tenant → organization → site</c>. Protocol
+/// <c>tenant → study → [country] → study_site → enrollment</c>, and <c>tenant → organization → site</c>. Protocol
 /// versions and study standards sit under their study, and an attestation under the object it signs (ADR-2485).
 /// It is presentation only and never implies authority.
 /// </summary>
 public static class ZoomRules
 {
     /// <summary>
-    /// A participant sits under its responsible study site, or directly under its study when it has none (a
-    /// decentralised trial, ICH E6(R3) Annex 2). Activity is never assumed to happen at a site.
+    /// A participant appears in a study as its enrollment (ADR-2453), which sits under its responsible study site, or
+    /// directly under its study when it has none (a decentralised trial, ICH E6(R3) Annex 2). Activity is never
+    /// assumed to happen at a site.
     /// </summary>
-    public static NodeRef ParticipantParent(StudyId study, StudySiteId? responsibleStudySite) =>
+    public static NodeRef EnrollmentParent(StudyId study, StudySiteId? responsibleStudySite) =>
         responsibleStudySite is { IsEmpty: false } site ? NodeRef.For(site) : NodeRef.For(study);
 }
 
