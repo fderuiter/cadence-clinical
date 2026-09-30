@@ -108,4 +108,4 @@ However, a comprehensive infrastructure and workflow audit identified critical g
   - `docker/docker-compose.yml`
 * Verification:
   - Run `python scripts/validate_adrs.py` to ensure ADR index integrity.
-  - Verify `generate_rtm.py` scans `tests/SecurityAndDomainTests.cs` and maps `PRD-SYS-053`.
+  - Verify `generate_rtm.py` scans `tests/Cadence.UnitTests/SecurityAndDomainTests.cs` and maps `PRD-SYS-053`.

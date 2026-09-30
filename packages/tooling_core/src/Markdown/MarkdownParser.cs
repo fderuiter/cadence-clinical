@@ -17,6 +17,12 @@ public static class MarkdownParser
 {
     private static readonly Regex MarkdownLinkRegex = new(@"\[([^\]]+)\]\(([^)]+)\)", RegexOptions.Compiled);
 
+    // A path into a .NET test project folder (tests/Cadence.UnitTests/..., tests/Cadence.IntegrationTests/...):
+    // the first segment starts with a capital letter. Lower-case paths such as tests/fixtures or a web app's own
+    // tests/ folder are not matched.
+    private static readonly Regex TestProjectPathRegex = new(
+        @"(?<![A-Za-z0-9_./-])tests/[A-Z][A-Za-z0-9_.-]*(?:/[A-Za-z0-9_.-]+)*/?", RegexOptions.Compiled);
+
     private static readonly string[] IgnoredSubstrings = new[]
     {
         "placeholder", "your-", "example", "path-to-new-adr", "node.js"
@@ -111,6 +117,54 @@ public static class MarkdownParser
             catch (Exception ex)
             {
                 issues.Add(new MarkdownValidationIssue(relativeFile, "", $"Error reading '{file}': {ex.Message}"));
+            }
+        }
+
+        return issues;
+    }
+
+    /// <summary>
+    /// Reports every path into a .NET test project folder (<c>tests/Cadence.UnitTests/...</c>) that names a file or
+    /// folder that does not exist, whether or not it is written as a link. Test files move when the test layout
+    /// changes, and a stale path in a decision record or guide sends a reader to nothing. The migration working
+    /// papers under <c>docs/migration/</c> record the tree as it was and are skipped, as are the generated RTM and
+    /// IQ/OQ/PQ report, which <c>gxp sync</c> rewrites.
+    /// </summary>
+    public static List<MarkdownValidationIssue> ValidateTestProjectPaths(
+        string repoRoot,
+        IEnumerable<string> filesToScan)
+    {
+        var issues = new List<MarkdownValidationIssue>();
+
+        foreach (var file in filesToScan)
+        {
+            if (!File.Exists(file)) continue;
+
+            string relativeFile = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+            if (relativeFile.StartsWith("docs/migration/", StringComparison.OrdinalIgnoreCase) ||
+                relativeFile.EndsWith("Requirements_Traceability_Matrix.md", StringComparison.OrdinalIgnoreCase) ||
+                relativeFile.EndsWith("IQ_OQ_PQ_Execution_Report.md", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string[] lines;
+            try { lines = File.ReadAllLines(file); } catch (IOException) { continue; }
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                foreach (Match m in TestProjectPathRegex.Matches(lines[i]))
+                {
+                    int end = m.Index + m.Length;
+                    if (end < lines[i].Length && lines[i][end] == '*') continue; // a glob, not a path
+
+                    string target = m.Value.TrimEnd('.');
+                    string fullPath = Path.Combine(repoRoot, target);
+                    if (File.Exists(fullPath) || Directory.Exists(fullPath)) continue;
+
+                    issues.Add(new MarkdownValidationIssue(relativeFile, target,
+                        $"Path to a missing test file or folder in '{relativeFile}:{i + 1}': '{target}'", i + 1));
+                }
             }
         }
 

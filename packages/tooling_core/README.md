@@ -6,7 +6,7 @@ Implementation library behind the Cadence CLI: repository validators, generators
 
 - `packages/tooling_core/src/Cadence.ToolingCore.csproj` (assembly `Cadence.ToolingCore`):
   - `Cadence.ToolingCore.Services`: one static service per tool, for example `ReadmeValidatorService`, `MarkdownValidatorService`, `AdrValidatorService`, `ArchitectureDriftValidatorService`, `ImportValidatorService`, `DependencyValidatorService`, `SyncGxPService`, `ScaffoldServiceService`, `SelfHealService`, `OpenApiSyncService`, `SchemaDocGeneratorService`.
-  - `Cadence.ToolingCore.Markdown`: `MarkdownParser` (workspace link checking).
+  - `Cadence.ToolingCore.Markdown`: `MarkdownParser` (workspace link checking, and paths into .NET test project folders that no longer exist; `docs/migration/` and the generated RTM and IQ/OQ/PQ report are skipped).
   - `Cadence.ToolingCore.Contracts`: `ContractVerifier`.
   - `Cadence.ToolingCore.Security`: `SecretScanner`.
   - `Cadence.ToolingCore.OpenApi`: `OpenApiToolingService`, and `OpenApiSpecExporter` (currently writes placeholder documents with empty `paths`).

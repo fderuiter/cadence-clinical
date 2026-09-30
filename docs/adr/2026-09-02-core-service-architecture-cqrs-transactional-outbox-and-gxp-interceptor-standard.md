@@ -93,5 +93,5 @@ This decision record establishes the mandatory internal architecture, request di
 ## 6. Implementation & Verification
 
 * Target files: Core primitives implemented in `packages/engine_core/src/` (`Result.cs`, `DomainError.cs`, `AuditLogEntry.cs`, `GxPAuditInterceptor.cs`).
-* Verification: Verified via unit test suite in `tests/Cadence.UnitTests.csproj` with traceability tags (`PRD-SYS-053`).
+* Verification: Verified via unit test suite in `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` with traceability tags (`PRD-SYS-053`).
 

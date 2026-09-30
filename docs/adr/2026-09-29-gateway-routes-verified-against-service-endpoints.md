@@ -37,7 +37,7 @@ A route to nowhere authenticates the caller, signs identity headers and forwards
 
 ### Option 2: A test that boots every host and compares endpoints (Selected)
 
-- **Overview:** `tests/Gateway/GatewayRouteCoverageTests.cs` compares the gateway's configured routes with the `RouteEndpoint`s each service actually registers. It fails in two cases:
+- **Overview:** `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` compares the gateway's configured routes with the `RouteEndpoint`s each service actually registers. It fails in two cases:
   - a route prefix has no endpoint under it
   - a service maps an `/api/v1` endpoint that no route reaches
 - **Pros:**

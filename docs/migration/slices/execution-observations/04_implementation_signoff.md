@@ -11,8 +11,8 @@ Execution Slice 2 (`execution-observations`) has been fully transcribed to **C# 
 All 14 tracer-bullet development tickets (`MIG-OBS-001` through `MIG-OBS-014`) are verified and complete.
 
 - **Solution Build:** 0 Warnings, 0 Errors (`dotnet build Cadence.sln`)
-- **Unit Tests:** 667 passed, 0 failed (`dotnet test tests/Cadence.UnitTests.csproj`)
-- **Architecture Tests:** 546 passed, 0 failed (`dotnet test tests/Cadence.ArchitectureTests.csproj`)
+- **Unit Tests:** 667 passed, 0 failed (`dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`)
+- **Architecture Tests:** 546 passed, 0 failed (`dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`)
 - **Formatting:** Clean verification with 0 changes (`dotnet format Cadence.sln --verify-no-changes`)
 - **GxP Compliance & RTM:** 100% mapped and synchronized (`python scripts/sync_gxp.py`, `python scripts/generate_rtm.py --validate`)
 - **Architecture Drift & ADR Validation:** Clean verification (`python scripts/validate_adrs.py`, `python scripts/validate_architecture_drift.py`)

@@ -52,7 +52,7 @@ apps/execution/src/
     Filters/ ChangeReasonHeaderFilter.cs, AuditContextFilter.cs
 ```
 
-Dependency direction: `Endpoints -> Application -> Domain`, `Infrastructure -> Domain` (implements `Domain.Ports`), `Infrastructure -> Application` (implements `Application.Abstractions`). No layer references `Endpoints`. Enforced by the existing `Cadence.ArchitectureTests` ArchUnitNET suite (`tests/Cadence.ArchitectureTests.csproj`) — this design adds one rule: `Domain` must not reference `Microsoft.AspNetCore.*` or `MassTransit`.
+Dependency direction: `Endpoints -> Application -> Domain`, `Infrastructure -> Domain` (implements `Domain.Ports`), `Infrastructure -> Application` (implements `Application.Abstractions`). No layer references `Endpoints`. Enforced by the existing `Cadence.ArchitectureTests` ArchUnitNET suite (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) — this design adds one rule: `Domain` must not reference `Microsoft.AspNetCore.*` or `MassTransit`.
 
 ### 1.2 DI lifetimes
 

@@ -88,6 +88,6 @@ This ADR decides what the kernel stores about an artifact, how versions work, an
   `Evidence/ArtifactContent`, `Commands/EvidenceCommands`, `Events/EvidenceEvents`, `Trust/ContentHash.OfBytes`),
   `Cadence.Kernel.Domain/Entities/Artifact.cs`, `Cadence.Kernel.Application/Evidence`,
   `Cadence.Kernel.Persistence/Configurations/EvidenceConfigurations.cs`, migration `ArtifactsAndVersions`.
-- Tests: `tests/Kernel/ArtifactTests.cs` (content validation, numbering, signable target) and
-  `tests/Kernel/Integration/KernelArtifactPostgresTests.cs` (pipeline, attestation, insert-only guard, check
+- Tests: `tests/Cadence.UnitTests/Kernel/ArtifactTests.cs` (content validation, numbering, signable target) and
+  `tests/Cadence.IntegrationTests/Kernel/KernelArtifactPostgresTests.cs` (pipeline, attestation, insert-only guard, check
   constraints). The shared insert-only and tenant-isolation tests cover the new tables.

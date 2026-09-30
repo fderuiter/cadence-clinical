@@ -69,13 +69,13 @@ Under 21 CFR Part 11 an electronic record's author and signer must be the authen
 
 - **Affected Repositories / Services:** `packages/security`, `apps/gateway`, every service `Program.cs`, `apps/execution` query and form endpoints, `packages/testing` (`Cadence.Testing.Security`), `docker/docker-compose.yml`, `.env.example`, `docs/ENVIRONMENT_VARIABLES.md`.
 - **Verification Plan:**
-  - `tests/Execution/Endpoints/ExecutionAuthenticationTests.cs` covers:
+  - `tests/Cadence.UnitTests/Execution/Endpoints/ExecutionAuthenticationTests.cs` covers:
     - anonymous, wrong-secret, tampered-role and stale requests return 401;
     - wrong role and body-only PI role return 403;
     - a mismatched signer returns 403;
     - the caller is recorded as signer;
     - startup fails fast without `GATEWAY_SECRET`.
-  - `tests/Gateway/GatewayAuthenticationTests.cs` covers:
+  - `tests/Cadence.UnitTests/Gateway/GatewayAuthenticationTests.cs` covers:
     - anonymous and untrusted-token requests return 401;
     - signed forwarding replaces spoofed client headers;
     - startup fails fast without `OIDC_AUTHORITY`.

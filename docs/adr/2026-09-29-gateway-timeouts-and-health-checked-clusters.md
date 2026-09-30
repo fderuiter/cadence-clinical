@@ -66,7 +66,7 @@ Every service already exposes `/healthz/ready` (database reachable, migrations a
 - **Affected Repositories / Services:**
   - `apps/gateway/src/GatewayClusters.cs`, `apps/gateway/src/Program.cs`
   - `apps/gateway/README.md`, `docs/ENVIRONMENT_VARIABLES.md`, `.env.example`
-- **Verification Plan:** `tests/Gateway/GatewayResilienceTests.cs` checks three things:
+- **Verification Plan:** `tests/Cadence.UnitTests/Gateway/GatewayResilienceTests.cs` checks three things:
   - every cluster carries the policy
   - a service whose readiness probe fails gets 503 with no request forwarded, and serves again once ready. This fails under `HealthyOrPanic`.
   - a service that stops responding gets 504 after the timeout

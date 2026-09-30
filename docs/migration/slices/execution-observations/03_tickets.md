@@ -199,9 +199,9 @@ graph TD
 ### [x] `MIG-OBS-013`: Golden Master Fixtures & Cross-Stack Parity
 - **Description:** Execute golden master regression suite against Python test baseline fixtures.
 - **Files:**
-  - `tests/Execution/Observations/ObservationGoldenMasterTests.cs`
-  - `tests/Execution/Forms/FormSubmissionGoldenMasterTests.cs`
-  - `tests/Execution/EditChecks/BatchEditCheckTests.cs`
+  - `tests/Cadence.UnitTests/Execution/Observations/ObservationGoldenMasterTests.cs`
+  - `tests/Cadence.UnitTests/Execution/Forms/FormSubmissionGoldenMasterTests.cs`
+  - `tests/Cadence.UnitTests/Execution/EditChecks/BatchEditCheckTests.cs`
 - **Acceptance Criteria:**
   - [x] 100% behavioral parity with Python baseline.
   - [x] Concurrency and stress tests for batch evaluation.
