@@ -361,10 +361,12 @@ participants by state on study home (an interim count from Execution's list tota
 Indicators, D6), the Participants section (adding a participant in screening, and moving a participant between
 the states Execution allows, less unblinding), Site activation, and a participant's data (observations by visit
 with source data verification, queries with their transitions, and form submissions). Selections are addressed by NodeRef in the
-URL. For a selected participant, Act lists the kernel's commands with the reader's dry-run decision and reason,
+URL. For a selected participant, Trace lists the kernel's lineage walk back from it, edge by edge, and Impact
+counts what depends on it by kind, expandable to objects; objects the reader may not see stay in place as hidden and
+are counted (ADR-2540). Act lists the kernel's commands with the reader's dry-run decision and reason,
 and Explain renders the kernel's explanation of a chosen decision (ADR-2540); neither sends a command. The `⌘K`
-palette adds the studies kernel search finds by code or title (ADR-2484), leaving out any the reader may not see. Trace,
-Impact and Simulate, and Act and Explain on an observation (no kernel reference yet), are shown disabled, each
+palette adds the studies kernel search finds by code or title (ADR-2484), leaving out any the reader may not see. Simulate,
+and the kernel verbs on an observation (no kernel reference yet), are shown disabled, each
 naming what it waits on, and stages with no service are empty (§6.1). [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md) tracks what it
 adds next.
 
