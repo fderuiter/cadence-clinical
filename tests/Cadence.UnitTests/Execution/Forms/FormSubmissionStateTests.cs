@@ -1,6 +1,4 @@
 using System;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +7,7 @@ using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
+using Cadence.Kernel.Trust;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
@@ -34,11 +33,8 @@ public sealed class FormSubmissionStateTests
         public string ChangeReason => reason;
     }
 
-    private static string ComputeHash(string payload)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
+    /// <summary>The payload hash a signer computes: SHA-256 of the RFC 8785 canonical payload (ADR-2513).</summary>
+    private static string ComputeHash(string payload) => JsonCanonicalization.Sha256Hex(payload);
 
     /// <summary>
     /// Validates that initializing a form submission places it in Draft state with editable properties.

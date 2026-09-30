@@ -12,6 +12,7 @@ using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
+using Cadence.Kernel.Trust;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
@@ -327,7 +328,7 @@ public sealed class ObservationAndFormEndpointsTests
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: FormSubmissionApplicationService.ComputeSha256(payload));
+            PayloadHash: JsonCanonicalization.Sha256Hex(payload));
 
         var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("pi-user-01", "Principal Investigator") };
         var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
@@ -367,7 +368,7 @@ public sealed class ObservationAndFormEndpointsTests
             SignerRole: "unauthorized_role",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: FormSubmissionApplicationService.ComputeSha256(payload));
+            PayloadHash: JsonCanonicalization.Sha256Hex(payload));
 
         var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("user-01", "unauthorized_role") };
         var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
@@ -403,7 +404,7 @@ public sealed class ObservationAndFormEndpointsTests
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: FormSubmissionApplicationService.ComputeSha256(payload)));
+            PayloadHash: JsonCanonicalization.Sha256Hex(payload)));
         await formRepo.AddAsync(form, CancellationToken.None);
 
         var result = await FormEndpoints.UnlockFormSubmissionAsync(

@@ -16,6 +16,7 @@ using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Trust;
 
 namespace Cadence.Apps.Execution.Application.Forms;
 
@@ -277,12 +278,13 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.UnauthorizedSignerRole(string.Join(",", signer.Roles));
         }
 
-        // Verify SHA-256 payload hash integrity
-        string canonicalPayload = submission.Payload ?? "{}";
-        string computedHash = ComputeSha256(canonicalPayload);
+        // The signer's hash covers the form content, not the text the database returns: both sides hash the
+        // RFC 8785 canonical form, so key order, whitespace and number spelling do not matter (#5023).
+        string? computedHash = ComputePayloadHash(submission.Payload ?? "{}");
 
-        if (string.IsNullOrWhiteSpace(manifest.PayloadHash) ||
-            !string.Equals(manifest.PayloadHash, computedHash, StringComparison.OrdinalIgnoreCase))
+        if (computedHash is null ||
+            string.IsNullOrWhiteSpace(manifest.PayloadHash) ||
+            !string.Equals(manifest.PayloadHash.Trim(), computedHash, StringComparison.OrdinalIgnoreCase))
         {
             return FormErrors.InvalidPayloadHash();
         }
@@ -341,10 +343,22 @@ public sealed class FormSubmissionApplicationService(
         return MapToResponse(submission);
     }
 
-    public static string ComputeSha256(string content)
+    /// <summary>
+    /// The payload hash a signer puts in an approval's signature manifest: the lower-case hex SHA-256 of the RFC 8785
+    /// (JCS) canonical form of the payload (<see cref="JsonCanonicalization"/>). A client computes it from the payload
+    /// it submitted, for example <c>sha256(canonicalSerialize(JSON.parse(payload)))</c> with
+    /// <c>packages/ui/signing.js</c>. Null when the payload is not JSON that JCS can canonicalize.
+    /// </summary>
+    public static string? ComputePayloadHash(string payload)
     {
-        byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(content));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
+        try
+        {
+            return JsonCanonicalization.Sha256Hex(payload);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
