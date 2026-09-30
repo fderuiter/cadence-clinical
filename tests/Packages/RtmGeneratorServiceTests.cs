@@ -316,6 +316,50 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     }
 
     [Fact]
+    public void GenerateRtm_TwiceFromTheSameTests_WritesIdenticalDocuments()
+    {
+        WriteMinimalRepository();
+        string rtm = Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md");
+        string report = Path.Combine(_dir, "docs", "SDLC", "IQ_OQ_PQ_Execution_Report.md");
+
+        RtmGeneratorService.GenerateRtm(draft: true, repoRoot: _dir).Should().Be(0);
+        var firstRtm = File.ReadAllText(rtm);
+        var firstReport = File.ReadAllText(report);
+        RtmGeneratorService.GenerateRtm(draft: true, repoRoot: _dir).Should().Be(0);
+
+        File.ReadAllText(rtm).Should().Be(firstRtm);
+        File.ReadAllText(report).Should().Be(firstReport);
+        GxPSigner.VerifyStamp(firstRtm).Should().BeTrue();
+        GxPSigner.VerifyStamp(firstReport).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("Requirements_Traceability_Matrix.md")]
+    [InlineData("IQ_OQ_PQ_Execution_Report.md")]
+    public void ValidateRtm_FailsWhenAGeneratedDocumentIsEditedByHand(string document)
+    {
+        WriteMinimalRepository();
+        RtmGeneratorService.GenerateRtm(draft: true, repoRoot: _dir).Should().Be(0);
+        string path = Path.Combine(_dir, "docs", "SDLC", document);
+
+        File.WriteAllText(path, File.ReadAllText(path).Replace("# ", "# Edited ", StringComparison.Ordinal));
+
+        RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true, repoRoot: _dir).Should().Be(1);
+    }
+
+    [Fact]
+    public void VerifyStamp_AcceptsTheStampedDocumentAndRejectsEditsOrAMissingStamp()
+    {
+        var stamped = GxPSigner.StampGxpMarkdown("# Report\n\nAll requirements qualified.\n");
+
+        stamped.Should().Contain("Unsigned working copy").And.NotContain("BEGIN SIGNATURE");
+        GxPSigner.VerifyStamp(stamped).Should().BeTrue();
+        GxPSigner.VerifyStamp(stamped.Replace("\n", "\r\n", StringComparison.Ordinal)).Should().BeTrue();
+        GxPSigner.VerifyStamp(stamped.Replace("All requirements", "Most requirements", StringComparison.Ordinal)).Should().BeFalse();
+        GxPSigner.VerifyStamp("# Report\n\nAll requirements qualified.\n").Should().BeFalse();
+    }
+
+    [Fact]
     public void RepositoryTests_DeclareOnlyRequirementIdsThatExist()
     {
         string repoRoot = Cadence.ToolingCore.OpenApi.OpenApiToolingService.FindRepoRoot();
@@ -327,6 +371,14 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     }
 
     private static TestMappingInfo Mapping(string fullName) => new() { FullName = fullName, TestName = fullName };
+
+    private void WriteMinimalRepository()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "docs", "SDLC"));
+        File.WriteAllText(Path.Combine(_dir, "docs", "SDLC", "prd.md"), "#### PRD-AAA-001: Widget\n");
+        Directory.CreateDirectory(Path.Combine(_dir, "tests"));
+        WriteTaggedTest("First", "PRD-AAA-001");
+    }
 
     private void WriteTaggedTest(string name, string requirementId) =>
         File.WriteAllText(Path.Combine(_dir, "tests", $"{name}.cs"), string.Join("\n",

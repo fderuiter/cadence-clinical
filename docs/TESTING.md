@@ -162,9 +162,17 @@ Set `RTM_STRICT_ALL=true` to make validation fail while any requirement is not q
 - a test declares a requirement ID that no requirement document defines, or
 - the checked-in RTM lists different tests for a requirement than the tags in `tests/` declare. That happens
   when a PR adds, removes or moves a tag without re-running `gxp sync`. The error names each test that is
-  missing from the RTM or no longer declares the requirement.
+  missing from the RTM or no longer declares the requirement, or
+- the RTM or the IQ/OQ/PQ report no longer matches its integrity stamp, because it was edited by hand.
 
-It does not compare test results; only a full `gxp sync` produces those. The check is part of CI's static
+`gxp sync` ends both documents with an **integrity stamp**: the SHA-256 of the document body, marked as an
+unsigned working copy. It replaces the self-signed signature the documents used to carry, which came from a new
+throwaway key on every run and so changed the files every time. The same tests and results now give byte-identical
+documents, and CI's docs diff can pass. The stamp is not an electronic signature. A release copy of the validation
+package is signed by a named person with `GxPSigner.SignGxpMarkdown` and their own certificate; no CLI command
+does this yet.
+
+`check rtm` does not compare test results; only a full `gxp sync` produces those. The check is part of CI's static
 analysis job, not the pre-commit hook, because fixing it means running the whole suite. If you change a tag,
 run `gxp sync` before you open the PR.
 

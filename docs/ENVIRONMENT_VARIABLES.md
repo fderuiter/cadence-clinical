@@ -90,7 +90,7 @@ Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-24
 | `OIDC_SIGNATURE_CLIENT_SECRET` | `apps/gateway/src/Program.cs:76` | none | only if that client is confidential |
 | `OIDC_TOKEN_ENDPOINT` | `apps/gateway/src/Program.cs:72` | `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY` | no |
 | `AUDIT_LOG_SECRET_KEY` | `packages/security/src/Audit/AuditSecretKey.cs` (the only resolver; used by `AuditDigestEngine`, both `AuditDigestCalculator`s and `AddCadenceSecurity`) | none | yes; signing or verifying the audit chain throws without it |
-| `GXP_SIGNER_ID` | `packages/compliance/src/GxPSigner.cs:18` | `cadence-validation-runner` | no |
+| `GXP_SIGNER_ID` | `packages/compliance/src/GxPSigner.cs:67` (release signing with `SignGxpMarkdown` only; `gxp sync` stamps, it does not sign) | `cadence-validation-runner` | no |
 
 ## Observability
 
@@ -106,7 +106,7 @@ Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-24
 | `BRAND_DOMAIN` | `packages/tooling_core/src/OpenApiToolingService.cs:171` | `ccrsoft.com` |
 | `GH_TOKEN`, `GITHUB_TOKEN` | `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10` | none |
 | `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:101-102` (honoured by `generate-rtm` and `check rtm`; `gxp sync` ignores them) | off |
-| `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:205` | off |
+| `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:214` | off |
 | `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Execution/Integration/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped) | none |
 
 ## Web apps

@@ -18,6 +18,14 @@ certificates and signatures contain it by chance. `VerifyMarkdown` also checks t
 against the document body. Only tests call the verifier today; `dotnet cadence verify-gxp-signatures` is not
 implemented yet ([docs/cli.md](../../docs/cli.md)).
 
+## Generated GxP documents
+
+`RtmGeneratorService` writes the RTM and the IQ/OQ/PQ report with `GxPSigner.StampGxpMarkdown`, a deterministic
+SHA-256 integrity stamp marked as an unsigned working copy, and `GxPSigner.VerifyStamp` lets `check rtm` reject
+hand edits. `GxPSigner.SignGxpMarkdown` (RSA-PSS with an embedded certificate) remains for signing a release copy
+with a named person's certificate; without one it falls back to a throwaway self-signed key, which is only useful
+in tests. [docs/TESTING.md](../../docs/TESTING.md) has the workflow.
+
 ## Key dependencies
 
 - Project references: `Cadence.CoreModels`, `Cadence.Deid`.
