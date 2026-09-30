@@ -4,8 +4,8 @@ namespace Cadence.Apps.Execution.Domain.Subjects;
 
 /// <summary>
 /// Single factory for every <see cref="DomainError"/> this slice raises, unifying the 25 legacy
-/// raise sites (`01_spec.md` §5.1) onto 7 stable, machine-readable codes, plus one code with no legacy raise
-/// site (<c>ICF_SIGNED_DATE_REQUIRED</c>, #4824). HTTP status mapping is
+/// raise sites (`01_spec.md` §5.1) onto 7 stable, machine-readable codes, plus codes with no legacy raise
+/// site (<c>ICF_SIGNED_DATE_REQUIRED</c>, #4824; <c>UNAUTHORIZED_SUBJECT_ROLE</c> and <c>UNAUTHORIZED_UNBLIND_ROLE</c>, #4943). HTTP status mapping is
 /// MIG-SUBJ-010's concern; aggregate-level call sites are MIG-SUBJ-004's.
 /// @req:PRD-SUB-001
 /// </summary>
@@ -36,6 +36,16 @@ public static class SubjectErrors
             $"Protocol Amendment {versionTag} is active. Subject {subjectId} must execute re-consent before data entry on visit {visitId}.")
             with
         { Type = ErrorType.Forbidden };
+
+    /// <summary>The caller holds no role that may change a participant's record (#4943).</summary>
+    public static DomainError UnauthorizedParticipantRole(string roles) =>
+        DomainError.Forbidden("UNAUTHORIZED_SUBJECT_ROLE",
+            $"Role '{roles}' is not authorized to change a participant's record. Permitted roles: investigator, clinical research coordinator, data manager.");
+
+    /// <summary>The caller holds no unblinding authority, so cannot move a participant to UNBLINDED (#4943).</summary>
+    public static DomainError UnauthorizedUnblindRole(string roles) =>
+        DomainError.Forbidden("UNAUTHORIZED_UNBLIND_ROLE",
+            $"Role '{roles}' is not authorized to unblind a participant. Permitted roles: emergency unblinder, principal investigator, authorized ER physician, lead investigator.");
 
     /// <summary>A signed consent was submitted without <c>icf_signed_date</c> and no date is on file for that
     /// consent version. The legacy system defaulted the date to the time of the request; this port rejects it

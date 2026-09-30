@@ -144,7 +144,7 @@ export const PARTICIPANT_TRANSITIONS: Readonly<
 
 /**
  * Unblinding breaks the blind for a participant, so it gets its own workflow rather than a menu entry here,
- * even though Execution accepts it as a state change.
+ * even though Execution accepts it as a state change from an unblinding authority (#4943).
  */
 const WITHHELD_STATE_CHANGES = new Set(["UNBLINDED"]);
 
