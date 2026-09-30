@@ -1,5 +1,3 @@
-using System;
-
 using Cadence.Database;
 
 using Microsoft.EntityFrameworkCore;
@@ -24,12 +22,11 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// <para>
 /// This factory is never referenced by the running application (<c>Program.cs</c> is untouched by this
 /// ticket, deliberately — see the implementing ticket's report for why) — it is loaded solely by the
-/// design-time tooling process. The connection string below therefore only has to be one Npgsql accepts
-/// while it builds the model to diff migrations against; <c>migrations add</c> never opens it. It matches
-/// this repo's own local/dev Postgres container (<c>docker/docker-compose.yml</c>'s <c>postgres</c>
-/// service: user/db <c>cadence</c>/<c>cadence_edc</c>) so that a real <c>dotnet ef database update</c>
-/// against that container works out of the box too; <c>POSTGRES_CONNECTION_STRING</c> (the same variable
-/// name the compose file's <c>dotnet-dev</c> service already sets) overrides it for any other target.
+/// design-time tooling process. The connection string is read from <c>POSTGRES_CONNECTION_STRING</c> (the
+/// same variable name the compose file's <c>dotnet-dev</c> service already sets) via
+/// <see cref="Cadence.Database.CadenceDatabaseExtensions.ResolveDesignTimeConnectionString"/>; there is no
+/// built-in fallback credential, so running <c>dotnet ef</c> without it fails with a message naming the
+/// variable (ADR-2260).
 /// </para>
 /// @req:PRD-SUB-001
 /// </summary>
@@ -38,14 +35,9 @@ public sealed class ExecutionDbContextFactory : IDesignTimeDbContextFactory<Exec
     /// <summary>This module's PostgreSQL schema in the shared database (ADR-2247).</summary>
     public const string Schema = "edc";
 
-    private const string DefaultDesignTimeConnectionString =
-        "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password";
-
     public ExecutionDbContext CreateDbContext(string[] args)
     {
-        var connectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") is { Length: > 0 } configured
-            ? configured
-            : DefaultDesignTimeConnectionString;
+        var connectionString = CadenceDatabaseExtensions.ResolveDesignTimeConnectionString(args);
 
         var optionsBuilder = new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, Schema));

@@ -1,8 +1,10 @@
 using System.Linq;
 
+using Cadence.Database;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 
 using FluentAssertions;
 
@@ -20,7 +22,8 @@ namespace Cadence.UnitTests.Kernel;
 public class KernelDbContextModelTests
 {
     private static KernelDbContext CreateContext() =>
-        new KernelDbContextDesignTimeFactory().CreateDbContext([]);
+        new KernelDbContextDesignTimeFactory().CreateDbContext(
+            [CadenceDatabaseExtensions.DesignTimeConnectionArgument, TestHostSettings.PostgresConnectionString]);
 
     /// <summary>
     /// Validates that every kernel table lives in the single <c>kernel</c> schema (ADR-2247) with snake_case columns.

@@ -1,5 +1,3 @@
-using System;
-
 using Cadence.Database;
 
 using Microsoft.EntityFrameworkCore;
@@ -17,14 +15,9 @@ public sealed class CtmsDbContextFactory : IDesignTimeDbContextFactory<CtmsDbCon
     /// <summary>This module's PostgreSQL schema in the shared database (ADR-2247).</summary>
     public const string Schema = "ctms";
 
-    private const string DefaultDesignTimeConnectionString =
-        "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password";
-
     public CtmsDbContext CreateDbContext(string[] args)
     {
-        var connectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING") is { Length: > 0 } configured
-            ? configured
-            : DefaultDesignTimeConnectionString;
+        var connectionString = CadenceDatabaseExtensions.ResolveDesignTimeConnectionString(args);
 
         var optionsBuilder = new DbContextOptionsBuilder<CtmsDbContext>()
             .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, Schema));

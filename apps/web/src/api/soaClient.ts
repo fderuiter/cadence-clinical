@@ -1,30 +1,7 @@
 import { openApiClient, unwrapResponse } from "./client";
-import { generateGatewaySignature } from "ui";
 import type { paths } from "./types";
 
 export const soaClient = {
-  /**
-   * Helper to sign request headers for GxP validation of identity.
-   */
-  async getSignedHeaders(changeReason = "") {
-    const timestamp = String(Math.floor(Date.now() / 1000));
-    const signature = await generateGatewaySignature(
-      "usr_dm_fderuiter",
-      "data_manager",
-      timestamp,
-      "2",
-      changeReason,
-      "internal-gateway-secret-12345"
-    );
-    return {
-      "X-User-Id": "usr_dm_fderuiter",
-      "X-User-Roles": "data_manager",
-      "X-Gateway-Timestamp": timestamp,
-      "X-Gateway-Signature": signature,
-      "X-Signature-Version": "2",
-    };
-  },
-
   /**
    * Fetches the complete SoA matrix projection for a given study and version.
    */
@@ -34,7 +11,6 @@ export const soaClient = {
     options: { changeReason?: string } = {}
   ) {
     const { changeReason = "Get projection" } = options;
-    const signedHeaders = await this.getSignedHeaders(changeReason);
     return unwrapResponse(
       openApiClient.GET(
         "/api/v1/studies/{study_id}/versions/{version_id}/soa-projection",
@@ -45,10 +21,7 @@ export const soaClient = {
               version_id: versionId,
             },
           },
-          headers: {
-            ...signedHeaders,
-            "X-Change-Reason": changeReason,
-          },
+          headers: { "X-Change-Reason": changeReason },
         }
       )
     );

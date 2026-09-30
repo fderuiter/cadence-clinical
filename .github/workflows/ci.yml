@@ -269,6 +269,17 @@ jobs:
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check clean-secrets
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check security
 
+      - name: Run detect-secrets against the baseline
+        id: run_detect_secrets
+        if: always()
+        env:
+          BASE_REF: ${{ github.base_ref || 'main' }}
+        run: | # pragma: allowlist secret
+          pip install --quiet detect-secrets==1.5.0
+          git fetch --no-tags origin "$BASE_REF"
+          git diff --name-only --diff-filter=ACMR -z "origin/$BASE_REF...HEAD" \
+            | xargs -0 --no-run-if-empty detect-secrets-hook --baseline .secrets.baseline
+
       - name: Run DEID compliance scan
         id: run_deid_scan
         if: always()

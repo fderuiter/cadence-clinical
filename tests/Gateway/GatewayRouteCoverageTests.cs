@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 using Cadence.UnitTests.Execution;
 
@@ -99,7 +100,7 @@ public sealed class GatewayRouteCoverageTests
     private static async Task<IReadOnlyList<string>> MappedPaths<TProgram>()
         where TProgram : class
     {
-        await using var factory = new WebApplicationFactory<TProgram>().WithWebHostBuilder(host => host.UseTestGatewaySecret());
+        await using var factory = new WebApplicationFactory<TProgram>().WithWebHostBuilder(host => host.UseTestGatewaySecret().UseTestPostgresConnectionString());
         return PathsOf(factory.Services);
     }
 
