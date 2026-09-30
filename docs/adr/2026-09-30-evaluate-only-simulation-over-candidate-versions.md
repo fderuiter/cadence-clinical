@@ -37,8 +37,9 @@ every kernel table, every bitemporal guard and every read.
   not read directly (K-AUTH-4, K-IDN-1, K-AI-3).
 - **Part 11.** Simulation results that inform a decision need to be reproducible and attributable. Exploring a
   change must not create audit noise in the tenant chain.
-- **Requirements:** PRD-MDR-004 (semantic protocol amendment diffing), PRD-MDR-006 (blinding constraints on
-  UI data rendering).
+- **Requirements:** PRD-MDR-002 (an amendment is a new version that leaves the active one untouched), PRD-MDR-006
+  (blinding constraints on UI data rendering). An earlier revision of this ADR cited PRD-MDR-004, which is crossover
+  period sequencing, not amendment diffing.
 - **Cost.** Every kernel table, guard and query should not grow a branch dimension for a feature the UI needs
   only for versioned specifications.
 
@@ -157,6 +158,35 @@ over Proposals**. The kernel provides the Proposal, the saved result Artifact an
 review workflow and its comment threads are application state, as spec §12 says for authoring drafts. This
 answers Canvas doc §9 open question 3.
 
+### 4.6 First implementation slice (#4866)
+
+The first slice implements the contract for protocol candidates with the structural diff only. It settles these
+details:
+
+- **Candidates.** A stored protocol version is compared with the version it was forked from; a study's first version
+  has no base, so every element is added. Unsaved content is compared with a named base whose content is frozen (in
+  review or later), so the comparison can be repeated.
+- **Scope.** The scope of a protocol candidate is its study. `simulation.run` is checked there through
+  `IAuthorizationProbe` (ADR-2483), the same path as `CanI`.
+- **Element identity (K-PROT-1).** An element is any JSON object with a non-empty string `id`, the CDISC USDM
+  convention. Ids are unique within a version; a repeated id fails the run. A root without an id is the element
+  `$root`. Each element is compared on its own values: a nested element is replaced in its parent by a reference to
+  its id, so a change inside a child is reported once, on the child. The parent changes only when children are added,
+  removed or reordered. Changed values are listed as JSON Pointers; arrays are compared whole. Executable protocol
+  elements (#4808) will give elements types but keep `id` as the key.
+- **Pinning (K-SIM-2).** Protocol versions are not bitemporal. Their content is pinned by content hash instead: a
+  frozen version's hash is stored, and a draft's hash is computed when it is read. The as-of is still recorded and
+  hashed, so later sections that read bitemporal state share it.
+- **Hashes (K-SIM-3).** The input hash covers the as-of, the candidate and base references with their content hashes,
+  the engine versions and the masked parts. The result hash covers every field of the result except itself. Both are
+  canonical-JSON SHA-256 (`ContentHash`).
+- **Masking (K-SIM-4).** The study and both versions are passed to `INodeVisibility` once. If any is hidden, the diff
+  is withheld as a masked part with the reason, the references and content hashes are left out, and the hashes are
+  computed from the mask instead of the content. A hidden change therefore cannot change what the reader sees.
+  Element-level masking (arm-derived schedule and projection changes) comes with those sections.
+- **Errors.** Unknown versions, a draft base, content that is not a JSON object and repeated element ids are
+  `K.Simulation.*` errors. A denial is `K.Authorization.Denied` with the evaluator's explanation.
+
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:** the Simulate verb gets a kernel contract without any change to the write path. Simulation
@@ -171,7 +201,9 @@ answers Canvas doc §9 open question 3.
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** kernel specification §11.1 (K-SIM-1..5) and §17 (K011); Canvas doc D4.
-  No code in this decision. The simulation engine is tracked in #4866, which depends on #4783
+  The first slice (§4.6) is `Cadence.Kernel.Simulation` (contract), `Cadence.Kernel.Application.Simulation`
+  (`SimulationEngine`, `ProtocolStructuralDiff`, the `ISimulationInputs` port) and
+  `Cadence.Kernel.Persistence.Simulation` (`KernelSimulationInputs`). The simulation engine is tracked in #4866, which depends on #4783
   (Proposal), #4808 (protocol elements), #4811 (rules as data) and #4814 (SDTM projection).
 - **Verification Plan:** when the engine is built, its tests must show:
   - an architecture test that the simulation assembly or namespace does not depend on `IKernelCommandSender`,

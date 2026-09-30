@@ -139,7 +139,7 @@ _Avoid_: serving kernel reads from a product service, taking the tenant from the
 
 ### Simulation (candidate version)
 
-Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal.
+Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal. The first function built is the structural diff of a protocol version against its base, element by stable `id` (`ISimulationEngine`).
 
 ### Concept Registry
 
