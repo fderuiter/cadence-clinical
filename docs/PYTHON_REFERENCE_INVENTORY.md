@@ -78,7 +78,7 @@ profile-based filtering (GDPR vs HIPAA).
 | --- | --- | --- | --- | --- |
 | `derived/engine.py` | Derived-variable math engine with unit normalisation and plausibility ranges | none | Port missing |  |
 | `derived/models.py` | Formula, plausibility and result models | none | Port missing |  |
-| `financial/contracts.py` | Tiered overhead, payee splits, line-item hash (Decimal) | none (`apps/payments/src/Domain/PaymentEntities.cs` holds entities only; `tests/Payments/PaymentDecimalCalculationTests.cs` computes inline) | Port missing |  |
+| `financial/contracts.py` | Tiered overhead, payee splits, line-item hash (Decimal) | none (`apps/payments/src/Domain/PaymentEntities.cs` holds entities only; `tests/Cadence.UnitTests/Payments/PaymentDecimalCalculationTests.cs` computes inline) | Port missing |  |
 | `financial/engine.py` | Event-triggered payable engine | none | Port missing |  |
 | `financial/ledger.py` | Payable ledger with holdback reserve accounting | none | Port missing |  |
 | `financial/models.py` | Fee matrix, grant contract, payable models | entity shapes only in `apps/payments` | Port missing |  |

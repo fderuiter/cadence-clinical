@@ -22,12 +22,12 @@ Implementation library behind the Cadence CLI: repository validators, generators
 
 ## Referenced by
 
-[packages/cli](../cli/README.md), `Cadence.OpenApiExporter`, `apps/gateway` (project reference only; no gateway code uses it), `tests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests.csproj`.
+[packages/cli](../cli/README.md), `Cadence.OpenApiExporter`, `apps/gateway` (project reference only; no gateway code uses it), `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`.
 
 ## Tests
 
-Covered by `tests/Packages/PortedPackagesUnitTests.cs` and `tests/Packages/DeidEngineUnitTests.cs`:
+Covered by `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs` and `tests/Cadence.UnitTests/Packages/DeidEngineUnitTests.cs`:
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests"
 ```

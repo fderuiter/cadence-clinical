@@ -18,10 +18,10 @@ De-identification library: PII/PHI detection with compliance profiles, value tra
 
 ## Referenced by
 
-`packages/compliance`, `tests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests.csproj`. No application references it directly.
+`packages/compliance`, `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`. No application references it directly.
 
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests"
 ```

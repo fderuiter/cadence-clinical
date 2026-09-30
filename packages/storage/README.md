@@ -21,8 +21,8 @@ The three test projects only. No service uses it yet (including [apps/fileshare]
 
 ## Tests
 
-Covered by `tests/Packages/PortedPackagesUnitTests.cs`:
+Covered by `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`:
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
 ```

@@ -32,8 +32,8 @@ None. Neo4j is retired ([ADR-2245](../../docs/adr/2026-09-29-native-postgresql-p
 
 ## Tests
 
-- No service-specific tests. The compiler it calls is covered by `tests/Packages/DdfCompilerTests.cs`: `dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"`.
-- Architecture rules: `dotnet test tests/Cadence.ArchitectureTests.csproj`.
+- No service-specific tests. The compiler it calls is covered by `tests/Cadence.UnitTests/Packages/DdfCompilerTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"`.
+- Architecture rules: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

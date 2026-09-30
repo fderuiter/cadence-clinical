@@ -52,7 +52,7 @@ scripts/manage_migrations.sh script <service>   # or scripts/manage_migrations.p
 After changing an entity or its configuration, run `pnpm cadence generate-schema-doc` and commit `docs/schema`; the
 `schema-doc` gate in `pnpm cadence check` and CI fails while it is out of date.
 
-`tests/Packages/MigrationUnitTests.cs` fails when a DbContext model has changes that no migration captures, which
+`tests/Cadence.UnitTests/Packages/MigrationUnitTests.cs` fails when a DbContext model has changes that no migration captures, which
 would otherwise surface as `PendingModelChangesWarning` at deploy time.
 
 ---
@@ -60,5 +60,5 @@ would otherwise surface as `PendingModelChangesWarning` at deploy time.
 ## Local Development & Testing
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages"
 ```

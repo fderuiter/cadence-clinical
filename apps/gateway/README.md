@@ -70,7 +70,7 @@ Each route forwards a whole path prefix to one service. Service addresses come f
 Development a missing address defaults to `http://localhost:<port>` (the ports in
 [docs/LOCAL_DEV_ENVIRONMENT.md](../../docs/LOCAL_DEV_ENVIRONMENT.md)); in any other environment the gateway refuses to
 start without it. An address that is not an absolute http or https URL fails startup everywhere
-(`tests/Gateway/GatewayServiceUrlValidationTests.cs`).
+(`tests/Cadence.UnitTests/Gateway/GatewayServiceUrlValidationTests.cs`).
 
 | Path prefix | Service | Address key |
 | --- | --- | --- |
@@ -96,7 +96,7 @@ start without it. An address that is not an absolute http or https URL fails sta
 | `/api/v1/payments/**` | payments | `PAYMENTS_SERVICE_URL` |
 | `/api/v1/ai/**` | ai-gateway | `AI_GATEWAY_SERVICE_URL` |
 
-`tests/Gateway/GatewayRouteCoverageTests.cs` boots the gateway and every service and fails when a route leads to a
+`tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` boots the gateway and every service and fails when a route leads to a
 prefix its service does not map, or when a service maps an `/api/v1` endpoint no route reaches. Add or remove a
 route in `src/Program.cs` together with the endpoints it serves
 ([ADR-2448](../../docs/adr/2026-09-29-gateway-routes-verified-against-service-endpoints.md)).
@@ -126,5 +126,5 @@ to the proxy's address; otherwise every caller behind the proxy shares one limit
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Gateway"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Gateway"
 ```

@@ -9,8 +9,8 @@ in [AGENTS.md](AGENTS.md) and apply to everyone, human or AI agent.
 | --- | --- |
 | Set up a new machine | `make wizard` |
 | Build | `dotnet build Cadence.sln` |
-| Unit tests | `dotnet test tests/Cadence.UnitTests.csproj` |
-| Architecture tests | `dotnet test tests/Cadence.ArchitectureTests.csproj` |
+| Unit tests | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` |
+| Architecture tests | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
 | Format check | `dotnet format Cadence.sln --verify-no-changes` |
 | All quality gates | `pnpm cadence check` |
 | Auto-fix | `pnpm cadence fix` |
@@ -67,8 +67,8 @@ The pre-commit hook (`.githooks/pre-commit`) runs `dotnet format --verify-no-cha
 
 ```bash
 dotnet build Cadence.sln
-dotnet test tests/Cadence.UnitTests.csproj
-dotnet test tests/Cadence.ArchitectureTests.csproj
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
+dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 dotnet format Cadence.sln --verify-no-changes
 pnpm cadence check
 ```
@@ -96,7 +96,10 @@ description.
 
 ## 4. Tests and requirement traceability
 
-- Tests live in `tests/`, organised by area (`tests/Execution`, `tests/Kernel`, `tests/Gateway`, …).
+- Tests live in `tests/`, one folder per project: `Cadence.UnitTests` (no database), `Cadence.IntegrationTests`
+  (real PostgreSQL), `Cadence.ArchitectureTests` and `Cadence.E2ETests`, each organised by area
+  (`tests/Cadence.UnitTests/Execution`, `tests/Cadence.UnitTests/Kernel`, …). Shared fakes go in
+  `tests/Cadence.TestSupport` ([docs/TESTING.md](docs/TESTING.md#test-projects)).
   Use xUnit v3 and FluentAssertions, and the helpers in `packages/testing`
   ([AGENTS.md pattern 7](AGENTS.md#7-test-infrastructure-packagestesting)).
 - A test that verifies a requirement carries both an `@req:<ID>` tag in its XML doc comment and a

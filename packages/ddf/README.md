@@ -17,10 +17,10 @@ Digital Data Flow compiler. It turns a CDISC USDM study (JSON) or a kernel `Prot
 
 ## Referenced by
 
-[apps/designer](../../apps/designer/README.md) (`POST /api/v1/protocols/compile`), `tests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests.csproj`.
+[apps/designer](../../apps/designer/README.md) (`POST /api/v1/protocols/compile`), `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`.
 
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"
 ```

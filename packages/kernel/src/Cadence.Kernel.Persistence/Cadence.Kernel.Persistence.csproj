@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Cadence.UnitTests" />
+    <InternalsVisibleTo Include="Cadence.IntegrationTests" />
+    <InternalsVisibleTo Include="Cadence.TestSupport" />
     <InternalsVisibleTo Include="Cadence.ArchitectureTests" />
   </ItemGroup>
 

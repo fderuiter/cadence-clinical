@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cadence.UnitTests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- MIG-SUBJ-023: Microsoft.AspNetCore.OpenApi's XML-comment source generator flows transitively into
+         this project via the Cadence.Apps.Execution project reference (that package is not PrivateAssets
+         there), but the InterceptorsNamespaces opt-in its own package props would normally inject applies
+         only to a project referencing it directly, so this project needs the same opt-in explicitly,
+         exactly as the compiler's own CS9137 error names it. -->
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\packages\engine_core\src\Cadence.Core.Domain.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Application\Cadence.Kernel.Application.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Api\Cadence.Kernel.Api.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Standards\Cadence.Standards.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Rules\Cadence.Rules.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\benchmarks\Cadence.Rules.Benchmarks\Cadence.Rules.Benchmarks.csproj" />
+    <ProjectReference Include="..\..\packages\security\src\Cadence.Security.csproj" />
+    <ProjectReference Include="..\..\packages\testing\src\Cadence.Testing.csproj" />
+    <ProjectReference Include="..\Cadence.TestSupport\Cadence.TestSupport.csproj" />
+    <ProjectReference Include="..\..\apps\payments\src\Cadence.Apps.Payments.csproj" />
+    <ProjectReference Include="..\..\apps\econsent\src\Cadence.Apps.Econsent.csproj" />
+    <ProjectReference Include="..\..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\..\apps\apphost\src\Cadence.AppHost.csproj" />
+    <ProjectReference Include="..\..\apps\gateway\src\Cadence.Apps.Gateway.csproj" />
+    <ProjectReference Include="..\..\apps\designer\src\Cadence.Apps.Designer.csproj" />
+    <ProjectReference Include="..\..\apps\ai_gateway\src\Cadence.Apps.AiGateway.csproj" />
+    <ProjectReference Include="..\..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
+    <ProjectReference Include="..\..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
+    <ProjectReference Include="..\..\apps\quality\src\Cadence.Apps.Quality.csproj" />
+    <ProjectReference Include="..\..\apps\fileshare\src\Cadence.Apps.Fileshare.csproj" />
+    <ProjectReference Include="..\..\apps\eisf\src\Cadence.Apps.Eisf.csproj" />
+    <ProjectReference Include="..\..\apps\imaging\src\Cadence.Apps.Imaging.csproj" />
+    <ProjectReference Include="..\..\apps\interop\src\Cadence.Apps.Interop.csproj" />
+    <ProjectReference Include="..\..\apps\knowledge\src\Cadence.Apps.Knowledge.csproj" />
+    <ProjectReference Include="..\..\apps\notifications\src\Cadence.Apps.Notifications.csproj" />
+    <ProjectReference Include="..\..\apps\org\src\Cadence.Apps.Org.csproj" />
+    <ProjectReference Include="..\..\apps\safety\src\Cadence.Apps.Safety.csproj" />
+    <ProjectReference Include="..\..\apps\tickets\src\Cadence.Apps.Tickets.csproj" />
+    <ProjectReference Include="..\..\packages\database\src\Cadence.Database.csproj" />
+    <ProjectReference Include="..\..\packages\compliance\src\Cadence.Compliance.csproj" />
+    <ProjectReference Include="..\..\packages\deid\src\Cadence.Deid.csproj" />
+    <ProjectReference Include="..\..\packages\ddf\src\Cadence.Ddf.csproj" />
+    <ProjectReference Include="..\..\packages\hexagonal\src\Cadence.Hexagonal.csproj" />
+    <ProjectReference Include="..\..\packages\sentinels\src\Cadence.Sentinels.csproj" />
+    <ProjectReference Include="..\..\packages\storage\src\Cadence.Storage.csproj" />
+    <ProjectReference Include="..\..\packages\tooling_core\src\Cadence.ToolingCore.csproj" />
+    <ProjectReference Include="..\..\packages\cli\src\Cadence.Cli.csproj" />
+    <ProjectReference Include="..\..\packages\core-models\src\Cadence.CoreModels.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="NSubstitute" />
+    <!-- MIG-SUBJ-023: WebApplicationFactory<Program>/TestServer for SubjectEndpointsRoutingTests. -->
+    <PackageReference Include="Aspire.Hosting.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <!-- MIG-SUBJ-021: MassTransit.Testing.ITestHarness for EConsentCompletedConsumerTests. -->
+    <PackageReference Include="MassTransit" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+</Project>

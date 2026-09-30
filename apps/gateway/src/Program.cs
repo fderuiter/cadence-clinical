@@ -120,7 +120,7 @@ string knowledgeUrl = GetServiceUrl("KNOWLEDGE_SERVICE_URL", 8015);
 string paymentsUrl = GetServiceUrl("PAYMENTS_SERVICE_URL", 8016);
 string aiGatewayUrl = GetServiceUrl("AI_GATEWAY_SERVICE_URL", 8017);
 
-// Every route must lead to paths its service maps; tests/Gateway/GatewayRouteCoverageTests.cs checks both directions.
+// Every route must lead to paths its service maps; tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs checks both directions.
 var routes = new[]
 {
     new RouteConfig { RouteId = "designer-route", ClusterId = "designer-cluster", Match = new RouteMatch { Path = "/api/v1/studies/{**catch-all}" } },

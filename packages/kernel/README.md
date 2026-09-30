@@ -16,7 +16,7 @@ As formalized in [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-mo
 
 ## Assemblies
 
-Dependencies point inward only (spec §2.4, enforced by `tests/Architecture/KernelLayeringTests.cs`):
+Dependencies point inward only (spec §2.4, enforced by `tests/Cadence.ArchitectureTests/Architecture/KernelLayeringTests.cs`):
 
 - `Cadence.Kernel.Abstractions`: strongly-typed UUIDv7 IDs (`TenantId`, `StudyId`, `ParticipantId`, …), `IClock`, serialization contexts, and the command contracts (`ICommand<T>`, `IKernelCommandSender`, `Actor`, `KernelErrors`, event records). No EF Core, ASP.NET Core or rendering. Application modules reference only this assembly (K-XS-2).
 - `Cadence.Kernel.Domain`: kernel aggregates, state machines and temporal logic. Pure: no EF Core, ASP.NET Core or Npgsql.
@@ -243,7 +243,7 @@ To add a command:
    aggregate through `context.Work` (a second throws, K-TX-1), decide, `Raise` events, declare the aggregate's
    inputs with `LinkInput` (see [Lineage](#lineage-adr-2471)), return a `CommandResult`. Never save.
 3. Register the handler in `AddKernelCommandPipeline()`.
-4. Test it through the pipeline in `tests/Kernel/Integration` (see `KernelCommandPipelinePostgresTests`).
+4. Test it through the pipeline in `tests/Cadence.UnitTests/Kernel/Integration` (see `KernelCommandPipelinePostgresTests`).
 
 A host registers `AddKernelPersistence(appRoleConnectionString)`, `AddKernelCommandPipeline()`, an `IClock`, an
 `ICurrentActor`, an `IAuthorizer`, an `INodeVisibility` and logging; the container fails to resolve the sender or the
@@ -401,10 +401,10 @@ server works, e.g. an apt-installed PostgreSQL 16):
 
 ```bash
 CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres" \
-  dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Kernel.Integration"
+  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Kernel.Integration"
 ```
 
-The fixture (`tests/Kernel/Integration/KernelPostgresFixture.cs`) creates a throwaway database, applies the kernel
+The fixture (`tests/Cadence.IntegrationTests/Kernel/KernelPostgresFixture.cs`) creates a throwaway database, applies the kernel
 migrations as the superuser, creates an application login role with `KernelDatabase.GrantAppRoleSql`, wires the
 command pipeline for that role as a host does (with a settable actor and authorizer), and drops the database and role
 afterwards, so every pipeline test runs under Row-Level Security. `CreateContext(tenant)` reads as that role;

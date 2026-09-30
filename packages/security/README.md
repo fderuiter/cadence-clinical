@@ -39,7 +39,7 @@ signatures and audit digests shared by every Cadence service.
 Object keys sorted by ordinal (UTF-16 code unit) order, no whitespace, and only the escapes JSON
 requires (`"`, `\`, control characters). `<`, `>`, `&`, `'` and non-ASCII text are written literally.
 This is byte-for-byte `canonicalSerialize` in `packages/ui/signing.js`, so signatures verify across
-.NET and JavaScript; a known-answer vector in `tests/Packages/SignerUnitTests.cs` pins it.
+.NET and JavaScript; a known-answer vector in `tests/Cadence.UnitTests/Packages/SignerUnitTests.cs` pins it.
 
 ---
 
@@ -79,5 +79,5 @@ Tests take keys from `Cadence.Testing.Security.TestFieldProtection`, never from 
 ## Local Development & Testing
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Security|FullyQualifiedName~Signer|FullyQualifiedName~Gateway"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Security|FullyQualifiedName~Signer|FullyQualifiedName~Gateway"
 ```

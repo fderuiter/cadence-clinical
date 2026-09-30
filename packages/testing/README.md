@@ -19,7 +19,7 @@ Shared test infrastructure for the .NET test projects.
 
 ## Referenced by
 
-`tests/Cadence.UnitTests.csproj`, `tests/Cadence.ArchitectureTests.csproj`, `tests/Cadence.E2ETests.csproj`.
+`tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`.
 
 ## Tests
 

@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Test doubles and fixtures shared by the unit and integration test projects. Not a test project: it holds no
+       tests. Helpers that need no application reference belong in packages/testing (Cadence.Testing) instead. -->
+  <PropertyGroup>
+    <RootNamespace>Cadence.TestSupport</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
+    <InternalsVisibleTo Include="Cadence.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
+    <ProjectReference Include="..\..\packages\kernel\src\Cadence.Rules\Cadence.Rules.csproj" />
+    <ProjectReference Include="..\..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
+    <ProjectReference Include="..\..\apps\econsent\src\Cadence.Apps.Econsent.csproj" />
+    <ProjectReference Include="..\..\apps\eisf\src\Cadence.Apps.Eisf.csproj" />
+    <ProjectReference Include="..\..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
+    <ProjectReference Include="..\..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\..\apps\fileshare\src\Cadence.Apps.Fileshare.csproj" />
+    <ProjectReference Include="..\..\apps\imaging\src\Cadence.Apps.Imaging.csproj" />
+    <ProjectReference Include="..\..\apps\interop\src\Cadence.Apps.Interop.csproj" />
+    <ProjectReference Include="..\..\apps\knowledge\src\Cadence.Apps.Knowledge.csproj" />
+    <ProjectReference Include="..\..\apps\notifications\src\Cadence.Apps.Notifications.csproj" />
+    <ProjectReference Include="..\..\apps\org\src\Cadence.Apps.Org.csproj" />
+    <ProjectReference Include="..\..\apps\payments\src\Cadence.Apps.Payments.csproj" />
+    <ProjectReference Include="..\..\apps\quality\src\Cadence.Apps.Quality.csproj" />
+    <ProjectReference Include="..\..\apps\safety\src\Cadence.Apps.Safety.csproj" />
+    <ProjectReference Include="..\..\apps\tickets\src\Cadence.Apps.Tickets.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Pins EF Core Relational to the central version; see InMemorySubjectRepository for the conflict it avoids. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+</Project>

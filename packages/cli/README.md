@@ -39,7 +39,7 @@ Validation commands such as `validate-readmes`, `validate-markdown`, `validate-i
 
 ## Referenced by
 
-`tests/Cadence.ArchitectureTests.csproj` (for architecture scanning). No application references it.
+`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (for architecture scanning). No application references it.
 
 ## Native AOT
 
@@ -49,8 +49,8 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
 
 ## Tests
 
-- `tests/Packages/CliCommandLineTests.cs`: parses the documented invocations with `Program.BuildRootCommand()` and
+- `tests/Cadence.UnitTests/Packages/CliCommandLineTests.cs`: parses the documented invocations with `Program.BuildRootCommand()` and
   checks that unknown input, missing arguments and bare groups are rejected and that every command has an action and
   a description.
-- `tests/Packages/CliDocsParityTests.cs`: the `cli-docs` gate's command discovery.
-- Architecture rules cover the assembly: `dotnet test tests/Cadence.ArchitectureTests.csproj`.
+- `tests/Cadence.UnitTests/Packages/CliDocsParityTests.cs`: the `cli-docs` gate's command discovery.
+- Architecture rules cover the assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.

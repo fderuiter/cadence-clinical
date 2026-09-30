@@ -53,8 +53,8 @@ refuses to encrypt or decrypt.
 
 ## Tests
 
-- `tests/Payments/PaymentDecimalCalculationTests.cs`: `dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Payments"`.
-- Architecture rules (`tests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests.csproj`.
+- `tests/Cadence.UnitTests/Payments/PaymentDecimalCalculationTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Payments"`.
+- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

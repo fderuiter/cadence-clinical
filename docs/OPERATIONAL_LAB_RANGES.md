@@ -259,7 +259,7 @@ Verify that migrations were completed correctly by querying the columns metadata
 
 ```bash
 # Verify with the execution observation tests
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution.Observations"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution.Observations"
 ```
 
 ---

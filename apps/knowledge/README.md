@@ -35,7 +35,7 @@ Knowledge base scaffold. It holds the article, article version, category, contex
 ## Tests
 
 - No service-specific tests exist yet.
-- Architecture rules (`tests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests.csproj`.
+- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

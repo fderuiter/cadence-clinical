@@ -31,8 +31,8 @@ It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install`,
 ```bash
 dotnet restore Cadence.sln
 dotnet build Cadence.sln                          # warnings are errors
-dotnet test tests/Cadence.UnitTests.csproj
-dotnet test tests/Cadence.ArchitectureTests.csproj
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
+dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 pnpm install
 ```
 
@@ -41,10 +41,10 @@ PostgreSQL integration tests are skipped unless you provide a server:
 ```bash
 # an existing server
 CADENCE_TEST_POSTGRES="Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=cadence_test" \
-  dotnet test tests/Cadence.UnitTests.csproj --filter "Category=Integration"
+  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "Category=Integration"
 
 # or a throwaway container
-CADENCE_TEST_DOCKER=1 dotnet test tests/Cadence.UnitTests.csproj --filter "Category=Integration"
+CADENCE_TEST_DOCKER=1 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "Category=Integration"
 ```
 
 ## 3. Run the platform

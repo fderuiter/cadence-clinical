@@ -24,5 +24,5 @@ Every .NET service under `apps/` except the AppHost.
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.TelemetryUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.LoggerMessageGeneratorTests|FullyQualifiedName~Cadence.UnitTests.Packages.HttpHardeningTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.TelemetryUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.LoggerMessageGeneratorTests|FullyQualifiedName~Cadence.UnitTests.Packages.HttpHardeningTests"
 ```

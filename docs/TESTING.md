@@ -8,14 +8,20 @@ requirement as qualified.
 
 | Project | What it holds | Run it with |
 | --- | --- | --- |
-| `tests/Cadence.UnitTests.csproj` | Unit and component tests for services and packages. The Postgres integration tests under `tests/Integration/`, `tests/Execution/Integration/` and `tests/Kernel/Integration/` live here too. | `dotnet test tests/Cadence.UnitTests.csproj` |
-| `tests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, and the architecture sentinels. | `dotnet test tests/Cadence.ArchitectureTests.csproj` |
-| `tests/Cadence.E2ETests.csproj` | Black-box HTTP tests against the execution service through `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests.csproj` |
+| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database. | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` |
+| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj` | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`. | `dotnet cadence test --integration` |
+| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, suppression and test-layout policies, and the architecture sentinels. | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj` | Black-box HTTP tests against the execution service through `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj` |
 | `packages/ui/tests/` | Vitest suite for the shared JavaScript signing and UI helpers. | `pnpm --filter ui test` |
 | `apps/web/tests/` | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` are excluded. | `pnpm --filter web test` |
 
-`dotnet test Cadence.sln` runs all three .NET projects. `dotnet cadence test --fast` is the quick loop, and
-`make verify` runs the quality gates plus every suite before you open a PR.
+`dotnet test Cadence.sln` runs all four .NET test projects. `dotnet cadence test --fast` is the quick loop (every
+project, `Category!=Integration`), and `make verify` runs the quality gates plus every suite before you open a PR.
+
+Each project owns its folder under `tests/` and compiles nothing outside it, so every test runs exactly once.
+Fakes and fixtures that both the unit and integration projects need live in `tests/Cadence.TestSupport`, a class
+library with no tests. Helpers that need no application reference belong in `packages/testing` instead.
+`TestLayoutTests` in the architecture project enforces this.
 
 GitHub Actions minutes are not always available, so run the suites locally before pushing rather than
 relying on CI.
@@ -44,14 +50,14 @@ dotnet test Cadence.sln
 
 These tests currently use it:
 
-- `tests/Execution/Integration/` (`ExecutionPostgresFixture`): enrollment index concurrency, the audit chain
+- `tests/Cadence.IntegrationTests/Execution/` (`ExecutionPostgresFixture`): enrollment index concurrency, the audit chain
   round trip, and migrations.
-- `tests/Kernel/Integration/` (`KernelPostgresFixture`): the kernel schema, bitemporal guards and the command
+- `tests/Cadence.IntegrationTests/Kernel/` (`KernelPostgresFixture`): the kernel schema, bitemporal guards and the command
   pipeline. This fixture honours only `CADENCE_TEST_POSTGRES`.
-- `tests/Integration/` (`ThrowawayPostgresDatabase`): every service's migrations applied the way a deployed
+- `tests/Cadence.IntegrationTests/Database/` (`ThrowawayPostgresDatabase`): every service's migrations applied the way a deployed
   service applies them, into one shared database, checking that each service's tables and migration history
   land in its own schema (ADR-2247).
-- `tests/E2E/` (`ExecutionE2EFactory`): write paths that enroll a subject. Read and routing tests run on
+- `tests/Cadence.E2ETests/E2E/` (`ExecutionE2EFactory`): write paths that enroll a subject. Read and routing tests run on
   the in-memory provider when no database is configured. Tests that write call
   `factory.SkipUnlessPostgres()`.
 
