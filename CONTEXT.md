@@ -101,6 +101,10 @@ The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users w
 
 The public reference to any kernel object: `kind:id@version`, for example `study_site:<uuid>@3` (ADR-2481). It is the one form used in URLs, the command palette, trace links, event envelopes and lineage edges. The kernel computes the object's zoom path from it (portfolio, study, country, study site, participant); a participant with no responsible site sits directly under its study. The zoom path is presentation only and never grants access.
 
+### Explanation
+
+The kernel's answer to "why": why an action is permitted or denied, why an object is in its state, why a finding was raised or a metric has its value (ADR-2482). It holds a one-sentence claim, reasoning steps, every condition evaluated (met and unmet) with the evidence behind it as NodeRefs, and what would change the outcome. The component that owns the rule produces it; the UI renders it and never composes one.
+
 ### Simulation (candidate version)
 
 Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal.

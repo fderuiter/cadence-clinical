@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Core.Domain;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Explanations;
+using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Application.Commands;
 
@@ -28,13 +32,36 @@ public interface IAuthorizer
 }
 
 /// <summary>
-/// An authorization outcome. A denial names what is missing (K-AUTH-6) and is audited (K-AUTH-2).
+/// An authorization outcome. A denial names what is missing (K-AUTH-6) and is audited with the conditions it was
+/// decided on (K-AUTH-2). <see cref="Conditions"/> lists every condition the evaluator checked, met and unmet, each
+/// with its evidence, so the decision can be explained without re-deriving it (ADR-2482).
 /// </summary>
 public sealed record AuthorizationDecision(bool Permitted, string? Reason = null)
 {
-    public static AuthorizationDecision Permit(string? reason = null) => new(true, reason);
+    /// <summary>Producer name on explanations of authorization decisions.</summary>
+    public const string ExplanationProducer = "kernel.authorization";
 
-    public static AuthorizationDecision Deny(string reason) => new(false, reason);
+    /// <summary>Every condition the evaluator checked, met and unmet. Empty when it reported none.</summary>
+    public IReadOnlyList<EvaluatedCondition> Conditions { get; init; } = [];
+
+    public static AuthorizationDecision Permit(string? reason = null, params EvaluatedCondition[] conditions) =>
+        new(true, reason) { Conditions = conditions };
+
+    public static AuthorizationDecision Deny(string reason, params EvaluatedCondition[] conditions) =>
+        new(false, reason) { Conditions = conditions };
+
+    /// <summary>
+    /// The decision as an <see cref="Explanation"/> (ADR-2482 §4.3): the claim says whether <paramref name="action"/>
+    /// is permitted and why, the conditions are the evaluator's, and each unmet condition becomes a next action.
+    /// </summary>
+    public Explanation Explain(string action, NodeRef? subject = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(action);
+        var claim = Permitted ? $"{action} is permitted." : $"{action} is not permitted.";
+        var steps = Reason is null ? [] : new[] { new ExplanationStep(Reason, [.. Conditions.SelectMany(c => c.Evidence).Distinct()]) };
+        var next = Conditions.Where(c => !c.Met).Select(c => new NextAction(c.Description)).ToArray();
+        return new Explanation(subject, claim, ExplanationProducer, steps, Conditions, next);
+    }
 }
 
 /// <summary>
@@ -113,8 +140,11 @@ public interface IKernelCommandTransaction : IAsyncDisposable
     /// </summary>
     Task<CommitOutcome> CommitAsync(string resultJson, CancellationToken cancellationToken);
 
-    /// <summary>Records an authorization denial as its own audit entry and event (K-AUTH-2).</summary>
-    Task RecordDenialAsync(string reason, CancellationToken cancellationToken);
+    /// <summary>
+    /// Records an authorization denial as its own audit entry and event, with the reason and the conditions it was
+    /// decided on (K-AUTH-2).
+    /// </summary>
+    Task RecordDenialAsync(AuthorizationDecision denial, CancellationToken cancellationToken);
 }
 
 /// <summary>A result previously stored under the same tenant and idempotency key.</summary>
