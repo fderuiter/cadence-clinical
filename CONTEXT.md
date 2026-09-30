@@ -314,7 +314,8 @@ A regulatory compliance lock applied to clinical trial documents, regulatory bin
 
 ### Persona Context Switching
 
-A multi-tenant role simulation and test harness pattern that allows authorized users or automated verification suites to switch execution contexts dynamically across distinct clinical personas (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) without session corruption, validating role-based authorization gates, PII de-identification masks, and golden path workflows.
+A workspace-view pattern that lets a signed-in user switch between the clinical personas (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) their Keycloak token roles entitle, changing the workspace, help content and onboarding tour without changing roles. Automated suites switch persona by signing in as a different Keycloak user.
+_Avoid_: Persona switches that replace the token's roles or grant roles the user was not issued
 
 ### Bi-Directional DDF Compilation
 
@@ -831,8 +832,13 @@ _Avoid_: Stalled un-transitioned document states after indexing completion
 
 ### Demo Mode Client Gating
 
-A runtime feature-toggling pattern in `apps/web` and `apps/subject-portal` that isolates client-side mock datasets and offline demo states behind an explicit `VITE_DEMO_MODE=true` environment flag, ensuring live and staging environments raise visible RFC 7807 error toasts on network or API failures.
+A runtime feature-toggling pattern in `apps/web` and `apps/subject-portal` that isolates client-side mock datasets and offline demo states behind an explicit `VITE_DEMO_MODE=true` environment flag, ensuring live and staging environments raise visible RFC 7807 error toasts on network or API failures. In `apps/web` only a demo build may sign in the offline demo identity; every other build signs in through Keycloak (see Keycloak-Only Web Sign-In).
 _Avoid_: Silent catch-and-fallback to mock data masking production network errors
+
+### Keycloak-Only Web Sign-In
+
+The `apps/web` authentication model: the SPA signs in only through Keycloak as a public OIDC client (authorization code + PKCE S256, `check-sso` session restore), keeps tokens in memory, refreshes them before expiry, and attaches them as `Authorization: Bearer` in one place (`src/api/authorization.js`). Identity and roles come only from the token; signed-out users are sent to the sign-in page. The compile-time demo build is the one exception (ADR-2492).
+_Avoid_: Offline PIN or fallback identities outside a demo build, tokens in `localStorage`/`sessionStorage`, client-side gateway signing or `X-User-*` headers
 
 ### Self-Signed Trust Store Gating
 
@@ -891,7 +897,7 @@ _Avoid_: Monolithic multi-thousand-line Vue views mixing multiple persona lifecy
 
 ### Capability-Based Clinical RBAC
 
-A centralized role-based access control architecture in `apps/web/src/stores/auth.js` and `packages/security` that maps clinical personas and Keycloak OIDC roles to granular functional capabilities (e.g. `SUBJECT_ENROLL`, `PI_BATCH_SIGNOFF`, `SDV_VERIFY`, `ECONSENT_GATING`), eliminating brittle hardcoded string comparisons and ensuring consistent authorization across production and interactive demo modes.
+A centralized role-based access control architecture in `apps/web/src/stores/auth.js` and `packages/security` that maps clinical personas and Keycloak OIDC roles to granular functional capabilities (e.g. `SUBJECT_ENROLL`, `PI_BATCH_SIGNOFF`, `SDV_VERIFY`, `ECONSENT_GATING`), eliminating brittle hardcoded string comparisons and ensuring consistent authorization from Keycloak token roles.
 _Avoid_: Scattering ad-hoc role string comparisons (`activeRole === 'site_investigator'`) across component templates
 
 ### Metadata-Driven Engine Architecture (The Engine Triad)

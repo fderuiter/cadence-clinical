@@ -639,6 +639,7 @@ describe("Notifications System End-to-End Visual Integration", () => {
     it("constructs correct query strings and attaches JWT/Reason headers correctly", async () => {
       // Mock Pinia Auth token
       const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
       authStore.accessToken = "dummy-jwt-signature-token";
 
       globalThis.fetch.mockResolvedValue({
@@ -675,6 +676,7 @@ describe("Notifications System End-to-End Visual Integration", () => {
 
     it("attaches X-Change-Reason to mutations correctly", async () => {
       const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
       authStore.accessToken = "dummy-jwt-signature-token";
 
       globalThis.fetch.mockResolvedValue({
@@ -711,8 +713,7 @@ describe("Notifications System End-to-End Visual Integration", () => {
       // The offline localStorage simulation exists only in a demo build (#4523).
       vi.stubEnv("VITE_DEMO_MODE", "true");
       window.localStorage.clear();
-      authStore.isDemoMode = true;
-      authStore.accessToken = null;
+      authStore.startDemoSession();
       // Disable service mock so store executes offline demo localStorage logic
       originalGet = notificationsService.getNotifications;
       originalAck = notificationsService.acknowledgeNotification;

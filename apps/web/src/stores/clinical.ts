@@ -785,17 +785,10 @@ const useClinicalStoreInner = defineStore("clinical", {
   getters: {
     user: () => {
       const authStore = useAuthStore();
-      if (authStore.isDemoMode && !authStore.isAuthenticated) {
-        return {
-          username: "fderuiter",
-          roles: ["Monitor", "Sponsor Admin"],
-          authenticated: true,
-        };
-      }
       return {
-        username: authStore.identity?.username || "unknown",
+        username: authStore.identity?.username || null,
         roles: authStore.normalizedRoles,
-        authenticated: true,
+        authenticated: authStore.isAuthenticated,
       };
     },
     canManageQueries: () => {

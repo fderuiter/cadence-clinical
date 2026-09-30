@@ -35,7 +35,6 @@ describe("M5: USDM Ingestion & Synthesis Workspace Experience (MdrView.vue)", ()
     const authStore = useAuthStore();
     authStore.accessToken = "mock-keycloak-jwt-token";
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
 
     if (typeof window !== "undefined" && window.localStorage) {
       window.localStorage.clear();

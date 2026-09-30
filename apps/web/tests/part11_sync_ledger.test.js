@@ -19,7 +19,6 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     const authStore = useAuthStore();
     authStore.accessToken = "mock-keycloak-jwt-token";
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     window.localStorage.clear();
     mockFetch.mockReset();
   });

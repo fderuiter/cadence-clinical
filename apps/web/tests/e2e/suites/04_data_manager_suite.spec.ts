@@ -27,12 +27,7 @@ test.describe("Suite 4: Clinical Data Manager Golden Path", () => {
       page,
       {
         username: "dm.lead",
-        roles: [
-          "Data Manager",
-          "Sponsor Designer",
-          "Sponsor Admin",
-          "Super Admin",
-        ],
+        roles: ["Data Manager", "Sponsor Designer", "Sponsor Admin"],
       },
       "/cadence-clinical/rules"
     );

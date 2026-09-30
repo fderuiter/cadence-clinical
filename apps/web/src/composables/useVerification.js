@@ -34,8 +34,7 @@ export function useVerification(activeUserRole) {
     if (openReauthModalFn) {
       openReauthModalFn({
         action: "BULK_SDV",
-        username:
-          store.user?.username || authStore.identity?.username || "fderuiter",
+        username: store.user?.username || authStore.identity?.username || "",
       });
     }
   }
@@ -75,7 +74,7 @@ export function useVerification(activeUserRole) {
             Date.now() +
             "-" +
             Math.random().toString(36).substr(2, 4),
-          recipient_user_id: store.user?.username || "fderuiter",
+          recipient_user_id: store.user?.username || "",
           recipient_role: "monitor",
           category: "ALERTS",
           priority: "HIGH",

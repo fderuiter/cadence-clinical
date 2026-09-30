@@ -630,10 +630,6 @@ async function runContinuousPipeline() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-User-Id": "biostat_01",
-        "X-User-Roles": props.isUnblinded
-          ? "unblinded_statistician"
-          : "data_manager",
         "X-Unblinded-Access": props.isUnblinded ? "true" : "false",
       },
       body: JSON.stringify({

@@ -13,7 +13,6 @@ describe("Shared Zod Schema Client-Side Validation", () => {
     const authStore = useAuthStore();
     authStore.accessToken = "mock-keycloak-jwt-token";
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     window.localStorage.clear();
   });
 

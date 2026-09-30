@@ -27,7 +27,7 @@ test.describe("Suite 2: Site CRC & Clinical Data Capture Golden Path", () => {
       page,
       {
         username: "crc.site101",
-        roles: ["Site Investigator", "CRC"],
+        roles: ["Site Investigator"],
       },
       "/cadence-clinical/ecrf"
     );

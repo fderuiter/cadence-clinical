@@ -83,7 +83,6 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
     it("should attach Bearer tokens automatically from Pinia authStore", async () => {
       authStore.accessToken = "mock-keycloak-jwt-token";
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = false;
 
       mockFetch.mockResolvedValueOnce(jsonResponse({ user: "fderuiter" }));
 

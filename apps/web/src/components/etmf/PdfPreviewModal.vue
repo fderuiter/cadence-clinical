@@ -325,9 +325,9 @@ useEscapeClose(() => emit("close"));
 
 const authStore = useAuthStore();
 
-// Compute Username dynamically from authentication context or fallback
+// Signed-in username from the Keycloak token
 const currentUserId = computed(() => {
-  return authStore.identity?.username || "fderuiter";
+  return authStore.identity?.username || "";
 });
 
 // Compute current timestamp string

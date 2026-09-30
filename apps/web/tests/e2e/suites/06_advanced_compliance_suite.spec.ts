@@ -27,7 +27,7 @@ test.describe("Suite 6: Advanced Clinical, Devices & GxP Compliance Golden Path"
       page,
       {
         username: "auditor.lead",
-        roles: ["Auditor", "TMF Auditor", "Sponsor Admin", "Super Admin"],
+        roles: ["Auditor", "Sponsor Admin"],
       },
       "/cadence-clinical/imaging"
     );

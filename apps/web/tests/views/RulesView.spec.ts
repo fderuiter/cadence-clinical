@@ -38,7 +38,6 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
 
     // Default to authorized data_manager role
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.rawRoles = ["Data Manager"];
 
     // Setup mock implementations for apiClient
@@ -100,7 +99,6 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
   it("gates workspace access to STUDY_DESIGNER or DATA_MANAGER roles and hides the designer if unauthorized", async () => {
     // Set role to site coordinator (not authorized for rule authoring)
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.rawRoles = ["Site Investigator"];
 
     const wrapper = mount(RulesView, {
@@ -123,7 +121,6 @@ describe("RulesView.vue - Clinical Rules Designer Workspace Specification", () =
 
   it("allows STUDY_DESIGNER (Sponsor Designer) to access the workspace", async () => {
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.rawRoles = ["Sponsor Designer"];
 
     const wrapper = mount(RulesView, {

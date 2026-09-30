@@ -966,13 +966,7 @@ async function evaluateGreenlight() {
   loading.value = true;
   try {
     const res = await fetch(
-      `/api/v1/ctms/startup/sites/${activeSiteId.value}/greenlight?study_id=${activeStudyId.value}&country_code=${activeCountry.value}`,
-      {
-        headers: {
-          "X-User-Id": "clinical-ops-user",
-          "X-User-Roles": "sponsor_admin,regulatory_lead",
-        },
-      }
+      `/api/v1/ctms/startup/sites/${activeSiteId.value}/greenlight?study_id=${activeStudyId.value}&country_code=${activeCountry.value}`
     );
     if (res.ok) {
       gateData.value = await res.json();
@@ -987,13 +981,7 @@ async function evaluateGreenlight() {
 async function fetchEssentialDocuments() {
   try {
     const res = await fetch(
-      `/api/v1/ctms/startup/documents?study_id=${activeStudyId.value}&site_id=${activeSiteId.value}`,
-      {
-        headers: {
-          "X-User-Id": "clinical-ops-user",
-          "X-User-Roles": "sponsor_admin,regulatory_lead",
-        },
-      }
+      `/api/v1/ctms/startup/documents?study_id=${activeStudyId.value}&site_id=${activeSiteId.value}`
     );
     if (res.ok) {
       essentialDocuments.value = await res.json();
@@ -1006,13 +994,7 @@ async function fetchEssentialDocuments() {
 async function fetchCountryRules() {
   try {
     const res = await fetch(
-      `/api/v1/ctms/startup/rules?study_id=${activeStudyId.value}&country_code=${activeCountry.value}`,
-      {
-        headers: {
-          "X-User-Id": "clinical-ops-user",
-          "X-User-Roles": "sponsor_admin,regulatory_lead",
-        },
-      }
+      `/api/v1/ctms/startup/rules?study_id=${activeStudyId.value}&country_code=${activeCountry.value}`
     );
     if (res.ok) {
       countryRules.value = await res.json();
@@ -1025,13 +1007,7 @@ async function fetchCountryRules() {
 async function fetchRegulatoryMilestones() {
   try {
     const res = await fetch(
-      `/api/v1/ctms/startup/milestones?study_id=${activeStudyId.value}&country_code=${activeCountry.value}`,
-      {
-        headers: {
-          "X-User-Id": "clinical-ops-user",
-          "X-User-Roles": "sponsor_admin,regulatory_lead",
-        },
-      }
+      `/api/v1/ctms/startup/milestones?study_id=${activeStudyId.value}&country_code=${activeCountry.value}`
     );
     if (res.ok) {
       regulatoryMilestones.value = await res.json();
@@ -1064,8 +1040,6 @@ async function reviewDocument(docId, status) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-User-Id": "regulatory-reviewer-01",
-        "X-User-Roles": "sponsor_admin,regulatory_lead",
         "X-Change-Reason": `Document ${status.toLowerCase()} by regulatory reviewer`,
       },
       body: JSON.stringify({
@@ -1098,8 +1072,6 @@ async function submitDoc() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-User-Id": "site-coordinator-01",
-        "X-User-Roles": "crc,investigator",
         "X-Change-Reason": "Uploaded essential document via SSU Console",
       },
       body: JSON.stringify({
@@ -1134,8 +1106,6 @@ async function executeGreenlightCertification() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-User-Id": sigForm.name,
-          "X-User-Roles": "sponsor_admin,regulatory_lead",
           "X-Change-Reason": sigForm.changeReason,
         },
       }
@@ -1164,8 +1134,6 @@ async function executeExecutiveOverride() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-User-Id": overrideForm.sponsorId,
-          "X-User-Roles": "sponsor_admin",
           "X-Change-Reason": overrideForm.justification,
         },
         body: JSON.stringify({

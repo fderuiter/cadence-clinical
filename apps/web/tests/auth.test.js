@@ -1,90 +1,87 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import { useAuthStore } from "../src/stores/auth";
+import { setKeycloakClient } from "../src/auth/keycloak.js";
+import { useAuthStore, PERSONA_PRESETS } from "../src/stores/auth";
 import { useSignatureStore } from "../src/stores/signatures";
 import { useNotificationsStore } from "../src/stores/notifications";
 import { useEtmfStore } from "../src/stores/etmf";
+import { apiClient } from "../src/api/apiClient";
+import { notificationsService } from "../src/api/notifications";
+import { etmfService } from "../src/api/etmf";
+
+/** A signed-in keycloak-js double carrying the given realm roles. */
+function keycloakWith(roles, overrides = {}) {
+  return {
+    authenticated: true,
+    token: "access-token-1",
+    idToken: "id-token-1",
+    tokenParsed: {
+      sub: "user-uuid-9999",
+      preferred_username: "testuser",
+      email: "testuser@example.com",
+      given_name: "Test",
+      family_name: "User",
+      exp: 2000000000,
+      realm_access: { roles },
+    },
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn().mockResolvedValue(undefined),
+    updateToken: vi.fn().mockResolvedValue(false),
+    ...overrides,
+  };
+}
 
 describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
   beforeEach(() => {
-    const pinia = createPinia();
-    setActivePinia(pinia);
-    if (typeof window !== "undefined") {
-      delete window.keycloakInstance;
-      window.localStorage.clear();
-      window.sessionStorage.clear();
-    }
+    setActivePinia(createPinia());
+    setKeycloakClient(null);
+    window.localStorage.clear();
+    window.sessionStorage.clear();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  describe("Demo mode is opt-in (#4523)", () => {
-    it("starts outside demo mode, with no identity or roles, unless the build is a demo build", () => {
+  describe("Signed-out state", () => {
+    it("starts with no identity, roles, token or persona", () => {
       const authStore = useAuthStore();
 
       expect(authStore.isAuthenticated).toBe(false);
-      expect(authStore.isDemoMode).toBe(false);
       expect(authStore.token).toBeNull();
       expect(authStore.identity).toBeNull();
+      expect(authStore.userId).toBeNull();
       expect(authStore.normalizedRoles).toEqual([]);
-    });
-
-    it("ignores a stored demo flag outside a demo build", () => {
-      window.sessionStorage.setItem(
-        "cadence_auth",
-        JSON.stringify({ isAuthenticated: false, isDemoMode: true })
-      );
-
-      expect(useAuthStore().isDemoMode).toBe(false);
-    });
-
-    it("refuses offline sign-in outside a demo build", async () => {
-      const authStore = useAuthStore();
-
-      await expect(authStore.login()).rejects.toThrow(
-        "Sign-in is unavailable: the identity provider could not be reached."
-      );
-      expect(authStore.isAuthenticated).toBe(false);
+      expect(authStore.currentPersona).toBeNull();
+      expect(authStore.availablePersonas).toEqual([]);
       expect(authStore.isDemoMode).toBe(false);
     });
 
-    it("starts in demo mode with the demo identity and roles in a demo build", () => {
-      vi.stubEnv("VITE_DEMO_MODE", "true");
+    it("ignores and purges tokens persisted in web storage by older builds", () => {
+      const legacy = JSON.stringify({
+        isAuthenticated: true,
+        accessToken: "stolen-or-stale-token",
+        rawRoles: ["Sponsor Admin"],
+        isDemoMode: true,
+      });
+      window.sessionStorage.setItem("cadence_auth", legacy);
+      window.localStorage.setItem("cadence_auth", legacy);
+
       const authStore = useAuthStore();
 
-      expect(authStore.isDemoMode).toBe(true);
-      expect(authStore.identity).toEqual({
-        username: "fderuiter",
-        email: "fderuiter@example.com", // deid-ignore
-        firstName: "Frans",
-        lastName: "de Ruiter",
-        id: "fderuiter-id-12345",
-      });
-      expect(authStore.normalizedRoles).toEqual([
-        "sponsor_admin",
-        "sponsor_designer",
-        "data_manager",
-        "site_investigator",
-        "crc",
-        "cra",
-        "monitor",
-        "auditor",
-      ]);
+      expect(authStore.isAuthenticated).toBe(false);
+      expect(authStore.token).toBeNull();
+      expect(authStore.normalizedRoles).toEqual([]);
+      expect(window.sessionStorage.getItem("cadence_auth")).toBeNull();
+      expect(window.localStorage.getItem("cadence_auth")).toBeNull();
     });
 
-    it("allows offline login and logout in a demo build", async () => {
-      vi.stubEnv("VITE_DEMO_MODE", "true");
+    it("never writes tokens to web storage", () => {
       const authStore = useAuthStore();
+      authStore.setAuth(keycloakWith(["CRA"]));
 
-      await authStore.login();
-      expect(authStore.isAuthenticated).toBe(true);
-      expect(authStore.isDemoMode).toBe(true);
-
-      await authStore.logout();
-      expect(authStore.isAuthenticated).toBe(false);
-      expect(authStore.isDemoMode).toBe(true);
+      expect(window.sessionStorage.length).toBe(0);
+      expect(window.localStorage.getItem("cadence_auth")).toBeNull();
     });
   });
 
@@ -92,37 +89,19 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     it("sets state and parses claims correctly from a standard keycloak token object", () => {
       const authStore = useAuthStore();
 
-      const mockKeycloak = {
-        authenticated: true,
-        token: "mock-access-token-xyz-123",
-        idToken: "mock-id-token-abc",
-        refreshToken: "mock-refresh-token-pqr",
-        tokenParsed: {
-          sub: "user-uuid-9999",
-          preferred_username: "testuser",
-          email: "testuser@example.com",
-          given_name: "Test",
-          family_name: "User",
-          realm_access: {
-            roles: [
-              "Sponsor Admin",
-              "CRA",
-              "Data Manager",
-              "Site Investigator",
-            ],
-          },
-        },
-      };
-
-      authStore.setAuth(mockKeycloak);
+      authStore.setAuth(
+        keycloakWith([
+          "Sponsor Admin",
+          "CRA",
+          "Data Manager",
+          "Site Investigator",
+        ])
+      );
 
       expect(authStore.isAuthenticated).toBe(true);
-      expect(authStore.isDemoMode).toBe(false);
-      expect(authStore.token).toBe("mock-access-token-xyz-123");
-      expect(authStore.idToken).toBe("mock-id-token-abc");
-      expect(authStore.refreshToken).toBe("mock-refresh-token-pqr");
-
-      // Verify identity parsing
+      expect(authStore.token).toBe("access-token-1");
+      expect(authStore.idToken).toBe("id-token-1");
+      expect(authStore.tokenExpiresAt).toBe(2000000000 * 1000);
       expect(authStore.identity).toEqual({
         username: "testuser",
         email: "testuser@example.com",
@@ -130,37 +109,30 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         lastName: "User",
         id: "user-uuid-9999",
       });
-
-      // Verify exact role normalization mapping
+      expect(authStore.userId).toBe("user-uuid-9999");
       expect(authStore.normalizedRoles).toEqual([
         "sponsor_admin",
         "cra",
         "data_manager",
         "site_investigator",
       ]);
+      expect(authStore.currentPersona).toBe("super_admin");
     });
 
     it("normalizes roles with extra whitespaces, mixed cases, and special characters", () => {
       const authStore = useAuthStore();
 
-      const mockKeycloak = {
-        authenticated: true,
-        tokenParsed: {
-          realm_access: {
-            roles: [
-              "  Sponsor Admin  ",
-              "cRa",
-              "quality_manager",
-              "QA-LEAD",
-              "quality oversight",
-              "Subject",
-              "Auditor",
-            ],
-          },
-        },
-      };
-
-      authStore.setAuth(mockKeycloak);
+      authStore.setAuth(
+        keycloakWith([
+          "  Sponsor Admin  ",
+          "cRa",
+          "quality_manager",
+          "QA-LEAD",
+          "quality oversight",
+          "Subject",
+          "Auditor",
+        ])
+      );
 
       expect(authStore.normalizedRoles).toEqual([
         "sponsor_admin",
@@ -176,53 +148,287 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     it("normalizes Sponsor Designer, study_designer, and designer roles into the canonical sponsor_designer token", () => {
       const authStore = useAuthStore();
 
-      const mockKeycloak = {
-        authenticated: true,
-        tokenParsed: {
-          realm_access: {
-            roles: ["Sponsor Designer", "study_designer", "designer"],
-          },
-        },
-      };
-
-      authStore.setAuth(mockKeycloak);
+      authStore.setAuth(
+        keycloakWith(["Sponsor Designer", "study_designer", "designer"])
+      );
 
       expect(authStore.normalizedRoles).toEqual([
         "sponsor_designer",
         "sponsor_designer",
         "sponsor_designer",
       ]);
+      expect(authStore.currentPersona).toBe("sponsor_designer");
     });
 
     it("resets authentication state when setAuth is called with a falsy or unauthenticated object", () => {
       const authStore = useAuthStore();
-
-      // First set authenticated
-      authStore.setAuth({
-        authenticated: true,
-        token: "token",
-        tokenParsed: {
-          realm_access: { roles: ["CRA"] },
-        },
-      });
+      authStore.setAuth(keycloakWith(["CRA"]));
       expect(authStore.isAuthenticated).toBe(true);
 
-      // Now clear auth
       authStore.setAuth(null);
       expect(authStore.isAuthenticated).toBe(false);
       expect(authStore.token).toBeNull();
       expect(authStore.identity).toBeNull();
       expect(authStore.normalizedRoles).toEqual([]);
+      expect(authStore.currentPersona).toBeNull();
+
+      authStore.setAuth(keycloakWith(["CRA"], { authenticated: false }));
+      expect(authStore.isAuthenticated).toBe(false);
+    });
+
+    it("treats an authenticated flag without an access token as signed out", () => {
+      const authStore = useAuthStore();
+      authStore.setAuth(keycloakWith(["Sponsor Admin"], { token: undefined }));
+
+      expect(authStore.isAuthenticated).toBe(false);
+      expect(authStore.normalizedRoles).toEqual([]);
     });
   });
 
-  describe("Stores Demo Mode Local Simulation tests", () => {
+  describe("Keycloak sign-in, sign-out and token refresh", () => {
+    it("refuses to sign in when Keycloak could not be initialised", async () => {
+      const authStore = useAuthStore();
+
+      await expect(authStore.login()).rejects.toThrow(
+        "Keycloak sign-in is unavailable"
+      );
+      expect(authStore.isAuthenticated).toBe(false);
+    });
+
+    it("delegates sign-in to the Keycloak redirect", async () => {
+      const keycloak = keycloakWith([]);
+      setKeycloakClient(keycloak);
+      const authStore = useAuthStore();
+
+      await authStore.login({ redirectUri: "http://localhost:3000/x" });
+
+      expect(keycloak.login).toHaveBeenCalledWith({
+        redirectUri: "http://localhost:3000/x",
+      });
+    });
+
+    it("clears the session and ends the Keycloak SSO session on logout", async () => {
+      const keycloak = keycloakWith(["Auditor"]);
+      setKeycloakClient(keycloak);
+      const authStore = useAuthStore();
+      authStore.setAuth(keycloak);
+
+      await authStore.logout({ redirectUri: "http://localhost:3000/login" });
+
+      expect(keycloak.logout).toHaveBeenCalledWith({
+        redirectUri: "http://localhost:3000/login",
+      });
+      expect(authStore.isAuthenticated).toBe(false);
+      expect(authStore.token).toBeNull();
+      expect(authStore.currentPersona).toBeNull();
+    });
+
+    it("clears local state on logout even without a Keycloak client", async () => {
+      const authStore = useAuthStore();
+      authStore.setAuth(keycloakWith(["Auditor"]));
+
+      await authStore.logout();
+
+      expect(authStore.isAuthenticated).toBe(false);
+    });
+
+    it("refreshes the access token through keycloak.updateToken", async () => {
+      const keycloak = keycloakWith(["CRA"]);
+      setKeycloakClient(keycloak);
+      const authStore = useAuthStore();
+      authStore.setAuth(keycloak);
+
+      keycloak.updateToken.mockImplementation(async () => {
+        keycloak.token = "access-token-2";
+        return true;
+      });
+
+      await expect(authStore.refresh(30)).resolves.toBe(true);
+      expect(keycloak.updateToken).toHaveBeenCalledWith(30);
+      expect(authStore.token).toBe("access-token-2");
+      await expect(authStore.ensureFreshToken()).resolves.toBe(
+        "access-token-2"
+      );
+    });
+
+    it("ends the session when the token can no longer be refreshed", async () => {
+      const keycloak = keycloakWith(["CRA"]);
+      setKeycloakClient(keycloak);
+      const authStore = useAuthStore();
+      authStore.setAuth(keycloak);
+      keycloak.updateToken.mockRejectedValue(new Error("refresh expired"));
+
+      await expect(authStore.refresh()).rejects.toThrow("refresh expired");
+      expect(authStore.isAuthenticated).toBe(false);
+      await expect(authStore.ensureFreshToken()).resolves.toBeNull();
+    });
+
+    it("returns no token when nobody is signed in", async () => {
+      const authStore = useAuthStore();
+      await expect(authStore.ensureFreshToken()).resolves.toBeNull();
+      await expect(authStore.refresh()).resolves.toBe(false);
+    });
+  });
+
+  describe("Workspace personas follow token roles", () => {
+    it("offers only the personas the token's realm roles entitle", () => {
+      const authStore = useAuthStore();
+      authStore.setAuth(keycloakWith(["Site Investigator"]));
+
+      expect(authStore.availablePersonas.map((p) => p.key)).toEqual([
+        "site_crc",
+      ]);
+      expect(authStore.currentPersona).toBe("site_crc");
+    });
+
+    it("offers every persona to a Sponsor Admin", () => {
+      const authStore = useAuthStore();
+      authStore.setAuth(keycloakWith(["Sponsor Admin"]));
+
+      expect(authStore.availablePersonas.map((p) => p.key)).toEqual(
+        PERSONA_PRESETS.map((p) => p.key)
+      );
+    });
+
+    it("switches the workspace view without changing roles", () => {
+      const authStore = useAuthStore();
+      authStore.setAuth(keycloakWith(["Sponsor Admin"]));
+
+      expect(authStore.switchPersona("site_crc")).toBe(true);
+      expect(authStore.currentPersona).toBe("site_crc");
+      expect(authStore.normalizedRoles).toEqual(["sponsor_admin"]);
+    });
+
+    it("refuses a persona the token does not entitle and grants no roles", () => {
+      const authStore = useAuthStore();
+      authStore.setAuth(keycloakWith(["Site Investigator"]));
+
+      expect(authStore.switchPersona("super_admin")).toBe(false);
+      expect(authStore.switchPersona("invalid_hacked_persona_role")).toBe(
+        false
+      );
+      expect(authStore.currentPersona).toBe("site_crc");
+      expect(authStore.normalizedRoles).toEqual(["site_investigator"]);
+      expect(authStore.hasRole("sponsor_admin")).toBe(false);
+    });
+
+    it("refuses every persona when signed out", () => {
+      const authStore = useAuthStore();
+      expect(authStore.switchPersona("super_admin")).toBe(false);
+      expect(authStore.currentPersona).toBeNull();
+    });
+  });
+
+  describe("Stores call the API instead of fabricating data", () => {
+    it("submits batch signatures to the API and stores the server response", async () => {
+      const response = { signature_id: "sig-1", signed_forms_count: 2 };
+      const post = vi.spyOn(apiClient, "post").mockResolvedValue(response);
+      const signatureStore = useSignatureStore();
+
+      const res = await signatureStore.submitBatchSignature({
+        studyId: "STUDY-01",
+        subjectId: "SUBJ-01",
+        formIds: ["FORM-01", "FORM-02"],
+        password: "my-password", // pragma: allowlist secret
+        meaning: "APPROVED",
+      });
+
+      expect(post).toHaveBeenCalledWith(
+        "/api/v1/execution/signatures/batch-sign-off",
+        expect.objectContaining({ target_ids: ["FORM-01", "FORM-02"] }),
+        { changeReason: "APPROVED" }
+      );
+      expect(res).toEqual(response);
+      expect(window.localStorage.getItem("lastSignatureResult")).toBeNull();
+      post.mockRestore();
+    });
+
+    it("starts with no notifications and reports API failures", async () => {
+      const failure = Object.assign(new Error("Unauthorized"), {
+        status: 401,
+      });
+      const get = vi
+        .spyOn(notificationsService, "getNotifications")
+        .mockRejectedValue(failure);
+      const notificationsStore = useNotificationsStore();
+
+      expect(notificationsStore.notifications).toEqual([]);
+      await notificationsStore.fetchNotifications();
+
+      expect(get).toHaveBeenCalled();
+      expect(notificationsStore.notifications).toEqual([]);
+      expect(notificationsStore.errorStatus).toBe(401);
+      get.mockRestore();
+    });
+
+    it("loads eTMF documents from the API only", async () => {
+      const get = vi.spyOn(etmfService, "getDocuments").mockResolvedValue([]);
+      const etmfStore = useEtmfStore();
+
+      await etmfStore.fetchDocuments("01.01.01");
+
+      expect(get).toHaveBeenCalled();
+      expect(etmfStore.documentsList).toEqual([]);
+      expect(window.localStorage.getItem("demo_documents")).toBeNull();
+      get.mockRestore();
+    });
+  });
+
+  describe("Demo build sign-in (ADR-2329)", () => {
+    it("refuses demo sign-in outside a demo build", () => {
+      const authStore = useAuthStore();
+
+      expect(authStore.isDemoMode).toBe(false);
+      expect(() => authStore.startDemoSession()).toThrow(
+        "Demo sign-in is only available in a demo build."
+      );
+      expect(authStore.isAuthenticated).toBe(false);
+      expect(authStore.identity).toBeNull();
+    });
+
+    it("ignores a stored demo flag outside a demo build", () => {
+      window.sessionStorage.setItem(
+        "cadence_auth",
+        JSON.stringify({ isAuthenticated: true, isDemoMode: true })
+      );
+
+      const authStore = useAuthStore();
+      expect(authStore.isDemoMode).toBe(false);
+      expect(authStore.isAuthenticated).toBe(false);
+    });
+
+    it("signs in the offline demo identity without Keycloak in a demo build", async () => {
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      const authStore = useAuthStore();
+
+      await authStore.login();
+
+      expect(authStore.isDemoMode).toBe(true);
+      expect(authStore.isAuthenticated).toBe(true);
+      expect(authStore.token).toBeNull();
+      expect(authStore.identity).toEqual({
+        username: "fderuiter",
+        email: "fderuiter@example.com", // deid-ignore
+        firstName: "Frans",
+        lastName: "de Ruiter",
+        id: "fderuiter-id-12345",
+      });
+      expect(authStore.currentPersona).toBe("super_admin");
+
+      await authStore.logout();
+      expect(authStore.isAuthenticated).toBe(false);
+      expect(authStore.identity).toBeNull();
+    });
+  });
+
+  describe("Demo build stores simulate the API locally (ADR-2329)", () => {
     let authStore;
 
     beforeEach(() => {
       // These local simulations exist only in a demo build (#4523).
       vi.stubEnv("VITE_DEMO_MODE", "true");
       authStore = useAuthStore();
+      authStore.startDemoSession();
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.clear();
       }
@@ -438,107 +644,6 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
       await authStore.logout();
       expect(authStore.isAuthenticated).toBe(false);
-    });
-  });
-
-  describe("Session-Bound Persona Serialization & Reload Recovery", () => {
-    // Persona presets are a demo-build feature.
-    beforeEach(() => {
-      vi.stubEnv("VITE_DEMO_MODE", "true");
-    });
-
-    it("includes currentPersona in cadence_auth JSON payload in session storage on persona switch", async () => {
-      const authStore = useAuthStore();
-      await authStore.login();
-
-      authStore.switchPersona("site_crc");
-
-      expect(authStore.currentPersona).toBe("site_crc");
-      expect(authStore.normalizedRoles).toContain("crc");
-      expect(authStore.normalizedRoles).toContain("site_investigator");
-
-      const storedRaw = window.sessionStorage.getItem("cadence_auth");
-      expect(storedRaw).not.toBeNull();
-      const payload = JSON.parse(storedRaw);
-      expect(payload.currentPersona).toBe("site_crc");
-      expect(payload.rawRoles).toEqual(["Site Investigator", "CRC"]);
-    });
-
-    it("restores active persona key and corresponding role mappings upon store re-initialization", () => {
-      const savedAuth = {
-        isAuthenticated: true,
-        accessToken: "mock-token",
-        user: { username: "crc_user" },
-        currentPersona: "cra_monitor",
-        rawRoles: ["CRA", "Monitor"],
-        isDemoMode: true,
-      };
-      window.sessionStorage.setItem("cadence_auth", JSON.stringify(savedAuth));
-
-      const newPinia = createPinia();
-      setActivePinia(newPinia);
-      const restoredStore = useAuthStore();
-
-      expect(restoredStore.currentPersona).toBe("cra_monitor");
-      expect(restoredStore.normalizedRoles).toEqual(["cra", "monitor"]);
-      expect(restoredStore.isAuthenticated).toBe(true);
-    });
-
-    it("falls back to super_admin when stored persona data is invalid or corrupted", () => {
-      const corruptedAuth = {
-        isAuthenticated: true,
-        currentPersona: "invalid_hacked_persona_role",
-        rawRoles: ["SomeRole"],
-      };
-      window.sessionStorage.setItem(
-        "cadence_auth",
-        JSON.stringify(corruptedAuth)
-      );
-
-      const newPinia = createPinia();
-      setActivePinia(newPinia);
-      const restoredStore = useAuthStore();
-
-      expect(restoredStore.currentPersona).toBe("super_admin");
-      expect(restoredStore.isAuthenticated).toBe(true);
-    });
-
-    it("clears session storage and resets in-memory persona state upon logout", async () => {
-      const authStore = useAuthStore();
-      await authStore.login();
-      authStore.switchPersona("auditor");
-
-      expect(window.sessionStorage.getItem("cadence_auth")).not.toBeNull();
-      expect(authStore.currentPersona).toBe("auditor");
-
-      await authStore.logout();
-
-      expect(window.sessionStorage.getItem("cadence_auth")).toBeNull();
-      expect(authStore.currentPersona).toBe("super_admin");
-      expect(authStore.isAuthenticated).toBe(false);
-    });
-
-    it("synchronizes role permissions with persona preset when restoring saved persona", () => {
-      const savedAuthWithoutRoles = {
-        isAuthenticated: true,
-        currentPersona: "site_crc",
-        isDemoMode: true,
-      };
-      window.sessionStorage.setItem(
-        "cadence_auth",
-        JSON.stringify(savedAuthWithoutRoles)
-      );
-
-      const newPinia = createPinia();
-      setActivePinia(newPinia);
-      const restoredStore = useAuthStore();
-
-      expect(restoredStore.currentPersona).toBe("site_crc");
-      expect(restoredStore.rawRoles).toEqual(["Site Investigator", "CRC"]);
-      expect(restoredStore.normalizedRoles).toEqual([
-        "site_investigator",
-        "crc",
-      ]);
     });
   });
 });

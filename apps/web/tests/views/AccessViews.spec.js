@@ -5,13 +5,7 @@ import { router } from "../../src/router";
 import { useAuthStore } from "../../src/stores/auth";
 
 // The sign-in and access-denied screens are always available (#4529: every screen a user can open has a
-// view test). The offline key store is IndexedDB-backed; these tests only need "no stored sessions".
-vi.mock("../../src/utils/offlineAuth", () => ({
-  offlineAuthManager: {
-    getStoredUserIds: vi.fn().mockResolvedValue([]),
-    getSessionMetadata: vi.fn().mockResolvedValue(null),
-  },
-}));
+// view test).
 
 describe("Sign-in and access-denied screens", () => {
   beforeEach(async () => {
@@ -39,21 +33,29 @@ describe("Sign-in and access-denied screens", () => {
     expect(wrapper.find(".btn-login-demo").exists()).toBe(false);
   });
 
-  it("also offers the offline demo sign-in in a demo build", async () => {
+  it("offers the offline demo sign-in instead of Keycloak in a demo build", async () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");
     vi.resetModules();
 
     const wrapper = await mountLogin();
 
     expect(wrapper.find(".btn-login-demo").exists()).toBe(true);
+    expect(wrapper.find(".btn-login-keycloak").exists()).toBe(false);
   });
 
-  it("asks for a PIN before starting Keycloak sign-in", async () => {
+  it("starts the Keycloak redirect directly, with no offline PIN step", async () => {
+    const { setKeycloakClient } = await import("../../src/auth/keycloak.js");
+    const login = vi.fn().mockResolvedValue(undefined);
+    setKeycloakClient({ login });
     const wrapper = await mountLogin();
 
     await wrapper.find(".btn-login-keycloak").trigger("click");
+    await flushPromises();
 
-    expect(wrapper.text()).toContain("PIN");
+    expect(login).toHaveBeenCalledTimes(1);
+    expect(wrapper.text()).not.toContain("PIN");
+    expect(useAuthStore().isAuthenticated).toBe(false);
+    setKeycloakClient(null);
   });
 
   it("names the signed-in user and roles on the access-denied screen", async () => {
