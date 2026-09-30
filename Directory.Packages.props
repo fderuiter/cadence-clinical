@@ -39,7 +39,6 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.11" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
-    <PackageVersion Include="Neo4j.Driver" Version="5.28.1" />
 
     <!-- Asynchronous Messaging & Transactional Outbox -->
     <PackageVersion Include="MassTransit" Version="8.3.6" />
@@ -64,7 +63,6 @@
     <PackageVersion Include="FluentAssertions" Version="8.0.1" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.3.0" />
-    <PackageVersion Include="Testcontainers.Neo4j" Version="4.3.0" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="TngTech.ArchUnitNET.xUnit" Version="0.13.4" />

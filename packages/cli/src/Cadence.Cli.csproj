@@ -11,7 +11,7 @@
     <PublishAot>true</PublishAot>
     <OptimizationPreference>Speed</OptimizationPreference>
     <StackTraceSupport>true</StackTraceSupport>
-    <!-- Neo4j.Driver and Spectre.Console.Cli are not annotated for trimming/AOT: IL2104/IL3053 are their
+    <!-- Spectre.Console.Cli is not annotated for trimming/AOT: IL2104/IL3053 are its
          assembly-level aggregates and IL3000 is Spectre's Assembly.Location call. Warnings raised by
          Cadence code must be fixed, not added here. -->
     <NoWarn>$(NoWarn);IL2104;IL3053;IL3000</NoWarn>
@@ -36,6 +36,5 @@
     <PackageReference Include="Spectre.Console.Cli" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
-    <PackageReference Include="Neo4j.Driver" />
   </ItemGroup>
 </Project>
