@@ -4,6 +4,7 @@
 - **Date:** 2026-09-30
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
+- **Requirements:** PRD-PVG-005
 
 ---
 
