@@ -98,7 +98,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | — | `X-Change-Reason` is printable ASCII or RFC 8187 `UTF-8''` encoded, decoded before audit | [ADR-2495](docs/adr/2026-09-30-reason-for-change-header-encoding.md) |
 | — | Routes require a `resource:action` permission from the permission matrix | [ADR-2510](docs/adr/2026-09-30-endpoint-permissions-from-the-permission-matrix.md) |
 | — | Safety, Notifications and CTMS render routes need `safety_report:create`, `notification:send`, `ctms_monitoring_visit:create` | [ADR-2511](docs/adr/2026-09-30-template-render-routes-need-a-permission.md) |
-| — | The kernel API host serves the Canvas's kernel reads (nodes, zoom path, children, command catalogue, CanI, search) under `/api/v1/kernel` | [ADR-2540](docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) |
+| — | The kernel API host serves the Canvas's kernel reads (nodes, zoom path, children, command catalogue, CanI, search, protocol versions) under `/api/v1/kernel` | [ADR-2540](docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) |
 | — | Web coverage is measured over all source with a ratchet floor | [ADR-2530](docs/adr/2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) |
 | — | Python reference sources are deleted once their C# port is tested | [ADR-2492](docs/adr/2026-09-30-retire-python-reference-sources-once-ports-are-tested.md) |
 | — | The developer CLI parses with System.CommandLine and publishes as Native AOT without suppressions | [ADR-2496](docs/adr/2026-09-30-parse-the-cli-with-system-commandline-and-publish-aot-without-suppressions.md) |
@@ -132,7 +132,7 @@ Every backend is an ASP.NET Core 10 Minimal API host under `apps/<name>/src`, bu
 | [knowledge](apps/knowledge/README.md) | `Cadence.Apps.Knowledge` | 8015 | `knowledge` | `KnowledgeDbContext` | Scaffold |
 | [payments](apps/payments/README.md) | `Cadence.Apps.Payments` | 8016 | `payments` | `PaymentsDbContext` | Scaffold |
 | [ai_gateway](apps/ai_gateway/README.md) | `Cadence.Apps.AiGateway` | 8017 | `ai` | none | Scaffold |
-| [kernel-api](apps/kernel-api/README.md) | `Cadence.Kernel.Host` | 8018 | `kernel` | `KernelDbContext` (schema `kernel`, Row-Level Security) | Read endpoints for the Canvas ([ADR-2540](docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)); answers 503 until kernel tenants can be resolved |
+| [kernel-api](apps/kernel-api/README.md) | `Cadence.Kernel.Host` | 8018 | `kernel` | `KernelDbContext` (schema `kernel`, Row-Level Security) | Read endpoints for the Canvas ([ADR-2540](docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)); masks every object and denies every decision until the authority slice (#4781) |
 
 "Scaffold" means the host, security, health checks and (usually) a `DbContext` with migrations exist,
 but the service maps at most a few endpoints. Their future as kernel applications is decided in

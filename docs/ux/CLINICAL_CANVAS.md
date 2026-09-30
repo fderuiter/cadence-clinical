@@ -301,8 +301,9 @@ when its roadmap phase starts (§15). Phase numbers refer to the §15 roadmap.
 | PX-20 | Masked rendering                        | Every read returns "exists but masked" for blinded or identity-layer content instead of omitting it                                                                                                              | K-AUTH-4, K-IDN-1                                         | 1                 | Masking contract across APIs (D1)                                                                       |
 
 The HTTP reads named above are `GET` endpoints under `/api/v1/kernel` on the kernel API host
-([apps/kernel-api](../../apps/kernel-api/README.md), ADR-2540), routed by the gateway. Until the host can resolve the
-caller's kernel tenant they answer 503, and until the authority slice (#4781) lands every decision is a denial.
+([apps/kernel-api](../../apps/kernel-api/README.md), ADR-2540), routed by the gateway, in the kernel tenant found from
+the caller's signed tenant code. Until the authority slice (#4781) lands, every object is masked and every decision is a
+denial.
 
 ### 6.1 Order of delivery
 

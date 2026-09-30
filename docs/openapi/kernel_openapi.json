@@ -494,6 +494,152 @@
           }
         }
       }
+    },
+    "/api/v1/kernel/studies/{studyRef}/protocol-versions": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "A study\u0027s protocol versions, newest first, without their content.",
+        "description": "A study the caller may not see is refused; a version the caller may not see is masked in place (ADR-2471).",
+        "operationId": "KernelListProtocolVersions",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_KernelProtocolVersionResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/protocol-versions/{versionRef}": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "One protocol version, without its content.",
+        "operationId": "KernelGetProtocolVersion",
+        "parameters": [
+          {
+            "name": "versionRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProtocolVersionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -741,6 +887,86 @@
             ]
           },
           "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelProtocolVersionResponse": {
+        "required": [
+          "ref",
+          "study",
+          "number",
+          "parent_version",
+          "status",
+          "content_hash",
+          "amendment_intent",
+          "approval_attestation",
+          "withdrawal_reason",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "parent_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amendment_intent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approval_attestation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "withdrawal_reason": {
             "type": [
               "null",
               "string"

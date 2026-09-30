@@ -24,7 +24,8 @@ Two pieces the endpoints depend on are not in place yet:
 
 - **The authority evaluator** (#4781). `KernelAuthorization` needs an `IAuthorizationEvaluator`; there is none.
 - **Tenant resolution.** The gateway signs a tenant code (`tenant_id` claim), and the kernel keys everything by
-  `TenantId` (a UUID). There is no read port that finds the kernel tenant for a code yet.
+  `TenantId` (a UUID). When this ADR was written there was no read port that found the kernel tenant for a code; the
+  tenant directory (`ITenantDirectory`, #4780) now does.
 
 ## 2. Decision Drivers & Constraints
 
@@ -59,7 +60,7 @@ Two pieces the endpoints depend on are not in place yet:
 
 A new host, `Cadence.Kernel.Host` in `apps/kernel-api`, registers kernel persistence, navigation, search and
 authorization, and maps the read endpoints from `Cadence.Kernel.Api`. Until the evaluator exists every decision is a
-denial that names the missing evaluator; until tenants can be resolved every kernel read answers 503.
+denial that names the missing evaluator, and every object is masked.
 
 ## 4. Decision Outcome
 
@@ -89,8 +90,11 @@ All are `GET`, all under `/api/v1/kernel`, all answer problem details on failure
 | `nodes/{nodeRef}/commands` | Every kernel command offered on the object's kind, each with the caller's dry-run decision and explanation. |
 | `authorization/can-i?capability=&resource=` | The caller's dry-run decision on one capability and object, with its explanation. |
 | `search?q=&kind=&limit=` | Search hits (limit 1 to 50, default 20). |
+| `studies/{studyRef}/protocol-versions` | The study's protocol versions, newest first, without content: number, parent, status, content hash, amendment intent, approving attestation, withdrawal reason. |
+| `protocol-versions/{versionRef}` | One protocol version, the same way. |
 
-- NodeRefs travel as their canonical strings (`kind:id@version`); a malformed one is a 400.
+- NodeRefs travel as their canonical strings (`kind:id@version`); a malformed one, or one of the wrong kind for the
+  endpoint, is a 400.
 - CanI takes the capability token only. Its verb class comes from the kernel command that declares it; a token no
   command declares is a 400. The caller cannot choose the verb class.
 - The wire is snake_case, like Execution, and the host exports its OpenAPI document to
@@ -105,8 +109,10 @@ All are `GET`, all under `/api/v1/kernel`, all answer problem details on failure
 - 403 when the caller's tenant is not an active kernel tenant;
 - 503 when the host cannot resolve tenants.
 
-Until the tenant directory port exists the host's resolver always answers 503, so the endpoints serve no data. There is
-no configured mapping (option 2). When the port lands, the resolver reads the signed `tenant_id` claim and asks it.
+The host's resolver reads the signed `tenant_id` claim and asks the kernel's tenant directory
+(`ITenantDirectory.FindActiveByCodeAsync`) for the active tenant with that exact code. A missing code, or one that names
+no active tenant, is a 403; there is no fallback tenant and no configured mapping (option 2). Until the directory port
+shipped, the resolver answered 503 for every read.
 
 ### 4.4 Authorization
 
@@ -124,6 +130,9 @@ Every read runs under the tenant's Row-Level Security, and every object it retur
   (`NotPermitted`, `Blinded`, `IdentityVault`) and no ref, title, code, status or child count. A grouping level (a
   country) is masked with the object below it, and a masked child loses its group.
 - Search leaves masked hits out: a hit matched the caller's text, so keeping it would confirm the hidden object exists.
+- A protocol version list is refused with 403 when its study is masked, since listing the versions would describe the
+  study; a masked version in a visible study keeps its place with only its mask. The protocol version reader does not
+  authorize, so this masking is the read's authority check.
 - A request with no accountable actor sees every object masked.
 
 Until visibility is decided from the authority model (#4781) and the IdentityVault (#4782), the host's
@@ -131,7 +140,6 @@ Until visibility is decided from the authority model (#4781) and the IdentityVau
 
 ### 4.6 Out of scope
 
-- Protocol versions: served once the kernel ships its protocol version read port.
 - Commands over HTTP: the endpoints only read. Command endpoints come with the slices that need them, through the
   kernel command pipeline (K-AUTH-1).
 
@@ -139,20 +147,22 @@ Until visibility is decided from the authority model (#4781) and the IdentityVau
 
 - **Positive:** The web app gets the kernel's own answers over the same gateway, with a generated client. The two
   missing pieces each change one registration in the host.
-- **Positive:** Nothing can be shown or enabled wrongly in the meantime: the reads answer 503, every object is masked
-  and every decision is a denial with its reason.
-- **Negative:** Until the tenant directory lands the endpoints return no data, so the Canvas wiring can be exercised
-  only against the tests and a stubbed resolver.
+- **Positive:** Nothing can be shown or enabled wrongly in the meantime: every object is masked and every decision is a
+  denial with its reason.
+- **Negative:** Until #4781 decides visibility, the reads return masked objects only, so the Canvas wiring can be
+  exercised with real data only against the tests and a stubbed visibility.
 - **Negative:** One more deployable, on port 8018.
 
 ## 6. Implementation & Verification
 
-- `apps/kernel-api/src`: `Program.cs`, `ClaimsCurrentActor`, `UnavailableAuthorizationEvaluator`,
-  `UnavailableNodeVisibility`, `UnavailableTenantResolver`, `KernelDatabaseHealthCheck`, `KernelMigrationHostedService`.
+- `apps/kernel-api/src`: `Program.cs`, `ClaimsCurrentActor`, `DirectoryTenantResolver`,
+  `UnavailableAuthorizationEvaluator`, `UnavailableNodeVisibility`, `KernelDatabaseHealthCheck`,
+  `KernelMigrationHostedService`.
 - `packages/kernel/src/Cadence.Kernel.Api`: `KernelReadEndpoints`, `KernelReadResponses`, `KernelReadMasking`,
   `KernelTenantResolution`.
-- `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host: 503 before tenant resolution, 401
-  unsigned, reads in the resolved tenant, masking in place and in search, 400 and 404 problems, CanI and the command
-  catalogue denied and explained, and search.
+- `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host: 403 for a tenant code the directory
+  does not know or a missing one, 401 unsigned, reads in the resolved tenant, masking in place and in search, protocol
+  versions listed, masked and refused for a hidden study, 400 and 404 problems, CanI and the command catalogue denied
+  and explained, and search.
 - `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` and
   `tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` cover the route and the port.
