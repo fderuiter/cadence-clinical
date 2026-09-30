@@ -91,8 +91,8 @@ dotnet run --project apps/apphost/src/Cadence.AppHost.csproj
 ```
 
 The AppHost starts PostgreSQL (database `cadence`, with pgAdmin), MinIO, Keycloak (with the `cadence` realm
-imported) and all 18 .NET services on the same host ports as docker compose: the gateway on 8000 and the
-services on 8001 to 8017. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so telemetry shows in the Aspire dashboard.
+imported) and all 19 .NET services on the same host ports as docker compose: the gateway on 8000 and the
+services on 8001 to 8018. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so telemetry shows in the Aspire dashboard.
 Set its secret parameters once with `dotnet user-secrets` first; [apps/apphost](../apps/apphost/README.md)
 lists them.
 
@@ -133,6 +133,7 @@ services started with `dotnet run` and the compose stack alike. Inside compose, 
 | ctms | 8007 | `ctms` | ai_gateway | 8017 | none |
 | safety | 8008 | `safety` | Keycloak | 8080 | (own store) |
 | tickets | 8009 | `tickets` | web / subject portal | 5173 / 5174 | none |
+| kernel (`apps/kernel-api`) | 8018 | `kernel` | | | |
 
 PostgreSQL listens on 5432 (database `cadence`). What each service does and how mature it is:
 [ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today). Check for port clashes with

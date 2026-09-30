@@ -8,6 +8,7 @@ extern alias execution;
 extern alias fileshare;
 extern alias imaging;
 extern alias interop;
+extern alias kernel;
 extern alias knowledge;
 extern alias notifications;
 extern alias org;
@@ -74,6 +75,7 @@ public static class Program
             new("tickets", "Tickets_", typeof(tickets::Cadence.Apps.Tickets.Program), Path.Combine(repoRoot, "apps", "tickets", "src")),
             new("execution", "Execution_", typeof(execution::Cadence.Apps.Execution.Program), Path.Combine(repoRoot, "apps", "execution", "src")),
             new("designer", "Designer_", typeof(designer::Cadence.Apps.Designer.Program), Path.Combine(repoRoot, "apps", "designer", "src")),
+            new("kernel", "Kernel_", typeof(kernel::Cadence.Kernel.Host.Program), Path.Combine(repoRoot, "apps", "kernel-api", "src")),
             // The gateway is a YARP reverse proxy with no endpoints of its own and does not map an OpenAPI document.
         };
 

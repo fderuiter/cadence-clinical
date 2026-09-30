@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Cadence.Kernel.Host</RootNamespace>
+    <AssemblyName>Cadence.Kernel.Host</AssemblyName>
+    <Description>Clinical Kernel API host: serves the kernel's HTTP surface (ADR-2540). The only host that registers kernel persistence (K-XS-2).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Application\Cadence.Kernel.Application.csproj" />
+    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\packages\kernel\src\Cadence.Kernel.Api\Cadence.Kernel.Api.csproj" />
+    <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
+    <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
+    <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+</Project>

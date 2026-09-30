@@ -119,6 +119,7 @@ string imagingUrl = GetServiceUrl("IMAGING_SERVICE_URL", 8014);
 string knowledgeUrl = GetServiceUrl("KNOWLEDGE_SERVICE_URL", 8015);
 string paymentsUrl = GetServiceUrl("PAYMENTS_SERVICE_URL", 8016);
 string aiGatewayUrl = GetServiceUrl("AI_GATEWAY_SERVICE_URL", 8017);
+string kernelUrl = GetServiceUrl("KERNEL_SERVICE_URL", 8018);
 
 // Every route must lead to paths its service maps; tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs checks both directions.
 var routes = new[]
@@ -143,7 +144,8 @@ var routes = new[]
     new RouteConfig { RouteId = "imaging-route", ClusterId = "imaging-cluster", Match = new RouteMatch { Path = "/api/v1/imaging/{**catch-all}" } },
     new RouteConfig { RouteId = "knowledge-route", ClusterId = "knowledge-cluster", Match = new RouteMatch { Path = "/api/v1/knowledge/{**catch-all}" } },
     new RouteConfig { RouteId = "payments-route", ClusterId = "payments-cluster", Match = new RouteMatch { Path = "/api/v1/payments/{**catch-all}" } },
-    new RouteConfig { RouteId = "ai-gateway-route", ClusterId = "ai-gateway-cluster", Match = new RouteMatch { Path = "/api/v1/ai/{**catch-all}" } }
+    new RouteConfig { RouteId = "ai-gateway-route", ClusterId = "ai-gateway-cluster", Match = new RouteMatch { Path = "/api/v1/ai/{**catch-all}" } },
+    new RouteConfig { RouteId = "kernel-route", ClusterId = "kernel-cluster", Match = new RouteMatch { Path = "/api/v1/kernel/{**catch-all}" } }
 };
 
 var clusters = new[]
@@ -165,6 +167,7 @@ var clusters = new[]
     GatewayClusters.Create("knowledge-cluster", knowledgeUrl, builder.Configuration),
     GatewayClusters.Create("payments-cluster", paymentsUrl, builder.Configuration),
     GatewayClusters.Create("ai-gateway-cluster", aiGatewayUrl, builder.Configuration),
+    GatewayClusters.Create("kernel-cluster", kernelUrl, builder.Configuration),
 };
 
 builder.Services.AddGatewayRateLimiting(builder.Configuration);

@@ -95,6 +95,7 @@ start without it. An address that is not an absolute http or https URL fails sta
 | `/api/v1/knowledge/**` | knowledge | `KNOWLEDGE_SERVICE_URL` |
 | `/api/v1/payments/**` | payments | `PAYMENTS_SERVICE_URL` |
 | `/api/v1/ai/**` | ai-gateway | `AI_GATEWAY_SERVICE_URL` |
+| `/api/v1/kernel/**` | kernel ([apps/kernel-api](../kernel-api/README.md)) | `KERNEL_SERVICE_URL` |
 
 `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` boots the gateway and every service and fails when a route leads to a
 prefix its service does not map, or when a service maps an `/api/v1` endpoint no route reaches. Add or remove a

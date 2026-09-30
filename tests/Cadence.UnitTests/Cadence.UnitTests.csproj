@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Application\Cadence.Kernel.Application.csproj" />
     <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
     <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Api\Cadence.Kernel.Api.csproj" />
+    <ProjectReference Include="..\..\apps\kernel-api\src\Cadence.Kernel.Host.csproj" />
     <ProjectReference Include="..\..\packages\kernel\src\Cadence.Standards\Cadence.Standards.csproj" />
     <ProjectReference Include="..\..\packages\kernel\src\Cadence.Rules\Cadence.Rules.csproj" />
     <ProjectReference Include="..\..\packages\kernel\benchmarks\Cadence.Rules.Benchmarks\Cadence.Rules.Benchmarks.csproj" />

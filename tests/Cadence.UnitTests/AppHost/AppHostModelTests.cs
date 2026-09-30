@@ -42,6 +42,7 @@ public sealed class AppHostModelTests
         ["knowledge"] = 8015,
         ["payments"] = 8016,
         ["ai-gateway"] = 8017,
+        ["kernel"] = 8018,
     };
 
     private static readonly string[] WithoutDatabase = ["gateway", "designer", "ai-gateway"];

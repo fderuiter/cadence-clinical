@@ -1,0 +1,31 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+
+using Npgsql;
+
+namespace Cadence.Kernel.Host;
+
+/// <summary>Readiness: the kernel database accepts a connection as the application role.</summary>
+internal sealed class KernelDatabaseHealthCheck(string connectionString) : IHealthCheck
+{
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            return HealthCheckResult.Healthy();
+        }
+        catch (NpgsqlException exception)
+        {
+            return HealthCheckResult.Unhealthy("The kernel database is unreachable.", exception);
+        }
+        catch (TimeoutException exception)
+        {
+            return HealthCheckResult.Unhealthy("The kernel database did not answer in time.", exception);
+        }
+    }
+}
