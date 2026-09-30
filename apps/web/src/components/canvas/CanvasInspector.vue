@@ -135,7 +135,7 @@ const UNAVAILABLE_VERBS = [
   {
     id: "act",
     label: "Act",
-    note: "Act needs the kernel's command catalogue with dry-run authorization (#4847), so it can offer only what you may do.",
+    note: "Act offers the commands you may run from the kernel's command catalogue (ADR-2483, #4847), which no service serves over the API yet.",
   },
 ] as const;
 

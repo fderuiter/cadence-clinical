@@ -64,8 +64,8 @@
         }}
       </p>
       <p class="palette-footnote">
-        Actions and search across every study object arrive with the kernel's
-        command catalogue (#4847) and search (#4848).
+        Actions and search across every study object arrive once a service
+        serves the kernel's command catalogue (#4847) and search (#4848).
       </p>
     </div>
   </div>
