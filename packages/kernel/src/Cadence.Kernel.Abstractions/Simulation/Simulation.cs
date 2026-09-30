@@ -61,7 +61,7 @@ public sealed record SimulationCandidate
     /// <summary>The base of unsaved content; null for a stored candidate, whose base is its parent version.</summary>
     public ProtocolVersionId? BaseVersionId { get; }
 
-    /// <summary>Unsaved candidate content, a JSON object; null for a stored candidate.</summary>
+    /// <summary>Unsaved candidate content, a protocol design document (ADR-2472); null for a stored candidate.</summary>
     public string? Content { get; }
 
     /// <summary>
@@ -80,7 +80,8 @@ public sealed record SimulationCandidate
 
     /// <summary>
     /// Protocol content that is not saved anywhere, compared with <paramref name="baseVersion"/>, which must have
-    /// frozen content (in review or later) so the comparison is reproducible.
+    /// frozen content (in review or later) so the comparison is reproducible. The content must read as a protocol
+    /// design, as a stored draft's must (ADR-2472).
     /// </summary>
     public static SimulationCandidate UnsavedProtocolVersion(ProtocolVersionId baseVersion, string content)
     {
@@ -189,7 +190,7 @@ public static class SimulationErrors
         new("K.Simulation.BaseNotFrozen", 422, "The base version is still a draft; compare with a version whose content is frozen.");
 
     public static readonly KernelError ContentInvalid =
-        new("K.Simulation.ContentInvalid", 422, "The candidate content must be a JSON object.");
+        new("K.Simulation.ContentInvalid", 422, "The candidate content must be a protocol design (ADR-2472).");
 
     public static readonly KernelError ElementIdDuplicated =
         new("K.Simulation.ElementIdDuplicated", 422, "Two protocol elements share an id; element ids must be unique within a version (K-PROT-1).");

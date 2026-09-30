@@ -506,7 +506,8 @@ compares a protocol version with the version it was forked from and returns a `S
 (K-SIM-1).
 
 - `SimulationCandidate.UnsavedProtocolVersion(baseVersion, content)` compares content that is not saved anywhere with a
-  version whose content is frozen.
+  version whose content is frozen. The content must read as a protocol design (ADR-2472), as a stored draft's must;
+  otherwise the run fails with `K.Simulation.ContentInvalid` naming the design problems.
 - The result names its scope (the study), the pinned as-of, both versions with their content hashes, the engine
   versions, an input hash and a result hash (K-SIM-3).
 - `StructuralDiff` lists the elements added, removed or changed. An element is any JSON object with a string `id`

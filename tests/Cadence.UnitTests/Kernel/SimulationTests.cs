@@ -12,10 +12,12 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Trust;
 using Cadence.Testing.Time;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
@@ -35,6 +37,9 @@ public sealed class SimulationTests
           "arms":[{"id":"Arm_A","instanceType":"StudyArm","name":"Drug"},{"id":"Arm_B","instanceType":"StudyArm","name":"Placebo"}],
           "window":{"early":"P1D","late":"P2D"}}]}
         """;
+
+    /// <summary>A protocol design (ADR-2472), as stored and unsaved candidates must be.</summary>
+    private static readonly string Design = ProtocolDesignSamples.Minimal;
 
     private static readonly TenantId Tenant = TenantId.New();
     private static readonly StudyId Study = StudyId.New();
@@ -118,9 +123,9 @@ public sealed class SimulationTests
     public async Task Simulate_StoredDraftAgainstItsParent()
     {
         var inputs = new Inputs();
-        var parent = inputs.Add(Approved(Base));
-        var same = inputs.Add(Draft(parent, Base));
-        var renamed = inputs.Add(Draft(parent, Base.Replace("\"Drug\"", "\"Low dose\"", StringComparison.Ordinal)));
+        var parent = inputs.Add(Approved(Design));
+        var same = inputs.Add(Draft(parent, Design));
+        var renamed = inputs.Add(Draft(parent, Renamed("arm.A", "Low dose")));
         var engine = Engine(inputs);
 
         var unchanged = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(same.Id));
@@ -135,7 +140,7 @@ public sealed class SimulationTests
             NodeRef.For(parent.Id, parent.VersionIndex),
             ContentHash.Compute(renamed.Content),
             parent.ContentHash));
-        changed.StructuralDiff.Should().ContainSingle().Which.ElementId.Should().Be("Arm_A");
+        changed.StructuralDiff.Should().ContainSingle().Which.ElementId.Should().Be("arm.A");
         changed.EngineVersions.Should().Equal(ProtocolStructuralDiff.Engine, SimulationEngine.DependentsEngine);
         changed.AsOf.Should().Be(new SimulationAsOf(Now, Now));
         changed.Dependents!.Total.Should().Be(1);
@@ -149,14 +154,14 @@ public sealed class SimulationTests
     public async Task Simulate_HashesAreReproducible()
     {
         var inputs = new Inputs();
-        var parent = inputs.Add(Approved(Base));
+        var parent = inputs.Add(Approved(Design));
         var engine = Engine(inputs);
-        var candidate = SimulationCandidate.UnsavedProtocolVersion(parent.Id, Base.Replace("P2D", "P3D", StringComparison.Ordinal));
+        var candidate = SimulationCandidate.UnsavedProtocolVersion(parent.Id, ProtocolDesignDocument.Write(ProtocolDesignSamples.MinimalDesign() with { Title = "CARDIO-2" }));
 
         var first = await SimulateAsync(engine, candidate);
         var second = await SimulateAsync(engine, candidate);
         var later = await SimulateAsync(engine, candidate, Now.AddDays(1));
-        var other = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, Base));
+        var other = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, Design));
 
         second.InputHash.Should().Be(first.InputHash);
         second.ResultHash.Should().Be(first.ResultHash);
@@ -176,13 +181,13 @@ public sealed class SimulationTests
     public async Task Simulate_MasksWhatTheReaderMayNotSee()
     {
         var inputs = new Inputs();
-        var parent = inputs.Add(Approved(Base));
-        var draft = inputs.Add(Draft(parent, Base.Replace("\"Drug\"", "\"Low dose\"", StringComparison.Ordinal)));
+        var parent = inputs.Add(Approved(Design));
+        var draft = inputs.Add(Draft(parent, Renamed("arm.A", "Low dose")));
         var visibility = new Hide(NodeRef.For(draft.Id, draft.VersionIndex), MaskReason.Blinded);
         var engine = Engine(inputs, visibility);
 
         var hidden = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(draft.Id));
-        inputs.Replace(draft with { Content = Base.Replace("\"Placebo\"", "\"Active comparator\"", StringComparison.Ordinal) });
+        inputs.Replace(draft with { Content = Renamed("arm.B", "Active comparator") });
         var hiddenAfterChange = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(draft.Id));
 
         hidden.StructuralDiff.Should().BeEmpty();
@@ -202,12 +207,12 @@ public sealed class SimulationTests
     public async Task Simulate_NeedsSimulationRunAtTheStudy()
     {
         var inputs = new Inputs();
-        var parent = inputs.Add(Approved(Base));
+        var parent = inputs.Add(Approved(Design));
         var probe = new Probe(permitted: false);
         var engine = Engine(inputs, probe: probe);
 
         var result = await engine.SimulateAsync(
-            Tenant, new SimulationRequest(SimulationCandidate.UnsavedProtocolVersion(parent.Id, Base)), TestContext.Current.CancellationToken);
+            Tenant, new SimulationRequest(SimulationCandidate.UnsavedProtocolVersion(parent.Id, Design)), TestContext.Current.CancellationToken);
 
         result.Error!.Code.Should().Be(KernelErrors.AuthorizationDenied.Code);
         result.Error.Explanation.Should().NotBeNull();
@@ -219,8 +224,8 @@ public sealed class SimulationTests
     public async Task Simulate_RejectsUnknownVersionsDraftBasesAndInvalidContent()
     {
         var inputs = new Inputs();
-        var parent = inputs.Add(Approved(Base));
-        var draft = inputs.Add(Draft(parent, Base));
+        var parent = inputs.Add(Approved(Design));
+        var draft = inputs.Add(Draft(parent, Design));
         var engine = Engine(inputs);
         var ct = TestContext.Current.CancellationToken;
 
@@ -228,21 +233,46 @@ public sealed class SimulationTests
             (await engine.SimulateAsync(Tenant, new SimulationRequest(candidate), ct)).Error?.Code;
 
         (await Code(SimulationCandidate.StoredProtocolVersion(ProtocolVersionId.New()))).Should().Be(SimulationErrors.VersionUnknown.Code);
-        (await Code(SimulationCandidate.UnsavedProtocolVersion(ProtocolVersionId.New(), Base))).Should().Be(SimulationErrors.VersionUnknown.Code);
-        (await Code(SimulationCandidate.UnsavedProtocolVersion(draft.Id, Base))).Should().Be(SimulationErrors.BaseNotFrozen.Code);
+        (await Code(SimulationCandidate.UnsavedProtocolVersion(ProtocolVersionId.New(), Design))).Should().Be(SimulationErrors.VersionUnknown.Code);
+        (await Code(SimulationCandidate.UnsavedProtocolVersion(draft.Id, Design))).Should().Be(SimulationErrors.BaseNotFrozen.Code);
         (await Code(SimulationCandidate.UnsavedProtocolVersion(parent.Id, "not json"))).Should().Be(SimulationErrors.ContentInvalid.Code);
         (await Code(SimulationCandidate.UnsavedProtocolVersion(parent.Id, "[]"))).Should().Be(SimulationErrors.ContentInvalid.Code);
+    }
+
+    /// <summary>
+    /// Unsaved content is held to the rule a stored draft is held to (ADR-2472): JSON that is not a protocol design,
+    /// such as a USDM document, is refused with the design problems named.
+    /// </summary>
+    [Fact]
+    public async Task Simulate_RejectsUnsavedContentThatIsNotAProtocolDesign()
+    {
+        var inputs = new Inputs();
+        var parent = inputs.Add(Approved(Design));
+        var danglingArm = ProtocolDesignDocument.Write(ProtocolDesignSamples.MinimalDesign() with
+        {
+            Arms = [new Arm("arm.A", "Active", ArmType.Experimental, ["int.missing"])],
+        });
+
+        var usdm = await Engine(inputs).SimulateAsync(
+            Tenant, new SimulationRequest(SimulationCandidate.UnsavedProtocolVersion(parent.Id, Base)), TestContext.Current.CancellationToken);
+        var dangling = await Engine(inputs).SimulateAsync(
+            Tenant, new SimulationRequest(SimulationCandidate.UnsavedProtocolVersion(parent.Id, danglingArm)), TestContext.Current.CancellationToken);
+
+        usdm.Error!.Code.Should().Be(SimulationErrors.ContentInvalid.Code);
+        dangling.Error!.Code.Should().Be(SimulationErrors.ContentInvalid.Code);
+        dangling.Error.Message.Should().Contain("int.missing");
+        inputs.DependentsAsked.Should().BeEmpty();
     }
 
     [Fact]
     public async Task Simulate_NeedsAnAccountableActor()
     {
         var inputs = new Inputs();
-        var parent = inputs.Add(Approved(Base));
+        var parent = inputs.Add(Approved(Design));
         var engine = new SimulationEngine(inputs, new Probe(permitted: true), new Hide(null, MaskReason.NotPermitted), new FixedActor(null), new FakeClock(Now));
 
         var result = await engine.SimulateAsync(
-            Tenant, new SimulationRequest(SimulationCandidate.UnsavedProtocolVersion(parent.Id, Base)), TestContext.Current.CancellationToken);
+            Tenant, new SimulationRequest(SimulationCandidate.UnsavedProtocolVersion(parent.Id, Design)), TestContext.Current.CancellationToken);
 
         result.Error.Should().Be(KernelErrors.ActorUnresolved);
     }
@@ -257,6 +287,12 @@ public sealed class SimulationTests
         result.IsSuccess.Should().BeTrue(result.Error?.Message);
         return result.Value!;
     }
+
+    private static string Renamed(string armId, string name) =>
+        ProtocolDesignDocument.Write(ProtocolDesignSamples.MinimalDesign() with
+        {
+            Arms = [.. ProtocolDesignSamples.MinimalDesign().Arms.Select(a => a.Id == armId ? a with { Name = name } : a)],
+        });
 
     private static ProtocolVersionSnapshot Approved(string content) =>
         new(ProtocolVersionId.New(), Study, 1, ProtocolVersionStatus.Approved, null, content, ContentHash.Compute(content), 3);

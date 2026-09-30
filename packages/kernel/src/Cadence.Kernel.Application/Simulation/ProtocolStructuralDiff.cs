@@ -29,6 +29,8 @@ public static class ProtocolStructuralDiff
     /// <summary>The element id of a document root that carries no <c>id</c>.</summary>
     public const string RootId = "$root";
 
+    private static readonly KernelError NotAnObject = SimulationErrors.ContentInvalid.WithMessage("Protocol content must be a JSON object.");
+
     /// <summary>The property a nested element is replaced with in its parent.</summary>
     private const string ElementReference = "$element";
 
@@ -88,12 +90,12 @@ public static class ProtocolStructuralDiff
         }
         catch (JsonException)
         {
-            return SimulationErrors.ContentInvalid;
+            return NotAnObject;
         }
 
         if (root is not JsonObject document)
         {
-            return SimulationErrors.ContentInvalid;
+            return NotAnObject;
         }
 
         var duplicate = (string?)null;
