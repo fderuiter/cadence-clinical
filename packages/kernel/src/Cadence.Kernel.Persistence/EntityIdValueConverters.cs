@@ -70,3 +70,23 @@ public class ProtocolVersionIdValueConverter() : ValueConverter<ProtocolVersionI
     guid => new ProtocolVersionId(guid)
 );
 
+
+public class CodeSystemIdValueConverter() : ValueConverter<CodeSystemId, Guid>(
+    id => id.Value,
+    guid => new CodeSystemId(guid)
+);
+
+public class CodeSystemVersionIdValueConverter() : ValueConverter<CodeSystemVersionId, Guid>(
+    id => id.Value,
+    guid => new CodeSystemVersionId(guid)
+);
+
+public class ConceptIdValueConverter() : ValueConverter<ConceptId, Guid>(
+    id => id.Value,
+    guid => new ConceptId(guid)
+);
+
+public class ConceptMappingIdValueConverter() : ValueConverter<ConceptMappingId, Guid>(
+    id => id.Value,
+    guid => new ConceptMappingId(guid)
+);

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 using Cadence.Core.Domain;
 using Cadence.Kernel.Commands;
@@ -113,7 +112,8 @@ public class Concept : AggregateRoot<ConceptId>
 
     private void AddRevision(string preferredLabel, string definition, DateTimeOffset recordedAt)
     {
-        Version = _revisions.Count == 0 ? 1 : _revisions.Max(r => r.Version) + 1;
+        // Revisions are not loaded when a concept is changed; the current version number is the source.
+        Version++;
         PreferredLabel = preferredLabel.Trim();
         Definition = definition.Trim();
         _revisions.Add(new ConceptRevision(TenantId, Id, Version, PreferredLabel, Definition, recordedAt));

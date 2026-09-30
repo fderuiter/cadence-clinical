@@ -341,13 +341,15 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         (await fixture.Sender.SendAsync(NewTenant(), cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        await ConceptRegistryPostgresTests.SeedAsync(fixture, ct);
         await fixture.AuditChainSealer.SealAllAsync(ct);
 
         foreach (var statement in new[]
         {
             $"UPDATE kernel.{table} SET tenant_id = tenant_id",
             $"DELETE FROM kernel.{table}",
-            $"TRUNCATE kernel.{table}",
+            // CASCADE, so a table other rows reference reaches its trigger instead of stopping at the foreign key.
+            $"TRUNCATE kernel.{table} CASCADE",
         })
         {
             var act = () => ExecuteAsync(statement, ct);

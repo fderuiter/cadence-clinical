@@ -8,6 +8,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Commands;
@@ -123,6 +124,9 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The unit-of-work factory, whose <c>FaultInjector</c> tests use to fail a commit at a given stage.</summary>
     internal KernelUnitOfWorkFactory UnitOfWork => Scope().GetRequiredService<KernelUnitOfWorkFactory>();
+
+    /// <summary>The Concept Registry read port, as applications get it.</summary>
+    public IConceptRegistry ConceptRegistry => Scope().GetRequiredService<IConceptRegistry>();
 
     internal KernelAuditChainVerifier AuditChainVerifier => Scope().GetRequiredService<KernelAuditChainVerifier>();
 

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Knowledge;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Time;
 
@@ -191,6 +192,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddScoped<IKernelCommandSender, KernelCommandPipeline>();
         services.AddTransient<ICommandHandler<ProvisionTenant, TenantId>, ProvisionTenantHandler>();
         services.AddTransient<ICommandHandler<RegisterOrganization, OrganizationId>, RegisterOrganizationHandler>();
+        services.AddKernelKnowledgeHandlers();
         return services;
     }
 }
