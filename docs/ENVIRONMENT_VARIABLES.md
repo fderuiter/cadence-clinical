@@ -68,12 +68,13 @@ a service that does fails at startup when a required key is missing.
 
 | Key | Read by | Default | Required |
 | --- | --- | --- | --- |
-| `Storage__Provider` | `AddCadenceStorage` | none | yes; `s3`, `minio`, or `memory` (in-process, Development only) |
+| `Storage__Provider` | `AddCadenceStorage` | none | yes; `s3`, `minio`, `filesystem`, or `memory` (in-process, Development only) |
 | `Storage__BucketName` | same (`S3StorageOptions`) | none | yes for `s3` and `minio` |
 | `Storage__Region` | same | `us-east-1` | no |
 | `Storage__ServiceUrl` | same | none (Amazon S3) | yes for `minio`; an S3-compatible endpoint, which turns on path-style addressing |
 | `Storage__ForcePathStyle` | same | on when `Storage__ServiceUrl` is set | no |
 | `Storage__ServerSideEncryption` | same | `AES256` | no; `aws:kms` for KMS, empty to turn it off |
+| `Storage__RootPath` | same (`FileSystemStorageOptions`) | none | yes for `filesystem`; an absolute directory. The store keeps `objects/` and `meta/` under it |
 | `Storage__AccessKeyId`, `Storage__SecretAccessKey` | same | none; the AWS default credential chain (environment, profile, instance or task role) | no; set both or neither. There is no default key |
 
 ## Gateway routing
