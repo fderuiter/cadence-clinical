@@ -84,6 +84,12 @@ An unknown gate name prints an error and exits `1`. Two extra names are accepted
 - `rtm` (or `gxp-rtm-validate`) validates the traceability matrix without writing it. It is not one of the 21.
 - `prettier-check` always passes. It runs nothing.
 
+The `deid` gate scans the given files, or every file git tracks, with the full de-identification detector
+(`packages/deid`). Tests, docs, scripts and generated folders are skipped. A line containing `deid-ignore` is skipped. Findings print as
+`path:line:column` and category, never the matched value. Findings that predate the full detector are listed in
+`.deid-baseline.txt` (`path|category|line hash`), which may only shrink: a new finding or a stale entry fails the
+gate. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop stale entries.
+
 See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
 ### `cadence test`

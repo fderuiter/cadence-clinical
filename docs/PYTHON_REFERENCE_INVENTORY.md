@@ -18,7 +18,6 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | Package | Port missing | Port untested |
 | --- | ---: | ---: |
 | [packages/ddf](#packagesddf) | 10 | 0 |
-| [packages/deid](#packagesdeid) | 2 | 0 |
 | [packages/engine_core](#packagesengine_core) | 21 | 0 |
 | [packages/security](#packagessecurity) | 9 | 0 |
 | [packages/storage](#packagesstorage) | 6 | 0 |
@@ -37,16 +36,6 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `stages/ir_builder.py` | Builds IR: rules → XPath relevant/constraint, multi-language localisations, appearance | none (C# `ParseUsdmToIr` skips all of this) | Port missing |  |
 | `stages/normalizer.py` | USDM validation, fallback id/name synthesis with warnings, duplicate-id detection | none | Port missing |  |
 | `tripartite.py` | Pydantic tripartite form definition (data, UI and logic schemas, migration matrix, UAT report) | none | Port missing | Disposition against spec CollectionSpec |
-
-## packages/deid
-
-| Python file | What it does | C# today | Status | Notes |
-| --- | --- | --- | --- | --- |
-| `__main__.py` | `python -m packages.deid` → `cli.main()` | none | Port missing | Goes with `cli.py` |
-| `cli.py` | Repo PHI scanner using the full detector: gitignore handling, `deid-ignore` pragmas, URL/test-value allowlists, path exclusions | `packages/tooling_core/src/Services/DeidComplianceService.cs` (only an SSN regex over `*.cs`, skips `tests/`) | Port missing | The C# gate (CI `check deid`, `.github/workflows/ci.yml:285`) is much weaker |
-
-**Note D1.** `detector.py` and `models.py` were deleted once `DeidDetectorTests` pinned the C# port to them. `cli.py`
-and `__init__.py` still import them; recover them from git history when porting `cli.py`.
 
 ## packages/engine_core
 

@@ -5,7 +5,7 @@ Implementation library behind the Cadence CLI: repository validators, generators
 ## Projects
 
 - `packages/tooling_core/src/Cadence.ToolingCore.csproj` (assembly `Cadence.ToolingCore`):
-  - `Cadence.ToolingCore.Services`: one static service per tool, for example `ReadmeValidatorService`, `MarkdownValidatorService`, `AdrValidatorService`, `ArchitectureDriftValidatorService`, `ImportValidatorService`, `DependencyValidatorService`, `SyncGxPService`, `ScaffoldServiceService`, `SelfHealService`, `OpenApiSyncService`, `SchemaDocGeneratorService`.
+  - `Cadence.ToolingCore.Services`: one static service per tool, for example `ReadmeValidatorService`, `MarkdownValidatorService`, `AdrValidatorService`, `ArchitectureDriftValidatorService`, `ImportValidatorService`, `DependencyValidatorService`, `SyncGxPService`, `ScaffoldServiceService`, `SelfHealService`, `OpenApiSyncService`, `SchemaDocGeneratorService`, and `DeidComplianceService` (the `deid` gate: the full `DeidDetector` over tracked files, ratcheted by `.deid-baseline.txt`).
   - `Cadence.ToolingCore.Markdown`: `MarkdownParser` (workspace link checking, and paths into .NET test project folders that no longer exist; `docs/migration/` and the generated RTM and IQ/OQ/PQ report are skipped).
   - `Cadence.ToolingCore.Contracts`: `ContractVerifier`.
   - `Cadence.ToolingCore.Security`: `SecretScanner`.
@@ -16,7 +16,7 @@ Implementation library behind the Cadence CLI: repository validators, generators
 
 ## Key dependencies
 
-- `Cadence.ToolingCore`: project reference `Cadence.Compliance`; framework reference `Microsoft.AspNetCore.App`; packages `Microsoft.EntityFrameworkCore`, `Spectre.Console`.
+- `Cadence.ToolingCore`: project references `Cadence.Compliance` and `Cadence.Deid`; framework reference `Microsoft.AspNetCore.App`; packages `Microsoft.EntityFrameworkCore`, `Spectre.Console`.
 - `Cadence.OpenApiExporter`: `Cadence.ToolingCore`, the execution, designer and gateway service projects, `Microsoft.AspNetCore.Mvc.Testing`.
 - `Cadence.SchemaDocExporter`: `Cadence.Database`, `Cadence.Kernel.Persistence` and the 15 app projects that own a DbContext.
 
@@ -26,8 +26,8 @@ Implementation library behind the Cadence CLI: repository validators, generators
 
 ## Tests
 
-Covered by `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs` and `tests/Cadence.UnitTests/Packages/DeidEngineUnitTests.cs`:
+Covered by `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`, `DeidEngineUnitTests.cs` and `DeidComplianceServiceTests.cs`:
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests|FullyQualifiedName~DeidComplianceServiceTests"
 ```
