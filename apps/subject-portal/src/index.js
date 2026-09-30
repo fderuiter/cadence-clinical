@@ -2343,7 +2343,9 @@ async function initializeApp() {
       if (mountedApp) {
         try {
           mountedApp.unmount();
-        } catch (_) {}
+        } catch {
+          /* ignore */
+        }
         mountedApp = null;
       }
       mountedApp = createApp(App);
@@ -3317,7 +3319,9 @@ export function unmountApp() {
   if (mountedApp) {
     try {
       mountedApp.unmount();
-    } catch (_) {}
+    } catch {
+      /* ignore */
+    }
     mountedApp = null;
   }
 }
