@@ -56,6 +56,7 @@ public static class KernelReadEndpoints
         reads.MapGet("/nodes/{nodeRef}/children", GetChildrenAsync)
             .WithName("KernelGetChildren")
             .WithSummary("The children of a scope node, with their own child counts.")
+            .WithDescription("A node the caller may not see is refused; a child the caller may not see is masked in place (ADR-2471).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -155,6 +156,19 @@ public static class KernelReadEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        if (await navigator.ResolveAsync(tenant, node, cancellationToken).ConfigureAwait(false) is not { } parent)
+        {
+            return KernelProblems.NotFound(node);
+        }
+
+        // Visibility reaches up the scope path, so every child of a hidden object is hidden too: even masked, the list
+        // would say how many there are (a site's enrolled participants, a study's sites). It is refused, not masked (#5033).
+        var parentMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [parent.Ref], cancellationToken).ConfigureAwait(false);
+        if (parentMasks.For(parent.Ref) is { } parentMask)
+        {
+            return KernelProblems.NotVisible($"You can't see this {node.Kind} ({parentMask}), so its children are not listed.");
+        }
+
         if (await navigator.GetChildrenAsync(tenant, node, cancellationToken).ConfigureAwait(false) is not { } children)
         {
             return KernelProblems.NotFound(node);
@@ -256,10 +270,7 @@ public static class KernelReadEndpoints
         var studyMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [study.Ref], cancellationToken).ConfigureAwait(false);
         if (studyMasks.For(study.Ref) is { } studyMask)
         {
-            return TypedResults.Problem(
-                title: "Not visible",
-                detail: $"You can't see this study ({studyMask}), so its protocol versions are not listed.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return KernelProblems.NotVisible($"You can't see this study ({studyMask}), so its protocol versions are not listed.");
         }
 
         var versions = await reader.ListForStudyAsync(tenant, StudyId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);

@@ -88,7 +88,7 @@ All are `GET`, all under `/api/v1/kernel`, all answer problem details on failure
 | --- | --- |
 | `nodes/{nodeRef}` | The object's summary: ref at its current version, kind, title, code, status. 404 outside the tenant. |
 | `nodes/{nodeRef}/path` | The zoom path from the tenant down to the object, with grouping levels. Presentation only. |
-| `nodes/{nodeRef}/children` | The object's zoom children with their own child counts and grouping level. |
+| `nodes/{nodeRef}/children` | The object's zoom children with their own child counts and grouping level. A node the caller may not see is refused with 403 (#5033). |
 | `nodes/{nodeRef}/commands` | Every kernel command offered on the object's kind, each with the caller's dry-run decision and explanation. |
 | `authorization/can-i?capability=&resource=` | The caller's dry-run decision on one capability and object, with its explanation. |
 | `search?q=&kind=&limit=` | Search hits (limit 1 to 50, default 20). |
