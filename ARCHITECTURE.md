@@ -87,7 +87,7 @@ Every backend is an ASP.NET Core 10 Minimal API host under `apps/<name>/src`, bu
 
 | Service | Project | Port | Gateway routes (`/api/v1/…`) | Persistence | Maturity |
 | --- | --- | --- | --- | --- | --- |
-| [gateway](apps/gateway/README.md) | `Cadence.Apps.Gateway` | 8000 (behind the nginx front proxy in compose) | all of the below; each route is tested against the endpoints its service maps ([ADR-2448](docs/adr/2026-09-29-gateway-routes-verified-against-service-endpoints.md)) | none | Implemented |
+| [gateway](apps/gateway/README.md) | `Cadence.Apps.Gateway` | 8000 (behind the nginx front proxy in compose) | all of the below; each route is tested against the endpoints its service maps ([ADR-2448](docs/adr/2026-09-29-gateway-routes-verified-against-service-endpoints.md)); a stalled service gets a 504 and an unhealthy one a 503 without forwarding ([ADR-2451](docs/adr/2026-09-29-gateway-timeouts-and-health-checked-clusters.md)) | none | Implemented |
 | [designer](apps/designer/README.md) | `Cadence.Apps.Designer` | 8001 | `studies`, `protocols` | none yet | Scaffold |
 | [execution](apps/execution/README.md) | `Cadence.Apps.Execution` | 8002 | `observations`, `forms`, `queries`, `execution` | `ExecutionDbContext` | Implemented (EDC core) |
 | [etmf](apps/etmf/README.md) | `Cadence.Apps.Etmf` | 8003 | `etmf` | `EtmfDbContext` | Scaffold |

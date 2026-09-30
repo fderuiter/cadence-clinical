@@ -61,6 +61,14 @@ Read by `apps/gateway/src/Program.cs:68-84`. Each defaults to `http://localhost:
 | `PAYMENTS_SERVICE_URL` | 8016 |
 | `AI_GATEWAY_SERVICE_URL` | 8017 |
 
+Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClusters.cs` (ADR-2451). Each must be a positive number of seconds; the gateway refuses to start otherwise.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `GATEWAY_PROXY_TIMEOUT_SECONDS` | 30 | A proxied request fails with 504 once its service sends nothing for this long. |
+| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | 10 | How often the gateway probes each service's `/healthz/ready`. Two failures in a row make the gateway answer 503 for that service until a probe succeeds. |
+| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS` | 5 | How long one readiness probe may take before it counts as failed. |
+
 ## Authentication and audit
 
 | Key | Read by | Default | Required |
