@@ -125,7 +125,7 @@ const UNAVAILABLE_VERBS = [
   {
     id: "explain",
     label: "Explain",
-    note: "Explain needs explanations served by the kernel (#4842); the canvas never composes them itself.",
+    note: "Explain renders the kernel's explanations (ADR-2482, #4842), which no service serves over the API yet.",
   },
   {
     id: "simulate",
