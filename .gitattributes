@@ -15,3 +15,4 @@
 
 # Checksum-verified standards seed content: never normalise line endings (Seed/manifest.json pins each file's SHA-256)
 packages/kernel/src/Cadence.Standards/Seed/*.json -text
+packages/kernel/src/Cadence.Standards/Blocks/*.json -text

@@ -504,6 +504,10 @@ natural key `(code system, version)`, for example `sdtmct 2024-09-27`, and resol
 resolved version when the package is already imported; a study declaration must resolve every CT version it declares. An architecture test
 enforces K-PROJ-1 against the shipped seeds.
 
+**Implemented (#4789, ADR-2503):** reusable form blocks. `CollectionSpecification` library item content is checked
+when it is drafted. Its items name CDISC Biomedical Concepts by C-code, and instantiating it in a tenant resolves them
+to a protocol design `CollectionSpec`. `Cadence.Standards` ships a checksum-verified vital signs block.
+
 ---
 
 ## 7. Execution Engine

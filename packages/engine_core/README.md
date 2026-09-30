@@ -12,7 +12,7 @@ Shared domain library (folder `engine_core`): aggregate root base types, the `IG
 - `Cadence.Core.Domain.Supply`: `DTPLogisticsEngine`, `PredictiveDemandForecastingEngine` and supply models.
 - `Cadence.Core.Domain.Toxicity`: `LabToxicityGradingEngine` and CTCAE grading models.
 - Time (K-TIME-3, #4784): nothing here reads the wall clock, and the build fails on `DateTime.Now/UtcNow` (`CadenceBanWallClock`). The caller passes the instant: `RuleEvaluator(asOf)`, `EvaluateObservation(..., evaluatedAt)`, `EvaluateHysLaw(..., evaluatedAt)` and `EvaluateDtpDispatch(..., authorizedAt)`. `AggregateRootBase.CreatedAt` has no default, because the save path stamps it. `AuditLogEntry.Timestamp` and `RuleDefinition.CreatedAt` are `required`.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `derived/`, `financial/`, `fsm/`, `operations/`, `rules/ast.py`, `rules/sentinels.py`, `sla/`, `supply/` (all but `forecasting.py`), `timeline/`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `derived/`, `financial/`, `operations/`, `rules/ast.py`, `rules/sentinels.py`, `sla/`, `supply/` (all but `forecasting.py`), `timeline/`, with their `__init__.py` files and `pyproject.toml`. `fsm/` is superseded by the kernel's aggregate state machines and waits only for a maintainer to approve its deletion. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 
