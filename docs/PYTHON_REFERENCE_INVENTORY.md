@@ -18,7 +18,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 
 | Package | Port missing | Port untested | Ported, deletion pending |
 | --- | ---: | ---: | ---: |
-| [packages/ddf](#packagesddf) | 2 | 0 | 9 |
+| [packages/ddf](#packagesddf) | 1 | 0 | 10 |
 | [packages/engine_core](#packagesengine_core) | 19 | 0 | 3 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
 | [packages/storage](#packagesstorage) | 2 | 0 | 4 |
@@ -37,7 +37,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `stages/accessibility.py` | Runs validator; raises on WCAG or layout violations | `UsdmCompiler.CompileUsdm` throws `AccessibilityValidationException`; `XFormsAccessibilityValidator` is the built-in check | Ported, deletion pending | `DdfCompilerTests`, `XFormsAccessibilityValidatorTests` |
 | `stages/ir_builder.py` | Builds IR: rules → XPath relevant/constraint, multi-language localisations, appearance | `UsdmCompiler.ParseUsdmToIr`: rules, appearance, and item `label`, `description`, `hint` and `localizations` (`ItemText`) | Ported, deletion pending | ADR-2502; `DdfRulesTests`. Guessing item text from USDM narrative content by name is not carried forward: the text comes from the item's own fields |
 | `stages/normalizer.py` | USDM validation, fallback id/name synthesis with warnings, duplicate-id detection | `UsdmCompiler.ParseUsdmToIr`: a missing study id or name and an item without an id are filled in and reported as warnings; duplicate item ids and element names fail the compile | Ported, deletion pending | `DdfRulesTests`. Placeholder UUIDs for USDM `documentedBy` fields are not carried forward: nothing validates them against a schema |
-| `tripartite.py` | Pydantic tripartite form definition (data, UI and logic schemas, migration matrix, UAT report) | none | Port missing | Disposition against spec CollectionSpec: the data schema part is the protocol design's `CollectionSpec` (ADR-2503); the UI and logic schemas, migration matrix and UAT report remain |
+| `tripartite.py` | Pydantic tripartite form definition (data, UI and logic schemas, migration matrix, UAT report) | Not carried forward ([ADR-2504](adr/2026-09-30-the-tripartite-form-definition-is-not-carried-forward.md)): data schema → `CollectionSpec` and `CollectionSpecification` library items; CDISC metadata → mapping specifications; constraints → rule packs; UI schema → DDF form design; migration matrix → Effectivity and Applicability; UAT report → evaluate-only simulation | Ported, deletion pending | Shapes only, no behaviour; nothing in C# read them |
 
 ## packages/engine_core
 
