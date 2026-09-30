@@ -70,6 +70,8 @@ public static class CadenceSecurityServiceCollectionExtensions
         services.AddSingleton<IAuthorizationHandler, StudyScopeAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, ChangeJustificationAuthorizationHandler>();
         services.AddSingleton<IAuthorizationHandler, AuditorReadOnlyAuthorizationHandler>();
+        // RequirePermission("resource:action") names a policy built on demand from the permission matrix (ADR-2510).
+        services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 
         services.AddAuthorization(authOptions =>
         {
@@ -104,11 +106,14 @@ public static class CadenceSecurityServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Minimal API extension asserting required permission ("resource:action").
+    /// Requires the caller's roles to hold <paramref name="permission"/> (<c>resource:action</c>) in
+    /// <see cref="PermissionMatrix"/>; any other authenticated caller gets <c>403</c>. The policy is built by
+    /// <see cref="PermissionPolicyProvider"/> (ADR-2510).
     /// </summary>
     public static TBuilder RequirePermission<TBuilder>(this TBuilder builder, string permission) where TBuilder : IEndpointConventionBuilder
     {
-        return builder.RequireAuthorization(new AuthorizeAttribute { Policy = $"Permission:{permission}" });
+        ArgumentException.ThrowIfNullOrWhiteSpace(permission);
+        return builder.RequireAuthorization(new AuthorizeAttribute { Policy = PermissionPolicyProvider.PolicyName(permission) });
     }
 
     /// <summary>

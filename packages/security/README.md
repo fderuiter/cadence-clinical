@@ -29,6 +29,9 @@ signatures and audit digests shared by every Cadence service.
   ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)).
 - **Authorization:** `PermissionMatrix`, `RoleNormalization`, `Principal`, site/study access evaluators
   and the permission, role, study-scope, change-justification and auditor-read-only handlers.
+  `RequirePermission("resource:action")` on a route requires that permission in `PermissionMatrix`; the
+  `PermissionPolicyProvider` registered by `AddCadenceSecurity()` builds the policy and a caller without it
+  gets `403` ([ADR-2510](../../docs/adr/2026-09-30-endpoint-permissions-from-the-permission-matrix.md)).
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
   used by `Cadence.Deid` for redaction manifests and de-identification certificates.
