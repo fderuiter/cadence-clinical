@@ -7,6 +7,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Trust;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
@@ -21,7 +22,7 @@ internal sealed class KernelProtocolScenario(KernelPostgresFixture fixture)
 {
     public const string Reason = "Integration test";
 
-    public const string Content = """{"study":{"name":"CARDIO-1","arms":["A","B"]}}""";
+    public static readonly string Content = ProtocolDesignSamples.Minimal;
 
     public static readonly ProtocolAmendment Amendment = new(
         "Add a cohort",
@@ -32,12 +33,19 @@ internal sealed class KernelProtocolScenario(KernelPostgresFixture fixture)
         TransitionPolicy.RequiresReconsent);
 
     /// <summary>A new tenant with a sponsor organization and one study.</summary>
-    public async Task<(TenantId Tenant, StudyId Study)> NewStudyAsync(CancellationToken ct)
+    public Task<(TenantId Tenant, StudyId Study)> NewStudyAsync(CancellationToken ct) => NewStudyAsync(null, ct);
+
+    /// <summary>A sponsor organization and one study in <paramref name="existing"/>, or in a new tenant when it is null.</summary>
+    public async Task<(TenantId Tenant, StudyId Study)> NewStudyAsync(TenantId? existing, CancellationToken ct)
     {
         var suffix = Suffix();
-        var tenant = TenantId.New();
+        var tenant = existing ?? TenantId.New();
         var sponsor = OrganizationId.New();
-        await OkAsync(new ProvisionTenant(tenant, $"T-{suffix}", $"Tenant {suffix}", $"tenant-{suffix}", Reason), ct);
+        if (existing is null)
+        {
+            await OkAsync(new ProvisionTenant(tenant, $"T-{suffix}", $"Tenant {suffix}", $"tenant-{suffix}", Reason), ct);
+        }
+
         await OkAsync(new RegisterOrganization(tenant, sponsor, $"ORG-{suffix}", $"Sponsor {suffix}", OrganizationKind.Sponsor, $"org-{suffix}", Reason), ct);
 
         var study = new Study(StudyId.New(), tenant, sponsor, $"STUDY-{suffix}", "Cardiovascular outcomes", "Phase 3", KernelPostgresFixture.ActorId, "Seeded for test");
@@ -45,8 +53,8 @@ internal sealed class KernelProtocolScenario(KernelPostgresFixture fixture)
         return (tenant, study.Id);
     }
 
-    public Task<CommandResult<ProtocolVersionState>> CreateDraftAsync(TenantId tenant, StudyId study, ProtocolVersionId id, CancellationToken ct, string content = Content) =>
-        fixture.Sender.SendAsync(new CreateProtocolDraft(tenant, study, id, content, Key(), Reason), cancellationToken: ct);
+    public Task<CommandResult<ProtocolVersionState>> CreateDraftAsync(TenantId tenant, StudyId study, ProtocolVersionId id, CancellationToken ct, string? content = null) =>
+        fixture.Sender.SendAsync(new CreateProtocolDraft(tenant, study, id, content ?? Content, Key(), Reason), cancellationToken: ct);
 
     public Task<CommandResult<ProtocolVersionState>> SubmitAsync(TenantId tenant, ProtocolVersionId id, CancellationToken ct) =>
         fixture.Sender.SendAsync(new SubmitProtocolVersionForReview(tenant, id, Key(), Reason), cancellationToken: ct);

@@ -7,6 +7,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Trust;
 using Cadence.Testing;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
@@ -22,14 +23,14 @@ namespace Cadence.UnitTests.Kernel;
 [Trait("Category", "Unit")]
 public sealed class ProtocolVersionTests
 {
-    private const string Content = """{"study":{"name":"CARDIO-1","arms":["A","B"]}}""";
+    private static readonly string Content = ProtocolDesignSamples.Minimal;
 
     private static readonly ProtocolAmendment Amendment = new(
         "Add a cohort",
         "Enrolment is slower than planned",
         AmendmentClassification.Substantial,
         "Adds cohort C and a visit at week 12",
-        ["arm:C", "visit:W12"],
+        ["arm.C", "act.week12"],
         TransitionPolicy.RequiresReconsent);
 
     public static TheoryData<ProtocolVersionStatus, string, bool> Transitions()
@@ -81,15 +82,25 @@ public sealed class ProtocolVersionTests
         version.WithdrawalAttestationId.Should().BeNull();
     }
 
-    /// <summary>Protocol content must be a single JSON object without duplicate keys, so its hash is well defined.</summary>
-    [Theory(DisplayName = "Content_MustBeAJsonObject")]
+    /// <summary>
+    /// Protocol content must be a protocol design document (ADR-2472): one JSON object without duplicate keys, so its
+    /// hash is well defined, with no unknown properties, the current schema version and a title.
+    /// </summary>
+    [Theory(DisplayName = "Content_MustBeAProtocolDesign")]
     [InlineData("", "K.Protocol.ContentRequired")]
     [InlineData("   ", "K.Protocol.ContentRequired")]
     [InlineData("[1,2]", "K.Protocol.ContentInvalid")]
     [InlineData("\"text\"", "K.Protocol.ContentInvalid")]
     [InlineData("{\"a\":1", "K.Protocol.ContentInvalid")]
     [InlineData("{\"a\":1,\"a\":2}", "K.Protocol.ContentInvalid")]
-    public void ContentMustBeAJsonObject(string content, string code)
+    [InlineData("{\"title\":\"A\",\"title\":\"B\"}", "K.Protocol.ContentInvalid")]
+    [InlineData("{\"study\":{\"name\":\"CARDIO-1\"}}", "K.Protocol.ContentInvalid")]
+    [InlineData("{\"schemaVersion\":1,\"title\":\"CARDIO-1\",\"unknown\":1}", "K.Protocol.ContentInvalid")]
+    [InlineData("{\"schemaVersion\":1,\"title\":\" \"}", "K.Protocol.ContentInvalid")]
+    [InlineData("{\"schemaVersion\":2,\"title\":\"CARDIO-1\"}", "K.Protocol.ContentInvalid")]
+    [InlineData("{\"title\":\"CARDIO-1\"}", "K.Protocol.ContentInvalid")]
+    [InlineData("{\"schemaVersion\":1,\"title\":\"CARDIO-1\",\"cohorts\":[{\"id\":\"coh.1\",\"name\":\"Main\",\"armIds\":[\"arm.X\"]}]}", "K.Protocol.ContentInvalid")]
+    public void ContentMustBeAProtocolDesign(string content, string code)
     {
         ProtocolVersion.CreateFirst(ProtocolVersionId.New(), TenantId.New(), StudyId.New(), content).Error!.Code.Should().Be(code);
 
@@ -113,7 +124,7 @@ public sealed class ProtocolVersionTests
         version.Status.Should().Be(ProtocolVersionStatus.InReview);
         version.ContentHash.Should().Be(ContentHash.Compute(Content));
         version.SignableTarget.Should().Be(new AttestationTarget(AttestationTarget.ProtocolVersionKind, version.Id.Value, version.ContentHash!));
-        version.Revise("""{"changed":true}""", null)!.Code.Should().Be(ProtocolErrors.InvalidTransition.Code);
+        version.Revise(ProtocolDesignSamples.WithArmC, null)!.Code.Should().Be(ProtocolErrors.InvalidTransition.Code);
         version.Content.Should().Be(Content);
 
         version.ReturnToDraft().Should().BeNull();
@@ -138,7 +149,7 @@ public sealed class ProtocolVersionTests
 
         KernelError? error = operation switch
         {
-            "Revise" => version.Revise("""{"revised":true}""", null),
+            "Revise" => version.Revise(ProtocolDesignSamples.WithArmC, null),
             "Submit" => version.SubmitForReview(),
             "ReturnToDraft" => version.ReturnToDraft(),
             "Approve" => version.Approve(AttestationId.New()),
@@ -228,7 +239,7 @@ public sealed class ProtocolVersionTests
 
         var fork = ProtocolVersion.Fork(parent, ProtocolVersionId.New(), 2, Amendment).Value!;
         var revised = Amendment with { SummaryOfChanges = "Adds cohort C only" };
-        fork.Revise("""{"study":{"name":"CARDIO-1","arms":["A","B","C"]}}""", revised).Should().BeNull();
+        fork.Revise(ProtocolDesignSamples.WithArmC, revised).Should().BeNull();
         fork.Amendment.Should().Be(revised);
         fork.Revise(Content, null).Should().BeNull();
         fork.Amendment.Should().Be(revised);

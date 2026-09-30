@@ -7,9 +7,11 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
@@ -108,21 +110,68 @@ internal sealed class ReviseProtocolDraftHandler : ICommandHandler<ReviseProtoco
     }
 }
 
-/// <summary>Handles <see cref="SubmitProtocolVersionForReview"/>.</summary>
+/// <summary>
+/// Handles <see cref="SubmitProtocolVersionForReview"/>. Freezing the content is when its references outside the
+/// design must resolve (K-SEM-1): every concept version, code-system version and artifact it names must exist in the
+/// tenant, so reviewers sign a design whose meaning is pinned.
+/// </summary>
 internal sealed class SubmitProtocolVersionForReviewHandler : ICommandHandler<SubmitProtocolVersionForReview, ProtocolVersionState>
 {
-    public Task<CommandResult<ProtocolVersionState>> HandleAsync(
-        SubmitProtocolVersionForReview command, ICommandContext context, CancellationToken cancellationToken) =>
-        ProtocolVersionStates.ChangeAsync(context, command.ProtocolVersionId, cancellationToken, version =>
+    public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
+        SubmitProtocolVersionForReview command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Work.FindAsync<ProtocolVersion>(command.ProtocolVersionId, cancellationToken).ConfigureAwait(false) is not { } version)
         {
-            if (version.SubmitForReview() is { } error)
-            {
-                return error;
-            }
+            return KernelErrors.NotFound;
+        }
 
-            context.Work.Raise(new ProtocolVersionSubmittedForReview(version.TenantId, version.StudyId, version.Id, version.ContentHash!));
-            return null;
-        });
+        if (version.Status == ProtocolVersionStatus.Draft
+            && await UnknownReferenceAsync(context, version.Design().ExternalReferences(), cancellationToken).ConfigureAwait(false) is { } unknown)
+        {
+            return ProtocolErrors.ReferenceUnknown.WithMessage($"{ProtocolErrors.ReferenceUnknown.Message} Unknown: {unknown}.");
+        }
+
+        if (version.SubmitForReview() is { } error)
+        {
+            return error;
+        }
+
+        context.Work.Raise(new ProtocolVersionSubmittedForReview(version.TenantId, version.StudyId, version.Id, version.ContentHash!));
+        return ProtocolVersionStates.Of(version);
+    }
+
+    /// <summary>The first reference the tenant cannot resolve, or null. A concept reference needs that version to exist.</summary>
+    private static async Task<string?> UnknownReferenceAsync(
+        ICommandContext context, DesignExternalReferences references, CancellationToken cancellationToken)
+    {
+        foreach (var group in references.Concepts.GroupBy(c => c.ConceptId).OrderBy(g => g.Key.Value))
+        {
+            var concept = await context.Work.ReadAsync<Concept>(group.Key, cancellationToken).ConfigureAwait(false);
+            var missing = group.Where(c => concept is null || c.Version > concept.Version).OrderBy(c => c.Version).ToList();
+            if (missing.Count > 0)
+            {
+                return $"concept {missing[0]}";
+            }
+        }
+
+        foreach (var codeSystemVersion in references.CodeSystemVersions.OrderBy(v => v.Value))
+        {
+            if (!await context.Work.ExistsAsync<CodeSystemVersion>(codeSystemVersion, cancellationToken).ConfigureAwait(false))
+            {
+                return $"code-system version {codeSystemVersion}";
+            }
+        }
+
+        foreach (var artifact in references.Artifacts.OrderBy(a => a.Value))
+        {
+            if (!await context.Work.ExistsAsync<Artifact>(artifact, cancellationToken).ConfigureAwait(false))
+            {
+                return $"artifact {artifact}";
+            }
+        }
+
+        return null;
+    }
 }
 
 /// <summary>Handles <see cref="ReturnProtocolVersionToDraft"/>.</summary>

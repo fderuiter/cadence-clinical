@@ -24,7 +24,11 @@ recorded period (K-TIME-1). Code takes time only from `IClock` (K-TIME-3).
 A **ProtocolVersion** is one version of the executable protocol, numbered within its study. It moves
 `Draft → InReview → Approved → Superseded | Withdrawn`. Submitting it for review freezes its content under a
 **content hash**; approval and withdrawal each need an Attestation on that hash. An **Amendment** is carried
-by the draft forked from an approved version, and the parent stays approved (ADR-2452). **Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or
+by the draft forked from an approved version, and the parent stays approved (ADR-2452). Its content is a
+**protocol design document** (ADR-2472): typed elements (objectives, endpoints, estimands, arms, epochs, planned
+activities, collection specifications and more), each with an **element id** that stays the same across versions, so
+two versions can be diffed element by element (K-PROT-1). A **design finding** is a gap in the scientific chain, such
+as a collected item with no purpose (K-PROT-3); it informs and never blocks. **Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or
 StudySite): approval is not effectiveness, and `Effective` requires evidence artifacts such as the
 ethics approval (K-TIME-4, K-TIME-5).
 
@@ -192,7 +196,7 @@ A temporal data integrity standard under 21 CFR Part 11 that models mutable clin
 
 ### Native ProtocolVersion Snapshot Tree
 
-A clinical metadata storage pattern replacing dedicated graph database dependencies (Neo4j) with immutable, versioned hierarchical snapshots stored directly in PostgreSQL under the Clinical Kernel. Each approved protocol amendment is persisted as an immutable snapshot containing USDM study arms, epochs, encounters, activities, and biomedical concepts serialized into strongly-typed C# 14 record hierarchies and indexed JSONB columns. Graph visualizations and semantic diffs are computed on-demand or projected to read-only caches.
+A clinical metadata storage pattern replacing dedicated graph database dependencies (Neo4j) with immutable, versioned hierarchical snapshots stored directly in PostgreSQL under the Clinical Kernel. Each protocol version is persisted as an immutable snapshot of its protocol design document (ADR-2472): arms, epochs, planned activities, collection specifications and concept references as strongly-typed C# 14 records, stored as JSON under a content hash. Graph visualizations and semantic diffs are computed on-demand or projected to read-only caches.
 
 ### .NET Aspire Developer Orchestration Engine
 
@@ -315,7 +319,7 @@ A regulatory enforcement mechanism that automatically blocks site investigators 
 
 ### Unified Study Data Model (USDM)
 
-The CDISC TransCelerate standard defining a machine-readable protocol representation including study design elements, arms, epochs, encounters, activities, and biomedical concepts.
+The CDISC TransCelerate standard defining a machine-readable protocol representation including study design elements, arms, epochs, encounters, activities, and biomedical concepts. In Cadence it is an interchange format: USDM converts in and out of the kernel's protocol design document and is never the stored shape (ADR-2472).
 
 ### Schedule of Activities (SoA) Matrix
 

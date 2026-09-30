@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Cadence.Kernel.Knowledge;
 
@@ -11,6 +12,11 @@ public readonly record struct ConceptRef
 {
     /// <param name="conceptId">The concept.</param>
     /// <param name="version">The concept version the reference was made against, starting at 1.</param>
+    /// <remarks>
+    /// JSON reads through this constructor, so a document cannot produce the empty reference a struct's default
+    /// constructor would give.
+    /// </remarks>
+    [JsonConstructor]
     public ConceptRef(ConceptId conceptId, int version)
     {
         if (conceptId.IsEmpty)
