@@ -84,7 +84,7 @@ jobs:
         if: always()
         run: dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
 
-      # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2495).
+      # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2496).
       - name: Publish the CLI as Native AOT
         id: run_cli_aot
         if: always()

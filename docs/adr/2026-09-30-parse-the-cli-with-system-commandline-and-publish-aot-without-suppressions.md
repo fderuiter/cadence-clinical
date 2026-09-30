@@ -1,4 +1,4 @@
-# ADR-2495: Parse the CLI with System.CommandLine and Publish It as Native AOT Without Suppressions
+# ADR-2496: Parse the CLI with System.CommandLine and Publish It as Native AOT Without Suppressions
 
 - **Status:** Accepted
 - **Date:** 2026-09-30

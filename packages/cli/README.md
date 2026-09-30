@@ -45,7 +45,7 @@ Validation commands such as `validate-readmes`, `validate-markdown`, `validate-i
 
 `PublishAot` is on and no trim or AOT warning (IL2xxx/IL3xxx) is suppressed. Warnings are errors, so code that is
 not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64`, which CI runs
-(ADR-2249, ADR-2495). The Makefile publishes the same way to `./bin/cadence`.
+(ADR-2249, ADR-2496). The Makefile publishes the same way to `./bin/cadence`.
 
 ## Tests
 
