@@ -82,7 +82,7 @@ public static class Program
             {
                 db.SetDescription("Database management and migrations");
                 db.AddCommand<DbResetCommand>("reset")
-                    .WithDescription("Resets PostgreSQL, SQLite, and Neo4j datastores");
+                    .WithDescription("Resets the local PostgreSQL and SQLite datastores");
                 db.AddCommand<DbMigrateCommand>("migrate")
                     .WithDescription("Runs pre-boot EF Core database migrations");
                 db.AddCommand<DbStatusCommand>("status")

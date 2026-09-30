@@ -61,22 +61,6 @@ public class DoctorCommand : Command<DoctorCommand.Settings>
             AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable[/]");
         }
 
-        // 4. Neo4j connectivity
-        try
-        {
-            using var client = new TcpClient();
-            var asyncResult = client.BeginConnect("127.0.0.1", 7687, null, null);
-            bool success = asyncResult.AsyncWaitHandle.WaitOne(500, false);
-            if (success && client.Connected)
-                AnsiConsole.MarkupLine("  Neo4j Bolt (7687): [green]Connected[/]");
-            else
-                AnsiConsole.MarkupLine("  Neo4j Bolt (7687): [grey]Unreachable (start via docker compose -f docker/docker-compose.yml up -d neo4j)[/]");
-        }
-        catch
-        {
-            AnsiConsole.MarkupLine("  Neo4j Bolt (7687): [grey]Unreachable[/]");
-        }
-
         return 0;
     }
 }

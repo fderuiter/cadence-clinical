@@ -105,11 +105,6 @@ else
     echo "  [INFO] PostgreSQL not reachable on port 5432 (Run 'docker compose -f docker/docker-compose.yml up -d postgres' to start)."
 fi
 
-if nc -z 127.0.0.1 7687 2>/dev/null; then
-    echo -e "  \033[32m[OK] Neo4j Bolt detected on port 7687.\033[0m"
-else
-    echo "  [INFO] Neo4j not reachable on port 7687 (Run 'docker compose -f docker/docker-compose.yml up -d neo4j' to start)."
-fi
 
 echo -e "\n================================================================="
 echo -e "  \033[32m.NET 10 Developer Environment Setup Complete!\033[0m"
