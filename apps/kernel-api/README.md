@@ -1,8 +1,8 @@
 # Kernel API host
 
-The Clinical Kernel's HTTP host ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). It serves the kernel's read endpoints for the Clinical Canvas: navigation, dry-run authorization with explanations, the command catalogue and search. It is the only process that registers kernel persistence (K-XS-2); product services never reference it.
+The Clinical Kernel's HTTP host ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). It serves the kernel's read endpoints for the Clinical Canvas: navigation, dry-run authorization with explanations, the command catalogue, search and protocol versions. It is the only process that registers kernel persistence (K-XS-2); product services never reference it.
 
-**Status:** the endpoints are mapped, documented and tested, but they serve no data yet. Every kernel read answers 503 until the kernel can find the kernel tenant for the tenant code the gateway signs; every object is masked and every authorization decision is a denial until the authority slice (#4781) is registered.
+**Status:** the endpoints are mapped, documented and tested, and each read runs in the kernel tenant found from the tenant code the gateway signs. Until the authority slice (#4781) is registered, every object is masked and every authorization decision is a denial.
 
 ## Project
 
@@ -11,7 +11,7 @@ The Clinical Kernel's HTTP host ([ADR-2540](../../docs/adr/2026-09-30-kernel-api
 - `ClaimsCurrentActor`: the acting person, from the verified `sub` claim.
 - `UnavailableAuthorizationEvaluator`: the fail-closed `IAuthorizationEvaluator` until #4781. Every decision is a denial with the unmet condition `authority.evaluator`.
 - `UnavailableNodeVisibility`: the fail-closed `INodeVisibility` until #4781 and #4782. Every object a read returns is masked as `NotPermitted`.
-- `UnavailableTenantResolver`: answers 503 for every kernel read until the tenant directory read port exists. There is no configured tenant mapping.
+- `DirectoryTenantResolver`: finds the caller's kernel tenant from the signed `tenant_id` claim through `ITenantDirectory.FindActiveByCodeAsync`. A missing code, or one that names no active kernel tenant, is a 403; there is no fallback tenant and no configured mapping.
 - `KernelDatabaseHealthCheck`: the readiness probe opens a connection to the kernel database.
 - `KernelMigrationHostedService`: applies the kernel migrations on start when `Database:MigrateOnStartup` or `Database:MigrateOnly` is set.
 
@@ -29,6 +29,8 @@ All reads are `GET`, need the gateway-signed caller identity, run in the caller'
 | `nodes/{nodeRef}/commands` | Kernel commands offered on the object's kind, each with the caller's dry-run decision and explanation (ADR-2483). |
 | `authorization/can-i?capability=&resource=` | The caller's dry-run decision on one capability and object, with its explanation (ADR-2482). |
 | `search?q=&kind=&limit=` | Search hits by code or title (ADR-2484); `kind` repeats, `limit` is 1 to 50. |
+| `studies/{studyRef}/protocol-versions` | The study's protocol versions, newest first, without content. A hidden study is refused with 403; a hidden version is masked in place. |
+| `protocol-versions/{versionRef}` | One protocol version, without content. |
 
 Also `GET /healthz`, `/healthz/live`, `/healthz/ready` and `GET /api/v1/kernel/status` (anonymous). OpenAPI and the Scalar reference are mapped in Development only; the exported document is [docs/openapi/kernel_openapi.json](../../docs/openapi/kernel_openapi.json).
 
@@ -49,7 +51,7 @@ The gateway forwards `/api/v1/kernel/**` here. Compose publishes host port 8018 
 
 ## Tests
 
-- `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host with fake navigation and search: 503 before tenant resolution, 401 unsigned, reads in the resolved tenant, masking in place and in search (and the host's mask-everything default), 400 and 404 problems, CanI and the command catalogue denied and explained, and search.
+- `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host with fake navigation, search, tenant directory and protocol version reader: 403 for an unknown or missing tenant code, 401 unsigned, reads in the resolved tenant, masking in place and in search (and the host's mask-everything default), protocol versions listed, masked and refused for a hidden study, 400 and 404 problems, CanI and the command catalogue denied and explained, and search.
 - `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` checks the gateway route against the endpoints this host maps; `tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` checks its port.
 - The kernel ports themselves are tested against PostgreSQL in `tests/Cadence.IntegrationTests/Kernel`.
 

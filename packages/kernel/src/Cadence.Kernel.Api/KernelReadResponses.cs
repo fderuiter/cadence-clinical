@@ -6,6 +6,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Navigation;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
 
@@ -150,4 +151,49 @@ public sealed record KernelSearchHitResponse(string Ref, string Kind, string Tit
 {
     internal static KernelSearchHitResponse From(SearchHit hit) =>
         new(hit.Ref.ToString(), hit.Ref.Kind, hit.Title, hit.Code, hit.Detail, hit.ExactCode, hit.Rank);
+}
+
+/// <summary>
+/// A protocol version without its content (spec §6.2). A version the reader may not see keeps its place, with only
+/// <see cref="Mask"/> set.
+/// </summary>
+/// <param name="Ref">The version's NodeRef, or null when masked.</param>
+/// <param name="Study">The study's NodeRef, or null when masked.</param>
+/// <param name="Number">Its number in the study, from 1, or null when masked.</param>
+/// <param name="ParentVersion">The version it was forked from, or null for the first version or when masked.</param>
+/// <param name="Status">Its lifecycle status (<c>Draft</c>, <c>InReview</c>, <c>Approved</c>, <c>Superseded</c>, <c>Withdrawn</c>), or null when masked.</param>
+/// <param name="ContentHash">The content hash, set once the version is submitted for review.</param>
+/// <param name="AmendmentIntent">What the amendment sets out to change, or null for the first version.</param>
+/// <param name="ApprovalAttestation">The NodeRef of the attestation that approved it, once approved.</param>
+/// <param name="WithdrawalReason">Why it was withdrawn, once withdrawn.</param>
+/// <param name="Mask">Why the version is masked, or null when visible.</param>
+public sealed record KernelProtocolVersionResponse(
+    string? Ref,
+    string? Study,
+    int? Number,
+    string? ParentVersion,
+    string? Status,
+    string? ContentHash,
+    string? AmendmentIntent,
+    string? ApprovalAttestation,
+    string? WithdrawalReason,
+    string? Mask)
+{
+    internal static KernelProtocolVersionResponse From(ProtocolVersionSummary version, MaskReason? mask) =>
+        mask is { } reason
+            ? new(null, null, null, null, null, null, null, null, null, reason.ToString())
+            : new(
+                NodeRef.For(version.Id).ToString(),
+                NodeRef.For(version.StudyId).ToString(),
+                version.Number,
+                RefOf(version.ParentVersionId),
+                version.Status.ToString(),
+                version.ContentHash,
+                version.AmendmentIntent,
+                RefOf(version.ApprovalAttestationId),
+                version.WithdrawalReason,
+                null);
+
+    private static string? RefOf<TId>(TId? id)
+        where TId : struct, IEntityId<TId> => id is { } value ? NodeRef.For(value).ToString() : null;
 }

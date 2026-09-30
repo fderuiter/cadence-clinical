@@ -13,8 +13,10 @@ using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Navigation;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Kernel.Tenancy;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -42,10 +44,26 @@ public sealed class KernelApiHostTests : IDisposable
     private static readonly TenantId Tenant = TenantId.New();
     private static readonly NodeRef Study = NodeRef.For(StudyId.New());
     private static readonly NodeRef StudySite = NodeRef.For(StudySiteId.New());
+    private static readonly ProtocolVersionSummary FirstVersion = new(
+        ProtocolVersionId.New(), StudyId.FromGuid(Study.Id), 1, null, ProtocolVersionStatus.Approved, "sha256:abc", null,
+        AttestationId.New(), null);
+    private static readonly ProtocolVersionSummary Amendment = new(
+        ProtocolVersionId.New(), StudyId.FromGuid(Study.Id), 2, FirstVersion.Id, ProtocolVersionStatus.Draft, null,
+        "Add a week 12 visit", null, null);
+
+    private static readonly string[] ReadPaths =
+    [
+        $"/api/v1/kernel/nodes/{Study}", $"/api/v1/kernel/nodes/{Study}/path", $"/api/v1/kernel/nodes/{Study}/children",
+        $"/api/v1/kernel/nodes/{Study}/commands", $"/api/v1/kernel/authorization/can-i?capability=x.y&resource={Study}",
+        "/api/v1/kernel/search?q=CAD", $"/api/v1/kernel/studies/{Study}/protocol-versions",
+        $"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}",
+    ];
 
     private readonly FakeNavigator _navigator = new();
     private readonly FakeSearch _search = new();
     private readonly HideSome _visibility = new();
+    private readonly FakeTenantDirectory _directory = new();
+    private readonly FakeProtocolVersions _protocol = new();
     private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
 
     public void Dispose()
@@ -57,40 +75,53 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>
-    /// Until the kernel can find a caller's kernel tenant, every kernel read answers 503 with problem details and
-    /// reaches no kernel port; the status endpoint still answers.
+    /// A caller whose signed tenant code names no active kernel tenant is refused with 403 problem details on every
+    /// kernel read, which reaches no kernel port; the status endpoint still answers.
     /// @req:PRD-CRF-013
     /// </summary>
     [Fact]
     [GxPRequirement("PRD-CRF-013")]
-    public async Task EveryRead_Answers503_UntilTenantsCanBeResolved()
+    public async Task EveryRead_IsRefused_WhenTheSignedTenantIsNotAKernelTenant()
     {
-        using var client = Client(resolveTenant: false);
+        using var client = Client(knownTenant: false);
         var ct = TestContext.Current.CancellationToken;
 
-        foreach (var path in new[]
-                 {
-                     $"/api/v1/kernel/nodes/{Study}", $"/api/v1/kernel/nodes/{Study}/path", $"/api/v1/kernel/nodes/{Study}/children",
-                     $"/api/v1/kernel/nodes/{Study}/commands", $"/api/v1/kernel/authorization/can-i?capability=x.y&resource={Study}",
-                     "/api/v1/kernel/search?q=CAD",
-                 })
+        foreach (var path in ReadPaths)
         {
-            var response = await client.GetAsync(path, ct);
-            response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable, path);
+            var response = await client.GetAsync(new Uri(path, UriKind.Relative), ct);
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden, path);
             response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
-            (await response.Content.ReadAsStringAsync(ct)).Should().Contain("kernel tenant");
+            (await response.Content.ReadAsStringAsync(ct)).Should().Contain("not an active kernel tenant");
         }
 
+        _directory.Codes.Should().OnlyContain(c => c == GatewayIdentity.DefaultTenantId);
         _navigator.Tenants.Should().BeEmpty();
         _search.Requests.Should().BeEmpty();
-        (await client.GetAsync("/api/v1/kernel/status", ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+        _protocol.Tenants.Should().BeEmpty();
+        (await client.GetAsync(new Uri("/api/v1/kernel/status", UriKind.Relative), ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>A signed identity without a tenant code is refused without asking the tenant directory.</summary>
+    [Fact]
+    public async Task ReadWithoutATenantCode_IsRefused()
+    {
+        var factory = Factory(dropClaim: CadenceClaimTypes.TenantId);
+        using var client = factory.CreateSignedClient();
+        var ct = TestContext.Current.CancellationToken;
+
+        var response = await client.GetAsync(new Uri($"/api/v1/kernel/nodes/{Study}", UriKind.Relative), ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await response.Content.ReadAsStringAsync(ct)).Should().Contain("names no tenant");
+        _directory.Codes.Should().BeEmpty();
+        _navigator.Tenants.Should().BeEmpty();
     }
 
     /// <summary>A request without the gateway's signed identity is refused before any kernel code runs.</summary>
     [Fact]
     public async Task UnsignedRequest_IsUnauthorized()
     {
-        var factory = Factory(resolveTenant: true);
+        var factory = Factory();
         using var client = factory.CreateClient();
 
         var response = await client.GetAsync(new Uri($"/api/v1/kernel/nodes/{Study}", UriKind.Relative), TestContext.Current.CancellationToken);
@@ -130,6 +161,7 @@ public sealed class KernelApiHostTests : IDisposable
         child.GetProperty("group").GetString().Should().Be("DE");
 
         _navigator.Tenants.Should().NotBeEmpty().And.OnlyContain(t => t == Tenant);
+        _directory.Codes.Should().NotBeEmpty().And.OnlyContain(c => c == GatewayIdentity.DefaultTenantId);
     }
 
     /// <summary>A malformed NodeRef is a 400 and an object the tenant does not hold is a 404, both as problem details.</summary>
@@ -143,6 +175,10 @@ public sealed class KernelApiHostTests : IDisposable
     [InlineData("/api/v1/kernel/authorization/can-i?capability=not.declared&resource=study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/search?q=CAD&limit=51", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/search?q=CAD&limit=0", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/studies/site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/protocol-versions", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/studies/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/protocol-versions", HttpStatusCode.NotFound)]
+    [InlineData("/api/v1/kernel/protocol-versions/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/protocol-versions/protocol_version:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.NotFound)]
     public async Task BadRequestsAndMissingObjects_AnswerWithProblems(string path, HttpStatusCode expected)
     {
         using var client = Client();
@@ -188,7 +224,7 @@ public sealed class KernelApiHostTests : IDisposable
     {
         var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
         var resource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
-        var factory = Factory(resolveTenant: true, withoutSubject: true);
+        var factory = Factory(dropClaim: CadenceClaimTypes.Subject);
         using var client = factory.CreateSignedClient();
 
         using var decision = await ReadJsonAsync(
@@ -301,7 +337,7 @@ public sealed class KernelApiHostTests : IDisposable
     [Fact]
     public async Task ReaderWithoutASubject_SeesEverythingMasked()
     {
-        var factory = Factory(resolveTenant: true, withoutSubject: true);
+        var factory = Factory(dropClaim: CadenceClaimTypes.Subject);
         using var client = factory.CreateSignedClient();
 
         using var node = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{Study}", TestContext.Current.CancellationToken);
@@ -310,11 +346,78 @@ public sealed class KernelApiHostTests : IDisposable
         _visibility.Readers.Should().BeEmpty();
     }
 
-    private HttpClient Client(bool resolveTenant = true, bool hostVisibility = false) =>
-        Factory(resolveTenant, hostVisibility: hostVisibility).CreateSignedClient();
-
-    private WebApplicationFactory<Cadence.Kernel.Host.Program> Factory(bool resolveTenant, bool withoutSubject = false, bool hostVisibility = false)
+    /// <summary>
+    /// A study's protocol versions come newest first, in the caller's tenant, without content: number, parent,
+    /// status, content hash, amendment intent and approving attestation, each object as a NodeRef.
+    /// </summary>
+    [Fact]
+    public async Task ProtocolVersions_ListNewestFirst_InTheCallersTenant()
     {
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var list = await ReadJsonAsync(client, $"/api/v1/kernel/studies/{Study}/protocol-versions", ct);
+
+        var rows = list.RootElement.EnumerateArray().ToList();
+        rows.Select(r => r.GetProperty("number").GetInt32()).Should().Equal(2, 1);
+        var amendment = rows[0];
+        amendment.GetProperty("ref").GetString().Should().Be(NodeRef.For(Amendment.Id).ToString());
+        amendment.GetProperty("study").GetString().Should().Be(Study.ToString());
+        amendment.GetProperty("parent_version").GetString().Should().Be(NodeRef.For(FirstVersion.Id).ToString());
+        amendment.GetProperty("status").GetString().Should().Be("Draft");
+        amendment.GetProperty("amendment_intent").GetString().Should().Be("Add a week 12 visit");
+        amendment.GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+        var first = rows[1];
+        first.GetProperty("status").GetString().Should().Be("Approved");
+        first.GetProperty("content_hash").GetString().Should().Be("sha256:abc");
+        first.GetProperty("approval_attestation").GetString().Should().Be(NodeRef.For(FirstVersion.ApprovalAttestationId!.Value).ToString());
+
+        using var one = await ReadJsonAsync(client, $"/api/v1/kernel/protocol-versions/{NodeRef.For(Amendment.Id)}", ct);
+        one.RootElement.GetProperty("number").GetInt32().Should().Be(2);
+
+        _protocol.Tenants.Should().NotBeEmpty().And.OnlyContain(t => t == Tenant);
+    }
+
+    /// <summary>
+    /// A protocol version the caller may not see keeps its place in the list with only its mask; the single read masks
+    /// it the same way; and a study the caller may not see has its versions refused, not listed.
+    /// </summary>
+    [Fact]
+    public async Task ProtocolVersions_MaskHiddenVersions_AndRefuseAHiddenStudy()
+    {
+        _visibility.Hidden[NodeRef.For(FirstVersion.Id)] = MaskReason.NotPermitted;
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var list = await ReadJsonAsync(client, $"/api/v1/kernel/studies/{Study}/protocol-versions", ct);
+        var hidden = list.RootElement[1];
+        hidden.GetProperty("mask").GetString().Should().Be("NotPermitted");
+        foreach (var field in new[] { "ref", "study", "number", "parent_version", "status", "content_hash", "approval_attestation" })
+        {
+            hidden.GetProperty(field).ValueKind.Should().Be(JsonValueKind.Null, field);
+        }
+
+        using var one = await ReadJsonAsync(client, $"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}", ct);
+        one.RootElement.GetProperty("mask").GetString().Should().Be("NotPermitted");
+        one.RootElement.GetProperty("number").ValueKind.Should().Be(JsonValueKind.Null);
+
+        _visibility.Hidden[Study.AtVersion(3)] = MaskReason.Blinded;
+        var refused = await client.GetAsync(new Uri($"/api/v1/kernel/studies/{Study}/protocol-versions", UriKind.Relative), ct);
+        refused.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        refused.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+    }
+
+    private HttpClient Client(bool knownTenant = true, bool hostVisibility = false) =>
+        Factory(knownTenant, hostVisibility: hostVisibility).CreateSignedClient();
+
+    private WebApplicationFactory<Cadence.Kernel.Host.Program> Factory(
+        bool knownTenant = true, string? dropClaim = null, bool hostVisibility = false)
+    {
+        if (knownTenant)
+        {
+            _directory.Tenants[GatewayIdentity.DefaultTenantId] = Tenant;
+        }
+
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
             builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
@@ -324,11 +427,10 @@ public sealed class KernelApiHostTests : IDisposable
                 services.AddSingleton<IKernelNavigator>(_navigator);
                 services.RemoveAll<IKernelSearch>();
                 services.AddSingleton<IKernelSearch>(_search);
-                if (resolveTenant)
-                {
-                    services.RemoveAll<IKernelTenantResolver>();
-                    services.AddSingleton<IKernelTenantResolver>(new FixedTenantResolver(Tenant));
-                }
+                services.RemoveAll<ITenantDirectory>();
+                services.AddSingleton<ITenantDirectory>(_directory);
+                services.RemoveAll<IProtocolVersionReader>();
+                services.AddSingleton<IProtocolVersionReader>(_protocol);
 
                 if (!hostVisibility)
                 {
@@ -336,9 +438,9 @@ public sealed class KernelApiHostTests : IDisposable
                     services.AddSingleton<INodeVisibility>(_visibility);
                 }
 
-                if (withoutSubject)
+                if (dropClaim is not null)
                 {
-                    services.AddSingleton<Microsoft.AspNetCore.Authentication.IClaimsTransformation, DropSubject>();
+                    services.AddSingleton<Microsoft.AspNetCore.Authentication.IClaimsTransformation>(new DropClaim(dropClaim));
                 }
             });
         });
@@ -353,22 +455,44 @@ public sealed class KernelApiHostTests : IDisposable
         return JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
     }
 
-    private sealed class FixedTenantResolver(TenantId tenant) : IKernelTenantResolver
+    private sealed class FakeTenantDirectory : ITenantDirectory
     {
-        public ValueTask<KernelTenantResolution> ResolveAsync(ClaimsPrincipal caller, CancellationToken cancellationToken) =>
-            ValueTask.FromResult(caller.Identity?.IsAuthenticated == true
-                ? KernelTenantResolution.Resolved(tenant)
-                : KernelTenantResolution.Unknown("Not signed in."));
+        public Dictionary<string, TenantId> Tenants { get; } = [];
+
+        public List<string> Codes { get; } = [];
+
+        public Task<TenantId?> FindActiveByCodeAsync(string code, CancellationToken cancellationToken)
+        {
+            Codes.Add(code);
+            return Task.FromResult(Tenants.TryGetValue(code, out var tenant) ? tenant : (TenantId?)null);
+        }
     }
 
-    private sealed class DropSubject : Microsoft.AspNetCore.Authentication.IClaimsTransformation
+    private sealed class DropClaim(string type) : Microsoft.AspNetCore.Authentication.IClaimsTransformation
     {
         public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
         {
-            var identity = new ClaimsIdentity(
-                principal.Claims.Where(c => c.Type != CadenceClaimTypes.Subject),
-                principal.Identity?.AuthenticationType);
+            var identity = new ClaimsIdentity(principal.Claims.Where(c => c.Type != type), principal.Identity?.AuthenticationType);
             return Task.FromResult(new ClaimsPrincipal(identity));
+        }
+    }
+
+    /// <summary>Two protocol versions of <see cref="Study"/>: an approved first version and a draft amendment of it.</summary>
+    private sealed class FakeProtocolVersions : IProtocolVersionReader
+    {
+        public List<TenantId> Tenants { get; } = [];
+
+        public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken)
+        {
+            Tenants.Add(tenant);
+            IReadOnlyList<ProtocolVersionSummary> versions = NodeRef.For(study) == Study ? [Amendment, FirstVersion] : [];
+            return Task.FromResult(versions);
+        }
+
+        public Task<ProtocolVersionSummary?> GetAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken)
+        {
+            Tenants.Add(tenant);
+            return Task.FromResult(new[] { Amendment, FirstVersion }.FirstOrDefault(v => v.Id == version));
         }
     }
 

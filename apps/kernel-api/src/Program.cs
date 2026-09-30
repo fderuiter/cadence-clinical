@@ -46,8 +46,8 @@ builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 builder.Services.AddSingleton<IAuthorizationEvaluator, UnavailableAuthorizationEvaluator>();
 builder.Services.AddSingleton<INodeVisibility, UnavailableNodeVisibility>();
 
-// Until the kernel can find a tenant by the code the gateway signs, every kernel read answers 503 (ADR-2540).
-builder.Services.AddSingleton<IKernelTenantResolver, UnavailableTenantResolver>();
+// The kernel tenant comes from the tenant code the gateway signs, through the kernel's tenant directory (ADR-2540).
+builder.Services.AddSingleton<IKernelTenantResolver, DirectoryTenantResolver>();
 
 builder.Services.AddHealthChecks()
     .AddCheck("kernel-database", new KernelDatabaseHealthCheck(connectionString), tags: [CadenceTelemetryExtensions.ReadinessTag]);
