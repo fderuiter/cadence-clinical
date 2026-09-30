@@ -8,6 +8,7 @@ using Cadence.Security.FieldProtection;
 using Cadence.Testing;
 using Cadence.Testing.Persistence;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -134,6 +135,7 @@ public sealed class ConsentSignatureSecretsAtRestTests : IDisposable
         Meaning = "Consent on behalf of subject",
         DigestSha256 = DocumentDigest,
         SignatureBindingSha256 = ConsentSignatureBinding.Compute(DocumentDigest, SignatureCapture),
+        SignedAt = FakeClock.DefaultStart,
         CreatedBy = "investigator-1",
         ReasonForChange = "Consent signed",
     };

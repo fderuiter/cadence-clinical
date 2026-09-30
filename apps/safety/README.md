@@ -9,6 +9,7 @@ Safety and pharmacovigilance scaffold. It holds the safety case, ICSR reporting 
 - Project: `apps/safety/src/Cadence.Apps.Safety.csproj` (assembly `Cadence.Apps.Safety`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (safety cases, reporting evaluations, SAE reconciliation runs and discrepancies, narratives, signal detection, periodic reports, device investigations, AS2 transmissions, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `SafetyDbContext`, a design-time `SafetyDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145528_InitialCreate`.
 - `../Templates/e2b_r3_icsr.xml.liquid`: ICSR template embedded into the assembly.
