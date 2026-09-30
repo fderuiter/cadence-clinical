@@ -48,7 +48,8 @@ _Avoid_: stored visit schedules, day 0
 
 The pseudonymous kernel identity of a person taking part in a study. EDC "subject", eCOA "user" and
 RTSM "randomized subject" are views of the same `ParticipantId`. A Participant holds no study, site, code or
-status: each study membership is an Enrollment. Direct identifiers live only in the identity vault (ADR-2253).
+status: each study membership is an Enrollment. Direct identifiers live only in the IdentityVault (ADR-2253,
+ADR-2458).
 
 ### Enrollment
 
@@ -128,6 +129,17 @@ _Avoid_: role strings as authority, delegation tables separate from grants, queu
 
 The top-level isolation boundary. Every kernel row carries `tenant_id`, enforced by PostgreSQL
 row-level security (ADR-2250).
+A tenant may have a **residency** (`EU`, `US`, …), set when it is provisioned; an IdentityVault serves only the
+tenants of its own region.
+
+### IdentityVault
+
+The separate `identity_vault` schema that holds a tenant's direct identifiers for the layers of spec §9.2: a
+person's name, birth date and contact details, and a participant's site-local number. Each record is sealed with
+its own data key under the tenant's key. Recording, revealing (`identity.reveal.<layer>`), erasing and linking a
+participant to a person across studies are audited kernel commands; erasure is crypto-shredding. Kernel tables,
+`people` included, hold only pseudonymous ids (ADR-2458).
+_Avoid_: names or e-mails on kernel tables, reading identities without a reveal command, "PII table"
 
 ## Part 2: Platform and application glossary
 

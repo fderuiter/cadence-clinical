@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Core.Domain;
+using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Lineage;
@@ -156,6 +157,12 @@ public interface IKernelUnitOfWork
     /// with the part (K-LIN-2).
     /// </summary>
     void LinkPart(NodeRef from, NodeRef to, LineageEdgeKind kind);
+
+    /// <summary>
+    /// Stages a write to the IdentityVault, applied in this command's transaction after the kernel rows and before the
+    /// commit (ADR-2458). Only the IdentityVault handlers stage vault writes.
+    /// </summary>
+    void StageVaultWrite(IIdentityVaultWrite write);
 }
 
 /// <summary>Creates one unit of work per command. Implemented by kernel persistence.</summary>

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Persistence.IdentityVault;
 using Cadence.Kernel.Persistence.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +36,8 @@ public static class KernelDatabase
     /// <summary>
     /// SQL that grants <paramref name="role"/> what the kernel needs and nothing more: read, insert and update on the
     /// kernel tables, insert without update on the insert-only ones, no delete anywhere, nothing on the migration
-    /// history, and the tenant directory functions. Re-run it after every migration that adds a table. The role must not own
+    /// history, the tenant directory functions, and the IdentityVault functions without any privilege on the vault's
+    /// tables (ADR-2458). Re-run it after every migration that adds a table. The role must not own
     /// the schema and must not have <c>BYPASSRLS</c>; the schema test checks both.
     /// </summary>
     /// <param name="role">An existing lower-case role name, for example <c>cadence_app</c>.</param>
@@ -51,6 +53,7 @@ public static class KernelDatabase
             REVOKE ALL ON {s}."{MigrationsHistoryTable}" FROM {r};
             GRANT EXECUTE ON FUNCTION {s}.{TenantIsolationSql.DirectoryFunction}() TO {r};
             GRANT EXECUTE ON FUNCTION {s}.{TenantIsolationSql.CodeDirectoryFunction}(text) TO {r};
+            {IdentityVaultSql.GrantSql(r)}
             """;
     }
 

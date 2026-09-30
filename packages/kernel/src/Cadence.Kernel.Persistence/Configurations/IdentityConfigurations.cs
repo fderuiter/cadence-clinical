@@ -17,10 +17,11 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 {
     public void Configure(EntityTypeBuilder<Tenant> builder)
     {
-        builder.ToTable("tenants");
+        builder.ToTable("tenants", t => t.HasCheckConstraint("ck_tenants_residency", "residency IS NULL OR residency ~ '^[A-Z]{2,8}$'"));
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Code).HasMaxLength(64).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.Residency).HasMaxLength(8);
         builder.HasIndex(x => x.Code).IsUnique();
         AuditColumns.Configure(builder);
     }
@@ -44,9 +45,10 @@ internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organ
 }
 
 /// <summary>
-/// EF Core mapping for <c>kernel.people</c>: tenant-independent identity (K-ID-4), the one kernel table without a
-/// <c>tenant_id</c>. Its row-level policy shows a person only to tenants the person has a
-/// <see cref="TenantMembership"/> in. @req:PRD-SYS-053
+/// EF Core mapping for <c>kernel.people</c>: tenant-independent, pseudonymous identity (K-ID-4), the one kernel table
+/// without a <c>tenant_id</c>. It holds no direct identifier: names and contact details are in the IdentityVault
+/// (ADR-2458). Its row-level policy shows a person only to tenants the person has a <see cref="TenantMembership"/>
+/// in. @req:PRD-SYS-053
 /// </summary>
 internal sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
 {
@@ -54,10 +56,6 @@ internal sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
     {
         builder.ToTable("people");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Email).HasMaxLength(320).IsRequired();
-        builder.Property(x => x.FirstName).HasMaxLength(255).IsRequired();
-        builder.Property(x => x.LastName).HasMaxLength(255).IsRequired();
-        builder.HasIndex(x => x.Email).IsUnique();
         AuditColumns.Configure(builder);
     }
 }

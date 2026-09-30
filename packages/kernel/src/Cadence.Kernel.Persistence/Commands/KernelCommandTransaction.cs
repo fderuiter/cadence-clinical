@@ -12,8 +12,10 @@ using System.Threading.Tasks;
 
 using Cadence.Core.Domain;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Persistence.IdentityVault;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
@@ -35,6 +37,7 @@ internal enum CommitStage
     AuditAppended,
     IdempotencyStaged,
     Saved,
+    VaultWritten,
 }
 
 /// <summary>Creates a <see cref="KernelCommandTransaction"/> with its own <see cref="KernelDbContext"/> per command.</summary>
@@ -49,8 +52,8 @@ internal sealed class KernelUnitOfWorkFactory(KernelTenantDbContextFactory conte
 
 /// <summary>
 /// One command's persistence (spec §5.1): tracks its single aggregate (K-TX-1), its declared lineage inputs and its
-/// events, then writes state, provenance, lineage, events, the audit link, outbox rows and the idempotency record in
-/// one PostgreSQL transaction (K-TX-2, K-LIN-2).
+/// events, then writes state, provenance, lineage, events, the audit link, outbox rows, the idempotency record and any
+/// staged IdentityVault writes in one PostgreSQL transaction (K-TX-2, K-LIN-2, ADR-2458).
 /// @req:PRD-SYS-053
 /// </summary>
 internal sealed class KernelCommandTransaction(
@@ -64,6 +67,7 @@ internal sealed class KernelCommandTransaction(
     private readonly List<(NodeRef Input, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)> _inputs = [];
     private readonly Dictionary<NodeRef, bool> _parts = [];
     private readonly List<(NodeRef From, NodeRef To, LineageEdgeKind Kind)> _partEdges = [];
+    private readonly List<IIdentityVaultWrite> _vaultWrites = [];
     private (Type Type, string Key)? _claimed;
     private long? _lockKey;
     private AuthorizationDecision? _permit;
@@ -218,6 +222,12 @@ internal sealed class KernelCommandTransaction(
         }
     }
 
+    public void StageVaultWrite(IIdentityVaultWrite write)
+    {
+        ArgumentNullException.ThrowIfNull(write);
+        _vaultWrites.Add(write);
+    }
+
     public void RecordPermit(AuthorizationDecision permit)
     {
         ArgumentNullException.ThrowIfNull(permit);
@@ -272,8 +282,22 @@ internal sealed class KernelCommandTransaction(
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             Fault(CommitStage.Saved);
 
+            foreach (var write in _vaultWrites)
+            {
+                await IdentityVaultSql.ApplyAsync(db, write, execution.RecordedAt, cancellationToken).ConfigureAwait(false);
+            }
+
+            Fault(CommitStage.VaultWritten);
+
             await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             return CommitOutcome.Committed;
+        }
+        catch (PostgresException ex) when (ex.SqlState is IdentityVaultSql.ErasedSqlState or IdentityVaultSql.LinkConflictSqlState)
+        {
+            // Another command erased the record or linked the participant after this handler read the vault; a retry
+            // re-reads it and fails with the matching error.
+            await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
+            return CommitOutcome.ConcurrencyConflict;
         }
         catch (DbUpdateConcurrencyException)
         {
