@@ -1,5 +1,6 @@
 // Upgraded eCOA Subject Portal Dispatch and Failure-State Rendering Contract
 import { reactive, createApp, watch, nextTick } from "vue";
+let mountedApp = null;
 import App from "./App.vue";
 import {
   buildLedgerBlock,
@@ -2339,8 +2340,14 @@ async function initializeApp() {
   if (typeof document !== "undefined") {
     const appEl = document.getElementById("app");
     if (appEl) {
-      const app = createApp(App);
-      app.mount(appEl);
+      if (mountedApp) {
+        try {
+          mountedApp.unmount();
+        } catch (_) {}
+        mountedApp = null;
+      }
+      mountedApp = createApp(App);
+      mountedApp.mount(appEl);
     }
 
     // Dynamic Hover Pointer Capability Detection
@@ -3304,4 +3311,13 @@ function createQueryPanel(fieldId, query) {
   </div>
 </div>
   `.trim();
+}
+
+export function unmountApp() {
+  if (mountedApp) {
+    try {
+      mountedApp.unmount();
+    } catch (_) {}
+    mountedApp = null;
+  }
 }

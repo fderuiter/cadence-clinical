@@ -161,36 +161,40 @@ describe("Event-driven sync lifecycle emitter with reactive Vue progress state",
     app.mount("#app");
     await nextTick();
 
-    await queueSubmission({
-      subject_id: "subject_001",
-      diary_id: "inst_daily_diary",
-      assignment_id: "assign_01",
-      answers: { vssbp: 120, vsdpb: 80, vshr: 70 },
-      change_reason: "Baseline entry",
-      username: "subject_001",
-    });
+    try {
+      await queueSubmission({
+        subject_id: "subject_001",
+        diary_id: "inst_daily_diary",
+        assignment_id: "assign_01",
+        answers: { vssbp: 120, vsdpb: 80, vshr: 70 },
+        change_reason: "Baseline entry",
+        username: "subject_001",
+      });
 
-    await refreshSubmissionsState();
-    await nextTick();
+      await refreshSubmissionsState();
+      await nextTick();
 
-    // Trigger retry attempt manually via lifecycle emitter
-    emitSyncLifecycleEvent("sync:attempt", {
-      attempt: 2,
-      maxRetries: 5,
-      sequenceNumber: 1,
-      queuedCount: 1,
-    });
-    await nextTick();
+      // Trigger retry attempt manually via lifecycle emitter
+      emitSyncLifecycleEvent("sync:attempt", {
+        attempt: 2,
+        maxRetries: 5,
+        sequenceNumber: 1,
+        queuedCount: 1,
+      });
+      await nextTick();
 
-    // Check header sync button label
-    const syncBtnLabel = document.querySelector(".sync-btn-label");
-    expect(syncBtnLabel).not.toBeNull();
-    expect(syncBtnLabel.textContent).toContain("Retrying (2/5)");
+      // Check header sync button label
+      const syncBtnLabel = document.querySelector(".sync-btn-label");
+      expect(syncBtnLabel).not.toBeNull();
+      expect(syncBtnLabel.textContent).toContain("Retrying (2/5)");
 
-    // Check queued item status description in drawer
-    const drawerItem = document.querySelector(".drawer-submission-item");
-    expect(drawerItem).not.toBeNull();
-    const itemDesc = drawerItem.querySelector(".item-desc");
-    expect(itemDesc.textContent).toContain("Retrying... Attempt 2 of 5");
+      // Check queued item status description in drawer
+      const drawerItem = document.querySelector(".drawer-submission-item");
+      expect(drawerItem).not.toBeNull();
+      const itemDesc = drawerItem.querySelector(".item-desc");
+      expect(itemDesc.textContent).toContain("Retrying... Attempt 2 of 5");
+    } finally {
+      app.unmount();
+    }
   });
 });
