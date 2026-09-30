@@ -1,5 +1,10 @@
 using System;
 
+using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Domain.Forms;
+using Cadence.Apps.Execution.Domain.Forms.Errors;
+using Cadence.Apps.Execution.Domain.Observations.Errors;
+using Cadence.Apps.Execution.Domain.Queries.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Testing;
@@ -21,7 +26,8 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// `CustomizeProblemDetails` safety net's <see cref="DomainErrorHttpMapping.ApplyKnownCodeStatus"/> — proving
 /// it forces the one family the legacy system lacked a global handler for (`SUBJECT_NOT_FOUND`) to 404, while
 /// leaving anything it does not recognize (most importantly a bare exception's generic 500) untouched, so
-/// raise site #19's blanket downgrade-to-400 bug is never reproduced.
+/// raise site #19's blanket downgrade-to-400 bug is never reproduced. The form, observation and query codes the table
+/// pins, and the concurrency conflict code, are checked through both paths.
 /// </summary>
 public class DomainErrorHttpMappingTests
 {
@@ -133,6 +139,61 @@ public class DomainErrorHttpMappingTests
 
         problemDetails.Status.Should().Be(StatusCodes.Status404NotFound);
     }
+
+    /// <summary>
+    /// The form, observation and query errors whose status the code table pins. <c>FORM_LOCKED</c> and
+    /// <c>TRIAL_LOCKED</c> are overrides: 423 where their types (validation, forbidden) would give 400 and 403.
+    /// </summary>
+    [Theory]
+    [InlineData("Form.NotFound", "FORM_NOT_FOUND", StatusCodes.Status404NotFound)]
+    [InlineData("Form.FormReadonly", "FORM_LOCKED", StatusCodes.Status423Locked)]
+    [InlineData("Form.TrialLocked", "TRIAL_LOCKED", StatusCodes.Status423Locked)]
+    [InlineData("Form.UnauthorizedSignerRole", "UNAUTHORIZED_SIGNER_ROLE", StatusCodes.Status403Forbidden)]
+    [InlineData("Observation.NotFound", "OBSERVATION_NOT_FOUND", StatusCodes.Status404NotFound)]
+    [InlineData("Query.NotFound", "QUERY_NOT_FOUND", StatusCodes.Status404NotFound)]
+    [InlineData("Query.ActiveQueryAlreadyExists", "ACTIVE_QUERY_EXISTS", StatusCodes.Status409Conflict)]
+    [InlineData("Query.UnauthorizedRole", "UNAUTHORIZED_QUERY_ROLE", StatusCodes.Status403Forbidden)]
+    public void ToProblemResult_MapsFormObservationAndQueryErrorsToTheirPinnedStatus(string factory, string code, int expectedStatus)
+    {
+        var error = CreateOtherError(factory);
+        error.Code.Should().Be(code);
+
+        var result = error.ToProblemResult();
+
+        result.StatusCode.Should().Be(expectedStatus);
+        result.ProblemDetails.Status.Should().Be(expectedStatus);
+        result.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be(code);
+
+        var bare = new ProblemDetails { Status = StatusCodes.Status500InternalServerError };
+        bare.Extensions["code"] = code;
+        DomainErrorHttpMapping.ApplyKnownCodeStatus(bare);
+        bare.Status.Should().Be(expectedStatus, "the safety net recognizes the code without its DomainError");
+    }
+
+    /// <summary>A concurrency conflict written by its exception handler keeps 409 through the safety net.</summary>
+    [Fact]
+    public void ApplyKnownCodeStatus_ConcurrencyConflictCode_Is409()
+    {
+        var problemDetails = new ProblemDetails { Status = StatusCodes.Status500InternalServerError };
+        problemDetails.Extensions["code"] = ConcurrencyConflictException.Code;
+
+        DomainErrorHttpMapping.ApplyKnownCodeStatus(problemDetails);
+
+        problemDetails.Status.Should().Be(StatusCodes.Status409Conflict);
+    }
+
+    private static DomainError CreateOtherError(string factory) => factory switch
+    {
+        "Form.NotFound" => FormErrors.NotFound("FORM-1"),
+        "Form.FormReadonly" => FormErrors.FormReadonly(FormSubmissionId.New()),
+        "Form.TrialLocked" => FormErrors.TrialLocked("The trial is locked."),
+        "Form.UnauthorizedSignerRole" => FormErrors.UnauthorizedSignerRole("CRA"),
+        "Observation.NotFound" => ObservationErrors.NotFound("OBS-1"),
+        "Query.NotFound" => QueryErrors.NotFound("QRY-1"),
+        "Query.ActiveQueryAlreadyExists" => QueryErrors.ActiveQueryAlreadyExists("SUBJ-001/VS/SYSBP"),
+        "Query.UnauthorizedRole" => QueryErrors.UnauthorizedRole("CRA", "close"),
+        _ => throw new ArgumentOutOfRangeException(nameof(factory), factory, "Unknown error factory key."),
+    };
 
     private static DomainError CreateSubjectError(string factory) => factory switch
     {
