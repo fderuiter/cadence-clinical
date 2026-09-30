@@ -20,6 +20,9 @@ fallback credentials in any environment, Development included (ADR-2260).
 | `CADENCE_ENV` | `packages/cli/src/Services/DatabaseResetService.cs:122` (refuses `db reset` in Production) | `Development` | no |
 | `ENVIRONMENT` | `packages/cli/src/Services/DatabaseResetService.cs:124` | `Development` | no |
 | `CADENCE_TRUSTED_PROXIES` | every service (`packages/telemetry/src/CadenceHttpHardening.cs`, ADR-2491) | none; only loopback is trusted | set it behind a proxy. Comma-separated IP addresses or CIDR ranges of the front proxy and gateway. `X-Forwarded-For` and `X-Forwarded-Proto` from any other sender are ignored, and an entry that is not an address or range fails startup |
+| `AppHost__Profile` | `apps/apphost/src/Program.cs` (Aspire AppHost only) | `full` | no; `full` runs every service, `core` runs the gateway, execution, kernel and web only ([AppHost README](../apps/apphost/README.md#profiles-and-existing-infrastructure)). Any other value stops the AppHost |
+| `AppHost__OidcAuthority` | `apps/apphost/src/Program.cs` (Aspire AppHost only) | none; the AppHost runs a Keycloak container | no; an existing issuer URL ending in `/realms/<realm>` replaces the Keycloak container |
+| `ConnectionStrings__cadence` (AppHost) | `apps/apphost/src/Program.cs` | none; the AppHost runs a PostgreSQL container | no; an existing database replaces the PostgreSQL container and is passed to every service |
 
 ## Database
 
@@ -38,6 +41,13 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 | Key | Read by | Default | Required |
 | --- | --- | --- | --- |
 | `DemographicsEncryption__KeyBase64` | `apps/execution/src/Program.cs:105` (`DemographicsEncryptionOptions`) | none | yes; Base64 of a 16, 24 or 32 byte AES key (`openssl rand -base64 32`). The service refuses to start without a valid key. Under the Aspire AppHost, set it as the `demographics-encryption-key` parameter |
+
+## Notifications service
+
+| Key | Read by | Default | Required |
+| --- | --- | --- | --- |
+| `Notifications__PortalUrl` | `apps/notifications/src/Program.cs:21` (`NotificationBrandingOptions`) | none | no; the participant portal's sign-in URL used by the "Log In" link. It must be an absolute `https` URL (`http` only on localhost), or the service refuses to start. Without it, notifications carry no portal link |
+| `Notifications__BrandName` | same | `Cadence Clinical Platform` | no; the platform name in notification footers. It must not be empty |
 
 ## Field-level protection
 

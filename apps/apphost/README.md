@@ -1,6 +1,6 @@
 # Aspire AppHost
 
-.NET Aspire orchestration host for local development. It starts PostgreSQL, MinIO and Keycloak containers and every .NET service, and exposes their logs, traces and metrics on the Aspire dashboard.
+.NET Aspire orchestration host for local development. By default it starts PostgreSQL, MinIO and Keycloak containers, every .NET service and the web app, and exposes their logs, traces and metrics on the Aspire dashboard. A `core` profile runs only what the Clinical Canvas calls, and it can use an existing PostgreSQL and Keycloak instead of containers, so it also runs where there is no container runtime (#4991).
 
 ## Project
 
@@ -9,12 +9,29 @@
 - `Properties/launchSettings.json`: `https` (dashboard on `https://localhost:17000`) and `http` (`http://localhost:15000`) profiles, both in the Development environment.
 - `appsettings.json`, `appsettings.Development.json`: logging levels only.
 
+## Profiles and existing infrastructure
+
+| Setting | Values | Effect |
+| --- | --- | --- |
+| `AppHost:Profile` | `full` (default), `core` | `core` runs the gateway, the kernel API host, execution and the web app. `full` adds the other 15 services and MinIO. |
+| `ConnectionStrings:cadence` | an Npgsql connection string | Use this existing database instead of starting the PostgreSQL container. The services apply their migrations to it. |
+| `AppHost:OidcAuthority` | a Keycloak realm URL, `http(s)://host:port/realms/<realm>` | Use this issuer for the gateway and the web app instead of starting the Keycloak container. The realm needs the `cadence-web` client from `docker/cadence-realm.json`. |
+
+Pass them on the command line after `--` (`-- --AppHost:Profile=core`) or as environment variables
+(`AppHost__Profile=core`). An unknown profile or a malformed authority stops the AppHost with a message. In the
+`core` profile the gateway is given every other service's usual host port, where nothing listens, so those
+routes answer as the service being down.
+
 ## Resources
 
-- `postgres` (with a data volume and pgAdmin) and one database named `cadence`, shared by all services per [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md).
-- `minio` container (ports 9000 and 9001; no service reads it yet) and `keycloak` container (port 8080, `start-dev`, importing `docker/cadence-realm.json` as docker compose does).
+- `postgres` (with a data volume and pgAdmin) and one database named `cadence`, shared by all services per [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md). With `ConnectionStrings:cadence` set, `cadence` is that existing database and no container runs.
+- `keycloak` container (port 8080, `start-dev`, importing `docker/cadence-realm.json` as docker compose does), unless `AppHost:OidcAuthority` is set.
+- `minio` container (ports 9000 and 9001; no service reads it yet), in the `full` profile only.
+- `web`: the Clinical Canvas Vite dev server on `http://localhost:3000/cadence-clinical/`, the redirect URI the
+  `cadence-web` Keycloak client allows. It gets `VITE_API_BASE_URL` (the gateway) and the `VITE_KEYCLOAK_*`
+  settings. Run `pnpm install` at the repository root first; the AppHost does not install packages.
 - Projects, each on the host port docker compose publishes it on, so the gateway's Development defaults and the
-  web apps' `VITE_API_BASE_URL=http://localhost:8000` work for both:
+  web apps' `VITE_API_BASE_URL=http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018):
 
   | Port | Service | Port | Service | Port | Service |
   | --- | --- | --- | --- | --- | --- |
@@ -36,7 +53,9 @@ Aspire sets `OTEL_EXPORTER_OTLP_ENDPOINT` on each project; [packages/telemetry](
 
 ## Configuration
 
-Credentials have no default value (ADR-2260). These are Aspire secret parameters:
+Credentials have no default value (ADR-2260). These are Aspire secret parameters, declared only when a resource
+that uses them runs (the `core` profile never asks for the MinIO or field-protection keys, and an existing OIDC
+issuer never asks for the Keycloak admin):
 
 - the MinIO root user and password, and the Keycloak admin user and password;
 - `gateway-secret`, passed to every service as `GATEWAY_SECRET` (at least 32 characters);
@@ -60,22 +79,37 @@ dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Param
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-lookup-hash-key" "$(openssl rand -base64 32)"
 ```
 
-Or export `Parameters__minio-root-user` (and so on) as environment variables. If a value is missing, the Aspire
+Or set `Parameters__minio-root-user` (and so on) as environment variables. The names contain hyphens, which
+bash `export` rejects, so pass them with `env` (`env "Parameters__gateway-secret=..." dotnet run ...`). If a value is missing, the Aspire
 dashboard prompts for it before starting the containers.
 
 ## Key dependencies
 
-- Packages: `Aspire.Hosting.AppHost`, `Aspire.Hosting.PostgreSQL`.
+- Packages: `Aspire.Hosting.AppHost`, `Aspire.Hosting.PostgreSQL`, `Aspire.Hosting.JavaScript` (the Vite app).
 - Project references: every service project above.
 
 ## Tests
 
-`tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` builds the resource graph with `Aspire.Hosting.Testing`, without starting anything, and checks that every service is present on its port, gets the settings it refuses to start without, and that the gateway is told every service URL.
+`tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` builds the resource graph with `Aspire.Hosting.Testing`, without starting anything, and checks that every service is present on its port, gets the settings it refuses to start without, and that the gateway is told every service URL. It also checks the `core` profile, the existing-PostgreSQL and existing-OIDC switches, and that invalid settings stop the AppHost.
 
 ## Run locally
 
 ```bash
-dotnet run --project apps/apphost/src/Cadence.AppHost.csproj
+pnpm install                                                   # once, for the web app
+dotnet run --project apps/apphost/src/Cadence.AppHost.csproj   # full profile
+dotnet run --project apps/apphost/src/Cadence.AppHost.csproj -- --AppHost:Profile=core
 ```
 
-Requires a container runtime (Docker or Podman) for PostgreSQL, MinIO and Keycloak.
+Without a container runtime (for example a cloud dev container), point the core profile at an existing PostgreSQL
+and Keycloak. Nothing then needs Docker:
+
+```bash
+env AppHost__Profile=core \
+    ConnectionStrings__cadence="Host=localhost;Username=postgres;Password=<password>;Database=cadence" \
+    AppHost__OidcAuthority=http://localhost:8080/realms/cadence \
+    "Parameters__gateway-secret=$(openssl rand -hex 24)" \
+    "Parameters__audit-log-secret-key=$(openssl rand -hex 24)" \
+    "Parameters__demographics-encryption-key=$(openssl rand -base64 32)" \
+    ASPIRE_ALLOW_UNSECURED_TRANSPORT=true \
+    dotnet run --project apps/apphost/src/Cadence.AppHost.csproj --launch-profile http
+```

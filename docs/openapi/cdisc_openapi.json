@@ -5336,16 +5336,6 @@
           },
           "payload": {
             "$ref": "#/components/schemas/Notifications_NotificationPayload"
-          },
-          "brandName": {
-            "type": "string",
-            "default": "Cadence Clinical Platform"
-          },
-          "portalUrl": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
