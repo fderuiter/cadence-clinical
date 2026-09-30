@@ -22,42 +22,15 @@ namespace Cadence.UnitTests.Packages;
 
 public class DeidEngineUnitTests
 {
+    // Random per run: the de-identification keys are secrets and have no defaults (#5016).
+    private static readonly byte[] SigningKey = RandomNumberGenerator.GetBytes(DicomDeidentifier.MinimumSigningKeyLength);
+    private static readonly byte[] PseudonymKey = RandomNumberGenerator.GetBytes(DeidTransforms.MinimumPseudonymizationKeyLength);
     [Fact]
     public void DicomDeidentifier_DeidentifiesDicomStream_StripsHeaderTags_ShiftsDates_MasksPixels_ReturnsSignedCertificate()
     {
-        var dataset = new DicomDataset
-        {
-            { DicomTag.SOPClassUID, DicomUID.UltrasoundImageStorage },
-            { DicomTag.SOPInstanceUID, "1.2.840.10008.5.1.4.1.1.6.1.1001" },
-            { DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.6.1.2001" },
-            { DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.6.1.3001" },
-            { DicomTag.PatientName, "DOE^JOHN" },
-            { DicomTag.PatientBirthDate, "19800101" },
-            { DicomTag.PatientAge, "046Y" },
-            { DicomTag.StudyDate, "20260115" },
-            { DicomTag.StudyTime, "143000.000000" },
-            { DicomTag.InstitutionName, "ORIGINAL_CLINIC" },
-            { DicomTag.Modality, "US" },
-            { DicomTag.Rows, (ushort)100 },
-            { DicomTag.Columns, (ushort)100 },
-            { DicomTag.BitsAllocated, (ushort)16 },
-            { DicomTag.BitsStored, (ushort)12 },
-            { DicomTag.HighBit, (ushort)11 },
-            { DicomTag.PixelRepresentation, (ushort)0 },
-            { DicomTag.SamplesPerPixel, (ushort)1 },
-            { DicomTag.PhotometricInterpretation, PhotometricInterpretation.Monochrome2.Value }
-        };
+        byte[] inputBytes = MinimalDicom();
 
-        byte[] pixelBytes = new byte[100 * 100 * 2];
-        Array.Fill<byte>(pixelBytes, 0xFF);
-        dataset.AddOrUpdate(new DicomOtherByte(DicomTag.PixelData, pixelBytes));
-
-        var dicomFile = new DicomFile(dataset);
-        using var ms = new MemoryStream();
-        dicomFile.Save(ms);
-        byte[] inputBytes = ms.ToArray();
-
-        var deidentifier = new DicomDeidentifier();
+        var deidentifier = new DicomDeidentifier(SigningKey);
         var result = deidentifier.Deidentify(
             dicomBytes: inputBytes,
             subjectId: "SUBJ-101",
@@ -117,6 +90,7 @@ public class DeidEngineUnitTests
             text: text,
             results: results,
             strategies: strategies,
+            salt: PseudonymKey,
             shiftDays: 10,
             ageCap: 89
         );
@@ -135,6 +109,107 @@ public class DeidEngineUnitTests
         }
     }
 
+    /// <summary>A 100x100 ultrasound image with patient, institution and date tags to strip.</summary>
+    private static byte[] MinimalDicom()
+    {
+        var dataset = new DicomDataset
+        {
+            { DicomTag.SOPClassUID, DicomUID.UltrasoundImageStorage },
+            { DicomTag.SOPInstanceUID, "1.2.840.10008.5.1.4.1.1.6.1.1001" },
+            { DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.6.1.2001" },
+            { DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.6.1.3001" },
+            { DicomTag.PatientName, "DOE^JOHN" },
+            { DicomTag.PatientBirthDate, "19800101" },
+            { DicomTag.PatientAge, "046Y" },
+            { DicomTag.StudyDate, "20260115" },
+            { DicomTag.StudyTime, "143000.000000" },
+            { DicomTag.InstitutionName, "ORIGINAL_CLINIC" },
+            { DicomTag.Modality, "US" },
+            { DicomTag.Rows, (ushort)100 },
+            { DicomTag.Columns, (ushort)100 },
+            { DicomTag.BitsAllocated, (ushort)16 },
+            { DicomTag.BitsStored, (ushort)12 },
+            { DicomTag.HighBit, (ushort)11 },
+            { DicomTag.PixelRepresentation, (ushort)0 },
+            { DicomTag.SamplesPerPixel, (ushort)1 },
+            { DicomTag.PhotometricInterpretation, PhotometricInterpretation.Monochrome2.Value }
+        };
+
+        byte[] pixelBytes = new byte[100 * 100 * 2];
+        Array.Fill<byte>(pixelBytes, 0xFF);
+        dataset.AddOrUpdate(new DicomOtherByte(DicomTag.PixelData, pixelBytes));
+
+        var dicomFile = new DicomFile(dataset);
+        using var ms = new MemoryStream();
+        dicomFile.Save(ms);
+        return ms.ToArray();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(31)]
+    public void DicomDeidentifier_RefusesAMissingOrShortSigningKey(int length)
+    {
+        var missing = () => new DicomDeidentifier(null!);
+        var shortKey = () => new DicomDeidentifier(new byte[length]);
+
+        missing.Should().Throw<ArgumentNullException>();
+        shortKey.Should().Throw<ArgumentException>().WithMessage("*at least 32 bytes*");
+    }
+
+    [Fact]
+    public void DicomDeidentifier_CertificateSignedWithOneKey_DoesNotVerifyWithAnother()
+    {
+        var signer = new DicomDeidentifier(SigningKey);
+        var result = signer.Deidentify(
+            dicomBytes: MinimalDicom(),
+            subjectId: "SUBJ-102",
+            siteId: "SITE-01",
+            studyId: "STUDY-2026",
+            deidentifiedAt: FakeClock.DefaultStart,
+            dateShiftDays: 0,
+            applyPixelMask: false);
+
+        signer.VerifyCertificate(result.Certificate).Should().BeTrue();
+        new DicomDeidentifier(RandomNumberGenerator.GetBytes(32)).VerifyCertificate(result.Certificate).Should().BeFalse();
+    }
+
+    [Fact]
+    public void DeidTransforms_Pseudonymize_WithoutAKey_IsRefused()
+    {
+        var detector = new DeidDetector();
+        string text = "SSN 123-45-6789.";
+        var results = detector.Detect(text);
+        var strategies = new Dictionary<string, string> { [DetectorCategory.SsnNationalId] = "pseudonymize" };
+
+        var withoutKey = () => DeidTransforms.ApplyDeidTransforms(text, results, strategies);
+        var withShortKey = () => DeidTransforms.ApplyDeidTransforms(text, results, strategies, salt: new byte[16]);
+
+        withoutKey.Should().Throw<ArgumentException>().WithMessage("*no default key*");
+        withShortKey.Should().Throw<ArgumentException>().WithMessage("*no default key*");
+    }
+
+    [Fact]
+    public void DeidTransforms_MaskOnly_NeedsNoKey()
+    {
+        var detector = new DeidDetector();
+        string text = "Email john.doe@example.com.";
+
+        var (transformed, _) = DeidTransforms.ApplyDeidTransforms(text, detector.Detect(text));
+
+        transformed.Should().Contain("[EMAIL]");
+    }
+
+    [Fact]
+    public void DeidTransforms_PseudonymsDependOnTheKey()
+    {
+        byte[] otherKey = RandomNumberGenerator.GetBytes(32);
+
+        DeidTransforms.PseudonymizeValue("123-45-6789", PseudonymKey)
+            .Should().Be(DeidTransforms.PseudonymizeValue("123-45-6789", PseudonymKey))
+            .And.NotBe(DeidTransforms.PseudonymizeValue("123-45-6789", otherKey));
+    }
+
     [Fact]
     public void DeidTransforms_ShiftDateString_PreservesFormats()
     {
@@ -149,7 +224,7 @@ public class DeidEngineUnitTests
     [Fact]
     public void DeidTransforms_SubjectDateShift_And_CapAge()
     {
-        string salt = "test-salt-123";
+        string salt = Convert.ToBase64String(PseudonymKey);
         int shift1 = DeidTransforms.GetSubjectDateShift("SUBJ-101", salt);
         int shift2 = DeidTransforms.GetSubjectDateShift("SUBJ-101", salt);
 

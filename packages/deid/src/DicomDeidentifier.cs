@@ -99,9 +99,25 @@ public class DicomDeidentifier
         new DicomTag(0x0008, 0x0035)  // CurveTime
     ];
 
-    public DicomDeidentifier(byte[]? signingSecret = null)
+    /// <summary>The shortest certificate signing key accepted, in bytes (#5016).</summary>
+    public const int MinimumSigningKeyLength = 32;
+
+    /// <summary>
+    /// Creates a de-identifier that signs its certificates with <paramref name="signingSecret"/>, a secret from
+    /// configuration of at least <see cref="MinimumSigningKeyLength"/> bytes. There is no default key: a published
+    /// one would let anyone forge a certificate (#5016).
+    /// </summary>
+    public DicomDeidentifier(byte[] signingSecret)
     {
-        _signingSecret = signingSecret ?? Encoding.UTF8.GetBytes("cadence-audit-log-secret-key-2026");
+        ArgumentNullException.ThrowIfNull(signingSecret);
+        if (signingSecret.Length < MinimumSigningKeyLength)
+        {
+            throw new ArgumentException(
+                $"The de-identification certificate signing key must be at least {MinimumSigningKeyLength} bytes.",
+                nameof(signingSecret));
+        }
+
+        _signingSecret = [.. signingSecret];
     }
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S2325:Methods should be static", Justification = "Instance method API consistency")]

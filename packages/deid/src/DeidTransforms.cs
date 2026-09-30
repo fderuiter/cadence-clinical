@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
@@ -13,10 +14,20 @@ public static class DeidTransforms
 {
     public const int DefaultDateShiftDays = 365;
 
+    /// <summary>
+    /// The shortest HMAC key pseudonymization accepts, in bytes. The key is a secret from configuration; there is no
+    /// default, because anyone who knows the key can recompute pseudonyms from candidate identifiers (#5016).
+    /// </summary>
+    public const int MinimumPseudonymizationKeyLength = 32;
+
+    /// <summary>
+    /// Replaces <paramref name="value"/> with its HMAC-SHA256 under <paramref name="salt"/>, the secret pseudonymization
+    /// key (at least <see cref="MinimumPseudonymizationKeyLength"/> bytes).
+    /// </summary>
     public static string PseudonymizeValue(string value, byte[] salt, string prefix = "")
     {
         ArgumentNullException.ThrowIfNull(value);
-        ArgumentNullException.ThrowIfNull(salt);
+        EnsurePseudonymizationKey(salt);
 
         using var hmac = new HMACSHA256(salt);
         byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(value));
@@ -26,7 +37,18 @@ public static class DeidTransforms
 
     public static string PseudonymizeValue(string value, string salt, string prefix = "")
     {
-        return PseudonymizeValue(value, Encoding.UTF8.GetBytes(salt ?? string.Empty), prefix);
+        ArgumentNullException.ThrowIfNull(salt);
+        return PseudonymizeValue(value, Encoding.UTF8.GetBytes(salt), prefix);
+    }
+
+    private static void EnsurePseudonymizationKey([NotNull] byte[]? salt)
+    {
+        if (salt is null || salt.Length < MinimumPseudonymizationKeyLength)
+        {
+            throw new ArgumentException(
+                $"Pseudonymization needs a secret key of at least {MinimumPseudonymizationKeyLength} bytes; there is no default key.",
+                nameof(salt));
+        }
     }
 
     public static string ShiftDateString(string dateStr, int shiftDays = DefaultDateShiftDays)
@@ -127,7 +149,7 @@ public static class DeidTransforms
         int shiftDays = DefaultDateShiftDays,
         int ageCap = 89)
     {
-        salt ??= Encoding.UTF8.GetBytes("secure-clinical-salt-98765");
+        // No default key (#5016): the pseudonymize strategy fails below unless the caller passes one.
         var cleanResults = DeidDetector.ResolveOverlaps(results, text);
 
         var sb = new StringBuilder(text);
@@ -159,6 +181,7 @@ public static class DeidTransforms
             }
             else if (strategy == "pseudonymize")
             {
+                EnsurePseudonymizationKey(salt);
                 replacement = PseudonymizeValue(res.Value, salt);
             }
             else if (strategy == "date_shift")
