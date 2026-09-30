@@ -82,6 +82,12 @@ public sealed class SimulationEngine(
     /// <summary>The section the dependents are reported in, and masked as.</summary>
     public const string DependentsPart = "dependents";
 
+    /// <summary>The section the schedule changes are reported in, and masked as.</summary>
+    public const string ScheduleChangesPart = "schedule_changes";
+
+    /// <summary>The engine version recorded for the expected schedule (K-TIME-7); bump it when its output changes.</summary>
+    public static readonly EngineVersion ScheduleEngine = new("protocol.expected_schedule", "1");
+
     /// <summary>How many design problems an invalid-content error lists.</summary>
     private const int MaxReportedProblems = 10;
 
@@ -131,9 +137,10 @@ public sealed class SimulationEngine(
             .Select(node => hidden.TryGetValue(node, out var reason) ? reason : (MaskReason?)null)
             .FirstOrDefault(reason => reason is not null);
 
-        var engines = new List<EngineVersion> { ProtocolStructuralDiff.Engine };
+        var engines = new List<EngineVersion> { ProtocolStructuralDiff.Engine, ScheduleEngine };
         CandidateSummary summary;
         IReadOnlyList<ElementChange> diff;
+        IReadOnlyList<ScheduleChange> schedule;
         IReadOnlyList<MaskedPart> masked;
         DependentsReport? dependents = null;
         if (mask is { } reason)
@@ -141,7 +148,13 @@ public sealed class SimulationEngine(
             // Nothing derived from content the actor may not read is computed, hashed or shown (K-SIM-4).
             summary = new CandidateSummary(CandidateKind.ProtocolVersion, null, null, null, null);
             diff = [];
-            masked = [new MaskedPart(DependentsPart, reason), new MaskedPart(StructuralDiffPart, reason)];
+            schedule = [];
+            masked =
+            [
+                new MaskedPart(DependentsPart, reason),
+                new MaskedPart(ScheduleChangesPart, reason),
+                new MaskedPart(StructuralDiffPart, reason),
+            ];
         }
         else
         {
@@ -154,6 +167,7 @@ public sealed class SimulationEngine(
             summary = new CandidateSummary(
                 CandidateKind.ProtocolVersion, versionRef, baseRef, candidate.ContentHash, baseVersion?.ContentHash);
             diff = compared.Value!;
+            schedule = ScheduleChanges(baseVersion?.Content, candidate.Content);
             masked = [];
             if (diff.Count > 0 && baseVersion is not null)
             {
@@ -163,10 +177,50 @@ public sealed class SimulationEngine(
             }
         }
 
+        engines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
         var inputHash = ContentHash.Compute(InputDocument(asOf, summary, engines, masked).ToJsonString());
-        var resultHash = ContentHash.Compute(ResultDocument(scope, asOf, summary, engines, inputHash, diff, masked, dependents).ToJsonString());
+        var resultHash = ContentHash.Compute(
+            ResultDocument(scope, asOf, summary, engines, inputHash, diff, schedule, masked, dependents).ToJsonString());
         return CommandResult<SimulationResult>.Success(
-            new SimulationResult(scope, asOf, summary, engines, inputHash, resultHash, diff, masked, dependents));
+            new SimulationResult(scope, asOf, summary, engines, inputHash, resultHash, diff, schedule, masked, dependents));
+    }
+
+    /// <summary>
+    /// The timed activities added to, removed from or moved on the expected schedule (K-TIME-7), on the study-day axis.
+    /// Both contents are protocol designs: a stored version's by the protocol commands, unsaved content by
+    /// <see cref="LoadAsync"/>.
+    /// </summary>
+    private static IReadOnlyList<ScheduleChange> ScheduleChanges(string? baseContent, string candidateContent)
+    {
+        var before = baseContent is null ? [] : ExpectedSchedule.Plan(DesignOf(baseContent));
+        var after = ExpectedSchedule.Plan(DesignOf(candidateContent));
+        var beforeById = before.ToDictionary(v => v.ActivityId, StringComparer.Ordinal);
+        var afterById = after.ToDictionary(v => v.ActivityId, StringComparer.Ordinal);
+        var changes = new List<ScheduleChange>();
+        foreach (var id in beforeById.Keys.Union(afterById.Keys).Order(StringComparer.Ordinal))
+        {
+            var old = beforeById.GetValueOrDefault(id);
+            var @new = afterById.GetValueOrDefault(id);
+            if (old is null)
+            {
+                changes.Add(new ScheduleChange(id, ElementChangeKind.Added, null, @new));
+            }
+            else if (@new is null)
+            {
+                changes.Add(new ScheduleChange(id, ElementChangeKind.Removed, old, null));
+            }
+            else if (old.EpochId != @new.EpochId || old.StudyDay != @new.StudyDay
+                || old.WindowBefore != @new.WindowBefore || old.WindowAfter != @new.WindowAfter)
+            {
+                changes.Add(new ScheduleChange(id, ElementChangeKind.Changed, old, @new));
+            }
+        }
+
+        return changes;
+
+        static ProtocolDesign DesignOf(string content) =>
+            ProtocolDesignDocument.Read(content).Design
+            ?? throw new InvalidOperationException("Simulation compared content that is not a protocol design.");
     }
 
     private async Task<CommandResult<(Candidate Candidate, ProtocolVersionSnapshot? Base)>> LoadAsync(
@@ -237,6 +291,7 @@ public sealed class SimulationEngine(
         IReadOnlyList<EngineVersion> engines,
         string inputHash,
         IReadOnlyList<ElementChange> diff,
+        IReadOnlyList<ScheduleChange> schedule,
         IReadOnlyList<MaskedPart> masked,
         DependentsReport? dependents)
     {
@@ -249,6 +304,13 @@ public sealed class SimulationEngine(
             ["instance_type"] = change.InstanceType,
             ["change"] = change.Change.ToString(),
             ["properties"] = new JsonArray([.. change.Properties.Select(p => (JsonNode?)p)]),
+        })]);
+        document["schedule_changes"] = new JsonArray([.. schedule.Select(change => (JsonNode)new JsonObject
+        {
+            ["activity_id"] = change.ActivityId,
+            ["change"] = change.Change.ToString(),
+            ["before"] = PlannedVisitNode(change.Before),
+            ["after"] = PlannedVisitNode(change.After),
         })]);
         document["dependents"] = dependents is null ? null : new JsonObject
         {
@@ -270,6 +332,14 @@ public sealed class SimulationEngine(
         };
         return document;
     }
+
+    private static JsonObject? PlannedVisitNode(PlannedVisit? visit) => visit is null ? null : new JsonObject
+    {
+        ["epoch_id"] = visit.EpochId,
+        ["study_day"] = visit.StudyDay,
+        ["window_before"] = visit.WindowBefore,
+        ["window_after"] = visit.WindowAfter,
+    };
 
     private static JsonObject AsOfNode(SimulationAsOf asOf) => new()
     {

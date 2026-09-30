@@ -141,7 +141,8 @@ public sealed class SimulationTests
             ContentHash.Compute(renamed.Content),
             parent.ContentHash));
         changed.StructuralDiff.Should().ContainSingle().Which.ElementId.Should().Be("arm.A");
-        changed.EngineVersions.Should().Equal(ProtocolStructuralDiff.Engine, SimulationEngine.DependentsEngine);
+        changed.ScheduleChanges.Should().BeEmpty("renaming an arm moves no visit");
+        changed.EngineVersions.Should().Equal(SimulationEngine.DependentsEngine, SimulationEngine.ScheduleEngine, ProtocolStructuralDiff.Engine);
         changed.AsOf.Should().Be(new SimulationAsOf(Now, Now));
         changed.Dependents!.Total.Should().Be(1);
         inputs.DependentsAsked.Should().Equal((parent.Id, (ProtocolVersionId?)renamed.Id, new SimulationAsOf(Now, Now)));
@@ -193,7 +194,9 @@ public sealed class SimulationTests
         hidden.StructuralDiff.Should().BeEmpty();
         hidden.Masked.Should().Equal(
             new MaskedPart(SimulationEngine.DependentsPart, MaskReason.Blinded),
+            new MaskedPart(SimulationEngine.ScheduleChangesPart, MaskReason.Blinded),
             new MaskedPart(SimulationEngine.StructuralDiffPart, MaskReason.Blinded));
+        hidden.ScheduleChanges.Should().BeEmpty();
         hidden.Dependents.Should().BeNull();
         inputs.DependentsAsked.Should().BeEmpty("nothing is read about what depends on a hidden version");
         hidden.Candidate.Should().Be(new CandidateSummary(CandidateKind.ProtocolVersion, null, null, null, null));
@@ -201,6 +204,43 @@ public sealed class SimulationTests
         hiddenAfterChange.ResultHash.Should().Be(hidden.ResultHash);
         visibility.Asked.Should().HaveCount(2, "one visibility question per run").And.AllSatisfy(nodes => nodes.Should().BeEquivalentTo(
             [NodeRef.For(Study), NodeRef.For(draft.Id, draft.VersionIndex), NodeRef.For(parent.Id, parent.VersionIndex)]));
+    }
+
+    /// <summary>
+    /// A candidate that moves a visit, adds a timed one and drops another reports each on the study-day axis
+    /// (K-TIME-7); renaming a visit is a structural change only.
+    /// </summary>
+    [Fact]
+    public async Task Simulate_ReportsScheduleChangesOnTheStudyDayAxis()
+    {
+        var inputs = new Inputs();
+        var parent = inputs.Add(Approved(Scheduled(
+            Visit("act.screening", "Screening", "ep.screening", -14, 0, 0),
+            Visit("act.week4", "Week 4", "ep.treatment", 28, 2, 2),
+            Visit("act.week8", "Week 8", "ep.treatment", 56, 3, 3))));
+        var candidate = Scheduled(
+            Visit("act.screening", "Screening visit", "ep.screening", -14, 0, 0),
+            Visit("act.week4", "Week 4", "ep.treatment", 29, 2, 3),
+            Visit("act.week12", "Week 12", "ep.treatment", 84, 3, 3));
+        var engine = Engine(inputs);
+
+        var result = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, candidate));
+        var dayLater = await SimulateAsync(engine, SimulationCandidate.UnsavedProtocolVersion(parent.Id, candidate.Replace("\"day\":84", "\"day\":85", StringComparison.Ordinal)));
+
+        result.ScheduleChanges.Should().BeEquivalentTo(
+            [
+                new ScheduleChange("act.week12", ElementChangeKind.Added, null, new PlannedVisit("act.week12", "Week 12", "ep.treatment", 2, 84, 3, 3)),
+                new ScheduleChange(
+                    "act.week4",
+                    ElementChangeKind.Changed,
+                    new PlannedVisit("act.week4", "Week 4", "ep.treatment", 2, 28, 2, 2),
+                    new PlannedVisit("act.week4", "Week 4", "ep.treatment", 2, 29, 2, 3)),
+                new ScheduleChange("act.week8", ElementChangeKind.Removed, new PlannedVisit("act.week8", "Week 8", "ep.treatment", 2, 56, 3, 3), null),
+            ],
+            options => options.WithStrictOrdering());
+        result.StructuralDiff.Should().Contain(c => c.ElementId == "act.screening", "a renamed visit is a structural change");
+        dayLater.ScheduleChanges.Should().ContainSingle(c => c.ActivityId == "act.week12").Which.After!.StudyDay.Should().Be(85);
+        dayLater.ResultHash.Should().NotBe(result.ResultHash);
     }
 
     [Fact]
@@ -293,6 +333,16 @@ public sealed class SimulationTests
         {
             Arms = [.. ProtocolDesignSamples.MinimalDesign().Arms.Select(a => a.Id == armId ? a with { Name = name } : a)],
         });
+
+    private static string Scheduled(params PlannedActivity[] activities) =>
+        ProtocolDesignDocument.Write(ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.screening", "Screening", 1), new Epoch("ep.treatment", "Treatment", 2)],
+            PlannedActivities = [.. activities],
+        });
+
+    private static PlannedActivity Visit(string id, string name, string epochId, int day, int before, int after) =>
+        new(id, name, epochId, [ActivityLocation.Site], [], new ActivityTiming(day, before, after));
 
     private static ProtocolVersionSnapshot Approved(string content) =>
         new(ProtocolVersionId.New(), Study, 1, ProtocolVersionStatus.Approved, null, content, ContentHash.Compute(content), 3);

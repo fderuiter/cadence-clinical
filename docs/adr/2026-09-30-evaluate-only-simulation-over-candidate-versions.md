@@ -190,6 +190,10 @@ details:
   stored candidate is excluded from the walk, as amendment impact excludes the amended fork, so the two report the
   same objects. Until protocol elements are lineage nodes (#4808) the changed object is the base version as a whole.
   Masked objects are counted and masked by the lineage read; a hidden version withholds the section entirely.
+- **Schedule changes (ADR-2487).** A later slice adds `schedule_changes[]` from the expected schedule (K-TIME-7):
+  the timed activities added, removed or moved on the study-day axis, with the planned visit before and after. It is
+  recorded as the engine `protocol.expected_schedule`, withheld with the diff when masked, and part of the result
+  hash; `engine_versions` is sorted by name. Per-participant impact follows with participant anchors.
 - **Errors.** Unknown versions, a draft base, unsaved content that is not a protocol design (the error names its
   design problems) and repeated element ids are `K.Simulation.*` errors. A denial is `K.Authorization.Denied` with the evaluator's explanation.
 
