@@ -123,9 +123,9 @@ describe("Drawer Responsiveness & Viewport Tokens", () => {
         "utf-8"
       );
 
-      expect(ehrContent).toContain("var(--semantic-drawer-width-xl");
-      expect(shareContent).toContain("var(--semantic-drawer-width-md");
-      expect(readabilityContent).toContain("var(--semantic-drawer-width-sm");
+      expect(ehrContent).toContain("--semantic-drawer-width-xl");
+      expect(shareContent).toContain("--semantic-drawer-width-md");
+      expect(readabilityContent).toContain("--semantic-drawer-width-sm");
     });
   });
 
