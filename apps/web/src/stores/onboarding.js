@@ -30,6 +30,22 @@ function migrateLegacyKeys() {
       legacyEvents !== null
     ) {
       if (
+        legacyDisabled !== null &&
+        window.localStorage.getItem("onboarding_global_disabled") === null
+      ) {
+        window.localStorage.setItem(
+          "onboarding_global_disabled",
+          legacyDisabled
+        );
+      }
+      if (
+        legacyIsActive !== null &&
+        legacyIsActive === "false" &&
+        window.localStorage.getItem("onboarding_global_dismissed") === null
+      ) {
+        window.localStorage.setItem("onboarding_global_dismissed", "true");
+      }
+      if (
         legacyStep !== null &&
         window.localStorage.getItem("onboarding_super_admin_current_step") ===
           null
@@ -92,6 +108,11 @@ function readStorageForPersona(personaKey) {
       const disabledKey = `onboarding_${personaKey}_disabled`;
       const eventsKey = `onboarding_${personaKey}_events`;
 
+      const globalDismissed =
+        window.localStorage.getItem("onboarding_global_dismissed") === "true";
+      const globalDisabled =
+        window.localStorage.getItem("onboarding_global_disabled") === "true";
+
       const storedStep = window.localStorage.getItem(stepKey);
       if (storedStep !== null) {
         const parsed = parseInt(storedStep, 10);
@@ -100,14 +121,18 @@ function readStorageForPersona(personaKey) {
         }
       }
 
-      const storedIsActive = window.localStorage.getItem(activeKey);
-      if (storedIsActive !== null) {
-        isActive = storedIsActive === "true";
-      }
-
       const storedDisabled = window.localStorage.getItem(disabledKey);
-      if (storedDisabled !== null) {
-        disabled = storedDisabled === "true";
+      disabled = globalDisabled || storedDisabled === "true";
+
+      const storedIsActive = window.localStorage.getItem(activeKey);
+      if (disabled) {
+        isActive = false;
+      } else if (globalDismissed) {
+        isActive = false;
+      } else if (storedIsActive !== null) {
+        isActive = storedIsActive === "true";
+      } else {
+        isActive = true;
       }
 
       const storedEvents = window.localStorage.getItem(eventsKey);
@@ -174,6 +199,14 @@ export const useOnboardingStore = defineStore("onboarding", {
           window.localStorage.setItem(
             `onboarding_${targetPersona}_events`,
             JSON.stringify(this.events)
+          );
+          window.localStorage.setItem(
+            "onboarding_global_disabled",
+            this.disabled ? "true" : "false"
+          );
+          window.localStorage.setItem(
+            "onboarding_global_dismissed",
+            !this.isActive ? "true" : "false"
           );
         } catch (e) {
           console.error(
