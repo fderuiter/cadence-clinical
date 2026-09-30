@@ -334,6 +334,8 @@ import { ref, reactive, watch, onMounted, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
+import { useToastStore } from "../stores/toasts.js";
+import { executionApi } from "../api/executionApi";
 import { soaClient } from "../api/soaClient";
 import { validateField, debounce } from "ui";
 import { evaluateAST } from "../evaluator.js";
@@ -362,6 +364,7 @@ import { isDemoBuild } from "../utils/demoMode.js";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 const route = useRoute();
 const demoBuild = isDemoBuild();
 
@@ -1203,31 +1206,70 @@ async function submitEcrf() {
   });
 
   if (!allValid) {
-    alert(
-      "Cannot submit eCRF! The form contains validation errors:\n\n" +
-        errMsgs.join("\n")
-    );
+    toastStore.push({
+      tone: "error",
+      title: "eCRF Validation Failed",
+      message:
+        "Cannot submit eCRF! The form contains validation errors:\n\n" +
+        errMsgs.join("\n"),
+    });
     return;
   }
 
-  // The form is sample content until Execution serves form definitions (#4727), so it is never sent to
-  // Execution as if it were a real form. Outside a demo build nothing is saved (#4828).
-  if (!allowUnbackedAction("Submitting the form")) return;
+  const studyId =
+    store.activeStudyId ||
+    store.currentStudyId ||
+    store.currentUsdm?.studyId ||
+    "STUDY-USDM-001";
+  const subjectId =
+    selectedSubjectId.value || store.activeSubjectId || "SUBJ-001";
+  const visitId = selectedVisitId.value || store.activeVisitId || "Screening";
+  const formId = "VS_DEMO";
+  const siteId = store.activeSiteId || store.currentSiteId || "SITE-101";
+  const protocolVersion = store.currentUsdm?.protocolVersion || "1.0.0";
+  const payload = JSON.stringify(store.formValues || {});
 
-  store.addLedgerBlock(
-    "SESSION_SUBMIT",
-    {
-      formId: "VS_DEMO",
-      subjectId: selectedSubjectId.value,
-      visitId: selectedVisitId.value,
-      formValues: store.formValues,
-      formQueries: store.formQueries,
-    },
-    "eCRF successfully verified, finalized, and electronically submitted."
-  );
+  try {
+    const submission = await executionApi.createFormSubmission({
+      studyId,
+      subjectId,
+      formId,
+      siteId,
+      visitId,
+      protocolVersion,
+      payload,
+    });
 
-  alert(
-    "eCRF Session successfully submitted to secure cryptographic database!"
-  );
+    const completed = await executionApi.completeFormSubmission(submission.id);
+
+    const block = await store.addLedgerBlock(
+      "SESSION_SUBMIT",
+      {
+        formId,
+        subjectId,
+        visitId,
+        studyId,
+        siteId,
+        formValues: store.formValues,
+        formQueries: store.formQueries,
+        submissionId: completed.id,
+        backendSubmissionId: completed.id,
+        synced: true,
+      },
+      "eCRF successfully verified, finalized, and electronically submitted."
+    );
+    if (block) {
+      block.synced = true;
+      block.submissionId = completed.id;
+    }
+
+    toastStore.push({
+      tone: "success",
+      title: "eCRF Form Submitted",
+      message: `eCRF Session successfully submitted to backend Execution API (Submission ID: ${completed.id}).`,
+    });
+  } catch (err) {
+    toastStore.apiError("eCRF Form Submission Failed", err);
+  }
 }
 </script>

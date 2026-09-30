@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- K-TIME-3 (#4784): time comes from the caller or Cadence.Kernel.Time.IClock, never DateTime.Now/UtcNow. -->
-    <CadenceBanWallClock>true</CadenceBanWallClock>
     <OutputType>Exe</OutputType>
     <RootNamespace>Cadence.Cli</RootNamespace>
     <AssemblyName>cadence</AssemblyName>

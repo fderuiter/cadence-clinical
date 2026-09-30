@@ -4,13 +4,13 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -28,60 +28,7 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// </summary>
 public class SubjectApplicationServiceDemographicsTests
 {
-    private sealed record AuditCall(string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
-
-    private sealed class RecordingAuditLogWriter : IAuditLogWriter
-    {
-        public List<AuditCall> Calls { get; } = new();
-
-        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
-            IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct)
-        {
-            Calls.Add(new AuditCall(entityName, recordId, action, userId, changeReason));
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class FakeCurrentAuditContextAccessor : ICurrentAuditContextAccessor
-    {
-        public string UserId { get; init; } = "test-user";
-
-        public string ChangeReason { get; init; } = "test-reason";
-    }
-
-    private const string CorruptedCiphertext = "CORRUPTED-NOT-VALID-CIPHERTEXT";
-
-    /// <summary>
-    /// Decrypts anything except <see cref="CorruptedCiphertext"/>, which always throws
-    /// <see cref="DemographicsDecryptionFailedException"/> -- mirroring
-    /// <c>AesGcmDemographicsEncryptionService.Decrypt</c>'s real contract (tamper/corruption fails loudly,
-    /// never silently defaults to an empty dict).
-    /// </summary>
-    private sealed class FakeDemographicsEncryptionService : IDemographicsEncryptionService
-    {
-        private const string Prefix = "FAKE-CIPHER:";
-
-        public int EncryptCallCount { get; private set; }
-
-        public List<string> DecryptedCiphertexts { get; } = new();
-
-        public string Encrypt(IReadOnlyDictionary<string, object?> demographics)
-        {
-            EncryptCallCount++;
-            return Prefix + Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(demographics));
-        }
-
-        public IReadOnlyDictionary<string, object?> Decrypt(string ciphertext)
-        {
-            if (ciphertext == CorruptedCiphertext)
-            {
-                throw new DemographicsDecryptionFailedException("Demographics ciphertext could not be decrypted.");
-            }
-
-            DecryptedCiphertexts.Add(ciphertext);
-            return new Dictionary<string, object?> { ["marker"] = "decrypted" };
-        }
-    }
+    private const string CorruptedCiphertext = FakeDemographicsEncryptionService.CorruptedCiphertext;
 
     private sealed class Harness
     {

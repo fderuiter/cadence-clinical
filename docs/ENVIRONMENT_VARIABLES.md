@@ -143,6 +143,8 @@ Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-24
 | Key | Read by | Default |
 | --- | --- | --- |
 | `BRAND_DOMAIN` | `packages/tooling_core/src/OpenApiToolingService.cs:171` | `ccrsoft.com` |
+| `DOTNET_INSTALL_SH_SHA256` | `scripts/setup_dotnet_env.sh:50` | `082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e` |
+| `DOTNET_INSTALL_PS1_SHA256` | `scripts/setup_dotnet_env.ps1:63` | `e8b873e18a81e5c4cd8ab69d84dac8fead291d50b3c44633cd7fddad709a13d6` |
 | `GH_TOKEN`, `GITHUB_TOKEN` | `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10` | none |
 | `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:101-102` (honoured by `generate-rtm` and `check rtm`; `gxp sync` ignores them) | off |
 | `CADENCE_UPDATE_BASELINE` | `packages/tooling_core/src/Services/DeidComplianceService.cs` (`1` with `check deid` and no files rewrites `.deid-baseline.txt`) and `tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs` (rewrites the kernel boundary baseline) | off |

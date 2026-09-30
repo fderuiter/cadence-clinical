@@ -97,11 +97,12 @@ Rules for web tests:
 - **Wait for conditions, not time.** Use `vi.waitFor(...)` or `await router.isReady()` rather than fixed
   sleeps, which fail when the suite runs under load.
 
-## Shared test helpers (`Cadence.Testing`)
+## Shared test helpers (`Cadence.Testing` and `Cadence.UnitTests.Fixtures`)
 
-Use `packages/testing/src` rather than writing ad-hoc fakes:
+Use `packages/testing/src` or centralized unit test fixtures under `tests/Cadence.UnitTests/Fixtures/` rather than writing ad-hoc fakes:
 
 - `InMemoryRepository<T>`: a repository fake for application-service tests.
+- `Cadence.UnitTests.Fixtures.Execution`: centralized unit test doubles for Execution domain services (`FakeCurrentAuditContextAccessor`, `RecordingAuditLogWriter`, and `FakeDemographicsEncryptionService`).
 - `TestSecurityContext`: `CreateHmacHeaders(...)`, `CreatePrincipal(...)` and `Identity(...)` for gateway identities. Test identities carry the tenant code `TestSecurityContext.TenantCode`; there is no fallback tenant (ADR-2514).
 - The `factory.CreateSignedClient()` and `builder.UseTestGatewaySecret()` extensions, for signed calls into a
   `WebApplicationFactory` host.
@@ -125,7 +126,7 @@ each carry the audit interceptor once.
 
 ## Time in tests
 
-Tests follow K-TIME-3 like the kernel does: `tests/Directory.Build.props` enables the banned-API analyzer with
+Tests follow K-TIME-3 like the rest of the solution: root `Directory.Build.props` enables the banned-API analyzer globally with
 [`BannedSymbols.txt`](../BannedSymbols.txt), so `DateTime.Now/UtcNow` and `DateTimeOffset.Now/UtcNow` fail the
 build (RS0030). Pick the replacement by what the test needs:
 

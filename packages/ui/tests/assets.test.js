@@ -33,6 +33,14 @@ describe("CSS Assets and Package Exports", () => {
     expect(content).toContain("--font-size-base");
     expect(content).toContain("--breakpoint-tablet");
     expect(content).toContain("--touch-target-min");
+    expect(content).toContain("--drawer-width-sm");
+    expect(content).toContain("--drawer-width-md");
+    expect(content).toContain("--drawer-width-lg");
+    expect(content).toContain("--drawer-width-xl");
+    expect(content).toContain("--semantic-drawer-width-sm");
+    expect(content).toContain("--semantic-drawer-width-md");
+    expect(content).toContain("--semantic-drawer-width-lg");
+    expect(content).toContain("--semantic-drawer-width-xl");
   });
 
   it("should have responsive.css with all required utility classes", () => {
@@ -46,5 +54,8 @@ describe("CSS Assets and Package Exports", () => {
     expect(content).toContain(".container");
     expect(content).toContain(".touch-target");
     expect(content).toContain(".scrollable-table-wrapper");
+    expect(content).toContain("@media (max-width: 640px)");
+    expect(content).toContain(".drawer-mobile-full");
+    expect(content).toContain(".drawer-panel-mobile-full");
   });
 });

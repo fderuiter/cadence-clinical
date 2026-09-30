@@ -440,7 +440,11 @@ onMounted(() => {
 }
 
 .metadata-drawer {
-  width: 440px;
+  width: var(
+    --semantic-drawer-width-sm,
+    var(--drawer-width-sm, min(100vw, 440px))
+  );
+  max-width: 100vw;
   background: #ffffff;
   height: 100%;
   display: flex;
