@@ -29,6 +29,12 @@ public sealed record CiCommand(string FileName, IReadOnlyList<string> Arguments,
         argument.Length > 0 && argument.IndexOfAny([' ', ';', '"']) < 0 ? argument : $"\"{argument}\"";
 }
 
+/// <summary>An environment variable a step's commands get when another step passed earlier in the same run.</summary>
+/// <param name="StepKey">The step (<c>job/name</c>) that must have passed.</param>
+/// <param name="Name">The variable.</param>
+/// <param name="Value">Its value.</param>
+public sealed record CiEnvironmentIfPassed(string StepKey, string Name, string Value);
+
 /// <summary>Which files a step appends to its command, discovered when it runs.</summary>
 public enum CiFileSource
 {
@@ -100,6 +106,15 @@ public sealed record CiStep(string Job, string Name)
     /// <summary>Directories to delete before the step runs, relative to the repository root.</summary>
     public IReadOnlyList<string> CleanDirectories { get; init; } = [];
 
+    /// <summary>Variables set for the step's commands when another step passed first (see <see cref="CiEnvironmentIfPassed"/>).</summary>
+    public IReadOnlyList<CiEnvironmentIfPassed> EnvironmentIfPassed { get; init; } = [];
+
+    /// <summary>
+    /// Tracked files the step rewrites as a side effect, relative to the repository root. They are put back as they
+    /// were when the step ends, since a CI runner is thrown away but a working tree is not.
+    /// </summary>
+    public IReadOnlyList<string> RestoreFiles { get; init; } = [];
+
     /// <summary>The step's key, <c>job/name</c>.</summary>
     public string Key => $"{Job}/{Name}";
 }
@@ -135,6 +150,8 @@ public static class CiPlan
     private const string StyleNodeInstall = "style/Install Node dependencies";
     private const string StyleUiBuild = "style/Build UI package";
     private const string PushOnly = "CI runs it only on a push to main";
+    private const string RtmReport = "docs/SDLC/Requirements_Traceability_Matrix.md";
+    private const string IqReport = "docs/SDLC/IQ_OQ_PQ_Execution_Report.md";
     private const string E2eJob = "accessibility-e2e"; // deid-ignore: the ci.yml job key, not an account number
 
     /// <summary>
@@ -235,7 +252,16 @@ public static class CiPlan
             new("style", "Run ADR validation") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "adrs")] },
             new("style", "Run CODEOWNERS coverage validation") { Always = true, Commands = [CadenceCli(true, "validate-codeowners")] },
             new("style", "Run Markdown validation") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "markdown")] },
-            new("style", "Run documentation compilation") { Always = true, Commands = [Pnpm("docs:build")] },
+            new("style", "Run documentation compilation")
+            {
+                Always = true,
+                Commands = [Pnpm("docs:build")],
+
+                // scripts/build-docs.js runs the full 'cadence check' again before building; it skips that when the
+                // same gates already passed in this run (#5028). It also rewrites the RTM as a draft.
+                EnvironmentIfPassed = [new(QualitySentinels, "CADENCE_DOCS_SKIP_CHECKS", "1")],
+                RestoreFiles = [RtmReport, IqReport],
+            },
             new("style", "Verify schema documentation freshness")
             {
                 Always = true,
@@ -344,7 +370,7 @@ public static class CiPlan
             {
                 Commands =
                 [
-                    new CiCommand("git", ["diff", "--exit-code", "docs/SDLC/Requirements_Traceability_Matrix.md", "docs/SDLC/IQ_OQ_PQ_Execution_Report.md"]),
+                    new CiCommand("git", ["diff", "--exit-code", RtmReport, IqReport]),
                 ],
             },
         ])

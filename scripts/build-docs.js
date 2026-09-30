@@ -343,12 +343,20 @@ try {
       "Warning: Shared UI primitives package build failed, continuing anyway..."
     );
   }
-  runCommand(
-    "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check"
-  );
-  runCommand(
-    "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- validate-markdown"
-  );
+  // `cadence ci` sets CADENCE_DOCS_SKIP_CHECKS=1 when its "Run Cadence quality sentinels" step already passed on
+  // this tree: that step runs the same gates, Markdown included, so running them again here only costs minutes.
+  if (process.env.CADENCE_DOCS_SKIP_CHECKS === "1") {
+    console.log(
+      "Skipping 'cadence check' and 'validate-markdown' (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
+    );
+  } else {
+    runCommand(
+      "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check"
+    );
+    runCommand(
+      "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- validate-markdown"
+    );
+  }
   runCommand(
     "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-schema-doc"
   );

@@ -147,6 +147,7 @@ Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-24
 | `CADENCE_UPDATE_BASELINE` | `packages/tooling_core/src/Services/DeidComplianceService.cs` (`1` with `check deid` and no files rewrites `.deid-baseline.txt`) and `tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs` (rewrites the kernel boundary baseline) | off |
 | `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:214` | off |
 | `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped). `cadence ci` (`packages/cli/src/Services/LocalCiRunner.cs`) opens the connection string once before the .NET tests and fails when neither is usable, unless `--allow-skip` is given | none |
+| `CADENCE_DOCS_SKIP_CHECKS` | `scripts/build-docs.js` (`1` skips its `cadence check` and Markdown validation; `cadence ci` sets it for the docs build step only when `Run Cadence quality sentinels` already passed in the same run) | unset |
 | `CADENCE_UPDATE_GOLDEN` | `tests/Cadence.UnitTests/Packages/UsdmDesignImporterTests.cs` (`1` rewrites the expected design of the USDM import golden test; review the diff before committing) | off |
 
 ## Web apps

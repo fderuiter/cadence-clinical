@@ -51,8 +51,21 @@ public sealed class LocalCiEnvironment
     /// <summary>The repository root; every command runs here.</summary>
     public required string RepoRoot { get; init; }
 
-    /// <summary>Runs a command with the given extra arguments in the repository root and returns its exit code.</summary>
-    public required Func<CiCommand, IReadOnlyList<string>, int> Run { get; init; }
+    /// <summary>
+    /// Runs a command with the given extra arguments and extra environment variables in the repository root and
+    /// returns its exit code.
+    /// </summary>
+    public required Func<CiCommand, IReadOnlyList<string>, IReadOnlyDictionary<string, string>, int> Run { get; init; }
+
+    /// <summary>Reads a file under the repository root, or returns null when it does not exist.</summary>
+    public Func<string, string?> ReadFile { get; init; } = path => File.Exists(path) ? File.ReadAllText(path) : null;
+
+    /// <summary>Writes a file back to the given content, or deletes it when the content is null.</summary>
+    public Action<string, string?> RestoreFile { get; init; } = (path, content) =>
+    {
+        if (content is null) File.Delete(path);
+        else if (!File.Exists(path) || File.ReadAllText(path) != content) File.WriteAllText(path, content);
+    };
 
     /// <summary>Whether a program is on <c>PATH</c>.</summary>
     public required Func<string, bool> IsToolOnPath { get; init; }
@@ -76,19 +89,24 @@ public sealed class LocalCiEnvironment
     public static LocalCiEnvironment Create(string repoRoot, Action<CiStep, IReadOnlyList<string>>? onStepStarting = null) => new()
     {
         RepoRoot = repoRoot,
-        Run = (command, extra) => RunProcess(repoRoot, command, extra),
+        Run = (command, extra, variables) => RunProcess(repoRoot, command, extra, variables),
         IsToolOnPath = IsOnPath,
         ProbePostgres = ProbePostgresFromEnvironment,
         FindFiles = (step, baseRef) => DiscoverFiles(repoRoot, step, baseRef),
         OnStepStarting = onStepStarting,
     };
 
-    private static int RunProcess(string repoRoot, CiCommand command, IReadOnlyList<string> extra)
+    private static int RunProcess(string repoRoot, CiCommand command, IReadOnlyList<string> extra, IReadOnlyDictionary<string, string> variables)
     {
         var psi = new ProcessStartInfo(command.FileName) { WorkingDirectory = repoRoot, UseShellExecute = false };
         foreach (var argument in command.Arguments.Concat(extra))
         {
             psi.ArgumentList.Add(argument);
+        }
+
+        foreach (var (name, value) in variables)
+        {
+            psi.Environment[name] = value;
         }
 
         try
@@ -286,7 +304,7 @@ public static class LocalCiRunner
                         note = postgres.Available ? postgres.Message : $"PostgreSQL tests skipped (--allow-skip): {postgres.Message}";
                     }
 
-                    result = RunStep(step, options, environment, note);
+                    result = RunStep(step, options, environment, note, byKey);
                 }
 
                 Record(result);
@@ -328,7 +346,8 @@ public static class LocalCiRunner
         return null;
     }
 
-    private static CiStepResult RunStep(CiStep step, LocalCiOptions options, LocalCiEnvironment environment, string note)
+    private static CiStepResult RunStep(
+        CiStep step, LocalCiOptions options, LocalCiEnvironment environment, string note, Dictionary<string, CiStepResult> earlier)
     {
         IReadOnlyList<string> files = [];
         if (step.Files != CiFileSource.None)
@@ -348,6 +367,11 @@ public static class LocalCiRunner
             display.Add(step.InProcessDisplay ?? step.Name);
         }
 
+        var variables = step.EnvironmentIfPassed
+            .Where(e => earlier.TryGetValue(e.StepKey, out var r) && r.Outcome == CiOutcome.Passed)
+            .ToDictionary(e => e.Name, e => e.Value, StringComparer.Ordinal);
+        display.AddRange(variables.Select(v => $"(with {v.Key}={v.Value})"));
+
         environment.OnStepStarting?.Invoke(step, display);
 
         foreach (var directory in step.CleanDirectories)
@@ -355,11 +379,31 @@ public static class LocalCiRunner
             environment.DeleteDirectory(Path.Combine(environment.RepoRoot, directory));
         }
 
+        var saved = step.RestoreFiles
+            .Select(file => Path.Combine(environment.RepoRoot, file))
+            .Select(path => (Path: path, Content: environment.ReadFile(path)))
+            .ToList();
+        try
+        {
+            return RunCommands(step, environment, note, files, variables);
+        }
+        finally
+        {
+            foreach (var (path, content) in saved)
+            {
+                environment.RestoreFile(path, content);
+            }
+        }
+    }
+
+    private static CiStepResult RunCommands(
+        CiStep step, LocalCiEnvironment environment, string note, IReadOnlyList<string> files, IReadOnlyDictionary<string, string> variables)
+    {
         var watch = Stopwatch.StartNew();
         for (int i = 0; i < step.Commands.Count; i++)
         {
             var command = step.Commands[i];
-            int exitCode = environment.Run(command, i == step.Commands.Count - 1 ? files : []);
+            int exitCode = environment.Run(command, i == step.Commands.Count - 1 ? files : [], variables);
             if (exitCode != 0)
             {
                 return new(step, CiOutcome.Failed, watch.Elapsed, Join(note, $"'{command.Display}' exited {exitCode}"));
