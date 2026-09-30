@@ -7,7 +7,8 @@ namespace Cadence.Hexagonal;
 public abstract record DomainEvent
 {
     public string EventId { get; init; } = Guid.NewGuid().ToString();
-    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
+    /// <summary>When the event happened. The code that raises it supplies the time from its clock (K-TIME-3).</summary>
+    public required DateTimeOffset OccurredAt { get; init; }
     public string EventType { get; init; }
 
     protected DomainEvent()
@@ -64,11 +65,14 @@ public abstract class BaseEntity<TId> where TId : notnull
     public int VersionIndex { get; protected set; }
     public DateTimeOffset CreatedAt { get; protected set; }
 
-    protected BaseEntity(TId id, int versionIndex = 1, DateTimeOffset? createdAt = null)
+    /// <param name="id">The entity identifier.</param>
+    /// <param name="createdAt">When the entity was created, from the caller's clock (K-TIME-3).</param>
+    /// <param name="versionIndex">The entity version, 1 for a new entity.</param>
+    protected BaseEntity(TId id, DateTimeOffset createdAt, int versionIndex = 1)
     {
         Id = id;
         VersionIndex = versionIndex;
-        CreatedAt = createdAt ?? DateTimeOffset.UtcNow;
+        CreatedAt = createdAt;
     }
 
     public override bool Equals(object? obj)
@@ -95,8 +99,8 @@ public abstract class AggregateRoot<TId> : BaseEntity<TId> where TId : notnull
 {
     private readonly List<DomainEvent> _domainEvents = [];
 
-    protected AggregateRoot(TId id, int versionIndex = 1, DateTimeOffset? createdAt = null)
-        : base(id, versionIndex, createdAt) { }
+    protected AggregateRoot(TId id, DateTimeOffset createdAt, int versionIndex = 1)
+        : base(id, createdAt, versionIndex) { }
 
     public void RecordEvent(DomainEvent @event)
     {

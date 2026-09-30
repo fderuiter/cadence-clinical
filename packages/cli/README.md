@@ -7,6 +7,7 @@ Developer and CI command-line tool, published as a Native AOT binary. System.Com
 - Project: `packages/cli/src/Cadence.Cli.csproj` (assembly `cadence`; `PackAsTool` with command name `cadence`).
 - `Program.cs`: command tree, registered with `AddCommand` and `AddBranch` (the `cli-docs` gate reads these calls). `Commands/`: static classes for commands that take options or have their own logic. `Services/`: thin wrappers, most of which delegate to [packages/tooling_core](../tooling_core/README.md).
 - The tool is not registered in `.config/dotnet-tools.json`, so run it with `dotnet run` (or `pnpm cadence`, which does the same).
+- Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `scaffold adr` takes today's date from `Cadence.Kernel.Time.SystemClock`.
 
 ## Usage
 
@@ -35,7 +36,7 @@ Validation commands such as `validate-readmes`, `validate-markdown`, `validate-i
 
 ## Key dependencies
 
-- Project references: `Cadence.Core.Domain`, `Cadence.Database`, `Cadence.Compliance`, `Cadence.Security`, `Cadence.ToolingCore`.
+- Project references: `Cadence.Core.Domain`, `Cadence.Database`, `Cadence.Compliance`, `Cadence.Security`, `Cadence.ToolingCore`, `Cadence.Kernel.Abstractions`.
 - Packages: `System.CommandLine`, `Spectre.Console`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore.Sqlite`.
 
 ## Referenced by

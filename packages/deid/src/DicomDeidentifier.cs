@@ -222,6 +222,7 @@ public class DicomDeidentifier
         string subjectId,
         string siteId,
         string studyId,
+        DateTimeOffset deidentifiedAt,
         int dateShiftDays = 0,
         bool applyPixelMask = true,
         List<PixelMaskBoundingBox>? customPixelMasks = null,
@@ -365,7 +366,8 @@ public class DicomDeidentifier
             ScrubbedTags = scrubbedTags.OrderBy(x => x, StringComparer.Ordinal).ToList(),
             PixelMaskApplied = appliedMasks.Count > 0,
             PixelMasks = appliedMasks,
-            OperatorIdentity = operatorIdentity
+            OperatorIdentity = operatorIdentity,
+            Timestamp = deidentifiedAt.UtcDateTime.ToString("o")
         };
 
         var certPayload = CreateCertPayloadWithoutSignature(cert);

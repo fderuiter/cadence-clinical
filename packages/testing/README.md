@@ -11,6 +11,7 @@ Shared test infrastructure for the .NET test projects.
 - `Cadence.Testing.Time`: `FakeClock` implementing the kernel `IClock`.
 - `Cadence.Testing.GoldenMaster`: `GoldenMasterScenario`, `GoldenMasterFixtureLoader`, `GoldenMasterAssert`.
 - There are no entity factories (such as `SubjectFactory`) in this package.
+- Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `TestSecurityContext` signs at `SystemClock.Instance.UtcNow` unless the test passes a time.
 
 ## Key dependencies
 

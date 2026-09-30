@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| **Status** | Open (`apps/` and `packages/engine_core` done; `packages/database` interceptor and other shared packages left) |
+| **Status** | Open (`apps/` and every shared package done except `packages/database`, `packages/compliance` and `packages/security`, which the security thread owns) |
 | **Date** | 2026-09-29 |
 | **Spec** | `docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` §4.1 K-TIME-3, §10 |
 | **Issue** | #4784 |
@@ -34,14 +34,26 @@
 
 ## What is left
 
-The analyzer is **not** yet enabled for `packages/database` or the other shared packages under `packages/`
-outside `packages/kernel/` and `packages/engine_core/`. Once a project is clean, it sets
+The analyzer is **not** yet enabled for three shared packages. The security thread owns all three, because the
+remaining uses are audit, signing and replay-protection code. Once a project is clean, it sets
 `<CadenceBanWallClock>true</CadenceBanWallClock>` in its `.csproj`.
 
-- `packages/database`: `GxPAuditInterceptor` falls back to `DateTime.UtcNow` when no clock is passed. The security
-  thread owns this change (audit code): take a required `IClock`, then opt the project in.
-- `packages/compliance`, `packages/deid`, `packages/hexagonal`, `packages/security`, `packages/tooling_core`,
-  `packages/cli` and `packages/testing` still read the wall clock (find them with the grep below over `packages/`).
+- `packages/database`: `GxPAuditInterceptor` falls back to `DateTime.UtcNow` when no clock is passed. The fix is to
+  take a required `IClock`.
+- `packages/compliance`: `GxPSigner`, `Pkcs7Signer`, `ComplianceAuditLogRecord` and `RtmGeneratorService`.
+- `packages/security`: `ReplayCache`, `AuditLogRecord` and `AuditDigestEngine`.
+
+### Shared packages (done)
+
+These projects opt into the ban. They needed no migration.
+
+| Project | Change |
+| --- | --- |
+| `packages/deid` | `DicomDeidentifier.Deidentify` takes `deidentifiedAt` and `RedactionManifestBuilder.BuildRedactionManifest` takes `recordedAt`. The certificate and manifest `Timestamp` default to empty, so the builder is the only place that sets them. |
+| `packages/hexagonal` | `DomainEvent.OccurredAt` is `required`. `BaseEntity`/`AggregateRoot` take `createdAt` as a required constructor argument. |
+| `packages/tooling_core` (all three projects) | `CreateAdrService.CreateAdr` takes the date |
+| `packages/cli` | `scaffold adr` dates the file from `SystemClock.Instance`, its composition root |
+| `packages/testing` | `TestSecurityContext` signs headers and step-up tokens at `SystemClock.Instance.UtcNow` unless a time is given, because the gateway checks the real clock |
 
 The counts below are from `main` at the base of this change and exclude EF `Migrations/`.
 

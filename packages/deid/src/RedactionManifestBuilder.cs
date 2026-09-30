@@ -13,7 +13,7 @@ public static class RedactionManifestBuilder
         string reason,
         string sourceVersion,
         string targetVersion,
-        string? timestamp = null)
+        DateTimeOffset recordedAt)
     {
         ArgumentNullException.ThrowIfNull(redactionRecord);
 
@@ -32,7 +32,7 @@ public static class RedactionManifestBuilder
             Strategies = strategies,
             OperatorIdentity = operatorIdentity,
             Reason = reason,
-            Timestamp = timestamp ?? DateTime.UtcNow.ToString("o"),
+            Timestamp = recordedAt.UtcDateTime.ToString("o"),
             SourceVersion = sourceVersion,
             TargetVersion = targetVersion
         };

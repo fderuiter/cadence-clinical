@@ -8,6 +8,7 @@ using System.Text.Json;
 using Cadence.Deid;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FellowOakDicom;
 using FellowOakDicom.Imaging;
@@ -62,6 +63,7 @@ public class DeidEngineUnitTests
             subjectId: "SUBJ-101",
             siteId: "SITE-01",
             studyId: "STUDY-2026",
+            deidentifiedAt: FakeClock.DefaultStart,
             dateShiftDays: 30,
             applyPixelMask: true
         );
@@ -92,6 +94,7 @@ public class DeidEngineUnitTests
         result.Certificate.Should().NotBeNull();
         result.Certificate.PixelMaskApplied.Should().BeTrue();
         result.Certificate.SubjectId.Should().Be("SUBJ-101");
+        result.Certificate.Timestamp.Should().Be("2026-01-01T00:00:00.0000000Z");
         deidentifier.VerifyCertificate(result.Certificate).Should().BeTrue();
     }
 
@@ -249,11 +252,13 @@ public class DeidEngineUnitTests
             operatorIdentity: "compliance.officer",
             reason: "Protocol 101 Anonymization",
             sourceVersion: "v1.0",
-            targetVersion: "v1.1"
+            targetVersion: "v1.1",
+            recordedAt: FakeClock.DefaultStart
         );
 
         manifest.CategoriesCounts["email"].Should().Be(1);
         manifest.CategoriesCounts["ssn_national_id"].Should().Be(1);
+        manifest.Timestamp.Should().Be("2026-01-01T00:00:00.0000000Z");
 
         byte[] hmacKey = "secret-hmac-key-999"u8.ToArray();
         RedactionManifestBuilder.SignManifestSymmetric(manifest, hmacKey);

@@ -13,6 +13,7 @@ Implementation library behind the Cadence CLI: repository validators, generators
   - `Cadence.ToolingCore`: `ToolingHandlers` and request/response records (`Contracts.cs`) intended for MCP tools; only the unit tests call them today.
 - `packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj`: console app that loads the execution, designer and gateway services in-process and writes their OpenAPI documents (default `docs/openapi`, override with `--output-dir` / `-o`).
 - `packages/tooling_core/src/Cadence.SchemaDocExporter/Cadence.SchemaDocExporter.csproj`: console app that creates each module's DbContext through its design-time factory (the kernel and 15 apps), renders the EF Core model with `SchemaDocumentation` from [packages/database](../database/README.md) and writes `docs/schema/<module>.md` plus `README.md` (default `docs/schema`, override with `--output-dir` / `-o`). It never opens a database connection. `SchemaDocGeneratorService` runs it for `generate-schema-doc` and the `schema-doc` gate.
+- Time (K-TIME-3): all three projects ban `DateTime.Now/UtcNow`. `CreateAdrService.CreateAdr` takes the date.
 
 ## Key dependencies
 

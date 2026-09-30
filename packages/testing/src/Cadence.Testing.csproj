@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <!-- K-TIME-3 (#4784): time comes from the caller or Cadence.Kernel.Time.IClock, never DateTime.Now/UtcNow. -->
+    <CadenceBanWallClock>true</CadenceBanWallClock>
     <RootNamespace>Cadence.Testing</RootNamespace>
     <Description>Centralized test infrastructure, in-memory repository fakes, GxP requirement attributes, and factories.</Description>
   </PropertyGroup>
