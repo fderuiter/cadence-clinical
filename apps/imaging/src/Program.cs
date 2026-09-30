@@ -1,4 +1,6 @@
+using Cadence.Apps.Imaging.Endpoints;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
+using Cadence.Apps.Imaging.Services;
 using Cadence.Database;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -9,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddScoped<IDicomIngestionService, DicomIngestionService>();
 builder.AddCadencePostgresDbContext<ImagingDbContext>();
 
 var app = builder.Build();
@@ -19,6 +22,9 @@ app.MapCadenceHealthAndStatusEndpoints(
     "imaging",
     "Medical Imaging DICOM service health probe.",
     "Returns Medical Imaging operational status.");
+
+app.MapDicomWebEndpoints();
+app.MapImagingAdjudicationEndpoints();
 
 await app.RunAsync();
 

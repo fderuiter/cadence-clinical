@@ -38,17 +38,17 @@ public sealed class ExecutionDbContextCecTests
             reportedOnsetDate: "2026-02-10");
 
         context.CecDossiers.Add(dossier);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var auditEntriesFirstSave = await context.AuditLogEntries.ToListAsync();
-        auditEntriesFirstSave.Should().NotIsEmpty();
+        var auditEntriesFirstSave = await context.AuditLogEntries.ToListAsync(TestContext.Current.CancellationToken);
+        auditEntriesFirstSave.Should().NotBeEmpty();
         auditEntriesFirstSave.Should().Contain(e => e.EntityName == nameof(CecDossier));
 
         var manifest = SignatureManifest.Create(
             SignerId: "chair_user_1",
             SignerRole: "CEC_CHAIR",
             SigningReason: "I confirm this clinical endpoint adjudication determination is final",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc),
             PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             SignerName: "Dr. Chair");
 
@@ -58,7 +58,7 @@ public sealed class ExecutionDbContextCecTests
             finalAdjudicatedOnsetDate: "2026-02-10",
             adjudicationRationale: "Confirmed by MRI",
             signatureManifest: manifest,
-            finalizedAt: DateTime.UtcNow);
+            finalizedAt: new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc));
 
         var adjudication = CecChairAdjudication.Create(
             determinationId: "DET-123456",
@@ -72,19 +72,19 @@ public sealed class ExecutionDbContextCecTests
             criteriaConfirmed: ["MRI_CONFIRMED"],
             adjudicationRationale: "Confirmed by MRI",
             signatureManifest: manifest,
-            finalizedAt: DateTime.UtcNow,
+            finalizedAt: new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc),
             createdBy: "chair_user_1");
 
         context.CecChairAdjudications.Add(adjudication);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var auditEntriesSecondSave = await context.AuditLogEntries.ToListAsync();
+        var auditEntriesSecondSave = await context.AuditLogEntries.ToListAsync(TestContext.Current.CancellationToken);
         auditEntriesSecondSave.Should().Contain(e => e.EntityName == nameof(CecChairAdjudication));
 
         var cecDossierAuditChain = await context.AuditLogEntries
             .Where(e => e.EntityName == nameof(CecDossier))
-            .OrderBy(e => e.SequenceNumber)
-            .ToListAsync();
+            .OrderBy(e => e.VersionIndex)
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         cecDossierAuditChain.Count.Should().BeGreaterThanOrEqualTo(2);
         cecDossierAuditChain[1].PredecessorHash.Should().Be(cecDossierAuditChain[0].BlockHash);

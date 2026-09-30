@@ -230,6 +230,7 @@ jobs:
       UV_NO_SYNC: "1"
     permissions:
       contents: read
+      security-events: write
     outputs:
       audit_outcome: ${{ steps.run_audit.outcome }}
       static_outcome: ${{ steps.run_static.outcome }}
@@ -271,12 +272,19 @@ jobs:
         if: github.event_name == 'push'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: 'cadence-gateway:latest'
-          format: 'table'
-          exit-code: '0'
+          image-ref: "cadence-gateway:latest"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          exit-code: "1"
           ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: github.event_name == 'push' && (success() || failure())
+        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        with:
+          sarif_file: "trivy-results.sarif"
 
       - name: Run dependency audit
         id: run_audit
@@ -362,7 +370,6 @@ jobs:
         id: run_tests
         if: always()
         run: pnpm -r test
-
 
   dotnet-tests:
     name: .NET 10 C# xUnit Verification
