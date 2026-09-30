@@ -15,7 +15,7 @@ The Cadence platform transitions from Python 3.14+ to .NET 10 via a **tracer-bul
 │ Phase 1: Core DDF Tracer Bullet                                        │
 │  - Cadence.Apps.Gateway     (Reverse proxy, HMAC validation, OIDC)     │
 │  - Cadence.Apps.Execution   (EDC core: subjects, observations, eCRF)   │
-│  - Cadence.Apps.Designer    (CDISC USDM metadata, Neo4j study graph)   │
+│  - Cadence.Apps.Designer    (CDISC USDM metadata)                      │
 └────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
@@ -259,7 +259,7 @@ When transcribing a service or pattern that supersedes a prior architectural dec
 
 #### 6.3: System Architecture & Domain Glossary Sync
 
-1. **`ARCHITECTURE.md`**: Update the service architecture section to reflect .NET 10 Minimal APIs, active port, and EF Core / Neo4j persistence drivers.
+1. **`ARCHITECTURE.md`**: Update the service architecture section to reflect .NET 10 Minimal APIs, active port, and EF Core persistence.
 2. **`CONTEXT.md`**: Refine domain terms to reflect C# 14 / .NET 10 implementation patterns and primary constructor models.
 
 ---
@@ -316,7 +316,7 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 | **Format Verification**   | `dotnet format Cadence.sln --verify-no-changes`            | Enforces `.editorconfig` rules (fails on deviations)           |
 | **Auto-Format Code**      | `dotnet format Cadence.sln`                                | Automatically fixes whitespace and namespace formatting        |
 | **Run Fast Unit Tests**   | `dotnet test Cadence.sln --filter "Category!=Integration"` | Runs in-memory unit tests                                      |
-| **Run Integration Tests** | `dotnet test Cadence.sln --filter "Category=Integration"`  | Runs Testcontainers PostgreSQL & Neo4j tests                   |
+| **Run Integration Tests** | `dotnet test Cadence.sln --filter "Category=Integration"`  | Runs Testcontainers PostgreSQL tests                           |
 | **ADR Validation**        | `python scripts/validate_adrs.py`                          | Validates ADR index formatting and requirement tags            |
 | **GxP Compliance Sync**   | `python scripts/sync_gxp.py`                               | Parses tests, extracts `@req` tags, and updates SDLC docs      |
 | **Docker Dev Stack**      | `docker compose --profile dotnet up -d`                    | Starts .NET container with hot reload and live datastores      |

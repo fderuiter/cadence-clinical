@@ -1,5 +1,8 @@
 # Operations & Deployment Guide (Production Playbook)
 
+> [!WARNING]
+> **Status: baseline, pre-kernel.** **Neo4j is retired** ([ADR-2245](../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); sections that describe Neo4j graphs, Cypher, Neo4j migrations or Neo4j backups no longer apply. Protocol versions become immutable PostgreSQL snapshots in the kernel ([kernel specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md)). Current runbooks: [local development](../LOCAL_DEV_ENVIRONMENT.md) and [database layout and migrations](../OPERATIONAL_DATABASE.md).
+
 **Document ID:** CC-OPS-001
 **Version:** 1.0.0
 **Effective Date:** October 2026
