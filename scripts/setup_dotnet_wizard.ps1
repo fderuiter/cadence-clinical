@@ -68,6 +68,10 @@ if (-not $sdkFound) {
     if ($installChoice -ne 'n' -and $installChoice -ne 'N') {
         Write-Host "  Installing .NET 10 SDK via scripts/setup_dotnet_env.ps1..." -ForegroundColor Cyan
         & powershell.exe -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "setup_dotnet_env.ps1") -SkipCertTrust
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  [ERROR] .NET environment setup failed with exit code $LASTEXITCODE. Aborting onboarding." -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
     } else {
         Write-Host "  [SKIPPED] Please manually install .NET 10 SDK before compiling Cadence.sln." -ForegroundColor Yellow
     }
