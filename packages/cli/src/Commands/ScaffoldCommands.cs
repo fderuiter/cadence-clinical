@@ -1,45 +1,45 @@
 using System;
-using System.ComponentModel;
+using System.CommandLine;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 
 using Spectre.Console;
-using Spectre.Console.Cli;
 
 namespace Cadence.Cli.Commands;
 
-public class ScaffoldServiceCommand : Command<ScaffoldServiceCommand.Settings>
+public static class ScaffoldCommands
 {
-    public class Settings : CommandSettings
+    public static void ConfigureService(Command command)
     {
-        [CommandArgument(0, "<name>")]
-        public string Name { get; set; } = "";
+        var name = new Argument<string>("name") { Description = "Name of the service to scaffold" };
+        command.Arguments.Add(name);
+        command.SetAction(result => ScaffoldService(result.GetRequiredValue(name)));
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    public static void ConfigureAdr(Command command)
     {
-        AnsiConsole.MarkupLine($"[cyan]Scaffolding Clean Architecture service: {settings.Name}[/]");
-        var psi = new ProcessStartInfo("bash", $"scripts/migrate_service_wizard.sh -ServiceName {settings.Name}") { UseShellExecute = false };
+        var title = new Argument<string>("title") { Description = "Title of the decision" };
+        command.Arguments.Add(title);
+        command.SetAction(result => ScaffoldAdr(result.GetRequiredValue(title)));
+    }
+
+    private static int ScaffoldService(string name)
+    {
+        AnsiConsole.MarkupLine($"[cyan]Scaffolding Clean Architecture service: {Markup.Escape(name)}[/]");
+        var psi = new ProcessStartInfo("bash") { UseShellExecute = false };
+        psi.ArgumentList.Add("scripts/migrate_service_wizard.sh");
+        psi.ArgumentList.Add("-ServiceName");
+        psi.ArgumentList.Add(name);
         using var p = Process.Start(psi);
         p?.WaitForExit();
         return p?.ExitCode ?? 0;
     }
-}
 
-public class ScaffoldAdrCommand : Command<ScaffoldAdrCommand.Settings>
-{
-    public class Settings : CommandSettings
+    private static int ScaffoldAdr(string title)
     {
-        [CommandArgument(0, "<title>")]
-        public string Title { get; set; } = "";
-    }
-
-    public override int Execute(CommandContext context, Settings settings)
-    {
-        AnsiConsole.MarkupLine($"[cyan]Scaffolding new ADR: {settings.Title}[/]");
+        AnsiConsole.MarkupLine($"[cyan]Scaffolding new ADR: {Markup.Escape(title)}[/]");
         string repoRoot = Cadence.Cli.Services.QualityGateOrchestrator.FindRepoRoot();
-        string title = settings.Title;
         string todayStr = DateTime.UtcNow.ToString("yyyy-MM-dd");
         string slug = Regex.Replace(title.ToLowerInvariant().Trim(), @"[^\w\s-]", "");
         slug = Regex.Replace(slug, @"[\s_-]+", "-").Trim('-');

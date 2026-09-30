@@ -216,6 +216,11 @@ Without a version the reference means "as of the read's `(valid_at, known_at)`".
   `tenant → study → [country] → study_site → participant → clinical event → observation`, and
   `tenant → organization → site`. A participant without a responsible study site sits directly under its study.
   The zoom path is presentation only and never implies authority (§9.3).
+- **K-ID-8** Search (ADR-2484) finds kernel objects by code and title within one tenant and returns NodeRefs. It
+  queries the source tables themselves with PostgreSQL full-text search, never a copy, so Row-Level Security,
+  deletion and crypto-shredding apply to it exactly as to the source. Searchable tables are an explicit
+  allow-list; identity content is never a source unless the actor holds its `identity.reveal.<layer>` capability
+  (K-IDN-1).
 
 ### 3.3 Tenancy invariants (ADR-2250)
 
@@ -1050,6 +1055,7 @@ kernel, is merged into another, or is retired.
 | K013 | Standards Registry and MDR | Tenant-scoped reference data; one governance envelope for library items; attested approval; immutable once registered | ADR-2460 |
 | K014 | Explanations | One `Explanation` type produced by the rule owner; authorization returns met and unmet conditions with evidence | ADR-2482 |
 | K015 | Dry-run authorization | One evaluator for commands and `CanI`; declared command capabilities; dry runs in the access log, not the audit chain | ADR-2483 |
+| K016 | Search | PostgreSQL full-text search over the source tables under RLS; NodeRef results; identity content excluded | ADR-2484 |
 
 ---
 

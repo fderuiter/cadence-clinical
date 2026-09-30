@@ -1,32 +1,29 @@
-using System.ComponentModel;
+using System.CommandLine;
 using System.Diagnostics;
 
 using Spectre.Console;
-using Spectre.Console.Cli;
 
 namespace Cadence.Cli.Commands;
 
-public class TestCommand : Command<TestCommand.Settings>
+public static class TestCommand
 {
-    public class Settings : CommandSettings
+    public static void Configure(Command command)
     {
-        [CommandOption("-f|--fast")]
-        [Description("Run fast unit tests excluding integration tests")]
-        public bool Fast { get; set; }
-
-        [CommandOption("-i|--integration")]
-        [Description("Run integration test suites only")]
-        public bool Integration { get; set; }
+        var fast = new Option<bool>("--fast", "-f") { Description = "Run fast unit tests excluding integration tests" };
+        var integration = new Option<bool>("--integration", "-i") { Description = "Run integration test suites only" };
+        command.Options.Add(fast);
+        command.Options.Add(integration);
+        command.SetAction(result => Execute(result.GetValue(fast), result.GetValue(integration)));
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    private static int Execute(bool fast, bool integration)
     {
         string filter = "";
-        if (settings.Fast)
+        if (fast)
         {
             filter = "--filter \"Category!=Integration\"";
         }
-        else if (settings.Integration)
+        else if (integration)
         {
             filter = "--filter \"Category=Integration\"";
         }

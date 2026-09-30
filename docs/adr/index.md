@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K015 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K016 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -35,10 +35,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K013 | Standards Registry and MDR (tenant-scoped, governed reference data) | [ADR-2460](2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) |
 | K014 | Explanation model produced by the rule owner | [ADR-2482](2026-09-30-explanation-model-produced-by-the-rule-owner.md) |
 | K015 | Dry-run authorization and the command catalogue | [ADR-2483](2026-09-30-dry-run-authorization-and-command-catalogue.md) |
+| K016 | Tenant-scoped search over the source tables | [ADR-2484](2026-09-30-tenant-scoped-search-over-source-tables.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K015)
+### 0. Clinical Kernel (K001–K016)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -58,6 +59,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2481: Public NodeRef and Kernel-Computed Zoom Path](2026-09-30-public-noderef-and-kernel-computed-zoom-path.md) (2026-09-30)
 - [ADR-2482: Explanation Model Produced by the Rule Owner](2026-09-30-explanation-model-produced-by-the-rule-owner.md) (2026-09-30)
 - [ADR-2483: Dry-Run Authorization and the Command Catalogue](2026-09-30-dry-run-authorization-and-command-catalogue.md) (2026-09-30)
+- [ADR-2484: Tenant-Scoped Search over the Source Tables](2026-09-30-tenant-scoped-search-over-source-tables.md) (2026-09-30)
 
 ### 1. Core Platform & Execution Engine
 
@@ -448,6 +450,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2492: Retire Python Reference Sources Once Their C# Ports Are Tested](2026-09-30-retire-python-reference-sources-once-ports-are-tested.md) (2026-09-30)
 - [ADR-2248: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md) (2026-09-29)
 - [ADR-2249: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md) (2026-09-29)
+- [ADR-2496: Parse the CLI with System.CommandLine and Publish It as Native AOT Without Suppressions](2026-09-30-parse-the-cli-with-system-commandline-and-publish-aot-without-suppressions.md) (2026-09-30)
 - [ADR-2256: Fail-Closed Gateway Identity and Signed Caller Authentication](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) (2026-09-29)
 - [ADR-2257: Attributable Audit Actors and Named Service Accounts](2026-09-29-attributable-audit-actors-and-named-service-accounts.md) (2026-09-29)
 - [ADR-2447: Module Schemas via Search Path and Migration Deployment Modes](2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) (2026-09-29)

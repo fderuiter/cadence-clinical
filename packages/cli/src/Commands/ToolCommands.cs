@@ -1,271 +1,61 @@
-using System.ComponentModel;
+using System.CommandLine;
 
 using Cadence.Compliance;
 using Cadence.ToolingCore.Services;
 
-using Spectre.Console.Cli;
-
 namespace Cadence.Cli.Commands;
 
-public class DetectDuplicationCommand : Command
+/// <summary>Options for the tool commands that take any; the rest are registered directly in <c>Program.cs</c>.</summary>
+public static class ToolCommands
 {
-    public override int Execute(CommandContext context)
+    public static void ConfigureExtractEnvVars(Command command)
     {
-        return DuplicationDetectorService.DetectDuplication();
-    }
-}
-
-public class ValidateImportsCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return ImportValidatorService.ValidateImports();
-    }
-}
-
-public class ValidateDependenciesCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return DependencyValidatorService.ValidateDependencies();
-    }
-}
-
-public class ValidatePathPatternsCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return PathPatternValidatorService.ValidatePathPatterns();
-    }
-}
-
-public class ValidateReadmesCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return ReadmeValidatorService.ValidateReadmes();
-    }
-}
-
-public class ValidateCodeownersCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return CodeownersValidatorService.ValidateCodeowners();
-    }
-}
-
-public class ValidateMarkdownCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return MarkdownValidatorService.ValidateMarkdown();
-    }
-}
-
-public class QueryLinterCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return QueryLinterService.LintQueries();
-    }
-}
-
-public class ExtractEnvVarsCommand : Command<ExtractEnvVarsCommand.Settings>
-{
-    public class Settings : CommandSettings
-    {
-        [CommandOption("--check")]
-        [Description("Check environment variables without modifying documentation")]
-        public bool Check { get; set; }
+        var check = new Option<bool>("--check") { Description = "Check environment variables without modifying documentation" };
+        command.Options.Add(check);
+        command.SetAction(result => EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: result.GetValue(check)));
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    public static void ConfigureSyncOpenApiSpec(Command command)
     {
-        return EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: settings.Check);
-    }
-}
-
-public class VerifyContractsCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return ContractVerifierService.VerifyContracts();
-    }
-}
-
-public class AuditSecurityCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return SecurityAuditorService.AuditSecurity();
-    }
-}
-
-public class ValidateVulnerabilitiesCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return VulnerabilityAuditorService.AuditVulnerabilities();
-    }
-}
-
-public class CleanSecretsBaselineCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return SecretsBaselineCleanerService.CleanSecretsBaseline();
-    }
-}
-
-public class ValidateArchitectureDriftCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return ArchitectureDriftValidatorService.ValidateArchitectureDrift();
-    }
-}
-
-public class SyncOpenApiSpecCommand : Command<SyncOpenApiSpecCommand.Settings>
-{
-    public class Settings : CommandSettings
-    {
-        [CommandOption("--validate")]
-        public bool ValidateOnly { get; set; }
+        var validate = new Option<bool>("--validate") { Description = "Only report whether docs/openapi matches the services; exit 1 when it does not" };
+        command.Options.Add(validate);
+        command.SetAction(result => OpenApiSyncService.SyncOpenApiSpec(validate: result.GetValue(validate)));
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    public static void ConfigureGenerateApiDocs(Command command)
     {
-        return OpenApiSyncService.SyncOpenApiSpec(validate: settings.ValidateOnly);
-    }
-}
-
-public class ValidateOpenApiDriftCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return OpenApiDriftValidatorService.ValidateDrift();
-    }
-}
-
-public class GenerateApiDocsCommand : Command<GenerateApiDocsCommand.Settings>
-{
-    public class Settings : CommandSettings
-    {
-        [CommandOption("--validate")]
-        public bool ValidateOnly { get; set; }
+        var validate = new Option<bool>("--validate") { Description = "Only report whether docs/api matches docs/openapi; exit 1 when it does not" };
+        command.Options.Add(validate);
+        command.SetAction(result => ApiDocsGeneratorService.GenerateApiDocs(validate: result.GetValue(validate)));
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    public static void ConfigureGenerateSchemaDoc(Command command)
     {
-        return ApiDocsGeneratorService.GenerateApiDocs(validate: settings.ValidateOnly);
-    }
-}
-
-public class GenerateSchemaDocCommand : Command<GenerateSchemaDocCommand.Settings>
-{
-    public class Settings : CommandSettings
-    {
-        [CommandOption("--validate")]
-        [Description("Only report whether docs/schema matches the EF Core models; exit 1 when it does not")]
-        public bool ValidateOnly { get; set; }
+        var validate = new Option<bool>("--validate") { Description = "Only report whether docs/schema matches the EF Core models; exit 1 when it does not" };
+        command.Options.Add(validate);
+        command.SetAction(result => SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: result.GetValue(validate)));
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    public static void ConfigureGenerateCliDocs(Command command)
     {
-        return SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: settings.ValidateOnly);
-    }
-}
-
-public class PreCommitOpenApiCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return PreCommitOpenApiService.ExecutePreCommitOpenApi();
-    }
-}
-
-public class ValidateApiClientsCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return ApiClientValidatorService.ValidateApiClients();
-    }
-}
-
-public class GenerateCliDocsCommand : Command<GenerateCliDocsCommand.Settings>
-{
-    public class Settings : CommandSettings
-    {
-        [CommandOption("--check")]
-        public bool Check { get; set; }
+        var check = new Option<bool>("--check") { Description = "Only check that docs/cli.md documents every command" };
+        command.Options.Add(check);
+        command.SetAction(result => CliDocsGeneratorService.GenerateCliDocs(check: result.GetValue(check)));
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    public static void ConfigureGenerateRtm(Command command)
     {
-        return CliDocsGeneratorService.GenerateCliDocs(check: settings.Check);
-    }
-}
-
-public class GenerateRtmCommand : Command<GenerateRtmCommand.Settings>
-{
-    public class Settings : CommandSettings
-    {
-        [CommandOption("--validate")]
-        public bool ValidateOnly { get; set; }
-
-        [CommandOption("--draft")]
-        public bool Draft { get; set; }
+        var validate = new Option<bool>("--validate") { Description = "Write nothing; fail if a mapped test failed" };
+        var draft = new Option<bool>("--draft") { Description = "Mark tests as unverified when the test report is missing" };
+        command.Options.Add(validate);
+        command.Options.Add(draft);
+        command.SetAction(result => RtmGeneratorService.GenerateRtm(draft: result.GetValue(draft), validateOnly: result.GetValue(validate)));
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    public static void ConfigureComplianceUtility(Command command)
     {
-        return RtmGeneratorService.GenerateRtm(draft: settings.Draft, validateOnly: settings.ValidateOnly);
-    }
-}
-
-public class ComplianceUtilityCommand : Command<ComplianceUtilityCommand.Settings>
-{
-    public class Settings : CommandSettings
-    {
-        [CommandOption("--sanitize")]
-        public bool Sanitize { get; set; }
-    }
-
-    public override int Execute(CommandContext context, Settings settings)
-    {
-        return ComplianceUtilityService.ExecuteComplianceUtility(sanitize: settings.Sanitize);
-    }
-}
-
-public class VerifyGxPSignaturesCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return VerifyGxPSignaturesService.VerifySignatures();
-    }
-}
-
-public class CleanTestDbsCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return CleanTestDbsService.CleanTestDatabases();
-    }
-}
-
-public class CheckPortsCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return PortCheckerService.CheckPorts();
-    }
-}
-
-public class RunGatingPipelineCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return GatingPipelineService.RunGatingPipeline();
+        var sanitize = new Option<bool>("--sanitize") { Description = "Upper-case @req:PRD-... tags in docs/**/*.md" };
+        command.Options.Add(sanitize);
+        command.SetAction(result => ComplianceUtilityService.ExecuteComplianceUtility(sanitize: result.GetValue(sanitize)));
     }
 }

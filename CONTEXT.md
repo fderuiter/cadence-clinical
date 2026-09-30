@@ -104,6 +104,10 @@ The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users w
 
 The public reference to any kernel object: `kind:id@version`, for example `study_site:<uuid>@3` (ADR-2481). It is the one form used in URLs, the command palette, trace links, event envelopes and lineage edges. The kernel computes the object's zoom path from it (portfolio, study, country, study site, participant); a participant with no responsible site sits directly under its study. The zoom path is presentation only and never grants access.
 
+### Search
+
+Finding kernel objects by code or title within one tenant (ADR-2484): studies, sites, organizations, concepts, terminology codes, standards and library items. Results are NodeRefs. Search reads the source tables directly under the tenant's Row-Level Security, so it never shows another tenant's data or anything deleted, and never searches identity content without the reveal capability.
+
 ### Capability and dry run (CanI)
 
 A capability is a `resource.action` token with a verb class (Read, Propose, Execute, Approve), for example `concept.revise`. Every kernel command declares the capability it needs and the object it is checked against. A dry run, `CanI(capability, object)`, asks the kernel whether the signed-in actor could act without acting; it gets exactly the decision the command would get, and is recorded in the access log rather than the audit trail (ADR-2483). The command catalogue lists the commands offered on an object with those decisions, which the command palette renders.

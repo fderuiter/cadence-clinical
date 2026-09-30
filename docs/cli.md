@@ -1,6 +1,6 @@
 # Cadence Unified Developer CLI Reference
 
-`cadence` is the developer CLI for this repository. It is a .NET 10 console app built with Spectre.Console. The source is in `packages/cli/src`. Commands are registered in `packages/cli/src/Program.cs`.
+`cadence` is the developer CLI for this repository. It is a .NET 10 Native AOT console app: System.CommandLine parses the command line and Spectre.Console renders the output. The source is in `packages/cli/src`. Commands are registered in `packages/cli/src/Program.cs` with `AddCommand` and `AddBranch`; the `cli-docs` gate reads those calls to check that this page documents every command.
 
 ## Running the CLI
 
@@ -38,7 +38,9 @@ Some commands also have a `make` target. The Makefile publishes the CLI to `./bi
 
 `make wizard` runs `scripts/setup_wizard.sh` directly. That is the same script as `cadence wizard onboarding`.
 
-There are no global options. Spectre.Console adds `-h|--help` to every command, for example `pnpm cadence check --help`. Every run prints a "Cadence" banner first.
+System.CommandLine adds `-h|--help|-?` to every command, for example `pnpm cadence check --help`, and `--version` to the root command. There are no other global options. Every run prints a "Cadence" banner first.
+
+An unknown command or option, a missing required argument, or a group such as `cadence gxp` without a subcommand prints the error and the command's help, and exits `1`. `cadence check` also rejects option-like tokens where it expects a gate or file name, so a typo such as `--pre-comit` fails instead of running as a gate name.
 
 Exit code `0` means success. Any other exit code means failure. Some commands always exit `0`; the sections below say which.
 

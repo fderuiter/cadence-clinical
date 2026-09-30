@@ -1,30 +1,49 @@
-using System.ComponentModel;
+using System.CommandLine;
+using System.CommandLine.Parsing;
+using System.Linq;
 
 using Cadence.Cli.Services;
 
-using Spectre.Console.Cli;
-
 namespace Cadence.Cli.Commands;
 
-public class CheckCommand : Command<CheckCommand.Settings>
+public static class CheckCommand
 {
-    public class Settings : CommandSettings
+    public static void Configure(Command command)
     {
-        [CommandArgument(0, "[gate]")]
-        [Description("Specific quality gate to execute (e.g., clean-secrets-baseline, duplication, adrs).")]
-        public string? Gate { get; set; }
+        var gate = new Argument<string?>("gate")
+        {
+            Arity = ArgumentArity.ZeroOrOne,
+            Description = "Specific quality gate to execute (e.g., clean-secrets-baseline, duplication, adrs).",
+        };
+        var files = new Argument<string[]>("files")
+        {
+            Arity = ArgumentArity.ZeroOrMore,
+            Description = "Optional list of target files to validate.",
+        };
+        var preCommit = new Option<bool>("--pre-commit")
+        {
+            Description = "Run the quick variants used by the pre-commit hook (the openapi gate skips exporting specs from the services).",
+        };
 
-        [CommandArgument(1, "[files]")]
-        [Description("Optional list of target files to validate.")]
-        public string[]? Files { get; set; }
+        // A free positional argument would otherwise swallow a mistyped option such as --pre-comit as a gate name.
+        gate.Validators.Add(RejectOptionLikeTokens);
+        files.Validators.Add(RejectOptionLikeTokens);
 
-        [CommandOption("--pre-commit")]
-        [Description("Run the quick variants used by the pre-commit hook (the openapi gate skips exporting specs from the services).")]
-        public bool PreCommit { get; set; }
+        command.Arguments.Add(gate);
+        command.Arguments.Add(files);
+        command.Options.Add(preCommit);
+        command.SetAction(result =>
+        {
+            string[] targets = result.GetValue(files) ?? [];
+            return QualityGateOrchestrator.RunQualityGates(result.GetValue(gate), targets.Length == 0 ? null : targets, result.GetValue(preCommit));
+        });
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    private static void RejectOptionLikeTokens(ArgumentResult result)
     {
-        return QualityGateOrchestrator.RunQualityGates(settings.Gate, settings.Files, settings.PreCommit);
+        foreach (var token in result.Tokens.Where(t => t.Value.StartsWith('-')))
+        {
+            result.AddError($"Unrecognized option '{token.Value}'.");
+        }
     }
 }

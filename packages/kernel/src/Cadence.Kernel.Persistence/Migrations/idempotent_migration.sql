@@ -1808,3 +1808,29 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930040415_KernelSearchIndexes') THEN
+    CREATE INDEX IF NOT EXISTS "ix_organizations_search" ON "kernel"."organizations" USING gin ((to_tsvector('simple'::regconfig, coalesce((code)::text, '') || ' ' || coalesce((name)::text, ''))));
+    CREATE INDEX IF NOT EXISTS "ix_sites_search" ON "kernel"."sites" USING gin ((to_tsvector('simple'::regconfig, coalesce((site_code)::text, '') || ' ' || coalesce((name)::text, ''))));
+    CREATE INDEX IF NOT EXISTS "ix_studies_search" ON "kernel"."studies" USING gin ((to_tsvector('simple'::regconfig, coalesce((study_code)::text, '') || ' ' || coalesce((title)::text, ''))));
+    CREATE INDEX IF NOT EXISTS "ix_concepts_search" ON "kernel"."concepts" USING gin ((to_tsvector('simple'::regconfig, coalesce((external_code)::text, '') || ' ' || coalesce((preferred_label)::text, ''))));
+    CREATE INDEX IF NOT EXISTS "ix_code_systems_search" ON "kernel"."code_systems" USING gin ((to_tsvector('simple'::regconfig, coalesce((NULL)::text, '') || ' ' || coalesce((name)::text, ''))));
+    CREATE INDEX IF NOT EXISTS "ix_code_system_entries_search" ON "kernel"."code_system_entries" USING gin ((to_tsvector('simple'::regconfig, coalesce((code)::text, '') || ' ' || coalesce((display)::text, ''))));
+    CREATE INDEX IF NOT EXISTS "ix_standard_versions_search" ON "kernel"."standard_versions" USING gin ((to_tsvector('simple'::regconfig, coalesce((standard_code)::text, '') || ' ' || coalesce((name)::text, ''))));
+    CREATE INDEX IF NOT EXISTS "ix_library_items_search" ON "kernel"."library_items" USING gin ((to_tsvector('simple'::regconfig, coalesce((key)::text, '') || ' ' || coalesce((title)::text, ''))));
+
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930040415_KernelSearchIndexes') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930040415_KernelSearchIndexes', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
