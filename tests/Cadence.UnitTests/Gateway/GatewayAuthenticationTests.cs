@@ -88,8 +88,9 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
         var ct = TestContext.Current.CancellationToken;
         using var client = fixture.Gateway.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, ProxiedPath);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GatewayFixture.CreateToken("cra-01", ["CRA", "Monitor"]));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GatewayFixture.CreateToken("cra-01", ["CRA", "Monitor"], tenant: "tenant-a"));
         request.Headers.Add(GatewayHeaders.UserId, "someone-else");
+        request.Headers.Add(GatewayHeaders.TenantId, "tenant-b");
         request.Headers.Add(GatewayHeaders.Roles, "Site Investigator");
         request.Headers.Add("X-User-Role", "admin");
         request.Headers.Add(GatewayHeaders.Signature, "deadbeef");
@@ -103,6 +104,7 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
 
         headers[GatewayHeaders.UserId].Should().Be("cra-01");
         headers[GatewayHeaders.Roles].Should().Be("CRA,Monitor");
+        headers[GatewayHeaders.TenantId].Should().Be("tenant-a");
         headers[GatewayHeaders.ChangeReason].Should().Be("Transcription error");
         headers.Should().NotContainKey("X-User-Role");
         headers.Should().NotContainKey("Authorization");
@@ -143,8 +145,35 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
             timestamp: headers[GatewayHeaders.Timestamp],
             signature: headers[GatewayHeaders.Signature],
             secret: GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret),
-            changeReason: typed,
-            tenantId: headers[GatewayHeaders.TenantId]).Should().BeTrue();
+            changeReason: typed).Should().BeTrue();
+    }
+
+    /// <summary>
+    /// A token that names no tenant forwards no tenant, and a tenant header the caller adds is dropped: there is no
+    /// fallback tenant, so a kernel host refuses the caller (#5038).
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task ProxiedRoute_WithATokenNamingNoTenant_ForwardsNoTenant()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var client = fixture.Gateway.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, ProxiedPath);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", GatewayFixture.CreateToken("cra-01", ["CRA"]));
+        request.Headers.Add(GatewayHeaders.TenantId, "tenant-b");
+
+        var response = await client.SendAsync(request, ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var echoed = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(ct);
+        var headers = new Dictionary<string, string>(echoed!, StringComparer.OrdinalIgnoreCase);
+        headers.Should().NotContainKey(GatewayHeaders.TenantId);
+        HmacSigner.VerifyGatewaySignature(
+            userId: headers[GatewayHeaders.UserId],
+            roles: headers[GatewayHeaders.Roles],
+            timestamp: headers[GatewayHeaders.Timestamp],
+            signature: headers[GatewayHeaders.Signature],
+            secret: GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret)).Should().BeTrue();
     }
 
     [Fact]
@@ -192,15 +221,23 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
 
         public WebApplicationFactory<Cadence.Apps.Gateway.Program> Gateway { get; private set; } = null!;
 
-        public static string CreateToken(string subject, IReadOnlyList<string> roles, SecurityKey? key = null) =>
-            new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        public static string CreateToken(string subject, IReadOnlyList<string> roles, SecurityKey? key = null, string? tenant = null)
+        {
+            var claims = new Dictionary<string, object> { ["realm_access"] = new Dictionary<string, object> { ["roles"] = roles } };
+            if (tenant is not null)
+            {
+                claims["tenant_id"] = tenant;
+            }
+
+            return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
             {
                 Issuer = Issuer,
                 Subject = new ClaimsIdentity([new Claim("sub", subject)]),
-                Claims = new Dictionary<string, object> { ["realm_access"] = new Dictionary<string, object> { ["roles"] = roles } },
+                Claims = claims,
                 Expires = SystemClock.Instance.UtcNow.UtcDateTime.AddMinutes(5),
                 SigningCredentials = new SigningCredentials(key ?? SigningKey, SecurityAlgorithms.HmacSha256),
             });
+        }
 
         public async ValueTask InitializeAsync()
         {

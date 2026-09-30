@@ -29,6 +29,8 @@ public static class NodeKinds
     public const string ArtifactVersion = "artifact_version";
     public const string Role = "role";
     public const string Grant = "grant";
+    public const string Qualification = "qualification";
+    public const string QualificationRequirement = "qualification_requirement";
     public const string Effectivity = "effectivity";
     public const string TenantMembership = "tenant_membership";
     public const string CodeSystem = "code_system";
@@ -60,6 +62,8 @@ public static class NodeKinds
         [typeof(ArtifactVersionId)] = ArtifactVersion,
         [typeof(RoleId)] = Role,
         [typeof(GrantId)] = Grant,
+        [typeof(QualificationId)] = Qualification,
+        [typeof(QualificationRequirementId)] = QualificationRequirement,
         [typeof(EffectivityId)] = Effectivity,
         [typeof(TenantMembershipId)] = TenantMembership,
         [typeof(CodeSystemId)] = CodeSystem,

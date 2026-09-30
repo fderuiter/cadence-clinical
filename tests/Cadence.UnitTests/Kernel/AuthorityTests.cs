@@ -10,6 +10,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
 using Cadence.Testing.Time;
 
@@ -243,6 +244,161 @@ public sealed class AuthorityTests
         (await Evaluate(store, Admin, revoke, NodeRef.For(delegation.Id))).Permitted.Should().BeFalse();
     }
 
+    /// <summary>
+    /// A qualification has a lower snake_case code; protocol training names its protocol version and nothing else does;
+    /// its validity ends after it starts.
+    /// </summary>
+    [Fact(DisplayName = "Qualification_Record_ValidatesCodeProtocolVersionAndPeriod")]
+    public void QualificationRecordValidatesCodeProtocolVersionAndPeriod()
+    {
+        var version = ProtocolVersionId.New();
+
+        Qualify(code: "GCP").Error.Should().Be(QualificationErrors.CodeInvalid);
+        Qualify(code: "gcp__refresher").Error.Should().Be(QualificationErrors.CodeInvalid);
+        Qualify(code: new string('a', Qualification.MaxCodeLength + 1)).Error.Should().Be(QualificationErrors.CodeInvalid);
+        Qualify(kind: (QualificationKind)42).Error.Should().Be(QualificationErrors.CodeInvalid);
+        Qualify(kind: QualificationKind.ProtocolTraining).Error.Should().Be(QualificationErrors.ProtocolVersionMismatch);
+        Qualify(version: version).Error.Should().Be(QualificationErrors.ProtocolVersionMismatch);
+        Qualify(validFrom: T0, validTo: T0).Error.Should().Be(QualificationErrors.ValidityInvalid);
+
+        var recorded = Qualify(kind: QualificationKind.ProtocolTraining, code: "protocol_training", version: version, validTo: T0.AddYears(1)).Value!;
+        recorded.State().Should().Be(new QualificationState(
+            recorded.Id, Crc, QualificationKind.ProtocolTraining, "protocol_training", version, recorded.EvidenceArtifactVersionId, T0, T0.AddYears(1), Revoked: false));
+    }
+
+    /// <summary>
+    /// A qualification's validity is bitemporal: revoking it keeps what was known before, and <c>LapsedBy</c> names the
+    /// end of a validity known at the time.
+    /// </summary>
+    [Fact(DisplayName = "Qualification_Revoke_KeepsHistoryAndNamesTheLapse")]
+    public void QualificationRevokeKeepsHistoryAndNamesTheLapse()
+    {
+        var gcp = Qualify(validTo: T0.AddDays(30)).Value!;
+
+        gcp.LapsedBy(T0.AddDays(10), T0).Should().BeNull();
+        gcp.LapsedBy(T0.AddDays(30), T0).Should().Be(T0.AddDays(30));
+        gcp.Revoke(T0.AddDays(10), T0.AddDays(5)).Should().BeNull();
+
+        gcp.IsInEffect(T0.AddDays(20), T0.AddDays(1)).Should().BeTrue("the revocation was not known yet");
+        gcp.IsInEffect(T0.AddDays(20), T0.AddDays(6)).Should().BeFalse();
+        gcp.IsInEffect(T0.AddDays(9), T0.AddDays(6)).Should().BeTrue();
+        gcp.LapsedBy(T0.AddDays(20), T0.AddDays(6)).Should().Be(T0.AddDays(10));
+        gcp.Revoke(T0.AddDays(10), T0.AddDays(7)).Should().Be(QualificationErrors.RevocationInvalid);
+        gcp.Revoke(T0, T0.AddDays(8)).Should().BeNull();
+        gcp.State().Revoked.Should().BeTrue();
+        gcp.Revoke(T0, T0.AddDays(9)).Should().Be(QualificationErrors.RevocationInvalid);
+    }
+
+    /// <summary>A requirement names a well-formed capability and qualification code, a valid scope and a valid period.</summary>
+    [Fact(DisplayName = "QualificationRequirement_Define_Validates")]
+    public void QualificationRequirementDefineValidates()
+    {
+        Require(capability: "Observation.Record").Error.Should().Be(AuthorityErrors.CapabilityInvalid);
+        Require(code: "GCP").Error.Should().Be(QualificationErrors.CodeInvalid);
+        Require(scope: new AuthorityScope(ScopeLevel.Study)).Error!.Code.Should().Be(AuthorityErrors.ScopeInvalid.Code);
+        Require(validTo: T0.AddDays(-1)).Error.Should().Be(QualificationErrors.ValidityInvalid);
+
+        var version = ProtocolVersionId.New();
+        var requirement = Require(code: "protocol_training", version: version).Value!;
+        requirement.IsMetBy(Qualify(kind: QualificationKind.ProtocolTraining, code: "protocol_training", version: version).Value!).Should().BeTrue();
+        requirement.IsMetBy(Qualify(kind: QualificationKind.ProtocolTraining, code: "protocol_training", version: ProtocolVersionId.New()).Value!).Should().BeFalse();
+        requirement.IsMetBy(Qualify().Value!).Should().BeFalse();
+        requirement.Retire(T0.AddDays(1), T0.AddDays(1)).Should().BeNull();
+        requirement.IsInEffect(T0.AddDays(2), T0.AddDays(2)).Should().BeFalse();
+        requirement.IsInEffect(T0, T0.AddDays(2)).Should().BeTrue();
+    }
+
+    /// <summary>
+    /// With a requirement in effect over the resource, a grant alone is not enough: the evaluator denies and names the
+    /// qualification to obtain, and permits with the qualification and its evidence once one is current (K-AUTH-5,
+    /// K-AUTH-6).
+    /// </summary>
+    [Fact(DisplayName = "Evaluate_RequiredQualification_DeniesUntilHeldAndNamesIt")]
+    public async Task EvaluateRequiredQualificationDeniesUntilHeldAndNamesIt()
+    {
+        var grant = Issue().Value!;
+        var requirement = Require().Value!;
+        var gcp = Qualify().Value!;
+
+        var denied = await Evaluate(new Store(grant) { Requirements = [requirement] }, Crc, Record, SiteA1Ref);
+        denied.Permitted.Should().BeFalse();
+        denied.Reason.Should().Be("crc@site.test is not qualified to observation.record: Obtain gcp.");
+        denied.Conditions.Should().Equal(
+            EvaluatedCondition.Satisfied(AuthorityEvaluator.GrantCondition, $"Holds observation.record for {grant.Scope}", NodeRef.For(grant.Id)),
+            EvaluatedCondition.Unsatisfied(AuthorityEvaluator.QualificationCondition, "Obtain gcp", NodeRef.For(requirement.Id)));
+
+        var permitted = await Evaluate(new Store(grant) { Requirements = [requirement], Qualifications = [gcp] }, Crc, Record, SiteA1Ref);
+        permitted.Permitted.Should().BeTrue();
+        permitted.Conditions.Should().HaveCount(2).And.Contain(EvaluatedCondition.Satisfied(
+            AuthorityEvaluator.QualificationCondition, "Holds current gcp", NodeRef.For(requirement.Id), NodeRef.For(gcp.Id), NodeRef.For(gcp.EvidenceArtifactVersionId)));
+
+        var otherHolder = await Evaluate(new Store(grant, Issue(grantee: Pi).Value!) { Requirements = [requirement], Qualifications = [gcp] }, Pi, Record, SiteA1Ref);
+        otherHolder.Permitted.Should().BeFalse("the qualification is the CRC's");
+    }
+
+    /// <summary>An expired qualification is named with the day it expired, so the denial says what to renew (K-AUTH-6).</summary>
+    [Fact(DisplayName = "Evaluate_ExpiredQualification_DeniesNamingTheExpiry")]
+    public async Task EvaluateExpiredQualificationDeniesNamingTheExpiry()
+    {
+        var grant = Issue(validFrom: T0.AddYears(-2)).Value!;
+        var requirement = Require(validFrom: T0.AddYears(-2)).Value!;
+        var older = Qualify(validFrom: T0.AddYears(-2), validTo: T0.AddYears(-1)).Value!;
+        var lapsed = Qualify(validFrom: T0.AddYears(-1), validTo: T0.AddDays(-3)).Value!;
+
+        var decision = await Evaluate(new Store(grant) { Requirements = [requirement], Qualifications = [older, lapsed] }, Crc, Record, SiteA1Ref);
+
+        decision.Permitted.Should().BeFalse();
+        decision.Reason.Should().Be($"crc@site.test is not qualified to observation.record: Renew gcp; it expired on {T0.AddDays(-3):yyyy-MM-dd}.");
+        decision.Conditions[^1].Evidence.Should().Equal(NodeRef.For(requirement.Id), NodeRef.For(lapsed.Id));
+        var evaluator = new AuthorityEvaluator(new Store(grant) { Requirements = [requirement], Qualifications = [older, lapsed] }, new KernelAuthorityOptions(new HashSet<string>()));
+        (await evaluator.EvaluateAsync(new AuthorizationRequest(Crc, Tenant, Record, SiteA1Ref, T0.AddDays(-4), T0), CancellationToken.None))
+            .Permitted.Should().BeTrue("the qualification was current then");
+    }
+
+    /// <summary>
+    /// Spec §14 scenario 12 in memory: a requirement for training on one protocol version is met only by training on that
+    /// version, and the denial names the version.
+    /// </summary>
+    [Fact(DisplayName = "Evaluate_ProtocolTrainingRequirement_NeedsTheNamedVersion")]
+    public async Task EvaluateProtocolTrainingRequirementNeedsTheNamedVersion()
+    {
+        var v1 = ProtocolVersionId.New();
+        var v2 = ProtocolVersionId.New();
+        var grant = Issue().Value!;
+        var requirement = Require(code: "protocol_training", version: v2).Value!;
+        var trainedOnV1 = Qualify(kind: QualificationKind.ProtocolTraining, code: "protocol_training", version: v1).Value!;
+        var trainedOnV2 = Qualify(kind: QualificationKind.ProtocolTraining, code: "protocol_training", version: v2).Value!;
+
+        var denied = await Evaluate(new Store(grant) { Requirements = [requirement], Qualifications = [trainedOnV1] }, Crc, Record, SiteA1Ref);
+        denied.Reason.Should().EndWith($": Obtain protocol_training for protocol version {v2}.");
+        (await Evaluate(new Store(grant) { Requirements = [requirement], Qualifications = [trainedOnV1, trainedOnV2] }, Crc, Record, SiteA1Ref))
+            .Permitted.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Requirements apply only to their capability, within their scope and while in effect; a qualification recorded
+    /// late cannot validate an action evaluated as of before it was known (K-AUTH-3).
+    /// </summary>
+    [Fact(DisplayName = "Evaluate_Qualification_RespectsScopeCapabilityAndKnownTime")]
+    public async Task EvaluateQualificationRespectsScopeCapabilityAndKnownTime()
+    {
+        var grant = Issue().Value!;
+        var elsewhere = Require(scope: AuthorityScope.Study(StudyB)).Value!;
+        var otherCapability = Require(capability: "observation.sign").Value!;
+        var later = Require(validFrom: T0.AddDays(1)).Value!;
+        (await Evaluate(new Store(grant) { Requirements = [elsewhere, otherCapability, later] }, Crc, Record, SiteA1Ref))
+            .Conditions.Should().ContainSingle("no requirement applies here and now");
+
+        var requirement = Require().Value!;
+        var recordedLate = Qualify(validFrom: T0.AddDays(-1), recordedAt: T0.AddHours(1)).Value!;
+        var evaluator = new AuthorityEvaluator(new Store(grant) { Requirements = [requirement], Qualifications = [recordedLate] }, new KernelAuthorityOptions(new HashSet<string>()));
+
+        (await evaluator.EvaluateAsync(new AuthorizationRequest(Crc, Tenant, Record, SiteA1Ref, T0, T0), CancellationToken.None))
+            .Permitted.Should().BeFalse("the training was not known when the action was decided");
+        (await evaluator.EvaluateAsync(new AuthorizationRequest(Crc, Tenant, Record, SiteA1Ref, T0, T0.AddHours(2)), CancellationToken.None))
+            .Permitted.Should().BeTrue();
+    }
+
     private static CommandResult<Grant> Issue(
         Actor? grantee = null,
         string? capability = "observation.record",
@@ -257,6 +413,27 @@ public sealed class AuthorityTests
             GrantId.New(), Tenant, grantee ?? Crc, capability, role, scope ?? AuthorityScope.Study(StudyA),
             validFrom ?? T0, validTo, withGrantOption, parent, Admin, recordedAt ?? T0);
 
+    private static CommandResult<Qualification> Qualify(
+        QualificationKind kind = QualificationKind.Training,
+        string code = "gcp",
+        ProtocolVersionId? version = null,
+        DateTimeOffset? validFrom = null,
+        DateTimeOffset? validTo = null,
+        DateTimeOffset? recordedAt = null) =>
+        Qualification.Record(
+            QualificationId.New(), Tenant, Crc, kind, code, version, ArtifactVersionId.New(), validFrom ?? T0, validTo, Admin, recordedAt ?? T0);
+
+    private static CommandResult<QualificationRequirement> Require(
+        string capability = "observation.record",
+        string code = "gcp",
+        ProtocolVersionId? version = null,
+        AuthorityScope? scope = null,
+        DateTimeOffset? validFrom = null,
+        DateTimeOffset? validTo = null) =>
+        QualificationRequirement.Define(
+            QualificationRequirementId.New(), Tenant, capability, code, version, scope ?? AuthorityScope.Study(StudyA),
+            validFrom ?? T0, validTo, Admin, T0);
+
     private static ValueTask<AuthorizationDecision> Evaluate(Store store, Actor actor, Capability capability, NodeRef resource, DateTimeOffset? at = null)
     {
         var evaluator = new AuthorityEvaluator(store, new KernelAuthorityOptions(new HashSet<string>(["svc:platform"])));
@@ -267,6 +444,10 @@ public sealed class AuthorityTests
     private sealed class Store(params Grant[] grants) : IAuthorityStore
     {
         public IReadOnlyList<Role> Roles { get; init; } = [];
+
+        public IReadOnlyList<Qualification> Qualifications { get; init; } = [];
+
+        public IReadOnlyList<QualificationRequirement> Requirements { get; init; } = [];
 
         public Task<IReadOnlyList<Grant>> GrantsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Grant>>([.. grants.Where(g => g.Grantee == actor)]);
@@ -289,5 +470,11 @@ public sealed class AuthorityTests
 
         public Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ScopePath>>([]);
+
+        public Task<IReadOnlyList<Qualification>> QualificationsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<Qualification>>([.. Qualifications.Where(q => q.Holder == actor)]);
+
+        public Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<QualificationRequirement>>([.. Requirements.Where(r => r.Capability == capability)]);
     }
 }
