@@ -17,7 +17,7 @@ Single-context repo:
 /
 ├── CONTEXT.md
 ├── docs/adr/
-│   ├── 2023-01-01-neo4j-graph-database.md
+│   ├── 2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md
 │   └── ...
 └── apps/  packages/  scripts/
 ```

@@ -6,8 +6,8 @@
         <h2>⚡ AI-Native USDM Protocol Digitization &amp; eCRF Synthesis</h2>
         <p>
           Automated Digital Data Flow (DDF) pipeline: Ingest unstructured
-          protocol documents (PDF/DOCX), compile CDISC USDM v4.0 graph entities
-          into Neo4j, and synthesize CDASH eCRFs and Schedule of Activities in
+          protocol documents (PDF/DOCX), compile CDISC USDM v4.0 study entities
+          into the study design, and synthesize CDASH eCRFs and Schedule of Activities in
           &lt; 60s.
         </p>
       </div>
@@ -471,7 +471,7 @@
           <p>
             The synthesized forms below have been generated from extracted
             Schedule of Activities procedures. Confirm and commit to create the
-            active study in Neo4j and launch the EDC workspace.
+            active study and launch the EDC workspace.
           </p>
         </div>
 
@@ -556,7 +556,7 @@
               Study Protocol Digitization &amp; eCRF Synthesis Complete!
             </h4>
             <p class="success-desc">
-              Successfully populated Neo4j knowledge graph ({{
+              Successfully built the study design ({{
                 commitResult.nodes_created
               }}
               nodes, {{ commitResult.relationships_created }} relationships) and

@@ -1,5 +1,8 @@
 # Security, Compliance & Audit Trail Spec
 
+> [!WARNING]
+> **Status: baseline, pre-kernel.** **Neo4j is retired** ([ADR-2245](../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); statements about a Neo4j designer store, its encryption or its backups no longer apply. Current security controls: [SECURITY.md](../../SECURITY.md) and the service READMEs.
+
 ---
 
 ## Document Control & Executive Summary

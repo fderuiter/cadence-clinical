@@ -23,7 +23,7 @@ The clinical research enterprise suffers from a structural breakdown between ups
 Cadence operates as an **Enterprise Multi-Tenant SaaS and On-Premises Qualified Platform**.
 - **Data Isolation:** Complete logical tenant and trial isolation. Clinical sites operate under strict geographical and institutional data siloing.
 - **Regulatory Paradigm:** Validated under GxP / 21 CFR Part 11 / EU Annex 11 with non-repudiation, dual-attribution AI draft governance, and cryptographic audit chaining.
-- **Architectural Topology:** Modular clean-architecture microservices fronted by an API Gateway and Keycloak OpenID Connect (OIDC) identity provider, coordinating via strongly typed REST contracts, transactional outbox messaging, and PostgreSQL/Neo4j datastores.
+- **Architectural Topology:** Modular clean-architecture microservices fronted by an API Gateway and Keycloak OpenID Connect (OIDC) identity provider, coordinating via strongly typed REST contracts, transactional outbox messaging, and PostgreSQL datastores.
 
 ### 1.3 Primary System Actors
 
@@ -199,7 +199,7 @@ stateDiagram-v2
 * **Actor(s):** Sponsor Clinical Designer, Sponsor Admin.
 * **Functional Description:** Enables graphical and schema-driven authoring of clinical protocol architectures, including study arms, epochs (Screening, Treatment, Follow-up), encounters, and activities conforming to CDISC USDM v3.0/v4.0.
 * **Inputs & Triggers:** REST payloads specifying protocol elements, arms, encounters, and transitions; or USDM JSON import.
-* **Underlying Logic & Business Rules:** Stored natively as a connected property graph in Neo4j. Prevents orphan nodes; enforces acyclic epoch sequences and valid epoch-to-encounter relationships.
+* **Underlying Logic & Business Rules:** Stored as immutable ProtocolVersion snapshots in PostgreSQL ([ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)). Prevents orphan nodes; enforces acyclic epoch sequences and valid epoch-to-encounter relationships.
 * **System Side Effects:** Emits graph mutation events; updates study draft version index.
 * **Error States:** Rejects invalid references with RFC 7807 problem details (HTTP 400); blocks cyclical epoch loops.
 
@@ -729,7 +729,7 @@ stateDiagram-v2
 1. **Authoring:** Sponsor Designer logs into Cadence Designer (`/mdr`), selects study, and authors Study Arms, Epochs, and Encounters.
 2. **Concept Mapping:** Designer drags Biomedical Concepts (e.g. Vital Signs, Adverse Events) onto the Schedule of Activities (SoA) matrix and sets visit tolerance windows.
 3. **Validation:** Designer runs the Protocol Quality Sentinel; system validates graph connectivity and USDM compliance.
-4. **Digitization & Export:** DDF Compiler transforms the Neo4j USDM graph into intermediate representation (IR) and compiles eCRF definitions into the PostgreSQL Execution Engine.
+4. **Digitization & Export:** DDF Compiler transforms the USDM study design into intermediate representation (IR) and compiles eCRF definitions into the PostgreSQL Execution Engine.
 5. **Readiness:** Site CRC logs into `/ecrf`; the new study forms are immediately ready for dynamic schema projection without manual database schema creation.
 
 ### Journey 2: Site Startup, 6-Facet Greenlight, and First Subject Ingestion
