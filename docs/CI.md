@@ -21,6 +21,11 @@ How CI is set up, which checks run where, and how to reproduce and fix each fail
 
 Only on pushes to `main`: accessibility E2E tests, the container build and Trivy scan, the production pipeline and the docs deploy. They are kept off pull requests to save Actions minutes.
 
+> [!IMPORTANT]
+> GitHub Actions does not run jobs for this repository until 2027: every check on a pull request fails within seconds
+> without running. Until then, run `pnpm cadence ci` (or `make ci`) before merging. It runs the jobs above on your
+> machine with the same commands and needs PostgreSQL for the .NET tests ([cli.md](cli.md#cadence-ci)).
+
 ## Quality gates
 
 `pnpm cadence check` runs all 21 quality gates. The pre-commit hook runs a quicker variant (below), and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
@@ -73,7 +78,7 @@ Don't bypass the hook with `--no-verify`; fix the failing gate instead.
 
 ## CI failure runbook
 
-CI runs in `.github/workflows/ci.yml`. Every check can be reproduced locally with the command in the last column.
+CI runs in `.github/workflows/ci.yml`. `pnpm cadence ci` reproduces the whole workflow; each check can also be reproduced on its own with the command in the last column.
 
 | Failing job or step                                          | Usual cause                                                                       | Reproduce and fix locally                                                                                        |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |

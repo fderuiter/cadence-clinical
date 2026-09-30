@@ -1,3 +1,7 @@
 # Keep generated TypeScript schema pristine
 src/types/db_schemas.ts
 **/db_schemas.ts
+
+# Local test and coverage output (git-ignored)
+coverage/
+test-results/

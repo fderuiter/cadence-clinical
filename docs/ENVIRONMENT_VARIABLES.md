@@ -131,7 +131,7 @@ Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-24
 | `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:101-102` (honoured by `generate-rtm` and `check rtm`; `gxp sync` ignores them) | off |
 | `CADENCE_UPDATE_BASELINE` | `packages/tooling_core/src/Services/DeidComplianceService.cs` (`1` with `check deid` and no files rewrites `.deid-baseline.txt`) and `tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs` (rewrites the kernel boundary baseline) | off |
 | `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:214` | off |
-| `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped) | none |
+| `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped). `cadence ci` (`packages/cli/src/Services/LocalCiRunner.cs`) opens the connection string once before the .NET tests and fails when neither is usable, unless `--allow-skip` is given | none |
 | `CADENCE_UPDATE_GOLDEN` | `tests/Cadence.UnitTests/Packages/UsdmDesignImporterTests.cs` (`1` rewrites the expected design of the USDM import golden test; review the diff before committing) | off |
 
 ## Web apps

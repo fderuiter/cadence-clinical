@@ -29,6 +29,7 @@ Some commands also have a `make` target. The Makefile publishes the CLI to `./bi
 | `make check`                             | `cadence check`                           |
 | `make test`                              | `cadence test`                            |
 | `make verify`                            | `cadence check`, then `cadence test`      |
+| `make ci`                                | `cadence ci`                              |
 | `make sync-gxp`, `make gxp-sync`         | `cadence gxp sync`                        |
 | `make rtm`                               | `cadence gxp validate`                    |
 | `make adr TITLE="..."`                   | `cadence scaffold adr "<title>"`          |
@@ -102,6 +103,56 @@ Runs `dotnet test Cadence.sln` from the repository root.
 | `-i\|--integration` | Runs `tests/Cadence.IntegrationTests` only. It needs PostgreSQL (see [TESTING.md](TESTING.md)). |
 
 With no option, all tests run. If both options are given, `--fast` wins.
+
+### `cadence ci`
+
+Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Actions does not run jobs for this
+repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
+
+```bash
+pnpm cadence ci                         # style, security, unit-tests, dotnet-tests and compliance
+pnpm cadence ci --job dotnet-tests      # one job (repeat --job for more)
+pnpm cadence ci --job compliance        # a job and the jobs it needs (unit-tests, dotnet-tests)
+pnpm cadence ci --job accessibility-e2e # the Playwright job, which CI runs only on a push to main
+pnpm cadence ci --list                  # what each step runs locally, without running it
+```
+
+| Option            | Description                                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `style`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`. |
+| `--allow-skip`    | Runs the .NET tests without PostgreSQL, so the database tests report as skipped instead of failing the run.                      |
+| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.        |
+| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                       |
+
+It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
+and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
+ends with one line per step (passed, failed, covered, skipped or not run, with its time) and exits `1` if any step
+failed.
+
+Where it differs from CI:
+
+- **PostgreSQL is required.** CI gives the .NET tests a database, so without `CADENCE_TEST_POSTGRES` or
+  `CADENCE_TEST_DOCKER=1` ([TESTING.md](TESTING.md#tests-that-need-postgresql)) the test step fails before it starts
+  instead of passing with every database test skipped. `--allow-skip` accepts the skips.
+- **Checks already run once are not repeated.** A step that runs one gate of `cadence check` (ADRs, Markdown, schema
+  doc, OpenAPI, contracts, duplication, the security audit, vulnerabilities, secrets and DEID) is reported as
+  *covered* when the full `Run Cadence quality sentinels` step passed. If that step failed, each of them runs on its own
+  so the summary shows which gate failed. The Node install and UI build in later jobs are covered by the style job's.
+- **The tests run once.** The .NET test step writes its TRX files to `TestResults/gxp`, and the compliance job builds
+  the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`, which would run every test again. Nothing is
+  staged; `Assert No Documentation Git Diff` then fails if the regenerated reports differ from the committed ones.
+- **Tools are not installed for you.** Hadolint, ShellCheck and detect-secrets run when they are on `PATH` and are
+  reported as skipped, with the install command, when they are not.
+- **Not run:** the container build and Trivy scan (push to `main` only, and they need Docker), the Playwright browser
+  install, and the jobs that act on GitHub itself (`classify`, `automerge`, `release-and-archive`, `deploy-docs`).
+- **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the
+  full DEID scan, for example) do not see untracked files, and a changed-files step falls back to the working tree only
+  when the branch has no commits over the base.
+- The Native AOT publish targets this machine's runtime (`linux-x64` in CI), since AOT does not cross-compile, and
+  writes to a temporary folder.
+
+`tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs` reads `ci.yml` and fails when a job or step is added, renamed or
+removed, or runs a different command, until `packages/cli/src/Services/CiPlan.cs` follows.
 
 ### `cadence dev`
 
