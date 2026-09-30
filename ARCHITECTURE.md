@@ -74,7 +74,13 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K007 | Neo4j dropped; ProtocolVersion snapshots in PostgreSQL | [ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) |
 | K008 | Rules as versioned data over one AST; public standards only; Rust runtime seam later | [ADR-2254](docs/adr/2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md) |
 | K009 | Lineage graph in the kernel schema, written transactionally | [ADR-2255](docs/adr/2026-09-29-kernel-lineage-graph-and-scientific-traceability.md) |
+| — | Kernel command pipeline: one transactional write set, per-tenant audit chain, outbox | [ADR-2449](docs/adr/2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md) |
+| — | Per-tenant terminology with pinned code-system versions | [ADR-2470](docs/adr/2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) |
+| — | Simulation evaluates candidate versions and never writes | [ADR-2480](docs/adr/2026-09-30-evaluate-only-simulation-over-candidate-versions.md) |
+| — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
+| — | No default credentials; secrets resolve fail-closed | [ADR-2260](docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md) |
+| — | Services fail startup on missing required settings | [ADR-2490](docs/adr/2026-09-30-fail-fast-startup-validation-of-required-settings.md) |
 | — | .NET 10 platform standards (C# 14, Minimal APIs, EF Core 10, CPM) | [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) |
 
 The full list is in the [ADR index](docs/adr/index.md).
@@ -166,9 +172,15 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
   `scripts/manage_migrations.ps1` (see [AGENTS.md §10](AGENTS.md)). `Database__MigrateOnStartup=true`
   applies them at startup; `Database__MigrateOnly=true` runs them as a deployment job and exits. See the
   [database runbook](docs/OPERATIONAL_DATABASE.md).
-- **Today** each service has its own `DbContext` in its own schema. **Target:** one kernel schema with
-  row-level security per tenant (ADR-2250), bitemporal `tstzrange` columns (ADR-2246), an audit chain,
-  a transactional outbox and a lineage store (spec §5, §9.6).
+- **The kernel schema** is implemented in `packages/kernel` ([README](packages/kernel/README.md)):
+  - Row-level security is enabled and forced on every table, with composite `(tenant_id, id)` keys (ADR-2250).
+  - Bitemporal tables use guarded `tstzrange` columns (ADR-2246).
+  - Every change is a command whose aggregate, provenance, events, audit-chain link and outbox rows commit in one
+    transaction (ADR-2449).
+  - Background jobs relay the outbox and verify and seal each tenant's audit chain.
+  - A Concept Registry holds pinned terminology (ADR-2470).
+- **Still to come:** the lineage store (spec §9.6), and the product services moving from their own `DbContext`
+  and schema onto kernel concepts.
 - **Audit:** EF Core `SaveChangesInterceptor` populates `CreatedAt`, `CreatedBy`, `ReasonForChange`
   and `VersionIndex` (21 CFR Part 11), attributing every write to a real user or a named service account
   ([ADR-2257](docs/adr/2026-09-29-attributable-audit-actors-and-named-service-accounts.md)). `apps/execution` publishes domain events through the MassTransit
