@@ -469,7 +469,15 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
   `INodeVisibility`. A reader sees what a grant it holds in effect covers, the organization, study and country above
   that scope, participants and sites through the study sites they reach, and tenant reference data. Everything else
   is masked `NotPermitted`.
-- **Not yet:** qualifications, separation of duties, and StudySite, protocol or blinding conditions (rest of #4781).
+- **Qualifications (ADR-2459).** `RecordQualification` files a qualification held by an actor: `Training`,
+  `ProtocolTraining` (naming its protocol version), `Credential` or `Certificate`, with a lower snake_case code, a
+  validity period and a `TrainingRecord` or `Credential` artifact version as evidence. `RevokeQualification`
+  shortens it bitemporally. `DefineQualificationRequirement` says a capability within a scope needs a current
+  qualification of a code (and protocol version); `RetireQualificationRequirement` ends it. After a grant permits,
+  the evaluator adds one `qualification.current` condition per requirement in effect over the resource and denies
+  when one is unmet: "Obtain gcp", or "Renew protocol_training for protocol version …; it expired on …".
+  `qualification_periods` and `qualification_requirement_periods` carry the bitemporal guards.
+- **Not yet:** separation of duties, and StudySite, protocol or blinding conditions (rest of #4781).
 
 ## IdentityVault (ADR-2458)
 

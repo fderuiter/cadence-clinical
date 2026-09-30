@@ -240,6 +240,7 @@ public static class AuthorityServiceCollectionExtensions
         services.AddTransient<ICommandHandler<IssueGrant, GrantState>, IssueGrantHandler>();
         services.AddTransient<ICommandHandler<DelegateGrant, GrantState>, DelegateGrantHandler>();
         services.AddTransient<ICommandHandler<RevokeGrant, GrantState>, RevokeGrantHandler>();
+        services.AddKernelQualificationHandlers();
         return services;
     }
 }

@@ -197,5 +197,11 @@ public sealed class GrantNodeVisibilityTests
 
         public Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ScopePath>>(Reached.GetValueOrDefault(node, []));
+
+        public Task<IReadOnlyList<Qualification>> QualificationsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<Qualification>>([]);
+
+        public Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<QualificationRequirement>>([]);
     }
 }
