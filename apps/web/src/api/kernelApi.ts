@@ -234,11 +234,9 @@ export const kernelApi = {
    * The signed-in person's work queues (ADR-2486): each holds only the items the person may act on now, oldest first.
    * A `within` scope the person may not see is refused; an item on an object they may not see keeps its place masked.
    */
-  workQueues({
-    within,
-    codes,
-    limit,
-  }: KernelWorkQueueQuery = {}): Promise<KernelWorkQueue[]> {
+  workQueues({ within, codes, limit }: KernelWorkQueueQuery = {}): Promise<
+    KernelWorkQueue[]
+  > {
     return unwrapResponse(
       client.GET("/api/v1/kernel/work-queues", {
         params: {
