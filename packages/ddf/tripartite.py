@@ -243,3 +243,234 @@ class UatEvidenceReport(BaseModel):
     execution_duration_ms: float
     gxp_compliance_verified: bool = True
     sha256_evidence_digest: str
+
+
+def compute_uat_evidence_digest(
+    report_id: str,
+    form_id: str,
+    protocol_id: str,
+    total_scenarios: int,
+    passed: int,
+    failed: int,
+    coverage: float,
+    executed_at: datetime | str,
+) -> str:
+    """Computes an immutable SHA-256 evidence digest for 21 CFR Part 11 compliance."""
+    ts = executed_at.isoformat() if isinstance(executed_at, datetime) else str(executed_at)
+    raw_payload = f"{report_id}|{form_id}|{protocol_id}|{total_scenarios}|{passed}|{failed}|{coverage:.2f}|{ts}"
+    import hashlib
+    return hashlib.sha256(raw_payload.encode("utf-8")).hexdigest()
+
+
+def generate_synthetic_payloads(
+    form_def: TripartiteFormDefinition | DataSchema,
+    count: int = 500,
+) -> list[SyntheticPayload]:
+    """Synthesizes boundary test payloads targeting rule limits, null values, and edge scenarios."""
+    data_schema = form_def.data_schema if isinstance(form_def, TripartiteFormDefinition) else form_def
+    logic_schema = form_def.logic_schema if isinstance(form_def, TripartiteFormDefinition) else None
+
+    variables = data_schema.variables
+    edit_checks = logic_schema.edit_checks if logic_schema else []
+
+    payloads: list[SyntheticPayload] = []
+
+    # Helper to derive expected rule outcomes for a given data dict
+    def derive_expected_outcomes(data_dict: dict[str, Any]) -> dict[str, bool]:
+        outcomes: dict[str, bool] = {}
+        for check in edit_checks:
+            fired = False
+            expr = check.ast_expression
+            # Simple evaluator for expected outcomes in common AST expressions
+            if isinstance(expr, dict):
+                op = expr.get("operator") or list(expr.keys())[0] if expr else None
+                if op in ("<", "<="):
+                    # e.g., value < min_value
+                    target_id = check.target_variable_ids[0] if check.target_variable_ids else None
+                    if target_id and target_id in data_dict:
+                        val = data_dict[target_id]
+                        if val is None:
+                            fired = True
+                        elif isinstance(expr.get("operands"), list) and len(expr["operands"]) > 1:
+                            limit = expr["operands"][1].get("value")
+                            if limit is not None and val is not None and float(val) < float(limit):
+                                fired = True
+                elif op in (">", ">="):
+                    target_id = check.target_variable_ids[0] if check.target_variable_ids else None
+                    if target_id and target_id in data_dict:
+                        val = data_dict[target_id]
+                        if val is None:
+                            fired = True
+                        elif isinstance(expr.get("operands"), list) and len(expr["operands"]) > 1:
+                            limit = expr["operands"][1].get("value")
+                            if limit is not None and val is not None and float(val) > float(limit):
+                                fired = True
+                elif op in ("is_empty", "empty", "=="):
+                    target_id = check.target_variable_ids[0] if check.target_variable_ids else None
+                    if target_id and target_id in data_dict:
+                        fired = data_dict[target_id] is None or data_dict[target_id] == ""
+            outcomes[check.id] = fired
+        return outcomes
+
+    # Base valid record
+    base_data: dict[str, Any] = {}
+    for var in variables:
+        if var.data_type in (ClinicalDataType.INTEGER, ClinicalDataType.FLOAT):
+            min_v = var.constraints.min_value if var.constraints.min_value is not None else 10
+            max_v = var.constraints.max_value if var.constraints.max_value is not None else 100
+            base_data[var.id] = (min_v + max_v) / 2
+        elif var.data_type == ClinicalDataType.BOOLEAN:
+            base_data[var.id] = True
+        else:
+            base_data[var.id] = "NORMAL_VALUE"
+
+    idx = 1
+    # Generate targeted edge boundary scenarios
+    for var in variables:
+        c = var.constraints
+        # Scenario 1: Below Min Limit (Hard/Soft Error)
+        if c.min_value is not None:
+            data = dict(base_data)
+            data[var.id] = c.min_value - 1
+            payloads.append(
+                SyntheticPayload(
+                    payload_id=f"payload-{idx:03d}",
+                    test_scenario=f"Boundary Below Min Value on {var.id} ({c.min_value - 1})",
+                    data=data,
+                    expected_rule_outcomes=derive_expected_outcomes(data),
+                )
+            )
+            idx += 1
+
+        # Scenario 2: At Min Limit (Boundary Edge)
+        if c.min_value is not None:
+            data = dict(base_data)
+            data[var.id] = c.min_value
+            payloads.append(
+                SyntheticPayload(
+                    payload_id=f"payload-{idx:03d}",
+                    test_scenario=f"Boundary Exact Min Value on {var.id} ({c.min_value})",
+                    data=data,
+                    expected_rule_outcomes=derive_expected_outcomes(data),
+                )
+            )
+            idx += 1
+
+        # Scenario 3: At Max Limit (Boundary Edge)
+        if c.max_value is not None:
+            data = dict(base_data)
+            data[var.id] = c.max_value
+            payloads.append(
+                SyntheticPayload(
+                    payload_id=f"payload-{idx:03d}",
+                    test_scenario=f"Boundary Exact Max Value on {var.id} ({c.max_value})",
+                    data=data,
+                    expected_rule_outcomes=derive_expected_outcomes(data),
+                )
+            )
+            idx += 1
+
+        # Scenario 4: Above Max Limit (Hard/Soft Error)
+        if c.max_value is not None:
+            data = dict(base_data)
+            data[var.id] = c.max_value + 1
+            payloads.append(
+                SyntheticPayload(
+                    payload_id=f"payload-{idx:03d}",
+                    test_scenario=f"Boundary Above Max Value on {var.id} ({c.max_value + 1})",
+                    data=data,
+                    expected_rule_outcomes=derive_expected_outcomes(data),
+                )
+            )
+            idx += 1
+
+        # Scenario 5: Null / Empty Value
+        if c.required:
+            data = dict(base_data)
+            data[var.id] = None
+            payloads.append(
+                SyntheticPayload(
+                    payload_id=f"payload-{idx:03d}",
+                    test_scenario=f"Null Boundary Value on Required Field {var.id}",
+                    data=data,
+                    expected_rule_outcomes=derive_expected_outcomes(data),
+                )
+            )
+            idx += 1
+
+    # Fill remaining count up to 500 deterministically with parameterized variations
+    while len(payloads) < count:
+        p_idx = len(payloads) + 1
+        data = dict(base_data)
+        var_to_tweak = variables[(p_idx - 1) % len(variables)] if variables else None
+        scenario_msg = f"Boundary Synthetic Sweep Scenario #{p_idx:03d}"
+        if var_to_tweak:
+            c = var_to_tweak.constraints
+            if var_to_tweak.data_type in (ClinicalDataType.INTEGER, ClinicalDataType.FLOAT):
+                min_v = c.min_value if c.min_value is not None else 0
+                max_v = c.max_value if c.max_value is not None else 200
+                factor = (p_idx % 10) / 10.0
+                val = min_v + (max_v - min_v) * factor
+                if p_idx % 5 == 0:
+                    val = min_v - (p_idx % 3 + 1)  # Boundary violation
+                data[var_to_tweak.id] = val
+                scenario_msg = f"Boundary Sweep {var_to_tweak.id}={val:.1f} Scenario #{p_idx:03d}"
+            elif var_to_tweak.data_type == ClinicalDataType.BOOLEAN:
+                data[var_to_tweak.id] = (p_idx % 2 == 0)
+            else:
+                if p_idx % 4 == 0:
+                    data[var_to_tweak.id] = ""
+                else:
+                    data[var_to_tweak.id] = f"TEST_VAL_{p_idx}"
+
+        payloads.append(
+            SyntheticPayload(
+                payload_id=f"payload-{p_idx:03d}",
+                test_scenario=scenario_msg,
+                data=data,
+                expected_rule_outcomes=derive_expected_outcomes(data),
+            )
+        )
+
+    return payloads[:count]
+
+
+def execute_patient_migration(
+    matrix: PatientMigrationMatrix,
+    patient_data: dict[str, Any],
+    is_retrospective: bool = False,
+) -> dict[str, Any]:
+    """Executes protocol amendment in-flight data routing based on PatientMigrationMatrix directives."""
+    data = dict(patient_data)
+    queries_raised: list[str] = []
+
+    for directive in matrix.directives:
+        var_id = directive.variable_id
+        if directive.action == "ADD":
+            if directive.migration_mode == MigrationMode.RETROSPECTIVE or is_retrospective:
+                if var_id not in data or data[var_id] is None:
+                    base_msg = directive.backfill_query_message or f"Retrospective amendment required field {var_id} missing"
+                    msg = base_msg if var_id in base_msg else f"[{var_id}] {base_msg}"
+                    queries_raised.append(msg)
+            else:
+                if var_id not in data:
+                    data[var_id] = None
+        elif directive.action == "REMOVE":
+            if var_id in data:
+                data[f"_archived_{var_id}"] = data.pop(var_id)
+        elif directive.action in ("MODIFY_CONSTRAINT", "MODIFY_RULE"):
+            if var_id in data and data[var_id] is None and directive.migration_mode == MigrationMode.RETROSPECTIVE:
+                base_msg = directive.backfill_query_message or f"Rule modification requires updated value for {var_id}"
+                msg = base_msg if var_id in base_msg else f"[{var_id}] {base_msg}"
+                queries_raised.append(msg)
+
+    return {
+        "protocol_id": matrix.protocol_id,
+        "from_version": matrix.from_version_tag,
+        "to_version": matrix.to_version_tag,
+        "patient_data": data,
+        "queries_raised": queries_raised,
+        "directives_applied_count": len(matrix.directives),
+        "is_compliant": len(queries_raised) == 0,
+    }
+

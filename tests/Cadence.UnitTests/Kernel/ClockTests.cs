@@ -126,7 +126,7 @@ public class ClockTests
             .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))
             .Select(line => line.Split(';')[0].Trim())
             .ToArray();
-        var kernelProps = File.ReadAllText(Path.Combine(repoRoot, "packages", "kernel", "Directory.Build.props"));
+        var rootProps = File.ReadAllText(Path.Combine(repoRoot, "Directory.Build.props"));
 
         // Assert
         bannedIds.Should().Contain(BannedClockSymbols);
@@ -138,7 +138,7 @@ public class ClockTests
                 .Should().NotBeNull($"{id} must name a real static property");
         }
 
-        kernelProps.Should().Contain("Microsoft.CodeAnalysis.BannedApiAnalyzers")
+        rootProps.Should().Contain("Microsoft.CodeAnalysis.BannedApiAnalyzers")
             .And.Contain("BannedSymbols.txt");
     }
 
