@@ -180,7 +180,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
             Id = Guid.NewGuid().ToString(),
             SeriesEnvelopeId = seriesEnvelope.Id,
             SopInstanceUid = deidResult.AnonymizedSopUid,
-            SopClassUid = "1.2.840.10008.5.1.4.1.1.2", // CT Image Storage default
+            SopClassUid = "1.2.840.10008.5.1.4.1.1.2", // CT Image Storage default // deid-ignore
             InstanceNumber = seriesEnvelope.InstanceCount,
             Rows = deidResult.Rows,
             Columns = deidResult.Columns,

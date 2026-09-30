@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 using Xunit;
 
@@ -39,11 +40,11 @@ public sealed class DocumentConversionWorkerTests
         {
             Filename = "protocol.docx",
             ObjectKey = "docs/doc-1",
-            UploadedAt = DateTimeOffset.UtcNow,
+            UploadedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
             ConversionStatus = "PENDING"
         };
         dbContext.FileRecords.Add(fileRecord);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var services = new ServiceCollection();
         services.AddScoped(_ => CreateDbContext(dbName));
@@ -66,10 +67,10 @@ public sealed class DocumentConversionWorkerTests
 
         var worker = new DocumentConversionWorker(scopeFactory, workerOptions, NullLogger<DocumentConversionWorker>.Instance);
 
-        await worker.ProcessPendingConversionsAsync(CancellationToken.None);
+        await worker.ProcessPendingConversionsAsync(TestContext.Current.CancellationToken);
 
         using var verifyDb = CreateDbContext(dbName);
-        var updated = await verifyDb.FileRecords.FindAsync("doc-1");
+        var updated = await verifyDb.FileRecords.FindAsync(new object[] { "doc-1" }, TestContext.Current.CancellationToken);
         updated.Should().NotBeNull();
         updated!.ConversionStatus.Should().Be("COMPLETED");
         updated.PdfRenditionKey.Should().Be("docs/doc-1.pdf");
@@ -86,18 +87,17 @@ public sealed class DocumentConversionWorkerTests
         {
             Filename = "corrupt.docx",
             ObjectKey = "docs/doc-fail",
-            UploadedAt = DateTimeOffset.UtcNow,
+            UploadedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
             ConversionStatus = "PENDING"
         };
         dbContext.FileRecords.Add(fileRecord);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var services = new ServiceCollection();
         services.AddScoped(_ => CreateDbContext(dbName));
 
         var mockProcessor = Substitute.For<IDocumentConverterProcessor>();
         mockProcessor.ConvertToPdfAsync(Arg.Any<FileRecord>(), Arg.Any<CancellationToken>())
-            .FromMatches(x => true)
             .ThrowsAsync(new InvalidOperationException("LibreOffice process exit code 1"));
         services.AddScoped(_ => mockProcessor);
 
@@ -114,10 +114,10 @@ public sealed class DocumentConversionWorkerTests
 
         var worker = new DocumentConversionWorker(scopeFactory, workerOptions, NullLogger<DocumentConversionWorker>.Instance);
 
-        await worker.ProcessPendingConversionsAsync(CancellationToken.None);
+        await worker.ProcessPendingConversionsAsync(TestContext.Current.CancellationToken);
 
         using var verifyDb = CreateDbContext(dbName);
-        var updated = await verifyDb.FileRecords.FindAsync("doc-fail");
+        var updated = await verifyDb.FileRecords.FindAsync(new object[] { "doc-fail" }, TestContext.Current.CancellationToken);
         updated.Should().NotBeNull();
         updated!.ConversionStatus.Should().Be("FAILED");
         updated.ConversionError.Should().Contain("LibreOffice process exit code 1");
@@ -132,17 +132,17 @@ public sealed class DocumentConversionWorkerTests
 
         var completedRecord = new FileRecord("doc-done")
         {
-            UploadedAt = DateTimeOffset.UtcNow,
+            UploadedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
             ConversionStatus = "COMPLETED"
         };
         var deletedRecord = new FileRecord("doc-del")
         {
-            UploadedAt = DateTimeOffset.UtcNow,
+            UploadedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
             ConversionStatus = "PENDING",
             IsDeleted = true
         };
         dbContext.FileRecords.AddRange(completedRecord, deletedRecord);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var services = new ServiceCollection();
         services.AddScoped(_ => CreateDbContext(dbName));
@@ -156,7 +156,7 @@ public sealed class DocumentConversionWorkerTests
         var workerOptions = Options.Create(new FileshareWorkerOptions());
         var worker = new DocumentConversionWorker(scopeFactory, workerOptions, NullLogger<DocumentConversionWorker>.Instance);
 
-        await worker.ProcessPendingConversionsAsync(CancellationToken.None);
+        await worker.ProcessPendingConversionsAsync(TestContext.Current.CancellationToken);
 
         await mockProcessor.DidNotReceive().ConvertToPdfAsync(Arg.Any<FileRecord>(), Arg.Any<CancellationToken>());
     }
