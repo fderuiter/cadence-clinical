@@ -36,6 +36,7 @@ public static class KernelModelConfigurationBuilderExtensions
         configurationBuilder.Properties<StandardVersionId>().HaveConversion<StandardVersionIdValueConverter, EntityIdValueComparer<StandardVersionId>>();
         configurationBuilder.Properties<LibraryItemId>().HaveConversion<LibraryItemIdValueConverter, EntityIdValueComparer<LibraryItemId>>();
         configurationBuilder.Properties<StudyStandardsProfileId>().HaveConversion<StudyStandardsProfileIdValueConverter, EntityIdValueComparer<StudyStandardsProfileId>>();
+        configurationBuilder.Properties<WorkQueueDefinitionId>().HaveConversion<WorkQueueDefinitionIdValueConverter, EntityIdValueComparer<WorkQueueDefinitionId>>();
 
         return configurationBuilder;
     }

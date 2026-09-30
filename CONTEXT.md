@@ -105,7 +105,10 @@ capabilities and never bundles unblinding. A **Delegation** is a grant issued un
 carries the grant option. It cannot exceed its parent's capabilities, scope or validity, and it stops counting
 the moment any grant above it ends. Revoking a grant supersedes its validity row rather than deleting it, so
 past decisions stay explainable (ADR-2455).
-_Avoid_: role strings as authority, delegation tables separate from grants
+A **work queue** is a versioned definition keyed by one capability, never a role name. A person's queue holds
+the items a registered source reports as due that the evaluator permits them to act on now, so it follows their
+grants and delegations. Read without a scope, it is the portfolio queue across the tenant's studies (ADR-2486).
+_Avoid_: role strings as authority, delegation tables separate from grants, queues per role
 
 ### Tenant
 

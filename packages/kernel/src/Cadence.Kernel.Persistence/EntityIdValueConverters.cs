@@ -115,3 +115,8 @@ public class GrantIdValueConverter() : ValueConverter<GrantId, Guid>(
     id => id.Value,
     guid => new GrantId(guid)
 );
+
+public class WorkQueueDefinitionIdValueConverter() : ValueConverter<WorkQueueDefinitionId, Guid>(
+    id => id.Value,
+    guid => new WorkQueueDefinitionId(guid)
+);

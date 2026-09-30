@@ -33,6 +33,9 @@ internal static class InsertOnlySql
         // Authority: a role never changes once defined, so grants under it keep their meaning (spec §9.3).
         "roles",
 
+        // Work-queue definitions (ADR-2486): a version never changes; defining the code again adds the next one.
+        "work_queue_definitions",
+
         // Standards Registry definitions: fixed once their standard version is registered (spec §6.3).
         "standard_datasets", "standard_variables", "standard_value_level_definitions", "standard_terminology",
 
