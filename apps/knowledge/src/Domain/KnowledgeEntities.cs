@@ -11,7 +11,7 @@ public class KnowledgeCategory
     public string? ParentId { get; set; }
     public string? PersonaVisibility { get; set; }
     public bool IsDeleted { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -32,7 +32,7 @@ public class KnowledgeArticle
     public string? LastEditedBy { get; set; }
     public string? ApprovedBy { get; set; }
     public bool IsDeleted { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
 }
@@ -47,7 +47,7 @@ public class KnowledgeArticleVersion
     public string BodyMarkdown { get; set; } = string.Empty;
     public string? BodyHtml { get; set; }
     public bool IsLocked { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
 }
@@ -62,7 +62,7 @@ public class KnowledgeArticleAuditLog
     public string? Details { get; set; }
     public string? PreviousDigest { get; set; }
     public string? Sha256Digest { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
@@ -77,7 +77,7 @@ public class ContextualHelpMapping
     public string? SectionAnchor { get; set; }
     public int Priority { get; set; } = 100;
     public bool IsActive { get; set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
@@ -98,7 +98,7 @@ public class ProtocolKnowledgeChunk
     public string? EmbeddingJson { get; set; }
     public int TokenCount { get; set; }
     public bool IsApproved { get; set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;

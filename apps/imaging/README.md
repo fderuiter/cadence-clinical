@@ -9,6 +9,7 @@ Medical imaging scaffold. It holds the imaging study/series/instance envelope, d
 - Project: `apps/imaging/src/Cadence.Apps.Imaging.csproj` (assembly `Cadence.Apps.Imaging`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (imaging study, series and instance envelopes, de-identification certificates, annotations, tumour response assessments, adjudication sessions, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `ImagingDbContext`, a design-time `ImagingDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145016_InitialCreate`.
 

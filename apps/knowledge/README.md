@@ -9,6 +9,7 @@ Knowledge base scaffold. It holds the article, article version, category, contex
 - Project: `apps/knowledge/src/Cadence.Apps.Knowledge.csproj` (assembly `Cadence.Apps.Knowledge`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (knowledge categories, articles and versions, contextual help mappings, protocol knowledge chunks, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `KnowledgeDbContext`, a design-time `KnowledgeDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145203_InitialCreate`.
 
