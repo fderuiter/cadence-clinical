@@ -405,6 +405,9 @@ which has no "latest" lookup. How to load a release: [`packages/kernel/README.md
 The protocol is a **machine-readable specification of the experiment**. The PDF, the CRF set, the SoA grid,
 the RTSM configuration and the registry entry are renderings or derivations of it. CDISC USDM is the
 interchange format for it, not its internal shape.
+*Implemented for the SoA grid (#4730, ADR-2475):* `ScheduleOfActivities.Compile` renders a design as planned activities
+(columns, grouped by epoch) by collection specifications (rows), with generated footnotes; the same design always
+gives the same bytes. It is compiled on read, never stored.
 
 ```
 Study 1─* Protocol 1─* ProtocolVersion 1─* Amendment
@@ -445,8 +448,9 @@ ProtocolVersion contains:
   *Implemented in part (#4841, #4808, ADR-2471 §4.5, ADR-2474):* approving a version writes its design elements as
   lineage nodes. `IAmendmentImpact` lists the dependents of the amended parent version (§9.6 `Dependents`), excluding
   the fork itself, and follows only the elements the amendment changes or removes. The report carries the elements
-  actually changed next to the amendment's declared impacted elements. The attestation gate on approval is still to
-  come.
+  actually changed next to the amendment's declared impacted elements, and typed Schedule of Activities and
+  eligibility directives (visit moved, activity collected less often, criterion added; ADR-2475) with the elements
+  they touch that the amendment does not declare. The attestation gate on approval is still to come.
 - **K-PROT-3** The scientific chain `Objective → Endpoint → Estimand → required data → PlannedActivity →
   CollectionSpec` is explicit; a CollectionSpec item with no path to an Endpoint, Estimand, safety
   requirement or operational need is flagged at design time (a Quality finding, not a blocker).

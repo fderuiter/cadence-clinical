@@ -1,0 +1,224 @@
+{
+  "title": "Something Very Official",
+  "epochs": [
+    {
+      "epochId": "StudyEpoch_1",
+      "name": "Screening",
+      "order": 1,
+      "firstColumn": 0,
+      "columnCount": 1
+    },
+    {
+      "epochId": "StudyEpoch_2",
+      "name": "Baseline",
+      "order": 2,
+      "firstColumn": 1,
+      "columnCount": 1
+    },
+    {
+      "epochId": "StudyEpoch_3",
+      "name": "Treatment",
+      "order": 3,
+      "firstColumn": 2,
+      "columnCount": 3
+    },
+    {
+      "epochId": "StudyEpoch_4",
+      "name": "Follow-Up",
+      "order": 4,
+      "firstColumn": 5,
+      "columnCount": 1
+    }
+  ],
+  "columns": [
+    {
+      "activityId": "ScheduledActivityInstance_1",
+      "name": "E1",
+      "epochId": "StudyEpoch_1",
+      "studyDay": -2,
+      "windowBefore": 0,
+      "windowAfter": 0,
+      "locations": [
+        "Site"
+      ],
+      "footnotes": []
+    },
+    {
+      "activityId": "ScheduledActivityInstance_2",
+      "name": "E2",
+      "epochId": "StudyEpoch_2",
+      "studyDay": 1,
+      "windowBefore": 0,
+      "windowAfter": 0,
+      "locations": [
+        "Site"
+      ],
+      "footnotes": []
+    },
+    {
+      "activityId": "ScheduledActivityInstance_3",
+      "name": "E3",
+      "epochId": "StudyEpoch_3",
+      "studyDay": 1,
+      "windowBefore": 0,
+      "windowAfter": 0,
+      "locations": [
+        "Site"
+      ],
+      "footnotes": []
+    },
+    {
+      "activityId": "ScheduledActivityInstance_4",
+      "name": "E4",
+      "epochId": "StudyEpoch_3",
+      "studyDay": 15,
+      "windowBefore": 1,
+      "windowAfter": 1,
+      "locations": [
+        "Site"
+      ],
+      "footnotes": [
+        1
+      ]
+    },
+    {
+      "activityId": "ScheduledActivityInstance_5",
+      "name": "E5",
+      "epochId": "StudyEpoch_3",
+      "studyDay": 29,
+      "windowBefore": 1,
+      "windowAfter": 1,
+      "locations": [
+        "Site"
+      ],
+      "footnotes": [
+        1
+      ]
+    },
+    {
+      "activityId": "ScheduledActivityInstance_6",
+      "name": "E6",
+      "epochId": "StudyEpoch_4",
+      "studyDay": 43,
+      "windowBefore": 3,
+      "windowAfter": 3,
+      "locations": [
+        "Home",
+        "Telehealth"
+      ],
+      "footnotes": [
+        2,
+        3
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "collectionSpecId": "Activity_1",
+      "name": "Demographics",
+      "itemIds": [
+        "Activity_1.BiomedicalConcept_1",
+        "Activity_1.BiomedicalConcept_2",
+        "Activity_1.BiomedicalConcept_3",
+        "Activity_1.BiomedicalConcept_4"
+      ],
+      "concepts": [
+        {
+          "conceptId": "00000000-0000-7000-8000-000000069260",
+          "version": 1
+        },
+        {
+          "conceptId": "00000000-0000-7000-8000-000000028421",
+          "version": 1
+        },
+        {
+          "conceptId": "00000000-0000-7000-8000-000000017049",
+          "version": 1
+        },
+        {
+          "conceptId": "00000000-0000-7000-8000-000000025208",
+          "version": 1
+        }
+      ],
+      "columns": [
+        0
+      ],
+      "footnotes": [],
+      "frequency": 1
+    },
+    {
+      "collectionSpecId": "Activity_2",
+      "name": "Procedures",
+      "itemIds": [],
+      "concepts": [],
+      "columns": [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      "footnotes": [],
+      "frequency": 5
+    },
+    {
+      "collectionSpecId": "Activity_3",
+      "name": "Optional Weight",
+      "itemIds": [
+        "Activity_3.BiomedicalConcept_5"
+      ],
+      "concepts": [
+        {
+          "conceptId": "00000000-0000-7000-8000-000000025208",
+          "version": 1
+        }
+      ],
+      "columns": [
+        0,
+        3
+      ],
+      "footnotes": [],
+      "frequency": 2
+    },
+    {
+      "collectionSpecId": "Activity_4",
+      "name": "Optional",
+      "itemIds": [
+        "Activity_4.BiomedicalConcept_6",
+        "Activity_4.BiomedicalConcept_7"
+      ],
+      "concepts": [
+        {
+          "conceptId": "00000000-0000-7000-8000-000000025298",
+          "version": 1
+        },
+        {
+          "conceptId": "00000000-0000-7000-8000-000000025299",
+          "version": 1
+        }
+      ],
+      "columns": [
+        4
+      ],
+      "footnotes": [],
+      "frequency": 1
+    }
+  ],
+  "footnotes": [
+    {
+      "number": 1,
+      "kind": "Window",
+      "text": "Window: 1 day either side."
+    },
+    {
+      "number": 2,
+      "kind": "Window",
+      "text": "Window: 3 days either side."
+    },
+    {
+      "number": 3,
+      "kind": "Location",
+      "text": "May take place: at home, by telehealth."
+    }
+  ]
+}

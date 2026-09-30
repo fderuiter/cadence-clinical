@@ -174,6 +174,14 @@ var outside = fork.Design().ExternalReferences();                   // ConceptRe
   per study and element id (`ProtocolElementId.For(study, elementId)`), versioned by the protocol version that last
   added or changed them. The approved version governs every element; changed elements supersede their previous
   version; the scientific chain and the concepts that define an element are edges. See [Lineage](#lineage-adr-2471).
+- **Schedule of Activities (ADR-2475).** `ScheduleOfActivities.Compile(design)` renders the design as a matrix:
+  planned activities are columns grouped by epoch and ordered by study day (event-driven ones last), collection
+  specifications are rows with the columns that collect them, and footnotes (windows, locations, event-driven visits,
+  operational needs, unscheduled specifications) are generated. `Write` and `Hash` give the same bytes and hash for the
+  same design. `ScheduleOfActivitiesDiff.Compare(parent, amended)` returns typed directives (`VisitMoved`,
+  `ActivityFrequencyChanged`, `CriterionAdded`, …) with the elements and concepts each touches, and whether the
+  schedule or eligibility changes. `IProtocolVersionReader.GetScheduleOfActivitiesAsync` compiles a stored version's
+  matrix; it is never stored.
 
 ## Participants and enrollment (ADR-2453)
 
@@ -605,7 +613,7 @@ grouped by kind with counts (Canvas D2). Counts are of objects, not versions. Ma
 other, so every screen and every reader gets the same number. `IAmendmentImpact.ComputeAsync(tenant, reader,
 amendedVersion)` is K-PROT-2 as one caller of it: the dependents of the parent version, not walking through the fork
 itself, and entering only the protocol elements the amendment changes or removes (ADR-2474). `ChangedElements` lists
-those elements from the structural diff. Forking a protocol version links the fork to its parent (`DerivedFrom`).
+those elements from the structural diff, and `Schedule` the Schedule of Activities directives (ADR-2475). Forking a protocol version links the fork to its parent (`DerivedFrom`).
 
 ## Activity stream (ADR-2485)
 

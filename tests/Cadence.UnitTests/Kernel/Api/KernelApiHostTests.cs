@@ -19,6 +19,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
 using Cadence.Kernel.Simulation;
@@ -27,6 +28,7 @@ using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
@@ -67,7 +69,19 @@ public sealed class KernelApiHostTests : IDisposable
         $"/api/v1/kernel/nodes/{Study}/commands", $"/api/v1/kernel/authorization/can-i?capability=x.y&resource={Study}",
         "/api/v1/kernel/search?q=CAD", $"/api/v1/kernel/studies/{Study}/protocol-versions",
         $"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}", $"/api/v1/kernel/activity?scope={Study}",
+        $"/api/v1/kernel/protocol-versions/{NodeRef.For(Amendment.Id)}/schedule-of-activities",
     ];
+
+    /// <summary>The amendment's design: CARDIO-2 with its week 12 visit a week later.</summary>
+    private static readonly ProtocolDesign AmendedDesign = SoaSamples.Cardio() with
+    {
+        PlannedActivities =
+        [
+            .. SoaSamples.Cardio().PlannedActivities.Select(a => a.Id == "visit.week12" ? a with { Timing = a.Timing! with { Day = 92 } } : a),
+        ],
+    };
+
+    private static readonly SoaAmendmentDiff ScheduleDiff = ScheduleOfActivitiesDiff.Compare(SoaSamples.Cardio(), AmendedDesign);
 
     private readonly FakeNavigator _navigator = new();
     private readonly FakeSearch _search = new();
@@ -193,6 +207,9 @@ public sealed class KernelApiHostTests : IDisposable
     [InlineData("/api/v1/kernel/studies/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/protocol-versions", HttpStatusCode.NotFound)]
     [InlineData("/api/v1/kernel/protocol-versions/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/protocol-versions/protocol_version:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.NotFound)]
+    [InlineData("/api/v1/kernel/protocol-versions/nonsense/schedule-of-activities", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/protocol-versions/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/schedule-of-activities", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/protocol-versions/protocol_version:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/schedule-of-activities", HttpStatusCode.NotFound)]
     [InlineData("/api/v1/kernel/nodes/nonsense/lineage", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/lineage?direction=sideways", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/lineage?direction=1", HttpStatusCode.BadRequest)]
@@ -702,9 +719,78 @@ public sealed class KernelApiHostTests : IDisposable
         changed.GetProperty("properties").EnumerateArray().Select(p => p.GetString()).Should().Equal("/timing/day");
         _lineage.Impacts.Should().ContainSingle().Which.Should().Be((Tenant, Reader, Amendment.Id));
 
+        var schedule = root.GetProperty("schedule");
+        var moved = schedule.GetProperty("directives").EnumerateArray().Should().ContainSingle().Subject;
+        moved.GetProperty("kind").GetString().Should().Be("VisitMoved");
+        moved.GetProperty("element_id").GetString().Should().Be("visit.week12");
+        moved.GetProperty("before").GetProperty("study_day").GetInt32().Should().Be(85);
+        moved.GetProperty("after").GetProperty("study_day").GetInt32().Should().Be(92);
+        schedule.GetProperty("undeclared").EnumerateArray().Select(e => e.GetString())
+            .Should().Equal(ScheduleDiff.ImpactedElements, "the amendment declares none of the elements the move touches");
+        schedule.GetProperty("impacted_concepts").EnumerateArray().Select(e => e.GetString())
+            .Should().Contain(NodeRef.For(SoaSamples.Sbp.ConceptId, SoaSamples.Sbp.Version).ToString());
+        schedule.GetProperty("changes_schedule").GetBoolean().Should().BeTrue();
+        schedule.GetProperty("changes_eligibility").GetBoolean().Should().BeFalse();
+
         var first = await client.GetAsync(new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}/impact", UriKind.Relative), ct);
         first.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await first.Content.ReadAsStringAsync(ct)).Should().Contain("amends nothing");
+    }
+
+    /// <summary>
+    /// The impact report describes the amendment's content, so an amendment the caller may not see is refused before
+    /// anything is computed.
+    /// </summary>
+    [Fact]
+    public async Task AmendmentImpact_OfAHiddenAmendment_IsRefused()
+    {
+        _visibility.Hidden[NodeRef.For(Amendment.Id)] = MaskReason.NotPermitted;
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        var refused = await client.GetAsync(new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(Amendment.Id)}/impact", UriKind.Relative), ct);
+
+        refused.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        refused.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        _lineage.Impacts.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// A version's Schedule of Activities is compiled from its design: epochs over their columns, visits by study day,
+    /// rows with the columns that collect them and their concept versions, footnotes, and the matrix hash. Content that
+    /// is not a typed design has none, and a version the caller may not see is refused.
+    /// </summary>
+    [Fact]
+    public async Task ScheduleOfActivities_IsCompiledFromTheDesign_AndRefusedWhenHidden()
+    {
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+        var path = $"/api/v1/kernel/protocol-versions/{NodeRef.For(Amendment.Id)}/schedule-of-activities";
+
+        using var soa = await ReadJsonAsync(client, path, ct);
+
+        var root = soa.RootElement;
+        root.GetProperty("version").GetString().Should().Be(NodeRef.For(Amendment.Id).ToString());
+        root.GetProperty("hash").GetString().Should().Be(ScheduleOfActivities.Hash(ScheduleOfActivities.Compile(AmendedDesign)));
+        root.GetProperty("title").GetString().Should().Be("CARDIO-2");
+        root.GetProperty("epochs").EnumerateArray().Select(e => e.GetProperty("epoch_id").GetString())
+            .Should().Equal("epoch.screening", "epoch.treatment");
+        root.GetProperty("columns").EnumerateArray().Select(c => c.GetProperty("activity_id").GetString())
+            .Should().Equal("visit.screening", "visit.baseline", "visit.week4", "visit.week8", "visit.week12", "visit.et");
+        var vitals = root.GetProperty("rows").EnumerateArray().Single(r => r.GetProperty("collection_spec_id").GetString() == "cs.vitals");
+        vitals.GetProperty("frequency").GetInt32().Should().Be(6);
+        vitals.GetProperty("concepts").EnumerateArray().Select(c => c.GetString())
+            .Should().Equal(NodeRef.For(SoaSamples.Sbp.ConceptId, SoaSamples.Sbp.Version).ToString());
+        root.GetProperty("footnotes").EnumerateArray().Select(f => f.GetProperty("kind").GetString()).Should().Contain("EventDriven");
+
+        var untyped = await client.GetAsync(new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}/schedule-of-activities", UriKind.Relative), ct);
+        untyped.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await untyped.Content.ReadAsStringAsync(ct)).Should().Contain("not a typed protocol design");
+
+        _visibility.Hidden[NodeRef.For(Amendment.Id)] = MaskReason.Blinded;
+        var refused = await client.GetAsync(new Uri(path, UriKind.Relative), ct);
+        refused.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        refused.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
     }
 
     /// <summary>Lineage reads name their reader, so a caller with no accountable person is refused before any walk.</summary>
@@ -867,7 +953,8 @@ public sealed class KernelApiHostTests : IDisposable
                     FirstVersion.Id,
                     ["schedule_of_activities"],
                     Report(NodeRef.For(FirstVersion.Id), depth),
-                    [new ElementChange("act.week12", "PlannedActivity", ElementChangeKind.Changed, ["/timing/day"])])
+                    [new ElementChange("act.week12", "PlannedActivity", ElementChangeKind.Changed, ["/timing/day"])],
+                    ScheduleDiff)
                 : null);
         }
 
@@ -907,6 +994,13 @@ public sealed class KernelApiHostTests : IDisposable
         {
             Tenants.Add(tenant);
             return Task.FromResult(new[] { Amendment, FirstVersion }.FirstOrDefault(v => v.Id == version));
+        }
+
+        /// <summary>The amendment holds a typed design; the first version's content is not one.</summary>
+        public Task<SoaMatrix?> GetScheduleOfActivitiesAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken)
+        {
+            Tenants.Add(tenant);
+            return Task.FromResult(version == Amendment.Id ? ScheduleOfActivities.Compile(AmendedDesign) : null);
         }
     }
 

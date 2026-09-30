@@ -133,6 +133,7 @@ internal static class KernelLineageEndpoints
         HttpContext context,
         IProtocolVersionReader versions,
         IAmendmentImpact impact,
+        INodeVisibility visibility,
         ICurrentActor actor,
         CancellationToken cancellationToken)
     {
@@ -162,6 +163,14 @@ internal static class KernelLineageEndpoints
         if (await versions.GetAsync(tenant, amended, cancellationToken).ConfigureAwait(false) is not { } version)
         {
             return KernelProblems.NotFound(node);
+        }
+
+        // The report describes the amendment's content, so an amendment the caller may not see is refused, not masked.
+        var versionNode = NodeRef.For(version.Id);
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [versionNode], cancellationToken).ConfigureAwait(false);
+        if (masks.For(versionNode) is { } mask)
+        {
+            return KernelProblems.NotVisible($"You can't see this protocol version ({mask}), so its amendment impact is not shown.");
         }
 
         if (version.ParentVersionId is null)
