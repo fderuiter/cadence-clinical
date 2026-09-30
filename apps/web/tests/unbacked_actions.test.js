@@ -100,7 +100,9 @@ describe("Regulated actions without a backend", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.text()).not.toContain("10019211");
-      expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual(["headache"]);
+      expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([
+        "headache",
+      ]);
     } finally {
       vi.useRealTimers();
     }

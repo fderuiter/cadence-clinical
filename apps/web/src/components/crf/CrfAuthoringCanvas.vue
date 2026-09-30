@@ -56,15 +56,24 @@
             v-model="sections"
             item-key="id"
             handle=".section-drag-handle"
+            :force-fallback="true"
+            :fallback-tolerance="5"
+            scroll-sensitivity="30"
             class="sections-drag-list"
             @change="handleSectionReorder"
           >
-            <template #item="{ element: section }">
+            <template #item="{ element: section, index }">
               <FormSectionContainer
                 :section="section"
                 :selected-field-id="selectedFieldId"
+                :section-index="index"
+                :total-sections="sections.length"
+                :is-first="index === 0"
+                :is-last="index === sections.length - 1"
                 @select-field="onSelectField"
                 @update-section="onUpdateSection"
+                @move-section-up="moveSectionUp(index)"
+                @move-section-down="moveSectionDown(index)"
               />
             </template>
           </draggable>
@@ -605,6 +614,26 @@ const handleSectionReorder = (evt) => {
   console.log("Section reordered:", evt);
   compilationStatus.value = null;
 };
+
+function moveSectionUp(index) {
+  if (index <= 0) return;
+  const updated = [...sections.value];
+  const temp = updated[index];
+  updated[index] = updated[index - 1];
+  updated[index - 1] = temp;
+  sections.value = updated;
+  compilationStatus.value = null;
+}
+
+function moveSectionDown(index) {
+  if (index < 0 || index >= sections.value.length - 1) return;
+  const updated = [...sections.value];
+  const temp = updated[index];
+  updated[index] = updated[index + 1];
+  updated[index + 1] = temp;
+  sections.value = updated;
+  compilationStatus.value = null;
+}
 
 function onSelectField(fieldId) {
   emit("select-field", fieldId);
