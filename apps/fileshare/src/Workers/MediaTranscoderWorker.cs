@@ -123,7 +123,7 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
             }
         }
 
-        if (success is true && manifestKey is not null)
+        if (success && manifestKey is not null)
         {
             record.TranscodeStatus = "COMPLETED";
             record.HlsManifestKey = manifestKey;

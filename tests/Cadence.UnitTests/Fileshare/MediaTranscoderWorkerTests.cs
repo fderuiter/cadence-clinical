@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 
 using Xunit;
 
@@ -21,6 +22,8 @@ namespace Cadence.UnitTests.Fileshare;
 
 public sealed class MediaTranscoderWorkerTests
 {
+    private static readonly DateTimeOffset FixedTimestamp = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
     private static FileshareDbContext CreateDbContext(string dbName)
     {
         var options = new DbContextOptionsBuilder<FileshareDbContext>()
@@ -39,11 +42,11 @@ public sealed class MediaTranscoderWorkerTests
         {
             Filename = "video.mp4",
             ObjectKey = "videos/video-1",
-            UploadedAt = DateTimeOffset.UtcNow,
+            UploadedAt = FixedTimestamp,
             TranscodeStatus = "PENDING"
         };
         dbContext.FileRecords.Add(fileRecord);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var services = new ServiceCollection();
         services.AddScoped(_ => CreateDbContext(dbName));
@@ -66,10 +69,10 @@ public sealed class MediaTranscoderWorkerTests
 
         var worker = new MediaTranscoderWorker(scopeFactory, workerOptions, NullLogger<MediaTranscoderWorker>.Instance);
 
-        await worker.ProcessPendingTranscodesAsync(CancellationToken.None);
+        await worker.ProcessPendingTranscodesAsync(TestContext.Current.CancellationToken);
 
         using var verifyDb = CreateDbContext(dbName);
-        var updated = await verifyDb.FileRecords.FindAsync("video-1");
+        var updated = await verifyDb.FileRecords.FindAsync(new object[] { "video-1" }, TestContext.Current.CancellationToken);
         updated.Should().NotBeNull();
         updated!.TranscodeStatus.Should().Be("COMPLETED");
         updated.HlsManifestKey.Should().Be("videos/video-1/master.m3u8");
@@ -86,18 +89,17 @@ public sealed class MediaTranscoderWorkerTests
         {
             Filename = "corrupt.mp4",
             ObjectKey = "videos/video-fail",
-            UploadedAt = DateTimeOffset.UtcNow,
+            UploadedAt = FixedTimestamp,
             TranscodeStatus = "PENDING"
         };
         dbContext.FileRecords.Add(fileRecord);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var services = new ServiceCollection();
         services.AddScoped(_ => CreateDbContext(dbName));
 
         var mockProcessor = Substitute.For<IMediaTranscoderProcessor>();
         mockProcessor.TranscodeToHlsAsync(Arg.Any<FileRecord>(), Arg.Any<CancellationToken>())
-            .FromMatches(x => true)
             .ThrowsAsync(new InvalidOperationException("FFmpeg error: Invalid data found"));
         services.AddScoped(_ => mockProcessor);
 
@@ -114,10 +116,10 @@ public sealed class MediaTranscoderWorkerTests
 
         var worker = new MediaTranscoderWorker(scopeFactory, workerOptions, NullLogger<MediaTranscoderWorker>.Instance);
 
-        await worker.ProcessPendingTranscodesAsync(CancellationToken.None);
+        await worker.ProcessPendingTranscodesAsync(TestContext.Current.CancellationToken);
 
         using var verifyDb = CreateDbContext(dbName);
-        var updated = await verifyDb.FileRecords.FindAsync("video-fail");
+        var updated = await verifyDb.FileRecords.FindAsync(new object[] { "video-fail" }, TestContext.Current.CancellationToken);
         updated.Should().NotBeNull();
         updated!.TranscodeStatus.Should().Be("FAILED");
         updated.TranscodeError.Should().Contain("FFmpeg error");
@@ -132,17 +134,17 @@ public sealed class MediaTranscoderWorkerTests
 
         var completedRecord = new FileRecord("video-done")
         {
-            UploadedAt = DateTimeOffset.UtcNow,
+            UploadedAt = FixedTimestamp,
             TranscodeStatus = "COMPLETED"
         };
         var deletedRecord = new FileRecord("video-del")
         {
-            UploadedAt = DateTimeOffset.UtcNow,
+            UploadedAt = FixedTimestamp,
             TranscodeStatus = "PENDING",
             IsDeleted = true
         };
         dbContext.FileRecords.AddRange(completedRecord, deletedRecord);
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var services = new ServiceCollection();
         services.AddScoped(_ => CreateDbContext(dbName));
@@ -156,7 +158,7 @@ public sealed class MediaTranscoderWorkerTests
         var workerOptions = Options.Create(new FileshareWorkerOptions());
         var worker = new MediaTranscoderWorker(scopeFactory, workerOptions, NullLogger<MediaTranscoderWorker>.Instance);
 
-        await worker.ProcessPendingTranscodesAsync(CancellationToken.None);
+        await worker.ProcessPendingTranscodesAsync(TestContext.Current.CancellationToken);
 
         await mockProcessor.DidNotReceive().TranscodeToHlsAsync(Arg.Any<FileRecord>(), Arg.Any<CancellationToken>());
     }

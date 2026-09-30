@@ -561,7 +561,9 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       expect(store.activeForm.sections[2].id).toBe("sec-3");
 
       // Now click Move Down on Section 2 (which is now at index 0)
-      const sec2MoveDown = wrapper.findAllComponents(FormSectionContainer)[0].find(".btn-section-move-down");
+      const sec2MoveDown = wrapper
+        .findAllComponents(FormSectionContainer)[0]
+        .find(".btn-section-move-down");
       await sec2MoveDown.trigger("click");
 
       // Verify order restored to Sec 1, Sec 2, Sec 3
@@ -616,7 +618,9 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       expect(section.items[2].id).toBe("f-3");
 
       // Click Move Down on Field 2 (now at index 0)
-      const field2MoveDown = wrapper.findAllComponents(CanvasFieldWidget)[0].find(".btn-field-move-down");
+      const field2MoveDown = wrapper
+        .findAllComponents(CanvasFieldWidget)[0]
+        .find(".btn-field-move-down");
       await field2MoveDown.trigger("click");
 
       // Verify items order restored to f-1, f-2, f-3
