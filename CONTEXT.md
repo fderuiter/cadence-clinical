@@ -44,6 +44,13 @@ activity is a planned visit on a **study day**, where day 1 is the reference sta
 is no day 0 (the SDTM `--DY` convention), with a window of days before and after.
 _Avoid_: stored visit schedules, day 0
 
+The **Schedule of Activities** (SoA) is compiled from the design too, never stored (ADR-2475): planned activities are
+its columns (visits, grouped by epoch), collection specifications its rows, a cell marks that a visit collects a
+specification, and footnotes are generated from windows, locations and purposes. A **schedule directive** is one typed
+change an amendment makes to it or to eligibility (a visit moved, an activity collected less often, a criterion
+added), with the elements and concepts it touches.
+_Avoid_: hand-maintained SoA grids, "SoA activity" to mean a visit (a USDM Activity is a row, an encounter a column)
+
 ### Participant
 
 The pseudonymous kernel identity of a person taking part in a study. EDC "subject", eCOA "user" and
@@ -120,6 +127,11 @@ the moment any grant above it ends. Revoking a grant supersedes its validity row
 past decisions stay explainable (ADR-2455). What a reader may **see** follows the same grants: what they cover,
 the study and organization above them, and participants and sites through their study sites. Everything else comes
 back masked (ADR-2457).
+A **Qualification** is evidence about an actor (training, protocol training on one protocol version, a credential
+or a certificate) with a code, a bitemporal validity and the training record or credential artifact version that
+proves it. A **qualification requirement** says a capability within a scope needs a current qualification of a code,
+and of a protocol version when it names one. The evaluator applies every requirement in effect over the resource
+after a grant permits, and a denial names what to obtain, or what to renew and when it expired (ADR-2459).
 A **work queue** is a versioned definition keyed by one capability, never a role name. A person's queue holds
 the items a registered source reports as due that the evaluator permits them to act on now, so it follows their
 grants and delegations. Read without a scope, it is the portfolio queue across the tenant's studies (ADR-2486).
@@ -531,7 +543,7 @@ An asynchronous multi-stage directed acyclic graph workflow in `apps/designer` t
 
 ### Protocol Amendment Impact Assessment
 
-An automated analysis engine evaluating graph and narrative deltas between protocol revisions to quantify operational scope changes, calculate subject re-consent requirements, and generate domain-routed operational tickets.
+An automated analysis engine evaluating graph and narrative deltas between protocol revisions to quantify operational scope changes, calculate subject re-consent requirements, and generate domain-routed operational tickets. In the kernel it is `IAmendmentImpact` (K-PROT-2): the dependents of the changed elements (ADR-2474) and the schedule directives (ADR-2475).
 
 ### Generative Pharmacovigilance Narrative
 

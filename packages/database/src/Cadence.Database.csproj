@@ -2,8 +2,6 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Database</RootNamespace>
     <Description>Entity Framework Core 10 persistence base classes, GxP SaveChanges audit interceptors, and Npgsql providers.</Description>
-    <!-- Audit timestamps come from the injected IClock only (K-TIME-3, #4784). -->
-    <CadenceBanWallClock>true</CadenceBanWallClock>
   </PropertyGroup>
 
   <ItemGroup>

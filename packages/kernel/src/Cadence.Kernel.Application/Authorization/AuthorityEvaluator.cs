@@ -43,6 +43,12 @@ public interface IAuthorityStore
     /// participant has an enrollment, or where a site takes part in a study. Empty for any other object.
     /// </summary>
     Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
+
+    /// <summary>Every qualification held by <paramref name="actor"/>, with its whole validity history (K-AUTH-5).</summary>
+    Task<IReadOnlyList<Qualification>> QualificationsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken);
+
+    /// <summary>Every requirement defined for <paramref name="capability"/>, with its whole validity history.</summary>
+    Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken);
 }
 
 /// <summary>Settings of the authority evaluator.</summary>
@@ -63,10 +69,13 @@ public sealed record KernelAuthorityOptions(IReadOnlySet<string> PlatformOperato
 /// every grant above it in effect (K-AUTH-3).</item>
 /// <item>The capability is the grant's, or in the granted role, and the grant's scope covers the resource's scope path.</item>
 /// <item>Automation agents may only read and propose (spec §11).</item>
+/// <item>Every qualification requirement for the capability in effect over the resource's scope path is met by a
+/// qualification the actor holds, in effect at the same <c>(at, known_at)</c> (K-AUTH-5).</item>
 /// </list>
 /// Two rules are about grants themselves: the holder of a grant with the grant option may delegate under it, and a
 /// delegator may revoke a delegation it signed. Every decision lists the conditions checked with their evidence
-/// (K-AUTH-6). Qualifications and separation of duties are later slices of #4781.
+/// (K-AUTH-6); a missing qualification is named, with the one that lapsed when there is one. Separation of duties is a
+/// later slice of #4781.
 /// </summary>
 public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOptions options) : IAuthorizationEvaluator
 {
@@ -84,6 +93,9 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
 
     /// <summary>Condition: an automation agent acts only within its verb classes.</summary>
     public const string AgentVerbCondition = "actor.agent_verb";
+
+    /// <summary>Condition: the actor holds a current qualification a requirement names (K-AUTH-5).</summary>
+    public const string QualificationCondition = "qualification.current";
 
     /// <summary>How many grants a delegation chain may have above it; deeper chains are not in effect.</summary>
     public const int MaxDelegationDepth = 8;
@@ -125,8 +137,14 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         {
             if (await InEffectAsync(request, grant, cancellationToken).ConfigureAwait(false))
             {
-                return AuthorizationDecision.Permit(
-                    conditions: EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)));
+                EvaluatedCondition[] conditions =
+                [
+                    EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)),
+                    .. await QualificationConditionsAsync(request, path, cancellationToken).ConfigureAwait(false),
+                ];
+                return conditions.FirstOrDefault(c => !c.Met) is { } missing
+                    ? AuthorizationDecision.Deny($"{request.Actor.Id} is not qualified to {token}: {missing.Description}.", conditions)
+                    : AuthorizationDecision.Permit(conditions: conditions);
             }
         }
 
@@ -168,6 +186,57 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
 
         return null;
     }
+
+    /// <summary>
+    /// One condition per qualification requirement for the capability that is in effect over <paramref name="path"/>:
+    /// met by a qualification the actor holds in effect at the same instant, or unmet naming what to obtain and, when
+    /// one lapsed, which and when (K-AUTH-6).
+    /// </summary>
+    private async Task<IReadOnlyList<EvaluatedCondition>> QualificationConditionsAsync(
+        AuthorizationRequest request, ScopePath path, CancellationToken cancellationToken)
+    {
+        var requirements = (await store.QualificationRequirementsAsync(request.Tenant, request.Capability.Token, cancellationToken).ConfigureAwait(false))
+            .Where(r => r.IsInEffect(request.At, request.KnownAt) && r.Scope.Covers(path))
+            .OrderBy(r => r.Id)
+            .ToList();
+        if (requirements.Count == 0)
+        {
+            return [];
+        }
+
+        var held = await store.QualificationsHeldAsync(request.Tenant, request.Actor, cancellationToken).ConfigureAwait(false);
+        var conditions = new List<EvaluatedCondition>(requirements.Count);
+        foreach (var requirement in requirements)
+        {
+            var matching = held.Where(requirement.IsMetBy).OrderBy(q => q.Id).ToList();
+            var named = Named(requirement);
+            if (matching.FirstOrDefault(q => q.IsInEffect(request.At, request.KnownAt)) is { } current)
+            {
+                conditions.Add(EvaluatedCondition.Satisfied(
+                    QualificationCondition, $"Holds current {named}", NodeRef.For(requirement.Id), NodeRef.For(current.Id), NodeRef.For(current.EvidenceArtifactVersionId)));
+                continue;
+            }
+
+            var lapsed = matching
+                .Select(q => (Qualification: q, Ended: q.LapsedBy(request.At, request.KnownAt)))
+                .Where(x => x.Ended is not null)
+                .OrderByDescending(x => x.Ended)
+                .FirstOrDefault();
+            conditions.Add(lapsed.Qualification is { } expired
+                ? EvaluatedCondition.Unsatisfied(
+                    QualificationCondition,
+                    $"Renew {named}; it expired on {lapsed.Ended!.Value:yyyy-MM-dd}",
+                    NodeRef.For(requirement.Id), NodeRef.For(expired.Id))
+                : EvaluatedCondition.Unsatisfied(QualificationCondition, $"Obtain {named}", NodeRef.For(requirement.Id)));
+        }
+
+        return conditions;
+    }
+
+    private static string Named(QualificationRequirement requirement) =>
+        requirement.ProtocolVersionId is { } version
+            ? $"{requirement.QualificationCode} for protocol version {version}"
+            : requirement.QualificationCode;
 
     private Task<bool> InEffectAsync(AuthorizationRequest request, Grant grant, CancellationToken cancellationToken) =>
         GrantChain.InEffectAsync(store, request.Tenant, grant, request.At, request.KnownAt, cancellationToken);

@@ -1,15 +1,4 @@
 <Project>
   <!-- Inherit the solution-wide build properties and analyzers. -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
-
-  <!-- K-TIME-3 for tests: no direct wall-clock reads (see BannedSymbols.txt). Use Cadence.Testing.Time.FakeClock for
-       deterministic time, SystemClock.Instance where the code under test checks the real clock (token expiry,
-       certificate validity), and Stopwatch for elapsed time. RS0030 fails the build (TreatWarningsAsErrors). -->
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory)../BannedSymbols.txt" Link="BannedSymbols.txt" />
-  </ItemGroup>
 </Project>

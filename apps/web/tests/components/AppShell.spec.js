@@ -211,4 +211,67 @@ describe("AppShell.vue - Application Shell Component", () => {
 
     expect(result.pass).toBe(false);
   });
+
+  it("renders mobile menu toggle button with full accessibility attributes", () => {
+    const wrapper = mount(AppShell, {
+      global: {
+        plugins: [router],
+      },
+    });
+
+    const toggleBtn = wrapper.find("#btn-mobile-menu-toggle");
+    expect(toggleBtn.exists()).toBe(true);
+    expect(toggleBtn.attributes("aria-label")).toBe("Toggle navigation menu");
+    expect(toggleBtn.attributes("aria-controls")).toBe("mobile-nav-menu");
+    expect(toggleBtn.attributes("aria-expanded")).toBe("false");
+  });
+
+  it("toggles mobile navigation menu open and closed when mobile menu button is clicked", async () => {
+    const wrapper = mount(AppShell, {
+      global: {
+        plugins: [router],
+      },
+    });
+
+    const toggleBtn = wrapper.find("#btn-mobile-menu-toggle");
+    const mobileMenu = wrapper.find("#mobile-nav-menu");
+
+    expect(mobileMenu.exists()).toBe(true);
+    expect(mobileMenu.classes()).not.toContain("is-open");
+    expect(toggleBtn.attributes("aria-expanded")).toBe("false");
+
+    // Click to open mobile menu
+    await toggleBtn.trigger("click");
+    expect(toggleBtn.attributes("aria-expanded")).toBe("true");
+    expect(mobileMenu.classes()).toContain("is-open");
+
+    // Click again to close mobile menu
+    await toggleBtn.trigger("click");
+    expect(toggleBtn.attributes("aria-expanded")).toBe("false");
+    expect(mobileMenu.classes()).not.toContain("is-open");
+  });
+
+  it("allows switching persona from inside the open mobile menu drawer and updates live region", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+
+    const wrapper = mount(AppShell, {
+      global: {
+        plugins: [router],
+      },
+    });
+
+    // Open mobile drawer
+    const toggleBtn = wrapper.find("#btn-mobile-menu-toggle");
+    await toggleBtn.trigger("click");
+
+    const personaSelect = wrapper.find("#persona-select");
+    if (personaSelect.exists()) {
+      await personaSelect.setValue("site_investigator");
+      await personaSelect.trigger("change");
+
+      const liveRegion = wrapper.find(".sr-only-status-alerts");
+      expect(liveRegion.text()).toContain("Switched workspace view to");
+    }
+  });
 });

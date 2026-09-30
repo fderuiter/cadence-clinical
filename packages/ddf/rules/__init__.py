@@ -16,13 +16,11 @@ from packages.ddf.rules.compiler import (
     extract_appearance,
     sanitize_identifier,
 )
-from packages.ddf.rules.concept import DEFAULT_MOCK_TERMINOLOGY, resolve_concept_id
 
 __all__ = [
     "ConstraintRule",
     "CreateRuleRequest",
     "CrossFormCheckRule",
-    "DEFAULT_MOCK_TERMINOLOGY",
     "ExpressionNode",
     "FieldReference",
     "SkipLogicRule",
@@ -31,6 +29,6 @@ __all__ = [
     "detect_circular_dependencies",
     "extract_appearance",
     "extract_field_references",
-    "resolve_concept_id",
     "sanitize_identifier",
 ]
+

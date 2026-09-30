@@ -13,6 +13,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -30,36 +31,13 @@ namespace Cadence.UnitTests.Execution.Compliance;
 /// InMemory-backed <see cref="ExecutionDbContext"/> (matching `SiteComplianceRepositoryTests`'/
 /// `SiteComplianceCacheConfigurationTests`' own established convention for this aggregate, and no
 /// mocking-framework usage appears anywhere else in <c>tests/Cadence.UnitTests/Execution/</c>) plus a hand-rolled
-/// <see cref="FakeAuditLogWriter"/> that records every call for zero-calls/ordering assertions.
+/// <see cref="RecordingAuditLogWriter"/> that records every call for zero-calls/ordering assertions.
 /// </summary>
 public class SiteComplianceApplicationServiceTests
 {
     private static readonly StudyCode Study = new("STUDY-COMPLIANCE-APP");
     private const string SiteId = "SITE-COMPLIANCE-APP";
     private const string Milestone = "SITE_ACTIVATION";
-
-    private sealed record AuditCall(
-        string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
-
-    private sealed class FakeAuditLogWriter : IAuditLogWriter
-    {
-        public List<AuditCall> Calls { get; } = new();
-
-        public Task WriteAsync(
-            string entityName, string recordId, string action, string userId, string changeReason,
-            IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues,
-            CancellationToken ct)
-        {
-            Calls.Add(new AuditCall(entityName, recordId, action, userId, changeReason));
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class FakeAuditContextAccessor : ICurrentAuditContextAccessor
-    {
-        public string UserId => "user-compliance-1";
-        public string ChangeReason => "system_operation";
-    }
 
     private static ExecutionDbContext CreateContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
@@ -68,10 +46,10 @@ public class SiteComplianceApplicationServiceTests
             .Options);
 
     private static SiteComplianceApplicationService CreateService(
-        ExecutionDbContext context, FakeAuditLogWriter? auditLog = null) =>
+        ExecutionDbContext context, RecordingAuditLogWriter? auditLog = null) =>
         new(new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create()),
-            auditLog ?? new FakeAuditLogWriter(),
-            new FakeAuditContextAccessor());
+            auditLog ?? new RecordingAuditLogWriter(),
+            new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"));
 
     // ---- ApplyEtmfWebhookAsync: create branch ------------------------------------------------------
 
@@ -80,7 +58,7 @@ public class SiteComplianceApplicationServiceTests
     public async Task ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller()
     {
         string databaseName = Guid.NewGuid().ToString();
-        var auditLog = new FakeAuditLogWriter();
+        var auditLog = new RecordingAuditLogWriter();
         var payload = new EtmfCompletenessWebhookPayload(
             Study.Value, SiteId, Milestone, IsComplete: true, MissingArtifacts: new[] { "Form-A" });
 
@@ -131,7 +109,7 @@ public class SiteComplianceApplicationServiceTests
     public async Task ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller()
     {
         string databaseName = Guid.NewGuid().ToString();
-        var auditLog = new FakeAuditLogWriter();
+        var auditLog = new RecordingAuditLogWriter();
 
         await using (var seed = CreateContext(databaseName))
         {
@@ -172,7 +150,7 @@ public class SiteComplianceApplicationServiceTests
         // ticket's own final report). The safest available behavior is a documented no-op: no exception, no
         // fabricated site, and -- per the "always upserts" contract -- still a successful result.
         string databaseName = Guid.NewGuid().ToString();
-        var auditLog = new FakeAuditLogWriter();
+        var auditLog = new RecordingAuditLogWriter();
         var payload = new EtmfCompletenessWebhookPayload(
             Study.Value, SiteId: null, Milestone, IsComplete: true, MissingArtifacts: new[] { "Form-A" });
 
@@ -193,7 +171,7 @@ public class SiteComplianceApplicationServiceTests
     public async Task ActivateSiteAsync_GivenNoComplianceRow_FailsWithBlockedActivationAndWritesAuditEntryFirst()
     {
         string databaseName = Guid.NewGuid().ToString();
-        var auditLog = new FakeAuditLogWriter();
+        var auditLog = new RecordingAuditLogWriter();
 
         await using var context = CreateContext(databaseName);
         var service = CreateService(context, auditLog);
@@ -216,7 +194,7 @@ public class SiteComplianceApplicationServiceTests
     public async Task ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry()
     {
         string databaseName = Guid.NewGuid().ToString();
-        var auditLog = new FakeAuditLogWriter();
+        var auditLog = new RecordingAuditLogWriter();
 
         await using (var seed = CreateContext(databaseName))
         {
@@ -251,7 +229,7 @@ public class SiteComplianceApplicationServiceTests
             var service = new SiteComplianceApplicationService(
                 new SiteComplianceRepository(context, SaveChangesResiliencePipelineFactory.Create()),
                 new EfAuditLogWriter(context),
-                new FakeAuditContextAccessor());
+                new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"));
 
             var result = await service.ActivateSiteAsync(
                 SiteId, new SiteActivationRequest(Study.Value), TestContext.Current.CancellationToken);
@@ -273,7 +251,7 @@ public class SiteComplianceApplicationServiceTests
     public async Task ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete()
     {
         string databaseName = Guid.NewGuid().ToString();
-        var auditLog = new FakeAuditLogWriter();
+        var auditLog = new RecordingAuditLogWriter();
 
         await using (var seed = CreateContext(databaseName))
         {

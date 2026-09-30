@@ -2538,6 +2538,78 @@
         }
       }
     },
+    "/api/v1/kernel/protocol-versions/{versionRef}/schedule-of-activities": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "A protocol version\u0027s Schedule of Activities, compiled from its design.",
+        "description": "Planned activities as columns grouped by epoch, collection specifications as rows (ADR-2475). A version the caller may not see is refused.",
+        "operationId": "KernelGetScheduleOfActivities",
+        "parameters": [
+          {
+            "name": "versionRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelScheduleOfActivitiesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/nodes/{nodeRef}/lineage": {
       "get": {
         "tags": [
@@ -3173,6 +3245,406 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/dsur/compile": {
+      "post": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "summary": "Compiles an aggregate DSUR periodic safety report with patient-years exposure and MedDRA cross-tabulation.",
+        "operationId": "CompileDsurReport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Safety_DsurCompileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_PeriodicSafetyReportRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/dsur/{id}/approve": {
+      "post": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "summary": "Applies a 21 CFR Part 11 PKCS#7 e-signature block via GxPSigner and locks the DSUR record.",
+        "operationId": "ApproveDsurReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Safety_DsurApproveRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_PeriodicSafetyReportRecord"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/dsur/{id}": {
+      "put": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "summary": "Updates a draft DSUR periodic safety report record. Returns 409 Conflict if LOCKED.",
+        "operationId": "UpdateDsurReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Safety_DsurUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_PeriodicSafetyReportRecord"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "summary": "Retrieves a DSUR periodic safety report record by identifier.",
+        "operationId": "GetDsurReportById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_PeriodicSafetyReportRecord"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/dsur": {
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "summary": "Lists all DSUR periodic safety report records.",
+        "operationId": "ListDsurReports",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Safety_PeriodicSafetyReportRecord"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/compile": {
+      "post": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "CompilePeriodicReport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Safety_DsurCompileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/{id}/approve": {
+      "post": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "ApprovePeriodicReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Safety_DsurApproveRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/{id}/sign": {
+      "post": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "SignPeriodicReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Safety_DsurApproveRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/{id}": {
+      "put": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "UpdatePeriodicReport",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Safety_DsurUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "GetPeriodicReportById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports": {
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "ListPeriodicReports",
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -5286,7 +5758,8 @@
           "parent",
           "impacted_elements",
           "dependents",
-          "changed_elements"
+          "changed_elements",
+          "schedule"
         ],
         "type": "object",
         "properties": {
@@ -5310,6 +5783,16 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelElementChangeResponse"
             }
+          },
+          "schedule": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelSoaAmendmentDiffResponse"
+              }
+            ]
           }
         }
       },
@@ -5864,6 +6347,60 @@
           }
         }
       },
+      "Kernel_KernelScheduleOfActivitiesResponse": {
+        "required": [
+          "version",
+          "content_hash",
+          "hash",
+          "title",
+          "epochs",
+          "columns",
+          "rows",
+          "footnotes"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hash": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "epochs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaEpochResponse"
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaColumnResponse"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaRowResponse"
+            }
+          },
+          "footnotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaFootnoteResponse"
+            }
+          }
+        }
+      },
       "Kernel_KernelSearchHitResponse": {
         "required": [
           "ref",
@@ -5907,6 +6444,380 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "Kernel_KernelSoaAmendmentDiffResponse": {
+        "required": [
+          "directives",
+          "impacted_elements",
+          "impacted_concepts",
+          "undeclared",
+          "changes_schedule",
+          "changes_eligibility"
+        ],
+        "type": "object",
+        "properties": {
+          "directives": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelSoaDirectiveResponse"
+            }
+          },
+          "impacted_elements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "impacted_concepts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "undeclared": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "changes_schedule": {
+            "type": "boolean"
+          },
+          "changes_eligibility": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_KernelSoaColumnResponse": {
+        "required": [
+          "activity_id",
+          "name",
+          "epoch_id",
+          "study_day",
+          "window_before",
+          "window_after",
+          "locations",
+          "footnotes"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "epoch_id": {
+            "type": "string"
+          },
+          "study_day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "footnotes": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "Kernel_KernelSoaDirectiveResponse": {
+        "required": [
+          "kind",
+          "element_id",
+          "impacted_elements",
+          "impacted_concepts",
+          "before",
+          "after",
+          "frequency_before",
+          "frequency_after",
+          "collected_at_added",
+          "collected_at_removed"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "element_id": {
+            "type": "string"
+          },
+          "impacted_elements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "impacted_concepts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "before": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelSoaVisitResponse"
+              }
+            ]
+          },
+          "after": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelSoaVisitResponse"
+              }
+            ]
+          },
+          "frequency_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "frequency_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "collected_at_added": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "collected_at_removed": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_KernelSoaEpochResponse": {
+        "required": [
+          "epoch_id",
+          "name",
+          "order",
+          "first_column",
+          "column_count"
+        ],
+        "type": "object",
+        "properties": {
+          "epoch_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "first_column": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "column_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Kernel_KernelSoaFootnoteResponse": {
+        "required": [
+          "number",
+          "kind",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_KernelSoaRowResponse": {
+        "required": [
+          "collection_spec_id",
+          "name",
+          "item_ids",
+          "concepts",
+          "columns",
+          "frequency",
+          "footnotes"
+        ],
+        "type": "object",
+        "properties": {
+          "collection_spec_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "item_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "concepts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "frequency": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "footnotes": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "Kernel_KernelSoaVisitResponse": {
+        "required": [
+          "epoch_id",
+          "study_day",
+          "window_before",
+          "window_after",
+          "locations"
+        ],
+        "type": "object",
+        "properties": {
+          "epoch_id": {
+            "type": "string"
+          },
+          "study_day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -6271,6 +7182,131 @@
           }
         }
       },
+      "Safety_DsurApproveRequest": {
+        "required": [
+          "signerUserId",
+          "signingReason",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "signerUserId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signingReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Safety_DsurCompileRequest": {
+        "required": [
+          "compoundName",
+          "studyId",
+          "periodStart",
+          "periodEnd",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "compoundName": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectEnrollments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Safety_SubjectEnrollmentRecord"
+            }
+          },
+          "safetyCases": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Safety_SafetyCaseIcsrInput"
+            }
+          }
+        }
+      },
+      "Safety_DsurUpdateRequest": {
+        "required": [
+          "compoundName",
+          "studyId",
+          "periodStart",
+          "periodEnd",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "compoundName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "periodStart": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "periodEnd": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Safety_IcsrHeader": {
         "required": [
           "messageId",
@@ -6564,6 +7600,93 @@
           }
         }
       },
+      "Safety_PeriodicSafetyReportRecord": {
+        "required": [
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reportType": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "compoundName": {
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "totalSubjectExposure": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalSaes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reportPayloadJson": {
+            "type": "string"
+          },
+          "approvedByUserId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "esignatureManifestId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "reasonForChange": {
+            "type": "string"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "Safety_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -6599,6 +7722,122 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Safety_SafetyCaseIcsrInput": {
+        "required": [
+          "caseId",
+          "subjectId",
+          "studyId",
+          "receiptDate",
+          "aeTerm",
+          "meddraPt",
+          "meddraSoc",
+          "isSerious",
+          "isFatal",
+          "isAesi",
+          "aesiCategory",
+          "causality",
+          "expectedness",
+          "treatmentArm",
+          "actionTaken",
+          "onsetDate",
+          "resolutionDate"
+        ],
+        "type": "object",
+        "properties": {
+          "caseId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "receiptDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "aeTerm": {
+            "type": "string"
+          },
+          "meddraPt": {
+            "type": "string"
+          },
+          "meddraSoc": {
+            "type": "string"
+          },
+          "isSerious": {
+            "type": "boolean"
+          },
+          "isFatal": {
+            "type": "boolean"
+          },
+          "isAesi": {
+            "type": "boolean"
+          },
+          "aesiCategory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "causality": {
+            "type": "string"
+          },
+          "expectedness": {
+            "type": "string"
+          },
+          "treatmentArm": {
+            "type": "string"
+          },
+          "actionTaken": {
+            "type": "string"
+          },
+          "onsetDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolutionDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Safety_SubjectEnrollmentRecord": {
+        "required": [
+          "subjectId",
+          "studyId",
+          "treatmentArm",
+          "enrollmentDate",
+          "discontinuationDate"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "treatmentArm": {
+            "type": "string"
+          },
+          "enrollmentDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "discontinuationDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },

@@ -8,6 +8,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.TestSupport.Execution.Fakes;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -21,32 +22,11 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// </summary>
 public class SubjectApplicationServiceListTests
 {
-    private sealed class UnusedEncryption : IDemographicsEncryptionService
-    {
-        public string Encrypt(IReadOnlyDictionary<string, object?> demographics) => throw new NotSupportedException();
-
-        public IReadOnlyDictionary<string, object?> Decrypt(string ciphertext) => throw new NotSupportedException();
-    }
-
-    private sealed class NoOpAuditLogWriter : IAuditLogWriter
-    {
-        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
-            IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct) =>
-            Task.CompletedTask;
-    }
-
-    private sealed class AuditContext : ICurrentAuditContextAccessor
-    {
-        public string UserId => "test-user";
-
-        public string ChangeReason => "test-reason";
-    }
-
     private readonly InMemorySubjectRepository _subjects = new();
 
     private SubjectApplicationService CreateService() =>
-        new(_subjects, new InMemoryConsentRepository(), new InMemorySiteComplianceRepository(), new UnusedEncryption(),
-            new NoOpAuditLogWriter(), new AuditContext());
+        new(_subjects, new InMemoryConsentRepository(), new InMemorySiteComplianceRepository(),
+            new FakeDemographicsEncryptionService(), new RecordingAuditLogWriter(), new FakeCurrentAuditContextAccessor());
 
     private async Task SeedAsync(string subjectCode, string studyCode, string? siteCode, int enrollmentIndex,
         SubjectState status = SubjectState.Screening)

@@ -405,6 +405,9 @@ which has no "latest" lookup. How to load a release: [`packages/kernel/README.md
 The protocol is a **machine-readable specification of the experiment**. The PDF, the CRF set, the SoA grid,
 the RTSM configuration and the registry entry are renderings or derivations of it. CDISC USDM is the
 interchange format for it, not its internal shape.
+*Implemented for the SoA grid (#4730, ADR-2475):* `ScheduleOfActivities.Compile` renders a design as planned activities
+(columns, grouped by epoch) by collection specifications (rows), with generated footnotes; the same design always
+gives the same bytes. It is compiled on read, never stored.
 
 ```
 Study 1─* Protocol 1─* ProtocolVersion 1─* Amendment
@@ -445,8 +448,9 @@ ProtocolVersion contains:
   *Implemented in part (#4841, #4808, ADR-2471 §4.5, ADR-2474):* approving a version writes its design elements as
   lineage nodes. `IAmendmentImpact` lists the dependents of the amended parent version (§9.6 `Dependents`), excluding
   the fork itself, and follows only the elements the amendment changes or removes. The report carries the elements
-  actually changed next to the amendment's declared impacted elements. The attestation gate on approval is still to
-  come.
+  actually changed next to the amendment's declared impacted elements, and typed Schedule of Activities and
+  eligibility directives (visit moved, activity collected less often, criterion added; ADR-2475) with the elements
+  they touch that the amendment does not declare. The attestation gate on approval is still to come.
 - **K-PROT-3** The scientific chain `Objective → Endpoint → Estimand → required data → PlannedActivity →
   CollectionSpec` is explicit; a CollectionSpec item with no path to an Endpoint, Estimand, safety
   requirement or operational need is flagged at design time (a Quality finding, not a blocker).
@@ -826,9 +830,18 @@ protocol training + credential + effective dates + site activation state, never 
 a grant bounded by its parent, changed by `DefineRole`, `IssueGrant`, `DelegateGrant` and `RevokeGrant`.
 `AuthorityEvaluator` is the `IAuthorizationEvaluator`: it checks steps 1 and 2, requires every grant above a
 delegation to be in effect, denies automation agents Execute and Approve, and records each decision's conditions
-in `provenance_activities.authorization`. Qualifications (K-AUTH-5), separation of duties (step 4) and the
-StudySite, protocol and blinding conditions of step 3 are still to come. Work-queue definitions and the queue read
+in `provenance_activities.authorization`. Separation of duties (step 4) and the StudySite, protocol and blinding
+conditions of step 3 are still to come. Work-queue definitions and the queue read
 (K-AUTH-8) are implemented (#4849), with protocol versions in review as the first item source.
+
+*Qualifications (#4781, ADR-2459, K031):* `Qualification` (bitemporal `QualificationPeriod` validity, a
+`TrainingRecord` or `Credential` artifact version as evidence, a protocol version for protocol training) and
+`QualificationRequirement` (a capability, a qualification code, optionally a protocol version, a scope and bitemporal
+validity), changed by `RecordQualification`, `RevokeQualification`, `DefineQualificationRequirement` and
+`RetireQualificationRequirement`. The evaluator applies step 3's first condition: every requirement in effect over the
+resource must be met by a qualification the actor holds at the same `(at, known_at)`, and a denial names what to
+obtain, or what to renew and when it expired. Scenario 12 of §14 passes. A requirement names its protocol version
+explicitly; deriving it from the resource's governing version is still to come.
 
 *Visibility (#4781, ADR-2457):* `GrantNodeVisibility` is the `INodeVisibility` computed from the same grants. A reader
 sees what a grant it holds in effect covers, the organization, study and country above that scope, participants and
@@ -1230,6 +1243,7 @@ kernel, is merged into another, or is retired.
 | K027 | Grant-backed visibility | A reader sees what its grants in effect cover and the scope path above them; participants and sites through their study sites; reference data to any grant holder | ADR-2457 |
 | K028 | Mapping specifications | Governed library items pinned to one standard version, CT versions and Concept versions; K-STD-1 checked at protocol submission, gaps accepted as findings; engine behind `IMappingEngine` | ADR-2463 |
 | K029 | IdentityVault | Direct identifiers sealed per record (AES-256-GCM data keys wrapped by a per-tenant key) in the `identity_vault` schema, reached only through its functions; record, reveal, erase and cross-study link are audited kernel commands; residency is a tenant property | ADR-2458 |
+| K031 | Qualifications | Actor prerequisites are bitemporal Qualifications with artifact evidence; QualificationRequirements name the qualification a capability needs within a scope; the evaluator denies naming what to obtain or renew (K-AUTH-5, K-AUTH-6) | ADR-2459 |
 | K032 | Visit timing, anchors and cycles | `ExpectedSchedule.Assess` measures an actual date against the window with no built-in severity; visits anchored on another visit's actual date; repeating cycles as numbered occurrences | ADR-2507 |
 
 ---

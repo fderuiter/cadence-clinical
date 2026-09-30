@@ -132,7 +132,10 @@ public sealed class KernelArtifactPostgresTests(KernelPostgresFixture fixture) :
             $"UPDATE kernel.artifact_versions SET storage_ref = 'blob://elsewhere' WHERE id = '{version.Value}'",
             $"UPDATE kernel.artifact_versions SET content_hash = '{Content("forged").ContentHash}' WHERE id = '{version.Value}'",
             $"DELETE FROM kernel.artifact_versions WHERE id = '{version.Value}'",
-            "TRUNCATE kernel.artifact_versions",
+
+            // CASCADE, because qualifications reference their evidence version and a plain TRUNCATE stops at the
+            // foreign key before the guard runs.
+            "TRUNCATE kernel.artifact_versions CASCADE",
         })
         {
             var act = () => ExecuteAsAdminAsync(statement, ct);

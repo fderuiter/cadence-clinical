@@ -264,14 +264,16 @@ jobs:
       - name: Run dependency audit
         id: run_audit
         if: always()
-        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check vulnerabilities
+        run: |
+          python3 -m pip install --quiet pip-audit==2.10.1 || true
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check vulnerabilities
 
       - name: Run secret detection
         id: run_secrets
         if: always()
         run: |
-          git add .secrets.baseline
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check clean-secrets
+          git diff --exit-code .secrets.baseline
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check security
 
       - name: Run detect-secrets against the baseline

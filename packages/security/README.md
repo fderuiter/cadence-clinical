@@ -26,7 +26,9 @@ signatures and audit digests shared by every Cadence service.
   `AuditorWriteGuardMiddleware`, and `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain
   printable ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8 for any other text. Every reader decodes the
   header with it, so the audit trail stores what the user typed
-  ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)).
+  ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)). A signed request without `X-Tenant-Id` authenticates with no
+  `tenant_id` claim; there is no default tenant, and `GatewayIdentity.TenantId` is null when the sign-in names none
+  ([ADR-2514](../../docs/adr/2026-09-30-the-tenant-comes-from-sign-in-with-no-fallback.md)).
 - **Authorization:** `PermissionMatrix`, `RoleNormalization`, `Principal`, site/study access evaluators
   and the permission, role, study-scope, change-justification and auditor-read-only handlers.
   `RequirePermission("resource:action")` on a route requires that permission in `PermissionMatrix`; the
@@ -35,7 +37,7 @@ signatures and audit digests shared by every Cadence service.
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
   used by `Cadence.Deid` for redaction manifests and de-identification certificates.
-- **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `GxPAuditInterceptor`, `IAuditLogWriter`.
+- **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `IAuditLogWriter`.
 - **Time (K-TIME-3):** the project bans `DateTime.Now/UtcNow`. `ReplayCache` and `AuditDigestEngine` take an
   `IClock` (default `SystemClock.Instance`; `AddCadenceSecurity` passes the registered one), and
   `AuditLogRecord.Timestamp` is `required` (#4784).
