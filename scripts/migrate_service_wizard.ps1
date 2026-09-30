@@ -30,7 +30,7 @@ Write-Host "--------------------------------------------------------------------
 if ([string]::IsNullOrWhiteSpace($ServiceName)) {
     Write-Host "Available Clinical Services:" -ForegroundColor Yellow
     Write-Host "  [1] execution      (EDC Clinical Observation Engine)"
-    Write-Host "  [2] designer       (MDR Protocol Designer - Neo4j)"
+    Write-Host "  [2] designer       (MDR Protocol Designer)"
     Write-Host "  [3] ctms           (Clinical Trial Management System)"
     Write-Host "  [4] etmf           (Electronic Trial Master File)"
     Write-Host "  [5] eisf           (Investigator Site File)"

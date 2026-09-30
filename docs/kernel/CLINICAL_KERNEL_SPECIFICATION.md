@@ -300,7 +300,8 @@ correlation_id, causation_id, payload }`.
 
 Items 1-3 are implemented for the kernel by ADR-2449: the `enforce_insert_only` trigger (SQLSTATE `KA001`) guards
 `audit_entries`, `domain_events`, `provenance_activities` and `idempotency_records`; `audit_chain_heads` serialises
-each tenant's chain; `KernelAuditChainVerifier` re-derives it. Root sealing and the scheduled verifier follow in #4779.
+each tenant's chain; `KernelAuditChainVerifier` re-derives it, and an hourly job seals each intact chain in the
+insert-only `audit_chain_seals` table. `KernelOutboxRelay` delivers events at least once to the host's `IKernelEventPublisher`.
 
 ### 5.4 Error-code registry (resolves G13)
 

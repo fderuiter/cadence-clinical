@@ -12,7 +12,6 @@
         "ms-dotnettools.csharp",
         "editorconfig.editorconfig",
         "ckolkman.vscode-postgres",
-        "neo4j.neo4j-for-vscode",
         "vue.volar"
       ],
       "settings": {
@@ -21,7 +20,7 @@
       }
     }
   },
-  "forwardPorts": [8000, 8001, 8002, 5432, 7687],
+  "forwardPorts": [8000, 8001, 8002, 5432],
   "remoteUser": "root",
   "postCreateCommand": "bash scripts/setup_wizard.sh --dev"
 }

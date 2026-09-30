@@ -23,12 +23,12 @@ Study design service. Today it exposes a CDISC USDM compile endpoint backed by `
 
 ## Persistence
 
-None. The project still references `Neo4j.Driver`, but no code opens a Neo4j session, and Neo4j is no longer in `docker/docker-compose.yml` (#4790).
+None. Neo4j is retired (ADR-2245), and its unused `Neo4j.Driver` reference was removed in #4790.
 
 ## Key dependencies
 
 - Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Kernel.Domain`, `Cadence.Ddf`, `Cadence.Security`, `Cadence.Telemetry`.
-- Packages: `Neo4j.Driver` (unused), OpenTelemetry, `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`.
+- Packages: OpenTelemetry, `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`.
 
 ## Tests
 

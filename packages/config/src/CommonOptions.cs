@@ -83,12 +83,4 @@ public class CommonOptions
     /// <summary>Redis connection URL.</summary>
     public string? RedisUrl { get; set; }
 
-    /// <summary>Neo4j database connection URI.</summary>
-    public string Neo4jUri { get; set; } = "bolt://localhost:7687";
-
-    /// <summary>Neo4j database username.</summary>
-    public string Neo4jUser { get; set; } = "neo4j";
-
-    /// <summary>Neo4j database password.</summary>
-    public string? Neo4jPassword { get; set; }
 }

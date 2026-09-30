@@ -196,13 +196,15 @@ public partial class CommandPipeline : Migration
             table: "provenance_activities",
             columns: new[] { "tenant_id", "recorded_at" });
 
-        migrationBuilder.CreateInsertOnlyGuards("kernel");
+        migrationBuilder.CreateInsertOnlyFunction("kernel");
+        migrationBuilder.CreateInsertOnlyGuards("kernel", "audit_entries", "domain_events", "provenance_activities", "idempotency_records");
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropInsertOnlyGuards("kernel");
+        migrationBuilder.DropInsertOnlyGuards("kernel", "audit_entries", "domain_events", "provenance_activities", "idempotency_records");
+        migrationBuilder.DropInsertOnlyFunction("kernel");
 
         migrationBuilder.DropTable(
             name: "audit_chain_heads",

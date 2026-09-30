@@ -303,8 +303,13 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
           "Checked subject CRF and resolved"
         );
 
-        // Check localStorage persistence
-        const stored = window.localStorage.getItem("demo_notifications");
+        // Check localStorage persistence (demo notifications are scoped per persona)
+        expect(authStore.currentPersona).toBe("super_admin");
+        expect(window.localStorage.getItem("demo_notifications")).toBeNull();
+        const stored = window.localStorage.getItem(
+          "demo_notifications_super_admin"
+        );
+        expect(stored).not.toBeNull();
         expect(stored).toBeDefined();
         const storedList = JSON.parse(stored);
         expect(storedList[0].status).toBe("ACKNOWLEDGED");
@@ -388,8 +393,10 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         expect(
           window.localStorage.getItem("lastSignatureResult")
         ).not.toBeNull();
+        // Demo notifications are persisted under the active persona's key
+        expect(authStore.currentPersona).toBe("super_admin");
         expect(
-          window.localStorage.getItem("demo_notifications")
+          window.localStorage.getItem("demo_notifications_super_admin")
         ).not.toBeNull();
         expect(window.localStorage.getItem("demo_documents")).not.toBeNull();
 
@@ -400,7 +407,9 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
         // Verify localStorage is cleared
         expect(window.localStorage.getItem("lastSignatureResult")).toBeNull();
-        expect(window.localStorage.getItem("demo_notifications")).toBeNull();
+        expect(
+          window.localStorage.getItem("demo_notifications_super_admin")
+        ).toBeNull();
         expect(window.localStorage.getItem("demo_documents")).toBeNull();
 
         // Verify in-memory state is back to pristine default state

@@ -47,7 +47,7 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
         tables.Should().BeEquivalentTo(
             "__ef_migrations_history", "tenants", "organizations", "people", "sites", "studies", "study_sites",
             "provenance_activities", "domain_events", "audit_entries", "audit_chain_heads", "outbox_messages",
-            "idempotency_records");
+            "idempotency_records", "audit_chain_seals");
     }
 
     /// <summary>

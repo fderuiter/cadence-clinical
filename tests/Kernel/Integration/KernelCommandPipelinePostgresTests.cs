@@ -10,6 +10,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -71,7 +72,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         await using var db = fixture.CreateContext();
         var tenant = await db.Tenants.AsNoTracking().SingleAsync(t => t.Id == command.TenantId, ct);
         tenant.CreatedBy.Should().Be(KernelPostgresFixture.ActorId);
-        tenant.CreatedAt.Should().Be(KernelCommandPipeline.TruncateToMicroseconds(fixture.Clock.UtcNow).UtcDateTime);
+        tenant.CreatedAt.Should().Be(KernelTimestamps.ToStoredPrecision(fixture.Clock.UtcNow).UtcDateTime);
         tenant.ReasonForChange.Should().Be(Reason);
         tenant.VersionIndex.Should().Be(1);
 
@@ -330,7 +331,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     }
 
     /// <summary>
-    /// Validates spec §5.3 item 2: the audit, event, provenance and idempotency tables reject UPDATE, DELETE and
+    /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency and seal tables reject UPDATE, DELETE and
     /// TRUNCATE in the database itself (SQLSTATE KA001).
     /// </summary>
     [Theory(DisplayName = "InsertOnlyTables_RejectUpdateDeleteAndTruncate")]
@@ -340,6 +341,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         (await fixture.Sender.SendAsync(NewTenant(), cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        await fixture.AuditChainSealer.SealAllAsync(ct);
 
         foreach (var statement in new[]
         {
@@ -427,7 +429,7 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
             command,
             nameof(ProvisionTenant),
             Actor.Person(KernelPostgresFixture.ActorId),
-            KernelCommandPipeline.TruncateToMicroseconds(fixture.Clock.UtcNow),
+            KernelTimestamps.ToStoredPrecision(fixture.Clock.UtcNow),
             Guid.CreateVersion7(),
             new CommandMetadata(Guid.CreateVersion7()),
             new string('0', 64));

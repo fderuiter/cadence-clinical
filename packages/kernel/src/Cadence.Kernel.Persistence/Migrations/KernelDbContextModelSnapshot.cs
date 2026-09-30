@@ -409,6 +409,45 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.ToTable("audit_chain_heads", "kernel");
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Persistence.Commands.AuditChainSeal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("hash");
+
+                    b.Property<DateTimeOffset>("SealedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sealed_at");
+
+                    b.Property<string>("SealedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("sealed_by");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("audit_chain_seals", "kernel");
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Persistence.Commands.AuditEntryRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -621,6 +660,15 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("event_id");
 
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -638,6 +686,9 @@ namespace Cadence.Kernel.Persistence.Migrations
 
                     b.HasIndex("EventId")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "EnqueuedAt")
+                        .HasFilter("dispatched_at IS NULL");
 
                     b.ToTable("outbox_messages", "kernel");
                 });

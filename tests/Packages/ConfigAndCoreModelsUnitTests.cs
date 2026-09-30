@@ -47,9 +47,6 @@ public class ConfigAndCoreModelsUnitTests
         options.RedisPort.Should().Be(6379);
         options.RedisPassword.Should().BeNull();
         options.RedisUrl.Should().BeNull();
-        options.Neo4jUri.Should().Be("bolt://localhost:7687");
-        options.Neo4jUser.Should().Be("neo4j");
-        options.Neo4jPassword.Should().BeNull();
     }
 
     [Fact]

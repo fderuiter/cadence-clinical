@@ -114,7 +114,7 @@ public class BitemporalPersistenceTests
     /// Validates the K-TIME-1/K-TIME-2 guard DDL: tenant first in a deferred GiST exclusion, row and truncate triggers,
     /// and refusal of identifiers that are not plain snake_case.
     /// </summary>
-    [Fact(DisplayName = "BitemporalSql_Guards_ExcludeOverlapsPerTenantAndKey_AndRejectUnsafeIdentifiers")] // pragma: allowlist secret
+    [Fact(DisplayName = "BitemporalSql_Guards_ExcludeOverlapsPerTenantAndKey_AndRejectUnsafeIdentifiers")]
     [Trait("Category", "Unit")]
     public void BitemporalSqlGuardsExcludeOverlapsPerTenantAndKeyAndRejectUnsafeIdentifiers()
     {
