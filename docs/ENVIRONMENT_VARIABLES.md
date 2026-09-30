@@ -19,6 +19,7 @@ fallback credentials in any environment, Development included (ADR-2260).
 | `ASPNETCORE_ENVIRONMENT` | every service (ASP.NET Core host); `packages/cli/src/Services/DatabaseResetService.cs:123` | `Production` | no |
 | `CADENCE_ENV` | `packages/cli/src/Services/DatabaseResetService.cs:122` (refuses `db reset` in Production) | `Development` | no |
 | `ENVIRONMENT` | `packages/cli/src/Services/DatabaseResetService.cs:124` | `Development` | no |
+| `CADENCE_TRUSTED_PROXIES` | every service (`packages/telemetry/src/CadenceHttpHardening.cs`, ADR-2491) | none; only loopback is trusted | set it behind a proxy. Comma-separated IP addresses or CIDR ranges of the front proxy and gateway. `X-Forwarded-For` and `X-Forwarded-Proto` from any other sender are ignored, and an entry that is not an address or range fails startup |
 
 ## Database
 
@@ -69,6 +70,12 @@ Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClu
 | `GATEWAY_PROXY_TIMEOUT_SECONDS` | 30 | A proxied request fails with 504 once its service sends nothing for this long. |
 | `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | 10 | How often the gateway probes each service's `/healthz/ready`. Two failures in a row make the gateway answer 503 for that service until a probe succeeds. |
 | `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS` | 5 | How long one readiness probe may take before it counts as failed. |
+
+Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-2491). It must be a positive number; the gateway refuses to start otherwise.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `GATEWAY_RATE_LIMIT_PER_MINUTE` | 600 | Requests each caller may send per one-minute window, counted by token subject, or by client address for unauthenticated requests. Over the limit the gateway answers 429 with `Retry-After`. Health probes are not limited. |
 
 ## Authentication and audit
 

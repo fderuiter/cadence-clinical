@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -131,6 +132,15 @@ public static partial class CadenceTelemetryExtensions
 
         builder.AddCadenceLogging();
         builder.AddCadenceTelemetry();
+
+        // Don't advertise the server software, honour X-Forwarded-* only from the configured proxies, and
+        // tell browsers to stay on HTTPS (sent only on HTTPS responses outside Development).
+        builder.WebHost.ConfigureKestrel(kestrel => kestrel.AddServerHeader = false);
+        string? trustedProxies = builder.Configuration[CadenceHttpHardening.TrustedProxiesKey];
+        CadenceHttpHardening.ConfigureForwardedHeaders(new ForwardedHeadersOptions(), trustedProxies); // fail at startup on a bad entry
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            CadenceHttpHardening.ConfigureForwardedHeaders(options, trustedProxies));
+        builder.Services.AddHsts(options => options.MaxAge = CadenceHttpHardening.HstsMaxAge);
         builder.Services.AddHealthChecks();
         if (configureProblemDetails != null)
         {
@@ -185,6 +195,12 @@ public static partial class CadenceTelemetryExtensions
     public static WebApplication UseCadenceWebDefaults(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
+
+        app.UseForwardedHeaders();
+        if (!app.Environment.IsDevelopment())
+        {
+            app.UseHsts();
+        }
 
         app.UseExceptionHandler();
         app.UseCadenceTraceparent();
