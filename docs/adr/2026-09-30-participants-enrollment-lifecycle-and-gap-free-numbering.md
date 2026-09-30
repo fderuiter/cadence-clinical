@@ -183,3 +183,7 @@ withdrawal is proven, and how the database enforces the lifecycle.
     - tenant isolation of reads, changes, screenings, numbering and signatures;
     - the trigger, the append-only status rows and the exclusion constraint refusing forbidden changes for the
       superuser.
+  - `KernelCommandPipelinePostgresTests`, on the advisory lock itself: asking again for the same aggregate is a
+    no-op and a second aggregate is refused; a second command waits until the holder is disposed and then holds the
+    lock; the same id in another tenant or under another aggregate type does not wait; the key differs by tenant,
+    type and id.
