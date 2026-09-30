@@ -1072,6 +1072,8 @@ _Avoid_: Disconnected single-analyte lab flags missing multi-parameter DILI tria
 A structured temporal boundary model defining permissible before ($w_b$) and after ($w_a$) calendar day offsets around a target protocol visit day (e.g. Day $28 [-3, +5]$ days), outputting deterministic deviation classifications (`WITHIN_WINDOW`, `EARLY_VISIT`, `LATE_VISIT`, `OUT_OF_WINDOW_MAJOR`, `MISSED_VISIT`).
 _Avoid_: Symmetric window approximations or untracked protocol visit deviations
 
+> Replaced by ADR-2507. `ExpectedSchedule.Assess` measures an actual visit as early, in window or late, with the days outside the window; how important a deviation is, is a Quality rule, and a missed visit is a closed window with no actual date.
+
 ### Cycle-Based Template Expansion
 
 A clinical protocol scheduling pattern in the SoA Vector Timeline Engine that generates repeating encounter sequences across oncology cycles (e.g. Q3W Cycles 1-6 with Day 1, Day 8, Day 15 visits) from a single parameterized template definition without manual visit duplicating.

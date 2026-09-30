@@ -658,6 +658,9 @@ clock and stores nothing.
   `VisitWindowStatus` at `asOf`. Pass site-calendar dates.
 - `DateOfStudyDay(referenceStart, day)` uses the SDTM `--DY` convention: day 1 is the reference start, day -1 the
   day before, and a day-0 timing is day 1.
+- `Assess(expectedVisit, actualDate)` measures a visit that happened: calendar days from the target, `Early`,
+  `InWindow` or `Late`, and days outside the window (ADR-2507). It has no severity; the study's Quality rules decide
+  how important an out-of-window visit is.
 
 ## Indicators and the study Pulse (ADR-2488)
 

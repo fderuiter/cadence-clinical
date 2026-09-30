@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K029 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K032 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -49,10 +49,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K027 | Grant-backed node visibility | [ADR-2457](2026-09-30-grant-backed-node-visibility.md) |
 | K028 | Mapping specifications as governed concept-to-variable maps | [ADR-2463](2026-09-30-mapping-specifications-as-governed-concept-to-variable-maps.md) |
 | K029 | IdentityVault | [ADR-2458](2026-09-30-identity-vault.md) |
+| K032 | Visit timing, anchored visits and cycles on the expected schedule | [ADR-2507](2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K029)
+### 0. Clinical Kernel (K001–K032)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -504,6 +505,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2504: The Tripartite Form Definition Is Not Carried Forward](2026-09-30-the-tripartite-form-definition-is-not-carried-forward.md) (2026-09-30)
 - [ADR-2505: Recording Evidence Goes to Controlled Object Storage, Not Google Drive](2026-09-30-recording-evidence-goes-to-controlled-object-storage.md) (2026-09-30)
 - [ADR-2506: The engine_core Rule AST Is Superseded by the One Rule Language](2026-09-30-the-engine-core-rule-ast-is-superseded-by-the-one-rule-language.md) (2026-09-30)
+- [ADR-2507: Visit Timing, Anchored Visits and Cycles on the Expected Schedule](2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md) (2026-09-30)
 - [ADR-2510: Endpoint Permissions from the Permission Matrix](2026-09-30-endpoint-permissions-from-the-permission-matrix.md) (2026-09-30)
 - [ADR-2511: Template Render Routes Need a Permission](2026-09-30-template-render-routes-need-a-permission.md) (2026-09-30)
 - [ADR-2512: Security and Compliance Take Time From IClock](2026-09-30-security-and-compliance-take-time-from-iclock.md) (2026-09-30)
