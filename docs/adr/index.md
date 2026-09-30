@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K018 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K019 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -38,10 +38,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K016 | Tenant-scoped search over the source tables | [ADR-2484](2026-09-30-tenant-scoped-search-over-source-tables.md) |
 | K017 | Participants, enrollment lifecycle and gap-free numbering | [ADR-2453](2026-09-30-participants-enrollment-lifecycle-and-gap-free-numbering.md) |
 | K018 | Rule expression language, rule-pack format and `IRuleEvaluator` port | [ADR-2461](2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md) |
+| K019 | Reader-facing activity stream projection | [ADR-2485](2026-09-30-reader-facing-activity-stream-projection.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K018)
+### 0. Clinical Kernel (K001–K019)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -65,6 +66,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2482: Explanation Model Produced by the Rule Owner](2026-09-30-explanation-model-produced-by-the-rule-owner.md) (2026-09-30)
 - [ADR-2483: Dry-Run Authorization and the Command Catalogue](2026-09-30-dry-run-authorization-and-command-catalogue.md) (2026-09-30)
 - [ADR-2484: Tenant-Scoped Search over the Source Tables](2026-09-30-tenant-scoped-search-over-source-tables.md) (2026-09-30)
+- [ADR-2485: Reader-Facing Activity Stream Projection](2026-09-30-reader-facing-activity-stream-projection.md) (2026-09-30)
 
 ### 1. Core Platform & Execution Engine
 

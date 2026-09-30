@@ -115,6 +115,12 @@ The public reference to any kernel object: `kind:id@version`, for example `study
 
 Finding kernel objects by code or title within one tenant (ADR-2484): studies, sites, organizations, concepts, terminology codes, standards and library items. Results are NodeRefs. Search reads the source tables directly under the tenant's Row-Level Security, so it never shows another tenant's data or anything deleted, and never searches identity content without the reveal capability.
 
+### Activity stream
+
+What happened in a scope (a study, a site, a protocol version or the whole tenant), newest first, filtered by event family, actor and time (ADR-2485). It is a projection of the kernel's domain events for people, separate from the integration events other systems consume, and it carries no clinical values. An entry about something the reader may not see, such as a blinded record, stays in the stream marked as hidden with the reason, so the stream never silently shortens.
+
+_Avoid_: audit trail (the audit trail is the tamper-evident record for inspection; the activity stream is a reader's view), feed, notifications
+
 ### Capability and dry run (CanI)
 
 A capability is a `resource.action` token with a verb class (Read, Propose, Execute, Approve), for example `concept.revise`. Every kernel command declares the capability it needs and the object it is checked against. A dry run, `CanI(capability, object)`, asks the kernel whether the signed-in actor could act without acting; it gets exactly the decision the command would get, and is recorded in the access log rather than the audit trail (ADR-2483). The command catalogue lists the commands offered on an object with those decisions, which the command palette renders.

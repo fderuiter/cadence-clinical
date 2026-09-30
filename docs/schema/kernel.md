@@ -6,6 +6,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 
 | Table | Entity | Columns |
 | --- | --- | --- |
+| [`kernel.activity_entries`](#kernelactivity_entries) | `ActivityEntryRecord` | 11 |
 | [`kernel.attestations`](#kernelattestations) | `Attestation` | 15 |
 | [`kernel.audit_chain_heads`](#kernelaudit_chain_heads) | `AuditChainHead` | 3 |
 | [`kernel.audit_chain_seals`](#kernelaudit_chain_seals) | `AuditChainSeal` | 6 |
@@ -40,6 +41,33 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 10 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 8 |
+
+## kernel.activity_entries
+
+Entity: `ActivityEntryRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `event_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `actor_id` | `character varying(255)` | no |  |  |
+| `correlation_id` | `uuid` | no |  |  |
+| `family` | `character varying(32)` | no |  |  |
+| `occurred_valid` | `timestamp with time zone` | yes |  |  |
+| `recorded` | `timestamp with time zone` | no |  |  |
+| `scope` | `text[]` | no |  |  |
+| `subject` | `character varying(128)` | yes |  |  |
+| `subject_kind` | `character varying(48)` | yes |  |  |
+| `type` | `character varying(128)` | no |  |  |
+
+Foreign keys:
+
+- `FK_activity_entries_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `IX_activity_entries_scope`: (`scope`)
+- `IX_activity_entries_tenant_id_recorded_event_id`: (`tenant_id`, `recorded`, `event_id`)
 
 ## kernel.attestations
 

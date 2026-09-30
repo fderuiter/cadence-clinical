@@ -118,8 +118,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     /// <summary>
     /// Opens a window in which <c>SaveChanges</c> is allowed. Only the command pipeline's transaction, the outbox relay
-    /// (delivery bookkeeping only) and test seeding open one: every other write is refused, so no kernel state changes
-    /// without its provenance, event and audit link (K-TX-2).
+    /// (delivery bookkeeping only), the activity projector (a derived read model, ADR-2485) and test seeding open one:
+    /// every other write is refused, so no kernel state changes without its provenance, event and audit link (K-TX-2).
     /// </summary>
     internal IDisposable PermitPipelineWrites()
     {
