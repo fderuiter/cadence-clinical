@@ -18,6 +18,9 @@
   `BannedSymbols.txt` bans `DateTime.Now`, `DateTime.UtcNow`, `DateTimeOffset.Now` and `DateTimeOffset.UtcNow`.
 - The analyzer is enabled for every project under `packages/kernel/` through `packages/kernel/Directory.Build.props`.
   Because `TreatWarningsAsErrors` is on, a violation there fails the build with RS0030.
+- The analyzer also covers every test project under `tests/` through `tests/Directory.Build.props` (#4913). Tests
+  use `FakeClock`, or `SystemClock.Instance` where the code under test checks the real clock
+  ([TESTING.md, Time in tests](../TESTING.md#time-in-tests)).
 
 ## What is left
 
