@@ -201,10 +201,10 @@ namespace Cadence.Kernel.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId");
-
                     b.HasIndex("InstitutionId", "SiteCode")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "InstitutionId");
 
                     b.ToTable("sites", "kernel");
                 });
@@ -268,7 +268,7 @@ namespace Cadence.Kernel.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SponsorId");
+                    b.HasIndex("TenantId", "SponsorId");
 
                     b.HasIndex("TenantId", "StudyCode")
                         .IsUnique();
@@ -327,12 +327,14 @@ namespace Cadence.Kernel.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SiteId");
-
-                    b.HasIndex("TenantId");
+                    b.HasAlternateKey("TenantId", "Id");
 
                     b.HasIndex("StudyId", "SiteId")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "SiteId");
+
+                    b.HasIndex("TenantId", "StudyId");
 
                     b.ToTable("study_sites", "kernel");
                 });
@@ -386,6 +388,57 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("tenants", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.TenantMembership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("person_id");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("TenantId", "PersonId")
+                        .IsUnique();
+
+                    b.ToTable("tenant_memberships", "kernel");
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Persistence.Commands.AuditChainHead", b =>
@@ -782,45 +835,64 @@ namespace Cadence.Kernel.Persistence.Migrations
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Site", b =>
                 {
-                    b.HasOne("Cadence.Kernel.Domain.Entities.Organization", null)
-                        .WithMany()
-                        .HasForeignKey("InstitutionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "InstitutionId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Study", b =>
                 {
-                    b.HasOne("Cadence.Kernel.Domain.Entities.Organization", null)
-                        .WithMany()
-                        .HasForeignKey("SponsorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "SponsorId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.StudySite", b =>
                 {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Cadence.Kernel.Domain.Entities.Site", null)
                         .WithMany()
-                        .HasForeignKey("SiteId")
+                        .HasForeignKey("TenantId", "SiteId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Cadence.Kernel.Domain.Entities.Study", null)
                         .WithMany()
-                        .HasForeignKey("StudyId")
+                        .HasForeignKey("TenantId", "StudyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.TenantMembership", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Person", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

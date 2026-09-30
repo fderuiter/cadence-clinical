@@ -10,6 +10,7 @@ As formalized in [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-mo
 - **Clinical Truth**: Observations, Assertions, Sources, Provenance
 - **Authority**: Actors, Capabilities, Delegations, Attestations (21 CFR Part 11 electronic signatures)
 - **Temporal Integrity**: PostgreSQL native bitemporal intervals (`valid_period`, `recorded_period`) via `tstzrange` and `gist` (ADR-2246)
+- **Tenant Isolation**: `tenant_id` on every tenant-scoped table, composite `(tenant_id, id)` foreign keys and PostgreSQL Row-Level Security enabled and forced on every kernel table (ADR-2250)
 - **Audit Ledger**: one SHA-256 hash chain per tenant over insert-only audit entries, written with provenance, events and outbox rows in each command's transaction (ADR-2449)
 
 ## Assemblies
@@ -19,10 +20,41 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Architecture/Kern
 - `Cadence.Kernel.Abstractions`: strongly-typed UUIDv7 IDs (`TenantId`, `StudyId`, `ParticipantId`, …), `IClock`, serialization contexts, and the command contracts (`ICommand<T>`, `IKernelCommandSender`, `Actor`, `KernelErrors`, event records). No EF Core, ASP.NET Core or rendering. Application modules reference only this assembly (K-XS-2).
 - `Cadence.Kernel.Domain`: kernel aggregates, state machines and temporal logic. Pure: no EF Core, ASP.NET Core or Npgsql.
 - `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and command handlers. Policy evaluation arrives with #4781.
-- `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`) and migrations. Referenced only by `Cadence.Kernel.Api` and the host.
+- `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host.
 - `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to.
 
 Rendering lives in `packages/templating` (`Cadence.Templating`), outside the kernel.
+
+## Tenant isolation (ADR-2250)
+
+PostgreSQL keeps tenants apart, not application code (K-ID-1, K-ID-2):
+
+- **Composite keys.** Every tenant-scoped table has `tenant_id NOT NULL` and a unique `(tenant_id, id)` key, and every
+  reference between tenant-scoped tables is a composite foreign key `(tenant_id, x_id) → (tenant_id, id)`. A row that
+  names another tenant's row fails the constraint. Map new references with
+  `HasForeignKey(x => new { x.TenantId, x.OtherId }).HasPrincipalKey(x => new { x.TenantId, x.Id })`;
+  `KernelDbContextModelTests` fails on a plain one.
+- **Row-Level Security, forced.** Each table has one policy comparing its tenant with `kernel.current_tenant_id()`,
+  the value of the `cadence.tenant_id` setting. `FORCE` binds the table owner too. With no tenant set a connection
+  sees no rows and can insert none.
+- **One place sets the tenant.** `KernelTenantConnectionInterceptor` sets `cadence.tenant_id` when a kernel context
+  opens a connection and clears it on close. Contexts come from `KernelTenantDbContextFactory.Create(tenant)`; the
+  pipeline binds each command's context to the command's tenant. A context with no tenant cannot connect.
+- **People (K-ID-4).** `people` is tenant-independent and has no `tenant_id`. A tenant sees a person only through its
+  own `tenant_memberships` row.
+- **Jobs that visit every tenant** (outbox relay, verify-and-seal) list tenant ids with the
+  `kernel.tenant_ids()` directory function, then work through a connection scoped to each tenant in turn. The
+  function returns ids only and is the only way to read across tenants.
+
+A new kernel table needs `migrationBuilder.EnableTenantIsolation(KernelDbContext.Schema, "<table>")` in the
+migration that creates it. `KernelTenantIsolationPostgresTests` fails for any kernel table without `tenant_id`, forced
+RLS or a policy.
+
+**Deployment roles.** Run migrations as the schema owner with `KernelDatabase.MigrateAsync(ownerConnectionString)`.
+Connect the application with a separate login role that is not the owner and has no `BYPASSRLS`, and grant it
+`KernelDatabase.GrantAppRoleSql("cadence_app")` after every migration: read, insert and update on kernel tables,
+no update on insert-only tables, no delete anywhere, and the tenant directory. A superuser bypasses RLS entirely, so
+never connect the application as one.
 
 ## Bitemporal tables (ADR-2246)
 
@@ -75,8 +107,8 @@ Insert-only tables (these, plus `audit_chain_seals`) reject `UPDATE`, `DELETE` a
 
 `AddKernelBackgroundJobs()` runs two jobs in the host (call it in exactly one host per deployment):
 
-- **Outbox relay** (`KernelOutboxRelay`): delivers each event's envelope to the host's `IKernelEventPublisher`, at
-  least once, oldest first per tenant. A failed delivery is retried after 2^attempts seconds (capped at one hour)
+- **Outbox relay** (`KernelOutboxRelay`): visits each tenant in turn and delivers up to `RelayBatchSize` of its
+  events' envelopes to the host's `IKernelEventPublisher`, at least once, oldest first per tenant. A failed delivery is retried after 2^attempts seconds (capped at one hour)
   with the error in `outbox_messages.last_error`, and holds back only its own tenant's later events. Subscribers
   deduplicate on `EventId`.
 - **Verify and seal** (`KernelAuditChainSealer`, hourly): verifies every tenant's chain and seals each intact one at
@@ -96,7 +128,7 @@ To add a command:
 3. Register the handler in `AddKernelCommandPipeline()`.
 4. Test it through the pipeline in `tests/Kernel/Integration` (see `KernelCommandPipelinePostgresTests`).
 
-A host registers `AddKernelPersistence(connectionString)`, `AddKernelCommandPipeline()`, an `IClock`, an
+A host registers `AddKernelPersistence(appRoleConnectionString)`, `AddKernelCommandPipeline()`, an `IClock`, an
 `ICurrentActor`, an `IAuthorizer` and logging; the container fails to resolve the sender if any is missing. The host
 that runs `AddKernelBackgroundJobs()` also registers an `IKernelEventPublisher`.
 
@@ -116,6 +148,9 @@ CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Databa
 ```
 
 The fixture (`tests/Kernel/Integration/KernelPostgresFixture.cs`) creates a throwaway database, applies the kernel
-migrations, wires the command pipeline as a host does (with a settable actor and authorizer), and drops the database
-afterwards. `SeedAsync` inserts rows directly for constraint tests; everything else goes through commands. Without `CADENCE_TEST_POSTGRES` these tests are
+migrations as the superuser, creates an application login role with `KernelDatabase.GrantAppRoleSql`, wires the
+command pipeline for that role as a host does (with a settable actor and authorizer), and drops the database and role
+afterwards, so every pipeline test runs under Row-Level Security. `CreateContext(tenant)` reads as that role;
+`CreateAdminContext()` reads every tenant as the superuser. `SeedAsync` inserts rows directly for constraint tests;
+everything else goes through commands. Without `CADENCE_TEST_POSTGRES` these tests are
 reported as skipped, never as passed.

@@ -20,10 +20,8 @@ internal sealed class KernelDbContextDesignTimeFactory : IDesignTimeDbContextFac
             ? configured
             : DefaultDesignTimeConnectionString;
 
-        var options = new DbContextOptionsBuilder<KernelDbContext>()
-            .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__ef_migrations_history", KernelDbContext.Schema))
-            .Options;
-
-        return new KernelDbContext(options);
+        var options = new DbContextOptionsBuilder<KernelDbContext>();
+        KernelDatabase.UseKernelNpgsql(options, connectionString);
+        return new KernelDbContext(options.Options);
     }
 }

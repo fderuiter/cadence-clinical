@@ -13,10 +13,10 @@ namespace Cadence.Kernel.Persistence.Background;
 /// <summary>Schedules for the kernel's background jobs.</summary>
 public sealed class KernelBackgroundOptions
 {
-    /// <summary>How long the relay waits after a pass that found fewer than <see cref="RelayBatchSize"/> messages.</summary>
+    /// <summary>How long the relay waits after a pass in which no tenant filled its batch.</summary>
     public TimeSpan RelayInterval { get; set; } = TimeSpan.FromSeconds(2);
 
-    /// <summary>Messages claimed per relay pass.</summary>
+    /// <summary>Messages claimed per tenant in one relay pass, so a busy tenant cannot starve the others.</summary>
     public int RelayBatchSize { get; set; } = 100;
 
     /// <summary>How often every tenant's audit chain is verified and sealed.</summary>
@@ -37,7 +37,7 @@ internal sealed partial class KernelOutboxRelayService(
             try
             {
                 var result = await relay.RelayBatchAsync(options.RelayBatchSize, stoppingToken).ConfigureAwait(false);
-                backlog = result.Claimed == options.RelayBatchSize && result.Failed == 0;
+                backlog = result.MoreDue;
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {

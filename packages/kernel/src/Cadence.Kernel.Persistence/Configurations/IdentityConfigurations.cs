@@ -7,8 +7,10 @@ namespace Cadence.Kernel.Persistence.Configurations;
 
 /// <summary>
 /// EF Core mapping for <c>kernel.tenants</c>. The identity and ownership tables (spec §3) in this file keep
-/// human-facing codes unique within the scope spec §3.2 states; tenant isolation with composite keys and RLS is
-/// added by #4780 (ADR-2250).
+/// human-facing codes unique within the scope spec §3.2 states. Tenant isolation (K-ID-1, ADR-2250): every
+/// tenant-scoped table also has a unique <c>(tenant_id, id)</c> key, and every reference between tenant-scoped tables
+/// is a composite <c>(tenant_id, x_id)</c> foreign key, so a row can never point at another tenant's row. Row-Level
+/// Security is added by the <c>TenantIsolation</c> migration (<see cref="Tenancy.TenantIsolationSql"/>).
 /// @req:PRD-SYS-053
 /// </summary>
 internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
@@ -35,12 +37,17 @@ internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organ
         builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
         builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
         builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
         AuditColumns.Configure(builder);
     }
 }
 
-/// <summary>EF Core mapping for <c>kernel.people</c> (tenant-independent identity, K-ID-4). @req:PRD-SYS-053</summary>
+/// <summary>
+/// EF Core mapping for <c>kernel.people</c>: tenant-independent identity (K-ID-4), the one kernel table without a
+/// <c>tenant_id</c>. Its row-level policy shows a person only to tenants the person has a
+/// <see cref="TenantMembership"/> in. @req:PRD-SYS-053
+/// </summary>
 internal sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
 {
     public void Configure(EntityTypeBuilder<Person> builder)
@@ -66,8 +73,11 @@ internal sealed class SiteConfiguration : IEntityTypeConfiguration<Site>
         builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
         builder.Property(x => x.Country).HasMaxLength(2).IsRequired();
         builder.HasIndex(x => new { x.InstitutionId, x.SiteCode }).IsUnique();
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
         builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne<Organization>().WithMany().HasForeignKey(x => x.InstitutionId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Organization>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.InstitutionId }).HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
         AuditColumns.Configure(builder);
     }
 }
@@ -83,8 +93,11 @@ internal sealed class StudyConfiguration : IEntityTypeConfiguration<Study>
         builder.Property(x => x.Title).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.Phase).HasMaxLength(32).IsRequired();
         builder.HasIndex(x => new { x.TenantId, x.StudyCode }).IsUnique();
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
         builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne<Organization>().WithMany().HasForeignKey(x => x.SponsorId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Organization>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.SponsorId }).HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
         AuditColumns.Configure(builder);
     }
 }
@@ -98,9 +111,33 @@ internal sealed class StudySiteConfiguration : IEntityTypeConfiguration<StudySit
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Status).HasMaxLength(32).IsRequired();
         builder.HasIndex(x => new { x.StudyId, x.SiteId }).IsUnique();
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
         builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne<Study>().WithMany().HasForeignKey(x => x.StudyId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne<Site>().WithMany().HasForeignKey(x => x.SiteId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Study>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.StudyId }).HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Site>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.SiteId }).HasPrincipalKey(x => new { x.TenantId, x.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        AuditColumns.Configure(builder);
+    }
+}
+
+/// <summary>
+/// EF Core mapping for <c>kernel.tenant_memberships</c>: one row per person per tenant (K-ID-4). The person reference
+/// is a plain foreign key because <c>people</c> is tenant-independent. @req:PRD-SYS-053
+/// </summary>
+internal sealed class TenantMembershipConfiguration : IEntityTypeConfiguration<TenantMembership>
+{
+    public void Configure(EntityTypeBuilder<TenantMembership> builder)
+    {
+        builder.ToTable("tenant_memberships");
+        builder.HasKey(x => x.Id);
+        builder.HasIndex(x => new { x.TenantId, x.PersonId }).IsUnique();
+        builder.HasIndex(x => x.PersonId);
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Person>().WithMany().HasForeignKey(x => x.PersonId).OnDelete(DeleteBehavior.Restrict);
         AuditColumns.Configure(builder);
     }
 }

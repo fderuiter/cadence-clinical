@@ -29,6 +29,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<Person> People => Set<Person>();
 
+    public DbSet<TenantMembership> TenantMemberships => Set<TenantMembership>();
+
     public DbSet<Site> Sites => Set<Site>();
 
     public DbSet<Study> Studies => Set<Study>();
@@ -50,6 +52,41 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
     private int _permittedWriters;
+
+    /// <summary>
+    /// The tenant every connection this context opens is scoped to (K-ID-2). Set once, before first use, by
+    /// <see cref="Tenancy.KernelTenantDbContextFactory"/>; <see cref="Tenancy.KernelTenantConnectionInterceptor"/>
+    /// refuses to open a connection for a context that has neither a tenant nor <see cref="IsTenantDirectory"/>.
+    /// </summary>
+    internal TenantId? Tenant { get; private set; }
+
+    /// <summary>True for a context that may only list tenant ids; it sees no tenant's rows.</summary>
+    internal bool IsTenantDirectory { get; private set; }
+
+    internal void BindTenant(TenantId tenant)
+    {
+        if (tenant.IsEmpty)
+        {
+            throw new ArgumentException("K-ID-2: a kernel context needs a tenant.", nameof(tenant));
+        }
+
+        if (Tenant is not null || IsTenantDirectory)
+        {
+            throw new InvalidOperationException("K-ID-2: a kernel context is bound to one tenant, once.");
+        }
+
+        Tenant = tenant;
+    }
+
+    internal void BindTenantDirectory()
+    {
+        if (Tenant is not null || IsTenantDirectory)
+        {
+            throw new InvalidOperationException("K-ID-2: a kernel context is bound to one tenant, once.");
+        }
+
+        IsTenantDirectory = true;
+    }
 
     /// <summary>
     /// Opens a window in which <c>SaveChanges</c> is allowed. Only the command pipeline's transaction, the outbox relay
