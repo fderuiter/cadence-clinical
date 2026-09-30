@@ -105,3 +105,13 @@ public class ConceptMappingIdValueConverter() : ValueConverter<ConceptMappingId,
     id => id.Value,
     guid => new ConceptMappingId(guid)
 );
+
+public class RoleIdValueConverter() : ValueConverter<RoleId, Guid>(
+    id => id.Value,
+    guid => new RoleId(guid)
+);
+
+public class GrantIdValueConverter() : ValueConverter<GrantId, Guid>(
+    id => id.Value,
+    guid => new GrantId(guid)
+);

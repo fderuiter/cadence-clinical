@@ -47,6 +47,16 @@ public sealed partial record Capability
 
     public VerbClass VerbClass { get; }
 
+    /// <summary>
+    /// True when <paramref name="token"/> reveals blinded information: a segment that starts with <c>unblind</c>, such as
+    /// <c>enrollment.unblind</c>. Such capabilities are granted one by one and never bundled in a role (K-AUTH-4).
+    /// </summary>
+    public static bool IsUnblinding(string token)
+    {
+        ArgumentNullException.ThrowIfNull(token);
+        return Array.Exists(token.Split('.'), segment => segment.StartsWith("unblind", StringComparison.Ordinal));
+    }
+
     /// <summary>True when <paramref name="token"/> follows the capability token grammar.</summary>
     public static bool IsWellFormed(string? token) => token is not null && token.Length <= 96 && TokenPattern().IsMatch(token);
 

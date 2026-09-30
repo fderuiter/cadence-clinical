@@ -2402,3 +2402,179 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    ALTER TABLE kernel.provenance_activities ADD "authorization" jsonb;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    CREATE TABLE kernel.roles (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        code character varying(32) NOT NULL,
+        name character varying(200) NOT NULL,
+        capabilities text[] NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_roles" PRIMARY KEY (id),
+        CONSTRAINT "AK_roles_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_roles_capabilities CHECK (cardinality(capabilities) > 0),
+        CONSTRAINT "FK_roles_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    CREATE TABLE kernel.grants (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        grantee_kind character varying(32) NOT NULL,
+        grantee_id character varying(256) NOT NULL,
+        capability character varying(96),
+        role_id uuid,
+        scope_level character varying(16) NOT NULL,
+        scope_target_id uuid,
+        scope_country character varying(2),
+        with_grant_option boolean NOT NULL,
+        parent_grant_id uuid,
+        issued_by character varying(300) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_grants" PRIMARY KEY (id),
+        CONSTRAINT "AK_grants_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_grants_scope CHECK ((scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL) OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL) OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')),
+        CONSTRAINT ck_grants_target CHECK ((capability IS NULL) <> (role_id IS NULL)),
+        CONSTRAINT "FK_grants_grants_tenant_id_parent_grant_id" FOREIGN KEY (tenant_id, parent_grant_id) REFERENCES kernel.grants (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_grants_roles_tenant_id_role_id" FOREIGN KEY (tenant_id, role_id) REFERENCES kernel.roles (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_grants_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    CREATE TABLE kernel.grant_periods (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        grant_id uuid NOT NULL,
+        recorded_period tstzrange NOT NULL,
+        valid_period tstzrange NOT NULL,
+        CONSTRAINT "PK_grant_periods" PRIMARY KEY (id),
+        CONSTRAINT "FK_grant_periods_grants_tenant_id_grant_id" FOREIGN KEY (tenant_id, grant_id) REFERENCES kernel.grants (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    CREATE INDEX "IX_grant_periods_tenant_id_grant_id" ON kernel.grant_periods (tenant_id, grant_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    CREATE INDEX "IX_grants_tenant_id_grantee_kind_grantee_id" ON kernel.grants (tenant_id, grantee_kind, grantee_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    CREATE INDEX "IX_grants_tenant_id_parent_grant_id" ON kernel.grants (tenant_id, parent_grant_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    CREATE INDEX "IX_grants_tenant_id_role_id" ON kernel.grants (tenant_id, role_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    CREATE UNIQUE INDEX "IX_roles_tenant_id_code" ON kernel.roles (tenant_id, code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    ALTER TABLE "kernel"."grant_periods" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."grant_periods" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."grant_periods"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    ALTER TABLE "kernel"."grants" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."grants" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."grants"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    ALTER TABLE "kernel"."roles" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."roles" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."roles"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    ALTER TABLE "kernel"."grant_periods" ADD CONSTRAINT "ex_grant_periods_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "grant_id" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_grant_periods_append_only" BEFORE UPDATE OR DELETE ON "kernel"."grant_periods"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_grant_periods_no_truncate" BEFORE TRUNCATE ON "kernel"."grant_periods"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    CREATE TRIGGER "trg_roles_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."roles"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_roles_no_truncate" BEFORE TRUNCATE ON "kernel"."roles"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930065947_GrantsRolesAndDelegation') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930065947_GrantsRolesAndDelegation', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

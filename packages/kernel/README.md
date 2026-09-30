@@ -20,7 +20,7 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Cadence.Architect
 
 - `Cadence.Kernel.Abstractions`: strongly-typed UUIDv7 IDs (`TenantId`, `StudyId`, `ParticipantId`, …), `IClock`, serialization contexts, and the command contracts (`ICommand<T>`, `IKernelCommandSender`, `Actor`, `KernelErrors`, event records). No EF Core, ASP.NET Core or rendering. Application modules reference only this assembly (K-XS-2).
 - `Cadence.Kernel.Domain`: kernel aggregates, state machines and temporal logic. Pure: no EF Core, ASP.NET Core or Npgsql.
-- `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and command handlers. Policy evaluation arrives with #4781.
+- `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and command handlers, and the authority evaluator (`AuthorityEvaluator`, ADR-2455).
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host ([apps/kernel-api](../../apps/kernel-api/README.md)).
 - `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, and the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
 - `Cadence.Standards`: reads public CDISC Library product content into a `StandardPackage` and ships checksum-verified seeds (see [its README](src/Cadence.Standards/README.md)). References only `Cadence.Kernel.Abstractions`.
@@ -356,10 +356,38 @@ public sealed record ReviseConcept(TenantId TenantId, ConceptId ConceptId, /* �
 
 `AddKernelAuthorization()` registers `KernelAuthorization` as the pipeline's `IAuthorizer` and as
 `IAuthorizationProbe`. Both turn the question into an `AuthorizationRequest` for the host's
-`IAuthorizationEvaluator` (the authority slice, #4781), so a dry run gets exactly the decision the command would.
+`IAuthorizationEvaluator`, so a dry run gets exactly the decision the command would.
 `CanIAsync(tenant, capability, resource)` answers for the current actor, and `GetCommandsAsync(tenant, resource)`
 lists the commands offered on an object with their decisions and explanations. Dry runs write nothing to the audit
 chain; they are logged as event `2483 AuthorizationDryRun`.
+
+## Grants, roles and delegation (ADR-2455)
+
+Authority is kernel evidence, not a role string. A host registers the evaluator next to the pipeline:
+
+```csharp
+services.AddKernelAuthorization();
+services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
+```
+
+- **Roles.** `DefineRole` creates an immutable, named bundle of capabilities. A role never bundles an unblinding
+  capability (K-AUTH-4).
+- **Grants.** `IssueGrant` gives an actor one capability or one role at an `AuthorityScope` (`Tenant`,
+  `Organization`, `Study`, `StudyCountry` or `StudySite`) for a validity period. `WithGrantOption` lets the holder
+  delegate.
+- **Delegation.** `DelegateGrant` issues a child grant under one the caller holds with the grant option. It is
+  refused if it exceeds the parent's capabilities, scope or validity, or if it is made to oneself.
+- **Revocation.** `RevokeGrant` supersedes the grant's current validity row and records a shortened one. Every
+  delegation under the grant stops counting.
+- **Evaluation.** `AuthorityEvaluator` permits when a grant held by the actor carries the capability (directly or
+  through its role), covers the resource's scope path and is in effect at `(at, known_at)` with every grant above
+  it. Automation agents are denied Execute and Approve. Platform operators (`svc:` accounts) hold only
+  `tenant.provision`, `grant.issue` and `role.define`, which lets them bootstrap a tenant through the pipeline.
+- **Recording.** Each decision names its conditions (`grant.active`, `grant.delegable`, `grant.delegator`,
+  `actor.platform_operator`, `actor.agent_verb`). The command's provenance activity stores them in
+  `authorization`.
+- **Tables.** `kernel.roles` is insert-only. `kernel.grant_periods` carries the bitemporal guards.
+- **Not yet:** qualifications, separation of duties, and StudySite, protocol or blinding conditions (rest of #4781).
 
 ## Search (ADR-2484)
 

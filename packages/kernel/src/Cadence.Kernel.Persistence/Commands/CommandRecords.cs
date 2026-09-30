@@ -23,6 +23,9 @@ internal sealed class ProvenanceActivityRecord
     public string? AggregateId { get; init; }
     public Guid CorrelationId { get; init; }
     public Guid? CausationId { get; init; }
+
+    /// <summary>The authorization decision as JSON: its reason and every condition with its evidence (K-AUTH-2).</summary>
+    public string? Authorization { get; init; }
 }
 
 /// <summary>A raised domain event in its §5.2 envelope. Insert-only; the outbox carries it to subscribers.</summary>
