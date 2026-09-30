@@ -13,18 +13,19 @@ search: false
 ## 1. Traceability Summary
 
 - **Total Documented Requirements (PRD):** 195
-- **Qualified (mapped tests passed):** 7
+- **Qualified (mapped tests passed):** 8
 - **Failed (a mapped test failed):** 0
 - **Not Verified (mapped tests skipped or not run):** 0
-- **Planned (no mapped tests):** 188
+- **Planned (no mapped tests):** 187
 - **Traceability Aliases (Trace and SRS IDs):** 94
 - **Unknown Requirement IDs Declared by Tests:** 0
-- **Qualified Coverage:** 3.6%
+- **Qualified Coverage:** 4.1%
 
 ## 2. Requirements with Mapped Tests
 
 | Requirement ID | Source Document | Title / Description | Mapped Test Cases | Status |
 | :--- | :--- | :--- | :--- | :--- |
+| PRD-CRF-004 | PRD | **Declarative Rule Generation & Multi-Layer Edit Checks** | `RulePackDraftedAndReleasedAtRuntimeLoadsAndEvaluates` (tests/Kernel/Integration/RulePackPostgresTests.cs) 🟢<br>`EvaluatorIsDeterministicOverGeneratedPacksAndRecords` (tests/Kernel/Rules/RulePackTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-CRF-012 | PRD | **Version Pinning and Lock Enforcement** | `ForkKeepsTheParentApprovedNumbersTheDraftAndStoresTheAmendment` (tests/Kernel/Integration/KernelProtocolVersionPostgresTests.cs) 🟢<br>`ProtocolVersionsTriggerFreezesApprovedContentForEveryDatabaseUser` (tests/Kernel/Integration/KernelProtocolVersionPostgresTests.cs) 🟢<br>`SubmitForReviewSetsTheContentHashReturnToDraftClearsIt` (tests/Kernel/ProtocolVersionTests.cs) 🟢<br>`LifecycleAllowsOnlyTheSpecifiedTransitions` (tests/Kernel/ProtocolVersionTests.cs) 🟢<br>`ForkLeavesTheParentApprovedAndStartsAnAmendedDraft` (tests/Kernel/ProtocolVersionTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-CRF-013 | PRD | **Site & Tenant Data Isolation** | `NavigationNeverCrossesTenants` (tests/Kernel/Integration/KernelNavigationPostgresTests.cs) 🟢<br>`SearchNeverReturnsAnotherTenantsObjects` (tests/Kernel/Integration/KernelSearchPostgresTests.cs) 🟢<br>`EveryKernelTableHasTenantIdAndForcedRowLevelSecurity` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`CrossTenantReadReturnsNothing` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`NoTenantCannotConnectAndSeesNothing` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`PersonIsVisibleOnlyToTenantsWithAMembership` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly` (tests/Kernel/Integration/KernelTenantIsolationPostgresTests.cs) 🟢<br>`KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys` (tests/Kernel/KernelDbContextModelTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-SUB-001 | PRD | **State Transition Matrix & Enforcements** | `NominalScenario_MatchesGoldenMaster` (tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs) 🟢<br>`EdgeCaseScenario_MatchesGoldenMaster` (tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs) 🟢<br>`ErrorScenario_MatchesExpectedStatusAndDetail` (tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs) 🟢<br>`Create_ProducesSubjectInScreeningWithSuppliedFields` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`TransitionTo_LegalTransition_UpdatesStatusAndReturnsSuccess` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`TransitionTo_IllegalTransition_LeavesStatusUnchangedAndReturnsGuardFailure` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`TransitionTo_SameState_NoOpSucceedsViaGuard` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Withdraw_AfterUnblinding_SetsWithdrawalFieldsFromClock` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Withdraw_CalledTwiceOnAlreadyWithdrawnSubject_SucceedsSilentlyAsNoOp` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`Withdraw_OnScreenFailedSubject_ReturnsFailureWithoutThrowing` (tests/Execution/Subjects/ClinicalSubjectTests.cs) 🟢<br>`AdvanceStateAsync_GivenLegalTransition_SucceedsAndPersistsNewStatus` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenForbiddenTransition_ReturnsInvalidStateTransitionAndDoesNotMutate` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenUnmappedStateString_ReturnsInvalidStateTransition_SameCodeAsForbiddenTransition` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenNeitherStatusNorState_ReturnsInvalidStateTransitionRatherThanThrowing` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenLegalTransition_WritesTransitionAuditEntryNamedForTargetState` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenSuccessfulTransitionToEnrolled_ResponseAndStoredStatusAreEnrolled` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`AdvanceStateAsync_GivenCompliantSite_TargetingEnrolled_Succeeds` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`EvaluateAndTransitionScreeningAsync_GivenEligible_TransitionsToEnrolled` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`EvaluateAndTransitionScreeningAsync_GivenIneligible_TransitionsToScreenFailed` (tests/Execution/Subjects/SubjectApplicationServiceStateTests.cs) 🟢<br>`Guard_FullTransitionMatrix_MatchesSpecGraph` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢<br>`Guard_SameStateNoOp_AlwaysSucceeds` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢<br>`Guard_NullCurrentTargetingScreening_Succeeds` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢<br>`Guard_NullCurrentTargetingNonScreening_FailsWithInvalidStateTransition` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢<br>`Guard_ReconsentRequiredFanOut_CoversEveryOtherState` (tests/Execution/Subjects/SubjectTransitionGraphTests.cs) 🟢<br>`EnrollmentTransitionsFollowTheLifecycle` (tests/Kernel/EnrollmentTests.cs) 🟢<br>`ChangeStatusRefusesIllegalMovesAndTimes` (tests/Kernel/Integration/KernelEnrollmentPostgresTests.cs) 🟢<br>`EnrollmentsDatabaseGuardsEnforceTheLifecycleForEveryDatabaseUser` (tests/Kernel/Integration/KernelEnrollmentPostgresTests.cs) 🟢 | ✅ **Qualified** |
@@ -52,7 +53,6 @@ search: false
 | PRD-CRF-001 | PRD | **CRF Authoring & Global Library Instantiation** | Sprint Roadmap |
 | PRD-CRF-002 | PRD | **Real-time Contextual Preview** | Sprint Roadmap |
 | PRD-CRF-003 | PRD | **Collaborative Workspace Review Workflow** | Sprint Roadmap |
-| PRD-CRF-004 | PRD | **Declarative Rule Generation & Multi-Layer Edit Checks** | Sprint Roadmap |
 | PRD-CRF-005 | PRD | **Simulation and Dry-Run Cycle Detection** | Sprint Roadmap |
 | PRD-CRF-006 | PRD | **CDASH, USDM, and CSV Mapping Fidelity** | Sprint Roadmap |
 | PRD-CRF-007 | PRD | **FHIR eSource Readiness & CDASH Pre-fill** | Sprint Roadmap |
@@ -306,7 +306,7 @@ Aliases report their canonical parent's state. A test tagged only with an alias 
 | `Trace-2` | `PRD-SUB-003` | Cryptographic Key Multi-Sharing & Rotation | 📋 **Scheduled via Parent** |
 | `Trace-20` | `PRD-CRF-002` | Real-time Contextual Preview | 📋 **Scheduled via Parent** |
 | `Trace-21` | `PRD-CRF-003` | Collaborative Workspace Review Workflow | 📋 **Scheduled via Parent** |
-| `Trace-22` | `PRD-CRF-004` | Declarative Rule Generation & Multi-Layer Edit Checks | 📋 **Scheduled via Parent** |
+| `Trace-22` | `PRD-CRF-004` | Declarative Rule Generation & Multi-Layer Edit Checks | ✅ **Verified via Parent** |
 | `Trace-23` | `PRD-CRF-005` | Simulation and Dry-Run Cycle Detection | 📋 **Scheduled via Parent** |
 | `Trace-24` | `PRD-CRF-006` | CDASH, USDM, and CSV Mapping Fidelity | 📋 **Scheduled via Parent** |
 | `Trace-25` | `PRD-CRF-007` | FHIR eSource Readiness & CDASH Pre-fill | 📋 **Scheduled via Parent** |
@@ -336,4 +336,4 @@ None. Every requirement ID declared by a test is defined in the PRD or SRS.
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** 29ebfc825be6f63c418a9d38c3c4387b2f0885fbbd8f5a1b286792dba52a8859
+- **Content Hash (SHA-256):** 9226d224ae4b517c74cb59243010d6f15676d9cb1c5db9bdd76fabbebb01e431

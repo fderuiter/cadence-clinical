@@ -18,19 +18,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Kernel.Application.Standards;
 
-/// <summary>
-/// Validates the content of one kind of Metadata Registry library item before it is drafted. Slices register one per
-/// kind whose content has a schema (for example rule packs, #4811); content of a kind with no validator only has to
-/// be a JSON object.
-/// </summary>
-public interface ILibraryContentValidator
-{
-    LibraryItemKind Kind { get; }
-
-    /// <summary>Every problem with <paramref name="content"/>; empty when it is valid.</summary>
-    IReadOnlyList<string> Validate(JsonElement content);
-}
-
 /// <summary>Handles <see cref="RegisterStandardVersion"/>.</summary>
 internal sealed class RegisterStandardVersionHandler(IStandardsRegistry registry) : ICommandHandler<RegisterStandardVersion, StandardVersionId>
 {

@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K017 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K018 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -37,10 +37,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K015 | Dry-run authorization and the command catalogue | [ADR-2483](2026-09-30-dry-run-authorization-and-command-catalogue.md) |
 | K016 | Tenant-scoped search over the source tables | [ADR-2484](2026-09-30-tenant-scoped-search-over-source-tables.md) |
 | K017 | Participants, enrollment lifecycle and gap-free numbering | [ADR-2453](2026-09-30-participants-enrollment-lifecycle-and-gap-free-numbering.md) |
+| K018 | Rule expression language, rule-pack format and `IRuleEvaluator` port | [ADR-2461](2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K017)
+### 0. Clinical Kernel (K001–K018)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -56,6 +57,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2452: Protocol Version Lifecycle, Content-Hash Freezing and Attested Approval](2026-09-30-protocol-version-lifecycle-content-hash-and-attested-approval.md) (2026-09-30)
 - [ADR-2453: Participants, Bitemporal Enrollment Lifecycle and Gap-Free Enrollment Numbering](2026-09-30-participants-enrollment-lifecycle-and-gap-free-numbering.md) (2026-09-30)
 - [ADR-2460: Standards Registry and Metadata Registry as Governed, Tenant-Scoped Reference Data](2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) (2026-09-30)
+- [ADR-2461: Rule Expression Language, Rule-Pack Format and the IRuleEvaluator Port](2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md) (2026-09-30)
 - [ADR-2470: Per-Tenant Terminology, Pinned Code-System Versions and Versioned Concepts](2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) (2026-09-30)
 - [ADR-2480: Evaluate-Only Simulation over Candidate Versions](2026-09-30-evaluate-only-simulation-over-candidate-versions.md) (2026-09-30)
 - [ADR-2481: Public NodeRef and Kernel-Computed Zoom Path](2026-09-30-public-noderef-and-kernel-computed-zoom-path.md) (2026-09-30)

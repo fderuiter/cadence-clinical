@@ -11,7 +11,7 @@ When this document and the spec disagree, the spec wins; fix this document.
 | Section | Contents |
 | --- | --- |
 | [1. Target architecture](#1-target-architecture) | Kernel, six engines, applications, invariants |
-| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K017 and the platform decisions, with their ADRs |
+| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K018 and the platform decisions, with their ADRs |
 | [3. Running services today](#3-running-services-today) | Services, ports, gateway routes, maturity |
 | [4. Request path and security](#4-request-path-and-security) | OIDC at the gateway, signed identity in services |
 | [5. Persistence](#5-persistence) | Databases, connection strings, migrations |
@@ -58,7 +58,8 @@ Engines are an organising frame, not deployment units. The rules that shape ever
   `Participant`, `Observation`, `Person`, roles, rule engines or audit tables; they reference kernel IDs.
 - **Assemblies (spec §2.4):** `Cadence.Kernel.Abstractions` (IDs, ports, `IClock`) → `Domain` →
   `Application` → `Persistence` (internal) → `Api`; applications reference `Abstractions` only (K-XS-2).
-  `Cadence.Standards` loads public CDISC content into the Standards Registry and also references `Abstractions` only.
+  `Cadence.Standards` loads public CDISC content into the Standards Registry and `Cadence.Rules` holds the rule
+  language, rule packs and `IRuleEvaluator`; both reference `Abstractions` only.
 
 The [domain glossary](CONTEXT.md) defines the vocabulary.
 
@@ -83,6 +84,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K015 | Every kernel command declares its capability; a dry run (`CanI`) takes the same authorization path and is logged, not audited | [ADR-2483](docs/adr/2026-09-30-dry-run-authorization-and-command-catalogue.md) |
 | K016 | Search queries the source tables with PostgreSQL full-text search under the tenant's RLS, never a copy; results are NodeRefs and identity content is excluded | [ADR-2484](docs/adr/2026-09-30-tenant-scoped-search-over-source-tables.md) |
 | K017 | Participant is identity only; each Enrollment keeps a bitemporal status history, gap-free numbers under the Study lock, and attested withdrawal | [ADR-2453](docs/adr/2026-09-30-participants-enrollment-lifecycle-and-gap-free-numbering.md) |
+| K018 | Rule expression language, rule-pack format and `IRuleEvaluator` port | [ADR-2461](docs/adr/2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md) |
 | — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
 | — | No default credentials; secrets resolve fail-closed | [ADR-2260](docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md) |
@@ -220,6 +222,7 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
     the audit chain (ADR-2483).
   - `IKernelSearch` finds studies, sites, organizations, concepts, terminology codes, standards and library items by
     code or title, querying the source tables under the tenant's RLS with GIN full-text indexes (ADR-2484).
+  - Rule packs are released library items evaluated through `IRuleEvaluator` in `Cadence.Rules` (ADR-2461).
 - **Still to come:** the lineage store (spec §9.6), and the product services moving from their own `DbContext`
   and schema onto kernel concepts.
 - **Audit:** EF Core `SaveChangesInterceptor` populates `CreatedAt`, `CreatedBy`, `ReasonForChange`

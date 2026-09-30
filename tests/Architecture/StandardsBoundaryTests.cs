@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
+using Cadence.Rules.Evaluation;
 using Cadence.Standards;
 
 using FluentAssertions;
@@ -14,23 +15,28 @@ using Xunit;
 namespace Cadence.ArchitectureTests.Architecture;
 
 /// <summary>
-/// Enforces the Standards Registry boundaries (spec §2.4, §6.3): the standards assembly depends on the kernel's
-/// public contracts only, and standard dataset and variable names exist only as registry data, never in kernel or
+/// Enforces the Standards Registry and rules boundaries (spec §2.4, §6.3, §10.1): the standards and rules assemblies
+/// depend on the kernel's public contracts only, and standard dataset and variable names exist only as registry data, never in kernel or
 /// standards code (K-PROJ-1).
 /// </summary>
 public partial class StandardsBoundaryTests
 {
     private static readonly Assembly Standards = typeof(StandardSeeds).Assembly;
+    private static readonly Assembly Rules = typeof(IRuleEvaluator).Assembly;
 
     /// <summary>
-    /// Validates that Cadence.Standards references Cadence.Kernel.Abstractions and no other Cadence assembly, and no
-    /// EF Core, ASP.NET Core or Npgsql assembly, so any host or application can load standards content.
+    /// Validates that Cadence.Standards and Cadence.Rules reference Cadence.Kernel.Abstractions and no other Cadence
+    /// assembly, and no EF Core, ASP.NET Core or Npgsql assembly, so any host or application can load standards content
+    /// and evaluate rules, and a replacement rules engine needs only the kernel's public contracts.
     /// </summary>
-    [Fact(DisplayName = "Standards_ReferencesKernelAbstractionsOnly")]
+    [Theory(DisplayName = "StandardsAndRules_ReferenceKernelAbstractionsOnly")]
+    [InlineData("Cadence.Standards")]
+    [InlineData("Cadence.Rules")]
     [Trait("Category", "Architecture")]
-    public void StandardsReferencesKernelAbstractionsOnly()
+    public void StandardsAndRulesReferenceKernelAbstractionsOnly(string assemblyName)
     {
-        var references = Standards.GetReferencedAssemblies().Select(a => a.Name ?? string.Empty).ToList();
+        var assembly = new[] { Standards, Rules }.Single(a => a.GetName().Name == assemblyName);
+        var references = assembly.GetReferencedAssemblies().Select(a => a.Name ?? string.Empty).ToList();
 
         references.Where(r => r.StartsWith("Cadence.", StringComparison.Ordinal))
             .Should().ContainSingle().Which.Should().Be("Cadence.Kernel.Abstractions");

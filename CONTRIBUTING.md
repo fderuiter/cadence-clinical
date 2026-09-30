@@ -85,7 +85,7 @@ and give the reason: `[SuppressMessage(..., Justification = "...")]`, or a comme
 `#pragma warning disable` or `<NoWarn>` line. Two project-wide rules:
 
 - CS1591 (missing XML comment on a public member) is off for services, tools and tests. Projects that
-  are an API for other code (`packages/contracts`, `Cadence.Kernel.Api`, `Cadence.Standards`) set
+  are an API for other code (`packages/contracts`, `Cadence.Kernel.Api`, `Cadence.Standards`, `Cadence.Rules`) set
   `<CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>` (see `Directory.Build.targets`), so their
   public members must be documented. The other kernel projects opt in as their comments are written.
 - The CLI (`packages/cli`) suppresses no trim or AOT warning; CI publishes it as Native AOT.

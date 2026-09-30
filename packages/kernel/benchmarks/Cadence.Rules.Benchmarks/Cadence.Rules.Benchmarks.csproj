@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Cadence.Rules.Benchmarks</RootNamespace>
+    <AssemblyName>Cadence.Rules.Benchmarks</AssemblyName>
+    <Description>Measures IRuleEvaluator throughput over a synthetic dataset (spec §13), so the decision on a Rust rules runtime (spec §10.1) rests on numbers.</Description>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Cadence.Rules\Cadence.Rules.csproj" />
+  </ItemGroup>
+
+</Project>
