@@ -836,6 +836,33 @@ approval and read-only display are application workflow over it.
 - Analytics, forecasting and statistical outputs are **projections** with provenance; they never write
   clinical truth.
 
+### 11.1 Simulation (ADR-2480)
+
+Simulation answers "what happens if I change this?" (Clinical Canvas Simulate verb) by **evaluating, never
+writing**. The change is a *candidate version* of a versioned specification: a draft ProtocolVersion,
+MappingSpecification version or RulePack version, identified by its content hash. The engine evaluates the pure
+functions twice at one pinned `(valid_at, known_at)`, with the current versions (baseline) and with the candidate
+(candidate), and returns the difference:
+
+```
+Simulate(scope, candidate, as_of, actor) → SimulationResult{ as_of, candidate, engine_versions, input_hash,
+  result_hash, structural_diff[] (K-PROT-1), schedule_changes[] (K-TIME-7), projection_changes[] (K-PROJ-2),
+  validation_delta (K-RULE-4, K-FIND-1), dependents[] (Dependents), masked[] }
+```
+
+- **K-SIM-1** Simulation writes no clinical state; the engine cannot reach the command sender or a unit of work.
+- **K-SIM-2** Baseline and candidate use the same pinned `(valid_at, known_at)` and engine versions.
+- **K-SIM-3** Same inputs (as-of, base versions, candidate hash, engine versions) → same `result_hash`.
+- **K-SIM-4** Simulation reads with the requester's authority; values derived from content the actor cannot read
+  are masked, so a simulation cannot reveal blinded data.
+- **K-SIM-5** A saved result is an Artifact referenced by a Proposal. Approving the Proposal does not apply it:
+  the real commands run through the pipeline against current state.
+
+Running a simulation is a read (`simulation.run` plus the `Read` capabilities for what it reads) and is not
+written to the tenant audit chain; saving it as a Proposal is an audited command. Study data is never branched.
+Copy-on-write branches, review workflows over simulations, and operational what-ifs are out of scope; ADR-2480
+§4.4 lists when branches would be reconsidered, and review is application state over Proposals.
+
 ---
 
 ## 12. Application Capability Map
@@ -948,6 +975,7 @@ kernel, is merged into another, or is retired.
 | K008 | Rules and standards | Rules as versioned data over one AST; public standards only; Rust runtime seam | ADR-2254 |
 | K009 | Lineage | Lineage graph in the kernel schema, written transactionally, queried both ways | ADR-2255 |
 | K010 | Command pipeline and audit | One transaction per command; per-tenant hash chain; insert-only history | ADR-2449 |
+| K011 | Simulation | Evaluate-only over candidate versions; no study branches | ADR-2480 |
 
 ---
 

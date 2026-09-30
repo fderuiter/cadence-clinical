@@ -97,6 +97,10 @@ The platform's organising model (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` 
 
 The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users work inside a study, never inside a named product: navigation follows the lifecycle (Design, Start, Conduct, Data, Analyze, Submit), the study is zoomable from portfolio down to a single observation, and every screen uses one navigator, workspace and inspector layout. Six verbs apply to any object: Search, Trace (backward through lineage), Impact (forward through lineage), Explain (why a state, number or denial holds, from evidence), Simulate (evaluate a change without writing) and Act (an authorised, audited command). Role lenses change emphasis, never access.
 
+### Simulation (candidate version)
+
+Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal.
+
 ### Concept Registry
 
 The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation.
