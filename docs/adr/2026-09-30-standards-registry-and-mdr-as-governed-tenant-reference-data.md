@@ -4,6 +4,7 @@
 - **Date:** 2026-09-30
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
+- **Requirements:** PRD-MDR-001 (value-level metadata), PRD-CDR-003 (Dataset-JSON and Define-XML from registry metadata), PRD-CRF-013 (tenant isolation)
 
 ---
 
