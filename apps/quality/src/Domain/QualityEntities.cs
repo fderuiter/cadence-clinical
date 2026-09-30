@@ -40,7 +40,7 @@ public sealed class QualityCapaRecord : AggregateRoot<string>
     public string ActionPlan { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? PreventiveMeasures { get; set; }
-    public DateTime? TargetCompletionDate { get; set; }
+    public DateTimeOffset? TargetCompletionDate { get; set; }
     public string StudyId { get; set; } = string.Empty;
     public string? SiteId { get; set; }
 
@@ -50,7 +50,7 @@ public sealed class QualityCapaRecord : AggregateRoot<string>
 
 public sealed class QualityAuditLog : AggregateRoot<string>
 {
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset Timestamp { get; set; }
     public string UserId { get; set; } = string.Empty;
     public string UserRole { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;

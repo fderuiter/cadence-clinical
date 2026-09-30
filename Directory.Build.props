@@ -35,4 +35,17 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
+  <!-- #4784 K-TIME-3 for applications: a project that sets <CadenceBanWallClock>true</CadenceBanWallClock> takes
+       time only from Cadence.Kernel.Time.IClock; DateTime.Now/UtcNow and DateTimeOffset.Now/UtcNow fail the build
+       (RS0030, see BannedSymbols.txt). Applications opt in as they move onto IClock; packages/kernel and tests/
+       enable the same ban in their own Directory.Build.props. The condition is evaluated after the project file's
+       properties, so the property can be set in the .csproj. -->
+  <ItemGroup Condition="'$(CadenceBanWallClock)' == 'true'">
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" Link="BannedSymbols.txt" />
+  </ItemGroup>
 </Project>

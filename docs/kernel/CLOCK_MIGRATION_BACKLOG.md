@@ -21,14 +21,21 @@
 - The analyzer also covers every test project under `tests/` through `tests/Directory.Build.props` (#4913). Tests
   use `FakeClock`, or `SystemClock.Instance` where the code under test checks the real clock
   ([TESTING.md, Time in tests](../TESTING.md#time-in-tests)).
+- Applications opt in project by project with `<CadenceBanWallClock>true</CadenceBanWallClock>` in the `.csproj`. The
+  repo-root `Directory.Build.props` then adds the same analyzer and `BannedSymbols.txt` to the whole project, not
+  only `Domain/`. Opted in so far: `apps/interop` and `apps/quality`.
+- In those apps every timestamp is a `DateTimeOffset`, and the ones a writer must supply (`CreatedAt`, `UpdatedAt`,
+  `Timestamp`, `ReceivedAt`, interop's `DeviceTimestamp` and `ServerTimestamp`) are `required` with no default, so
+  code that creates a row must pass a time it took from `IClock` (or, for `DeviceTimestamp`, the device's own time).
+  The columns were already `timestamp with time zone`, so the change needs no migration
+  (`dotnet ef migrations has-pending-model-changes` reports none).
 
 ## What is left
 
-The analyzer is **not** yet enabled for `packages/engine_core` or `apps/*/src/Domain`. Enabling it there
+The analyzer is **not** yet enabled for `packages/engine_core` or the apps not listed above. Enabling it there
 today would break the build. Each follow-up below removes one group of violations. Once a group is clean, the
 same `PackageReference` and `AdditionalFiles` items from `packages/kernel/Directory.Build.props` are added to
-that project (for an app, scoped to `Domain/**` with a `Directory.Build.props` or an `.editorconfig`
-`dotnet_diagnostic.RS0030.severity` override outside `Domain/`).
+that project (for an app, `<CadenceBanWallClock>true</CadenceBanWallClock>` in its `.csproj`).
 
 The counts below are from `main` at the base of this change and exclude EF `Migrations/`.
 
@@ -37,7 +44,7 @@ The counts below are from `main` at the base of this change and exclude EF `Migr
 | App | Violations | File | Kind |
 | --- | ---: | --- | --- |
 | payments | 22 | `Domain/PaymentEntities.cs` | `= DateTime.UtcNow` property initializers |
-| interop | 19 | `Domain/InteropEntities.cs` | initializers. `DeviceTimestamp` and `ServerTimestamp` both default to server now (breaks offline capture, spec §10) |
+| interop | ~~19~~ 0 | `Domain/InteropEntities.cs` | Done: `DeviceTimestamp` and `ServerTimestamp` no longer both default to server now (spec §10) |
 | econsent | 16 | `Domain/EconsentEntities.cs` | initializers |
 | safety | 15 | `Domain/SafetyEntities.cs` | initializers |
 | imaging | 10 | `Domain/ImagingEntities.cs` | initializers |
@@ -49,11 +56,12 @@ The counts below are from `main` at the base of this change and exclude EF `Migr
 | fileshare | 3 | `Domain/FileshareEntities.cs` | initializers |
 | notifications | 2 | `Domain/NotificationEntities.cs` | initializers |
 | ctms | 1 | `Domain/CtmsEntities.cs` | initializer |
-| quality | 1 | `Domain/QualityEntities.cs` | initializer |
+| quality | ~~1~~ 0 | `Domain/QualityEntities.cs` | Done |
 | execution | 2 | `Domain/Observations/ClinicalObservation.cs:144`, `Domain/Queries/ClinicalQuery.cs:141` | `?? DateTime.UtcNow` fallbacks. Pass `IClock` from the application service instead |
 
-Per app, the follow-up is the same: remove the initializer, set the value from `IClock` in the command
-handler, change the property to `DateTimeOffset` (`timestamptz`), and add an EF migration.
+Per app, the follow-up is the same: remove the initializer, make the property a `required DateTimeOffset`
+(`timestamptz`), set the value from `IClock` wherever the app creates the row, opt the project in, and add an EF
+migration if `has-pending-model-changes` reports one.
 
 ### `packages/engine_core` (deferred: changing these cascades)
 
