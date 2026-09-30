@@ -52,8 +52,8 @@ The counts below are from `main` at the base of this change and exclude EF `Migr
 | etmf | 4 | `Domain/EtmfEntities.cs` | initializers |
 | org | ~~4~~ 0 | `Domain/OrgEntities.cs` | Done |
 | tickets | 4 | `Domain/TicketEntities.cs` | initializers |
-| eisf | 3 | `Domain/EisfEntities.cs` | initializers |
-| fileshare | 3 | `Domain/FileshareEntities.cs` | initializers |
+| eisf | ~~3~~ 0 | `Domain/EisfEntities.cs` | Done |
+| fileshare | ~~3~~ 0 | `Domain/FileshareEntities.cs` | Done |
 | notifications | ~~2~~ 0 | `Domain/NotificationEntities.cs` | Done |
 | ctms | ~~1~~ 0 | `Domain/CtmsEntities.cs` | Done |
 | quality | ~~1~~ 0 | `Domain/QualityEntities.cs` | Done |

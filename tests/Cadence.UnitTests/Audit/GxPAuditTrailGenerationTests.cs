@@ -12,6 +12,7 @@ using Cadence.Apps.Quality.Domain;
 using Cadence.Apps.Quality.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -182,6 +183,7 @@ public class GxPAuditTrailGenerationTests
             SizeBytes = 1024567,
             ObjectKey = "s3://clinical-files/lab_results_001.pdf",
             UploadedBy = TestUser,
+            UploadedAt = FakeClock.DefaultStart,
             ReasonForChange = "Uploading lab results"
         };
         context.FileRecords.Add(file);

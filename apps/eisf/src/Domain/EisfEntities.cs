@@ -13,10 +13,10 @@ public class IsfDocument
     public string? Content { get; set; }
     public string MimeType { get; set; } = string.Empty;
     public int VersionIndex { get; set; } = 1;
-    public DateTime? IssueDate { get; set; }
-    public DateTime? ExpirationDate { get; set; }
+    public DateTimeOffset? IssueDate { get; set; }
+    public DateTimeOffset? ExpirationDate { get; set; }
     public string? DocumentOwnerId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string? MetadataJson { get; set; }
     public string? CorrelationKey { get; set; }
@@ -28,7 +28,7 @@ public class IsfDocument
 public class IsfAuditLog
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset Timestamp { get; set; }
     public string ActorId { get; set; } = string.Empty;
     public string ActorRole { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
@@ -61,8 +61,8 @@ public class EisfDocumentRecord
     public int VersionMajor { get; set; } = 1;
     public int VersionMinor { get; set; } = 0;
     public string Status { get; set; } = "DRAFT";
-    public DateTime? ExpirationDate { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset? ExpirationDate { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = "Initial Document Ingestion";
     public int VersionIndex { get; set; } = 1;
