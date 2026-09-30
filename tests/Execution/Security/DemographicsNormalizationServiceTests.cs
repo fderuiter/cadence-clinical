@@ -1,7 +1,7 @@
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Infrastructure.Security;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -17,11 +17,6 @@ namespace Cadence.UnitTests.Execution.Security;
 /// </summary>
 public class DemographicsNormalizationServiceTests
 {
-    private sealed class FakeClock(DateTimeOffset utcNow) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = utcNow;
-    }
-
     private sealed class FakeEncryptionService : IDemographicsEncryptionService
     {
         private readonly IReadOnlyDictionary<string, object?>? _payload;

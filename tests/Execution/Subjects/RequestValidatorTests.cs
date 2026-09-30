@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -106,7 +107,7 @@ public class RequestValidatorTests
     {
         var request = new SubjectConsentRequest(
             new ProtocolVersionPayload("STUDY-001", "2.0", 2), IcfSigned: true,
-            IcfSignedDate: DateTimeOffset.UtcNow);
+            IcfSignedDate: FakeClock.DefaultStart);
 
         var result = new SubjectConsentRequestValidator().Validate(request);
 

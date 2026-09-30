@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ using Cadence.Apps.Execution.Infrastructure.Consumers;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -171,11 +173,6 @@ public class EConsentCompletedConsumerTests
         }
     }
 
-    private sealed class FakeClock(DateTimeOffset utcNow) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = utcNow;
-    }
-
     // ---- Harness plumbing ------------------------------------------------------------------------------
 
     private static async Task<ServiceProvider> StartHarnessAsync(
@@ -212,10 +209,10 @@ public class EConsentCompletedConsumerTests
     /// <c>Consumed.Any&lt;T&gt;()</c> (already satisfied by the first).</summary>
     private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(5);
+        var elapsed = Stopwatch.StartNew();
         while (!condition())
         {
-            if (DateTime.UtcNow > deadline)
+            if (elapsed.Elapsed > TimeSpan.FromSeconds(5))
             {
                 throw new TimeoutException("Condition was not met within the expected time.");
             }
@@ -292,7 +289,7 @@ public class EConsentCompletedConsumerTests
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork();
         var auditWriter = new FakeAuditLogWriter();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
         var harness = provider.GetRequiredService<ITestHarness>();
@@ -325,7 +322,7 @@ public class EConsentCompletedConsumerTests
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork();
         var auditWriter = new FakeAuditLogWriter();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
         var harness = provider.GetRequiredService<ITestHarness>();
@@ -360,7 +357,7 @@ public class EConsentCompletedConsumerTests
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork();
         var auditWriter = new FakeAuditLogWriter();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
         var harness = provider.GetRequiredService<ITestHarness>();
@@ -442,7 +439,7 @@ public class EConsentCompletedConsumerTests
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork { ThrowOnSaveChanges = new DbUpdateException("Simulated persistence failure.") };
         var auditWriter = new FakeAuditLogWriter();
-        var clock = new FakeClock(DateTimeOffset.UtcNow);
+        var clock = new FakeClock();
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
         var harness = provider.GetRequiredService<ITestHarness>();
@@ -497,7 +494,7 @@ public class EConsentCompletedConsumerTests
         var unitOfWork = new FakeUnitOfWork();
         var auditWriter = new FakeAuditLogWriter();
 
-        await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, new FakeClock(DateTimeOffset.UtcNow));
+        await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, new FakeClock());
         var harness = provider.GetRequiredService<ITestHarness>();
         try
         {

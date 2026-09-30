@@ -9,6 +9,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -151,7 +152,7 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
                 Issuer = Issuer,
                 Subject = new ClaimsIdentity([new Claim("sub", subject)]),
                 Claims = new Dictionary<string, object> { ["realm_access"] = new Dictionary<string, object> { ["roles"] = roles } },
-                Expires = DateTime.UtcNow.AddMinutes(5),
+                Expires = SystemClock.Instance.UtcNow.UtcDateTime.AddMinutes(5),
                 SigningCredentials = new SigningCredentials(key ?? SigningKey, SecurityAlgorithms.HmacSha256),
             });
 

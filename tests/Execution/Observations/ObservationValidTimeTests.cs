@@ -10,8 +10,8 @@ using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 using Cadence.UnitTests.Execution.Fakes;
 
 using FluentAssertions;
@@ -30,11 +30,6 @@ public sealed class ObservationValidTimeTests
     private static readonly DateTimeOffset RecordedAt = new(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly DateTime MeasuredAt = new(2026, 2, 20, 8, 30, 0, DateTimeKind.Utc);
 
-    private sealed class FakeClock : IClock
-    {
-        public DateTimeOffset UtcNow => RecordedAt;
-    }
-
     private sealed class FakeAuditContextAccessor : ICurrentAuditContextAccessor
     {
         public string UserId => "coordinator-01";
@@ -45,7 +40,7 @@ public sealed class ObservationValidTimeTests
 
     private static ObservationApplicationService ObservationService(InMemoryObservationRepository repository) =>
         new(repository, new InMemorySubjectRepository(), new UcumNormalizationService(), new LabRangeService(),
-            new AstEditCheckEngine(), new FakeClock(), new FakeAuditContextAccessor());
+            new AstEditCheckEngine(), new FakeClock(RecordedAt), new FakeAuditContextAccessor());
 
     private static FormSubmissionApplicationService FormService(InMemoryObservationRepository observations) =>
         new(new InMemoryFormSubmissionRepository(), observations, new UcumNormalizationService(), new FakeAuditContextAccessor());

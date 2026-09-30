@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 
 using Cadence.Deid;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FellowOakDicom;
@@ -270,7 +271,7 @@ public class DeidEngineUnitTests
         using var rsa = RSA.Create(2048);
         var certificateRequest = new CertificateRequest(
             "CN=Cadence Deid Test Signer", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-        using var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddDays(1));
+        using var certificate = certificateRequest.CreateSelfSigned(SystemClock.Instance.UtcNow.AddMinutes(-5), SystemClock.Instance.UtcNow.AddDays(1));
         string privateKeyPem = rsa.ExportRSAPrivateKeyPem();
         string certPem = certificate.ExportCertificatePem();
 

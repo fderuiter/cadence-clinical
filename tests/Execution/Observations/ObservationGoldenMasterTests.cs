@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -83,12 +84,12 @@ public sealed class ObservationGoldenMasterTests
             testCode: new TestCode("SYSBP"),
             testName: "Systolic Blood Pressure",
             value: 120.0,
-            observationDate: DateTime.UtcNow).Value!;
+            observationDate: FakeClock.DefaultStart.UtcDateTime).Value!;
 
         obs.IsSdvVerified.Should().BeFalse();
         obs.VersionIndex.Should().Be(1);
 
-        var verifyTime = DateTime.UtcNow;
+        var verifyTime = FakeClock.DefaultStart.UtcDateTime;
         var verifyRes = obs.VerifySdv("cra_user_alpha", verifyTime);
         verifyRes.IsSuccess.Should().BeTrue();
         obs.IsSdvVerified.Should().BeTrue();

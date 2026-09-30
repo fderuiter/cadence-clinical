@@ -12,6 +12,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -136,7 +137,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionApiFactory factory) 
                     signer_role = "Site Investigator",
                     signing_reason = "PI approval and sign-off.",
                     payload_hash = FormSubmissionApplicationService.ComputeSha256(payload),
-                    signed_at = DateTime.UtcNow,
+                    signed_at = FakeClock.DefaultStart.UtcDateTime,
                 },
             },
             Ct));

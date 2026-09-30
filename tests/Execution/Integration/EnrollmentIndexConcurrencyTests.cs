@@ -13,6 +13,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 using Cadence.UnitTests.Execution.Fakes;
 
 using FluentAssertions;
@@ -125,7 +126,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
             var consumer = new EConsentCompletedConsumer(repository, consents, auditWriter, new AmbientAuditContextAccessor(new HttpContextAccessor()));
 
             var consumeContext = Substitute.For<ConsumeContext<EConsentCompletedEvent>>();
-            consumeContext.Message.Returns(new EConsentCompletedEvent($"SUBJ-EVT-PG-{i:D3}", studyCode.Value, "SITE-001", "v1.0", 1, DateTimeOffset.UtcNow));
+            consumeContext.Message.Returns(new EConsentCompletedEvent($"SUBJ-EVT-PG-{i:D3}", studyCode.Value, "SITE-001", "v1.0", 1, FakeClock.DefaultStart));
             consumeContext.CancellationToken.Returns(TestContext.Current.CancellationToken);
 
             await consumer.Consume(consumeContext);

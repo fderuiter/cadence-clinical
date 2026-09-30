@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Time;
 using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Security.Blinding;
@@ -165,7 +166,7 @@ public class CadenceSecurityUnitTests
     public void HmacSigner_GeneratesAndVerifiesGatewaySignatures()
     {
         byte[] secret = Encoding.UTF8.GetBytes(TestSecret);
-        string timestamp = DateTime.UtcNow.ToString("o");
+        string timestamp = SystemClock.Instance.UtcNow.UtcDateTime.ToString("o");
 
         string sig = HmacSigner.GenerateGatewaySignature(
             userId: "usr-01",
@@ -219,7 +220,7 @@ public class CadenceSecurityUnitTests
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(new[] { new Claim("sub", "user-777") }),
-            Expires = DateTime.UtcNow.AddMinutes(5),
+            Expires = SystemClock.Instance.UtcNow.UtcDateTime.AddMinutes(5),
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(secret), SecurityAlgorithms.HmacSha256Signature)
         };
         var token = tokenHandler.CreateToken(tokenDescriptor);
