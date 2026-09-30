@@ -363,13 +363,13 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
   });
 
   it("shows a stage with no service as empty, with where it is tracked, not as sample content", async () => {
-    await open("/studies/CAD-101?stage=design");
+    await open("/studies/CAD-101?stage=analyze");
 
-    expect(wrapper.find("#stage-design").attributes("aria-current")).toBe(
+    expect(wrapper.find("#stage-analyze").attributes("aria-current")).toBe(
       "step"
     );
     expect(wrapper.find("#stage-empty").text()).toContain(
-      "No part of Design has a service yet."
+      "No part of Analyze has a service yet."
     );
     expect(wrapper.find("#stage-empty a").attributes("href")).toContain(
       "/issues/4829"

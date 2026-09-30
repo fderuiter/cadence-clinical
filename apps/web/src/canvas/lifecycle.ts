@@ -7,7 +7,8 @@
 export type StageId =
   "design" | "start" | "conduct" | "data" | "analyze" | "submit";
 
-export type SectionId = "site-activation" | "participants";
+export type SectionId =
+  "protocol-versions" | "site-activation" | "participants";
 
 export interface Section {
   id: SectionId;
@@ -29,7 +30,14 @@ export const STAGES: readonly Stage[] = [
     label: "Design",
     scope:
       "Protocol, objectives and estimands, schedule of activities, collection specs, standards and mappings",
-    sections: [],
+    sections: [
+      {
+        id: "protocol-versions",
+        label: "Protocol versions",
+        description:
+          "The protocol's versions, and what each amendment changes and affects",
+      },
+    ],
   },
   {
     id: "start",

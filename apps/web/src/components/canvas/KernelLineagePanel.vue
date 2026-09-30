@@ -1,12 +1,10 @@
 <template>
   <section
-    :id="`kernel-${mode}`"
+    :id="`kernel-${verb}`"
     class="lineage"
-    :aria-labelledby="`kernel-${mode}-title`"
+    :aria-labelledby="`kernel-${verb}-title`"
   >
-    <h3 :id="`kernel-${mode}-title`">
-      {{ mode === "trace" ? "Where this came from" : "What depends on this" }}
-    </h3>
+    <h3 :id="`kernel-${verb}-title`">{{ title }}</h3>
     <p v-if="loading" class="lineage-note" role="status">
       Reading the kernel's lineage…
     </p>
@@ -18,7 +16,7 @@
       <p v-if="!lineage.edges.length" class="lineage-note" role="status">
         The kernel records nothing this came from.
       </p>
-      <ol v-else :id="`kernel-${mode}-list`" class="lineage-list">
+      <ol v-else :id="`kernel-${verb}-list`" class="lineage-list">
         <li
           v-for="(edge, index) in lineage.edges"
           :key="`edge-${index}`"
@@ -34,17 +32,48 @@
       </p>
     </template>
 
-    <template v-else-if="mode === 'impact' && dependents">
+    <template v-else-if="verb === 'impact' && dependents">
+      <template v-if="amendment">
+        <p
+          v-if="!amendment.changed_elements.length"
+          id="kernel-amendment-unchanged"
+          class="lineage-note"
+          role="status"
+        >
+          The kernel records no element this amendment changes.
+        </p>
+        <ul v-else id="kernel-amendment-changes" class="lineage-list">
+          <li
+            v-for="change in amendment.changed_elements"
+            :key="change.element_id"
+            class="amendment-change"
+            :data-change="change.change"
+          >
+            <span class="amendment-change-kind">{{ change.change }}</span>
+            {{ change.instance_type ? words(change.instance_type) : "element" }}
+            <code>{{ change.element_id }}</code>
+            <span
+              v-if="change.properties.length"
+              class="lineage-note amendment-properties"
+            >
+              ({{ change.properties.join(", ") }})
+            </span>
+          </li>
+        </ul>
+        <h4 class="lineage-subheading">
+          What depends on the version it amends
+        </h4>
+      </template>
       <p v-if="!dependents.groups.length" class="lineage-note" role="status">
         Nothing the kernel records depends on this.
       </p>
       <template v-else>
-        <p :id="`kernel-${mode}-total`" class="lineage-total">
+        <p :id="`kernel-${verb}-total`" class="lineage-total">
           {{ dependents.truncated ? "At least " : ""
           }}{{ dependents.total }} dependent
           {{ Number(dependents.total) === 1 ? "object" : "objects" }}
         </p>
-        <ul :id="`kernel-${mode}-list`" class="lineage-list">
+        <ul :id="`kernel-${verb}-list`" class="lineage-list">
           <li
             v-for="group in dependents.groups"
             :key="group.kind"
@@ -79,6 +108,7 @@ import { computed, ref, watch } from "vue";
 import {
   isMasked,
   kernelApi,
+  type KernelAmendmentImpact,
   type KernelDependents,
   type KernelLineage,
   type KernelLineageNode,
@@ -88,9 +118,24 @@ import {
  * The Trace and Impact verbs (docs/ux/CLINICAL_CANVAS.md §4, ADR-2540): the kernel's lineage walk backward from the
  * selected object, or its dependents grouped by kind with counts. Both come from the kernel as they are (Canvas D2):
  * an object the reader may not see keeps its place as its kind and mask reason, and is counted, never dropped. A
- * refusal or an unreachable kernel is reported as it is; nothing is inferred in the browser (K-TRUTH-1).
+ * refusal or an unreachable kernel is reported as it is; nothing is inferred in the browser (K-TRUTH-1). On a
+ * protocol amendment, Impact is the amendment's impact (K-PROT-2): the elements it adds, changes or removes, then
+ * what depends on the version it amends.
  */
-const props = defineProps<{ nodeRef: string; mode: "trace" | "impact" }>();
+const props = defineProps<{
+  nodeRef: string;
+  mode: "trace" | "impact" | "amendment";
+}>();
+
+/** The verb the panel answers; an amendment's impact is still Impact. */
+const verb = computed(() => (props.mode === "trace" ? "trace" : "impact"));
+const title = computed(() => {
+  if (props.mode === "trace") return "Where this came from";
+  return props.mode === "amendment"
+    ? "What this amendment changes"
+    : "What depends on this";
+});
+const amendment = ref<KernelAmendmentImpact | null>(null);
 
 const lineage = ref<KernelLineage | null>(null);
 const dependents = ref<KernelDependents | null>(null);
@@ -128,10 +173,17 @@ async function load() {
   error.value = "";
   lineage.value = null;
   dependents.value = null;
+  amendment.value = null;
   try {
     if (props.mode === "trace") {
       const result = await kernelApi.trace(props.nodeRef);
       if (request === latest) lineage.value = result;
+    } else if (props.mode === "amendment") {
+      const result = await kernelApi.amendmentImpact(props.nodeRef);
+      if (request === latest) {
+        amendment.value = result;
+        dependents.value = result.dependents;
+      }
     } else {
       const result = await kernelApi.dependents(props.nodeRef);
       if (request === latest) dependents.value = result;
@@ -177,6 +229,20 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
 .lineage-kind {
   font-style: italic;
   color: var(--neutral-dark);
+}
+
+.lineage-subheading {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+}
+
+.amendment-change {
+  overflow-wrap: anywhere;
+}
+
+.amendment-change-kind {
+  font-weight: 600;
+  margin-right: 4px;
 }
 
 .lineage-total {
