@@ -79,6 +79,17 @@ Useful single gates (`pnpm cadence check <gate>`): `adrs`, `markdown`, `readmes`
 **PostgreSQL integration tests** are skipped unless you provide a database:
 `CADENCE_TEST_POSTGRES=<Npgsql connection string>` or `CADENCE_TEST_DOCKER=1` (Testcontainers).
 
+**Warnings are errors.** Fix a warning rather than suppressing it. When a suppression is the right call
+(a generated EF migration, an established acronym, an analyzer false positive), scope it to the member
+and give the reason: `[SuppressMessage(..., Justification = "...")]`, or a comment on the
+`#pragma warning disable` or `<NoWarn>` line. Two project-wide rules:
+
+- CS1591 (missing XML comment on a public member) is off for services, tools and tests. Projects that
+  are an API for other code (`packages/contracts`, `Cadence.Kernel.Api`, `Cadence.Standards`) set
+  `<CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>` (see `Directory.Build.targets`), so their
+  public members must be documented. The other kernel projects opt in as their comments are written.
+- The CLI (`packages/cli`) suppresses no trim or AOT warning; CI publishes it as Native AOT.
+
 **CI** runs the same gates in `.github/workflows/ci.yml`; [docs/CI.md](docs/CI.md) lists every job and
 gate and how to reproduce each failure locally. If CI cannot run, validate locally and say so in the PR
 description.

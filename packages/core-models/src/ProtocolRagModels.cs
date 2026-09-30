@@ -1,5 +1,3 @@
-#pragma warning disable S101 // Type names should comply with a configured naming convention
-
 namespace Cadence.CoreModels;
 
 /// <summary>
@@ -14,7 +12,7 @@ namespace Cadence.CoreModels;
 /// <param name="PageNumber">1-indexed physical page number in source PDF.</param>
 /// <param name="ChunkText">Raw text of the protocol chunk.</param>
 /// <param name="IsApproved">Whether this protocol chunk is from an approved version.</param>
-public record ProtocolRAGContextChunk(
+public record ProtocolRagContextChunk(
     string ChunkId,
     string ProtocolVersion,
     string? SectionNumber = null,

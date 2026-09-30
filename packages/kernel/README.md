@@ -27,6 +27,11 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Architecture/Kern
 
 Rendering lives in `packages/templating` (`Cadence.Templating`), outside the kernel.
 
+`Cadence.Kernel.Api` and `Cadence.Standards` set `CadenceRequireXmlDocs`, so every public member needs an XML
+comment (CS1591 fails the build). The other kernel assemblies do not yet: on 2026-09-30 they had about 890
+undocumented public members (Abstractions 609, Domain 196, Application 46, Persistence 37). Set the property in a
+project once its comments are written ([CONTRIBUTING.md §3](../../CONTRIBUTING.md#3-local-checks)).
+
 ## Tenant isolation (ADR-2250)
 
 PostgreSQL keeps tenants apart, not application code (K-ID-1, K-ID-2):

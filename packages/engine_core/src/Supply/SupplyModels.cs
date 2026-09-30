@@ -110,7 +110,8 @@ public record TemperatureReading(
     [property: JsonPropertyName("timestamp")] string? Timestamp = null
 );
 
-[SuppressMessage("Naming", "S101:Types should be named in PascalCase")]
+[SuppressMessage("Naming", "S101:Types should be named in PascalCase",
+    Justification = "DTP (direct-to-patient) is the supply-chain term used in the protocol and IRT specifications.")]
 public record DTPDispatchAuthorization(
     [property: JsonPropertyName("dispatch_id")] string DispatchId,
     [property: JsonPropertyName("study_id")] string StudyId,
