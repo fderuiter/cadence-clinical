@@ -19,7 +19,7 @@ How CI is set up, which checks run where, and how to reproduce and fix each fail
 4. **Frontend Unit Tests**: Vitest across the pnpm workspace.
 5. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `pnpm cadence gxp sync` and fails if they differ from the committed files.
 
-Only on pushes to `main`: accessibility E2E tests, the container build and Trivy scan, the production pipeline and the docs deploy. They are kept off pull requests to save Actions minutes.
+Only on pushes to `main`: accessibility E2E tests, the container build and Trivy vulnerability scan (enforcing fail-closed exit code 1 with SARIF report upload to GitHub Security tab), the production pipeline and the docs deploy. They are kept off pull requests to save Actions minutes.
 
 > [!IMPORTANT]
 > GitHub Actions does not run jobs for this repository until 2027: every check on a pull request fails within seconds
@@ -32,29 +32,29 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 
 `pnpm cadence check` runs all 21 quality gates. The pre-commit hook runs a quicker variant (below), and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
 
-| Gate (short name)     | What it checks                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------ |
-| `dotnet-format`       | Whitespace formatting against `.editorconfig`                                              |
-| `dotnet-format-style` | Roslyn code-style rules                                                                    |
-| `clean-secrets`       | Normalizes `.secrets.baseline` and enforces baseline immutability                         |
-| `duplication`         | Duplicated code blocks over 15 normalized lines                                            |
-| `cli-docs`            | `docs/cli.md` matches the CLI's commands                                                   |
-| `adrs`                | ADR schema and `docs/adr/index.md` consistency                                             |
-| `arch-drift`          | Architecture diagrams match the solution                                                   |
-| `sanitizer`           | Requirement tag prefixes in tests                                                          |
-| `markdown`            | Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist |
-| `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md`                        |
-| `readmes`             | Each project has a README                                                                  |
-| `imports`             | No cross-service persistence references                                                    |
-| `security`            | Static security audit and secret patterns                                                  |
+| Gate (short name)     | What it checks                                                                                                                      |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `dotnet-format`       | Whitespace formatting against `.editorconfig`                                                                                       |
+| `dotnet-format-style` | Roslyn code-style rules                                                                                                             |
+| `clean-secrets`       | Normalizes `.secrets.baseline` and enforces baseline immutability                                                                  |
+| `duplication`         | Duplicated code blocks over 15 normalized lines                                                                                     |
+| `cli-docs`            | `docs/cli.md` matches the CLI's commands                                                                                            |
+| `adrs`                | ADR schema and `docs/adr/index.md` consistency                                                                                      |
+| `arch-drift`          | Architecture diagrams match the solution                                                                                            |
+| `sanitizer`           | Requirement tag prefixes in tests                                                                                                   |
+| `markdown`            | Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist                      |
+| `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md`                                                                 |
+| `readmes`             | Each project has a README                                                                                                           |
+| `imports`             | No cross-service persistence references                                                                                             |
+| `security`            | Static security audit and secret patterns                                                                                           |
 | `deid`                | PHI/PII in tracked files outside tests, docs, scripts and similar folders (all 14 detector categories), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment |
-| `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi` |
-| `api-clients`         | The web API clients typecheck against their generated OpenAPI types                        |
-| `schema-doc`          | `docs/schema` matches the EF Core models (skipped by the pre-commit hook)                   |
-| `path-patterns`       | Files live in allowed directories                                                          |
-| `contracts`           | Hexagonal port/adapter contracts                                                           |
-| `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`)                        |
-| `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)                                  |
+| `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`                                                                                                      |
+| `api-clients`         | The web API clients typecheck against their generated OpenAPI types                                                                                                                             |
+| `schema-doc`          | `docs/schema` matches the EF Core models (skipped by the pre-commit hook)                                                                                                                       |
+| `path-patterns`       | Files live in allowed directories                                                                                                                                                               |
+| `contracts`           | Hexagonal port/adapter contracts                                                                                                                                                                |
+| `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`)                                                                                                                             |
+| `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)                                                                                                                                       |
 
 `pnpm cadence check rtm` (not part of the 21) validates the traceability matrix without regenerating it.
 
@@ -87,7 +87,7 @@ CI runs in `.github/workflows/ci.yml`. `pnpm cadence ci` reproduces the whole wo
 | Style › Verify .NET C# code formatting                       | Code doesn't match `.editorconfig` or analyzer style                              | `dotnet format Cadence.sln`, then commit                                                                         |
 | Style › Run frontend style and lint                          | ESLint or Prettier findings in `apps/web`, `apps/subject-portal` or `packages/ui` | `pnpm format` and `pnpm -r lint`                                                                                 |
 | Style › Run Cadence quality sentinels, or a single gate step | One of the 21 gates failed; the log names it                                      | `pnpm cadence check <gate>`                                                                                      |
-| Style › Run architecture tests                               | A layer dependency rule was broken                                                | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`                                                             |
+| Style › Run architecture tests                               | A layer dependency rule was broken                                                | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`                                   |
 | Style › Publish the CLI as Native AOT                        | The CLI, or code it calls, raised a trim or AOT warning (IL2xxx/IL3xxx)           | `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64`; fix the call, never add `NoWarn`   |
 | Style › Run Hadolint or ShellCheck                           | Dockerfile or shell script findings                                               | `hadolint <Dockerfile>`, `shellcheck <script>`                                                                   |
 | Style › Verify OpenAPI specification drift                   | An endpoint changed without regenerating the specs                                | `pnpm cadence sync-openapi-spec` and `pnpm cadence generate-api-docs`, then commit `docs/openapi` and `docs/api` |
