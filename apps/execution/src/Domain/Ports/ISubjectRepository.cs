@@ -53,6 +53,12 @@ public interface ISubjectRepository
     /// </summary>
     Task<ClinicalSubject?> GetByCodeAsync(string code, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Lists one page of a study's subjects, in enrollment order, without tracking them. Never throws on an
+    /// empty result.
+    /// </summary>
+    Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken);
+
     /// <summary>Stages a new <see cref="ClinicalSubject"/> for insertion; takes effect on the next
     /// <see cref="SaveChangesAsync"/>.</summary>
     Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken);

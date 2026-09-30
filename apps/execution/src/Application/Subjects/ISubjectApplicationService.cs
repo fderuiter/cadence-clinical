@@ -39,6 +39,13 @@ public interface ISubjectApplicationService
     /// <summary>Full subject detail, RTSM-blinding-redacted for a blinded caller. Implemented by MIG-SUBJ-019.</summary>
     Task<Result<SubjectDetailResponse>> GetDetailAsync(string subjectId, bool isBlindedCaller, CancellationToken ct);
 
+    /// <summary>
+    /// Lists one page of a study's subjects in enrollment order, optionally narrowed to a site and a status.
+    /// <paramref name="studyId"/> is required; <paramref name="limit"/> defaults to 50 and is capped at 200.
+    /// </summary>
+    Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit, int? offset,
+        CancellationToken ct);
+
     /// <summary>Evaluates screening eligibility and transitions to <c>ScreenFailed</c>/<c>Enrolled</c>
     /// (SCN-005/SCN-007). Implemented by MIG-SUBJ-019.</summary>
     Task<Result<SubjectResponse>> EvaluateAndTransitionScreeningAsync(string subjectId, CancellationToken ct);

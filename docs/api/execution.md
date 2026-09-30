@@ -25,6 +25,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/queries/{id}/respond` | RespondClinicalQuery |  |
 | `POST` | `/api/v1/execution/sites/{siteId}/activate` | ActivateSite |  |
 | `GET` | `/api/v1/execution/sites/{siteId}/compliance-status` | GetSiteComplianceStatus |  |
+| `GET` | `/api/v1/execution/subjects` | ListSubjects | Lists one page of a study's subjects in enrollment order. |
 | `POST` | `/api/v1/execution/subjects` | CreateSubject |  |
 | `GET` | `/api/v1/execution/subjects/{subjectId}` | GetSubjectDetail |  |
 | `POST` | `/api/v1/execution/subjects/{subjectId}/consent` | RecordSubjectConsent |  |

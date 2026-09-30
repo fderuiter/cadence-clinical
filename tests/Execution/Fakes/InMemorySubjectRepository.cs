@@ -70,6 +70,20 @@ public sealed class InMemorySubjectRepository : ISubjectRepository
         return Task.FromResult(match);
     }
 
+    public Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken)
+    {
+        var matches = _store.Values
+            .Where(s => s.StudyCode == criteria.StudyCode)
+            .Where(s => criteria.SiteCode is null || s.SiteCode == criteria.SiteCode)
+            .Where(s => criteria.Status is null || s.Status == criteria.Status)
+            .OrderBy(s => s.EnrollmentIndex)
+            .ThenBy(s => s.SubjectCode.Value, StringComparer.Ordinal)
+            .ToList();
+
+        var page = matches.Skip(criteria.Offset).Take(criteria.Limit).ToList();
+        return Task.FromResult(new SubjectPage(page, matches.Count));
+    }
+
     public Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken)
     {
         _store[subject.Id] = subject;
