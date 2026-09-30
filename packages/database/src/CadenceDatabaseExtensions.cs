@@ -45,7 +45,7 @@ public static partial class CadenceDatabaseExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         string connectionString = WithModuleSchema(
-            ResolvePostgresConnectionString(builder.Configuration, builder.Environment, DefaultDatabaseName, connectionName),
+            ResolvePostgresConnectionString(builder.Configuration, builder.Environment, connectionName),
             schema ?? ModuleSchemaFor<TDbContext>());
 
         builder.Services.AddCadenceDbContext<TDbContext>(options =>
@@ -61,14 +61,13 @@ public static partial class CadenceDatabaseExtensions
 
     /// <summary>
     /// Resolves the PostgreSQL connection string in this order: <c>ConnectionStrings:{connectionName}</c>,
-    /// then <c>POSTGRES_CONNECTION_STRING</c>. In the Development environment only, falls back to the local
-    /// docker-compose database; in any other environment a missing value fails startup instead of silently
-    /// connecting to localhost with a well-known password.
+    /// then <c>POSTGRES_CONNECTION_STRING</c>. There is no built-in fallback in any environment (including
+    /// Development): a missing value fails startup with an <see cref="InvalidOperationException"/> naming both
+    /// keys, instead of silently connecting with a well-known password committed to source control (ADR-2260).
     /// </summary>
     public static string ResolvePostgresConnectionString(
         IConfiguration configuration,
         IHostEnvironment environment,
-        string defaultDatabaseName = DefaultDatabaseName,
         string connectionName = DefaultConnectionName)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -84,14 +83,37 @@ public static partial class CadenceDatabaseExtensions
             return legacy;
         }
 
-        if (environment.IsDevelopment())
-        {
-            return $"Host=localhost;Port=5432;Database={defaultDatabaseName};Username=cadence;Password=cadence_password";
-        }
-
         throw new InvalidOperationException(
             $"No PostgreSQL connection string configured for '{environment.ApplicationName}'. " +
             $"Set ConnectionStrings__{connectionName} or {LegacyConnectionStringKey}.");
+    }
+
+    /// <summary>Design-time argument that supplies the connection string: <c>dotnet ef ... -- --connection "..."</c>.</summary>
+    public const string DesignTimeConnectionArgument = "--connection";
+
+    /// <summary>
+    /// Resolves the connection string for <c>IDesignTimeDbContextFactory</c> implementations (the
+    /// <c>dotnet ef</c> tooling process, which has no host configuration): the value after
+    /// <see cref="DesignTimeConnectionArgument"/> in <paramref name="args"/>, otherwise the
+    /// <c>POSTGRES_CONNECTION_STRING</c> environment variable. Throws when neither is set rather than falling
+    /// back to a hardcoded credential (ADR-2260).
+    /// </summary>
+    public static string ResolveDesignTimeConnectionString(string[]? args = null)
+    {
+        if (args is not null)
+        {
+            int index = Array.IndexOf(args, DesignTimeConnectionArgument);
+            if (index >= 0 && index + 1 < args.Length && args[index + 1] is { Length: > 0 } fromArgs)
+            {
+                return fromArgs;
+            }
+        }
+
+        return Environment.GetEnvironmentVariable(LegacyConnectionStringKey) is { Length: > 0 } configured
+            ? configured
+            : throw new InvalidOperationException(
+                $"{LegacyConnectionStringKey} is not set. Export it, or pass {DesignTimeConnectionArgument} \"...\" " +
+                "after -- on the dotnet ef command line.");
     }
 
     /// <summary>

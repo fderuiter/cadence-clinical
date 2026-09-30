@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Cadence.Database;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 
 using FluentAssertions;
 
@@ -29,9 +30,10 @@ public class TestDbContext : DbContext
 public class DatabaseUnitTests
 {
     [Fact]
-    public void AddCadencePostgresDbContext_RegistersDbContextWithDefaultConnectionString()
+    public void AddCadencePostgresDbContext_RegistersDbContextWithNamedConnectionString()
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
+        builder.Configuration["ConnectionStrings:cadence"] = TestHostSettings.PostgresConnectionString;
 
         builder.AddCadencePostgresDbContext<TestDbContext>();
 
@@ -80,6 +82,7 @@ public class DatabaseUnitTests
     public void AddCadencePostgresDbContext_RegistersReadinessHealthCheck()
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
+        builder.Configuration["ConnectionStrings:cadence"] = TestHostSettings.PostgresConnectionString;
 
         builder.AddCadencePostgresDbContext<TestDbContext>();
 
@@ -110,13 +113,62 @@ public class DatabaseUnitTests
             .Should().Be(expected);
     }
 
-    [Fact]
-    public void ResolvePostgresConnectionString_InDevelopment_FallsBackToLocalDatabase()
+    /// <summary>
+    /// Issue #4765: no environment, Development included, falls back to a hardcoded credential.
+    /// </summary>
+    [Theory]
+    [InlineData("Development")]
+    [InlineData("Staging")]
+    [InlineData("Production")]
+    public void ResolvePostgresConnectionString_WithoutConfiguration_ThrowsNamingTheVariable(string environmentName)
     {
         var configuration = new ConfigurationBuilder().Build();
-        var environment = new HostingEnvironment { EnvironmentName = Environments.Development, ApplicationName = "Test" };
+        var environment = new HostingEnvironment { EnvironmentName = environmentName, ApplicationName = "Test" };
 
-        CadenceDatabaseExtensions.ResolvePostgresConnectionString(configuration, environment, "cadence_ctms")
-            .Should().Contain("Host=localhost").And.Contain("Database=cadence_ctms");
+        Action act = () => CadenceDatabaseExtensions.ResolvePostgresConnectionString(configuration, environment);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ConnectionStrings__cadence*POSTGRES_CONNECTION_STRING*");
+    }
+
+    /// <summary>
+    /// Issue #4765: AddCadencePostgresDbContext fails startup in Development too when no connection string is set.
+    /// </summary>
+    [Fact]
+    public void AddCadencePostgresDbContext_InDevelopmentWithoutConnectionString_Throws()
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
+        builder.Configuration["ConnectionStrings:cadence"] = string.Empty;
+        builder.Configuration["POSTGRES_CONNECTION_STRING"] = string.Empty;
+
+        Action act = () => builder.AddCadencePostgresDbContext<TestDbContext>();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*POSTGRES_CONNECTION_STRING*");
+    }
+
+    /// <summary>
+    /// Issue #4765: design-time factories read --connection or POSTGRES_CONNECTION_STRING and never fall back to a credential.
+    /// Environment variables are process-wide, so this test reads rather than mutates them.
+    /// </summary>
+    [Fact]
+    public void ResolveDesignTimeConnectionString_UsesEnvironmentOrThrowsNamingTheVariable()
+    {
+        string? configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey);
+
+        Func<string> act = () => CadenceDatabaseExtensions.ResolveDesignTimeConnectionString([]);
+
+        CadenceDatabaseExtensions.ResolveDesignTimeConnectionString(
+                [CadenceDatabaseExtensions.DesignTimeConnectionArgument, TestHostSettings.PostgresConnectionString])
+            .Should().Be(TestHostSettings.PostgresConnectionString);
+
+        if (string.IsNullOrEmpty(configured))
+        {
+            act.Should().Throw<InvalidOperationException>().WithMessage("*POSTGRES_CONNECTION_STRING*");
+        }
+        else
+        {
+            act().Should().Be(configured);
+        }
     }
 }

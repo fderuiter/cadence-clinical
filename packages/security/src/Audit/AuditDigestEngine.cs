@@ -24,11 +24,11 @@ public static class AuditDigestCalculator
         string previousDigest,
         string? secretKey = null)
     {
-        secretKey ??= Environment.GetEnvironmentVariable("AUDIT_LOG_SECRET_KEY") ?? "internal-test-audit-secret-key";
+        string key = AuditSecretKey.Resolve(secretKey);
 
         string canonicalPayload = $"{eventId}|{serviceName}|{actionType}|{entityName}|{entityId}|{userId}|{tenantId}|{reasonForChange}|{timestamp}|{previousDigest}";
 
-        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secretKey));
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key));
         byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(canonicalPayload));
         return Convert.ToHexStringLower(hash);
     }
@@ -42,7 +42,7 @@ public class AuditDigestEngine
     public AuditDigestEngine(IAuditLogWriter? writer = null, string? secretKey = null)
     {
         _writer = writer ?? new InMemoryAuditStore();
-        _secretKey = secretKey ?? Environment.GetEnvironmentVariable("AUDIT_LOG_SECRET_KEY") ?? "internal-test-audit-secret-key";
+        _secretKey = AuditSecretKey.Resolve(secretKey);
     }
 
     public string GetLastDigest()

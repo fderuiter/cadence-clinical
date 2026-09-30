@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using Microsoft.AspNetCore.Hosting;
@@ -60,6 +61,7 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseTestGatewaySecret().UseTestDemographicsKey();
+        builder.UseTestPostgresConnectionString();
 
         builder.ConfigureServices(services =>
         {

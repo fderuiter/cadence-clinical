@@ -13,14 +13,30 @@
 
 - `postgres` (with a data volume and pgAdmin) and one database named `cadence`, shared by all services per [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md).
 - `minio` container (ports 9000 and 9001) and `keycloak` container (port 8080, `start-dev`).
-- Projects: `gateway`, `designer`, `execution`, `ctms`, `etmf`, `quality` (the last four reference the `cadence` database, which supplies `ConnectionStrings:cadence`), and `fileshare` (receives `STORAGE_ENDPOINT_URL` for MinIO).
+- Projects: `gateway`, `designer`, `execution`, `ctms`, `etmf`, `quality` and `fileshare`. `execution`, `ctms`, `etmf`, `quality` and `fileshare` reference the `cadence` database, which supplies `ConnectionStrings:cadence`; `fileshare` also receives `STORAGE_ENDPOINT_URL` for MinIO.
 - Not wired here: ai_gateway, econsent, eisf, imaging, interop, knowledge, notifications, org, payments, safety, tickets, and the frontends.
 
 Aspire sets `OTEL_EXPORTER_OTLP_ENDPOINT` on each project; [packages/telemetry](../../packages/telemetry/README.md) enables OTLP export when that variable is present, so service telemetry reaches the dashboard.
 
-## Configuration gaps
+## Configuration
 
-The AppHost does not set `GATEWAY_SECRET` for any service or `OIDC_AUTHORITY` for the gateway, and it does not import the `cadence` Keycloak realm. Every service fails at startup without `GATEWAY_SECRET`, and the gateway fails without `OIDC_AUTHORITY`; supply them before relying on this host. See [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
+Credentials have no default value (ADR-2260). The MinIO root user and password, the Keycloak admin user and
+password, the shared `GATEWAY_SECRET` and the `AUDIT_LOG_SECRET_KEY` are Aspire secret parameters. The AppHost
+passes `GATEWAY_SECRET` and `AUDIT_LOG_SECRET_KEY` to every service and sets the gateway's `OIDC_AUTHORITY` to the
+Keycloak `cadence` realm. Set the parameters once with user secrets (choose your own values):
+
+```bash
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:minio-root-user" "<user>"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:minio-root-password" "<password>"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:keycloak-admin" "<user>"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:keycloak-admin-password" "<password>"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:gateway-secret" "<at least 32 characters>"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:audit-log-secret-key" "<secret>"
+```
+
+Or export `Parameters__minio-root-user` (and so on) as environment variables. If a value is missing, the Aspire
+dashboard prompts for it before starting the containers. The AppHost does not import the `cadence` Keycloak realm;
+import `docker/cadence-realm.json` before signing in.
 
 ## Key dependencies
 

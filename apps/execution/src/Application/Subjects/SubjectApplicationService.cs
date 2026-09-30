@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -339,6 +340,78 @@ public sealed class SubjectApplicationService(
         return new SubjectDetailResponse(subject.SubjectCode, subject.StudyCode,
             SubjectStateCodec.ToCode(subject.Status), subject.SiteCode, treatmentGroup,
             RandomizationSeed: null, InvestigationalProductId: null);
+    }
+
+    /// <summary>Default page size for <see cref="ListAsync"/>.</summary>
+    public const int DefaultListLimit = 50;
+
+    /// <summary>Largest page <see cref="ListAsync"/> returns, whatever the caller asks for.</summary>
+    public const int MaxListLimit = 200;
+
+    /// <summary>
+    /// Lists one page of a study's subjects in enrollment order. A missing study, a malformed study or site
+    /// code, an unknown status, a limit outside 1..<see cref="MaxListLimit"/> or a negative offset is a
+    /// validation error rather than a silently widened or emptied list.
+    /// </summary>
+    public async Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit,
+        int? offset, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(studyId))
+        {
+            return DomainError.Validation("STUDY_ID_REQUIRED", "study_id is required to list subjects.");
+        }
+
+        StudyCode studyCode;
+        try
+        {
+            studyCode = new StudyCode(studyId);
+        }
+        catch (ArgumentException ex)
+        {
+            return DomainError.Validation("INVALID_STUDY_CODE", ex.Message);
+        }
+
+        SiteCode? siteCode = null;
+        if (!string.IsNullOrWhiteSpace(siteId))
+        {
+            try
+            {
+                siteCode = new SiteCode(siteId);
+            }
+            catch (ArgumentException ex)
+            {
+                return DomainError.Validation("INVALID_SITE_CODE", ex.Message);
+            }
+        }
+
+        SubjectState? state = null;
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (!SubjectStateCodec.TryParse(status, out var parsed))
+            {
+                return DomainError.Validation("INVALID_SUBJECT_STATUS", $"'{status}' is not a subject status.");
+            }
+
+            state = parsed;
+        }
+
+        int pageSize = limit ?? DefaultListLimit;
+        if (pageSize is < 1 or > MaxListLimit)
+        {
+            return DomainError.Validation("INVALID_LIMIT", $"limit must be between 1 and {MaxListLimit}.");
+        }
+
+        int skip = offset ?? 0;
+        if (skip < 0)
+        {
+            return DomainError.Validation("INVALID_OFFSET", "offset cannot be negative.");
+        }
+
+        var page = await subjects.ListAsync(new SubjectListCriteria(studyCode, siteCode, state, pageSize, skip), ct)
+            .ConfigureAwait(false);
+
+        return new SubjectListResponse(page.Items.Select(SubjectSummaryResponse.FromAggregate).ToList(), page.Total,
+            pageSize, skip);
     }
 
     /// <summary>

@@ -2,6 +2,7 @@ using System;
 using System.Security.Cryptography;
 
 using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -29,6 +30,7 @@ public sealed class DemographicsKeyStartupValidationTests
         using var unconfigured = new WebApplicationFactory<Cadence.Apps.Execution.Program>()
             .WithWebHostBuilder(builder => builder
                 .UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
                 .UseSetting("DemographicsEncryption:KeyBase64", keyBase64));
 
         Action start = () => unconfigured.CreateClient();

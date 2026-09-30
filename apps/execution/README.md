@@ -19,6 +19,7 @@ Electronic data capture runtime. It manages subjects (enrolment state, consent, 
 
 - `GET /healthz` (anonymous, mapped in `Program.cs`); `GET /healthz/live` and `GET /healthz/ready` (anonymous, mapped by `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `ExecutionDbContext`.
 - `/api/v1/execution/subjects`, `/api/v1/execution/observations`, `/api/v1/execution/forms`, `/api/v1/execution/queries` (route groups).
+- `GET /api/v1/execution/subjects?study_id=` lists a study's subjects in enrollment order. `site_id` and `status` narrow it; `limit` (default 50, at most 200) and `offset` page it, and `total` counts every match. The list carries no treatment group or demographics, so a blinded caller can see it; the detail is `GET /api/v1/execution/subjects/{subjectId}`.
 - `/api/v1/execution/sites/{siteId}/activate`, `/api/v1/execution/sites/{siteId}/compliance-status`, `/api/v1/execution/webhooks/etmf`.
 - Legacy aliases: `/api/v1/observations`, `/api/v1/forms`, `/api/v1/queries`.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.

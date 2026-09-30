@@ -56,7 +56,7 @@ Two settings still failed late or silently:
   - A missing demographics key or service address is found at deploy time, not by a site user.
 - **Negative Impact / Technical Debt:**
   - Test hosts call `UseTestDemographicsKey()` from `Cadence.Testing`, and the OpenAPI exporter supplies a throwaway key.
-  - The Aspire AppHost does not yet pass `GATEWAY_SECRET` or a demographics key to the services, so running through it needs both set in the environment.
+  - The Aspire AppHost does not yet pass a demographics key to the execution service, so running through it needs `DemographicsEncryption__KeyBase64` set in the environment.
 
 ## 6. Implementation & Verification
 

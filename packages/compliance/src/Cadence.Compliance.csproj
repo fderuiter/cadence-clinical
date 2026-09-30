@@ -14,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\core-models\src\Cadence.CoreModels.csproj" />
     <ProjectReference Include="..\..\deid\src\Cadence.Deid.csproj" />
+    <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
   </ItemGroup>
 </Project>

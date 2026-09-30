@@ -123,10 +123,8 @@ builder.Services.AddSingleton<IEditCheckEngine, AstEditCheckEngine>();
 
 // ExecutionDbContext (Scoped, the EF Core default `AddDbContext` lifetime) -- the connection string mirrors
 // ExecutionDbContextFactory's own design-time convention exactly (same POSTGRES_CONNECTION_STRING
-// environment variable, same local-dev-Postgres fallback matching docker/docker-compose.yml's `postgres`
-// service), so `dotnet run` against the same docker-compose Postgres container "just works" with no
-// additional configuration. Both interceptors flagged forward by MIG-SUBJ-011/013's own doc comments are
-// registered together here, exactly as those comments asked: ConcurrencyTokenIncrementInterceptor is
+// environment variable, set by docker/docker-compose.yml's services and by the Aspire AppHost). Both
+// interceptors flagged forward by MIG-SUBJ-011/013's own doc comments are registered together here, exactly as those comments asked: ConcurrencyTokenIncrementInterceptor is
 // stateless (safe to share one instance across every scope), while GxPAuditInterceptor's current-user
 // delegate must be re-resolved per scope -- achieved by using AddDbContext's `(IServiceProvider, ...)`
 // options-action overload, whose `optionsLifetime` defaults to Scoped, so this callback (and therefore the
@@ -135,8 +133,8 @@ builder.Services.AddSingleton<IEditCheckEngine, AstEditCheckEngine>();
 // caller inside an HTTP request, the declared service account inside a consumer) is what actually stamps AuditLogEntry.UserId, not a fixed value captured once at
 // startup.
 //
-// The connection string comes from ConnectionStrings:cadence or POSTGRES_CONNECTION_STRING; only the Development
-// environment falls back to the local docker-compose database, so a misconfigured deployment fails at startup.
+// The connection string comes from ConnectionStrings:cadence or POSTGRES_CONNECTION_STRING; there is no
+// hardcoded fallback in any environment, so a missing value fails at startup naming both keys.
 string executionDbConnectionString = CadenceDatabaseExtensions.WithModuleSchema(
     CadenceDatabaseExtensions.ResolvePostgresConnectionString(builder.Configuration, builder.Environment),
     ExecutionDbContextFactory.Schema);

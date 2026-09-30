@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -202,7 +203,10 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     public void HostStartup_WithoutGatewaySecret_FailsFast()
     {
         using var unconfigured = new WebApplicationFactory<Cadence.Apps.Execution.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestDemographicsKey().UseSetting("GATEWAY_SECRET", string.Empty));
+            .WithWebHostBuilder(builder => builder
+                .UseTestPostgresConnectionString()
+                .UseTestDemographicsKey()
+                .UseSetting("GATEWAY_SECRET", string.Empty));
 
         Action start = () => unconfigured.CreateClient();
 

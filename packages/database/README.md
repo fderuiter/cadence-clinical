@@ -16,7 +16,9 @@ migration application.
 - `WithModuleSchema(connectionString, schema)`: scopes a connection to one module schema (search path
   `<schema>,public`, ADR-2447). `ModuleSchemaFor<TContext>()` derives the default name (`CtmsDbContext` is `ctms`).
 - `ResolvePostgresConnectionString(...)`: reads `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`.
-  Only the Development environment falls back to the local compose database; elsewhere a missing value fails startup.
+  There is no fallback in any environment: a missing value fails startup with a message naming both keys (ADR-2260).
+- `ResolveDesignTimeConnectionString(args)`: used by every design-time `*DbContextFactory` (`dotnet ef`). Reads
+  `--connection "..."` passed after `--`, then `POSTGRES_CONNECTION_STRING`, and throws when neither is set.
 - `AddCadenceMigrations<TContext>()`: applies migrations according to the `Database` configuration section.
 - `AddCadenceDbContext<TContext>()`: `AddDbContext` plus the compiled EF model when one exists.
 - `GxPAuditInterceptor`: stamps `CreatedAt`, `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR Part 11), and is
