@@ -54,6 +54,39 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         return await PathAsync(db, tenant, resource.Kind, resource.Id, cancellationToken).ConfigureAwait(false) ?? ScopePath.TenantWide;
     }
 
+    public async Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        await using var db = contexts.Create(tenant);
+        IQueryable<StudySite> studySites;
+        switch (node.Kind)
+        {
+            case NodeKinds.Participant:
+                var participant = ParticipantId.FromGuid(node.Id);
+                var enrolledAt = db.Enrollments.AsNoTracking()
+                    .Where(e => e.TenantId == tenant && e.ParticipantId == participant)
+                    .Select(e => e.StudySiteId);
+                studySites = db.StudySites.AsNoTracking().Where(ss => ss.TenantId == tenant && enrolledAt.Contains(ss.Id));
+                break;
+
+            case NodeKinds.Site:
+                var siteId = SiteId.FromGuid(node.Id);
+                studySites = db.StudySites.AsNoTracking().Where(ss => ss.TenantId == tenant && ss.SiteId == siteId);
+                break;
+
+            default:
+                return [];
+        }
+
+        var rows = await (
+                from ss in studySites
+                join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                select new { study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return [.. rows.Select(r => new ScopePath(r.SponsorId, r.StudyId, r.Country, r.StudySiteId))];
+    }
+
     private static async Task<ScopePath?> PathAsync(KernelDbContext db, TenantId tenant, string kind, Guid id, CancellationToken ct)
     {
         switch (kind)

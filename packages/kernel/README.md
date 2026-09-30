@@ -441,6 +441,10 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
 - **Tables.** `kernel.roles` is insert-only. `kernel.grant_periods` carries the bitemporal guards. `kernel.grants`
   checks that exactly one of capability and role is set and that the scope columns fit the level, a `StudyCountry`
   scope included.
+- **Visibility (ADR-2457).** `AddKernelGrantVisibility()` registers `GrantNodeVisibility` as the host's
+  `INodeVisibility`. A reader sees what a grant it holds in effect covers, the organization, study and country above
+  that scope, participants and sites through the study sites they reach, and tenant reference data. Everything else
+  is masked `NotPermitted`.
 - **Not yet:** qualifications, separation of duties, and StudySite, protocol or blinding conditions (rest of #4781).
 
 ## Work queues (ADR-2486)

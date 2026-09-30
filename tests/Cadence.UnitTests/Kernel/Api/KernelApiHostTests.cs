@@ -674,6 +674,9 @@ public sealed class KernelApiHostTests : IDisposable
 
         public Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken) =>
             Task.FromResult(ScopePath.TenantWide);
+
+        public Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<ScopePath>>([]);
     }
 
     /// <summary>A lineage with one visible start and one blinded participant downstream of it.</summary>

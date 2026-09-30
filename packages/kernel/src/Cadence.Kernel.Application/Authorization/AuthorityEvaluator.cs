@@ -37,6 +37,12 @@ public interface IAuthorityStore
     /// organization or study, has <see cref="ScopePath.TenantWide"/>, which only tenant-wide grants cover.
     /// </summary>
     Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The scope paths of the study sites reached by an object that belongs to no study itself: the study sites where a
+    /// participant has an enrollment, or where a site takes part in a study. Empty for any other object.
+    /// </summary>
+    Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
 }
 
 /// <summary>Settings of the authority evaluator.</summary>
@@ -163,31 +169,8 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
         return null;
     }
 
-    private async Task<bool> InEffectAsync(AuthorizationRequest request, Grant grant, CancellationToken cancellationToken)
-    {
-        var current = grant;
-        for (var depth = 0; depth <= MaxDelegationDepth; depth++)
-        {
-            if (!current.IsInEffect(request.At, request.KnownAt))
-            {
-                return false;
-            }
-
-            if (current.ParentGrantId is not { } parentId)
-            {
-                return true;
-            }
-
-            if (await store.FindGrantAsync(request.Tenant, parentId, cancellationToken).ConfigureAwait(false) is not { } parent)
-            {
-                return false;
-            }
-
-            current = parent;
-        }
-
-        return false;
-    }
+    private Task<bool> InEffectAsync(AuthorizationRequest request, Grant grant, CancellationToken cancellationToken) =>
+        GrantChain.InEffectAsync(store, request.Tenant, grant, request.At, request.KnownAt, cancellationToken);
 
     private async Task<IReadOnlyDictionary<RoleId, Role>> RoleCapabilitiesAsync(TenantId tenant, IReadOnlyList<Grant> held, CancellationToken cancellationToken)
     {
@@ -204,6 +187,42 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
     private static bool Carries(Grant grant, string token, IReadOnlyDictionary<RoleId, Role> roles) =>
         string.Equals(grant.Capability, token, StringComparison.Ordinal)
         || (grant.RoleId is { } roleId && roles.TryGetValue(roleId, out var role) && role.Capabilities.Contains(token, StringComparer.Ordinal));
+}
+
+/// <summary>Checks a grant together with every grant above it (K-AUTH-3).</summary>
+internal static class GrantChain
+{
+    /// <summary>
+    /// True when <paramref name="grant"/> and every grant above it are in effect at <paramref name="at"/> as known at
+    /// <paramref name="knownAt"/>. A chain deeper than <see cref="AuthorityEvaluator.MaxDelegationDepth"/>, or one
+    /// naming a parent that does not exist, is not in effect.
+    /// </summary>
+    public static async Task<bool> InEffectAsync(
+        IAuthorityStore store, TenantId tenant, Grant grant, DateTimeOffset at, DateTimeOffset knownAt, CancellationToken cancellationToken)
+    {
+        var current = grant;
+        for (var depth = 0; depth <= AuthorityEvaluator.MaxDelegationDepth; depth++)
+        {
+            if (!current.IsInEffect(at, knownAt))
+            {
+                return false;
+            }
+
+            if (current.ParentGrantId is not { } parentId)
+            {
+                return true;
+            }
+
+            if (await store.FindGrantAsync(tenant, parentId, cancellationToken).ConfigureAwait(false) is not { } parent)
+            {
+                return false;
+            }
+
+            current = parent;
+        }
+
+        return false;
+    }
 }
 
 /// <summary>Registers the authority evaluator.</summary>
