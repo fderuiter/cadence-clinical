@@ -931,8 +931,11 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .drawer-panel {
-  width: 100%;
-  max-width: 720px;
+  width: var(
+    --semantic-drawer-width-lg,
+    var(--drawer-width-lg, min(100vw, 640px))
+  );
+  max-width: 100vw;
   height: 100vh;
   background: #ffffff;
   display: flex;
