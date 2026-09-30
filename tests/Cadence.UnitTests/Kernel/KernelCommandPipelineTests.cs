@@ -223,6 +223,43 @@ public sealed partial class KernelCommandPipelineTests
         }
     }
 
+    /// <summary>
+    /// Validates K-TX-3 when the commit trips a unique constraint: a winner stored under the same key is replayed.
+    /// Without one, a unique conflict on the aggregate is AlreadyExists, and an idempotency race that left no outcome is
+    /// a defect, never a silent success.
+    /// </summary>
+    [Theory(DisplayName = "Pipeline_UniqueConflictOrIdempotencyRace_ReplaysTheWinner_OrFails")]
+    [InlineData(CommitOutcome.UniqueConflict)]
+    [InlineData(CommitOutcome.IdempotencyRace)]
+    public async Task PipelineUniqueConflictOrIdempotencyRaceReplaysTheWinnerOrFails(CommitOutcome outcome)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var command = NewTenant();
+
+        var raced = new RacingTransaction(WinnerOutcome(command)) { CommitOutcome = outcome };
+        await using (var services = BuildServices(raced))
+        {
+            var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: ct);
+            result.Replayed.Should().BeTrue();
+            result.Value.Should().Be(command.TenantId);
+            raced.Lookups.Should().Be(2);
+        }
+
+        var alone = new RacingTransaction(winner: null) { CommitOutcome = outcome };
+        await using (var services = BuildServices(alone))
+        {
+            var send = () => services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: ct);
+            if (outcome == CommitOutcome.UniqueConflict)
+            {
+                (await send()).Error.Should().Be(KernelErrors.AlreadyExists);
+            }
+            else
+            {
+                await send.Should().ThrowAsync<InvalidOperationException>().WithMessage("*idempotency race*");
+            }
+        }
+    }
+
     private static ServiceProvider BuildServices(RacingTransaction transaction) =>
         new ServiceCollection()
             .AddSingleton<IClock>(new FakeClock())
