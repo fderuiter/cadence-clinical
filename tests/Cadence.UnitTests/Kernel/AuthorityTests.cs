@@ -286,5 +286,8 @@ public sealed class AuthorityTests
                     : ScopePath.TenantWide,
                 _ => ScopePath.TenantWide,
             });
+
+        public Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<ScopePath>>([]);
     }
 }

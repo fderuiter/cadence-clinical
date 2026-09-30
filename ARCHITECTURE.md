@@ -11,7 +11,7 @@ When this document and the spec disagree, the spec wins; fix this document.
 | Section | Contents |
 | --- | --- |
 | [1. Target architecture](#1-target-architecture) | Kernel, six engines, applications, invariants |
-| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K025 and the platform decisions, with their ADRs |
+| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K027 and the platform decisions, with their ADRs |
 | [3. Running services today](#3-running-services-today) | Services, ports, gateway routes, maturity |
 | [4. Request path and security](#4-request-path-and-security) | OIDC at the gateway, signed identity in services |
 | [5. Persistence](#5-persistence) | Databases, connection strings, migrations |
@@ -92,6 +92,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K023 | Work queues are versioned definitions keyed by a capability; a person's items are what a source reports as due and the evaluator permits them to act on now, so revoking a grant removes its items | [ADR-2486](docs/adr/2026-09-30-work-queues-as-capability-keyed-definitions.md) |
 | K024 | Effectivity is bitemporal per protocol version and scope on artifact-version evidence; the most specific scope decides; a study site activates only where a version is in force | [ADR-2456](docs/adr/2026-09-30-effectivity-and-study-site-activation.md) |
 | K025 | The expected schedule is a pure function of the protocol design, a reference start and an as-of date, on the SDTM study-day axis (no day 0); simulation reports schedule changes from it | [ADR-2487](docs/adr/2026-09-30-expected-schedule-as-a-pure-function.md) |
+| K027 | Visibility is computed from the reader's grants in effect: what they cover, the scope path above them, participants and sites through their study sites, and reference data; everything else is masked | [ADR-2457](docs/adr/2026-09-30-grant-backed-node-visibility.md) |
 | — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
 | — | No default credentials; secrets resolve fail-closed | [ADR-2260](docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md) |

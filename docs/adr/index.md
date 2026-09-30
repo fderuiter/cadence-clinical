@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K025 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K027 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -45,10 +45,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K023 | Work queues as capability-keyed definitions | [ADR-2486](2026-09-30-work-queues-as-capability-keyed-definitions.md) |
 | K024 | Effectivity and study-site activation | [ADR-2456](2026-09-30-effectivity-and-study-site-activation.md) |
 | K025 | Expected schedule as a pure function of the protocol design | [ADR-2487](2026-09-30-expected-schedule-as-a-pure-function.md) |
+| K027 | Grant-backed node visibility | [ADR-2457](2026-09-30-grant-backed-node-visibility.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K025)
+### 0. Clinical Kernel (K001–K027)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -66,6 +67,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2454: Evidence Artifacts as Immutable, Hash-Addressed Versions](2026-09-30-evidence-artifacts-as-immutable-hash-addressed-versions.md) (2026-09-30)
 - [ADR-2455: Grants, Roles and Delegation as Bitemporal Kernel Authority](2026-09-30-grants-roles-and-delegation-as-bitemporal-kernel-authority.md) (2026-09-30)
 - [ADR-2456: Effectivity and Study-Site Activation](2026-09-30-effectivity-and-study-site-activation.md) (2026-09-30)
+- [ADR-2457: Grant-Backed Node Visibility](2026-09-30-grant-backed-node-visibility.md) (2026-09-30)
 - [ADR-2460: Standards Registry and Metadata Registry as Governed, Tenant-Scoped Reference Data](2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) (2026-09-30)
 - [ADR-2461: Rule Expression Language, Rule-Pack Format and the IRuleEvaluator Port](2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md) (2026-09-30)
 - [ADR-2462: Validation Findings Derived from Immutable Runs and Attested Decisions](2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md) (2026-09-30)

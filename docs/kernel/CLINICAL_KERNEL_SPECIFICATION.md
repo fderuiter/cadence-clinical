@@ -802,6 +802,10 @@ in `provenance_activities.authorization`. Qualifications (K-AUTH-5), separation 
 StudySite, protocol and blinding conditions of step 3 are still to come. Work-queue definitions and the queue read
 (K-AUTH-8) are implemented (#4849), with protocol versions in review as the first item source.
 
+*Visibility (#4781, ADR-2457):* `GrantNodeVisibility` is the `INodeVisibility` computed from the same grants. A reader
+sees what a grant it holds in effect covers, the organization, study and country above that scope, participants and
+sites through the study sites they reach, and tenant reference data. Everything else is masked `NotPermitted`.
+
 ### 9.4 Computable consent
 
 Consent is not only a signed PDF. `ConsentStatus` is **bitemporal state** (resolves inventory §3 item 4):
@@ -1176,6 +1180,7 @@ kernel, is merged into another, or is retired.
 | K023 | Work queues | Versioned definitions keyed by a capability; items from a registered source kept per reader by the one evaluator; portfolio queues span a tenant's studies | ADR-2486 |
 | K024 | Effectivity and study-site activation | Bitemporal effectivity per version and scope on artifact-version evidence; most specific scope decides; activation needs a version in force | ADR-2456 |
 | K025 | Expected schedule | Pure function of the design, a reference start and an as-of date; SDTM study days with no day 0; simulation reports schedule changes on the study-day axis | ADR-2487 |
+| K027 | Grant-backed visibility | A reader sees what its grants in effect cover and the scope path above them; participants and sites through their study sites; reference data to any grant holder | ADR-2457 |
 
 ---
 

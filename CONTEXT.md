@@ -116,7 +116,9 @@ country or study site) for a bitemporal validity period. A Role is only a named,
 capabilities and never bundles unblinding. A **Delegation** is a grant issued under a parent grant that
 carries the grant option. It cannot exceed its parent's capabilities, scope or validity, and it stops counting
 the moment any grant above it ends. Revoking a grant supersedes its validity row rather than deleting it, so
-past decisions stay explainable (ADR-2455).
+past decisions stay explainable (ADR-2455). What a reader may **see** follows the same grants: what they cover,
+the study and organization above them, and participants and sites through their study sites. Everything else comes
+back masked (ADR-2457).
 A **work queue** is a versioned definition keyed by one capability, never a role name. A person's queue holds
 the items a registered source reports as due that the evaluator permits them to act on now, so it follows their
 grants and delegations. Read without a scope, it is the portfolio queue across the tenant's studies (ADR-2486).
