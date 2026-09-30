@@ -10,7 +10,6 @@ Shared test infrastructure for the .NET test projects.
 - `Cadence.Testing.Time`: `FakeClock` implementing the kernel `IClock`.
 - `Cadence.Testing.GoldenMaster`: `GoldenMasterScenario`, `GoldenMasterFixtureLoader`, `GoldenMasterAssert`.
 - There are no entity factories (such as `SubjectFactory`) in this package.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `factories.py`, `fakes.py`, `security.py`, `dependency_graph.py`, `__init__.py`, `pyproject.toml`. They are not the implementation.
 
 ## Key dependencies
 

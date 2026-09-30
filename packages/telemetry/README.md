@@ -11,7 +11,6 @@ Shared web host defaults for the .NET services: HTTP hardening, JSON console log
   - `UseCadenceWebDefaults()`: forwarded headers, HSTS outside Development, exception handler, `traceparent` response header, OpenAPI and Scalar UI in Development only, and the probe endpoints.
   - `MapCadenceProbeEndpoints()`: `GET /healthz/live` (no checks) and `GET /healthz/ready` (checks tagged `ready`, such as a service's DbContext).
   - `MapCadenceHealthAndStatusEndpoints(serviceName, routePrefix, ...)`: anonymous `GET /healthz` and `GET /api/v1/{routePrefix}/status`.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `logging.py`, `tracer.py`, `__init__.py`, `pyproject.toml`. They are not the implementation.
 
 ## Key dependencies
 

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -22,6 +23,13 @@ public static class ReadmeValidatorService
             {
                 string name = Path.GetFileName(subDir);
                 if (name.StartsWith('.') || name == "__pycache__" || name == "bin" || name == "obj" || name == "node_modules" || name == ".venv")
+                {
+                    continue;
+                }
+
+                // A package deleted upstream leaves its build output behind in existing checkouts. Such a
+                // directory is not a project, so it needs no README.
+                if (ContainsOnlyBuildOutput(subDir))
                 {
                     continue;
                 }
@@ -55,6 +63,11 @@ public static class ReadmeValidatorService
         Console.WriteLine("✔ README coverage validated cleanly.");
         return 0;
     }
+
+    private static bool ContainsOnlyBuildOutput(string directory) =>
+        !Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(directory, f).Replace('\\', '/'))
+            .Any(f => !f.Split('/').Any(part => part is "bin" or "obj" or "node_modules"));
 
     private static string FindRepoRoot()
     {

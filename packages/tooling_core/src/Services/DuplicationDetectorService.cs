@@ -17,22 +17,9 @@ public static class DuplicationDetectorService
         "node_modules", "tests", ".venv", "__pycache__", "dist", "build", "bin", "obj", "Migrations", "migrations", ".git"
     ];
 
+    // The service hosts share their startup wiring by design until they merge into the kernel host (ADR-2244).
     private static readonly HashSet<string>[] ExemptedPairs =
     [
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/econsent/adapters/ai_readability_client.py", "apps/execution/adapters/ai_anomaly_client.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/ddf/rules/ast.py", "packages/engine_core/rules/sentinels.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/security/audit_logger.py", "packages/compliance/audit.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/compliance/audit.py", "packages/compliance/__init__.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/safety/adapters/ai_narrative_client.py", "apps/safety/adapters/execution_client.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "packages/compliance/services/protocol_rag.py", "packages/core-models/protocol_rag/__init__.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/ctms/src/domain/acl/document_renderer_dto.py", "apps/designer/src/domain/document_renderer.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/domain/acl/usdm_validation_dto.py", "apps/gateway/domain/acl/usdm_validation.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/designer/adapters/neo4j_usdm_writer.py", "apps/designer/domain/cdisc/usdm_importer.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/ctms/src/domain/acl/sync_engine_dto.py", "apps/interop/src/domain/sync_engine.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/etmf/watermark.py", "apps/etmf/adapters/watermark.py", "apps/execution/src/domain/watermark.py", "apps/execution/domain/watermark.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/domain/acl/designer_eligibility_dto.py", "apps/interop/src/domain/acl/eligibility_dto.py", "apps/designer/src/domain/eligibility/models.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/etmf/sealer.py", "apps/etmf/adapters/sealer.py", "apps/execution/database/sealer.py" },
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/gateway/main.py", "packages/security/middleware.py" },
         new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "apps/execution/src/Program.cs", "apps/designer/src/Program.cs", "apps/gateway/src/Program.cs" }
     ];
 
@@ -58,7 +45,8 @@ public static class DuplicationDetectorService
                 string norm = file.Replace('\\', '/');
                 if (IgnoredPathKeywords.Any(k => norm.Contains($"/{k}/", StringComparison.Ordinal) || norm.Contains($"/{k}", StringComparison.Ordinal))) continue;
 
-                if (norm.EndsWith(".py", StringComparison.Ordinal) || norm.EndsWith(".js", StringComparison.Ordinal) || norm.EndsWith(".vue", StringComparison.Ordinal) || norm.EndsWith(".css", StringComparison.Ordinal) || norm.EndsWith(".cs", StringComparison.Ordinal))
+                // Python files are porting references, not live code (#4789), so they are not scanned.
+                if (norm.EndsWith(".js", StringComparison.Ordinal) || norm.EndsWith(".vue", StringComparison.Ordinal) || norm.EndsWith(".css", StringComparison.Ordinal) || norm.EndsWith(".cs", StringComparison.Ordinal))
                 {
                     allFiles.Add(file);
                 }

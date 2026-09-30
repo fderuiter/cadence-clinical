@@ -9,7 +9,7 @@ De-identification library: PII/PHI detection with compliance profiles, value tra
 - `DeidTransforms`, `DeidAirGapVault`.
 - `DicomDeidentifier` (with `DicomDeidResult`, `DicomDeidCertificate`, `PixelMaskBoundingBox`), built on fo-dicom.
 - `RedactionManifestBuilder`, `RedactionManifest`, `RedactionRecordItem`.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `detector.py`, `transforms.py`, `air_gap.py`, `dicom.py`, `manifest.py`, `ner_scrubber.py`, `cli.py`, `__main__.py`, `models.py`, `pyproject.toml`. They are not the implementation.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `cli.py`, `__main__.py`, `detector.py`, `models.py`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 

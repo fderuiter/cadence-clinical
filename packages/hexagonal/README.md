@@ -9,7 +9,6 @@ Generic building blocks for ports-and-adapters code: entity and value-object bas
 - `Ports.cs`: `IRepositoryPort`, `IUseCasePort`, `IEventDispatcherPort`, `IAuditLoggerPort`, `IExternalServiceClientPort`.
 - `DomainExceptions.cs`: `DomainException` and subclasses (`EntityNotFoundException`, `EntityAlreadyExistsException`, `ValidationException`, `ConflictException`, `PreconditionFailedException`, `UnauthorizedActionException`, `DatabaseException`).
 - `ProblemDetails.cs`: `ProblemDetails` record and `DomainErrorMapper`.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `__init__.py`, `pyproject.toml`. They are not the implementation.
 
 ## Key dependencies
 

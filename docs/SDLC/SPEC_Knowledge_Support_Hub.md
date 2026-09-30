@@ -94,7 +94,7 @@ Key capabilities include:
 
 ### Prior Art
 - `apps/tickets/tests/test_tickets_service.py`
-- `packages/testing/factories.py` and `packages/testing/security.py`
+- `packages/testing/src/Security/TestSecurityContext.cs` (the Python `packages/testing` factories and security helpers were retired in #4789)
 
 ## Out of Scope
 

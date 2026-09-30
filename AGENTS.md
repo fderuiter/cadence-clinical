@@ -208,8 +208,9 @@ Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoint
 
 ### 11. Porting Python reference sources
 
-Some packages still contain the Python implementation as a behavioural reference, deleted as each C#
-port is verified (#4789). Follow [docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md). Equivalents:
+Some packages still contain Python files as a behavioural reference for C# ports that are missing or
+untested; [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) lists each one and what it
+needs before it can be deleted (#4789). Follow [docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md). Equivalents:
 
 | Python | .NET 10 |
 | --- | --- |

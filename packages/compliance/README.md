@@ -6,7 +6,7 @@ Part 11 support library: audit digest calculation and hash-chain verification, e
 
 - Project: `packages/compliance/src/Cadence.Compliance.csproj` (assembly `Cadence.Compliance`, namespace `Cadence.Compliance`).
 - Main types: `AuditDigestCalculator`, `AuditChainVerifier`, `ComplianceAuditLogRecord`, `ESignatureVerifier`, `GxPSigner`, `Pkcs7Signer`, `PhiRedactorService`, `ProtocolRagService`, `RtmGeneratorService`, and the exceptions `TamperDetectedException` and `UnapprovedAIRecordException`.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `audit.py`, `services/`, `pyproject.toml`. They are not the implementation.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `services/esignature_verifier.py`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Signature verification
 
