@@ -34,10 +34,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// Validates the schema-wide rule: every kernel table has Row-Level Security enabled and forced with at least one
     /// policy, and every table except <c>tenants</c> and <c>people</c> has a non-null <c>tenant_id</c>. A new table
     /// that a migration leaves unprotected fails here.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "EveryKernelTable_HasTenantIdAndForcedRowLevelSecurity")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task EveryKernelTableHasTenantIdAndForcedRowLevelSecurity()
     {
         fixture.SkipIfUnavailable();
@@ -71,10 +69,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates that the application role cannot escape the policies: it is not a superuser, has no
     /// <c>BYPASSRLS</c>, owns no kernel table, cannot update the insert-only tables and cannot delete anywhere.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ApplicationRole_IsNotOwner_AndCannotBypassRowLevelSecurity")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity()
     {
         fixture.SkipIfUnavailable();
@@ -104,10 +100,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates spec §14 scenario 5, reads: a context scoped to tenant A sees only A's tenant, organizations and
     /// studies, even when it asks for B's rows by id, and an unfiltered SQL count sees only A's rows.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "CrossTenantRead_ReturnsNothing")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CrossTenantReadReturnsNothing()
     {
         fixture.SkipIfUnavailable();
@@ -130,10 +124,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// Validates spec §14 scenario 5, writes: a row in tenant A that names tenant B's organization fails the composite
     /// foreign key, and a row stamped with tenant B while connected as tenant A fails the policy check, both inside
     /// PostgreSQL.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "CrossTenantForeignKey_AndForeignTenantRow_AreRejectedByTheDatabase")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase()
     {
         fixture.SkipIfUnavailable();
@@ -155,10 +147,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates that a kernel context with no tenant cannot open a connection, and that a raw connection as the
     /// application role with no tenant set sees no rows and can insert none.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "NoTenant_CannotConnect_AndSeesNothing")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task NoTenantCannotConnectAndSeesNothing()
     {
         fixture.SkipIfUnavailable();
@@ -184,10 +174,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates K-ID-4: a person has one tenant-independent identity, and a tenant sees that person only through a
     /// membership of its own.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Person_IsVisibleOnlyToTenantsWithAMembership")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task PersonIsVisibleOnlyToTenantsWithAMembership()
     {
         fixture.SkipIfUnavailable();
@@ -214,10 +202,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates the tenant directory: system jobs can list every tenant id through the directory function, while
     /// the application role can neither read the tenants table unscoped nor switch the directory on for itself.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "TenantDirectory_ListsIds_OnlyThroughTheDirectoryFunction")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction()
     {
         fixture.SkipIfUnavailable();
@@ -239,10 +225,8 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates that the command pipeline runs under the policies end to end: a command for tenant A commits as the
     /// application role, and its provenance, audit link and outbox row are visible to tenant A only.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "PipelineCommand_CommitsUnderRowLevelSecurity_VisibleToItsTenantOnly")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly()
     {
         fixture.SkipIfUnavailable();
