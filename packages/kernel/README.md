@@ -79,13 +79,18 @@ Every tenant loads the releases it adopts, public ones included; licensed conten
 never in this repository. To load a release, register its code system once, then load the publisher's file:
 
 ```csharp
-await sender.SendAsync(new RegisterCodeSystem(tenant, ctId, KnownCodeSystems.NciThesaurus, "CDISC CT", "CDISC/NCI EVS",
-    LicenseClass.Open, key, "Adopt CDISC CT"));
+await sender.SendAsync(new RegisterCodeSystem(tenant, ctId, KnownCodeSystems.SdtmCt, "SDTM CT", "CDISC/NCI EVS",
+    LicenseClass.Open, key, "Adopt SDTM CT"));
 var version = await new TerminologyPackageLoader(sender).LoadAsync(
     new TerminologyRelease(tenant, ctId, CodeSystemVersionId.New(), "2026-06-27", new DateOnly(2026, 6, 27),
         "SDTM Terminology.txt", "https://evs.nci.nih.gov/ftp1/CDISC/SDTM/", publishedSha256, "Adopt SDTM CT 2026-06-27"),
-    File.ReadAllBytes(path), new CdiscControlledTerminologyParser());
+    File.ReadAllBytes(path), new CdiscControlledTerminologyParser("sdtmct"));
 ```
+
+Each CDISC CT package type is its own code system, `KnownCodeSystems.CdiscCt("sdtmct")` (constants `SdtmCt`, `CdashCt`,
+`AdamCt`, `SendCt`, `ProtocolCt`, `DefineXmlCt`), and the release date is the version. A standard's CT binding
+`(sdtmct, 2024-09-27)` therefore resolves with `FindCodeSystemVersionAsync(tenant, KnownCodeSystems.CdiscCt("sdtmct"),
+"2024-09-27")`. The C-codes inside a package are NCI Thesaurus codes.
 
 The loader refuses a file whose SHA-256 differs from the expected one; loading the same file again replays the import.
 Parsers exist for NCI EVS CDISC CT text (`CdiscControlledTerminologyParser`), `ucum-essence.xml` (`UcumEssenceParser`)

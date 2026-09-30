@@ -86,7 +86,13 @@ Rules:
    with a relation (exact, broader, narrower, related), a review status (proposed, confirmed, rejected) and evidence.
    Only confirmed mappings resolve an incoming code to a concept. A sponsor concept's mapping state (unmapped,
    proposed, mapped) is derived from its mappings on read, never stored.
-6. **Coding verbatim terms** (MedDRA, WHODrug) is a `CodedAs` Assertion carrying a `Coding(code-system version, code)`
+6. **One code system per CDISC CT package.** Each package type the CDISC Library publishes (`sdtmct`, `cdashct`,
+   `adamct`, `sendct`, `protocolct`, `define-xmlct`, …) is its own code system with the URI
+   `https://library.cdisc.org/api/mdr/ct/packages/{type}` (`KnownCodeSystems.CdiscCt`), and the package's release date
+   is the version label. The Standards Registry's CT binding `(sdtmct, 2024-09-27)` is then a natural key for exactly
+   one pinned code-system version. Packages released on the same date by different standards stay distinct. Every
+   package is `Open`. The C-codes they contain are NCI Thesaurus codes.
+7. **Coding verbatim terms** (MedDRA, WHODrug) is a `CodedAs` Assertion carrying a `Coding(code-system version, code)`
    about an Observation (#4729); the registry provides the `Coding` type and the lookups.
 
 ## 5. Consequences & Trade-offs

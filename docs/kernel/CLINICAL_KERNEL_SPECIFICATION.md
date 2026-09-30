@@ -484,7 +484,9 @@ approval needs an `Approved` Attestation, deprecation a `Responsibility` one, bo
 items; deprecation never changes a pin. Registered definitions are insert-only (`KA001`) and the identity and content
 columns of versions and items are immutable (`KS001`). `Cadence.Standards` loads CDISC Library product content with
 checksum verification and ships SDTMIG v3.4 (DM, AE, VS, LB) and ADaMIG v1.3 (ADSL) seeds. Until the Concept Registry
-lands, CT bindings are the natural key `(code system, version)`, for example `sdtmct 2024-09-27`. An architecture test
+lands, CT bindings are the natural key `(code system, version)`, for example `sdtmct 2024-09-27`; each CDISC CT package
+type is its own Concept Registry code system (`KnownCodeSystems.CdiscCt`, ADR-2470), so the key names one pinned
+code-system version. An architecture test
 enforces K-PROJ-1 against the shipped seeds.
 
 ---

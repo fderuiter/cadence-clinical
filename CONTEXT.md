@@ -135,7 +135,7 @@ Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The cha
 
 ### Concept Registry
 
-The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation. Each tenant loads the terminology releases it adopts (ADR-2470); a release is a pinned **CodeSystemVersion**, and a **Coding** is a code in one such version. A concept's label or definition change is a new version; earlier versions keep resolving. A **ConceptMapping** links one concept version to one Coding with a relation and a review status.
+The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation. Each tenant loads the terminology releases it adopts (ADR-2470); a release is a pinned **CodeSystemVersion**,, and a **Coding** is a code in one such version. Each CDISC CT package type (SDTM CT, ADaM CT, …) is its own code system and its release date is the version. A concept's label or definition change is a new version; earlier versions keep resolving. A **ConceptMapping** links one concept version to one Coding with a relation and a review status.
 
 ### Standards Registry, Metadata Registry and Study Standards
 

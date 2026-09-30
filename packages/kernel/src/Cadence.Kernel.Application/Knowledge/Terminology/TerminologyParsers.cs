@@ -30,11 +30,13 @@ public interface ITerminologyParser
 /// CDISC Controlled Terminology as NCI EVS publishes it: the tab-delimited text file per standard (for example
 /// "SDTM Terminology.txt"), with the columns Code, Codelist Code, Codelist Extensible (Yes/No), Codelist Name, CDISC
 /// Submission Value, CDISC Synonym(s), CDISC Definition and NCI Preferred Term. A codelist row (no codelist code) becomes
-/// an entry with no group; each term becomes an entry grouped under its codelist's C-code.
+/// an entry with no group; each term becomes an entry grouped under its codelist's C-code. The file belongs to one CT
+/// package (for example <c>sdtmct</c>), whose code system is <see cref="KnownCodeSystems.CdiscCt"/>.
 /// </summary>
-public sealed class CdiscControlledTerminologyParser : ITerminologyParser
+/// <param name="package">The CDISC CT package type the file is, for example <c>sdtmct</c>.</param>
+public sealed class CdiscControlledTerminologyParser(string package) : ITerminologyParser
 {
-    public string CodeSystemUri => KnownCodeSystems.NciThesaurus;
+    public string CodeSystemUri { get; } = KnownCodeSystems.CdiscCt(package);
 
     public string Format => "nci-evs-tsv";
 
