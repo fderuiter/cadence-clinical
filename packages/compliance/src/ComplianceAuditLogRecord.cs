@@ -28,5 +28,4 @@ public record ComplianceAuditLogRecord(
 {
     public string Id { get; init; } = Id ?? Guid.NewGuid().ToString();
     public string EventId { get; init; } = EventId ?? Guid.NewGuid().ToString();
-    public DateTimeOffset? Timestamp { get; init; } = Timestamp ?? DateTimeOffset.UtcNow;
 }

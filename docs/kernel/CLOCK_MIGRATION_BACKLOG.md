@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| **Status** | Open (`apps/` and every shared package done except `packages/database`, `packages/compliance` and `packages/security`, which the security thread owns) |
+| **Status** | No wall-clock reads remain in `apps/` or `packages/`. Every app and every package that had one opts into the ban; `core-models`, `telemetry`, `ddf`, `templating`, `storage`, `sentinels` and `contracts` have none and are not opted in yet |
 | **Date** | 2026-09-29 |
 | **Spec** | `docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` §4.1 K-TIME-3, §10 |
 | **Issue** | #4784 |
@@ -36,16 +36,19 @@
   registered `IClock`. The value is still normalized to UTC `DateTime` before hashing, so the Merkle block hash
   format is unchanged and no migration is needed. `packages/database` opts in with `CadenceBanWallClock`.
 
-## What is left
+## Last packages (done)
 
-The analyzer is **not** yet enabled for three shared packages. The security thread owns all three, because the
-remaining uses are audit, signing and replay-protection code. Once a project is clean, it sets
-`<CadenceBanWallClock>true</CadenceBanWallClock>` in its `.csproj`.
+The last three packages with wall-clock reads were the audit, signing and
+replay-protection packages the security thread owns (#4784):
 
-- `packages/database`: `GxPAuditInterceptor` falls back to `DateTime.UtcNow` when no clock is passed. The fix is to
-  take a required `IClock`.
-- `packages/compliance`: `GxPSigner`, `Pkcs7Signer`, `ComplianceAuditLogRecord` and `RtmGeneratorService`.
-- `packages/security`: `ReplayCache`, `AuditLogRecord` and `AuditDigestEngine`.
+- `packages/database`: `GxPAuditInterceptor` takes a required `IClock`.
+- `packages/compliance`: `GxPSigner.SignGxpMarkdown`, `Pkcs7Signer.GenerateSigningCredentials` and
+  `RtmGeneratorService.GenerateRtm` take an optional `IClock` (default `SystemClock.Instance`).
+  `ComplianceAuditLogRecord.Timestamp` no longer defaults to the current time: a record without one stays without
+  one.
+- `packages/security`: `ReplayCache` and `AuditDigestEngine` take an optional `IClock` (default
+  `SystemClock.Instance`; `AddCadenceSecurity` passes the registered clock when there is one).
+  `AuditLogRecord.Timestamp` is `required`.
 
 ### Shared packages (done)
 

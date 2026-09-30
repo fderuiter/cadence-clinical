@@ -36,6 +36,9 @@ signatures and audit digests shared by every Cadence service.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
   used by `Cadence.Deid` for redaction manifests and de-identification certificates.
 - **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `GxPAuditInterceptor`, `IAuditLogWriter`.
+- **Time (K-TIME-3):** the project bans `DateTime.Now/UtcNow`. `ReplayCache` and `AuditDigestEngine` take an
+  `IClock` (default `SystemClock.Instance`; `AddCadenceSecurity` passes the registered one), and
+  `AuditLogRecord.Timestamp` is `required` (#4784).
 
 ### Canonical JSON (`CanonicalSigner`)
 
@@ -49,6 +52,7 @@ This is byte-for-byte `canonicalSerialize` in `packages/ui/signing.js`, so signa
 ## Dependencies
 
 - ASP.NET Core shared framework
+- `Cadence.Kernel.Abstractions` (`IClock`)
 - `Microsoft.EntityFrameworkCore`
 - `System.IdentityModel.Tokens.Jwt`, `Microsoft.IdentityModel.Tokens`
 

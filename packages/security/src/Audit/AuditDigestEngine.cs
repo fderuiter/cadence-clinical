@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
+using Cadence.Kernel.Time;
+
 namespace Cadence.Security.Audit;
 
 /// <summary>
@@ -38,11 +40,13 @@ public class AuditDigestEngine
 {
     private readonly IAuditLogWriter _writer;
     private readonly string _secretKey;
+    private readonly IClock _clock;
 
-    public AuditDigestEngine(IAuditLogWriter? writer = null, string? secretKey = null)
+    public AuditDigestEngine(IAuditLogWriter? writer = null, string? secretKey = null, IClock? clock = null)
     {
         _writer = writer ?? new InMemoryAuditStore();
         _secretKey = AuditSecretKey.Resolve(secretKey);
+        _clock = clock ?? SystemClock.Instance;
     }
 
     public string GetLastDigest()
@@ -54,7 +58,7 @@ public class AuditDigestEngine
     public AuditLogRecord LogEvent(AuditLogPayload payload)
     {
         string eventId = Guid.NewGuid().ToString();
-        DateTime timestamp = DateTime.UtcNow;
+        DateTime timestamp = _clock.UtcNow.UtcDateTime;
         string timestampStr = timestamp.ToString("o");
         string prevDigest = GetLastDigest();
 
