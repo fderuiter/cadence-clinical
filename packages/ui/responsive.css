@@ -192,6 +192,7 @@
 /* 7. Mobile Breakpoint Drawer Rules (Requirement 2) */
 @media (max-width: 640px) {
   .drawer-mobile-full,
+  .drawer-panel-mobile-full,
   .ehr-reconciliation-drawer,
   .share-drawer,
   .readability-drawer {
