@@ -5,6 +5,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Testing;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -187,6 +188,8 @@ public class PaymentDecimalCalculationTests
 
         var payable = new Payable
         {
+            CreatedAt = FakeClock.DefaultStart,
+            UpdatedAt = FakeClock.DefaultStart,
             CreatedBy = "payments-test",
             BaseAmount = baseAmount,
             OverheadAmount = overheadAmount,
@@ -228,6 +231,8 @@ public class PaymentDecimalCalculationTests
     {
         var wallet = new ParticipantWallet
         {
+            CreatedAt = FakeClock.DefaultStart,
+            UpdatedAt = FakeClock.DefaultStart,
             CreatedBy = "payments-test",
             CurrentBalance = 0.00m,
             LifetimeStipends = 0.00m,
@@ -261,6 +266,8 @@ public class PaymentDecimalCalculationTests
 
         var alloc1 = new PayableAllocation
         {
+            CreatedAt = FakeClock.DefaultStart,
+            UpdatedAt = FakeClock.DefaultStart,
             CreatedBy = "payments-test",
             AllocationPercentage = payee1AllocationRate,
             GrossShare = Math.Round(grossAmount * (payee1AllocationRate / 100.0m), 4, MidpointRounding.ToEven),
@@ -270,6 +277,8 @@ public class PaymentDecimalCalculationTests
 
         var alloc2 = new PayableAllocation
         {
+            CreatedAt = FakeClock.DefaultStart,
+            UpdatedAt = FakeClock.DefaultStart,
             CreatedBy = "payments-test",
             AllocationPercentage = payee2AllocationRate,
             GrossShare = Math.Round(grossAmount * (payee2AllocationRate / 100.0m), 4, MidpointRounding.ToEven),

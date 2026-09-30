@@ -9,6 +9,7 @@ using Cadence.Security.FieldProtection;
 using Cadence.Testing;
 using Cadence.Testing.Persistence;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -115,6 +116,8 @@ public sealed class ParticipantWalletSecretsAtRestTests : IDisposable
 
     private static ParticipantWallet NewWallet() => new()
     {
+        CreatedAt = FakeClock.DefaultStart,
+        UpdatedAt = FakeClock.DefaultStart,
         SubjectId = "SUBJ-101",
         StudyId = "STUDY-1",
         SiteId = "SITE-101",

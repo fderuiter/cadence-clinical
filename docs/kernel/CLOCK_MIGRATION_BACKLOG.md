@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| **Status** | Open |
+| **Status** | Open (`apps/` done; `packages/engine_core` left) |
 | **Date** | 2026-09-29 |
 | **Spec** | `docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` §4.1 K-TIME-3, §10 |
 | **Issue** | #4784 |
@@ -21,29 +21,31 @@
 - The analyzer also covers every test project under `tests/` through `tests/Directory.Build.props` (#4913). Tests
   use `FakeClock`, or `SystemClock.Instance` where the code under test checks the real clock
   ([TESTING.md, Time in tests](../TESTING.md#time-in-tests)).
-- Applications opt in project by project with `<CadenceBanWallClock>true</CadenceBanWallClock>` in the `.csproj`. The
-  repo-root `Directory.Build.props` then adds the same analyzer and `BannedSymbols.txt` to the whole project, not
-  only `Domain/`. Opted in so far: every app whose row in the table below says Done.
-- In those apps every timestamp is a `DateTimeOffset`, and the ones a writer must supply (`CreatedAt`, `UpdatedAt`,
-  `Timestamp`, `ReceivedAt`, interop's `DeviceTimestamp` and `ServerTimestamp`) are `required` with no default, so
-  code that creates a row must pass a time it took from `IClock` (or, for `DeviceTimestamp`, the device's own time).
+- The analyzer covers every project under `apps/`, the whole project and not only `Domain/`. The repo-root
+  `Directory.Build.props` sets `CadenceBanWallClock` for any project under `apps/` and then adds the analyzer and
+  `BannedSymbols.txt`. Any other project opts in with `<CadenceBanWallClock>true</CadenceBanWallClock>` in its
+  `.csproj`. The apps moved over two at a time (#4942, #4946, #4949, #4953, #4970, #4975, #4984, and payments with
+  the apps-wide default last).
+- In the app entities every timestamp is a `DateTimeOffset` (execution's `ObservationDate` aside, see below). The
+  ones a writer must supply (`CreatedAt`, `UpdatedAt`, `Timestamp`, `ReceivedAt`, interop's `DeviceTimestamp` and
+  `ServerTimestamp`, eConsent's `SignedAt` and `WithdrawalDate`) are `required` with no default, so code that creates a row must pass a time it took from `IClock` (or, for `DeviceTimestamp`, the device's own time).
   The columns were already `timestamp with time zone`, so the change needs no migration
   (`dotnet ef migrations has-pending-model-changes` reports none).
 
 ## What is left
 
-The analyzer is **not** yet enabled for `packages/engine_core` or the apps not listed above. Enabling it there
-today would break the build. Each follow-up below removes one group of violations. Once a group is clean, the
-same `PackageReference` and `AdditionalFiles` items from `packages/kernel/Directory.Build.props` are added to
-that project (for an app, `<CadenceBanWallClock>true</CadenceBanWallClock>` in its `.csproj`).
+The analyzer is **not** yet enabled for `packages/engine_core` or the other shared packages under `packages/`
+outside `packages/kernel/`. Enabling it there today would break the build. Each follow-up below removes one group
+of violations. Once a group is clean, that project sets `<CadenceBanWallClock>true</CadenceBanWallClock>` in its
+`.csproj`. The kernel slices thread owns this remainder.
 
 The counts below are from `main` at the base of this change and exclude EF `Migrations/`.
 
-### `apps/*/src` (110 property initializers in 14 apps, plus 2 fallbacks in execution)
+### `apps/*/src` (done: 110 property initializers in 14 apps and 2 fallbacks in execution)
 
 | App | Violations | File | Kind |
 | --- | ---: | --- | --- |
-| payments | 22 | `Domain/PaymentEntities.cs` | `= DateTime.UtcNow` property initializers |
+| payments | ~~22~~ 0 | `Domain/PaymentEntities.cs` | Done |
 | interop | ~~19~~ 0 | `Domain/InteropEntities.cs` | Done: `DeviceTimestamp` and `ServerTimestamp` no longer both default to server now (spec §10) |
 | econsent | ~~16~~ 0 | `Domain/EconsentEntities.cs` | Done |
 | safety | ~~15~~ 0 | `Domain/SafetyEntities.cs` | Done |

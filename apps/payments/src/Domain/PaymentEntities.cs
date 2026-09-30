@@ -16,9 +16,9 @@ public class BudgetContract
     public string? EffectiveDate { get; set; }
     public string Status { get; set; } = "ACTIVE";
     public bool IsActive { get; set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -39,9 +39,9 @@ public class FeeSchedule
     public decimal TravelReimbursement { get; set; }
     public bool RequiresSdv { get; set; }
     public bool IsActive { get; set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -57,9 +57,9 @@ public class SplitPayeeConfig
     public string? BankAccountReference { get; set; }
     public string? TaxIdentifier { get; set; }
     public bool IsActive { get; set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -89,11 +89,11 @@ public class Payable
     public string Currency { get; set; } = "USD";
     public string Status { get; set; } = "TRIGGERED";
     public bool IsSdvGated { get; set; }
-    public DateTime? SdvVerifiedAt { get; set; }
+    public DateTimeOffset? SdvVerifiedAt { get; set; }
     public string? SdvVerifiedBy { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -111,9 +111,9 @@ public class PayableAllocation
     public decimal NetShare { get; set; }
     public string Currency { get; set; } = "USD";
     public string Status { get; set; } = "ALLOCATED";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -129,15 +129,15 @@ public class HoldbackReserve
     public string Currency { get; set; } = "USD";
     public string Status { get; set; } = "HELD";
     public string? ReleaseAuthorizedBy { get; set; }
-    public DateTime? ReleaseAuthorizedAt { get; set; }
+    public DateTimeOffset? ReleaseAuthorizedAt { get; set; }
     public string? DmSignoffBy { get; set; }
-    public DateTime? DmSignoffAt { get; set; }
+    public DateTimeOffset? DmSignoffAt { get; set; }
     public string? QualitySignoffBy { get; set; }
-    public DateTime? QualitySignoffAt { get; set; }
+    public DateTimeOffset? QualitySignoffAt { get; set; }
     public string? ReleaseNotes { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -153,7 +153,7 @@ public class PaymentAuditLog
     public string? Details { get; set; }
     public string UserId { get; set; } = string.Empty;
     public string UserRoles { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
@@ -180,18 +180,18 @@ public class SelfBillingInvoice
     public int PayableCount { get; set; }
     public string Status { get; set; } = "DRAFT";
     public string? ApprovedBy { get; set; }
-    public DateTime? ApprovedAt { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
     public string? ErpSystem { get; set; } = "SAP";
     public string? ErpReferenceId { get; set; }
     public string ErpSyncStatus { get; set; } = "PENDING";
-    public DateTime? ErpSyncedAt { get; set; }
+    public DateTimeOffset? ErpSyncedAt { get; set; }
     public string? ReconciledBy { get; set; }
-    public DateTime? ReconciledAt { get; set; }
+    public DateTimeOffset? ReconciledAt { get; set; }
     public string? ReconciliationReference { get; set; }
     public string? ReconciliationNotes { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -214,9 +214,9 @@ public class InvoiceLineItem
     public decimal WithholdingAmount { get; set; }
     public decimal NetAmount { get; set; }
     public string Currency { get; set; } = "USD";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -238,15 +238,15 @@ public class RemittanceAdvice
     public bool IsSealed { get; set; } = true;
     public bool IsSigned { get; set; }
     public string? SignedBy { get; set; }
-    public DateTime? SignedAt { get; set; }
+    public DateTimeOffset? SignedAt { get; set; }
     public string? SignerRole { get; set; }
     public string? SignatureManifestJson { get; set; }
     public string? DispatchedTo { get; set; }
-    public DateTime? DispatchedAt { get; set; }
+    public DateTimeOffset? DispatchedAt { get; set; }
     public string DispatchStatus { get; set; } = "PENDING";
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
@@ -262,7 +262,7 @@ public class ErpSyncLog
     public string? ResponseDataJson { get; set; }
     public string? ExternalReference { get; set; }
     public bool Reconciled { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
@@ -283,8 +283,8 @@ public class ParticipantWallet
     public decimal TaxableYtd { get; set; }
     public bool Is1099ThresholdExceeded { get; set; }
     public string W9Status { get; set; } = "NOT_REQUIRED";
-    public DateTime? W9SubmittedAt { get; set; }
-    public DateTime? W9VerifiedAt { get; set; }
+    public DateTimeOffset? W9SubmittedAt { get; set; }
+    public DateTimeOffset? W9VerifiedAt { get; set; }
     public string? TaxIdLastFour { get; set; }
     public string CardType { get; set; } = "RELOADABLE_DEBIT";
     public string CardStatus { get; set; } = "ACTIVE";
@@ -305,9 +305,9 @@ public class ParticipantWallet
     public string? AchRoutingMask { get; set; }
     public string? AchAccountMask { get; set; }
     public string? AchAccountHolder { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
     public int VersionIndex { get; set; } = 1;
 }
