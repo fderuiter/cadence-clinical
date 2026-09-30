@@ -14,6 +14,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
@@ -70,6 +71,7 @@ public sealed class KernelApiHostTests : IDisposable
     private readonly FakeTenantDirectory _directory = new();
     private readonly FakeProtocolVersions _protocol = new();
     private readonly FakeAuthorityStore _authority = new();
+    private readonly FakeLineage _lineage = new();
     private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
 
     public void Dispose()
@@ -185,6 +187,15 @@ public sealed class KernelApiHostTests : IDisposable
     [InlineData("/api/v1/kernel/studies/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/protocol-versions", HttpStatusCode.NotFound)]
     [InlineData("/api/v1/kernel/protocol-versions/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/protocol-versions/protocol_version:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.NotFound)]
+    [InlineData("/api/v1/kernel/nodes/nonsense/lineage", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/lineage?direction=sideways", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/lineage?direction=1", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/lineage?depth=0", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/dependents?depth=51", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/dependents?edge_kind=Nope", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/dependents?edge_kind=3", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/protocol-versions/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/impact", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/protocol-versions/protocol_version:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/impact", HttpStatusCode.NotFound)]
     public async Task BadRequestsAndMissingObjects_AnswerWithProblems(string path, HttpStatusCode expected)
     {
         using var client = Client();
@@ -465,6 +476,115 @@ public sealed class KernelApiHostTests : IDisposable
         refused.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
     }
 
+    /// <summary>
+    /// Trace walks the lineage in the caller's tenant as the signed-in reader, with the direction, depth, edge kinds and
+    /// times asked for, and returns masked objects in place with their handles.
+    /// </summary>
+    [Fact]
+    public async Task Trace_WalksTheLineageAsTheReader_WithMaskedObjectsInPlace()
+    {
+        using var client = Client();
+
+        using var graph = await ReadJsonAsync(
+            client,
+            $"/api/v1/kernel/nodes/{Study}/lineage?direction=forward&depth=3&edge_kind=DerivedFrom&edge_kind=governedby&valid_at=2026-06-01T00:00:00Z",
+            TestContext.Current.CancellationToken);
+
+        var (tenant, reader, query) = _lineage.Traces.Should().ContainSingle().Subject;
+        tenant.Should().Be(Tenant);
+        reader.Should().Be(Reader);
+        query.Node.Should().Be(Study);
+        query.Direction.Should().Be(LineageDirection.Forward);
+        query.Depth.Should().Be(3);
+        query.EdgeKinds.Should().BeEquivalentTo([LineageEdgeKind.DerivedFrom, LineageEdgeKind.GovernedBy]);
+        query.ValidAt.Should().Be(new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero));
+        query.KnownAt.Should().BeNull();
+
+        var root = graph.RootElement;
+        root.GetProperty("direction").GetString().Should().Be("Forward");
+        root.GetProperty("truncated").GetBoolean().Should().BeTrue();
+        var masked = root.GetProperty("nodes")[1];
+        masked.GetProperty("handle").GetString().Should().Be("masked:1");
+        masked.GetProperty("kind").GetString().Should().Be(NodeKinds.Participant);
+        masked.GetProperty("ref").ValueKind.Should().Be(JsonValueKind.Null);
+        masked.GetProperty("mask").GetString().Should().Be("Blinded");
+        var edge = root.GetProperty("edges").EnumerateArray().Should().ContainSingle().Subject;
+        edge.GetProperty("to").GetString().Should().Be("masked:1");
+        edge.GetProperty("kind").GetString().Should().Be("DerivedFrom");
+        edge.GetProperty("activity").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    /// <summary>Trace defaults to a backward walk of the kernel's default depth over every edge kind.</summary>
+    [Fact]
+    public async Task Trace_DefaultsToABackwardWalk()
+    {
+        using var client = Client();
+
+        using var graph = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{Study}/lineage", TestContext.Current.CancellationToken);
+
+        var (_, _, query) = _lineage.Traces.Should().ContainSingle().Subject;
+        query.Direction.Should().Be(LineageDirection.Backward);
+        query.Depth.Should().Be(LineageQuery.DefaultDepth);
+        query.EdgeKinds.Should().BeNull();
+    }
+
+    /// <summary>Dependents come grouped by kind with counts that include masked objects, and their total.</summary>
+    [Fact]
+    public async Task Dependents_AreGroupedByKind_CountingMaskedObjects()
+    {
+        using var client = Client();
+
+        using var report = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{Study}/dependents?depth=2", TestContext.Current.CancellationToken);
+
+        var (tenant, reader, query) = _lineage.Dependents.Should().ContainSingle().Subject;
+        (tenant, reader, query.Node, query.Depth).Should().Be((Tenant, Reader, Study, 2));
+        var root = report.RootElement;
+        root.GetProperty("total").GetInt32().Should().Be(2);
+        var group = root.GetProperty("groups").EnumerateArray().Should().ContainSingle().Subject;
+        group.GetProperty("kind").GetString().Should().Be(NodeKinds.Participant);
+        group.GetProperty("count").GetInt32().Should().Be(2);
+        group.GetProperty("objects").EnumerateArray().Select(o => o.GetProperty("mask").GetString()).Should().Equal(null, "Blinded");
+    }
+
+    /// <summary>
+    /// An amendment's impact names the amended and parent versions and the elements it changes, with the parent's
+    /// dependents counted the Impact way; a first version amends nothing.
+    /// </summary>
+    [Fact]
+    public async Task AmendmentImpact_CountsWhatDependsOnTheAmendedVersion()
+    {
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var impact = await ReadJsonAsync(client, $"/api/v1/kernel/protocol-versions/{NodeRef.For(Amendment.Id)}/impact", ct);
+
+        var root = impact.RootElement;
+        root.GetProperty("amended").GetString().Should().Be(NodeRef.For(Amendment.Id).ToString());
+        root.GetProperty("parent").GetString().Should().Be(NodeRef.For(FirstVersion.Id).ToString());
+        root.GetProperty("impacted_elements").EnumerateArray().Select(e => e.GetString()).Should().Equal("schedule_of_activities");
+        root.GetProperty("dependents").GetProperty("total").GetInt32().Should().Be(2);
+        _lineage.Impacts.Should().ContainSingle().Which.Should().Be((Tenant, Reader, Amendment.Id));
+
+        var first = await client.GetAsync(new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}/impact", UriKind.Relative), ct);
+        first.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await first.Content.ReadAsStringAsync(ct)).Should().Contain("amends nothing");
+    }
+
+    /// <summary>Lineage reads name their reader, so a caller with no accountable person is refused before any walk.</summary>
+    [Theory]
+    [InlineData("lineage")]
+    [InlineData("dependents")]
+    public async Task LineageReads_WithoutAnAccountableReader_AreRefused(string read)
+    {
+        using var client = Factory().CreateSignedClient(TestSecurityContext.Identity("system", "Data Manager"));
+
+        var response = await client.GetAsync(new Uri($"/api/v1/kernel/nodes/{Study}/{read}", UriKind.Relative), TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        _lineage.Traces.Should().BeEmpty();
+        _lineage.Dependents.Should().BeEmpty();
+    }
+
     private HttpClient Client(bool knownTenant = true, bool hostVisibility = false) =>
         Factory(knownTenant, hostVisibility: hostVisibility).CreateSignedClient();
 
@@ -491,6 +611,10 @@ public sealed class KernelApiHostTests : IDisposable
                 services.AddSingleton<IProtocolVersionReader>(_protocol);
                 services.RemoveAll<IAuthorityStore>();
                 services.AddSingleton<IAuthorityStore>(_authority);
+                services.RemoveAll<IKernelLineage>();
+                services.AddSingleton<IKernelLineage>(_lineage);
+                services.RemoveAll<IAmendmentImpact>();
+                services.AddSingleton<IAmendmentImpact>(_lineage);
 
                 if (!hostVisibility)
                 {
@@ -550,6 +674,61 @@ public sealed class KernelApiHostTests : IDisposable
 
         public Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken) =>
             Task.FromResult(ScopePath.TenantWide);
+    }
+
+    /// <summary>A lineage with one visible start and one blinded participant downstream of it.</summary>
+    private sealed class FakeLineage : IKernelLineage, IAmendmentImpact
+    {
+        private static readonly DateTimeOffset Now = new(2026, 9, 30, 0, 0, 0, TimeSpan.Zero);
+        private static readonly NodeRef Visible = NodeRef.For(ParticipantId.New(), 1);
+
+        public List<(TenantId, Actor, LineageQuery)> Traces { get; } = [];
+
+        public List<(TenantId, Actor, DependentsQuery)> Dependents { get; } = [];
+
+        public List<(TenantId, Actor, ProtocolVersionId)> Impacts { get; } = [];
+
+        public Task<LineageGraph> TraceAsync(TenantId tenant, Actor reader, LineageQuery query, CancellationToken cancellationToken = default)
+        {
+            Traces.Add((tenant, reader, query));
+            var start = query.Node.ToString();
+            return Task.FromResult(new LineageGraph(
+                start, query.Direction, query.Depth, Now, Now,
+                [new LineageNode(start, query.Node.Kind, query.Node, null, 0), new LineageNode("masked:1", NodeKinds.Participant, null, MaskReason.Blinded, 1)],
+                [new LineageEdge(start, "masked:1", LineageEdgeKind.DerivedFrom, null, Now, null)],
+                Truncated: true));
+        }
+
+        public Task<LineageDossier> DossierAsync(
+            TenantId tenant, Actor reader, NodeRef node, int depth = LineageQuery.DefaultDepth, DateTimeOffset? validAt = null,
+            DateTimeOffset? knownAt = null, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException("The kernel host serves no dossier read.");
+
+        public Task<DependentsReport> DependentsAsync(TenantId tenant, Actor reader, DependentsQuery query, CancellationToken cancellationToken = default)
+        {
+            Dependents.Add((tenant, reader, query));
+            return Task.FromResult(Report(query.Node, query.Depth));
+        }
+
+        public Task<AmendmentImpact?> ComputeAsync(
+            TenantId tenant, Actor reader, ProtocolVersionId amended, int depth = LineageQuery.DefaultDepth, DateTimeOffset? validAt = null,
+            DateTimeOffset? knownAt = null, CancellationToken cancellationToken = default)
+        {
+            Impacts.Add((tenant, reader, amended));
+            return Task.FromResult<AmendmentImpact?>(amended == Amendment.Id
+                ? new AmendmentImpact(Amendment.Id, FirstVersion.Id, ["schedule_of_activities"], Report(NodeRef.For(FirstVersion.Id), depth))
+                : null);
+        }
+
+        private static DependentsReport Report(NodeRef start, int depth) =>
+            new(
+                start.ToString(), depth, Now, Now,
+                [new DependentGroup(NodeKinds.Participant, 2, [
+                    new LineageNode(Visible.ToString(), NodeKinds.Participant, Visible, null, 1),
+                    new LineageNode("masked:1", NodeKinds.Participant, null, MaskReason.Blinded, 2),
+                ])],
+                Total: 2,
+                Truncated: false);
     }
 
     private sealed class DropClaim(string type) : Microsoft.AspNetCore.Authentication.IClaimsTransformation
