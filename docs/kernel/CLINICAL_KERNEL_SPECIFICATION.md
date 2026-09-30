@@ -437,6 +437,10 @@ ProtocolVersion contains:
   downstream object that references a changed element (CollectionSpecs, mapping specifications, rules,
   RTSM configuration, monitoring plan, consent forms, TMF expected documents, open Proposals). An amendment
   cannot be approved while that impact report is not attested as reviewed.
+  *Implemented in part (#4841, ADR-2471 §4.5):* `IAmendmentImpact` lists the dependents of the amended parent version
+  (§9.6 `Dependents`), excluding the fork itself. Until protocol elements are nodes (#4808), the changed object is the
+  whole parent version, and the report carries the amendment's declared impacted elements. The attestation gate on
+  approval is still to come.
 - **K-PROT-3** The scientific chain `Objective → Endpoint → Estimand → required data → PlannedActivity →
   CollectionSpec` is explicit; a CollectionSpec item with no path to an Endpoint, Estimand, safety
   requirement or operational need is flagged at design time (a Quality finding, not a blocker).
@@ -843,6 +847,14 @@ node = { handle, kind, ref | null, mask: null | NotPermitted | Blinded | Identit
 
 - **Masking elsewhere.** `MaskReason` and `INodeVisibility` are the masking contract for every kernel read that can
   reach blinded or identity-layer content.
+- **Dependents** (#4841, Canvas D2). `IKernelLineage.DependentsAsync` implements the read below:
+
+```
+Dependents(node, depth, edge_kinds, valid_at, known_at) → { start, groups[{ kind, count, objects[] }], total, truncated }
+```
+
+  Counts are of objects, not versions. Masked objects are counted, so a count never depends on the reader. The start
+  object is never its own dependent. Amendment impact (K-PROT-2) is one caller of this read (§6.2).
 
 ---
 

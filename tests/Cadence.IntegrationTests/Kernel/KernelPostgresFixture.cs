@@ -20,6 +20,7 @@ using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
@@ -151,6 +152,8 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The lineage read port, as applications get it.</summary>
     public IKernelLineage Lineage => Scope().GetRequiredService<IKernelLineage>();
+
+    public IAmendmentImpact AmendmentImpact => Scope().GetRequiredService<IAmendmentImpact>();
 
     internal KernelLineageOrphanCheck LineageOrphanCheck => Scope().GetRequiredService<KernelLineageOrphanCheck>();
 

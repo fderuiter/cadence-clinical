@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -131,6 +132,104 @@ internal sealed class KernelLineageStore(
         return new LineageDossier(backward, forward, byKind);
     }
 
+    public Task<DependentsReport> DependentsAsync(TenantId tenant, Actor reader, DependentsQuery query, CancellationToken cancellationToken = default) =>
+        DependentsAsync(tenant, reader, query, excluded: FrozenSet<NodeRef>.Empty, cancellationToken);
+
+    /// <summary>
+    /// Dependents of <see cref="DependentsQuery.Node"/>, not walking through any version of an object in
+    /// <paramref name="excluded"/>: those objects and whatever is reachable only through them are left out.
+    /// </summary>
+    internal async Task<DependentsReport> DependentsAsync(
+        TenantId tenant, Actor reader, DependentsQuery query, IReadOnlySet<NodeRef> excluded, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(reader);
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(excluded);
+        var (validAt, knownAt) = ResolveTimes(query.ValidAt, query.KnownAt);
+        var lineageQuery = new LineageQuery(query.Node, LineageDirection.Forward, query.Depth, query.EdgeKinds, validAt, knownAt);
+
+        Walk walk;
+        await using (var db = contexts.Create(tenant))
+        {
+            walk = await WalkAsync(db, tenant, lineageQuery, validAt, knownAt, cancellationToken).ConfigureAwait(false);
+        }
+
+        var start = query.Node.Unversioned();
+        var reached = Reach(walk, excluded);
+        var masks = await MaskAsync(tenant, reader, [walk], cancellationToken).ConfigureAwait(false);
+        var handles = new HandleBook(masks);
+        var startHandle = StartHandle(query.Node, walk, handles);
+
+        // One entry per dependent object: its latest version reached and its nearest distance, in walk order so masked
+        // handles are numbered by position.
+        var objects = reached
+            .Where(pair => pair.Key.Unversioned() != start)
+            .GroupBy(pair => pair.Key.Unversioned())
+            .Select(g => (
+                Latest: g.MaxBy(pair => pair.Key.Version)!.Key,
+                Distance: g.Min(pair => pair.Value.Distance),
+                Order: g.Min(pair => pair.Value.Order)))
+            .OrderBy(o => o.Distance)
+            .ThenBy(o => o.Order)
+            .Select(o => handles.Node(o.Latest, o.Distance))
+            .ToList();
+        var groups = objects
+            .GroupBy(n => n.Kind, StringComparer.Ordinal)
+            .OrderBy(g => g.Key, StringComparer.Ordinal)
+            .Select(g => new DependentGroup(g.Key, g.Count(), [.. g]))
+            .ToList();
+        return new DependentsReport(startHandle, query.Depth, validAt, knownAt, groups, objects.Count, walk.Truncated);
+    }
+
+    /// <summary>
+    /// Every node a forward walk reaches from its start without passing through an excluded object, with its fewest
+    /// edges from the start and the index of the first edge that reached it.
+    /// </summary>
+    private static Dictionary<NodeRef, (int Distance, int Order)> Reach(Walk walk, IReadOnlySet<NodeRef> excluded)
+    {
+        var outgoing = walk.Rows
+            .Select((row, index) => (row, index))
+            .ToLookup(pair => pair.row.From);
+        var reached = new Dictionary<NodeRef, (int Distance, int Order)>();
+        var frontier = new Queue<NodeRef>();
+        foreach (var origin in walk.StartNodes())
+        {
+            reached[origin] = (0, -1);
+            frontier.Enqueue(origin);
+        }
+
+        while (frontier.TryDequeue(out var node))
+        {
+            var distance = reached[node].Distance;
+            foreach (var (row, index) in outgoing[node])
+            {
+                if (excluded.Contains(row.To.Unversioned()) || reached.ContainsKey(row.To))
+                {
+                    continue;
+                }
+
+                reached[row.To] = (distance + 1, index);
+                frontier.Enqueue(row.To);
+            }
+        }
+
+        return reached;
+    }
+
+    /// <summary>
+    /// The start's handle: the pinned reference, or for an unversioned start the object's reference, masked when any
+    /// version of it is.
+    /// </summary>
+    private static string StartHandle(NodeRef node, Walk walk, HandleBook handles)
+    {
+        if (node.Version is not null)
+        {
+            return handles.Handle(node);
+        }
+
+        return handles.IsMaskedObject(node) ? handles.Handle(walk.StartNodes()[0]) : node.ToString();
+    }
+
     private (DateTimeOffset ValidAt, DateTimeOffset KnownAt) ResolveTimes(DateTimeOffset? validAt, DateTimeOffset? knownAt)
     {
         var known = knownAt ?? clock.UtcNow;
@@ -246,16 +345,7 @@ internal sealed class KernelLineageStore(
             .ToList();
 
         // An unversioned start names the object; when any of its versions is masked, so is the start.
-        var start = query.Node.ToString();
-        if (query.Node.Version is not null)
-        {
-            start = handles.Handle(query.Node);
-        }
-        else if (handles.IsMaskedObject(query.Node))
-        {
-            start = nodes.First(n => n.Distance == 0).Handle;
-        }
-
+        var start = StartHandle(query.Node, walk, handles);
         return new LineageGraph(start, query.Direction, query.Depth, validAt, knownAt, nodes, edges, walk.Truncated);
     }
 

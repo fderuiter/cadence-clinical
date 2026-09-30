@@ -137,6 +137,24 @@ Lineage(node, direction, depth, edge_kinds, valid_at, known_at) → { start, nod
 - The same shape (`MaskReason`, `INodeVisibility`) is the masking contract for every kernel read that can reach
   blinded or identity-layer content. The navigator (ADR-2481 §4.3) adopts it next.
 
+### 4.5 Dependents and amendment impact (#4841, Canvas D2)
+
+- `DependentsAsync(tenant, reader, DependentsQuery(node, depth, edge_kinds, valid_at, known_at))` is a forward walk
+  that the kernel aggregates:
+  - One entry per dependent object, at the latest version reached and the nearest distance.
+  - Grouped by kind in ordinal order, each group with its count and its objects.
+  - A total, and `truncated` from the walk.
+- The start object is never its own dependent, including its later versions.
+- Masked objects are counted and listed masked (§4.4). A screen that shows an impact count therefore shows the same
+  number to every reader, and no screen counts dependents its own way.
+- Amendment impact (K-PROT-2) is `IAmendmentImpact.ComputeAsync(tenant, reader, amended)`. It returns the dependents of
+  every version of the amended version's parent, walked without passing through the fork itself, together with the
+  amendment's declared impacted elements.
+  - Other open amendments of the same parent are listed, because they are open proposals on the same content.
+  - `ForkProtocolVersion` records the fork as `DerivedFrom` the parent version it copies.
+  - Until protocol elements are nodes of their own (#4808), the parent version is the unit that changes. Impact then
+    narrows to the objects that reference a changed element.
+
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:**
@@ -162,13 +180,16 @@ Lineage(node, direction, depth, edge_kinds, valid_at, known_at) → { start, nod
 
 - **Affected Assemblies:**
   - `Cadence.Kernel.Abstractions`: `Lineage/` (`LineageEdgeKind`, `LineageDirection`, `DerivedObjectAttribute`,
-    `LineageQuery`, `LineageGraph`, `LineageNode`, `LineageEdge`, `LineageDossier`, `IKernelLineage`,
-    `ILineageOrphanSink`) and `References/NodeVisibility.cs` (`MaskReason`, `INodeVisibility`).
-  - `Cadence.Kernel.Application`: `IKernelUnitOfWork.LinkInput`, and the `MapConcept` handler.
+    `LineageQuery`, `LineageGraph`, `LineageNode`, `LineageEdge`, `LineageDossier`, `DependentsQuery`,
+    `DependentGroup`, `DependentsReport`, `IKernelLineage`, `ILineageOrphanSink`), `Protocol/IAmendmentImpact.cs` and
+    `References/NodeVisibility.cs` (`MaskReason`, `INodeVisibility`).
+  - `Cadence.Kernel.Application`: `IKernelUnitOfWork.LinkInput`, and the `MapConcept` and `ForkProtocolVersion`
+    handlers.
   - `Cadence.Kernel.Domain`: `[DerivedObject]` on `ConceptMapping`.
-  - `Cadence.Kernel.Persistence`: `Lineage/` (records, `KernelLineageStore`, `KernelLineageOrphanCheck`), the lineage
+  - `Cadence.Kernel.Persistence`: `Lineage/` (records, `KernelLineageStore`, `KernelLineageOrphanCheck`,
+    `KernelAmendmentImpact`), the lineage
     stage in `KernelCommandTransaction`, `KernelLineageCheckService`, and migration `LineageStore`.
-- **Tracked by:** #4815, #4840.
+- **Tracked by:** #4815, #4840, #4841.
 - **Verification Plan:**
   - `LineagePostgresTests`, as the application role:
     - Mapping edges share the command's activity, and updates write `supersedes`.
@@ -180,5 +201,9 @@ Lineage(node, direction, depth, edge_kinds, valid_at, known_at) → { start, nod
     - Another tenant sees nothing, and the orphan check reports a derived version without inputs.
   - `KernelBackgroundJobsTests`: the lineage check is scheduled, and a host without `INodeVisibility` fails validation.
   - `KernelTenantIsolationPostgresTests` and `InsertOnlyTables_RejectUpdateDeleteAndTruncate` cover the new tables.
+  - `DependentsPostgresTests`:
+    - Dependents are grouped by kind and counted as objects, and masked dependents are counted and masked.
+    - A versioned start excludes its own later versions, and depth and edge kinds limit the walk.
+    - Amendment impact is the parent's dependents without the fork; a first version is refused.
   - `LineageBenchmarkPostgresTests` (opt-in, `CADENCE_LINEAGE_BENCHMARK=1`): 10,000,000 edges, reporting trace
     latency.

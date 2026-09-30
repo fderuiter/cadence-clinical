@@ -8,7 +8,9 @@ using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -81,6 +83,9 @@ internal sealed class ForkProtocolVersionHandler : ICommandHandler<ForkProtocolV
         }
 
         context.Work.Add(version);
+
+        // The fork is derived from the approved parent it copies, which is what amendment impact walks from (K-PROT-2).
+        context.Work.LinkInput(NodeRef.For(parent.Id, parent.VersionIndex), LineageEdgeKind.DerivedFrom);
         context.Work.Raise(new ProtocolVersionDrafted(
             version.TenantId, version.StudyId, version.Id, version.Number, version.ParentVersionId, version.Amendment));
         return ProtocolVersionStates.Of(version);

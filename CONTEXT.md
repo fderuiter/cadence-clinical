@@ -150,7 +150,7 @@ Validation, edit-check and conformance rules are versioned data evaluated by one
 
 ### Lineage trace and masked objects
 
-A lineage read (ADR-2471) walks the graph backward (toward inputs) or forward (toward dependents) from one object version, to a depth and as of `(valid_at, known_at)`. It returns every object reached with its distance, and sets `truncated` when the walk was cut off. An object the reader may not see is **masked**: it stays in the result as its kind and a reason (not permitted, blinded, identity vault) with a `masked:n` handle, never dropped, so a trace never looks shorter than it is. The **evidence dossier** is both walks of one object, grouped by kind.
+A lineage read (ADR-2471) walks the graph backward (toward inputs) or forward (toward dependents) from one object version, to a depth and as of `(valid_at, known_at)`. It returns every object reached with its distance, and sets `truncated` when the walk was cut off. An object the reader may not see is **masked**: it stays in the result as its kind and a reason (not permitted, blinded, identity vault) with a `masked:n` handle, never dropped, so a trace never looks shorter than it is. The **evidence dossier** is both walks of one object, grouped by kind. **Dependents** of an object are the objects downstream of it, grouped by kind and counted as objects (masked ones included), so every Impact view shows the same numbers; **amendment impact** is the dependents of the protocol version an amendment changes.
 
 ### Clinical Kernel Modular Monolith
 

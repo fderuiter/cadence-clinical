@@ -15,6 +15,7 @@ using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Persistence.Trust;
+using Cadence.Kernel.Protocol;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -68,7 +69,9 @@ public static class KernelPersistenceServiceCollectionExtensions
 
         // Lineage reads need the host's INodeVisibility (ADR-2471); none is registered here, so resolving
         // IKernelLineage in a host that has not decided visibility fails instead of showing every object.
-        services.TryAddSingleton<IKernelLineage, KernelLineageStore>();
+        services.TryAddSingleton<KernelLineageStore>();
+        services.TryAddSingleton<IKernelLineage>(sp => sp.GetRequiredService<KernelLineageStore>());
+        services.TryAddSingleton<IAmendmentImpact, KernelAmendmentImpact>();
         services.TryAddSingleton<ILineageOrphanSink, LoggingLineageOrphanSink>();
         services.TryAddSingleton<KernelLineageOrphanCheck>();
 

@@ -89,6 +89,53 @@ public sealed record LineageDossier(
     IReadOnlyDictionary<string, IReadOnlyList<LineageNode>> ByKind);
 
 /// <summary>
+/// A dependents read (Canvas D2, PX-6): <c>Dependents(node, depth, edge_kinds, valid_at, known_at)</c>, the objects
+/// downstream of <paramref name="Node"/>. Every screen that shows impact counts through this one read, so their
+/// numbers agree.
+/// </summary>
+/// <param name="Node">
+/// The object whose dependents are wanted. With a version, what was produced from that version onwards (the walk
+/// follows <see cref="LineageEdgeKind.Supersedes"/> like any other kind unless <paramref name="EdgeKinds"/> leaves it
+/// out); without one, what depends on any version.
+/// </param>
+/// <param name="Depth">How many edges downstream to count, 1 to <see cref="LineageQuery.MaxDepth"/>.</param>
+/// <param name="EdgeKinds">The edge kinds to follow; null or empty follows every kind.</param>
+/// <param name="ValidAt">Valid time; defaults to <paramref name="KnownAt"/>.</param>
+/// <param name="KnownAt">Transaction time; defaults to now.</param>
+public sealed record DependentsQuery(
+    NodeRef Node,
+    int Depth = LineageQuery.DefaultDepth,
+    IReadOnlySet<LineageEdgeKind>? EdgeKinds = null,
+    DateTimeOffset? ValidAt = null,
+    DateTimeOffset? KnownAt = null);
+
+/// <summary>
+/// The dependents of one kind. <see cref="Count"/> counts objects, not versions, and masked objects are counted like
+/// any other (D1), so a count never depends on who is reading.
+/// </summary>
+/// <param name="Kind">The objects' kind (<see cref="NodeKinds"/>).</param>
+/// <param name="Count">How many distinct objects of this kind depend on the start.</param>
+/// <param name="Objects">
+/// Each object once, at the latest version the walk reached, nearest first. <see cref="LineageNode.Distance"/> is the
+/// fewest edges from the start to any version of the object.
+/// </param>
+public sealed record DependentGroup(string Kind, int Count, IReadOnlyList<LineageNode> Objects);
+
+/// <summary>
+/// The result of a dependents read: the downstream objects grouped by kind (ordinal order of kind), and their total.
+/// The starting object itself is never its own dependent. <see cref="Truncated"/> is true when the graph continues
+/// past <see cref="Depth"/> or the read's edge limit, so the counts are then a lower bound.
+/// </summary>
+public sealed record DependentsReport(
+    string Start,
+    int Depth,
+    DateTimeOffset ValidAt,
+    DateTimeOffset KnownAt,
+    IReadOnlyList<DependentGroup> Groups,
+    int Total,
+    bool Truncated);
+
+/// <summary>
 /// Reads the tenant's lineage graph (spec §9.6, ADR-2255, ADR-2471). Every read names its reader: objects the reader
 /// may not see (decided by the host's <see cref="INodeVisibility"/>) are returned masked, never omitted. Edges are
 /// written only by the command pipeline, in the transaction of the object they describe (K-LIN-2).
@@ -110,6 +157,9 @@ public interface IKernelLineage
         DateTimeOffset? validAt = null,
         DateTimeOffset? knownAt = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>What depends on <see cref="DependentsQuery.Node"/>, grouped by kind with counts (Canvas D2).</summary>
+    Task<DependentsReport> DependentsAsync(TenantId tenant, Actor reader, DependentsQuery query, CancellationToken cancellationToken = default);
 }
 
 /// <summary>An object version that is derived but has no inbound lineage edge (K-LIN-1).</summary>
