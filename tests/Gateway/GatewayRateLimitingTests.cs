@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Gateway;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -20,6 +21,7 @@ public sealed class GatewayRateLimitingTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-189")]
     public async Task CallerOverTheLimit_Gets429WithRetryAfter_WhileOtherCallersAreServed()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -40,6 +42,7 @@ public sealed class GatewayRateLimitingTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-189")]
     public async Task HealthProbes_AreNeverRateLimited()
     {
         var ct = TestContext.Current.CancellationToken;

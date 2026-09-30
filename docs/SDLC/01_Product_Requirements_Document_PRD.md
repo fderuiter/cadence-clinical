@@ -24,6 +24,7 @@
 | :------------ | :--------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- | :--------------------------- |
 | 0.1.0-DRAFT   | 2026-06-01 | Initial skeleton and placeholder generation                                                                                                                          | F. de Ruiter | SDLC Steering Group          |
 | 1.0.0-RELEASE | 2026-07-22 | Comprehensive expansion of all clinical modules, field-level validation, clinical state machines, unblinding protocols, and query lifecycles. Conforms to ISO 29148. | F. de Ruiter | F. de Ruiter, QA Directorate |
+| 1.1.0-DRAFT   | 2026-09-30 | Added platform edge, startup configuration and gateway resilience requirements (PRD-SYS-189 to PRD-SYS-191).                                                       | F. de Ruiter | F. de Ruiter                 |
 
 ### 1.3 Signature & Approval Matrix
 
@@ -151,6 +152,18 @@ The system must coordinate all recurring background processing loops (such as au
 #### PRD-SYS-103: Asynchronous and Non-blocking Cryptographic Integrity Verification
 
 To protect system responsiveness and prevent blocking user-facing HTTP request lifecycles, heavy cryptographic and ledger verification tasks (such as validation of GxP clinical execution ledger integrity) must run asynchronously as background tasks (specifically within FastAPI background tasks). The system must expose the status of the last executed verification task in a non-blocking query endpoint.
+
+#### PRD-SYS-189: Hardened HTTP Edge
+
+Every service must trust `X-Forwarded-For` and `X-Forwarded-Proto` only from configured proxy addresses or ranges (`CADENCE_TRUSTED_PROXIES`), fail at startup on a malformed entry, send `Strict-Transport-Security` on HTTPS responses outside Development, and omit the `Server` header. The gateway must limit requests per authenticated caller (or per client address before sign-in), answer `429` with `Retry-After` over the limit, and never limit health probes.
+
+#### PRD-SYS-190: Fail-Fast Validation of Required Settings
+
+A service must refuse to start when a setting it needs to handle clinical data or authenticate callers is missing or malformed (for example the gateway secret, the demographics encryption key, or a downstream service address outside Development), naming the setting in the error. No required setting may have a default or fallback value.
+
+#### PRD-SYS-191: Gateway Routing and Resilience
+
+Every gateway route must resolve to a real endpoint of its downstream service. The gateway must bound each proxied call with a timeout, answer `504` when a downstream service does not respond in time, and answer `503` without forwarding while a downstream service's readiness check fails.
 
 #### PRD-EDL-001: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking
 

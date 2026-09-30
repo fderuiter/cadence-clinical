@@ -4,7 +4,7 @@
 - **Date:** 2026-09-29
 - **Authors:** @fderuiter, Claude Code
 - **Deciders:** @fderuiter
-- **Requirements:** PRD-SYS-053
+- **Requirements:** PRD-SYS-191
 
 ---
 

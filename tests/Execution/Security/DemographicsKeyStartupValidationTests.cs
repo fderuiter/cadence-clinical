@@ -2,6 +2,7 @@ using System;
 using System.Security.Cryptography;
 
 using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
@@ -25,6 +26,7 @@ public sealed class DemographicsKeyStartupValidationTests
     [InlineData("")]
     [InlineData("not base64!")]
     [InlineData("AAAAAAAAAAAAAAAAAAAAAA==AAAA")]
+    [GxPRequirement("PRD-SYS-190")]
     public void HostStartup_WithoutAValidDemographicsKey_FailsFast(string keyBase64)
     {
         using var unconfigured = new WebApplicationFactory<Cadence.Apps.Execution.Program>()
