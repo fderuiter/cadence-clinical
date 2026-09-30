@@ -21,6 +21,9 @@ public static class PredictiveDemandForecastingEngine
 
     public static PredictiveForecastResult SimulateSiteInventory(DemandForecastParameters paramsVal)
     {
+        ArgumentNullException.ThrowIfNull(paramsVal);
+        Validate(paramsVal);
+
         int horizon = paramsVal.SimulationHorizonDays;
         double dailyRecruitmentRate = paramsVal.MonthlyRecruitmentRate / 30.0;
 
@@ -33,7 +36,12 @@ public static class PredictiveDemandForecastingEngine
             new(1, 1), new(28, 1), new(56, 1), new(84, 1)
         };
 
-        var dispMap = dispSchedule.ToDictionary(d => d.VisitDayOffset, d => d.DispensationQty);
+        // Later entries for the same visit day replace earlier ones, as in the Python reference's dict comprehension.
+        var dispMap = new Dictionary<int, int>();
+        foreach (var d in dispSchedule)
+        {
+            dispMap[d.VisitDayOffset] = d.DispensationQty;
+        }
 
         var subjectCohorts = new List<CohortTracker>
         {
@@ -168,5 +176,39 @@ public static class PredictiveDemandForecastingEngine
             LotExpiryWarnings: lotExpiryWarnings,
             DailyProjections: dailyProjections
         );
+    }
+
+    // Mirrors the field constraints of the Python reference's pydantic DemandForecastParameters,
+    // ScheduledVisitDispensation and LotExpiryInfo models, which reject these values before simulation.
+    private static void Validate(DemandForecastParameters p)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(p.ActiveSubjects);
+        if (!double.IsFinite(p.MonthlyRecruitmentRate) || p.MonthlyRecruitmentRate < 0.0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(p), p.MonthlyRecruitmentRate, "MonthlyRecruitmentRate must be a finite value greater than or equal to 0.");
+        }
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(p.SimulationHorizonDays, 7);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(p.SimulationHorizonDays, 365);
+        ArgumentOutOfRangeException.ThrowIfLessThan(p.LeadTimeDays, 1);
+        ArgumentOutOfRangeException.ThrowIfNegative(p.SafetyBufferDays);
+        ArgumentOutOfRangeException.ThrowIfLessThan(p.ResupplyLotSize, 1);
+        ArgumentOutOfRangeException.ThrowIfNegative(p.CurrentOnHand);
+        ArgumentOutOfRangeException.ThrowIfNegative(p.CurrentInTransit);
+        ArgumentOutOfRangeException.ThrowIfNegative(p.InTransitArrivalDay);
+
+        foreach (var visit in p.DispensationSchedule ?? [])
+        {
+            ArgumentNullException.ThrowIfNull(visit);
+            ArgumentOutOfRangeException.ThrowIfNegative(visit.VisitDayOffset);
+            ArgumentOutOfRangeException.ThrowIfLessThan(visit.DispensationQty, 1);
+        }
+
+        foreach (var lot in p.ActiveLots ?? [])
+        {
+            ArgumentNullException.ThrowIfNull(lot);
+            ArgumentOutOfRangeException.ThrowIfNegative(lot.ExpiryDayOffset);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(lot.Quantity);
+        }
     }
 }

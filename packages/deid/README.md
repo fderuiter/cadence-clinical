@@ -9,7 +9,7 @@ De-identification library: PII/PHI detection with compliance profiles, value tra
 - `DeidTransforms`, `DeidAirGapVault`.
 - `DicomDeidentifier` (with `DicomDeidResult`, `DicomDeidCertificate`, `PixelMaskBoundingBox`), built on fo-dicom.
 - `RedactionManifestBuilder`, `RedactionManifest`, `RedactionRecordItem`.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `cli.py`, `__main__.py`, `detector.py`, `models.py`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `cli.py`, `__main__.py`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 
@@ -23,5 +23,5 @@ De-identification library: PII/PHI detection with compliance profiles, value tra
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests|FullyQualifiedName~DeidDetectorTests"
 ```

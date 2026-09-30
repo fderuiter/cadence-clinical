@@ -6,15 +6,19 @@ Part 11 support library: audit digest calculation and hash-chain verification, e
 
 - Project: `packages/compliance/src/Cadence.Compliance.csproj` (assembly `Cadence.Compliance`, namespace `Cadence.Compliance`).
 - Main types: `AuditDigestCalculator`, `AuditChainVerifier`, `ComplianceAuditLogRecord`, `ESignatureVerifier`, `GxPSigner`, `Pkcs7Signer`, `PhiRedactorService`, `ProtocolRagService`, `RtmGeneratorService`, and the exceptions `TamperDetectedException` and `UnapprovedAIRecordException`.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `services/esignature_verifier.py`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- No Python reference sources remain; `ESignatureVerifierTests` pins the verifier to the deleted `services/esignature_verifier.py` (#4789).
 
 ## Signature verification
 
-`ESignatureVerifier.VerifySignature` returns `VALID` only when the PSS signature over the document and the embedded
-certificate verifies. Otherwise the status names the failure: `TAMPERED_INVALID_HASH`, `DUPLICATE_BLOCKS_REJECTED`,
+`ESignatureVerifier.VerifySignature` returns `VALID` only when the RSA-PSS or ECDSA (SHA-256, DER-encoded) signature over the
+document and the embedded certificate verifies, and the certificate is not on the revocation list. Otherwise the status names the failure: `TAMPERED_INVALID_HASH`, `DUPLICATE_BLOCKS_REJECTED`,
 `REVOKED_CERTIFICATE`, `LEGACY_PADDING_REJECTED` (PKCS#1 v1.5), `UNSUPPORTED_KEY_TYPE`, or `MOCK_SIGNATURE_DETECTED`
 when a failed document contains the word "mock". The word never rejects a valid signature, because base64
-certificates and signatures contain it by chance. `VerifyMarkdown` also checks the SHA-256 in the signature block
+certificates and signatures contain it by chance. The revocation list takes PEM certificates, SHA-256 fingerprints (plain, or separated by colons, hyphens or
+spaces), SHA-1 thumbprints and serial numbers (decimal, `0x` hex or plain hex, compared by value); revocation is
+checked after the signature, so a tampered document reports tampering. Known differences from the deleted Python:
+the status is `REVOKED_CERTIFICATE` (Python `CERTIFICATE_REVOKED`), there are no trust-store checks, and the AI-record
+approval helpers are not ported (spec §11 Proposals supersedes them). `VerifyMarkdown` also checks the SHA-256 in the signature block
 against the document body. Only tests call the verifier today; `dotnet cadence verify-gxp-signatures` is not
 implemented yet ([docs/cli.md](../../docs/cli.md)).
 

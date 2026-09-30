@@ -116,7 +116,7 @@ Form definitions must never generate physical relational tables or columns in Po
 * **Isomorphic AST Execution**:
   - Logic compiles into portable AST format.
   - Evaluated in browser JavaScript via `apps/web/src/engine/rulesEvaluator.js` for instant sub-millisecond red-text feedback.
-  - Evaluated on backend Python 3.14 via `packages/engine_core/rules/evaluator.py` for strict server-side validation during form submission.
+  - Evaluated on the backend by `packages/engine_core/src/Rules/RuleEvaluator.cs` for strict server-side validation during form submission.
 * **Cross-Visit Chronology Engine**:
   - Horizontal dependency mapping across patient timeline.
   - Dynamic visit spawning and schedule suppression.
