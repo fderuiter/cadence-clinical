@@ -11,7 +11,9 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
@@ -35,13 +37,16 @@ namespace Cadence.UnitTests.Kernel.Api;
 
 /// <summary>
 /// The kernel API host's read endpoints (ADR-2540), booted from the real <c>Program.cs</c>. Navigation and search are
-/// replaced by fakes (their tables are covered by the Postgres tests); tenant resolution is replaced where a test needs
-/// a tenant. Authorization is the real <see cref="KernelAuthorization"/> over the host's fail-closed evaluator.
+/// replaced by fakes (their tables are covered by the Postgres tests), as are the tenant directory, the protocol version
+/// reader and the authority store. Authorization is the real <see cref="KernelAuthorization"/> over the kernel's
+/// <see cref="AuthorityEvaluator"/>.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class KernelApiHostTests : IDisposable
 {
     private static readonly TenantId Tenant = TenantId.New();
+    private static readonly Actor Reader = Actor.Person(TestSecurityContext.DefaultIdentity.UserId);
+    private static readonly DateTimeOffset GrantedFrom = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private static readonly NodeRef Study = NodeRef.For(StudyId.New());
     private static readonly NodeRef StudySite = NodeRef.For(StudySiteId.New());
     private static readonly ProtocolVersionSummary FirstVersion = new(
@@ -64,6 +69,7 @@ public sealed class KernelApiHostTests : IDisposable
     private readonly HideSome _visibility = new();
     private readonly FakeTenantDirectory _directory = new();
     private readonly FakeProtocolVersions _protocol = new();
+    private readonly FakeAuthorityStore _authority = new();
     private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
 
     public void Dispose()
@@ -190,11 +196,12 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>
-    /// Until the authority slice ships, CanI denies every capability for the signed-in person and explains why: the
-    /// unmet condition is the missing evaluator, and the verb class comes from the declaring command.
+    /// CanI is decided by the kernel's authority evaluator for the signed-in person: without a grant of the capability
+    /// it is a denial whose unmet condition is the missing grant, with the resource as evidence, and the verb class
+    /// comes from the declaring command.
     /// </summary>
     [Fact]
-    public async Task CanI_FailsClosed_AndExplainsWhy()
+    public async Task CanI_WithoutAGrant_Denies_AndExplainsWhy()
     {
         var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
         var resource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
@@ -209,13 +216,41 @@ public sealed class KernelApiHostTests : IDisposable
         root.GetProperty("verb_class").GetString().Should().Be(entry.Capability.VerbClass.ToString());
         root.GetProperty("resource").GetString().Should().Be(resource.ToString());
         root.GetProperty("permitted").GetBoolean().Should().BeFalse();
-        root.GetProperty("reason").GetString().Should().Be("Permissions can't be evaluated yet, so no kernel action is permitted.");
+        root.GetProperty("reason").GetString().Should().Be($"{Reader.Id} holds no grant of {entry.Capability.Token}.");
         var explanation = root.GetProperty("explanation");
         explanation.GetProperty("producer").GetString().Should().Be("kernel.authorization");
         explanation.GetProperty("subject").GetString().Should().Be(resource.ToString());
         var condition = explanation.GetProperty("conditions").EnumerateArray().Should().ContainSingle().Subject;
-        condition.GetProperty("code").GetString().Should().Be("authority.evaluator");
+        condition.GetProperty("code").GetString().Should().Be(AuthorityEvaluator.GrantCondition);
         condition.GetProperty("met").GetBoolean().Should().BeFalse();
+        condition.GetProperty("evidence").EnumerateArray().Select(e => e.GetString()).Should().Contain(resource.ToString());
+        _authority.Readers.Should().NotBeEmpty().And.OnlyContain(r => r == Reader);
+    }
+
+    /// <summary>
+    /// A grant of the capability held by the signed-in person, in effect and covering the resource, permits the dry
+    /// run, and the satisfied condition names the grant.
+    /// </summary>
+    [Fact]
+    public async Task CanI_WithAGrantInEffect_Permits()
+    {
+        var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
+        var resource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
+        var grant = Grant.Issue(
+            GrantId.New(), Tenant, Reader, entry.Capability.Token, null, AuthorityScope.Tenant(), GrantedFrom, null,
+            withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!;
+        _authority.Grants.Add(grant);
+        using var client = Client();
+
+        using var decision = await ReadJsonAsync(
+            client, $"/api/v1/kernel/authorization/can-i?capability={entry.Capability.Token}&resource={resource}",
+            TestContext.Current.CancellationToken);
+
+        decision.RootElement.GetProperty("permitted").GetBoolean().Should().BeTrue();
+        var condition = decision.RootElement.GetProperty("explanation").GetProperty("conditions").EnumerateArray().Should().ContainSingle().Subject;
+        condition.GetProperty("code").GetString().Should().Be(AuthorityEvaluator.GrantCondition);
+        condition.GetProperty("met").GetBoolean().Should().BeTrue();
+        condition.GetProperty("evidence").EnumerateArray().Select(e => e.GetString()).Should().Equal(NodeRef.For(grant.Id).ToString());
     }
 
     /// <summary>A caller the gateway signed without a subject has no actor, so CanI denies with the unresolved-actor condition.</summary>
@@ -234,6 +269,29 @@ public sealed class KernelApiHostTests : IDisposable
         decision.RootElement.GetProperty("permitted").GetBoolean().Should().BeFalse();
         decision.RootElement.GetProperty("explanation").GetProperty("conditions")[0].GetProperty("code").GetString()
             .Should().Be(KernelAuthorization.ActorResolvedCondition);
+    }
+
+    /// <summary>
+    /// A signed subject that names no accountable person (a reserved id, or a service account's) gives the request no
+    /// actor: CanI denies with the unresolved-actor condition instead of failing.
+    /// </summary>
+    [Theory]
+    [InlineData("system")]
+    [InlineData("svc:etl")]
+    public async Task CanI_ForASubjectThatIsNoAccountablePerson_DeniesForTheUnresolvedActor(string subject)
+    {
+        var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
+        var resource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
+        using var client = Factory().CreateSignedClient(TestSecurityContext.Identity(subject, "Data Manager"));
+
+        using var decision = await ReadJsonAsync(
+            client, $"/api/v1/kernel/authorization/can-i?capability={entry.Capability.Token}&resource={resource}",
+            TestContext.Current.CancellationToken);
+
+        decision.RootElement.GetProperty("permitted").GetBoolean().Should().BeFalse();
+        decision.RootElement.GetProperty("explanation").GetProperty("conditions")[0].GetProperty("code").GetString()
+            .Should().Be(KernelAuthorization.ActorResolvedCondition);
+        _authority.Readers.Should().BeEmpty();
     }
 
     /// <summary>The command catalogue for an object lists every kernel command offered on its kind, each denied and explained.</summary>
@@ -431,6 +489,8 @@ public sealed class KernelApiHostTests : IDisposable
                 services.AddSingleton<ITenantDirectory>(_directory);
                 services.RemoveAll<IProtocolVersionReader>();
                 services.AddSingleton<IProtocolVersionReader>(_protocol);
+                services.RemoveAll<IAuthorityStore>();
+                services.AddSingleton<IAuthorityStore>(_authority);
 
                 if (!hostVisibility)
                 {
@@ -466,6 +526,30 @@ public sealed class KernelApiHostTests : IDisposable
             Codes.Add(code);
             return Task.FromResult(Tenants.TryGetValue(code, out var tenant) ? tenant : (TenantId?)null);
         }
+    }
+
+    /// <summary>The grants a test issues; every resource sits at tenant scope, which only tenant-wide grants cover.</summary>
+    private sealed class FakeAuthorityStore : IAuthorityStore
+    {
+        public List<Grant> Grants { get; } = [];
+
+        public List<Actor> Readers { get; } = [];
+
+        public Task<IReadOnlyList<Grant>> GrantsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken)
+        {
+            tenant.Should().Be(Tenant);
+            Readers.Add(actor);
+            return Task.FromResult<IReadOnlyList<Grant>>([.. Grants.Where(g => g.Grantee == actor)]);
+        }
+
+        public Task<Grant?> FindGrantAsync(TenantId tenant, GrantId grant, CancellationToken cancellationToken) =>
+            Task.FromResult(Grants.SingleOrDefault(g => g.Id == grant));
+
+        public Task<IReadOnlyList<Role>> RolesAsync(TenantId tenant, IReadOnlyCollection<RoleId> roles, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<Role>>([]);
+
+        public Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken) =>
+            Task.FromResult(ScopePath.TenantWide);
     }
 
     private sealed class DropClaim(string type) : Microsoft.AspNetCore.Authentication.IClaimsTransformation

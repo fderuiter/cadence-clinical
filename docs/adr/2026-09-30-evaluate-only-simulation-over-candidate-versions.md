@@ -184,6 +184,11 @@ details:
   is withheld as a masked part with the reason, the references and content hashes are left out, and the hashes are
   computed from the mask instead of the content. A hidden change therefore cannot change what the reader sees.
   Element-level masking (arm-derived schedule and projection changes) comes with those sections.
+- **Dependents.** When the diff is not empty and there is a base, the result carries `Dependents`: the
+  `DependentsReport` of the base version at the pinned as-of, from the one dependents read (Canvas D2, #4841). A
+  stored candidate is excluded from the walk, as amendment impact excludes the amended fork, so the two report the
+  same objects. Until protocol elements are lineage nodes (#4808) the changed object is the base version as a whole.
+  Masked objects are counted and masked by the lineage read; a hidden version withholds the section entirely.
 - **Errors.** Unknown versions, a draft base, content that is not a JSON object and repeated element ids are
   `K.Simulation.*` errors. A denial is `K.Authorization.Denied` with the evaluator's explanation.
 

@@ -19,13 +19,16 @@ public record VerificationResult(
 
 public class ESignatureVerifier
 {
-    private readonly HashSet<string> _revokedCerts;
+    private readonly RevokedCertificateList _revoked;
 
-    public ESignatureVerifier(IEnumerable<string>? revokedCerts = null)
+    /// <summary>
+    /// Creates a verifier that rejects certificates on a revocation list. An entry may be a PEM certificate, a
+    /// SHA-256 fingerprint (plain, or separated by colons, hyphens or spaces), a SHA-1 thumbprint, or a serial
+    /// number in decimal, <c>0x</c>-prefixed hex or plain hex, as in the Python reference.
+    /// </summary>
+    public ESignatureVerifier(IEnumerable<string?>? revokedCerts = null)
     {
-        _revokedCerts = revokedCerts != null
-            ? new HashSet<string>(revokedCerts, StringComparer.OrdinalIgnoreCase)
-            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _revoked = new RevokedCertificateList(revokedCerts);
     }
 
     public VerificationResult VerifySignature(byte[] signedData)
@@ -50,9 +53,12 @@ public class ESignatureVerifier
 
     private VerificationResult VerifyText(string text)
     {
-        // Check for duplicate/injected certificate or signature blocks
+        // Check for duplicate/injected certificate or signature blocks, PEM or XML-DSig as in the Python reference
         if (CountOccurrences(text, "-----BEGIN CERTIFICATE-----") > 1 ||
-            CountOccurrences(text, "-----BEGIN SIGNATURE-----") > 1)
+            CountOccurrences(text, "-----BEGIN SIGNATURE-----") > 1 ||
+            CountOccurrences(text, "<X509Certificate>") > 1 ||
+            CountOccurrences(text, "<SignatureValue>") > 1 ||
+            CountOccurrences(text, "<Signature>") > 1)
         {
             return new VerificationResult(false, "DUPLICATE_BLOCKS_REJECTED", "Duplicate or injected certificate/signature blocks detected.");
         }
@@ -94,12 +100,6 @@ public class ESignatureVerifier
             return new VerificationResult(false, "TAMPERED_INVALID_HASH", $"TAMPER DETECTED: Failed to decode signature Base64: {ex.Message}");
         }
 
-        // Check for certificate revocation
-        if (IsCertificateRevoked(cert, certPem))
-        {
-            return new VerificationResult(false, "REVOKED_CERTIFICATE", "Certificate has been revoked.");
-        }
-
         // Cryptographically verify signature
         var originalDataBytes = Encoding.UTF8.GetBytes(originalDataStr);
         var certPemBytes = Encoding.UTF8.GetBytes(certPem);
@@ -131,7 +131,27 @@ public class ESignatureVerifier
         }
         else
         {
-            return new VerificationResult(false, "UNSUPPORTED_KEY_TYPE", "Unsupported public key algorithm");
+            using var ecdsa = cert.GetECDsaPublicKey();
+            if (ecdsa == null)
+            {
+                return new VerificationResult(false, "UNSUPPORTED_KEY_TYPE", "Unsupported public key algorithm");
+            }
+
+            // The Python reference verifies a DER-encoded ECDSA signature (cryptography's ec.ECDSA).
+            if (!ecdsa.VerifyData(toVerify, sigBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence))
+            {
+                return new VerificationResult(
+                    false,
+                    "TAMPERED_INVALID_HASH",
+                    "TAMPER DETECTED: Cryptographic signature mismatch (data or certificate modified post-signature).");
+            }
+        }
+
+        // Revocation is checked once the signature verifies, as in the Python reference, so a tampered document
+        // reports tampering whatever certificate signed it.
+        if (_revoked.Contains(cert, certPem))
+        {
+            return new VerificationResult(false, "REVOKED_CERTIFICATE", "Certificate has been revoked.");
         }
 
         return new VerificationResult(true, "VALID");
@@ -207,36 +227,6 @@ public class ESignatureVerifier
         }
 
         return res;
-    }
-
-    private bool IsCertificateRevoked(X509Certificate2 cert, string certPem)
-    {
-        if (_revokedCerts.Count == 0)
-        {
-            return false;
-        }
-
-        var serialStr = cert.SerialNumber;
-        var thumbprint = cert.Thumbprint;
-        var sha256Fingerprint = Convert.ToHexStringLower(SHA256.HashData(cert.RawData));
-        var subject = cert.Subject;
-
-        foreach (var revoked in _revokedCerts)
-        {
-            if (string.IsNullOrWhiteSpace(revoked)) continue;
-
-            if (revoked.Equals(serialStr, StringComparison.OrdinalIgnoreCase) ||
-                revoked.Equals(thumbprint, StringComparison.OrdinalIgnoreCase) ||
-                revoked.Equals(sha256Fingerprint, StringComparison.OrdinalIgnoreCase) ||
-                revoked.Equals(certPem.Trim(), StringComparison.OrdinalIgnoreCase) ||
-                certPem.Contains(revoked, StringComparison.OrdinalIgnoreCase) ||
-                subject.Contains(revoked, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static int CountOccurrences(string source, string pattern)

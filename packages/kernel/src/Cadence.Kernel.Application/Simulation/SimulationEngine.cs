@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
@@ -46,6 +47,19 @@ public interface ISimulationInputs
 {
     /// <summary>The protocol version, or null when the tenant has none with that id.</summary>
     Task<ProtocolVersionSnapshot?> FindProtocolVersionAsync(TenantId tenant, ProtocolVersionId id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// What depends on any version of <paramref name="baseVersion"/> at <paramref name="asOf"/>, through the kernel's one
+    /// dependents read, without walking through <paramref name="candidate"/> (a stored fork depends on its parent).
+    /// Objects <paramref name="reader"/> may not see are counted and masked.
+    /// </summary>
+    Task<DependentsReport> DependentsAsync(
+        TenantId tenant,
+        Actor reader,
+        ProtocolVersionId baseVersion,
+        ProtocolVersionId? candidate,
+        SimulationAsOf asOf,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -63,6 +77,12 @@ public sealed class SimulationEngine(
 {
     /// <summary>The section the structural diff is reported in, and masked as.</summary>
     public const string StructuralDiffPart = "structural_diff";
+
+    /// <summary>The section the dependents are reported in, and masked as.</summary>
+    public const string DependentsPart = "dependents";
+
+    /// <summary>The engine version recorded when a result carries dependents.</summary>
+    public static readonly EngineVersion DependentsEngine = new("lineage.dependents", "1");
 
     public async Task<CommandResult<SimulationResult>> SimulateAsync(
         TenantId tenant, SimulationRequest request, CancellationToken cancellationToken)
@@ -107,16 +127,17 @@ public sealed class SimulationEngine(
             .Select(node => hidden.TryGetValue(node, out var reason) ? reason : (MaskReason?)null)
             .FirstOrDefault(reason => reason is not null);
 
-        var engines = new[] { ProtocolStructuralDiff.Engine };
+        var engines = new List<EngineVersion> { ProtocolStructuralDiff.Engine };
         CandidateSummary summary;
         IReadOnlyList<ElementChange> diff;
         IReadOnlyList<MaskedPart> masked;
+        DependentsReport? dependents = null;
         if (mask is { } reason)
         {
             // Nothing derived from content the actor may not read is computed, hashed or shown (K-SIM-4).
             summary = new CandidateSummary(CandidateKind.ProtocolVersion, null, null, null, null);
             diff = [];
-            masked = [new MaskedPart(StructuralDiffPart, reason)];
+            masked = [new MaskedPart(DependentsPart, reason), new MaskedPart(StructuralDiffPart, reason)];
         }
         else
         {
@@ -130,12 +151,18 @@ public sealed class SimulationEngine(
                 CandidateKind.ProtocolVersion, versionRef, baseRef, candidate.ContentHash, baseVersion?.ContentHash);
             diff = compared.Value!;
             masked = [];
+            if (diff.Count > 0 && baseVersion is not null)
+            {
+                dependents = await inputs.DependentsAsync(tenant, actor, baseVersion.Id, candidate.Id, asOf, cancellationToken)
+                    .ConfigureAwait(false);
+                engines.Add(DependentsEngine);
+            }
         }
 
         var inputHash = ContentHash.Compute(InputDocument(asOf, summary, engines, masked).ToJsonString());
-        var resultHash = ContentHash.Compute(ResultDocument(scope, asOf, summary, engines, inputHash, diff, masked).ToJsonString());
+        var resultHash = ContentHash.Compute(ResultDocument(scope, asOf, summary, engines, inputHash, diff, masked, dependents).ToJsonString());
         return CommandResult<SimulationResult>.Success(
-            new SimulationResult(scope, asOf, summary, engines, inputHash, resultHash, diff, masked));
+            new SimulationResult(scope, asOf, summary, engines, inputHash, resultHash, diff, masked, dependents));
     }
 
     private async Task<CommandResult<(Candidate Candidate, ProtocolVersionSnapshot? Base)>> LoadAsync(
@@ -207,7 +234,8 @@ public sealed class SimulationEngine(
         IReadOnlyList<EngineVersion> engines,
         string inputHash,
         IReadOnlyList<ElementChange> diff,
-        IReadOnlyList<MaskedPart> masked)
+        IReadOnlyList<MaskedPart> masked,
+        DependentsReport? dependents)
     {
         var document = InputDocument(asOf, candidate, engines, masked);
         document["scope"] = scope.ToString();
@@ -219,6 +247,24 @@ public sealed class SimulationEngine(
             ["change"] = change.Change.ToString(),
             ["properties"] = new JsonArray([.. change.Properties.Select(p => (JsonNode?)p)]),
         })]);
+        document["dependents"] = dependents is null ? null : new JsonObject
+        {
+            ["start"] = dependents.Start,
+            ["depth"] = dependents.Depth,
+            ["total"] = dependents.Total,
+            ["truncated"] = dependents.Truncated,
+            ["groups"] = new JsonArray([.. dependents.Groups.Select(group => (JsonNode)new JsonObject
+            {
+                ["kind"] = group.Kind,
+                ["count"] = group.Count,
+                ["objects"] = new JsonArray([.. group.Objects.Select(o => (JsonNode)new JsonObject
+                {
+                    ["handle"] = o.Handle,
+                    ["mask"] = o.Mask?.ToString(),
+                    ["distance"] = o.Distance,
+                })]),
+            })]),
+        };
         return document;
     }
 

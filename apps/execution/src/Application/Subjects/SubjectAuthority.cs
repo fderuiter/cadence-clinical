@@ -6,8 +6,8 @@ namespace Cadence.Apps.Execution.Application.Subjects;
 
 /// <summary>
 /// Who may change a participant's record in Execution (#4943). Adding a participant, recording consent, changing
-/// their state and editing their demographics are site work, which a data manager may also do; breaking the blind
-/// needs an unblinding authority. These are role checks until grants and qualifications from the Trust engine
+/// their state and editing their demographics are site work; a data manager reviews and queries but never modifies
+/// source subject entries (PRD §3.2, #4981). Breaking the blind needs an unblinding authority. These are role checks until grants and qualifications from the Trust engine
 /// replace them (#4781).
 /// @req:PRD-SUB-001
 /// </summary>
@@ -15,7 +15,7 @@ public static class SubjectAuthority
 {
     /// <summary>
     /// Whether <paramref name="role"/> may add a participant, record consent, change state or edit demographics: an
-    /// investigator (site, principal, sub or lead), a clinical research coordinator, or a data manager. Monitors,
+    /// investigator (site, principal, sub or lead) or a clinical research coordinator. Data managers, monitors,
     /// auditors and participants read but never change the record.
     /// </summary>
     public static bool CanManageParticipants(string role)
@@ -30,8 +30,7 @@ public static class SubjectAuthority
             or "principal_investigator" or "principal investigator" or "pi"
             or "sub_investigator" or "sub investigator" or "sub-investigator"
             or "lead_investigator" or "lead investigator"
-            or "crc" or "site coordinator" or "site_coordinator" or "clinical research coordinator"
-            or "sponsor_dm" or "data_manager" or "data manager" or "data-manager" or "dm";
+            or "crc" or "site coordinator" or "site_coordinator" or "clinical research coordinator";
     }
 
     /// <summary>

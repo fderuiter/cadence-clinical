@@ -17,32 +17,11 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 
 | Package | Port missing | Port untested |
 | --- | ---: | ---: |
-| [packages/compliance](#packagescompliance) | 0 | 1 |
 | [packages/ddf](#packagesddf) | 10 | 0 |
-| [packages/deid](#packagesdeid) | 2 | 2 |
-| [packages/engine_core](#packagesengine_core) | 21 | 3 |
+| [packages/deid](#packagesdeid) | 2 | 0 |
+| [packages/engine_core](#packagesengine_core) | 21 | 0 |
 | [packages/security](#packagessecurity) | 9 | 0 |
-| [packages/sentinels](#packagessentinels) | 0 | 1 |
 | [packages/storage](#packagesstorage) | 6 | 0 |
-
-## packages/compliance
-
-| Python file | What it does | C# today | Status | Notes |
-| --- | --- | --- | --- | --- |
-| `services/esignature_verifier.py` | Verifies PEM+signature documents; mock, duplicate-block, legacy-padding and revocation checks; Markdown hash check; AI-record approval | `packages/compliance/src/ESignatureVerifier.cs`, `Exceptions.cs` | Port untested | See note C1 |
-
-**Note C1.** The C# `VerifySignature` and `VerifyMarkdown` are faithful ports, but:
-- Tests cover the valid-signature, tampered-body and `MOCK_SIGNATURE_DETECTED` paths (#4876; the C# reports a
-  mock only for a signature that already failed, where the Python rejected any text containing "mock").
-- Untested: the revocation check, `VerifyPdf` (which throws `TamperDetectedException`), and the
-  `LEGACY_PADDING_REJECTED` and `DUPLICATE_BLOCKS_REJECTED` paths.
-- Weaker than the Python: revocation-list normalisation (decimal, `0x` and plain-hex serials; colon-separated
-  fingerprints) and the XML-DSig duplicate-block checks (`<X509Certificate>`, `<SignatureValue>`,
-  `<Signature>`) were not ported.
-- `verify_ai_assisted_record_approval` and `assert_ai_record_approved` have no port. Spec §11 (Proposals)
-  supersedes them, so they need no port.
-- To delete: add tests for revocation, legacy padding, duplicates and `VerifyPdf`, or accept
-  the simplified revocation matching.
 
 ## packages/ddf
 
@@ -65,12 +44,9 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | --- | --- | --- | --- | --- |
 | `__main__.py` | `python -m packages.deid` → `cli.main()` | none | Port missing | Goes with `cli.py` |
 | `cli.py` | Repo PHI scanner using the full detector: gitignore handling, `deid-ignore` pragmas, URL/test-value allowlists, path exclusions | `packages/tooling_core/src/Services/DeidComplianceService.cs` (only an SSN regex over `*.cs`, skips `tests/`) | Port missing | The C# gate (CI `check deid`, `.github/workflows/ci.yml:285`) is much weaker |
-| `detector.py` | 14-category HIPAA/GDPR regex detector, overlap resolution, redaction | `packages/deid/src/DeidDetector.cs` (all 14 patterns ported) | Port untested | See note D1 |
-| `models.py` | `DetectorCategory`, `ComplianceProfile` and the profile → category mapping | `packages/deid/src/Models.cs` (`GetCategoriesForProfile`) | Port untested | Delete with `detector.py` |
 
-**Note D1.** No test covers the `zip_geographic`, `urls`, `ip_mac_addresses`, `medical_record_account`,
-`health_plan_beneficiary`, `certificate_license`, `vehicle_identifiers` or `device_serial` patterns, or
-profile-based filtering (GDPR vs HIPAA).
+**Note D1.** `detector.py` and `models.py` were deleted once `DeidDetectorTests` pinned the C# port to them. `cli.py`
+and `__init__.py` still import them; recover them from git history when porting `cli.py`.
 
 ## packages/engine_core
 
@@ -88,14 +64,11 @@ profile-based filtering (GDPR vs HIPAA).
 | `operations/engine.py` | Site startup greenlight facade | none | Port missing |  |
 | `operations/evaluator.py` | Greenlight rules: IRB, contract, staff qualification, facility, IP depot | none | Port missing | Spec K-TIME-4/5 and K-AUTH-5 are the target |
 | `operations/models.py` | Greenlight models | none | Port missing |  |
-| `randomization/boin.py` | BOIN boundaries, beta_inc, posterior, BOIN engine, 3+3 engine | `packages/engine_core/src/Randomization/BoinEngine.cs` (includes `Evaluate3Plus3Cohort`) | Port untested | 3+3 escalation (`Evaluate3Plus3Cohort`) and `CalculatePosteriorProbToxic` have no test |
 | `rules/ast.py` | Rule AST with `validate_node` shape validation (operand counts, required fields) | `packages/engine_core/src/Rules/RuleAst.cs` (plain classes, no validation) | Port missing | Node validation not ported |
-| `rules/evaluator.py` | Logical, comparison, arithmetic, function and date evaluation; `parse_json_logic` | `packages/engine_core/src/Rules/RuleEvaluator.cs` (full port) | Port untested | Arithmetic, functions, dates, strict variables and `ParseJsonLogic` untested |
 | `rules/sentinels.py` | Field-reference extraction, complexity, unresolved references, cycle detection | none | Port missing |  |
 | `sla/engine.py` | SLA countdown clocks with business hours and escalation tiers | none | Port missing |  |
 | `sla/models.py` | SLA models | none | Port missing |  |
 | `supply/engine.py` | `PredictiveSupplyEngine` facade (forecast, hierarchy, DTP, unblinding) | none | Port missing |  |
-| `supply/forecasting.py` | Visit-driven demand forecast, lot expiry, stockout risk | `packages/engine_core/src/Supply/PredictiveDemandForecastingEngine.cs` | Port untested |  |
 | `supply/hierarchy.py` | Multi-echelon depot/site hierarchy roll-up and validation | models only in `SupplyModels.cs` | Port missing |  |
 | `supply/unblinding.py` | Emergency unblinding authorisation | models only in `SupplyModels.cs` | Port missing | Spec Appendix A.1 (Attestation-bearing event) is the target |
 | `timeline/engine.py` | Visit-window schedule and deviation assessment | none | Port missing | Spec K-TIME-7 is the target |
@@ -130,12 +103,6 @@ that they are dropped.
 - `verify_inbound_email_signature` (eTMF inbound webhook; `INBOUND_EMAIL_HMAC_SECRET`).
 - `generate_greenlight_token` / `verify_greenlight_token`.
 - `compute_merkle_root` / `compute_block_hash`.
-
-## packages/sentinels
-
-| Python file | What it does | C# today | Status | Notes |
-| --- | --- | --- | --- | --- |
-| `engine.py` | Register checks, run concurrently, filter by gate, render a terminal summary | `packages/sentinels/src/SentinelEngine.cs` (no terminal summary; not used by `QualityGateOrchestrator`) | Port untested | One test with a fake check and a gate filter would clear it |
 
 ## packages/storage
 

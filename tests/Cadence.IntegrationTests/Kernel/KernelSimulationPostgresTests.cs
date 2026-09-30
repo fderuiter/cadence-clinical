@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +10,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Simulation;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
@@ -24,7 +26,7 @@ namespace Cadence.IntegrationTests.Kernel;
 
 /// <summary>
 /// Simulation against PostgreSQL (ADR-2480): a forked and revised protocol draft is compared with its approved parent
-/// through kernel persistence, the run adds or changes no row in any kernel table (K-SIM-1), and another tenant's
+/// through kernel persistence, with the parent's dependents counted exactly as amendment impact counts them, the run adds or changes no row in any kernel table (K-SIM-1), and another tenant's
 /// versions cannot be simulated. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -47,6 +49,8 @@ public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture)
         var draft = ProtocolVersionId.New();
         await scenario.OkAsync(new ForkProtocolVersion(tenant, parent, draft, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
         await scenario.OkAsync(new ReviseProtocolDraft(tenant, draft, Revised, null, KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        var other = ProtocolVersionId.New();
+        await scenario.OkAsync(new ForkProtocolVersion(tenant, parent, other, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
         var before = await RowCountsAsync(tenant, ct);
 
         var result = await Engine().SimulateAsync(tenant, new SimulationRequest(SimulationCandidate.StoredProtocolVersion(draft)), ct);
@@ -61,6 +65,13 @@ public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture)
             ],
             options => options.WithStrictOrdering());
         result.Value.Candidate.BaseVersion!.Unversioned().Should().Be(NodeRef.For(parent));
+        result.Value.EngineVersions.Should().Contain(SimulationEngine.DependentsEngine);
+        result.Value.Dependents!.Start.Should().Be(NodeRef.For(parent).ToString());
+        result.Value.Dependents.Groups.SelectMany(g => g.Objects).Select(o => o.Ref).Should().BeEquivalentTo(
+            [NodeRef.For(other, 1)], "the other open amendment depends on the parent; the simulated draft itself does not count");
+        var impact = await fixture.AmendmentImpact.ComputeAsync(
+            tenant, fixture.CurrentActor.Actor!, draft, validAt: result.Value.AsOf.ValidAt, knownAt: result.Value.AsOf.KnownAt, cancellationToken: ct);
+        impact!.Dependents.Should().BeEquivalentTo(result.Value.Dependents, "simulation and amendment impact count through the same read (Canvas D2)");
         (await RowCountsAsync(tenant, ct)).Should().Equal(before, "a simulation writes no clinical state (K-SIM-1)");
     }
 
@@ -84,7 +95,7 @@ public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture)
     }
 
     private SimulationEngine Engine() =>
-        new(new KernelSimulationInputs(fixture.TenantContexts), new PermitAll(), fixture.Visibility, fixture.CurrentActor, fixture.Clock);
+        new(new KernelSimulationInputs(fixture.TenantContexts, (KernelLineageStore)fixture.Lineage), new PermitAll(), fixture.Visibility, fixture.CurrentActor, fixture.Clock);
 
     private static async Task<ProtocolVersionId> ApproveAsync(KernelProtocolScenario scenario, TenantId tenant, StudyId study, string content, CancellationToken ct)
     {

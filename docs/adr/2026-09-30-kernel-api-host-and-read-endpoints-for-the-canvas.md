@@ -22,7 +22,9 @@ kernel, grey a verb with the kernel's reason, or search, and the Canvas keeps th
 
 Two pieces the endpoints depend on are not in place yet:
 
-- **The authority evaluator** (#4781). `KernelAuthorization` needs an `IAuthorizationEvaluator`; there is none.
+- **The authority evaluator** (#4781). `KernelAuthorization` needs an `IAuthorizationEvaluator`. When this ADR was
+  written there was none; the kernel's `AuthorityEvaluator` (ADR-2455) now decides from grants, roles and
+  delegations.
 - **Tenant resolution.** The gateway signs a tenant code (`tenant_id` claim), and the kernel keys everything by
   `TenantId` (a UUID). When this ADR was written there was no read port that found the kernel tenant for a code; the
   tenant directory (`ITenantDirectory`, #4780) now does.
@@ -59,8 +61,8 @@ Two pieces the endpoints depend on are not in place yet:
 ### Option 3: A kernel API host that serves the reads and fails closed on what is missing (selected)
 
 A new host, `Cadence.Kernel.Host` in `apps/kernel-api`, registers kernel persistence, navigation, search and
-authorization, and maps the read endpoints from `Cadence.Kernel.Api`. Until the evaluator exists every decision is a
-denial that names the missing evaluator, and every object is masked.
+authorization, and maps the read endpoints from `Cadence.Kernel.Api`. What is not in place yet fails closed: before the
+evaluator existed every decision was a denial that named it, and until visibility is decided every object is masked.
 
 ## 4. Decision Outcome
 
@@ -116,10 +118,17 @@ shipped, the resolver answered 503 for every read.
 
 ### 4.4 Authorization
 
-The host registers the kernel's `KernelAuthorization` unchanged. Its `IAuthorizationEvaluator` is a fail-closed
-placeholder until #4781: every decision is a denial whose one unmet condition is `authority.evaluator`, so the Canvas
-shows every command disabled with a reason, never enabled by mistake. #4781 replaces the registration and nothing
-else.
+The host registers the kernel's `KernelAuthorization` unchanged, over the kernel's `AuthorityEvaluator`
+(`AddKernelAuthorityEvaluator`, ADR-2455): a decision is a permit when a grant or delegation the caller holds, in effect
+now, carries the capability and covers the resource, and otherwise a denial whose unmet condition is `grant.active`.
+The host only reads and never provisions a tenant, so it names no platform operators.
+
+The actor is the person named by the verified subject. A subject the kernel does not accept as an accountable person
+(a reserved id such as `system`, or a service or agent id) gives the request no actor, so every dry run denies it with
+`actor.resolved`, the same as a request without a subject.
+
+Until #4781 shipped the evaluator, the host registered a placeholder that denied every decision with the unmet
+condition `authority.evaluator`.
 
 ### 4.5 Masking
 
@@ -147,8 +156,8 @@ Until visibility is decided from the authority model (#4781) and the IdentityVau
 
 - **Positive:** The web app gets the kernel's own answers over the same gateway, with a generated client. The two
   missing pieces each change one registration in the host.
-- **Positive:** Nothing can be shown or enabled wrongly in the meantime: every object is masked and every decision is a
-  denial with its reason.
+- **Positive:** Nothing can be shown wrongly in the meantime: every object is masked until visibility is decided, and
+  every decision is the kernel's own, with its reason.
 - **Negative:** Until #4781 decides visibility, the reads return masked objects only, so the Canvas wiring can be
   exercised with real data only against the tests and a stubbed visibility.
 - **Negative:** One more deployable, on port 8018.
@@ -156,13 +165,14 @@ Until visibility is decided from the authority model (#4781) and the IdentityVau
 ## 6. Implementation & Verification
 
 - `apps/kernel-api/src`: `Program.cs`, `ClaimsCurrentActor`, `DirectoryTenantResolver`,
-  `UnavailableAuthorizationEvaluator`, `UnavailableNodeVisibility`, `KernelDatabaseHealthCheck`,
+  `UnavailableNodeVisibility`, `KernelDatabaseHealthCheck`,
   `KernelMigrationHostedService`.
 - `packages/kernel/src/Cadence.Kernel.Api`: `KernelReadEndpoints`, `KernelReadResponses`, `KernelReadMasking`,
   `KernelTenantResolution`.
 - `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host: 403 for a tenant code the directory
   does not know or a missing one, 401 unsigned, reads in the resolved tenant, masking in place and in search, protocol
-  versions listed, masked and refused for a hidden study, 400 and 404 problems, CanI and the command catalogue denied
-  and explained, and search.
+  versions listed, masked and refused for a hidden study, 400 and 404 problems, CanI denied without a grant and
+  permitted with one, each explained, no actor for a subject that is no accountable person, the command catalogue,
+  and search.
 - `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` and
   `tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` cover the route and the port.

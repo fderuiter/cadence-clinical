@@ -23,7 +23,7 @@ using Xunit;
 namespace Cadence.IntegrationTests.Execution;
 
 /// <summary>
-/// #4943 through the real composition root: only site roles and data managers change a participant's record,
+/// #4943 through the real composition root: only site roles change a participant's record (not data managers, #4981),
 /// only an unblinding authority breaks the blind, and nobody sees the treatment group without the gateway-signed
 /// unblinded-access claim.
 /// </summary>
@@ -42,6 +42,8 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     [InlineData("CRA")]
     [InlineData("Monitor")]
     [InlineData("Subject")]
+    [InlineData("Data Manager")]
+    [InlineData("Sponsor Admin")]
     public async Task ParticipantWrites_ByARoleWithoutSiteAuthority_Return403_AndChangeNothing(string role)
     {
         factory.SkipIfUnavailable();
