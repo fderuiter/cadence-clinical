@@ -60,6 +60,7 @@
     <!-- Fetches the OpenAPI document from the real execution host (ExecutionApiFactory); Cadence.UnitTests only. -->
     <Compile Remove="Execution/OpenApi/**" />
     <Compile Remove="Gateway/**" />
+    <Compile Remove="AppHost/**" />
     <Compile Remove="Audit/GxPAuditTrailGenerationTests.cs" />
     <Compile Remove="Packages/**" />
     <Compile Remove="Kernel/**" />

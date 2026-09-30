@@ -29,6 +29,7 @@
     <Compile Remove="Kernel/**" />
     <Compile Remove="Integration/**" />
     <Compile Remove="Gateway/**" />
+    <Compile Remove="AppHost/**" />
     <Compile Remove="SecurityAndDomainTests.cs" />
     <Compile Remove="ArchitectureSentinelTests.cs" />
     <Compile Remove="Architecture/**" />

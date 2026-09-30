@@ -39,6 +39,7 @@
     <!-- #4770: DeviceTokenAtRestTests (tests/Interop) exercise the interop DbContext. -->
     <ProjectReference Include="..\apps\interop\src\Cadence.Apps.Interop.csproj" />
     <ProjectReference Include="..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="..\apps\apphost\src\Cadence.AppHost.csproj" />
     <ProjectReference Include="..\apps\gateway\src\Cadence.Apps.Gateway.csproj" />
     <ProjectReference Include="..\apps\designer\src\Cadence.Apps.Designer.csproj" />
     <ProjectReference Include="..\apps\ai_gateway\src\Cadence.Apps.AiGateway.csproj" />
@@ -73,6 +74,7 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="NSubstitute" />
     <!-- MIG-SUBJ-023: WebApplicationFactory<Program>/TestServer for SubjectEndpointsRoutingTests. -->
+    <PackageReference Include="Aspire.Hosting.Testing" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
