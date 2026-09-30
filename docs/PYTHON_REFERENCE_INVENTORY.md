@@ -18,8 +18,8 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 
 | Package | Port missing | Port untested | Ported, deletion pending |
 | --- | ---: | ---: | ---: |
-| [packages/ddf](#packagesddf) | 6 | 0 | 4 |
-| [packages/engine_core](#packagesengine_core) | 21 | 0 | 0 |
+| [packages/ddf](#packagesddf) | 6 | 0 | 5 |
+| [packages/engine_core](#packagesengine_core) | 22 | 0 | 0 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
 | [packages/storage](#packagesstorage) | 2 | 0 | 4 |
 
@@ -28,6 +28,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | Python file | What it does | C# today | Status | Notes |
 | --- | --- | --- | --- | --- |
 | `compiler.py` | 5-stage orchestrator; requires an accessibility validator port (fail-closed) | `packages/ddf/src/UsdmCompiler.cs` (runs the accessibility stage fail-closed; has no normalizer, IR builder or rule stages) | Port missing | Goes with `stages/normalizer.py` and `stages/ir_builder.py` |
+| `models.py` | Pydantic IR, report, options and result models | `packages/ddf/src/Models.cs` (`DDFItemIR`, `DDFStudyIR`, `AccessibilityReport`, `CompileOptions`, `DDFCompilationResult`, `CompilerWarning`, `ItemLocalization`) | Ported, deletion pending | Covered through `DdfCompilerTests` and `DdfRulesTests` |
 | `dataset_json_etl.py` | eCRF observations → SDTM Dataset-JSON | none | Port missing |  |
 | `ports.py` | `AccessibilityValidatorPort` | `IAccessibilityValidator` (`packages/ddf/src/Accessibility.cs`) | Ported, deletion pending | `DdfCompilerTests` |
 | `rules/ast.py` | DDF rule AST (skip logic, constraint, cross-form), node validation, `detect_circular_dependencies` | Replaced by the one rule language (K-RULE-3): item rules are `Cadence.Rules` expressions (`DdfItemRules`); cycles by `DdfDependencyGraph` | Ported, deletion pending | ADR-2502; `DdfRulesTests`. ODM paths (`field_ref` with form or visit, `indexed-repeat`) are not carried forward |
@@ -60,8 +61,9 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `sla/models.py` | SLA models | none | Port missing |  |
 | `supply/engine.py` | `PredictiveSupplyEngine` facade (forecast, hierarchy, DTP, unblinding) | none | Port missing |  |
 | `supply/hierarchy.py` | Multi-echelon depot/site hierarchy roll-up and validation | models only in `SupplyModels.cs` | Port missing |  |
+| `supply/models.py` | Supply node, roll-up, forecast, DTP and unblinding models | `packages/engine_core/src/Supply/SupplyModels.cs` (shapes; only the forecast models are used) | Port missing | Goes with `supply/hierarchy.py` and `supply/unblinding.py` |
 | `supply/unblinding.py` | Emergency unblinding authorisation | models only in `SupplyModels.cs` | Port missing | Spec Appendix A.1 (Attestation-bearing event) is the target |
-| `timeline/engine.py` | Visit-window schedule and deviation assessment | none | Port missing | Spec K-TIME-7 is the target |
+| `timeline/engine.py` | Visit-window schedule and deviation assessment | `ExpectedSchedule` (kernel, [ADR-2487](adr/2026-09-30-expected-schedule-as-a-pure-function.md)) places timed activities with their windows and window status from the reference start (K-TIME-7) | Port missing | Not in the kernel yet: repeating cycle templates, visits anchored on another event or on the previous visit, and early/late/major deviation classification of an actual visit |
 | `timeline/models.py` | Timeline models | none | Port missing |  |
 
 ## packages/security
@@ -72,10 +74,10 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `cert_store.py` | X.509 register, revoke, CRL status, self-signed and trust checks | none | Port missing |  |
 | `crypto_verifier.py` | `verify_electronic_signature`: JSON/PEM/XML signature parsing, XML-DSig stripping, mock-key detection, asymmetric verification or HMAC fallback | only the primitive `packages/security/src/AsymmetricSigner.AsymmetricVerify` | Port missing | The orchestration is not ported |
 | `fail_fast.py` | Refuses to start in non-dev environments on missing or insecure-fallback secrets; brand validation | `GATEWAY_SECRET` (required, at least 32 chars), the execution demographics key and the gateway service URLs ([ADR-2490](adr/2026-09-30-fail-fast-startup-validation-of-required-settings.md)) | Port missing | See note S1 |
-| `gating.py` | Which paths require e-signature step-up | none | Port missing | ADR-2256 §5 says step-up is not wired yet (#4761) |
+| `gating.py` | Which paths require e-signature step-up | Step-up is wired per endpoint: an endpoint that needs a signature adds `ElectronicSignatureEndpointFilter` ([ADR-2259](adr/2026-09-29-electronic-signature-step-up-re-authentication.md)), so no path list is needed | Port missing | Proposed for deletion as superseded |
 | `permissions.py` | Second permission scheme: `PermissionEnum` (`study:read`, `rtsm:randomize`, …), `RoleEnum`, role → permission map | none (C# `PermissionMatrix` uses a different resource → actions scheme; none of the 26 colon permissions exist in C#) | Port missing | Ask the owner whether spec §9.3 capability tokens make it obsolete |
 | `rbac.py` | Role aliases, role → resource → action matrix, `Principal`, site/study scope, payload masking, auditor checks | `packages/security/src/Rbac/RoleNormalization.cs`, `PermissionMatrix.cs`, `SiteAccessEvaluator.cs`, `StudyAccessEvaluator.cs`, `Blinding/FieldMasker.cs`, `Authentication/AuditorWriteGuardMiddleware.cs` | Port missing | See note S2 |
-| `regulated_actions.py` | Semantic regulated-action registry and path detection rules | none | Port missing | Goes with `gating.py` / #4761 |
+| `regulated_actions.py` | Semantic regulated-action registry and path detection rules | Superseded like `gating.py`: the signature meaning comes from the endpoint's filter (ADR-2259) | Port missing | Proposed for deletion with `gating.py` |
 | `signing.py` | Gateway HMAC, canonical signature, asymmetric sign, Merkle root and block hash, inbound-email webhook HMAC with replay cache, site greenlight token | `Authentication/HmacSigner.cs`, `CanonicalSigner.cs`, `AsymmetricSigner.cs`, `Audit/AuditDigestEngine.cs` | Port missing | See note S3 |
 
 **Note S1.** `fail_fast.py` refuses to start outside development when any required secret is missing or still
