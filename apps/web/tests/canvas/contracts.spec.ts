@@ -7,6 +7,7 @@ import {
   parseNodeRef,
   tryNodeRef,
 } from "../../src/canvas/nodeRef";
+import { canManageParticipants } from "../../src/canvas/authority";
 import {
   PARTICIPANT_STATES,
   PARTICIPANT_TRANSITIONS,
@@ -168,5 +169,44 @@ describe("Canvas lifecycle", () => {
     });
     expect(participantStateChanges("COMPLETED").targets).toEqual([]);
     expect(participantStateChanges("NOT_A_STATE").targets).toEqual([]);
+  });
+});
+
+describe("Canvas authority mirror", () => {
+  it("offers participant changes to exactly the roles Execution's SubjectAuthority accepts", () => {
+    const source = readFileSync(
+      join(
+        repoRoot,
+        "apps/execution/src/Application/Subjects/SubjectAuthority.cs"
+      ),
+      "utf8"
+    );
+    const method = source.slice(
+      source.indexOf("public static bool CanManageParticipants")
+    );
+    const body = method.slice(
+      method.indexOf("return normalized is"),
+      method.indexOf(";", method.indexOf("return normalized is"))
+    );
+    const accepted = [...body.matchAll(/"([^"]+)"/g)].map(([, role]) => role);
+
+    expect(accepted.length).toBeGreaterThan(0);
+    for (const role of accepted) {
+      expect(canManageParticipants({ rawRoles: [role] }), role).toBe(true);
+      expect(
+        canManageParticipants({ rawRoles: [` ${role.toUpperCase()} `] }),
+        role
+      ).toBe(true);
+    }
+    for (const role of [
+      "cra",
+      "monitor",
+      "auditor",
+      "sponsor_admin",
+      "admin",
+    ]) {
+      expect(canManageParticipants({ rawRoles: [role] }), role).toBe(false);
+    }
+    expect(canManageParticipants({ rawRoles: null })).toBe(false);
   });
 });

@@ -30,7 +30,7 @@
         </button>
       </span>
       <button
-        v-if="!adding"
+        v-if="canManageParticipants && !adding"
         id="btn-add-participant"
         type="button"
         class="btn btn-secondary"
@@ -41,7 +41,7 @@
     </header>
 
     <AddParticipantForm
-      v-if="adding"
+      v-if="canManageParticipants && adding"
       :default-site-id="siteId"
       @added="onAdded"
       @close="adding = false"
@@ -117,6 +117,8 @@ const props = defineProps<{
   status: string;
   siteId: string;
   selectedId: string;
+  /** Whether to offer adding participants (Execution enforces who may, #4943). */
+  canManageParticipants?: boolean;
 }>();
 const emit = defineEmits<{
   select: [participant: SubjectSummary];

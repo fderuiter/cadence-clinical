@@ -187,7 +187,10 @@
           <dd class="numeric">{{ participant.enrollment_index }}</dd>
         </dl>
 
-        <ParticipantStateChange :participant="participant" />
+        <ParticipantStateChange
+          v-if="canManageParticipants"
+          :participant="participant"
+        />
 
         <router-link
           v-if="recordLocation"
@@ -268,6 +271,8 @@ const props = defineProps<{
   observationQueries?: ClinicalQuery[];
   /** Whether to offer raising a query (Execution records the author). */
   canManage?: boolean;
+  /** Whether to offer changing the participant's state (Execution enforces who may, #4943). */
+  canManageParticipants?: boolean;
   raiseQuery?: (
     observation: Observation,
     explanation: string
