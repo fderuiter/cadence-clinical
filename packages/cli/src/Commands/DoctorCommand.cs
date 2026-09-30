@@ -1,24 +1,26 @@
 using System;
-using System.ComponentModel;
+using System.CommandLine;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 
 using Spectre.Console;
-using Spectre.Console.Cli;
 
 namespace Cadence.Cli.Commands;
 
-public class DoctorCommand : Command<DoctorCommand.Settings>
+public static class DoctorCommand
 {
-    public class Settings : CommandSettings
+    public static void Configure(Command command)
     {
-        [CommandOption("-f|--auto-fix")]
-        [Description("Automatically remediate missing databases and recoverable environment issues")]
-        public bool AutoFix { get; set; }
+        // Accepted for compatibility with `make doctor`; the diagnostics do not remediate anything yet (docs/cli.md).
+        command.Options.Add(new Option<bool>("--auto-fix", "-f")
+        {
+            Description = "Automatically remediate missing databases and recoverable environment issues",
+        });
+        command.SetAction(_ => Execute());
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    private static int Execute()
     {
         AnsiConsole.MarkupLine("[cyan]=== Cadence Clinical System Diagnostics ===[/]\n");
 

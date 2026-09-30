@@ -1,34 +1,17 @@
-using System.ComponentModel;
+using System.CommandLine;
 
 using Cadence.Cli.Services;
 
-using Spectre.Console.Cli;
-
 namespace Cadence.Cli.Commands;
 
-public class GxPSyncCommand : Command<GxPSyncCommand.Settings>
+public static class GxPSyncCommand
 {
-    public class Settings : CommandSettings
+    public static void Configure(Command command)
     {
-        [CommandOption("--dry-run")]
-        [Description("Validate GxP compliance without making changes")]
-        public bool DryRun { get; set; }
-
-        [CommandOption("--commit")]
-        [Description("Automatically stage updated compliance docs")]
-        public bool Commit { get; set; }
-    }
-
-    public override int Execute(CommandContext context, Settings settings)
-    {
-        return GxPComplianceService.SyncCompliance(settings.DryRun, settings.Commit);
-    }
-}
-
-public class GxPValidateCommand : Command
-{
-    public override int Execute(CommandContext context)
-    {
-        return GxPComplianceService.ValidateCompliance();
+        var dryRun = new Option<bool>("--dry-run") { Description = "Validate GxP compliance without making changes" };
+        var commit = new Option<bool>("--commit") { Description = "Automatically stage updated compliance docs" };
+        command.Options.Add(dryRun);
+        command.Options.Add(commit);
+        command.SetAction(result => GxPComplianceService.SyncCompliance(result.GetValue(dryRun), result.GetValue(commit)));
     }
 }

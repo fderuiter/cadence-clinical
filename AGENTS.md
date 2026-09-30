@@ -56,7 +56,7 @@ clinical truth (K-TRUTH-1).
 | Dependencies | Central Package Management: `Directory.Packages.props`, `Directory.Build.props` |
 | Tests | xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers |
 | Clinical standards | CDISC USDM v3/v4, ODM, CDASH, SDTM/ADaM (Dataset-JSON) |
-| CLI | `packages/cli` (Spectre.Console), run with `pnpm cadence <command>` |
+| CLI | `packages/cli` (System.CommandLine + Spectre.Console, Native AOT), run with `pnpm cadence <command>` |
 | Frontend | Vue 3 + Vite (`apps/web`, `apps/subject-portal`, `packages/ui`) |
 
 Neo4j is retired (ADR-2245); do not add Neo4j code.
