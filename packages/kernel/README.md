@@ -546,8 +546,22 @@ compares a protocol version with the version it was forked from and returns a `S
   work and persistence, and keeps its persistence reads from calling `SaveChanges`.
 - When something changed, `Dependents` lists what depends on the base version at the as-of, from the same
   dependents read as amendment impact (the stored candidate itself is left out).
-- Schedule changes, projection changes, the validation delta and saving a result as a Proposal come later, each
-  when the function behind it exists (#4866).
+- `ScheduleChanges` lists the timed activities added to, removed from or moved on the expected schedule, with the
+  planned visit before and after (K-TIME-7, ADR-2487). It is masked with the diff.
+- Participant-level schedule impact, projection changes, the validation delta and saving a result as a Proposal
+  come later, each when the function behind it exists (#4866).
+
+## Expected schedule (ADR-2487)
+
+`ExpectedSchedule` (`Cadence.Kernel.Protocol.Design`) is the pure schedule function of spec K-TIME-7. It reads no
+clock and stores nothing.
+
+- `Plan(design)` returns the timed planned activities as `PlannedVisit`s, ordered by study day, epoch order and
+  activity id. Activities without a timing are event-driven and left out.
+- `Compute(design, referenceStart, asOf)` places them on the calendar: target date, window start and end, and
+  `VisitWindowStatus` at `asOf`. Pass site-calendar dates.
+- `DateOfStudyDay(referenceStart, day)` uses the SDTM `--DY` convention: day 1 is the reference start, day -1 the
+  day before, and a day-0 timing is day 1.
 
 ## Migrations
 

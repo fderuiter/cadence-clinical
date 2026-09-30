@@ -31,6 +31,10 @@ two versions can be diffed element by element (K-PROT-1). A **design finding** i
 as a collected item with no purpose (K-PROT-3); it informs and never blocks. **Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or
 StudySite): approval is not effectiveness, and `Effective` requires evidence artifacts such as the
 ethics approval (K-TIME-4, K-TIME-5).
+The **expected schedule** is computed from the design, never stored (K-TIME-7, ADR-2487): each timed planned
+activity is a planned visit on a **study day**, where day 1 is the reference start, day -1 the day before and there
+is no day 0 (the SDTM `--DY` convention), with a window of days before and after.
+_Avoid_: stored visit schedules, day 0
 
 ### Participant
 
@@ -154,7 +158,7 @@ _Avoid_: serving kernel reads from a product service, taking the tenant from the
 
 ### Simulation (candidate version)
 
-Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal. The first function built is the structural diff of a protocol version against its base, element by stable `id` (`ISimulationEngine`).
+Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal. The first functions built are the structural diff of a protocol version against its base, element by stable `id` (`ISimulationEngine`), and the schedule changes from the expected schedule (ADR-2487).
 
 ### Concept Registry
 

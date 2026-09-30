@@ -603,6 +603,11 @@ When a new version becomes Effective at the StudySite, the Amendment's Transitio
   inconsistency that blocks data capture.
 - **K-TIME-7** The expected schedule is a pure function of `(ProtocolVersion, anchor events, as_of)`; it is
   never stored as truth, only cached as a projection.
+  - Implemented as `ExpectedSchedule` over the protocol design (ADR-2487). Timed planned activities are placed on
+    the study-day axis with the SDTM `--DY` convention: day 1 is the reference start, day -1 the day before, and
+    there is no day 0 (a day-0 timing is day 1). Activities without a timing are event-driven and not scheduled.
+  - The first anchor is the reference start, passed by the caller as a site-calendar date; each visit gets a
+    target date, a window and its status (`NotYetOpen`, `Open`, `Closed`) at the as-of date.
 - **K-TIME-8** An observation's governing version is resolved from Applicability at its valid time and
   stamped into its provenance. `ActiveProtocolVersion`, `ProtocolVersionTag/Index` and
   `FormSubmission.ProtocolVersion` are replaced by this (inventory §3 item 3).
@@ -1025,8 +1030,10 @@ Simulate(scope, candidate, as_of, actor) → SimulationResult{ as_of, candidate,
 
 A result has only the sections whose pure functions exist; its `engine_versions` name them. The structural diff
 of a protocol candidate reports each element once, by id, with the JSON Pointers of its changed values. Its
+schedule changes are the timed activities added to, removed from or moved on the expected schedule (K-TIME-7), on
+the study-day axis with their planned visit before and after (ADR-2487). Its
 dependents come from the one dependents read, as amendment impact's do (K-PROT-2). When the
-actor may not see the study or a version, the diff is withheld as a masked part and the hashes are computed from the
+actor may not see the study or a version, the diff and schedule changes are withheld as masked parts and the hashes are computed from the
 mask, not the content (ADR-2480 §4.6).
 
 Running a simulation is a read (`simulation.run` plus the `Read` capabilities for what it reads) and is not
@@ -1159,6 +1166,7 @@ kernel, is merged into another, or is retired.
 | K021 | Grants, roles and delegation | Bitemporal grants of a capability or role at a scope; delegation as a bounded child grant; platform operators bootstrap tenants | ADR-2455 |
 | K022 | Validation findings | Immutable study-scoped runs; finding identity derived from rule and target; status derived from runs and attested decisions | ADR-2462 |
 | K023 | Work queues | Versioned definitions keyed by a capability; items from a registered source kept per reader by the one evaluator; portfolio queues span a tenant's studies | ADR-2486 |
+| K025 | Expected schedule | Pure function of the design, a reference start and an as-of date; SDTM study days with no day 0; simulation reports schedule changes on the study-day axis | ADR-2487 |
 
 ---
 

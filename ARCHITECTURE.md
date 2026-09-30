@@ -11,7 +11,7 @@ When this document and the spec disagree, the spec wins; fix this document.
 | Section | Contents |
 | --- | --- |
 | [1. Target architecture](#1-target-architecture) | Kernel, six engines, applications, invariants |
-| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K023 and the platform decisions, with their ADRs |
+| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K025 and the platform decisions, with their ADRs |
 | [3. Running services today](#3-running-services-today) | Services, ports, gateway routes, maturity |
 | [4. Request path and security](#4-request-path-and-security) | OIDC at the gateway, signed identity in services |
 | [5. Persistence](#5-persistence) | Databases, connection strings, migrations |
@@ -90,6 +90,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K021 | Authority is kernel grants of a capability or role at a scope with bitemporal validity; a delegation is a grant bounded by its parent; one evaluator reads them | [ADR-2455](docs/adr/2026-09-30-grants-roles-and-delegation-as-bitemporal-kernel-authority.md) |
 | K022 | A validation finding keeps its identity across immutable runs; its status is derived from the runs and from attested decisions | [ADR-2462](docs/adr/2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md) |
 | K023 | Work queues are versioned definitions keyed by a capability; a person's items are what a source reports as due and the evaluator permits them to act on now, so revoking a grant removes its items | [ADR-2486](docs/adr/2026-09-30-work-queues-as-capability-keyed-definitions.md) |
+| K025 | The expected schedule is a pure function of the protocol design, a reference start and an as-of date, on the SDTM study-day axis (no day 0); simulation reports schedule changes from it | [ADR-2487](docs/adr/2026-09-30-expected-schedule-as-a-pure-function.md) |
 | — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
 | — | No default credentials; secrets resolve fail-closed | [ADR-2260](docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md) |

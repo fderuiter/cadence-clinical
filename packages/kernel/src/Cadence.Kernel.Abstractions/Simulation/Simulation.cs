@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Simulation;
@@ -143,6 +144,16 @@ public enum ElementChangeKind
 /// </param>
 public sealed record ElementChange(string ElementId, string? InstanceType, ElementChangeKind Change, IReadOnlyList<string> Properties);
 
+/// <summary>
+/// A timed planned activity whose place on the expected schedule differs between the base and the candidate (K-TIME-7,
+/// ADR-2487), on the study-day axis, so it holds for every participant whatever their reference start.
+/// </summary>
+/// <param name="ActivityId">The planned activity's element id.</param>
+/// <param name="Change">Added to the schedule (new, or newly timed), removed from it, or moved.</param>
+/// <param name="Before">Its planned visit in the base; null when added.</param>
+/// <param name="After">Its planned visit in the candidate; null when removed.</param>
+public sealed record ScheduleChange(string ActivityId, ElementChangeKind Change, PlannedVisit? Before, PlannedVisit? After);
+
 /// <summary>A part of a result withheld from this actor, and why (Canvas D1, ADR-2471).</summary>
 /// <param name="Part">The withheld section, for example <c>structural_diff</c>.</param>
 /// <param name="Reason">Why it is withheld.</param>
@@ -159,6 +170,10 @@ public sealed record MaskedPart(string Part, MaskReason Reason);
 /// <param name="InputHash">Hash of the inputs: the as-of, the base and candidate content hashes and the engine versions.</param>
 /// <param name="ResultHash">Hash of this result without itself. The same inputs always give the same hash (K-SIM-3).</param>
 /// <param name="StructuralDiff">Elements added, removed or changed, sorted by element id (K-PROT-1).</param>
+/// <param name="ScheduleChanges">
+/// Timed activities added to, removed from or moved on the expected schedule, sorted by activity id (K-TIME-7). A
+/// changed name or collection alone is in <paramref name="StructuralDiff"/>, not here.
+/// </param>
 /// <param name="Masked">Sections withheld from this actor (K-SIM-4).</param>
 /// <param name="Dependents">
 /// What depends on the base version, at <paramref name="AsOf"/>, through the one dependents read (Canvas D2); objects
@@ -173,11 +188,12 @@ public sealed record SimulationResult(
     string InputHash,
     string ResultHash,
     IReadOnlyList<ElementChange> StructuralDiff,
+    IReadOnlyList<ScheduleChange> ScheduleChanges,
     IReadOnlyList<MaskedPart> Masked,
     DependentsReport? Dependents = null)
 {
     /// <summary>True when the candidate changes nothing this actor may see.</summary>
-    public bool IsEmpty => StructuralDiff.Count == 0 && Masked.Count == 0;
+    public bool IsEmpty => StructuralDiff.Count == 0 && ScheduleChanges.Count == 0 && Masked.Count == 0;
 }
 
 /// <summary>Errors raised by simulation (ADR-2480).</summary>
