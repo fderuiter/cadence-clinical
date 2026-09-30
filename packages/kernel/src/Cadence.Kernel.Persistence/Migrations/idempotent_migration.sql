@@ -2578,3 +2578,66 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930080359_WorkQueueDefinitions') THEN
+    CREATE TABLE kernel.work_queue_definitions (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        code character varying(64) NOT NULL,
+        version integer NOT NULL,
+        title character varying(200) NOT NULL,
+        capability character varying(100) NOT NULL,
+        verb_class character varying(16) NOT NULL,
+        source character varying(100) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_work_queue_definitions" PRIMARY KEY (id),
+        CONSTRAINT "AK_work_queue_definitions_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_work_queue_definitions_version CHECK (version > 0),
+        CONSTRAINT "FK_work_queue_definitions_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930080359_WorkQueueDefinitions') THEN
+    CREATE UNIQUE INDEX "IX_work_queue_definitions_tenant_id_code_version" ON kernel.work_queue_definitions (tenant_id, code, version);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930080359_WorkQueueDefinitions') THEN
+    ALTER TABLE "kernel"."work_queue_definitions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."work_queue_definitions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."work_queue_definitions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930080359_WorkQueueDefinitions') THEN
+    CREATE TRIGGER "trg_work_queue_definitions_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."work_queue_definitions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_work_queue_definitions_no_truncate" BEFORE TRUNCATE ON "kernel"."work_queue_definitions"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930080359_WorkQueueDefinitions') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930080359_WorkQueueDefinitions', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

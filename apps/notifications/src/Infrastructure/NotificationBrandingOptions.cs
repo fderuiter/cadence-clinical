@@ -1,5 +1,8 @@
 using System;
 
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Cadence.Apps.Notifications.Infrastructure;
 
 /// <summary>
@@ -32,4 +35,23 @@ public sealed class NotificationBrandingOptions
         string.IsNullOrWhiteSpace(value)
         || (Uri.TryCreate(value, UriKind.Absolute, out var uri)
             && (uri.Scheme == Uri.UriSchemeHttps || (uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)));
+}
+
+/// <summary>Registers <see cref="NotificationBrandingOptions"/>, validated when the host starts.</summary>
+public static class NotificationBrandingServiceCollectionExtensions
+{
+    /// <summary>
+    /// Binds <see cref="NotificationBrandingOptions"/> from the <c>Notifications</c> section and refuses to start with
+    /// an empty brand name or a portal URL that is not absolute <c>https</c> (#4983).
+    /// </summary>
+    public static IServiceCollection AddNotificationBranding(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        services.AddOptions<NotificationBrandingOptions>()
+            .Bind(configuration.GetSection(NotificationBrandingOptions.SectionName))
+            .Validate(options => !string.IsNullOrWhiteSpace(options.BrandName), NotificationBrandingOptions.MissingBrandNameMessage)
+            .Validate(options => NotificationBrandingOptions.IsValidPortalUrl(options.PortalUrl), NotificationBrandingOptions.InvalidPortalUrlMessage)
+            .ValidateOnStart();
+        return services;
+    }
 }

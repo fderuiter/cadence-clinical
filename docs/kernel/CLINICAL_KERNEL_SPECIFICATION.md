@@ -773,13 +773,20 @@ protocol training + credential + effective dates + site activation state, never 
   a command without a declaration is denied. A dry run, `CanI(capability, resource)`, asks the same procedure for
   the calling actor only. It is not written to the audit chain; it is recorded in the authorization access log
   (ADR-2483), and the command catalogue for an object lists each command offered on it with its dry-run decision.
+- **K-AUTH-8** A work queue is keyed by a capability, never a role name. Its definition is versioned data (a code,
+  a capability with its verb class, and a registered source of due items). A person's queue holds the source's
+  items on which the evaluator permits them that capability now (K-AUTH-7), so it follows their Grants and
+  Delegations in scope and a revoked grant removes its items. Items the reader may not see are masked in place
+  (ADR-2471). A queue read without a scope spans every study of the tenant, which is the portfolio queue; queues
+  never span tenants (ADR-2486).
 
 *Implemented in part (#4781, ADR-2455):* `Role`, `Grant` (with bitemporal `GrantPeriod` validity) and delegation as
 a grant bounded by its parent, changed by `DefineRole`, `IssueGrant`, `DelegateGrant` and `RevokeGrant`.
 `AuthorityEvaluator` is the `IAuthorizationEvaluator`: it checks steps 1 and 2, requires every grant above a
 delegation to be in effect, denies automation agents Execute and Approve, and records each decision's conditions
 in `provenance_activities.authorization`. Qualifications (K-AUTH-5), separation of duties (step 4) and the
-StudySite, protocol and blinding conditions of step 3 are still to come.
+StudySite, protocol and blinding conditions of step 3 are still to come. Work-queue definitions and the queue read
+(K-AUTH-8) are implemented (#4849), with protocol versions in review as the first item source.
 
 ### 9.4 Computable consent
 
@@ -1140,6 +1147,7 @@ kernel, is merged into another, or is retired.
 | K019 | Activity stream | Asynchronous projection of outbox envelopes scoped by zoom path; payload-free; masked per reader at read time | ADR-2485 |
 | K020 | Evidence artifacts | Immutable, hash-addressed versions; bytes in object storage; declared kind, filing as an Assertion; attestations sign a version | ADR-2454 |
 | K021 | Grants, roles and delegation | Bitemporal grants of a capability or role at a scope; delegation as a bounded child grant; platform operators bootstrap tenants | ADR-2455 |
+| K023 | Work queues | Versioned definitions keyed by a capability; items from a registered source kept per reader by the one evaluator; portfolio queues span a tenant's studies | ADR-2486 |
 
 ---
 

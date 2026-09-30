@@ -5,6 +5,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Trust;
+using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Audit;
@@ -18,6 +19,7 @@ using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Persistence.Protocol;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Persistence.Trust;
+using Cadence.Kernel.Persistence.WorkQueues;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Tenancy;
 
@@ -73,6 +75,8 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<ITenantDirectory, KernelTenantDirectory>();
         services.TryAddSingleton<KernelAuditChainSealer>();
         services.TryAddSingleton<IConceptRegistry, KernelConceptRegistry>();
+        services.TryAddSingleton<IWorkQueueDefinitions, KernelWorkQueueDefinitions>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ProtocolVersionsInReviewSource>());
 
         // Lineage reads need the host's INodeVisibility (ADR-2471); none is registered here, so resolving
         // IKernelLineage in a host that has not decided visibility fails instead of showing every object.

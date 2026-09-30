@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -14,6 +15,8 @@ using FluentAssertions;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using Xunit;
@@ -64,19 +67,42 @@ public sealed class NotificationBrandingTests
         content.Should().Contain("Cadence Clinical Platform");
     }
 
+    // Checked on the registration Program.cs uses rather than by starting the host: a WebApplicationFactory whose
+    // host fails to start can surface an ObjectDisposedException instead of the startup error under a parallel run.
     [Theory]
     [InlineData("javascript:alert(1)")]
     [InlineData("http://portal.cadence.test")]
     [InlineData("/relative/path")]
     [InlineData("ftp://portal.cadence.test")]
-    public void Startup_RefusesAPortalUrlThatIsNotHttps(string portalUrl)
+    public void StartupValidation_RefusesAPortalUrlThatIsNotHttps(string portalUrl)
     {
-        using var factory = new NotificationsFactory(portalUrl, brandName: null);
+        using var provider = BrandingServices(portalUrl);
 
-        var act = () => factory.CreateClient();
+        var act = () => provider.GetRequiredService<IStartupValidator>().Validate();
 
         act.Should().Throw<OptionsValidationException>()
             .WithMessage($"*{NotificationBrandingOptions.InvalidPortalUrlMessage}*");
+    }
+
+    [Fact]
+    public void StartupValidation_RefusesAnEmptyBrandName()
+    {
+        using var provider = BrandingServices(portalUrl: null, brandName: " ");
+
+        var act = () => provider.GetRequiredService<IStartupValidator>().Validate();
+
+        act.Should().Throw<OptionsValidationException>()
+            .WithMessage($"*{NotificationBrandingOptions.MissingBrandNameMessage}*");
+    }
+
+    [Fact]
+    public void StartupValidation_AcceptsAnHttpsPortal()
+    {
+        using var provider = BrandingServices(ConfiguredPortal);
+
+        provider.GetRequiredService<IStartupValidator>().Validate();
+
+        provider.GetRequiredService<IOptions<NotificationBrandingOptions>>().Value.PortalUrl.Should().Be(ConfiguredPortal);
     }
 
     [Theory]
@@ -103,6 +129,18 @@ public sealed class NotificationBrandingTests
         response.StatusCode.Should().Be(HttpStatusCode.OK, body);
         using var json = JsonDocument.Parse(body);
         return json.RootElement.GetProperty("content").GetString()!;
+    }
+
+    private static ServiceProvider BrandingServices(string? portalUrl, string? brandName = null)
+    {
+        var settings = new Dictionary<string, string?> { ["Notifications:PortalUrl"] = portalUrl };
+        if (brandName is not null)
+        {
+            settings["Notifications:BrandName"] = brandName;
+        }
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        return new ServiceCollection().AddNotificationBranding(configuration).BuildServiceProvider();
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

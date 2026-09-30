@@ -18,11 +18,7 @@ builder.AddCadencePostgresDbContext<NotificationsDbContext>();
 builder.Services.AddFluidTemplating();
 
 // The brand name and portal link notifications carry come from configuration, never the request (#4983).
-builder.Services.AddOptions<NotificationBrandingOptions>()
-    .Bind(builder.Configuration.GetSection(NotificationBrandingOptions.SectionName))
-    .Validate(options => !string.IsNullOrWhiteSpace(options.BrandName), NotificationBrandingOptions.MissingBrandNameMessage)
-    .Validate(options => NotificationBrandingOptions.IsValidPortalUrl(options.PortalUrl), NotificationBrandingOptions.InvalidPortalUrlMessage)
-    .ValidateOnStart();
+builder.Services.AddNotificationBranding(builder.Configuration);
 
 FluidTemplateRenderer.RegisterType<NotificationPayload>();
 FluidTemplateRenderer.RegisterType<NotificationRenderModel>();

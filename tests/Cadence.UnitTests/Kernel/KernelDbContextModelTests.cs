@@ -44,7 +44,7 @@ public class KernelDbContextModelTests
             "standard_terminology", "library_items", "study_standards_profiles",
             "protocol_versions", "attestations", "participants", "enrollments", "enrollment_status_periods",
             "lineage_nodes", "lineage_edges", "activity_entries", "artifacts", "artifact_versions", "roles", "grants",
-            "grant_periods");
+            "grant_periods", "work_queue_definitions");
 
         entityTypes.Should().OnlyContain(e => e.GetSchema() == KernelDbContext.Schema);
         entityTypes.SelectMany(e => e.GetProperties())
