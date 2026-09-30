@@ -91,10 +91,21 @@ dotnet run --project apps/apphost/src/Cadence.AppHost.csproj
 ```
 
 The AppHost starts PostgreSQL (database `cadence`, with pgAdmin), MinIO, Keycloak (with the `cadence` realm
-imported) and all 19 .NET services on the same host ports as docker compose: the gateway on 8000 and the
-services on 8001 to 8018. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so telemetry shows in the Aspire dashboard.
-Set its secret parameters once with `dotnet user-secrets` first; [apps/apphost](../apps/apphost/README.md)
-lists them.
+imported), all 19 .NET services and the web app (`http://localhost:3000/cadence-clinical/`) on the same host ports
+as docker compose: the gateway on 8000 and the services on 8001 to 8018. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so
+telemetry shows in the Aspire dashboard. Run `pnpm install` and set its secret parameters with
+`dotnet user-secrets` first; [apps/apphost](../apps/apphost/README.md) lists them.
+
+For kernel and Canvas work, the `core` profile runs only PostgreSQL, Keycloak, the gateway, the kernel API host,
+execution and the web app:
+
+```bash
+dotnet run --project apps/apphost/src/Cadence.AppHost.csproj -- --AppHost:Profile=core
+```
+
+`ConnectionStrings:cadence` and `AppHost:OidcAuthority` replace the PostgreSQL and Keycloak containers with ones you
+already run, so the core profile also works without Docker, for example in a cloud dev container.
+[apps/apphost](../apps/apphost/README.md#run-locally) has the full command.
 
 ### Option C: one service
 

@@ -144,7 +144,7 @@ Other runtime pieces:
 | --- | --- | --- |
 | Web client | `apps/web` | Vue 3 + Vite (port 5173); signs in through Keycloak |
 | Subject portal | `apps/subject-portal` | Participant PWA (port 5174) |
-| Aspire AppHost | `apps/apphost` | Local orchestration of PostgreSQL (database `cadence`), MinIO, Keycloak and every .NET service |
+| Aspire AppHost | `apps/apphost` | Local orchestration of PostgreSQL (database `cadence`), MinIO, Keycloak, every .NET service and the web app; a `core` profile runs the gateway, kernel API, execution and web only, optionally on an existing PostgreSQL and Keycloak |
 | Keycloak | `docker/cadence-realm.json` | OIDC identity provider (port 8080), realm `cadence` |
 | PostgreSQL 16 | compose `postgres` | One `cadence` database with a schema per service (ADR-2447) |
 | MinIO, ClamAV | compose profile `storage` | Object storage and upload scanning; no service reads them yet |

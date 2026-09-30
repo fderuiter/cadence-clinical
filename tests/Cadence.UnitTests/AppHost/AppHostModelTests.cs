@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.JavaScript;
 using Aspire.Hosting.Testing;
 
 using FluentAssertions;
@@ -18,7 +19,8 @@ namespace Cadence.UnitTests.AppHost;
 /// <summary>
 /// Builds the AppHost's resource graph (no containers or processes start) and checks it can actually run the
 /// platform: every service is a project, listens on the port docker compose publishes it on, gets the secrets and
-/// database it refuses to start without, and the gateway is told where each service is.
+/// database it refuses to start without, and the gateway is told where each service is. The core profile and the
+/// existing-PostgreSQL and existing-OIDC switches (#4991) are checked the same way.
 /// </summary>
 public sealed class AppHostModelTests
 {
@@ -95,15 +97,95 @@ public sealed class AppHostModelTests
         }
     }
 
-    private static async Task<Dictionary<string, ProjectResource>> ProjectsAsync()
+    [Fact]
+    public async Task FullProfile_RunsTheWebAppAndEveryContainer()
     {
-        var builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Cadence_AppHost>(TestContext.Current.CancellationToken);
-        await using var app = await builder.BuildAsync(TestContext.Current.CancellationToken);
-        var model = app.Services.GetRequiredService<DistributedApplicationModel>();
-        return model.Resources.OfType<ProjectResource>().ToDictionary(p => p.Name, StringComparer.Ordinal);
+        var resources = await ResourcesAsync();
+
+        resources.Should().ContainKey("web").WhoseValue.Should().BeOfType<ViteAppResource>();
+        resources.Keys.Should().Contain(["postgres", "cadence", "keycloak", "minio"]);
     }
 
-    private static async Task<IReadOnlyCollection<string>> EnvironmentNamesAsync(IResource resource)
+    [Fact]
+    public async Task CoreProfile_RunsOnlyWhatTheCanvasCalls()
+    {
+        var resources = await ResourcesAsync("--AppHost:Profile=core");
+        var projects = resources.Values.OfType<ProjectResource>().ToDictionary(p => p.Name, StringComparer.Ordinal);
+
+        projects.Keys.Should().BeEquivalentTo("gateway", "execution", "kernel");
+        resources.Should().ContainKey("web");
+        resources.Should().NotContainKey("minio");
+        foreach (var (name, project) in projects)
+        {
+            project.Annotations.OfType<EndpointAnnotation>().Single(e => e.Name == "http").Port.Should().Be(ServicePorts[name], name);
+        }
+
+        // The gateway refuses to start outside Development without every service URL; a service left out points
+        // at its usual host port, where nothing listens.
+        var gateway = await EnvironmentAsync(projects["gateway"]);
+        gateway["EXECUTION_SERVICE_URL"].Should().BeOfType<EndpointReference>();
+        gateway["KERNEL_SERVICE_URL"].Should().BeOfType<EndpointReference>();
+        foreach (string service in ServicePorts.Keys.Except(["gateway", "execution", "kernel"]))
+        {
+            gateway[$"{service.Replace('-', '_').ToUpperInvariant()}_SERVICE_URL"].Should().Be($"http://localhost:{ServicePorts[service]}", service);
+        }
+        (await EnvironmentAsync(projects["execution"])).Keys
+            .Should().Contain(["GATEWAY_SECRET", "AUDIT_LOG_SECRET_KEY", "ConnectionStrings__cadence", "DemographicsEncryption__KeyBase64"]);
+    }
+
+    [Fact]
+    public async Task ExistingPostgres_ReplacesThePostgresContainer()
+    {
+        var resources = await ResourcesAsync("--AppHost:Profile=core", "--ConnectionStrings:cadence=Host=localhost;Database=cadence");
+
+        resources.Values.OfType<PostgresServerResource>().Should().BeEmpty();
+        resources.Should().ContainKey("cadence").WhoseValue.Should().BeAssignableTo<IResourceWithConnectionString>().And.NotBeOfType<PostgresDatabaseResource>();
+        (await EnvironmentAsync(resources["kernel"])).Keys.Should().Contain("ConnectionStrings__cadence");
+    }
+
+    [Fact]
+    public async Task ExistingOidcAuthority_ReplacesTheKeycloakContainer()
+    {
+        var resources = await ResourcesAsync("--AppHost:Profile=core", "--AppHost:OidcAuthority=https://id.example.test/realms/trial");
+
+        resources.Should().NotContainKey("keycloak");
+        var gateway = await EnvironmentAsync(resources["gateway"]);
+        gateway["OIDC_AUTHORITY"].Should().Be("https://id.example.test/realms/trial");
+        gateway["OIDC_REQUIRE_HTTPS_METADATA"].Should().Be("true");
+        var web = await EnvironmentAsync(resources["web"]);
+        web["VITE_KEYCLOAK_URL"].Should().Be("https://id.example.test");
+        web["VITE_KEYCLOAK_REALM"].Should().Be("trial");
+        web["VITE_KEYCLOAK_CLIENT_ID"].Should().Be("cadence-web");
+        web.Keys.Should().Contain("VITE_API_BASE_URL");
+    }
+
+    [Theory]
+    [InlineData("--AppHost:Profile=everything")]
+    [InlineData("--AppHost:OidcAuthority=http://localhost:8080")]
+    [InlineData("--AppHost:OidcAuthority=not a url/realms/cadence")]
+    public async Task InvalidSettings_StopTheAppHostWithAMessage(string setting)
+    {
+        var build = () => ResourcesAsync(setting);
+
+        await build.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    private static async Task<Dictionary<string, ProjectResource>> ProjectsAsync() =>
+        (await ResourcesAsync()).Values.OfType<ProjectResource>().ToDictionary(p => p.Name, StringComparer.Ordinal);
+
+    private static async Task<Dictionary<string, IResource>> ResourcesAsync(params string[] args)
+    {
+        var builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Cadence_AppHost>(args, TestContext.Current.CancellationToken);
+        await using var app = await builder.BuildAsync(TestContext.Current.CancellationToken);
+        var model = app.Services.GetRequiredService<DistributedApplicationModel>();
+        return model.Resources.ToDictionary(r => r.Name, StringComparer.Ordinal);
+    }
+
+    private static async Task<IReadOnlyCollection<string>> EnvironmentNamesAsync(IResource resource) =>
+        (await EnvironmentAsync(resource)).Keys.ToList();
+
+    /// <summary>The resource's environment in publish mode; plain values are strings, the rest are references.</summary>
+    private static async Task<Dictionary<string, object>> EnvironmentAsync(IResource resource)
     {
         var context = new EnvironmentCallbackContext(new DistributedApplicationExecutionContext(DistributedApplicationOperation.Publish));
         foreach (var callback in resource.Annotations.OfType<EnvironmentCallbackAnnotation>())
@@ -111,6 +193,6 @@ public sealed class AppHostModelTests
             await callback.Callback(context);
         }
 
-        return context.EnvironmentVariables.Keys.ToList();
+        return new Dictionary<string, object>(context.EnvironmentVariables, StringComparer.Ordinal);
     }
 }
