@@ -28,8 +28,8 @@ Generate a comprehensive specification with the following sections:
 1. **Title & Target Domain**: The clinical or platform area (`apps/designer`, `apps/execution`, `apps/gateway`, `apps/web`).
 2. **GxP Requirement ID**: New or updated `PRD-SYS-xxx` requirement tags.
 3. **Problem Statement & Clinical Context**: Regulatory motivation and clinical workflow impact.
-4. **Data Models & CDISC Schema Alignment**: USDM graph nodes, PostgreSQL SQLModel tables, Pydantic schemas.
-5. **API & Service Contracts**: FastAPI endpoint routes, request/response schemas, HMAC gateway auth requirements.
+4. **Data Models & CDISC Schema Alignment**: USDM entities, EF Core entities on PostgreSQL, C# record DTOs.
+5. **API & Service Contracts**: ASP.NET Core minimal API routes, request/response records, HMAC gateway auth requirements.
 6. **21 CFR Part 11 Audit Trail & Security**: Cryptographic signatures, audit fields, RBAC persona permissions.
 7. **Verification & Acceptance Criteria**: Specific unit, integration, and E2E test scenarios.
 

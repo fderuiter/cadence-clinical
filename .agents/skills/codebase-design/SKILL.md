@@ -1,6 +1,6 @@
 ---
 name: codebase-design
-description: "Apply deep module design principles, information hiding, interface leverage, and architectural seams to Cadence Python backends and Vue 3 frontend components. Use when designing new modules, refactoring shallow interfaces, or establishing service boundaries."
+description: "Apply deep module design principles, information hiding, interface leverage, and architectural seams to Cadence .NET 10 services and Vue 3 frontend components. Use when designing new modules, refactoring shallow interfaces, or establishing service boundaries."
 license: MIT
 metadata:
   author: Cadence Team
@@ -16,7 +16,7 @@ Vocabulary and design rules for creating deep, high-leverage modules across the 
 | Phase | Antigravity Tool | Invocation Pattern | Objective |
 | :--- | :--- | :--- | :--- |
 | **Seam Discovery** | `find_by_name` / `grep_search` | Query files across `apps/` and `packages/` | Identify shallow modules and leaky abstractions |
-| **Interface Inspection**| `view_file` | `AbsolutePath=".../ports.py"`, `StartLine=...` | Assess interface surface area vs. hidden complexity |
+| **Interface Inspection**| `view_file` | `AbsolutePath=".../Application/Ports/I*.cs"`, `StartLine=...` | Assess interface surface area vs. hidden complexity |
 | **Refactoring** | `replace_file_content` | Target: service/port files, surgical replacement | Deepen module by collapsing pass-through layers |
 | **Boundary Sentinel** | `run_command` | `CommandLine="dotnet cadence check --gate import-boundaries"` | Enforce no sibling database imports across boundaries |
 
@@ -32,31 +32,26 @@ A **deep module** provides powerful functionality behind a simple, compact inter
 
 ---
 
-## 2. Python 3.14+ Typing & PEP 695 Generics
+## 2. C# 14 Ports and Generics
 
-Use native type parameter syntax rather than inheriting from `typing.Generic`:
+Ports are interfaces in `Application/` (or `Cadence.Kernel.Abstractions` for kernel concepts); adapters live in `Infrastructure/`:
 
-```python
-# ✔ CORRECT — PEP 695 native type parameter syntax
-from abc import ABC, abstractmethod
+```csharp
+public interface IRepository<T>
+{
+    Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 
-
-class RepositoryPort[T](ABC):
-
-    @abstractmethod
-    async def get_by_id(self, entity_id: str) -> T | None: ...
-
-    @abstractmethod
-    async def save(self, entity: T) -> T: ...
+    Task SaveAsync(T entity, CancellationToken cancellationToken);
+}
 ```
 
 ---
 
-## 3. Pydantic v2 Domain Models
+## 3. Domain Records
 
-- Models must use strict typing (avoid `Any`).
-- Keep validation and normalization rules encapsulated within domain schemas using `@model_validator` and `@field_validator`.
-- Expose clear serialization interfaces (`model_dump()`, `model_dump_json()`).
+- Model values and DTOs as `record` types with primary constructors and `init` accessors; nullable reference types are on and warnings are errors.
+- Reference kernel IDs (`StudyId`, `SiteId`, `ParticipantId`), never `string` identifiers or redefined kernel types (spec §2.3).
+- Keep validation inside the domain (constructors, FluentValidation validators); serialize with `System.Text.Json` source generation.
 
 ---
 

@@ -51,7 +51,7 @@ git status --short
 
 ### D. Source Code & Database Migrations
 1. Use `view_file` to inspect conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`).
-2. Use `replace_file_content` to resolve domain logic preserving type safety (Pydantic v2) and GxP audit fields.
+2. Use `replace_file_content` to resolve domain logic preserving type safety (nullable reference types, kernel IDs) and GxP audit fields.
 3. Verify with `dotnet cadence fix --all`.
 
 ---

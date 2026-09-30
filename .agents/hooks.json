@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python ../scripts/hooks/pre_tool_guardrail.py",
+            "command": "../bin/cadence hook pre-tool",
             "timeout": 15
           }
         ]
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python ../scripts/hooks/post_write_check.py",
+            "command": "../bin/cadence hook post-write",
             "timeout": 30
           }
         ]
@@ -28,14 +28,14 @@
     "PreInvocation": [
       {
         "type": "command",
-        "command": "python ../scripts/hooks/pre_invocation_reminder.py",
+        "command": "../bin/cadence hook pre-invocation",
         "timeout": 10
       }
     ],
     "Stop": [
       {
         "type": "command",
-        "command": "python ../scripts/hooks/stop_sentinel.py",
+        "command": "../bin/cadence hook stop",
         "timeout": 30
       }
     ]
