@@ -89,7 +89,7 @@ public sealed class ObservationGoldenMasterTests
         obs.IsSdvVerified.Should().BeFalse();
         obs.VersionIndex.Should().Be(1);
 
-        var verifyTime = FakeClock.DefaultStart.UtcDateTime;
+        var verifyTime = FakeClock.DefaultStart;
         var verifyRes = obs.VerifySdv("cra_user_alpha", verifyTime);
         verifyRes.IsSuccess.Should().BeTrue();
         obs.IsSdvVerified.Should().BeTrue();

@@ -23,7 +23,7 @@
   ([TESTING.md, Time in tests](../TESTING.md#time-in-tests)).
 - Applications opt in project by project with `<CadenceBanWallClock>true</CadenceBanWallClock>` in the `.csproj`. The
   repo-root `Directory.Build.props` then adds the same analyzer and `BannedSymbols.txt` to the whole project, not
-  only `Domain/`. Opted in so far: `apps/interop` and `apps/quality`.
+  only `Domain/`. Opted in so far: `apps/interop`, `apps/quality`, `apps/ctms` and `apps/execution`.
 - In those apps every timestamp is a `DateTimeOffset`, and the ones a writer must supply (`CreatedAt`, `UpdatedAt`,
   `Timestamp`, `ReceivedAt`, interop's `DeviceTimestamp` and `ServerTimestamp`) are `required` with no default, so
   code that creates a row must pass a time it took from `IClock` (or, for `DeviceTimestamp`, the device's own time).
@@ -55,9 +55,9 @@ The counts below are from `main` at the base of this change and exclude EF `Migr
 | eisf | 3 | `Domain/EisfEntities.cs` | initializers |
 | fileshare | 3 | `Domain/FileshareEntities.cs` | initializers |
 | notifications | 2 | `Domain/NotificationEntities.cs` | initializers |
-| ctms | 1 | `Domain/CtmsEntities.cs` | initializer |
+| ctms | ~~1~~ 0 | `Domain/CtmsEntities.cs` | Done |
 | quality | ~~1~~ 0 | `Domain/QualityEntities.cs` | Done |
-| execution | 2 | `Domain/Observations/ClinicalObservation.cs:144`, `Domain/Queries/ClinicalQuery.cs:141` | `?? DateTime.UtcNow` fallbacks. Pass `IClock` from the application service instead |
+| execution | ~~2~~ 0 | `Domain/Queries/ClinicalQuery.cs:141` | Done. `ClinicalQuery.Close` now requires the time, and SDV verification, query resolution and escalation are `DateTimeOffset`. Before this, the service passed `IClock.UtcNow.DateTime` (`DateTimeKind.Unspecified`), which Npgsql refuses for `timestamptz`, so SDV and query close failed on PostgreSQL. An observation time without an offset is now stored as UTC. `ObservationDate` stays `DateTime` (valid time from the caller) |
 
 Per app, the follow-up is the same: remove the initializer, make the property a `required DateTimeOffset`
 (`timestamptz`), set the value from `IClock` wherever the app creates the row, opt the project in, and add an EF

@@ -85,7 +85,7 @@ public sealed class ObservationUnitTests
             value: 120.0,
             observationDate: FakeClock.DefaultStart.UtcDateTime).Value!;
 
-        var verifyTime = FakeClock.DefaultStart.UtcDateTime;
+        var verifyTime = FakeClock.DefaultStart;
         var result = obs.VerifySdv("cra_user_01", verifyTime);
 
         result.IsSuccess.Should().BeTrue();
@@ -109,8 +109,8 @@ public sealed class ObservationUnitTests
             value: 120.0,
             observationDate: FakeClock.DefaultStart.UtcDateTime).Value!;
 
-        obs.VerifySdv("cra_user_01", FakeClock.DefaultStart.UtcDateTime);
-        var secondResult = obs.VerifySdv("cra_user_02", FakeClock.DefaultStart.UtcDateTime);
+        obs.VerifySdv("cra_user_01", FakeClock.DefaultStart);
+        var secondResult = obs.VerifySdv("cra_user_02", FakeClock.DefaultStart);
 
         secondResult.IsFailure.Should().BeTrue();
         secondResult.Error!.Code.Should().Be("OBSERVATION_ALREADY_VERIFIED");
@@ -131,7 +131,7 @@ public sealed class ObservationUnitTests
             value: 120.0,
             observationDate: FakeClock.DefaultStart.UtcDateTime).Value!;
 
-        obs.VerifySdv("cra_user_01", FakeClock.DefaultStart.UtcDateTime);
+        obs.VerifySdv("cra_user_01", FakeClock.DefaultStart);
         var flagResult = obs.FlagSdv("Source document legibility issue");
 
         flagResult.IsSuccess.Should().BeTrue();

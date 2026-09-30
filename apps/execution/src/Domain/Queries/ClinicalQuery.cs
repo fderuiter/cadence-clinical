@@ -33,9 +33,9 @@ public sealed class ClinicalQuery : AggregateRoot<QueryId>
     public string? RuleId { get; private set; }
     public string? Responder { get; private set; }
     public string? Resolver { get; private set; }
-    public DateTime? ResolvedAt { get; private set; }
+    public DateTimeOffset? ResolvedAt { get; private set; }
     public string? CancellationReason { get; private set; }
-    public DateTime? EscalatedAt { get; private set; }
+    public DateTimeOffset? EscalatedAt { get; private set; }
     public string? FormId { get; private set; }
     public string? FieldId { get; private set; }
     public string? QueryType { get; private set; }
@@ -124,7 +124,7 @@ public sealed class ClinicalQuery : AggregateRoot<QueryId>
         return true;
     }
 
-    public Result<bool> Close(string resolverUserId, DateTime? resolvedAt = null)
+    public Result<bool> Close(string resolverUserId, DateTimeOffset resolvedAt)
     {
         if (Status != QueryStatus.Answered && Status != QueryStatus.Candidate)
         {
@@ -138,7 +138,7 @@ public sealed class ClinicalQuery : AggregateRoot<QueryId>
 
         Status = QueryStatus.Closed;
         Resolver = resolverUserId;
-        ResolvedAt = resolvedAt ?? DateTime.UtcNow;
+        ResolvedAt = resolvedAt.ToUniversalTime();
         return true;
     }
 
@@ -180,8 +180,8 @@ public sealed class ClinicalQuery : AggregateRoot<QueryId>
         return true;
     }
 
-    public void Escalate(DateTime escalatedAt)
+    public void Escalate(DateTimeOffset escalatedAt)
     {
-        EscalatedAt = escalatedAt;
+        EscalatedAt = escalatedAt.ToUniversalTime();
     }
 }
