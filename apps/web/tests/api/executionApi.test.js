@@ -179,7 +179,7 @@ describe("executionApi: participant data, SDV and queries (#4828)", () => {
     });
   });
 
-  it("verifies without a body and flags with the reason", async () => {
+  it("verifies without a body and flags with the reason, each with a reason for change", async () => {
     fetchSpy
       .mockResolvedValueOnce(jsonResponse(200, { id: "o1" }))
       .mockResolvedValueOnce(jsonResponse(200, { id: "o1" }));
@@ -191,10 +191,12 @@ describe("executionApi: participant data, SDV and queries (#4828)", () => {
       method: "POST",
       path: "/api/v1/execution/observations/o1/sdv",
       body: null,
+      reason: "Verified against source documents",
     });
     expect(await sent(1)).toMatchObject({
       path: "/api/v1/execution/observations/o1/sdv/flag",
       body: { reason: "Unit differs" },
+      reason: "Unit differs",
     });
   });
 

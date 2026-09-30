@@ -104,13 +104,81 @@ public sealed class ObservationAndFormEndpointsTests
 
         var obsId = createRes.Value!.Id;
 
-        var result = await ObservationEndpoints.VerifyObservationSdvAsync(obsId, svc, audit, CancellationToken.None);
+        var result = await ObservationEndpoints.VerifyObservationSdvAsync(obsId, CreateHttpContext(role: "cra"), svc, CancellationToken.None);
 
         result.Should().BeOfType<Ok<ObservationResponse>>();
         var ok = (Ok<ObservationResponse>)result;
         ok.StatusCode.Should().Be(StatusCodes.Status200OK);
         ok.Value!.IsSdvVerified.Should().BeTrue();
+        ok.Value.SdvVerifiedBy.Should().Be("test_user", "the verifier is the authenticated caller");
     }
+
+    /// <summary>
+    /// A site role cannot mark data source-verified or flag it: SDV verify and flag answer 403 and leave the
+    /// observation unverified (#4920).
+    /// </summary>
+    [Theory]
+    [InlineData("investigator")]
+    [InlineData("crc")]
+    [InlineData("subject")]
+    [InlineData("auditor")]
+    public async Task ObservationSdv_Handlers_WithSiteOrReadOnlyRole_Return403AndDoNotVerify(string role)
+    {
+        var repo = new InMemoryObservationRepository();
+        var svc = new ObservationApplicationService(
+            repo, new InMemorySubjectRepository(), new UcumNormalizationService(), new LabRangeService(),
+            new AstEditCheckEngine(), new FakeClock(), new FakeAuditContextAccessor());
+        var created = await svc.CreateAsync(new ObservationCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            Domain: "VS",
+            TestCode: "SYSBP",
+            TestName: "Systolic Blood Pressure",
+            ObservationDate: FakeClock.DefaultStart.UtcDateTime,
+            Value: 120.0), CancellationToken.None);
+        string id = created.Value!.Id;
+
+        var verify = await ObservationEndpoints.VerifyObservationSdvAsync(id, CreateHttpContext(role), svc, CancellationToken.None);
+        var flag = await ObservationEndpoints.FlagObservationSdvAsync(
+            id, new FlagObservationRequest("Source mismatch"), CreateHttpContext(role), svc, CancellationToken.None);
+
+        foreach (var result in new[] { verify, flag })
+        {
+            var problem = result.Should().BeOfType<ProblemHttpResult>().Which;
+            problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+            problem.ProblemDetails.Detail.Should().Contain("not authorized to verify source data");
+        }
+
+        (await svc.GetByIdAsync(id, CancellationToken.None)).Value!.IsSdvVerified.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// A caller with no authenticated identity is refused SDV rather than treated as a verifier.
+    /// </summary>
+    [Fact]
+    public async Task ObservationSdv_WithoutAuthenticatedCaller_Returns403()
+    {
+        var svc = new ObservationApplicationService(
+            new InMemoryObservationRepository(), new InMemorySubjectRepository(), new UcumNormalizationService(),
+            new LabRangeService(), new AstEditCheckEngine(), new FakeClock(), new FakeAuditContextAccessor());
+
+        var result = await svc.VerifySdvAsync(Guid.NewGuid().ToString(), verifier: null, CancellationToken.None);
+
+        result.Error!.Code.Should().Be("UNAUTHORIZED_SDV_ROLE");
+    }
+
+    [Theory]
+    [InlineData("cra", true)]
+    [InlineData("monitor", true)]
+    [InlineData("external_monitor", true)]
+    [InlineData("sponsor_dm", true)]
+    [InlineData("Data Manager", true)]
+    [InlineData("investigator", false)]
+    [InlineData("crc", false)]
+    [InlineData("sysadmin", false)]
+    [InlineData("", false)]
+    public void CanVerifySourceData_AllowsMonitorsAndDataManagersOnly(string role, bool expected) =>
+        ObservationApplicationService.CanVerifySourceData(role).Should().Be(expected);
 
     /// <summary>
     /// Validates that FormEndpoints.CreateFormSubmissionAsync returns 201 Created with Location header.
@@ -189,7 +257,6 @@ public sealed class ObservationAndFormEndpointsTests
         var httpContext = CreateHttpContext(role: "site_investigator");
         var result = await QueryEndpoints.CloseQueryAsync(
             query.Id.ToString(),
-            new QueryCloseRequest("inv-01"),
             httpContext,
             svc,
             CancellationToken.None);
@@ -222,7 +289,6 @@ public sealed class ObservationAndFormEndpointsTests
         var httpContext = CreateHttpContext(role: "cra");
         var result = await QueryEndpoints.CloseQueryAsync(
             query.Id.ToString(),
-            new QueryCloseRequest("cra-01"),
             httpContext,
             svc,
             CancellationToken.None);

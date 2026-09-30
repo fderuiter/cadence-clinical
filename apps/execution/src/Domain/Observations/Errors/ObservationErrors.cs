@@ -18,6 +18,11 @@ public static class ObservationErrors
     public static DomainError ObservationLocked(ObservationId id) =>
         DomainError.Forbidden("OBSERVATION_LOCKED", $"Clinical observation '{id}' is locked and cannot be modified.");
 
+    public static DomainError UnauthorizedSdvRole(string roles) =>
+        DomainError.Forbidden(
+            "UNAUTHORIZED_SDV_ROLE",
+            $"Role '{roles}' is not authorized to verify source data. Permitted roles: CRA, monitor, data manager.");
+
     public static DomainError InvalidCoordinates(string message) =>
         DomainError.Validation("INVALID_COORDINATES", message);
 

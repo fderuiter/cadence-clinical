@@ -166,7 +166,6 @@ public sealed class QueryLifecycleTests
         // Attempt close with unauthorized investigator role
         var rejectedResult = await service.CloseAsync(
             query.Id.ToString(),
-            new QueryCloseRequest("inv-01"),
             CancellationToken.None,
             userRole: "site_investigator");
 
@@ -176,7 +175,6 @@ public sealed class QueryLifecycleTests
         // Attempt close with authorized CRA role
         var approvedResult = await service.CloseAsync(
             query.Id.ToString(),
-            new QueryCloseRequest("cra-01"),
             CancellationToken.None,
             userRole: "cra");
 
@@ -194,7 +192,6 @@ public sealed class QueryLifecycleTests
 
         var dmResult = await service.CloseAsync(
             query2.Id.ToString(),
-            new QueryCloseRequest("dm-01"),
             CancellationToken.None,
             userRole: "Data Manager");
 
@@ -212,7 +209,6 @@ public sealed class QueryLifecycleTests
 
         var sponsorDmResult = await service.CloseAsync(
             query3.Id.ToString(),
-            new QueryCloseRequest("sponsor-dm-01"),
             CancellationToken.None,
             userRole: "sponsor_dm");
 
@@ -240,7 +236,7 @@ public sealed class QueryLifecycleTests
         query.Answer("Done.", "inv-01");
         await repo.AddAsync(query, CancellationToken.None);
 
-        var close = await service.CloseAsync(query.Id.ToString(), new QueryCloseRequest("anon"), CancellationToken.None, userRole: role);
+        var close = await service.CloseAsync(query.Id.ToString(), CancellationToken.None, userRole: role);
         var reopen = await service.ReopenAsync(query.Id.ToString(), new QueryReopenRequest("Recheck"), CancellationToken.None, userRole: role);
         var cancel = await service.CancelAsync(query.Id.ToString(), new QueryCancelRequest("Duplicate"), CancellationToken.None, userRole: role);
 

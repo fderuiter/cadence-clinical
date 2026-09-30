@@ -133,13 +133,12 @@ public static class QueryEndpoints
 
     public static async Task<IResult> CloseQueryAsync(
         string id,
-        QueryCloseRequest? request,
         HttpContext httpContext,
         IClinicalQueryApplicationService svc,
         CancellationToken ct)
     {
         var role = GetCallerRole(httpContext);
-        var result = await svc.CloseAsync(id, request, ct, role).ConfigureAwait(false);
+        var result = await svc.CloseAsync(id, ct, role).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 

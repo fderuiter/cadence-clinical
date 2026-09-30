@@ -628,9 +628,6 @@ export interface components {
     Execution_QueryCancelRequest: {
       reason: string;
     };
-    Execution_QueryCloseRequest: {
-      resolver?: null | string;
-    };
     Execution_QueryCreateRequest: {
       study_id: string;
       subject_id: string;
@@ -659,7 +656,6 @@ export interface components {
     };
     Execution_QueryRespondRequest: {
       response: string;
-      responder?: null | string;
     };
     /** @enum {string} */
     Execution_QueryStatus:
@@ -1262,6 +1258,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {
@@ -1299,6 +1304,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -1755,12 +1769,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
-      content: {
-        "application/json":
-          null | components["schemas"]["Execution_QueryCloseRequest"];
-      };
-    };
+    requestBody?: never;
     responses: {
       /** @description OK */
       200: {

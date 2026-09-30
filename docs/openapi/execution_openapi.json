@@ -688,6 +688,16 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Bad Request",
             "content": {
@@ -740,6 +750,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -1363,22 +1383,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "$ref": "#/components/schemas/Execution_QueryCloseRequest"
-                  }
-                ]
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "OK",
@@ -2474,17 +2478,6 @@
           }
         }
       },
-      "Execution_QueryCloseRequest": {
-        "type": "object",
-        "properties": {
-          "resolver": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "Execution_QueryCreateRequest": {
         "required": [
           "study_id",
@@ -2614,12 +2607,6 @@
         "properties": {
           "response": {
             "type": "string"
-          },
-          "responder": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },

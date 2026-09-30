@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Endpoints.Filters;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -40,17 +40,22 @@ public static class ObservationEndpoints
             .WithName("ListObservationsBySubject")
             .Produces<IReadOnlyList<ObservationResponse>>(StatusCodes.Status200OK);
 
+        // SDV is refused (403) unless the caller holds a verification role, and carries a reason for change.
         group.MapPost("/{id}/sdv", VerifyObservationSdvAsync)
             .WithName("VerifyObservationSdv")
             .Produces<ObservationResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/sdv/flag", FlagObservationSdvAsync)
             .WithName("FlagObservationSdv")
             .Produces<ObservationResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         // Undocumented alias for legacy Python router compatibility
         var legacyGroup = app.MapGroup("/api/v1/observations")
@@ -58,8 +63,8 @@ public static class ObservationEndpoints
 
         legacyGroup.MapPost("/", CreateObservationAsync);
         legacyGroup.MapGet("/{id}", GetObservationByIdAsync);
-        legacyGroup.MapPatch("/{id}/sdv", VerifyObservationSdvAsync);
-        legacyGroup.MapPost("/{id}/sdv", VerifyObservationSdvAsync);
+        legacyGroup.MapPatch("/{id}/sdv", VerifyObservationSdvAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/{id}/sdv", VerifyObservationSdvAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
     }
@@ -96,21 +101,22 @@ public static class ObservationEndpoints
 
     public static async Task<IResult> VerifyObservationSdvAsync(
         string id,
+        HttpContext httpContext,
         IObservationApplicationService svc,
-        ICurrentAuditContextAccessor auditContext,
         CancellationToken ct)
     {
-        var result = await svc.VerifySdvAsync(id, auditContext.UserId, ct).ConfigureAwait(false);
+        var result = await svc.VerifySdvAsync(id, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
     public static async Task<IResult> FlagObservationSdvAsync(
         string id,
         FlagObservationRequest request,
+        HttpContext httpContext,
         IObservationApplicationService svc,
         CancellationToken ct)
     {
-        var result = await svc.FlagSdvAsync(id, request.Reason, ct).ConfigureAwait(false);
+        var result = await svc.FlagSdvAsync(id, request.Reason, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 }

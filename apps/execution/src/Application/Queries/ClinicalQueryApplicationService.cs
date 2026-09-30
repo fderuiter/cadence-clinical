@@ -238,11 +238,8 @@ public sealed class ClinicalQueryApplicationService(
             return QueryErrors.NotFound(id);
         }
 
-        var responderId = !string.IsNullOrWhiteSpace(request.Responder)
-            ? request.Responder.Trim()
-            : auditContextAccessor.UserId;
-
-        var answerResult = query.Answer(request.Response, responderId);
+        // The responder is the authenticated caller; the request cannot name someone else (#4920).
+        var answerResult = query.Answer(request.Response, auditContextAccessor.UserId);
         if (answerResult.IsFailure)
         {
             return answerResult.Error!;
@@ -256,7 +253,6 @@ public sealed class ClinicalQueryApplicationService(
 
     public async Task<Result<ClinicalQueryResponse>> CloseAsync(
         string id,
-        QueryCloseRequest? request,
         CancellationToken cancellationToken,
         string? userRole = null)
     {
@@ -276,11 +272,8 @@ public sealed class ClinicalQueryApplicationService(
             return QueryErrors.NotFound(id);
         }
 
-        var resolverId = !string.IsNullOrWhiteSpace(request?.Resolver)
-            ? request.Resolver.Trim()
-            : auditContextAccessor.UserId;
-
-        var closeResult = query.Close(resolverId, clock.UtcNow.DateTime);
+        // The resolver is the authenticated caller; the request cannot name someone else (#4920).
+        var closeResult = query.Close(auditContextAccessor.UserId, clock.UtcNow.DateTime);
         if (closeResult.IsFailure)
         {
             return closeResult.Error!;
