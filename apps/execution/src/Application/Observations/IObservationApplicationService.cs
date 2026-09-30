@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Core.Domain;
 
 namespace Cadence.Apps.Execution.Application.Observations;
@@ -21,7 +22,12 @@ public interface IObservationApplicationService
 
     Task<Result<IReadOnlyList<ObservationResponse>>> ListBySubjectAsync(string studyId, string subjectId, CancellationToken cancellationToken);
 
-    Task<Result<ObservationResponse>> VerifySdvAsync(string id, string verifierUserId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Marks an observation source-verified by <paramref name="verifier"/>, who must hold a source data
+    /// verification role (<see cref="ObservationApplicationService.CanVerifySourceData"/>).
+    /// </summary>
+    Task<Result<ObservationResponse>> VerifySdvAsync(string id, AuthenticatedCaller? verifier, CancellationToken cancellationToken);
 
-    Task<Result<ObservationResponse>> FlagSdvAsync(string id, string reason, CancellationToken cancellationToken);
+    /// <summary>Flags an SDV discrepancy; <paramref name="verifier"/> must hold a source data verification role.</summary>
+    Task<Result<ObservationResponse>> FlagSdvAsync(string id, string reason, AuthenticatedCaller? verifier, CancellationToken cancellationToken);
 }

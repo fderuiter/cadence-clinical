@@ -1,7 +1,7 @@
 /**
  * Which canvas actions to offer the signed-in user. This is presentation only: Execution decides, and the
- * canvas reports its refusal (UX-6). Execution checks query management today and does not yet check source
- * data verification (#4920); both move to kernel Grants with the command catalogue (#4847, #4781).
+ * canvas reports its refusal (UX-6). Execution checks both query management and source data verification
+ * (#4920); both move to kernel Grants with the command catalogue (#4847, #4781).
  */
 interface RoleHolder {
   hasRole: (role: string) => boolean;

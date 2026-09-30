@@ -31,9 +31,9 @@ public interface IClinicalQueryApplicationService
         QueryRespondRequest request,
         CancellationToken cancellationToken);
 
+    /// <summary>Closes a query as the authenticated caller, who must be a CRA or data manager.</summary>
     Task<Result<ClinicalQueryResponse>> CloseAsync(
         string id,
-        QueryCloseRequest? request,
         CancellationToken cancellationToken,
         string? userRole = null);
 

@@ -2,6 +2,9 @@ import { encodeChangeReason } from "./changeReason";
 import { createOpenApiClient, unwrapResponse } from "./client";
 import type { components, paths } from "./generated/execution";
 
+/** The reason for change recorded when a monitor verifies an observation against its source. */
+export const SDV_VERIFY_REASON = "Verified against source documents";
+
 /**
  * Typed client for the .NET Execution service, generated from docs/openapi/execution_openapi.json.
  *
@@ -151,21 +154,32 @@ export const executionApi = {
     );
   },
 
-  /** Records that the signed-in user verified an observation against its source. Execution records who and when. */
-  verifyObservationSdv(id: string): Promise<Observation> {
+  /**
+   * Records that the signed-in user verified an observation against its source. Execution records who and
+   * when, refuses (403) anyone but a CRA, monitor or data manager, and requires a reason for change (#4920).
+   */
+  verifyObservationSdv(
+    id: string,
+    reason: string = SDV_VERIFY_REASON
+  ): Promise<Observation> {
     return unwrapResponse(
       client.POST("/api/v1/execution/observations/{id}/sdv", {
         params: { path: { id } },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },
 
-  /** Flags an observation for re-verification, clearing any earlier verification; the reason is recorded. */
+  /**
+   * Flags an observation for re-verification, clearing any earlier verification. The reason is recorded on the
+   * observation and sent as the reason for change.
+   */
   flagObservationSdv(id: string, reason: string): Promise<Observation> {
     return unwrapResponse(
       client.POST("/api/v1/execution/observations/{id}/sdv/flag", {
         params: { path: { id } },
         body: { reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },

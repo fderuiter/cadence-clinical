@@ -57,6 +57,7 @@
     <Compile Remove="Execution/Endpoints/ExecutionAuthenticationTests.cs" />
     <Compile Remove="Execution/Endpoints/ExecutionAuditAttributionTests.cs" />
     <Compile Remove="Execution/Endpoints/ChangeReasonEncodingTests.cs" />
+    <Compile Remove="Execution/Endpoints/ExecutionCallerAuthorityTests.cs" />
     <!-- Fetches the OpenAPI document from the real execution host (ExecutionApiFactory); Cadence.UnitTests only. -->
     <Compile Remove="Execution/OpenApi/**" />
     <Compile Remove="Gateway/**" />

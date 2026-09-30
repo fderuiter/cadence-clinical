@@ -206,8 +206,13 @@ public sealed class ObservationApplicationService(
         return Result<IReadOnlyList<ObservationResponse>>.Success(list.Select(MapToResponse).ToList());
     }
 
-    public async Task<Result<ObservationResponse>> VerifySdvAsync(string id, string verifierUserId, CancellationToken cancellationToken)
+    public async Task<Result<ObservationResponse>> VerifySdvAsync(string id, AuthenticatedCaller? verifier, CancellationToken cancellationToken)
     {
+        if (verifier?.FirstRoleMatching(CanVerifySourceData) is null)
+        {
+            return ObservationErrors.UnauthorizedSdvRole(verifier is null ? string.Empty : string.Join(",", verifier.Roles));
+        }
+
         if (!ObservationId.TryParse(id, out var observationId))
         {
             return ObservationErrors.NotFound(id);
@@ -219,7 +224,7 @@ public sealed class ObservationApplicationService(
             return ObservationErrors.NotFound(id);
         }
 
-        var verifyResult = observation.VerifySdv(verifierUserId, clock.UtcNow.DateTime);
+        var verifyResult = observation.VerifySdv(verifier.UserId, clock.UtcNow.DateTime);
         if (verifyResult.IsFailure)
         {
             return verifyResult.Error!;
@@ -231,8 +236,13 @@ public sealed class ObservationApplicationService(
         return MapToResponse(observation);
     }
 
-    public async Task<Result<ObservationResponse>> FlagSdvAsync(string id, string reason, CancellationToken cancellationToken)
+    public async Task<Result<ObservationResponse>> FlagSdvAsync(string id, string reason, AuthenticatedCaller? verifier, CancellationToken cancellationToken)
     {
+        if (verifier?.FirstRoleMatching(CanVerifySourceData) is null)
+        {
+            return ObservationErrors.UnauthorizedSdvRole(verifier is null ? string.Empty : string.Join(",", verifier.Roles));
+        }
+
         if (!ObservationId.TryParse(id, out var observationId))
         {
             return ObservationErrors.NotFound(id);
@@ -254,6 +264,23 @@ public sealed class ObservationApplicationService(
         await observationRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToResponse(observation);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="role"/> may verify source data or flag an SDV discrepancy: a CRA or monitor, or a
+    /// data manager. Site roles never verify their own data (#4920). This is a role check until
+    /// grants and qualifications from the Trust engine replace it (#4781).
+    /// </summary>
+    public static bool CanVerifySourceData(string role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+        {
+            return false;
+        }
+
+        var normalized = role.Trim().ToLowerInvariant();
+        return normalized is "cra" or "clinical research associate" or "monitor" or "external_monitor"
+            or "sponsor_dm" or "data_manager" or "data manager" or "data-manager" or "datamanager" or "dm";
     }
 
     private static ObservationResponse MapToResponse(ClinicalObservation o) =>
