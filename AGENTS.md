@@ -263,6 +263,7 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 | Architecture tests | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
 | Formatting | `dotnet format Cadence.sln --verify-no-changes` |
 | All quality gates (pre-commit) | `pnpm cadence check` |
+| Whole CI workflow locally (before merging; Actions is off until 2027) | `CADENCE_TEST_POSTGRES=<connection string> TERM=dumb pnpm cadence ci` (about 20 minutes; `TERM=dumb` or `script -qc "…" /dev/null` is needed in an agent shell, [docs/CI.md](docs/CI.md)) |
 | One gate | `pnpm cadence check <gate>` (for example `adrs`, `markdown`, `readmes`, `arch-drift`) |
 | PHI/PII scan | `pnpm cadence check deid`; mark a line that is not PHI with a `deid-ignore` comment, and drop stale `.deid-baseline.txt` entries with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` ([CONTRIBUTING.md §6](CONTRIBUTING.md#6-repository-hygiene)) |
 | Auto-fix | `pnpm cadence fix` |

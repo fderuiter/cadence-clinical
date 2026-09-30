@@ -79,7 +79,14 @@ Useful single gates (`pnpm cadence check <gate>`): `adrs`, `markdown`, `readmes`
 **Before merging, run `pnpm cadence ci`** (or `make ci`). GitHub Actions does not run jobs for this repository until
 2027, so this is the check that stands in for CI: it runs the jobs of `.github/workflows/ci.yml` locally with the same
 commands, and fails if the .NET tests have no PostgreSQL rather than letting the database tests skip
-([docs/cli.md](docs/cli.md#cadence-ci)).
+([docs/cli.md](docs/cli.md#cadence-ci)). A full run takes about 20 minutes:
+
+```bash
+CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres" pnpm cadence ci
+```
+
+In a shell without a terminal (an AI agent, a script, a pipe), prefix it with `TERM=dumb` or run it under
+`script -qc "…" /dev/null`, or the CLI prints its banner and none of the results.
 
 **PostgreSQL integration tests** are skipped unless you provide a database:
 `CADENCE_TEST_POSTGRES=<Npgsql connection string>` or `CADENCE_TEST_DOCKER=1` (Testcontainers).
