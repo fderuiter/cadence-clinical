@@ -9,6 +9,7 @@ File sharing scaffold. It holds the file record, share grant, guest link and pla
 - Project: `apps/fileshare/src/Cadence.Apps.Fileshare.csproj` (assembly `Cadence.Apps.Fileshare`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (file records, share grants, guest links, playback and file audit logs).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `FileshareDbContext`, a design-time `FileshareDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924144653_InitialCreate`.
 

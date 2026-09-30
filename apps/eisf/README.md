@@ -9,6 +9,7 @@ Electronic investigator site file scaffold. It holds the ISF document, section t
 - Project: `apps/eisf/src/Cadence.Apps.Eisf.csproj` (assembly `Cadence.Apps.Eisf`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (ISF documents, section taxonomy, document records, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `EisfDbContext`, a design-time `EisfDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924144921_InitialCreate`.
 
