@@ -24,6 +24,8 @@ export const NODE_KINDS = [
   "attestation",
   "artifact",
   "artifact_version",
+  "role",
+  "grant",
   "tenant_membership",
   "code_system",
   "code_system_version",

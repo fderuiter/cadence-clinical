@@ -58,6 +58,10 @@ public static class KernelEventFamilies
         ["ArtifactVersioned"] = EventFamily.Evidence,
         ["AttestationRecorded"] = EventFamily.Trust,
         ["DecisionDenied"] = EventFamily.Trust,
+        ["RoleDefined"] = EventFamily.Trust,
+        ["GrantIssued"] = EventFamily.Trust,
+        ["DelegationSigned"] = EventFamily.Trust,
+        ["GrantRevoked"] = EventFamily.Trust,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>Every classified event type.</summary>

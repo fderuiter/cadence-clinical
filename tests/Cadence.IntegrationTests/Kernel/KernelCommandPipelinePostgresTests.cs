@@ -339,8 +339,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     }
 
     /// <summary>
-    /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency, seal, attestation, terminology, lineage
-    /// and artifact version tables reject UPDATE, DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
+    /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency, seal, attestation, terminology, lineage,
+    /// artifact version and role tables reject UPDATE, DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
     /// </summary>
     [Theory(DisplayName = "InsertOnlyTables_RejectUpdateDeleteAndTruncate")]
     [MemberData(nameof(InsertOnlyTables))]
@@ -357,6 +357,12 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
             var scenario = new KernelProtocolScenario(fixture);
             var (studyTenant, study) = await scenario.NewStudyAsync(ct);
             await scenario.ApprovedAsync(studyTenant, study, ct);
+        }
+
+        if (table == "roles")
+        {
+            var role = new DefineRole(tenant.TenantId, RoleId.New(), "CRC", "Coordinator", ["observation.record"], $"key-{Guid.NewGuid():N}", Reason);
+            (await fixture.Sender.SendAsync(role, cancellationToken: ct)).IsSuccess.Should().BeTrue();
         }
 
         if (table == "artifact_versions")

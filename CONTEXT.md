@@ -95,6 +95,14 @@ Whether an actor may perform an action is computed from evidence (delegation, tr
 consent, blinding) by the kernel's policy evaluator, not read from role strings (ADR-2251). Denials
 name the missing evidence.
 
+A **Grant** gives an actor one capability, or one **Role**, at a scope (tenant, organization, study, study
+country or study site) for a bitemporal validity period. A Role is only a named, immutable bundle of
+capabilities and never bundles unblinding. A **Delegation** is a grant issued under a parent grant that
+carries the grant option. It cannot exceed its parent's capabilities, scope or validity, and it stops counting
+the moment any grant above it ends. Revoking a grant supersedes its validity row rather than deleting it, so
+past decisions stay explainable (ADR-2455).
+_Avoid_: role strings as authority, delegation tables separate from grants
+
 ### Tenant
 
 The top-level isolation boundary. Every kernel row carries `tenant_id`, enforced by PostgreSQL

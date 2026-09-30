@@ -84,6 +84,7 @@ public sealed class KernelCommandPipeline(
             };
         }
 
+        transaction.RecordPermit(decision);
         if (await ReplayAsync<TResult>(transaction, execution, cancellationToken).ConfigureAwait(false) is { } replay)
         {
             return replay;
@@ -205,6 +206,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddKernelTrustHandlers();
         services.AddKernelExecutionHandlers();
         services.AddKernelEvidenceHandlers();
+        services.AddKernelAuthorityHandlers();
         return services;
     }
 }

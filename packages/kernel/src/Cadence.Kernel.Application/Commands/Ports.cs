@@ -168,6 +168,12 @@ public interface IKernelCommandTransaction : IAsyncDisposable
     Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken);
 
     /// <summary>
+    /// Keeps the permit this command was authorized by, so the commit records it on the provenance activity with the
+    /// grants and evidence that justified it (K-AUTH-2).
+    /// </summary>
+    void RecordPermit(AuthorizationDecision permit);
+
+    /// <summary>
     /// Writes state, provenance, events, the audit entry, outbox rows and the idempotency record in one
     /// transaction (K-TX-2). Returns <see cref="CommitOutcome.IdempotencyRace"/> when a concurrent command with the
     /// same key committed first, and <see cref="CommitOutcome.ConcurrencyConflict"/> when the aggregate changed.

@@ -19,6 +19,7 @@ internal sealed class ProvenanceActivityConfiguration : IEntityTypeConfiguration
         builder.Property(x => x.Outcome).HasMaxLength(32).IsRequired();
         builder.Property(x => x.AggregateType).HasMaxLength(200);
         builder.Property(x => x.AggregateId).HasMaxLength(200);
+        builder.Property(x => x.Authorization).HasColumnType("jsonb");
         builder.HasIndex(x => new { x.TenantId, x.RecordedAt });
         builder.HasIndex(x => x.CorrelationId);
     }

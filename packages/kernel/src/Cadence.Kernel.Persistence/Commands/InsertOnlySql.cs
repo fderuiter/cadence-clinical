@@ -30,6 +30,9 @@ internal static class InsertOnlySql
         // Evidence: an artifact version names its bytes by hash and never changes (spec §8.3).
         "artifact_versions",
 
+        // Authority: a role never changes once defined, so grants under it keep their meaning (spec §9.3).
+        "roles",
+
         // Standards Registry definitions: fixed once their standard version is registered (spec §6.3).
         "standard_datasets", "standard_variables", "standard_value_level_definitions", "standard_terminology",
 

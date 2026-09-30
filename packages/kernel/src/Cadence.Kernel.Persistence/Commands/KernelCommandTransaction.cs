@@ -64,6 +64,7 @@ internal sealed class KernelCommandTransaction(
     private readonly List<(NodeRef Input, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)> _inputs = [];
     private (Type Type, string Key)? _claimed;
     private long? _lockKey;
+    private AuthorizationDecision? _permit;
 
     public IKernelUnitOfWork Work => this;
 
@@ -174,6 +175,12 @@ internal sealed class KernelCommandTransaction(
         }
     }
 
+    public void RecordPermit(AuthorizationDecision permit)
+    {
+        ArgumentNullException.ThrowIfNull(permit);
+        _permit = permit;
+    }
+
     public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
         db.IdempotencyRecords.AsNoTracking()
             .Where(r => r.TenantId == Command.TenantId && r.IdempotencyKey == Command.IdempotencyKey)
@@ -190,7 +197,7 @@ internal sealed class KernelCommandTransaction(
             aggregate = StampAggregate();
             Fault(CommitStage.StateStamped);
 
-            AddProvenance("Committed", aggregate);
+            AddProvenance("Committed", aggregate, _permit);
             Fault(CommitStage.ProvenanceStaged);
 
             StageLineage(aggregate);
@@ -260,14 +267,14 @@ internal sealed class KernelCommandTransaction(
         using var writes = db.PermitPipelineWrites();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
-        AddProvenance("Denied", aggregate: null);
+        AddProvenance("Denied", aggregate: null, denial);
         var payload = JsonSerializer.SerializeToElement(
             new
             {
                 command = execution.CommandType,
                 idempotencyKey = Command.IdempotencyKey,
                 reason = denial.Reason,
-                conditions = denial.Conditions.Select(c => new { c.Code, c.Description, c.Met, evidence = c.Evidence.Select(e => e.ToString()) }),
+                conditions = Conditions(denial),
             },
             KernelCommandPipelineJson.Options);
         AddEvent(DecisionDeniedEvent, 1, payload, occurredValid: null);
@@ -396,7 +403,10 @@ internal sealed class KernelCommandTransaction(
         return values;
     }
 
-    private void AddProvenance(string outcome, ChangedAggregate? aggregate) =>
+    private static object Conditions(AuthorizationDecision decision) =>
+        decision.Conditions.Select(c => new { c.Code, c.Description, c.Met, evidence = c.Evidence.Select(e => e.ToString()) });
+
+    private void AddProvenance(string outcome, ChangedAggregate? aggregate, AuthorizationDecision? decision) =>
         db.ProvenanceActivities.Add(new ProvenanceActivityRecord
         {
             Id = execution.ActivityId,
@@ -412,6 +422,11 @@ internal sealed class KernelCommandTransaction(
             AggregateId = aggregate?.Id,
             CorrelationId = execution.Metadata.CorrelationId,
             CausationId = execution.Metadata.CausationId,
+            Authorization = decision is null
+                ? null
+                : JsonSerializer.Serialize(
+                    new { permitted = decision.Permitted, reason = decision.Reason, conditions = Conditions(decision) },
+                    KernelCommandPipelineJson.Options),
         });
 
     /// <summary>

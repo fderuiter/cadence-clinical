@@ -309,7 +309,7 @@ changed, pinned to its new version (§3.4; null for events about no aggregate, s
 | Knowledge | `ProtocolVersionDrafted` (carries the amendment's classification), `…Approved`, `…Withdrawn`, `ConceptMapped`, `MappingSpecificationPublished`, `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
 | Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityGranted`, `StudySiteActivated`, `ParticipantRegistered`, `ParticipantScreened`, `ParticipantEnrolled`, `EnrollmentStatusChanged`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
 | Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactRegistered`, `ArtifactVersioned`, `IngestionBatchAccepted` |
-| Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
+| Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `RoleDefined`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
 | Quality | `ValidationRunCompleted`, `FindingOpened`, `FindingResolved`, `IndicatorBreached`, `SignalRaised`, `DeviationRecorded`, `LockApplied`, `LockReleased` |
 | Intelligence | `ProposalCreated`, `ProposalApproved`, `ProposalExecuted`, `ProposalRejected` |
 
@@ -767,6 +767,13 @@ protocol training + credential + effective dates + site activation state, never 
   the calling actor only. It is not written to the audit chain; it is recorded in the authorization access log
   (ADR-2483), and the command catalogue for an object lists each command offered on it with its dry-run decision.
 
+*Implemented in part (#4781, ADR-2455):* `Role`, `Grant` (with bitemporal `GrantPeriod` validity) and delegation as
+a grant bounded by its parent, changed by `DefineRole`, `IssueGrant`, `DelegateGrant` and `RevokeGrant`.
+`AuthorityEvaluator` is the `IAuthorizationEvaluator`: it checks steps 1 and 2, requires every grant above a
+delegation to be in effect, denies automation agents Execute and Approve, and records each decision's conditions
+in `provenance_activities.authorization`. Qualifications (K-AUTH-5), separation of duties (step 4) and the
+StudySite, protocol and blinding conditions of step 3 are still to come.
+
 ### 9.4 Computable consent
 
 Consent is not only a signed PDF. `ConsentStatus` is **bitemporal state** (resolves inventory §3 item 4):
@@ -1124,6 +1131,7 @@ kernel, is merged into another, or is retired.
 | K018 | Rule language and evaluator | Canonical JSON AST with Kleene logic and fixed coercions; packs are `RulePack` library items; `IRuleEvaluator` in `Cadence.Rules` | ADR-2461 |
 | K019 | Activity stream | Asynchronous projection of outbox envelopes scoped by zoom path; payload-free; masked per reader at read time | ADR-2485 |
 | K020 | Evidence artifacts | Immutable, hash-addressed versions; bytes in object storage; declared kind, filing as an Assertion; attestations sign a version | ADR-2454 |
+| K021 | Grants, roles and delegation | Bitemporal grants of a capability or role at a scope; delegation as a bounded child grant; platform operators bootstrap tenants | ADR-2455 |
 
 ---
 

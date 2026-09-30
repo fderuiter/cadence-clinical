@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
@@ -148,6 +149,9 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>The enrollment read port the execution handlers use.</summary>
     public IEnrollmentDirectory Enrollments => Scope().GetRequiredService<IEnrollmentDirectory>();
 
+    /// <summary>The grant and role reads behind the authority evaluator.</summary>
+    public IAuthorityStore AuthorityStore => Scope().GetRequiredService<IAuthorityStore>();
+
     /// <summary>The protocol version read port, as a host gets it.</summary>
     public IProtocolVersionReader ProtocolVersions => Scope().GetRequiredService<IProtocolVersionReader>();
 
@@ -258,13 +262,19 @@ public sealed class TestCurrentActor : ICurrentActor
     public Actor? Actor { get; set; } = Cadence.Kernel.Commands.Actor.Person(KernelPostgresFixture.ActorId);
 }
 
-/// <summary>An <see cref="IAuthorizer"/> that permits everything unless <see cref="Policy"/> is set.</summary>
+/// <summary>
+/// An <see cref="IAuthorizer"/> that permits everything unless <see cref="Policy"/> is set, or hands every decision to
+/// <see cref="Inner"/> (for example the production authorization over grants) when that is set.
+/// </summary>
 public sealed class TestAuthorizer : IAuthorizer
 {
     public Func<Actor, ICommand, AuthorizationDecision>? Policy { get; set; }
 
+    public IAuthorizer? Inner { get; set; }
+
     public ValueTask<AuthorizationDecision> AuthorizeAsync(Actor actor, ICommand command, CancellationToken cancellationToken) =>
-        ValueTask.FromResult(Policy?.Invoke(actor, command) ?? AuthorizationDecision.Permit());
+        Inner?.AuthorizeAsync(actor, command, cancellationToken)
+        ?? ValueTask.FromResult(Policy?.Invoke(actor, command) ?? AuthorizationDecision.Permit());
 }
 
 /// <summary>An <see cref="IKernelEventPublisher"/> that records deliveries in order and fails when <see cref="Fail"/> says so.</summary>

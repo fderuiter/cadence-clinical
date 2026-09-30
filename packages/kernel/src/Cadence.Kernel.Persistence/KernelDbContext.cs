@@ -65,6 +65,12 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<ArtifactVersion> ArtifactVersions => Set<ArtifactVersion>();
 
+    public DbSet<Role> Roles => Set<Role>();
+
+    public DbSet<Grant> Grants => Set<Grant>();
+
+    public DbSet<GrantPeriod> GrantPeriods => Set<GrantPeriod>();
+
     public DbSet<ProvenanceActivityRecord> ProvenanceActivities => Set<ProvenanceActivityRecord>();
 
     public DbSet<DomainEventRecord> DomainEvents => Set<DomainEventRecord>();

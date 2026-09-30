@@ -22,6 +22,8 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.domain_events`](#kerneldomain_events) | `DomainEventRecord` | 11 |
 | [`kernel.enrollment_status_periods`](#kernelenrollment_status_periods) | `EnrollmentStatusPeriod` | 8 |
 | [`kernel.enrollments`](#kernelenrollments) | `Enrollment` | 15 |
+| [`kernel.grant_periods`](#kernelgrant_periods) | `GrantPeriod` | 5 |
+| [`kernel.grants`](#kernelgrants) | `Grant` | 16 |
 | [`kernel.idempotency_records`](#kernelidempotency_records) | `IdempotencyRecord` | 7 |
 | [`kernel.library_items`](#kernellibrary_items) | `LibraryItem` | 16 |
 | [`kernel.lineage_edges`](#kernellineage_edges) | `LineageEdgeRecord` | 12 |
@@ -31,7 +33,8 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
 | [`kernel.people`](#kernelpeople) | `Person` | 9 |
 | [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
-| [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 13 |
+| [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 14 |
+| [`kernel.roles`](#kernelroles) | `Role` | 9 |
 | [`kernel.sites`](#kernelsites) | `Site` | 11 |
 | [`kernel.standard_datasets`](#kernelstandard_datasets) | `StandardDataset` | 7 |
 | [`kernel.standard_terminology`](#kernelstandard_terminology) | `StandardTerminologyBinding` | 4 |
@@ -470,6 +473,67 @@ Check constraints:
 - `ck_enrollments_number`: `enrollment_number IS NULL OR enrollment_number > 0`
 - `ck_enrollments_numbered`: `(status IN ('Screening', 'ScreenFailed') AND enrollment_number IS NULL) OR (status IN ('Enrolled', 'Randomized', 'Active', 'Completed') AND enrollment_number IS NOT NULL) OR status = 'Withdrawn'`
 
+## kernel.grant_periods
+
+Entity: `GrantPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `grant_id` | `uuid` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_grant_periods_grants_tenant_id_grant_id`: (`tenant_id`, `grant_id`) references `kernel.grants` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_grant_periods_tenant_id_grant_id`: (`tenant_id`, `grant_id`)
+
+## kernel.grants
+
+Entity: `Grant`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `capability` | `character varying(96)` | yes |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `grantee_id` | `character varying(256)` | no |  |  |
+| `grantee_kind` | `character varying(32)` | no |  |  |
+| `issued_by` | `character varying(300)` | no |  |  |
+| `parent_grant_id` | `uuid` | yes |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `role_id` | `uuid` | yes |  |  |
+| `scope_country` | `character varying(2)` | yes |  |  |
+| `scope_level` | `character varying(16)` | no |  |  |
+| `scope_target_id` | `uuid` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+| `with_grant_option` | `boolean` | no |  |  |
+
+Foreign keys:
+
+- `FK_grants_grants_tenant_id_parent_grant_id`: (`tenant_id`, `parent_grant_id`) references `kernel.grants` (`tenant_id`, `id`), on delete restrict
+- `FK_grants_roles_tenant_id_role_id`: (`tenant_id`, `role_id`) references `kernel.roles` (`tenant_id`, `id`), on delete restrict
+- `FK_grants_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_grants_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_grants_tenant_id_grantee_kind_grantee_id`: (`tenant_id`, `grantee_kind`, `grantee_id`)
+- `IX_grants_tenant_id_parent_grant_id`: (`tenant_id`, `parent_grant_id`)
+- `IX_grants_tenant_id_role_id`: (`tenant_id`, `role_id`)
+
+Check constraints:
+
+- `ck_grants_scope`: `(scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL) OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL) OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')`
+- `ck_grants_target`: `(capability IS NULL) <> (role_id IS NULL)`
+
 ## kernel.idempotency_records
 
 Entity: `IdempotencyRecord`
@@ -711,6 +775,7 @@ Entity: `ProvenanceActivityRecord`
 | `actor_kind` | `character varying(32)` | no |  |  |
 | `aggregate_id` | `character varying(200)` | yes |  |  |
 | `aggregate_type` | `character varying(200)` | yes |  |  |
+| `authorization` | `jsonb` | yes |  |  |
 | `causation_id` | `uuid` | yes |  |  |
 | `command_type` | `character varying(200)` | no |  |  |
 | `correlation_id` | `uuid` | no |  |  |
@@ -724,6 +789,35 @@ Indexes:
 
 - `IX_provenance_activities_correlation_id`: (`correlation_id`)
 - `IX_provenance_activities_tenant_id_recorded_at`: (`tenant_id`, `recorded_at`)
+
+## kernel.roles
+
+Entity: `Role`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `capabilities` | `text[]` | no |  |  |
+| `code` | `character varying(32)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `name` | `character varying(200)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_roles_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_roles_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_roles_tenant_id_code`: unique (`tenant_id`, `code`)
+
+Check constraints:
+
+- `ck_roles_capabilities`: `cardinality(capabilities) > 0`
 
 ## kernel.sites
 

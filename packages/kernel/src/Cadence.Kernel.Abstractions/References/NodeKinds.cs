@@ -26,6 +26,8 @@ public static class NodeKinds
     public const string Attestation = "attestation";
     public const string Artifact = "artifact";
     public const string ArtifactVersion = "artifact_version";
+    public const string Role = "role";
+    public const string Grant = "grant";
     public const string TenantMembership = "tenant_membership";
     public const string CodeSystem = "code_system";
     public const string CodeSystemVersion = "code_system_version";
@@ -50,6 +52,8 @@ public static class NodeKinds
         [typeof(AttestationId)] = Attestation,
         [typeof(ArtifactId)] = Artifact,
         [typeof(ArtifactVersionId)] = ArtifactVersion,
+        [typeof(RoleId)] = Role,
+        [typeof(GrantId)] = Grant,
         [typeof(TenantMembershipId)] = TenantMembership,
         [typeof(CodeSystemId)] = CodeSystem,
         [typeof(CodeSystemVersionId)] = CodeSystemVersion,

@@ -1,5 +1,6 @@
 using System;
 
+using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
@@ -7,6 +8,7 @@ using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Audit;
+using Cadence.Kernel.Persistence.Authorization;
 using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Execution;
@@ -66,6 +68,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelAuditChainVerifier>();
         services.TryAddSingleton<IAttestationVerifier, KernelAttestationVerifier>();
         services.TryAddSingleton<IEnrollmentDirectory, KernelEnrollmentDirectory>();
+        services.TryAddSingleton<IAuthorityStore, KernelAuthorityStore>();
         services.TryAddSingleton<IProtocolVersionReader, KernelProtocolVersionReader>();
         services.TryAddSingleton<ITenantDirectory, KernelTenantDirectory>();
         services.TryAddSingleton<KernelAuditChainSealer>();

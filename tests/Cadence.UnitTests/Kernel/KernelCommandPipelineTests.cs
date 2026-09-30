@@ -325,6 +325,10 @@ public sealed partial class KernelCommandPipelineTests
 
         public IKernelUnitOfWork Work => this;
 
+        public AuthorizationDecision? Permit { get; private set; }
+
+        public void RecordPermit(AuthorizationDecision permit) => Permit = permit;
+
         public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
             Task.FromResult(Lookups++ == 0 ? null : winner);
 

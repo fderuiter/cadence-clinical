@@ -297,6 +297,9 @@ public sealed class KernelAuthorizationTests
         {
             public IKernelUnitOfWork Work => throw new InvalidOperationException("A denied command has no unit of work.");
 
+            public void RecordPermit(AuthorizationDecision permit) =>
+                throw new InvalidOperationException("A denied command has no permit.");
+
             public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
                 throw new InvalidOperationException("A denied command is not replayed.");
 
