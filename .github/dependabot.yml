@@ -1,7 +1,7 @@
 version: 2
 updates:
-  # Python workspace dependency updates (uv / pyproject.toml)
-  - package-ecosystem: "pip"
+  # .NET dependencies (Central Package Management: Directory.Packages.props)
+  - package-ecosystem: "nuget"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -9,7 +9,7 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "python"
+      - "dotnet"
 
   # Node.js workspace dependency updates (pnpm / package.json)
   - package-ecosystem: "npm"
@@ -21,6 +21,28 @@ updates:
     labels:
       - "dependencies"
       - "nodejs"
+
+  # Container base images, pinned by version and digest (docker/Dockerfile.dotnet)
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # Local stack images, pinned by digest (docker/docker-compose.yml)
+  - package-ecosystem: "docker-compose"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"
