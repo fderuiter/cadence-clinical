@@ -1290,6 +1290,8 @@ const useClinicalStoreInner = defineStore("clinical", {
       }
     },
     async startSyncTimer() {
+      // The query ledger sync endpoint exists only in the demo build's mock API; no service serves it.
+      if (!isDemoBuild()) return;
       if (this.syncInterval) return;
       // Sync immediately on boot
       this.syncUnsyncedBlocks();

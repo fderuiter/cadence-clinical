@@ -75,20 +75,21 @@ The missing endpoints are tracked by module, not one issue per Python path:
 
 Some regulated actions never called an API. They recorded the action in the browser and reported success in every build (#4827). They now start with `allowUnbackedAction(...)` (`apps/web/src/utils/unbackedActions.js`). Outside a demo build the action is refused with a "not available yet, nothing was saved" alert and no state changes; a demo build still runs it on sample data. The same change stopped the wallet, lay summary, tickets, data lock, quality and safety screens from showing sample data, or closing a dialog as if it worked, when their API call fails.
 
-| Action                                                                  | Where                                                                                                    |
-| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Enrol a subject                                                         | `stores/clinical.ts` `enrollSubject` (eCRF, CRC form)                                                    |
-| Record re-consent from the eCRF                                         | `composables/useConsentGating.js`                                                                        |
-| Record SDV                                                              | `views/EcrfView.vue` `saveChange`                                                                        |
-| Move a query in the rules screen                                        | `views/RulesView.vue`                                                                                    |
-| Ticket status, comments, attachments, creation, signature, audit export | `views/TicketsView.vue`, `components/tickets/TicketSignModal.vue`                                        |
-| Verify the safety snapshot seal, physician sign-off                     | `components/clinical/AggregateSafetyConsole.vue`                                                         |
-| CEC reader assessment, chair sign-off                                   | `components/clinical/CecAdjudicationConsole.vue`                                                         |
-| Consent signature, publish an ICF version                               | `stores/econsent.js`, `views/ICFBuilderView.vue`                                                         |
-| Export study data                                                       | `views/ExportWizardView.vue`                                                                             |
-| Commit a digitized protocol                                             | `views/ProtocolDigitizationView.vue`                                                                     |
-| MedDRA/WHODrug code suggestions                                         | `components/crf/widgets/MedicalAutocodeWidget.vue` (no suggestions; the verbatim term is still captured) |
-| RCA, CAPA, breach, KRI, QTL and dossier actions                         | `views/QualityCockpitView.vue`                                                                           |
+| Action                                                                  | Where                                                                                                                                                       |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Enrol a subject                                                         | `stores/clinical.ts` `enrollSubject` (eCRF, CRC form)                                                                                                       |
+| Record re-consent from the eCRF                                         | `composables/useConsentGating.js`                                                                                                                           |
+| Record SDV                                                              | `views/EcrfView.vue` `saveChange`                                                                                                                           |
+| Raise, answer, close or reopen a query in the eCRF                      | `views/EcrfView.vue` (the close prompt's re-authentication verified nothing); the query ledger sync timer in `stores/clinical.ts` runs only in a demo build |
+| Move a query in the rules screen                                        | `views/RulesView.vue`                                                                                                                                       |
+| Ticket status, comments, attachments, creation, signature, audit export | `views/TicketsView.vue`, `components/tickets/TicketSignModal.vue`                                                                                           |
+| Verify the safety snapshot seal, physician sign-off                     | `components/clinical/AggregateSafetyConsole.vue`                                                                                                            |
+| CEC reader assessment, chair sign-off                                   | `components/clinical/CecAdjudicationConsole.vue`                                                                                                            |
+| Consent signature, publish an ICF version                               | `stores/econsent.js`, `views/ICFBuilderView.vue`                                                                                                            |
+| Export study data                                                       | `views/ExportWizardView.vue`                                                                                                                                |
+| Commit a digitized protocol                                             | `views/ProtocolDigitizationView.vue`                                                                                                                        |
+| MedDRA/WHODrug code suggestions                                         | `components/crf/widgets/MedicalAutocodeWidget.vue` (no suggestions; the verbatim term is still captured)                                                    |
+| RCA, CAPA, breach, KRI, QTL and dossier actions                         | `views/QualityCockpitView.vue`                                                                                                                              |
 
 When a screen moves onto the real API, replace its `allowUnbackedAction` calls with calls to the real endpoints.
 
