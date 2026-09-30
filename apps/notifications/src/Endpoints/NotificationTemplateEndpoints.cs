@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Notifications.Domain;
+using Cadence.Security.DependencyInjection;
 using Cadence.Templating;
 
 using Microsoft.AspNetCore.Builder;
@@ -20,6 +21,9 @@ namespace Cadence.Apps.Notifications.Endpoints;
 /// </summary>
 public static class NotificationTemplateEndpoints
 {
+    /// <summary>The permission that rendering a notification requires.</summary>
+    public const string RenderPermission = "notification:send";
+
     /// <summary>The notifications this service can render, keyed by the value callers pass as <c>templateName</c>.</summary>
     public static TemplateCatalog Catalog { get; } = new(
         typeof(NotificationTemplateEndpoints).Assembly,
@@ -38,7 +42,10 @@ public static class NotificationTemplateEndpoints
         group.MapPost("/render", RenderNotificationAsync)
             .WithName("RenderNotificationTemplate")
             .WithSummary("Renders a Liquid notification template asynchronously.")
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            // Study alerts are sent by sponsor staff and monitors (#4960, ADR-2511).
+            .RequirePermission(RenderPermission);
 
         return group;
     }

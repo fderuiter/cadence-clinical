@@ -18,7 +18,7 @@ Notifications scaffold. It holds the notification record, delivery and audit mod
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `NotificationsDbContext`.
 - `GET /api/v1/notifications/status` (anonymous status payload).
-- `POST /api/v1/notifications/render?templateName=...`: renders a `NotificationRenderModel` through an embedded Liquid template and returns `{ templateName, content }`.
+- `POST /api/v1/notifications/render?templateName=...`: renders a `NotificationRenderModel` through an embedded Liquid template and returns `{ templateName, content }`. Needs `notification:send` (sysadmin, sponsor data manager, sponsor medical monitor, CRA, monitor); other callers get `403` ([ADR-2511](../../docs/adr/2026-09-30-template-render-routes-need-a-permission.md)).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/notifications/**` to this service. Compose publishes host port 8006 (container port 8080).
 

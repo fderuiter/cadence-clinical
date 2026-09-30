@@ -20,6 +20,8 @@ public static class PermissionMatrix
         // sysadmin
         _rolePermissions[RoleNormalization.ROLE_SYSADMIN] = new(StringComparer.OrdinalIgnoreCase)
         {
+            ["safety_report"] = ["create", "read"],
+            ["notification"] = ["send"],
             ["visit_windowing"] = ["create", "read", "update"],
             ["soa"] = ["create", "read", "update", "delete"],
             ["study_design"] = ["create", "read", "update", "delete", "approve", "reorder"],
@@ -96,6 +98,7 @@ public static class PermissionMatrix
         // sponsor_dm
         _rolePermissions[RoleNormalization.ROLE_SPONSOR_DM] = new(StringComparer.OrdinalIgnoreCase)
         {
+            ["notification"] = ["send"],
             ["visit_windowing"] = ["read"],
             ["soa"] = ["read"],
             ["study_design"] = ["read", "approve"],
@@ -140,6 +143,8 @@ public static class PermissionMatrix
         // sponsor_mm
         _rolePermissions[RoleNormalization.ROLE_SPONSOR_MM] = new(StringComparer.OrdinalIgnoreCase)
         {
+            ["safety_report"] = ["create", "read"],
+            ["notification"] = ["send"],
             ["visit_windowing"] = ["read"],
             ["soa"] = ["read"],
             ["study_design"] = ["read"],
@@ -227,6 +232,7 @@ public static class PermissionMatrix
         // cra
         _rolePermissions[RoleNormalization.ROLE_CRA_CANONICAL] = new(StringComparer.OrdinalIgnoreCase)
         {
+            ["notification"] = ["send"],
             ["visit_windowing"] = ["read"],
             ["soa"] = ["read"],
             ["study_design"] = ["read"],
@@ -260,6 +266,7 @@ public static class PermissionMatrix
         // monitor
         _rolePermissions["monitor"] = new(StringComparer.OrdinalIgnoreCase)
         {
+            ["notification"] = ["send"],
             ["visit_windowing"] = ["read"],
             ["soa"] = ["read"],
             ["study_design"] = ["read"],
