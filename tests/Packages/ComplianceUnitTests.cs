@@ -96,6 +96,43 @@ public class ComplianceUnitTests
     }
 
     /// <summary>
+    /// Validates that a genuine signature verifies even when the signed text contains "mock", as a document can and
+    /// as a base64 certificate or signature does by chance in about 1 in 700 signings.
+    /// </summary>
+    [Fact]
+    public void ESignatureVerifier_AcceptsValidSignature_WhoseTextContainsMock()
+    {
+        var (cert, key) = Pkcs7Signer.GenerateSigningCredentials("investigator-01");
+        var signed = new Pkcs7Signer(cert, key).SignDocument("Mock visit schedule reviewed with the site."u8.ToArray());
+        var signedMarkdown = GxPSigner.SignGxpMarkdown("Hammock-shaped enrollment curve discussed.");
+
+        var verifier = new ESignatureVerifier();
+
+        verifier.VerifySignature(signed).Status.Should().Be("VALID");
+        verifier.VerifyMarkdown(signedMarkdown).Status.Should().Be("VALID");
+    }
+
+    /// <summary>
+    /// Validates that a placeholder signature is rejected and reported as a mock, whether it replaces the signature
+    /// block or the document has no signature markers at all.
+    /// </summary>
+    [Fact]
+    public void ESignatureVerifier_ReportsMockPlaceholderSignature()
+    {
+        var (cert, key) = Pkcs7Signer.GenerateSigningCredentials("investigator-01");
+        var signed = Encoding.UTF8.GetString(new Pkcs7Signer(cert, key).SignDocument("Visit 2 vitals."u8.ToArray()));
+        var sigStart = signed.IndexOf("-----BEGIN SIGNATURE-----", StringComparison.Ordinal) + "-----BEGIN SIGNATURE-----".Length;
+        var sigEnd = signed.IndexOf("-----END SIGNATURE-----", StringComparison.Ordinal);
+        var placeholder = signed[..sigStart] + "\nMOCK-SIGNATURE-PLACEHOLDER\n" + signed[sigEnd..];
+
+        var verifier = new ESignatureVerifier();
+
+        verifier.VerifySignature(Encoding.UTF8.GetBytes(placeholder)).Status.Should().Be("MOCK_SIGNATURE_DETECTED");
+        verifier.VerifySignature("Visit 2 vitals.\nSignature: mock"u8.ToArray()).Status.Should().Be("MOCK_SIGNATURE_DETECTED");
+        verifier.VerifySignature("Visit 2 vitals."u8.ToArray()).Status.Should().Be("TAMPERED_INVALID_HASH");
+    }
+
+    /// <summary>
     /// Validates that ProtocolRagService.EvaluateFaithfulness produces outputs matching ProtocolRAGEvaluator.
     /// @req:PRD-TCK-005
     /// </summary>

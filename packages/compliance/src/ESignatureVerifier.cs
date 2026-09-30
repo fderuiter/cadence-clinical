@@ -36,7 +36,20 @@ public class ESignatureVerifier
         }
 
         var text = Encoding.UTF8.GetString(signedData);
+        var result = VerifyText(text);
 
+        // A placeholder such as "MOCK SIGNATURE" never verifies; name it as such. Only a failed verification is
+        // relabelled: base64 certificates and signatures contain "mock" by chance (about 1 in 700), and a document
+        // may mention the word, so the word alone never rejects a valid signature.
+        return !result.IsValid
+            && result.Status != "DUPLICATE_BLOCKS_REJECTED"
+            && text.Contains("mock", StringComparison.OrdinalIgnoreCase)
+            ? new VerificationResult(false, "MOCK_SIGNATURE_DETECTED", "Mock signature detected and blocked.")
+            : result;
+    }
+
+    private VerificationResult VerifyText(string text)
+    {
         // Check for duplicate/injected certificate or signature blocks
         if (CountOccurrences(text, "-----BEGIN CERTIFICATE-----") > 1 ||
             CountOccurrences(text, "-----BEGIN SIGNATURE-----") > 1)
@@ -51,17 +64,7 @@ public class ESignatureVerifier
 
         if (certStart == -1 || sigStart == -1 || sigEnd == -1 || certStart >= sigStart || sigStart >= sigEnd)
         {
-            if (text.Contains("mock", StringComparison.OrdinalIgnoreCase))
-            {
-                return new VerificationResult(false, "MOCK_SIGNATURE_DETECTED", "Mock signature detected and blocked.");
-            }
             return new VerificationResult(false, "TAMPERED_INVALID_HASH", "TAMPER DETECTED: Missing certificate or signature markers.");
-        }
-
-        // Check for mock keyword in signature or certificate blocks
-        if (text.Contains("mock", StringComparison.OrdinalIgnoreCase))
-        {
-            return new VerificationResult(false, "MOCK_SIGNATURE_DETECTED", "Mock signature detected and blocked.");
         }
 
         // Extract components
