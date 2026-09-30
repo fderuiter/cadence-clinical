@@ -32,21 +32,21 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 
 `pnpm cadence check` runs all 21 quality gates. The pre-commit hook runs a quicker variant (below), and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
 
-| Gate (short name)     | What it checks                                                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `dotnet-format`       | Whitespace formatting against `.editorconfig`                                                                                       |
-| `dotnet-format-style` | Roslyn code-style rules                                                                                                             |
-| `clean-secrets`       | Normalizes `.secrets.baseline` and enforces baseline immutability                                                                  |
-| `duplication`         | Duplicated code blocks over 15 normalized lines                                                                                     |
-| `cli-docs`            | `docs/cli.md` matches the CLI's commands                                                                                            |
-| `adrs`                | ADR schema and `docs/adr/index.md` consistency                                                                                      |
-| `arch-drift`          | Architecture diagrams match the solution                                                                                            |
-| `sanitizer`           | Requirement tag prefixes in tests                                                                                                   |
-| `markdown`            | Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist                      |
-| `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md`                                                                 |
-| `readmes`             | Each project has a README                                                                                                           |
-| `imports`             | No cross-service persistence references                                                                                             |
-| `security`            | Static security audit and secret patterns                                                                                           |
+| Gate (short name)     | What it checks                                                                                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dotnet-format`       | Whitespace formatting against `.editorconfig`                                                                                                                                                   |
+| `dotnet-format-style` | Roslyn code-style rules                                                                                                                                                                         |
+| `clean-secrets`       | Normalizes `.secrets.baseline` and enforces baseline immutability                                                                                                                               |
+| `duplication`         | Duplicated code blocks over 15 normalized lines                                                                                                                                                 |
+| `cli-docs`            | `docs/cli.md` matches the CLI's commands                                                                                                                                                        |
+| `adrs`                | ADR schema and `docs/adr/index.md` consistency                                                                                                                                                  |
+| `arch-drift`          | Architecture diagrams match the solution                                                                                                                                                        |
+| `sanitizer`           | Requirement tag prefixes in tests                                                                                                                                                               |
+| `markdown`            | Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist                                                                                    |
+| `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md`                                                                                                                             |
+| `readmes`             | Each project has a README                                                                                                                                                                       |
+| `imports`             | No cross-service persistence references                                                                                                                                                         |
+| `security`            | Static security audit and secret patterns                                                                                                                                                       |
 | `deid`                | PHI/PII in tracked files outside tests, docs, scripts and similar folders (all 14 detector categories), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment |
 | `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`                                                                                                      |
 | `api-clients`         | The web API clients typecheck against their generated OpenAPI types                                                                                                                             |
