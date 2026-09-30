@@ -72,9 +72,12 @@ public sealed class KernelCommandPipeline(
         var decision = await authorizer.AuthorizeAsync(actor, command, cancellationToken).ConfigureAwait(false);
         if (!decision.Permitted)
         {
-            var reason = decision.Reason ?? KernelErrors.AuthorizationDenied.Message;
-            await transaction.RecordDenialAsync(reason, cancellationToken).ConfigureAwait(false);
-            return KernelErrors.AuthorizationDenied.WithMessage(reason);
+            var denial = decision with { Reason = decision.Reason ?? KernelErrors.AuthorizationDenied.Message };
+            await transaction.RecordDenialAsync(denial, cancellationToken).ConfigureAwait(false);
+            return KernelErrors.AuthorizationDenied.WithMessage(denial.Reason!) with
+            {
+                Explanation = denial.Explain(execution.CommandType),
+            };
         }
 
         if (await ReplayAsync<TResult>(transaction, execution, cancellationToken).ConfigureAwait(false) is { } replay)

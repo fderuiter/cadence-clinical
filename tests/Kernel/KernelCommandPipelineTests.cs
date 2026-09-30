@@ -293,7 +293,7 @@ public sealed partial class KernelCommandPipelineTests
             return Task.FromResult(CommitOutcome);
         }
 
-        public Task RecordDenialAsync(string reason, CancellationToken cancellationToken) =>
+        public Task RecordDenialAsync(AuthorizationDecision denial, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("The command was permitted.");
 
         public Task<TAggregate?> FindAsync<TAggregate>(object id, CancellationToken cancellationToken)

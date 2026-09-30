@@ -329,6 +329,25 @@ insert-only `audit_chain_seals` table. `KernelOutboxRelay` delivers events at le
   or renamed. Defaults: authorization denial 403, not found 404, idempotency/concurrency conflict 409,
   rule violation 422, lock 423.
 
+### 5.5 Explanations (ADR-2482)
+
+Why an action is permitted or denied, why an object is in its state, why a finding was raised and why a metric
+has its value are answered by one kernel type, `Explanation{ subject, claim, producer, steps[claim, evidence[]],
+conditions[code, description, met, evidence[]], next_actions[] }` (`Cadence.Kernel.Explanations`). Unmet
+conditions are the conditions whose `met` is false.
+
+- **K-EXP-1** The component that owns a rule (authorization §9.3, Applicability §7.5, Findings K-FIND-3,
+  Indicators §10.4) produces its explanation from the same evaluation that made the decision. Applications and
+  the UI render explanations and never compose them.
+- **K-EXP-2** Evidence is a NodeRef (§3.4), pinned to the version the producer read where it has one. Evidence
+  the reader may not see is masked, never dropped.
+- **K-EXP-3** An explanation is a pure function of the evaluated evidence and the producer's rule version; the
+  producer names that version.
+
+Authorization implements this today: a denied command returns `K.auth.denied` with the explanation, and the
+`DecisionDenied` event and audit entry record every evaluated condition with its evidence. Applicability,
+Finding and Indicator producers follow as those slices land (#4896).
+
 ---
 
 ## 6. Knowledge Engine
@@ -702,7 +721,8 @@ protocol training + credential + effective dates + site activation state, never 
   training evidence directly gates actions. Site-level readiness is StudySite/Effectivity (§7.1), not an actor
   condition (inventory §3 item 6).
 - **K-AUTH-6** A denial names the missing evidence (e.g. "protocol v3 training not current"), so the user can
-  act on it.
+  act on it. The decision carries every condition evaluated, met and unmet, each with its evidence NodeRef, and
+  explains itself as an `Explanation` (§5.5); the `DecisionDenied` event and audit entry record the conditions.
 
 ### 9.4 Computable consent
 
@@ -1014,6 +1034,7 @@ kernel, is merged into another, or is retired.
 | K011 | Simulation | Evaluate-only over candidate versions; no study branches | ADR-2480 |
 | K012 | Object references and zoom path | `kind:id@version` NodeRef; kernel-computed, presentation-only zoom path | ADR-2481 |
 | K013 | Standards Registry and MDR | Tenant-scoped reference data; one governance envelope for library items; attested approval; immutable once registered | ADR-2460 |
+| K014 | Explanations | One `Explanation` type produced by the rule owner; authorization returns met and unmet conditions with evidence | ADR-2482 |
 
 ---
 
