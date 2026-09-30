@@ -57,7 +57,8 @@ public record DoseLevelDefinition(
     [property: JsonPropertyName("formulation")] string? Formulation = null
 );
 
-[SuppressMessage("Naming", "S101:Types should be named in PascalCase")]
+[SuppressMessage("Naming", "S101:Types should be named in PascalCase",
+    Justification = "BOIN (Bayesian Optimal Interval) is the dose-finding design's published name.")]
 public record BOINConfig(
     [property: JsonPropertyName("target_dlt_rate")] double TargetDltRate = 0.25,
     [property: JsonPropertyName("escalation_boundary")] double? EscalationBoundary = null,
@@ -87,7 +88,8 @@ public record DoseCohortState(
     public double EmpiricalDltRate => EvaluatedSubjects == 0 ? 0.0 : Math.Round((double)ObservedDlts / EvaluatedSubjects, 4);
 }
 
-[SuppressMessage("Naming", "S101:Types should be named in PascalCase")]
+[SuppressMessage("Naming", "S101:Types should be named in PascalCase",
+    Justification = "BOIN (Bayesian Optimal Interval) is the dose-finding design's published name.")]
 public record BOINDoseRecommendation(
     [property: JsonPropertyName("current_dose_index")] int CurrentDoseIndex,
     [property: JsonPropertyName("current_dose_amount")] double CurrentDoseAmount,

@@ -1,0 +1,9 @@
+<Project>
+  <!-- CS1591 (missing XML comment for a publicly visible member) is off solution-wide in Directory.Build.props.
+       A project that is an API other code builds on sets <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>, which
+       turns CS1591 back on; warnings are errors, so an undocumented public member then fails the build. This file is
+       evaluated after the project, which is why the switch lives here and not in Directory.Build.props. -->
+  <PropertyGroup Condition="'$(CadenceRequireXmlDocs)' == 'true'">
+    <NoWarn>$([System.String]::Copy(';$(NoWarn);').Replace(';CS1591;', ';').Trim(';'))</NoWarn>
+  </PropertyGroup>
+</Project>

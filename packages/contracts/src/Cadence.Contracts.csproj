@@ -2,6 +2,8 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Contracts</RootNamespace>
     <Description>Shared DTOs, cross-service REST contracts, and resilient HTTP client interfaces.</Description>
+    <!-- Public API for other projects: every public member needs an XML comment (CS1591). -->
+    <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>
   </PropertyGroup>
 
   <ItemGroup>

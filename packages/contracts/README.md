@@ -9,6 +9,7 @@ Cross-service DTOs and typed HTTP client interfaces for service-to-service calls
 - `IExecutionAmendmentApiClient` with `PublishAmendmentRequestDto`, `PublishAmendmentResponseDto`, `AmendmentSnapshotDto`, `AmendmentActivityDto`.
 - `IDesignerEligibilityApiClient` with `DesignerEligibilityCriterionDto`, `DesignerExpressionNodeDto`, `FieldReferenceDto`.
 - Only interfaces and records exist; there are no client implementations or DI registrations yet.
+- Every public member has an XML comment: the project sets `CadenceRequireXmlDocs`, so a missing one fails the build (CS1591).
 
 ## Key dependencies
 

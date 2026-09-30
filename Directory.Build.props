@@ -17,7 +17,11 @@
 
     <!-- GxP & Part 11 Documentation Engine Requirements -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn> <!-- Missing XML comment for publicly visible type or member (temporary during initial scaffold) -->
+    <!-- CS1591 (missing XML comment on a public member) stays off for services, tools and tests, whose public
+         members are not an API for other code. Library projects that are (the contracts package, the kernel API
+         and standards assemblies) opt in with <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>; see
+         Directory.Build.targets and CONTRIBUTING.md. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <!-- Global Code Analysis & Security Analyzers -->

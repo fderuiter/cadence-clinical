@@ -121,7 +121,10 @@ namespace Cadence.Apps.Execution.Endpoints;
 
 `<Nullable>enable</Nullable>` and `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` apply
 solution-wide. Use primary constructors and `init` accessors on DTO records. Do not suppress nullable
-warnings (`#pragma warning disable CS8618`) without a documented GxP justification.
+warnings (`#pragma warning disable CS8618`) without a documented GxP justification. Every other
+suppression also carries its reason (`Justification = "..."` or a comment on the line), and projects
+that set `<CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>` need an XML comment on every public
+member ([CONTRIBUTING.md §3](CONTRIBUTING.md#3-local-checks)).
 
 ```csharp
 public record CreateSubjectCommand(

@@ -133,12 +133,12 @@ public class ComplianceUnitTests
     }
 
     /// <summary>
-    /// Validates that ProtocolRagService.EvaluateFaithfulness produces outputs matching ProtocolRAGEvaluator.
+    /// Validates that ProtocolRagService.EvaluateFaithfulness produces outputs matching ProtocolRagEvaluator.
     /// </summary>
     [Fact]
     public void ProtocolRagService_EvaluateFaithfulness_MatchesProtocolRAGEvaluator()
     {
-        var chunk = new ProtocolRAGContextChunk(
+        var chunk = new ProtocolRagContextChunk(
             ChunkId: "chk-100",
             ProtocolVersion: "v2.1",
             SectionNumber: "7.3",
@@ -153,7 +153,7 @@ public class ComplianceUnitTests
 
         var ragService = new ProtocolRagService();
         var (scoreService, citationsService, isGroundedService) = ragService.EvaluateFaithfulness(query, answer, new[] { chunk });
-        var (scoreEvaluator, citationsEvaluator, isGroundedEvaluator) = ProtocolRAGEvaluator.EvaluateFaithfulness(query, answer, new[] { chunk });
+        var (scoreEvaluator, citationsEvaluator, isGroundedEvaluator) = ProtocolRagEvaluator.EvaluateFaithfulness(query, answer, new[] { chunk });
 
         scoreService.Should().Be(scoreEvaluator);
         isGroundedService.Should().Be(isGroundedEvaluator);

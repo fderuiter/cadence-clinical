@@ -4,6 +4,8 @@
     <RootNamespace>Cadence.Kernel.Api</RootNamespace>
     <AssemblyName>Cadence.Kernel.Api</AssemblyName>
     <Description>Clinical Kernel Minimal API surface for external clients and application modules (spec §2.4).</Description>
+    <!-- Public API for other projects: every public member needs an XML comment (CS1591). -->
+    <CadenceRequireXmlDocs>true</CadenceRequireXmlDocs>
   </PropertyGroup>
 
   <ItemGroup>

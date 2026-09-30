@@ -7,7 +7,8 @@ using System.Text;
 
 namespace Cadence.Core.Domain.Supply;
 
-[SuppressMessage("Naming", "S101:Types should be named in PascalCase")]
+[SuppressMessage("Naming", "S101:Types should be named in PascalCase",
+    Justification = "DTP (direct-to-patient) is the supply-chain term used in the protocol and IRT specifications.")]
 public static class DTPLogisticsEngine
 {
     public const double GasConstantR = 0.008314472;

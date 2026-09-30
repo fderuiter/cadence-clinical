@@ -42,16 +42,18 @@ public record PublishAmendmentResponseDto(string? AmendmentId, string? SummaryOf
 /// <summary>
 /// Frozen HTTP contract for the Designer -&gt; Execution edge of the MIG-03
 /// same-tier cycle: POST /api/v1/execution/amendments/publish on the
-/// Execution service, currently reached via
-/// os.getenv("EXECUTION_SERVICE_URL") in designer_routes.py's protocol-
-/// amendment publish flow (see docs/migration/phase0/03_migration_plan.md,
-/// MIG-03). Implemented by the Execution service, consumed by Designer. This
-/// is a contract/DTO surface only — request signing, retry/rollback, and
-/// serving logic remain Phase 1 (Slice 01/Slice 02) implementation work.
+/// Execution service. It was defined for the Python Designer's protocol-
+/// amendment publish flow (docs/migration/phase0/03_migration_plan.md, MIG-03);
+/// no C# service implements or consumes it yet. This is a contract/DTO surface
+/// only: request signing, retry, rollback and serving are not built.
 /// @req:PRD-SYS-053
 /// </summary>
 public interface IExecutionAmendmentApiClient
 {
+    /// <summary>Publishes a protocol amendment to Execution.</summary>
+    /// <param name="request">The amendment to publish.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>Execution's acknowledgement, or a failure result.</returns>
     Task<Result<PublishAmendmentResponseDto>> PublishAmendmentAsync(
         PublishAmendmentRequestDto request, CancellationToken ct = default);
 }

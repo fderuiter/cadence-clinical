@@ -53,15 +53,17 @@ public record DesignerEligibilityCriterionDto(
 /// <summary>
 /// Frozen HTTP contract for the Execution -&gt; Designer edge of the MIG-03
 /// same-tier cycle: GET /api/v1/studies/{studyId}/eligibility-criteria on the
-/// Designer service, currently consumed by apps/execution/designer_client.py
-/// (DesignerCriteriaClient) on behalf of apps/execution/eligibility_service.py.
-/// Implemented by the Designer service, consumed by Execution. This is a
-/// contract/DTO surface only — request signing, retry, and serving logic
-/// remain Phase 1 (Slice 01/Slice 02) implementation work.
+/// Designer service. It was defined for the Python Execution service's
+/// eligibility checks; no C# service implements or consumes it yet. This is a
+/// contract/DTO surface only: request signing, retry and serving are not built.
 /// @req:PRD-SYS-053
 /// </summary>
 public interface IDesignerEligibilityApiClient
 {
+    /// <summary>Reads the eligibility criteria of a study's current design.</summary>
+    /// <param name="studyId">The study's identifier in the Designer service.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The criteria, or a failure result.</returns>
     Task<Result<IReadOnlyList<DesignerEligibilityCriterionDto>>> GetEligibilityCriteriaAsync(
         string studyId, CancellationToken ct = default);
 }

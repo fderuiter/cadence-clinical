@@ -1,5 +1,3 @@
-#pragma warning disable S101 // Type names should comply with a configured naming convention
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +10,7 @@ namespace Cadence.CoreModels;
 /// Enforces 21 CFR Part 11 and CDISC GxP compliance for Grounded Protocol AI Assistance.
 /// Requirements: PRD-TCK-005, PRD-SYS-051, ADR-2192
 /// </summary>
-public static partial class ProtocolRAGEvaluator
+public static partial class ProtocolRagEvaluator
 {
     /// <summary>
     /// Canonical verbatim citation format regex per PRD-TCK-005.
@@ -83,7 +81,7 @@ MANDATORY CLINICAL SAFETY & GXP RULES:
     /// <param name="query">Clinical inquiry from support ticket or user.</param>
     /// <param name="chunks">List of retrieved protocol context chunks.</param>
     /// <returns>Formatted prompt string.</returns>
-    public static string FormatGroundedRagPrompt(string query, IReadOnlyList<ProtocolRAGContextChunk>? chunks)
+    public static string FormatGroundedRagPrompt(string query, IReadOnlyList<ProtocolRagContextChunk>? chunks)
     {
         if (chunks == null || chunks.Count == 0)
         {
@@ -130,7 +128,7 @@ Please formulate a helpful, concise clinical response strictly citing the excerp
     public static (double FaithfulnessScore, IReadOnlyList<ParsedCitation> Citations, bool IsGrounded) EvaluateFaithfulness(
         string query,
         string answer,
-        IReadOnlyList<ProtocolRAGContextChunk>? chunks)
+        IReadOnlyList<ProtocolRagContextChunk>? chunks)
     {
         if (string.IsNullOrWhiteSpace(answer))
         {
@@ -156,7 +154,7 @@ Please formulate a helpful, concise clinical response strictly citing the excerp
             return (0.0, Array.Empty<ParsedCitation>(), false);
         }
 
-        var chunkMap = new Dictionary<(string VersionNorm, int PageNumber), ProtocolRAGContextChunk>();
+        var chunkMap = new Dictionary<(string VersionNorm, int PageNumber), ProtocolRagContextChunk>();
         foreach (var c in chunks)
         {
             var normV = c.ProtocolVersion.StartsWith("v", StringComparison.OrdinalIgnoreCase)
