@@ -82,7 +82,7 @@ public sealed class GoldenMasterFixtureLoaderTests
         // INV-020's expected body carries the same fixed "detail" string as INV-008 -- spot-check that the
         // loader actually surfaces ExpectedDetail (extracted from body.detail) rather than leaving it null.
         GoldenMasterScenario inv020 = scenarios.Single(s => s.ScenarioId == "INV-020");
-        inv020.ExpectedStatus.Should().Be(400);
+        inv020.ExpectedStatus.Should().Be(422);
         inv020.ExpectedDetail.Should().Be("INVALID_STATE_TRANSITION");
     }
 

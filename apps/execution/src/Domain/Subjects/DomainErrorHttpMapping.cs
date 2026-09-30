@@ -9,10 +9,12 @@ namespace Cadence.Apps.Execution.Domain.Subjects;
 
 /// <summary>
 /// Single source of truth for <see cref="DomainError"/> -&gt; HTTP status mapping (`02_technical_design.md`
-/// §3.4): the five default <see cref="ErrorType"/> -&gt; status mappings, plus the two named-<c>Code</c>
+/// §3.4): the five default <see cref="ErrorType"/> -&gt; status mappings, plus the named-<c>Code</c>
 /// overrides that deviate from their own <see cref="ErrorType"/>'s default (<c>LOCKED_FACTOR_MUTATION</c> -&gt;
-/// 422 despite <c>Type = Conflict</c>, whose default would be 409; <c>RECONSENT_REQUIRED</c> -&gt; 423 despite
-/// <c>Type = Forbidden</c>, whose default would be 403). <see cref="GetStatusCode"/> backs
+/// 422 despite <c>Type = Conflict</c>, whose default would be 409; <c>INVALID_STATE_TRANSITION</c> -&gt; 422
+/// despite <c>Type = Validation</c>, whose default would be 400, because PRD-SUB-001 requires a forbidden subject
+/// transition to answer 422 Unprocessable Entity (the Python reference answered 400);
+/// <c>RECONSENT_REQUIRED</c> -&gt; 423 despite <c>Type = Forbidden</c>, whose default would be 403). <see cref="GetStatusCode"/> backs
 /// `DomainErrorExtensions.ToProblemResult()`, the primary mechanism call sites use directly;
 /// <see cref="ApplyKnownCodeStatus"/> backs `Program.cs`'s `IProblemDetailsService.CustomizeProblemDetails`
 /// defense-in-depth registration (`01_spec.md` §5's "no global not-found handler exists in the legacy system"
@@ -38,14 +40,15 @@ public static class DomainErrorHttpMapping
     /// <c>SUBJECT_NOT_FOUND</c> is listed even though it agrees with its own <c>Type = NotFound</c> default
     /// (404): stating it here — not only relying on the <c>Type</c>-based branch — is what lets
     /// <see cref="ApplyKnownCodeStatus"/> recognize it from a bare wire-level <c>code</c> string alone, with
-    /// no <see cref="DomainError.Type"/> available to consult. <c>LOCKED_FACTOR_MUTATION</c> and
-    /// <c>RECONSENT_REQUIRED</c> are the two genuine overrides: both deviate from what their own
-    /// <see cref="ErrorType"/> would otherwise produce (409 and 403, respectively).
+    /// no <see cref="DomainError.Type"/> available to consult. <c>LOCKED_FACTOR_MUTATION</c>,
+    /// <c>INVALID_STATE_TRANSITION</c> and <c>RECONSENT_REQUIRED</c> are the subject overrides: each deviates from
+    /// what its own <see cref="ErrorType"/> would otherwise produce (409, 400 and 403, respectively).
     /// </summary>
     private static readonly IReadOnlyDictionary<string, int> StatusByCode = new Dictionary<string, int>
     {
         ["SUBJECT_NOT_FOUND"] = StatusCodes.Status404NotFound,
         ["LOCKED_FACTOR_MUTATION"] = StatusCodes.Status422UnprocessableEntity,
+        ["INVALID_STATE_TRANSITION"] = StatusCodes.Status422UnprocessableEntity,
         ["RECONSENT_REQUIRED"] = StatusCodes.Status423Locked,
         ["OBSERVATION_NOT_FOUND"] = StatusCodes.Status404NotFound,
         ["FORM_NOT_FOUND"] = StatusCodes.Status404NotFound,

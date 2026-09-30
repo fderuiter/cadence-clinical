@@ -133,6 +133,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
