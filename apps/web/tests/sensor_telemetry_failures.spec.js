@@ -132,11 +132,17 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
     await flushPromises();
 
     // Verify per-domain error states
-    expect(wrapper.vm.domainErrors.alerts).toContain("Safety alert service unavailable (HTTP 503)");
-    expect(wrapper.vm.domainErrors.metrics).toContain("Metrics service timeout (HTTP 504)");
+    expect(wrapper.vm.domainErrors.alerts).toContain(
+      "Safety alert service unavailable (HTTP 503)"
+    );
+    expect(wrapper.vm.domainErrors.metrics).toContain(
+      "Metrics service timeout (HTTP 504)"
+    );
     expect(wrapper.vm.domainErrors.devices).toBeNull();
     expect(wrapper.vm.domainErrors.summaries).toBeNull();
-    expect(wrapper.vm.fetchError).toBe("Failed to refresh some sensor telemetry data.");
+    expect(wrapper.vm.fetchError).toBe(
+      "Failed to refresh some sensor telemetry data."
+    );
 
     // Verify previously loaded data was NOT wiped
     expect(wrapper.vm.devices.length).toBe(1);
@@ -145,8 +151,16 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
     // Verify toastStore.apiError was invoked for the rejected calls
     const toastStore = useToastStore();
     expect(toastStore.toasts.length).toBeGreaterThanOrEqual(2);
-    expect(toastStore.toasts.some((t) => t.title === "Failed to refresh safety alerts")).toBe(true);
-    expect(toastStore.toasts.some((t) => t.title === "Failed to refresh sensor metrics")).toBe(true);
+    expect(
+      toastStore.toasts.some(
+        (t) => t.title === "Failed to refresh safety alerts"
+      )
+    ).toBe(true);
+    expect(
+      toastStore.toasts.some(
+        (t) => t.title === "Failed to refresh sensor metrics"
+      )
+    ).toBe(true);
   });
 
   it("displays warning banner above Safety Alerts section when safety alert API rejects", async () => {
@@ -179,7 +193,9 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
     const banner = wrapper.find(".alerts-warning-banner");
     expect(banner.exists()).toBe(true);
     expect(banner.classes()).toContain("error-banner");
-    expect(banner.text()).toContain("Failed to fetch safety alerts from cluster");
+    expect(banner.text()).toContain(
+      "Failed to fetch safety alerts from cluster"
+    );
   });
 
   it("acknowledgment modal displays inline .error-banner on failure, keeps modal open, and retains entered notes", async () => {
@@ -205,7 +221,9 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
 
     // Verify modal remains open and notes intact
     expect(wrapper.vm.showAckModal).toBe(true);
-    expect(wrapper.vm.ackNotes).toBe("Attending physician contacted; insulin adjusted.");
+    expect(wrapper.vm.ackNotes).toBe(
+      "Attending physician contacted; insulin adjusted."
+    );
 
     // Verify error banner rendered in modal
     const modalBanner = wrapper.find(".modal-dialog .modal-error-banner");
@@ -215,7 +233,11 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
 
     // Verify toast notification dispatched
     const toastStore = useToastStore();
-    expect(toastStore.toasts.some((t) => t.title === "Failed to acknowledge safety alert")).toBe(true);
+    expect(
+      toastStore.toasts.some(
+        (t) => t.title === "Failed to acknowledge safety alert"
+      )
+    ).toBe(true);
   });
 
   it("acknowledgment modal closes and shows success toast on successful submission", async () => {
@@ -272,7 +294,11 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
 
     // Verify toast
     const toastStore = useToastStore();
-    expect(toastStore.toasts.some((t) => t.title === "Failed to register medical IoT device")).toBe(true);
+    expect(
+      toastStore.toasts.some(
+        (t) => t.title === "Failed to register medical IoT device"
+      )
+    ).toBe(true);
   });
 
   it("simulation modal displays inline .error-banner on failure, keeps modal open, and retains inputs", async () => {
@@ -302,6 +328,10 @@ describe("SensorTelemetryConsole Failure & Toast Handling", () => {
 
     // Verify toast
     const toastStore = useToastStore();
-    expect(toastStore.toasts.some((t) => t.title === "Failed to ingest biometric telemetry stream")).toBe(true);
+    expect(
+      toastStore.toasts.some(
+        (t) => t.title === "Failed to ingest biometric telemetry stream"
+      )
+    ).toBe(true);
   });
 });

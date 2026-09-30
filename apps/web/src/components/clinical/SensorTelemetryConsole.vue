@@ -60,7 +60,8 @@
         <div class="metric-content">
           <span class="metric-label">Ingested Readings</span>
           <span class="metric-value">{{
-            metrics.total_readings_ingested !== null && metrics.total_readings_ingested !== undefined
+            metrics.total_readings_ingested !== null &&
+            metrics.total_readings_ingested !== undefined
               ? metrics.total_readings_ingested.toLocaleString()
               : "0"
           }}</span>
@@ -321,7 +322,10 @@
 
     <!-- TAB 2: Automated Safety Alerts -->
     <div v-if="activeTab === 'alerts'" class="tab-panel" role="tabpanel">
-      <div v-if="domainErrors.alerts" class="error-banner alerts-warning-banner">
+      <div
+        v-if="domainErrors.alerts"
+        class="error-banner alerts-warning-banner"
+      >
         ⚠️ Failed to update safety alerts: {{ domainErrors.alerts }}
       </div>
       <div class="card table-card">
