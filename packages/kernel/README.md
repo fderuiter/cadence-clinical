@@ -265,6 +265,25 @@ AuthorizationDecision.Deny("Protocol v3 training is not current.",
 A denied command returns `K.auth.denied` with `KernelError.Explanation` set, and the `DecisionDenied` event and
 audit entry record the reason and each condition with its evidence.
 
+## Authorization and dry runs (ADR-2483)
+
+Every kernel command declares the capability it needs and the property holding the object it is checked against:
+
+```csharp
+[KernelCapability("concept.revise", VerbClass.Execute, Resource = nameof(ReviseConcept.ConceptId))]
+public sealed record ReviseConcept(TenantId TenantId, ConceptId ConceptId, /* … */) : ICommand<ConceptRef>;
+```
+
+`Resource` defaults to `TenantId`; a command that creates an object names the scope it is created in.
+`KernelAuthorizationTests` fails for a command without the attribute, and the pipeline denies one at runtime.
+
+`AddKernelAuthorization()` registers `KernelAuthorization` as the pipeline's `IAuthorizer` and as
+`IAuthorizationProbe`. Both turn the question into an `AuthorizationRequest` for the host's
+`IAuthorizationEvaluator` (the authority slice, #4781), so a dry run gets exactly the decision the command would.
+`CanIAsync(tenant, capability, resource)` answers for the current actor, and `GetCommandsAsync(tenant, resource)`
+lists the commands offered on an object with their decisions and explanations. Dry runs write nothing to the audit
+chain; they are logged as event `2483 AuthorizationDryRun`.
+
 ## Migrations
 
 ```bash

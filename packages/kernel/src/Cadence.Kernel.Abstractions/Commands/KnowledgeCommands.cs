@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Knowledge;
 
 namespace Cadence.Kernel.Commands;
@@ -9,6 +10,7 @@ namespace Cadence.Kernel.Commands;
 /// Registers a code system (LOINC, UCUM, CDISC CT, MedDRA, a sponsor dictionary, …) in the tenant's Concept Registry
 /// (spec §6.1). A known URI must carry the licence class <see cref="KnownCodeSystems"/> gives it (K-SEM-2).
 /// </summary>
+[KernelCapability("code_system.register", VerbClass.Execute)]
 public sealed record RegisterCodeSystem(
     TenantId TenantId,
     CodeSystemId CodeSystemId,
@@ -23,6 +25,7 @@ public sealed record RegisterCodeSystem(
 /// Imports one release of a code system with all of its entries. A version is imported once and never changes; every
 /// specification, rule and projection names the version it used, never "the latest" (spec §6.1).
 /// </summary>
+[KernelCapability("code_system.import_version", VerbClass.Execute, Resource = nameof(ImportCodeSystemVersion.CodeSystemId))]
 public sealed record ImportCodeSystemVersion(
     TenantId TenantId,
     CodeSystemVersionId CodeSystemVersionId,
@@ -57,6 +60,7 @@ public sealed record CodeSystemEntryData(
 /// Defines a concept at version 1. A CDISC Biomedical Concept is identified by its CDISC concept code
 /// (<paramref name="ExternalCode"/>), which is unique in the tenant; a sponsor concept has none.
 /// </summary>
+[KernelCapability("concept.define", VerbClass.Execute)]
 public sealed record DefineConcept(
     TenantId TenantId,
     ConceptId ConceptId,
@@ -72,6 +76,7 @@ public sealed record DefineConcept(
 /// Changes a concept's label or definition as a new version. Earlier versions stay resolvable, so every fact keeps the
 /// meaning it was recorded against.
 /// </summary>
+[KernelCapability("concept.revise", VerbClass.Execute, Resource = nameof(ReviseConcept.ConceptId))]
 public sealed record ReviseConcept(
     TenantId TenantId,
     ConceptId ConceptId,
@@ -81,6 +86,7 @@ public sealed record ReviseConcept(
     string ReasonForChange) : ICommand<ConceptRef>;
 
 /// <summary>Deprecates a concept: no new references should use it; existing ones still resolve.</summary>
+[KernelCapability("concept.deprecate", VerbClass.Approve, Resource = nameof(DeprecateConcept.ConceptId))]
 public sealed record DeprecateConcept(
     TenantId TenantId,
     ConceptId ConceptId,
@@ -92,6 +98,7 @@ public sealed record DeprecateConcept(
 /// <see cref="MappingStatus.Proposed"/> unless <paramref name="Confirmed"/> is set. <paramref name="Evidence"/> says
 /// why the mapping holds (a CDISC publication, a reviewer's rationale).
 /// </summary>
+[KernelCapability("concept.map", VerbClass.Propose)]
 public sealed record MapConcept(
     TenantId TenantId,
     ConceptMappingId ConceptMappingId,
@@ -104,6 +111,7 @@ public sealed record MapConcept(
     string ReasonForChange) : ICommand<ConceptMappingId>;
 
 /// <summary>Confirms or rejects a proposed mapping, or rejects a confirmed one that turned out wrong.</summary>
+[KernelCapability("concept_mapping.review", VerbClass.Approve, Resource = nameof(ReviewConceptMapping.ConceptMappingId))]
 public sealed record ReviewConceptMapping(
     TenantId TenantId,
     ConceptMappingId ConceptMappingId,
