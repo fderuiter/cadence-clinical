@@ -3,37 +3,19 @@ using Cadence.Core.Domain;
 namespace Cadence.Kernel.Domain.Entities;
 
 /// <summary>
-/// Canonical Participant aggregate root representing a human subject enrolled in a Study at a StudySite.
-/// @req:PRD-SYS-053
+/// A participant: a pseudonymous kernel identity in a tenant (spec §7.4, §9.2). It holds no study, site, code or
+/// status; each study membership is an <see cref="Enrollment"/>, and identifying details belong to the IdentityVault
+/// (#4782). EDC's subject, eCOA's user and RTSM's randomized subject are views of the same <see cref="ParticipantId"/>.
 /// </summary>
 public class Participant : AggregateRoot<ParticipantId>
 {
-    public TenantId TenantId { get; private set; }
-    public StudyId StudyId { get; private set; }
-    public StudySiteId StudySiteId { get; private set; }
-    public string SubjectCode { get; private set; } = string.Empty;
-    public string Status { get; private set; } = "Screened";
-    public bool IsActive { get; private set; } = true;
-
     protected Participant() { }
 
-    public Participant(ParticipantId id, TenantId tenantId, StudyId studyId, StudySiteId studySiteId, string subjectCode, string status, string createdBy, string reasonForChange)
-        : base(id)
-    {
-        TenantId = tenantId;
-        StudyId = studyId;
-        StudySiteId = studySiteId;
-        SubjectCode = subjectCode;
-        Status = status;
-        CreatedBy = createdBy;
-        ReasonForChange = reasonForChange;
-    }
+    private Participant(ParticipantId id, TenantId tenantId)
+        : base(id) => TenantId = tenantId;
 
-    public void Enroll(string updatedBy, string reasonForChange)
-    {
-        Status = "Enrolled";
-        CreatedBy = updatedBy;
-        ReasonForChange = reasonForChange;
-        VersionIndex++;
-    }
+    public TenantId TenantId { get; private set; }
+
+    /// <summary>Registers a participant identity in <paramref name="tenantId"/>.</summary>
+    public static Participant Register(ParticipantId id, TenantId tenantId) => new(id, tenantId);
 }

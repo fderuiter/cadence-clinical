@@ -37,7 +37,7 @@ internal static class BitemporalGuardAssertions
     public static async Task AssertGuardedAsync(DbContext context, string table, CancellationToken ct)
     {
         var constraints = await context.Database.SqlQuery<int>(
-                $"SELECT count(*)::int AS \"Value\" FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid JOIN pg_namespace n ON n.oid = t.relnamespace WHERE n.nspname = {KernelDbContext.Schema} AND t.relname = {table} AND c.contype = 'x' AND c.condeferred")
+                $"SELECT count(*)::int AS \"Value\" FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid JOIN pg_namespace n ON n.oid = t.relnamespace WHERE n.nspname = {KernelDbContext.Schema} AND t.relname = {table} AND c.contype = 'x' AND c.condeferred AND c.conname = {BitemporalSql.ExclusionConstraintName(table)}")
             .SingleAsync(ct);
         constraints.Should().Be(1, $"{table} needs a deferred K-TIME-2 exclusion constraint");
 

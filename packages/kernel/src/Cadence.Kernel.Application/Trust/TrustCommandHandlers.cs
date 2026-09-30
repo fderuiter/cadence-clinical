@@ -61,7 +61,7 @@ internal sealed class AttestHandler : ICommandHandler<Attest, AttestationId>
     /// <summary>
     /// The kinds of record that can be signed, and how to read the content hash each one has now. A protocol version is
     /// signable once its content is frozen for review; a standard version's or library item's content never changes
-    /// after it is recorded.
+    /// after it is recorded; an enrollment is signed in its current state, which every change of status changes.
     /// </summary>
     private static async Task<KernelError?> CheckTargetAsync(AttestationTarget target, ICommandContext context, CancellationToken cancellationToken)
     {
@@ -94,6 +94,15 @@ internal sealed class AttestHandler : ICommandHandler<Attest, AttestationId>
                 }
 
                 current = target with { ContentHash = item.ContentHash };
+                break;
+            case NodeKinds.Enrollment:
+                var enrollment = await context.Work.ReadAsync<Enrollment>(EnrollmentId.FromGuid(target.Id), cancellationToken).ConfigureAwait(false);
+                if (enrollment is null)
+                {
+                    return TrustErrors.TargetUnknown;
+                }
+
+                current = enrollment.SignableTarget;
                 break;
             default:
                 return TrustErrors.TargetKindUnsupported.WithMessage($"Attestations cannot target '{target.Kind}' records.");

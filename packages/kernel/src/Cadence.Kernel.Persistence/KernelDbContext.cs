@@ -54,6 +54,12 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<Attestation> Attestations => Set<Attestation>();
 
+    public DbSet<Participant> Participants => Set<Participant>();
+
+    public DbSet<Enrollment> Enrollments => Set<Enrollment>();
+
+    public DbSet<EnrollmentStatusPeriod> EnrollmentStatusPeriods => Set<EnrollmentStatusPeriod>();
+
     public DbSet<ProvenanceActivityRecord> ProvenanceActivities => Set<ProvenanceActivityRecord>();
 
     public DbSet<DomainEventRecord> DomainEvents => Set<DomainEventRecord>();

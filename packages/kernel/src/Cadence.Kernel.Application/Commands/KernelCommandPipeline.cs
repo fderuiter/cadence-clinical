@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Knowledge;
 using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Application.Trust;
@@ -189,7 +190,8 @@ public static class KernelApplicationServiceCollectionExtensions
     /// <summary>
     /// Registers <see cref="IKernelCommandSender"/> and the kernel's command handlers. The host must also register
     /// <see cref="ICurrentActor"/>, <see cref="IAuthorizer"/> and kernel persistence (which provides
-    /// <see cref="IKernelUnitOfWorkFactory"/> and <see cref="Trust.IAttestationVerifier"/>).
+    /// <see cref="IKernelUnitOfWorkFactory"/>, <see cref="Trust.IAttestationVerifier"/> and
+    /// <see cref="Execution.IEnrollmentDirectory"/>).
     /// </summary>
     public static IServiceCollection AddKernelCommandPipeline(this IServiceCollection services)
     {
@@ -200,6 +202,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddKernelKnowledgeHandlers();
         services.AddKernelProtocolHandlers();
         services.AddKernelTrustHandlers();
+        services.AddKernelExecutionHandlers();
         return services;
     }
 }

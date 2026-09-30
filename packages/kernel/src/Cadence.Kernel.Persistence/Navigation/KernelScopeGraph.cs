@@ -129,7 +129,9 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     .OrderBy(x => x.Country).ThenBy(x => x.SiteCode)
                     .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-                // Participants are not mapped in the kernel yet (#4776), so a study site's child count is unknown.
+                // Participants and enrollments are mapped (#4776), but the participant zoom level is not: whether a study
+                // site's children are participants or their enrollments is the navigator's decision (ADR-2481), so the
+                // count stays unknown until that level is added.
                 return [.. studySites.Select(x => new ScopeChild(StudySiteSummary(x), ChildCount: null, x.Country))];
 
             case NodeKinds.Organization:

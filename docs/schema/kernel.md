@@ -17,10 +17,13 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.concept_revisions`](#kernelconcept_revisions) | `ConceptRevision` | 6 |
 | [`kernel.concepts`](#kernelconcepts) | `Concept` | 13 |
 | [`kernel.domain_events`](#kerneldomain_events) | `DomainEventRecord` | 11 |
+| [`kernel.enrollment_status_periods`](#kernelenrollment_status_periods) | `EnrollmentStatusPeriod` | 8 |
+| [`kernel.enrollments`](#kernelenrollments) | `Enrollment` | 15 |
 | [`kernel.idempotency_records`](#kernelidempotency_records) | `IdempotencyRecord` | 7 |
 | [`kernel.library_items`](#kernellibrary_items) | `LibraryItem` | 16 |
 | [`kernel.organizations`](#kernelorganizations) | `Organization` | 10 |
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
+| [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
 | [`kernel.people`](#kernelpeople) | `Person` | 9 |
 | [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
 | [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 13 |
@@ -309,6 +312,74 @@ Indexes:
 - `IX_domain_events_activity_id`: (`activity_id`)
 - `IX_domain_events_tenant_id_recorded`: (`tenant_id`, `recorded`)
 
+## kernel.enrollment_status_periods
+
+Entity: `EnrollmentStatusPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `enrollment_id` | `uuid` | no |  |  |
+| `participant_id` | `uuid` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `status` | `character varying(16)` | no |  |  |
+| `study_site_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_enrollment_status_periods_enrollments_tenant_id_enrollment_~`: (`tenant_id`, `enrollment_id`, `participant_id`, `study_site_id`) references `kernel.enrollments` (`tenant_id`, `id`, `participant_id`, `study_site_id`), on delete restrict
+
+Indexes:
+
+- `IX_enrollment_status_periods_tenant_id_enrollment_id`: (`tenant_id`, `enrollment_id`)
+- `IX_enrollment_status_periods_tenant_id_enrollment_id_participa~`: (`tenant_id`, `enrollment_id`, `participant_id`, `study_site_id`)
+
+## kernel.enrollments
+
+Entity: `Enrollment`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `enrollment_number` | `integer` | yes |  |  |
+| `participant_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `status` | `character varying(16)` | no |  |  |
+| `status_since` | `timestamp with time zone` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `study_site_id` | `uuid` | no |  |  |
+| `subject_code` | `character varying(64)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+| `withdrawal_attestation_id` | `uuid` | yes |  |  |
+| `withdrawal_kind` | `character varying(32)` | yes |  |  |
+
+Foreign keys:
+
+- `FK_enrollments_attestations_tenant_id_withdrawal_attestation_id`: (`tenant_id`, `withdrawal_attestation_id`) references `kernel.attestations` (`tenant_id`, `id`), on delete restrict
+- `FK_enrollments_participants_tenant_id_participant_id`: (`tenant_id`, `participant_id`) references `kernel.participants` (`tenant_id`, `id`), on delete restrict
+- `FK_enrollments_study_sites_tenant_id_study_site_id_study_id`: (`tenant_id`, `study_site_id`, `study_id`) references `kernel.study_sites` (`tenant_id`, `id`, `study_id`), on delete restrict
+- `FK_enrollments_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_enrollments_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `AK_enrollments_tenant_id_id_participant_id_study_site_id`: unique constraint (`tenant_id`, `id`, `participant_id`, `study_site_id`)
+- `IX_enrollments_tenant_id_participant_id`: (`tenant_id`, `participant_id`)
+- `IX_enrollments_tenant_id_study_id_enrollment_number`: unique (`tenant_id`, `study_id`, `enrollment_number`) where `enrollment_number IS NOT NULL`
+- `IX_enrollments_tenant_id_study_id_subject_code`: unique (`tenant_id`, `study_id`, `subject_code`)
+- `IX_enrollments_tenant_id_study_site_id_study_id`: (`tenant_id`, `study_site_id`, `study_id`)
+- `IX_enrollments_tenant_id_withdrawal_attestation_id`: (`tenant_id`, `withdrawal_attestation_id`)
+
+Check constraints:
+
+- `ck_enrollments_number`: `enrollment_number IS NULL OR enrollment_number > 0`
+- `ck_enrollments_numbered`: `(status IN ('Screening', 'ScreenFailed') AND enrollment_number IS NULL) OR (status IN ('Enrolled', 'Randomized', 'Active', 'Completed') AND enrollment_number IS NOT NULL) OR status = 'Withdrawn'`
+
 ## kernel.idempotency_records
 
 Entity: `IdempotencyRecord`
@@ -403,6 +474,27 @@ Indexes:
 - `IX_outbox_messages_enqueued_at`: (`enqueued_at`) where `dispatched_at IS NULL`
 - `IX_outbox_messages_event_id`: unique (`event_id`)
 - `IX_outbox_messages_tenant_id_enqueued_at`: (`tenant_id`, `enqueued_at`) where `dispatched_at IS NULL`
+
+## kernel.participants
+
+Entity: `Participant`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_participants_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_participants_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 
 ## kernel.people
 
@@ -693,6 +785,7 @@ Foreign keys:
 Indexes:
 
 - `AK_study_sites_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `AK_study_sites_tenant_id_id_study_id`: unique constraint (`tenant_id`, `id`, `study_id`)
 - `IX_study_sites_study_id_site_id`: unique (`study_id`, `site_id`)
 - `IX_study_sites_tenant_id_site_id`: (`tenant_id`, `site_id`)
 - `IX_study_sites_tenant_id_study_id`: (`tenant_id`, `study_id`)

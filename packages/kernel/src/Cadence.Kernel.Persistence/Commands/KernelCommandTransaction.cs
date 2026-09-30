@@ -1,8 +1,11 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,6 +58,7 @@ internal sealed class KernelCommandTransaction(
 
     private readonly List<(object Event, DateTimeOffset? OccurredValid)> _events = [];
     private (Type Type, string Key)? _claimed;
+    private long? _lockKey;
 
     public IKernelUnitOfWork Work => this;
 
@@ -98,6 +102,38 @@ internal sealed class KernelCommandTransaction(
     {
         ArgumentNullException.ThrowIfNull(filter);
         return await db.Set<TAggregate>().AsNoTracking().Where(filter).ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task LockAsync<TAggregate>(object id, CancellationToken cancellationToken)
+        where TAggregate : AggregateRootBase
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        var key = AdvisoryLockKey(Command.TenantId, typeof(TAggregate), KeyText(id));
+        if (_lockKey is { } held)
+        {
+            if (held == key)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"K-TX-4: {execution.CommandType} already holds an aggregate lock; a command takes at most one, so locks cannot deadlock.");
+        }
+
+        // A session lock on a connection this command keeps open: the handler's reads, its commit and the release all run
+        // on it. DisposeAsync releases the lock after the commit or failure, and Npgsql resets pooled connections anyway.
+        await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_lock({key})", cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+            throw;
+        }
+
+        _lockKey = key;
     }
 
     public void Add(AggregateRootBase aggregate)
@@ -198,7 +234,36 @@ internal sealed class KernelCommandTransaction(
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public ValueTask DisposeAsync() => db.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        if (_lockKey is { } key)
+        {
+            try
+            {
+                await db.Database.ExecuteSqlAsync($"SELECT pg_advisory_unlock({key})").ConfigureAwait(false);
+            }
+            catch (NpgsqlException)
+            {
+                // A broken connection has already lost its session locks; a healthy one is reset when it returns to the pool.
+            }
+            finally
+            {
+                await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+            }
+        }
+
+        await db.DisposeAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The advisory lock key of one aggregate in one tenant: the first eight bytes of SHA-256 over
+    /// <c>tenant:type:id</c>, so locks of different tenants and aggregate types never collide in practice.
+    /// </summary>
+    internal static long AdvisoryLockKey(TenantId tenant, Type aggregateType, string id)
+    {
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes($"{tenant}:{aggregateType.FullName}:{id}"));
+        return BinaryPrimitives.ReadInt64BigEndian(digest);
+    }
 
     private void Claim(Type type, string key)
     {

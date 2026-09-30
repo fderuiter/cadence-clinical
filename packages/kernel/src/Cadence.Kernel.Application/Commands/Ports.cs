@@ -115,6 +115,15 @@ public interface IKernelUnitOfWork
         Expression<Func<TAggregate, bool>> filter, CancellationToken cancellationToken)
         where TAggregate : AggregateRootBase;
 
+    /// <summary>
+    /// Takes the advisory lock of the aggregate <typeparamref name="TAggregate"/> <paramref name="id"/> and holds it until
+    /// the command has committed or failed (K-TX-4). Commands that decide from the same aggregate's state, such as
+    /// numbering within a study, take its lock first and then read, so they run one after another. The lock neither
+    /// claims nor changes the aggregate. A command takes at most one lock.
+    /// </summary>
+    Task LockAsync<TAggregate>(object id, CancellationToken cancellationToken)
+        where TAggregate : AggregateRootBase;
+
     /// <summary>Adds a new aggregate.</summary>
     void Add(AggregateRootBase aggregate);
 

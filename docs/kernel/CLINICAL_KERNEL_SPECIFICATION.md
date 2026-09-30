@@ -200,6 +200,7 @@ Tenant
   `StudyCode` per tenant, `SiteCode` per organization, `SubjectCode` **per study** (resolves inventory G2).
 - **K-ID-5** Code → ID resolution is one kernel query per code type (`ResolveParticipant(studyId, code)`).
   Commands and events carry IDs only; APIs accept a code only on resolution endpoints.
+  `SubjectCode` and its resolution query (`IEnrollmentDirectory.ResolveParticipantAsync`) are implemented (ADR-2453).
 - IDs are opaque to clients and never reused.
 
 ### 3.4 Object references and zoom path (ADR-2481)
@@ -290,7 +291,9 @@ Command → Authenticate → Resolve Actor → Authorize (§9.3) → Check conse
   anonymous or `"system"` fallbacks are rejected (resolves G14).
 
 Implemented by `KernelCommandPipeline` and `KernelCommandTransaction` (ADR-2449): one PostgreSQL transaction per
-command; `KernelDbContext` refuses `SaveChanges` outside it. How to add a command:
+command; `KernelDbContext` refuses `SaveChanges` outside it. K-TX-4 locks are `IKernelUnitOfWork.LockAsync<TAggregate>(id)`:
+a PostgreSQL advisory lock on the command's connection, held until the transaction ends, at most one per command
+(ADR-2453). How to add a command:
 [`packages/kernel/README.md`](../../packages/kernel/README.md#command-pipeline-adr-2449).
 
 ### 5.2 Events
@@ -302,7 +305,7 @@ changed, pinned to its new version (§3.4; null for events about no aggregate, s
 | Family | Examples |
 | --- | --- |
 | Knowledge | `ProtocolVersionDrafted` (carries the amendment's classification), `…Approved`, `…Withdrawn`, `ConceptMapped`, `MappingSpecificationPublished`, `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
-| Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityGranted`, `StudySiteActivated`, `ParticipantEnrolled`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
+| Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityGranted`, `StudySiteActivated`, `ParticipantRegistered`, `ParticipantScreened`, `ParticipantEnrolled`, `EnrollmentStatusChanged`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
 | Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactVersioned`, `IngestionBatchAccepted` |
 | Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
 | Quality | `ValidationRunCompleted`, `FindingOpened`, `FindingResolved`, `IndicatorBreached`, `SignalRaised`, `DeviationRecorded`, `LockApplied`, `LockReleased` |
@@ -537,6 +540,11 @@ issues and performance are application state (vendor oversight) keyed by the res
   `Eligibility` Assertion per criterion, and `Screening → Enrolled | ScreenFailed` requires a complete set.
 - **Arm assignment** (resolves G7): every arm assignment, randomized or not, is an RTSM Assertion with a
   blinding class (`Open | Blinded`); the kernel Participant holds no arm.
+- **Implemented** (ADR-2453, #4776): `Participant` is identity only; `Enrollment` is an aggregate per participant
+  and study site whose status history is bitemporal rows in `enrollment_status_periods`. Subject codes are unique
+  per study, numbers are gap-free per study under the Study lock, withdrawal names a `Withdrawn` Attestation over
+  the enrollment's content hash, and a database trigger and exclusion constraint repeat the lifecycle. Eligibility
+  gating (#4727), StudySite activation gating (#4777) and per-StudySite numbering are not yet enforced.
 
 | Concept | Meaning | Owner |
 | --- | --- | --- |
@@ -1056,6 +1064,7 @@ kernel, is merged into another, or is retired.
 | K014 | Explanations | One `Explanation` type produced by the rule owner; authorization returns met and unmet conditions with evidence | ADR-2482 |
 | K015 | Dry-run authorization | One evaluator for commands and `CanI`; declared command capabilities; dry runs in the access log, not the audit chain | ADR-2483 |
 | K016 | Search | PostgreSQL full-text search over the source tables under RLS; NodeRef results; identity content excluded | ADR-2484 |
+| K017 | Participants and enrollment | Identity-only Participant; bitemporal Enrollment status rows; gap-free numbers under the Study advisory lock; attested withdrawal | ADR-2453 |
 
 ---
 

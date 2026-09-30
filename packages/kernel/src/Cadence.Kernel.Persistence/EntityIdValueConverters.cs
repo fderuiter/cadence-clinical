@@ -55,6 +55,11 @@ public class ParticipantIdValueConverter() : ValueConverter<ParticipantId, Guid>
     guid => new ParticipantId(guid)
 );
 
+public class EnrollmentIdValueConverter() : ValueConverter<EnrollmentId, Guid>(
+    id => id.Value,
+    guid => new EnrollmentId(guid)
+);
+
 public class ObservationIdValueConverter() : ValueConverter<ObservationId, Guid>(
     id => id.Value,
     guid => new ObservationId(guid)
