@@ -202,6 +202,21 @@ Tenant
   Commands and events carry IDs only; APIs accept a code only on resolution endpoints.
 - IDs are opaque to clients and never reused.
 
+### 3.4 Object references and zoom path (ADR-2481)
+
+Every kernel object has a public reference, **NodeRef** `kind:id[@version]`
+(`study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@3`), used in URLs, the command palette, trace links, event
+envelopes (`subject`) and lineage edges. `kind` is a registered lower snake_case name bound to one identifier type
+(`Cadence.Kernel.References.NodeKinds`); `id` is the lower-case UUID; `version` is the object's version index.
+Without a version the reference means "as of the read's `(valid_at, known_at)`".
+
+- **K-ID-6** Each object version has exactly one NodeRef string; parsing accepts only the canonical form, and every
+  kernel identifier type has a registered kind.
+- **K-ID-7** The presentation zoom path is computed by the kernel from a NodeRef:
+  `tenant → study → [country] → study_site → participant → clinical event → observation`, and
+  `tenant → organization → site`. A participant without a responsible study site sits directly under its study.
+  The zoom path is presentation only and never implies authority (§9.3).
+
 ### 3.3 Tenancy invariants (ADR-2250)
 
 - **K-ID-1** Every kernel table has `tenant_id NOT NULL`, every FK is composite `(tenant_id, id)`, so
@@ -276,7 +291,8 @@ command; `KernelDbContext` refuses `SaveChanges` outside it. How to add a comman
 ### 5.2 Events
 
 `Envelope{ event_id, type, schema_version, tenant, occurred_valid, recorded, actor, activity_id,
-correlation_id, causation_id, payload }`.
+correlation_id, causation_id, payload, subject }`, where `subject` is the NodeRef of the aggregate the command
+changed, pinned to its new version (§3.4; null for events about no aggregate, such as `DecisionDenied`).
 
 | Family | Examples |
 | --- | --- |
@@ -984,6 +1000,7 @@ kernel, is merged into another, or is retired.
 | K009 | Lineage | Lineage graph in the kernel schema, written transactionally, queried both ways | ADR-2255 |
 | K010 | Command pipeline and audit | One transaction per command; per-tenant hash chain; insert-only history | ADR-2449 |
 | K011 | Simulation | Evaluate-only over candidate versions; no study branches | ADR-2480 |
+| K012 | Object references and zoom path | `kind:id@version` NodeRef; kernel-computed, presentation-only zoom path | ADR-2481 |
 
 ---
 

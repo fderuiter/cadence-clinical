@@ -38,7 +38,7 @@ every kernel table, every bitemporal guard and every read.
 - **Part 11.** Simulation results that inform a decision need to be reproducible and attributable. Exploring a
   change must not create audit noise in the tenant chain.
 - **Requirements:** PRD-MDR-004 (semantic protocol amendment diffing), PRD-MDR-006 (blinding constraints on
-  UI data rendering), PRD-SYS-053 (21 CFR Part 11 attributability).
+  UI data rendering).
 - **Cost.** Every kernel table, guard and query should not grow a branch dimension for a feature the UI needs
   only for versioned specifications.
 

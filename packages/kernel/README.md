@@ -166,6 +166,21 @@ A host registers `AddKernelPersistence(appRoleConnectionString)`, `AddKernelComm
 `ICurrentActor`, an `IAuthorizer` and logging; the container fails to resolve the sender if any is missing. The host
 that runs `AddKernelBackgroundJobs()` also registers an `IKernelEventPublisher`.
 
+## Object references and navigation (ADR-2481)
+
+Every kernel object is referenced publicly as a `NodeRef` (`Cadence.Kernel.References`): `kind:id` or
+`kind:id@version`, for example `study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@3`. `NodeRef.Parse` accepts only the
+canonical string, and `NodeRef.For(studySiteId)` builds one from a typed id. When you add a strongly-typed identifier to
+`Cadence.Kernel.Abstractions`, register its kind in `NodeKinds`; `NodeRefTests` fails until you do.
+
+Every event envelope carries `Subject`, the NodeRef of the aggregate the command changed at its new version.
+
+`IKernelNavigator` (`AddKernelNavigation()` in Application, `AddKernelScopeGraph()` in Persistence) resolves a NodeRef
+to a `NodeSummary`, computes its zoom path (`tenant → study → country → study_site → participant`, or
+`tenant → organization → site`) and lists its children with counts. A participant with no responsible study site
+sits directly under its study (`ZoomRules.ParticipantParent`). When a slice maps a new kind, add its case to
+`KernelScopeGraph` with the kind's zoom parent.
+
 ## Migrations
 
 ```bash

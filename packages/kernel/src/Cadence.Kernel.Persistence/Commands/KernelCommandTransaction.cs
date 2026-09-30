@@ -10,6 +10,7 @@ using Cadence.Core.Domain;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.References;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -114,7 +115,7 @@ internal sealed class KernelCommandTransaction(
             foreach (var (domainEvent, occurredValid) in _events)
             {
                 var attribute = EventAttribute(domainEvent.GetType());
-                AddEvent(attribute.Type, attribute.SchemaVersion, JsonSerializer.SerializeToElement(domainEvent, domainEvent.GetType(), KernelCommandPipelineJson.Options), occurredValid);
+                AddEvent(attribute.Type, attribute.SchemaVersion, JsonSerializer.SerializeToElement(domainEvent, domainEvent.GetType(), KernelCommandPipelineJson.Options), occurredValid, aggregate?.Subject);
             }
 
             Fault(CommitStage.EventsStaged);
@@ -229,7 +230,10 @@ internal sealed class KernelCommandTransaction(
                 break;
         }
 
-        return new ChangedAggregate(entry.Metadata.ClrType.Name, KeyText(entry), aggregate.VersionIndex, action, changes);
+        var subject = entry.Metadata.FindPrimaryKey()?.Properties is [var key] && entry.Property(key.Name).CurrentValue is IEntityId id
+            ? NodeRef.For(id, aggregate.VersionIndex)
+            : null;
+        return new ChangedAggregate(entry.Metadata.ClrType.Name, KeyText(entry), aggregate.VersionIndex, action, changes, subject);
     }
 
     private static SortedDictionary<string, object?> Snapshot(EntityEntry entry, bool modifiedOnly, bool original)
@@ -274,7 +278,7 @@ internal sealed class KernelCommandTransaction(
             CausationId = execution.Metadata.CausationId,
         });
 
-    private void AddEvent(string type, int schemaVersion, JsonElement payload, DateTimeOffset? occurredValid)
+    private void AddEvent(string type, int schemaVersion, JsonElement payload, DateTimeOffset? occurredValid, NodeRef? subject = null)
     {
         var envelope = new EventEnvelope(
             Guid.CreateVersion7(),
@@ -287,7 +291,8 @@ internal sealed class KernelCommandTransaction(
             execution.ActivityId,
             execution.Metadata.CorrelationId,
             execution.Metadata.CausationId,
-            payload);
+            payload,
+            subject);
 
         db.DomainEvents.Add(new DomainEventRecord
         {
@@ -364,7 +369,7 @@ internal sealed class KernelCommandTransaction(
 
     private static string Serialize(object value) => JsonSerializer.Serialize(value, KernelCommandPipelineJson.Options);
 
-    private sealed record ChangedAggregate(string Type, string Id, long Version, string Action, string Changes);
+    private sealed record ChangedAggregate(string Type, string Id, long Version, string Action, string Changes, NodeRef? Subject);
 }
 
 /// <summary>JSON options shared by kernel persistence for event payloads, envelopes and audit change sets.</summary>
