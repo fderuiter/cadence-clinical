@@ -369,7 +369,7 @@ A static AST analysis and dependency resolution model that evaluates Python and 
 
 ### Ephemeral In-Memory Database Harness
 
-An isolated test execution pattern where fast unit tests and TDD slices run against zero-IO in-memory SQLite instances and mock graph repositories, bypassing PostgreSQL and Neo4j network services to guarantee sub-500ms test iteration loops.
+An isolated test execution pattern where fast unit tests and TDD slices run against zero-IO in-memory SQLite instances and in-memory repositories, bypassing PostgreSQL to guarantee sub-500ms test iteration loops.
 
 ### Progressive Disclosure Zoom Token
 
@@ -854,7 +854,7 @@ _Avoid_: Promoting pre-release development environments as production-qualified 
 
 ### Digital Data Flow (DDF) Pipeline
 
-The automated, bi-directional translation pipeline bridging upstream CDISC USDM protocol graphs in Neo4j to downstream OpenRosa/Enketo XForms and relational eCRF tables in PostgreSQL via a strongly-typed DDF Intermediate Representation (IR) and XPath Rule Compiler.
+The automated, bi-directional translation pipeline bridging upstream CDISC USDM protocol definitions (ProtocolVersion snapshots in PostgreSQL, ADR-2245) to downstream OpenRosa/Enketo XForms and relational eCRF tables in PostgreSQL via a strongly-typed DDF Intermediate Representation (IR) and XPath Rule Compiler.
 _Avoid_: Manual protocol-to-EDC build translation, lossy template dictionaries
 
 ### Programmatic API Documentation Engine

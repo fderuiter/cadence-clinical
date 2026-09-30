@@ -1,8 +1,11 @@
 # ADR-2262: Neo4j Graph Database for Clinical Metadata
 
+> [!NOTE]
+> Superseded by [ADR-2245](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md). Neo4j is retired; protocol versions are immutable snapshots in PostgreSQL.
+
 ## Status
 
-Accepted
+Superseded by [ADR-2245](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)
 
 ## Context
 

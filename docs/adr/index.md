@@ -48,7 +48,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 
 ### 1. Core Platform & Execution Engine
 
-- [ADR-2262: Neo4j Graph Database for Clinical Metadata](2023-01-01-neo4j-graph-database.md) (2023-01-01)
+- [ADR-2262: Neo4j Graph Database for Clinical Metadata](2023-01-01-neo4j-graph-database.md) (2023-01-01) *(Superseded by ADR-2245)*
 - [ADR-2263: PostgreSQL Relational Database for Execution](2023-01-02-postgresql-relational-database.md) (2023-01-02)
 - [ADR-2264: Pydantic v2 for Domain Models](2023-01-03-pydantic-v2-domain-models.md) (2023-01-03)
 - [ADR-042: Decoupled API-First In-Memory Diffing](2026-07-22-api-first-in-memory-diffing.md) (2026-07-22)
