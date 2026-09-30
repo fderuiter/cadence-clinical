@@ -204,6 +204,10 @@ describe("Canvas authority mirror", () => {
       "auditor",
       "sponsor_admin",
       "admin",
+      "sponsor_dm",
+      "data_manager",
+      "data manager",
+      "dm",
     ]) {
       expect(canManageParticipants({ rawRoles: [role] }), role).toBe(false);
     }

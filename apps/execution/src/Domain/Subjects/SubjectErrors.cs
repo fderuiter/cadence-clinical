@@ -40,7 +40,7 @@ public static class SubjectErrors
     /// <summary>The caller holds no role that may change a participant's record (#4943).</summary>
     public static DomainError UnauthorizedParticipantRole(string roles) =>
         DomainError.Forbidden("UNAUTHORIZED_SUBJECT_ROLE",
-            $"Role '{roles}' is not authorized to change a participant's record. Permitted roles: investigator, clinical research coordinator, data manager.");
+            $"Role '{roles}' is not authorized to change a participant's record. Permitted roles: investigator, clinical research coordinator.");
 
     /// <summary>The caller holds no unblinding authority, so cannot move a participant to UNBLINDED (#4943).</summary>
     public static DomainError UnauthorizedUnblindRole(string roles) =>

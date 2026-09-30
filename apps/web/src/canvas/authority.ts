@@ -13,9 +13,9 @@ interface RawRoleHolder {
 }
 
 /**
- * Execution's SubjectAuthority.CanManageParticipants: investigators, coordinators and data managers. Compared
- * with Execution's own normalisation (trimmed, lower case) and without the web app's role aliases, because
- * Execution does not apply them: a sponsor admin, a monitor or an auditor gets a 403.
+ * Execution's SubjectAuthority.CanManageParticipants: investigators and coordinators. Compared with Execution's
+ * own normalisation (trimmed, lower case) and without the web app's role aliases, because Execution does not
+ * apply them: a data manager (#4981), a sponsor admin, a monitor or an auditor gets a 403.
  */
 const PARTICIPANT_ROLES = new Set([
   "investigator",
@@ -34,11 +34,6 @@ const PARTICIPANT_ROLES = new Set([
   "site coordinator",
   "site_coordinator",
   "clinical research coordinator",
-  "sponsor_dm",
-  "data_manager",
-  "data manager",
-  "data-manager",
-  "dm",
 ]);
 
 /** Add participants and change their state. */
