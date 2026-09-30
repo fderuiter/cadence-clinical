@@ -132,18 +132,21 @@ events, outbox, idempotency or chain.
 
 - Code: `packages/kernel/src/Cadence.Kernel.Abstractions/Commands`, `Cadence.Kernel.Application/Commands`,
   `Cadence.Kernel.Persistence/Commands`, migration `20260929223332_CommandPipeline`.
-- `tests/Kernel/Integration/KernelCommandPipelinePostgresTests.cs` (real PostgreSQL): the full write set as one
+- `tests/Cadence.IntegrationTests/Kernel/KernelCommandPipelinePostgresTests.cs` (real PostgreSQL): the full write set as one
   activity; replay and conflicting reuse of a key; concurrent sends with one key write once; no actor and invalid
   commands write nothing; audited denials; a failure injected at every commit stage persists nothing; duplicate codes
   map to `K.Aggregate.AlreadyExists`; concurrent commands keep one tenant's chain linear; the verifier detects an
-  edited link; every insert-only table rejects `UPDATE`, `DELETE` and `TRUNCATE`; K-TX-1; optimistic concurrency.
-- `tests/Kernel/KernelCommandPipelineTests.cs`: actor rules, error registry, request hash, time truncation, and the
-  order of refusals before any unit of work opens.
-- `tests/Kernel/Integration/KernelSchemaPostgresTests.cs`: the write guard refuses `SaveChanges` outside the pipeline.
-- `tests/Kernel/Integration/KernelOutboxAndSealingPostgresTests.cs` (real PostgreSQL): events delivered once and
+  edited link; every insert-only table rejects `UPDATE`, `DELETE` and `TRUNCATE`; K-TX-1; optimistic concurrency;
+  the K-TX-4 aggregate lock (one per command, held until disposed, scoped by tenant and type).
+- `tests/Cadence.UnitTests/Kernel/KernelCommandPipelineTests.cs`: actor rules, error registry, request hash, time
+  truncation, the order of refusals before any unit of work opens, and what each commit outcome returns: a same-key
+  winner is replayed; otherwise a concurrency conflict, `AlreadyExists` for a unique conflict, and a defect for an
+  idempotency race with no stored outcome.
+- `tests/Cadence.IntegrationTests/Kernel/KernelSchemaPostgresTests.cs`: the write guard refuses `SaveChanges` outside the pipeline.
+- `tests/Cadence.IntegrationTests/Kernel/KernelOutboxAndSealingPostgresTests.cs` (real PostgreSQL): events delivered once and
   marked dispatched; a failed delivery retries after its backoff while only its own tenant waits; concurrent relays
   deliver each event once; an intact chain is sealed only when it grows; a broken chain is not sealed; a chain cut
   back below its seal is reported broken; verification stays intact while commands append.
-- `tests/Kernel/KernelBackgroundJobsTests.cs`: the relay and sealing services are registered and resolvable.
+- `tests/Cadence.UnitTests/Kernel/KernelBackgroundJobsTests.cs`: the relay and sealing services are registered and resolvable.
 - Code for items 11-14: `Cadence.Kernel.Persistence/Outbox`, `/Audit`, `/Background`, migration
   `20260929234442_OutboxRelayAndChainSeals`.
