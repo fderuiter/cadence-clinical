@@ -21,6 +21,7 @@ public partial class WarningSuppressionPolicyTests
         "packages/contracts/src/Cadence.Contracts.csproj",
         "packages/kernel/src/Cadence.Kernel.Api/Cadence.Kernel.Api.csproj",
         "packages/kernel/src/Cadence.Standards/Cadence.Standards.csproj",
+        "packages/kernel/src/Cadence.Rules/Cadence.Rules.csproj",
     ];
 
     private static readonly string[] SourceRoots = ["apps", "packages", "tests"];

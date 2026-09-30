@@ -836,6 +836,12 @@ RulePack(id, version, authority, rules[], release Attestation)
   workloads without changing the model. The existing `AstEditCheckEngine` is the seed.
 - **K-RULE-4** Evaluation is deterministic: same rule version + same inputs → same findings.
 
+Implemented by #4811 ([ADR-2461](../adr/2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md)):
+`Cadence.Rules` holds the expression language, the rule-pack reader and `IRuleEvaluator` with its .NET
+implementation; it references `Cadence.Kernel.Abstractions` only. A `RulePack` is a library item of kind `RulePack`
+(§6.3): its release `Attestation` is the library item's approval, and a study uses the versions its standards profile
+pins. Rule packs are described in [RULE_PACKS.md](RULE_PACKS.md).
+
 ### 10.2 Validation across the lifecycle
 
 | Stage | Examples | Blocking effect |
@@ -1065,6 +1071,7 @@ kernel, is merged into another, or is retired.
 | K015 | Dry-run authorization | One evaluator for commands and `CanI`; declared command capabilities; dry runs in the access log, not the audit chain | ADR-2483 |
 | K016 | Search | PostgreSQL full-text search over the source tables under RLS; NodeRef results; identity content excluded | ADR-2484 |
 | K017 | Participants and enrollment | Identity-only Participant; bitemporal Enrollment status rows; gap-free numbers under the Study advisory lock; attested withdrawal | ADR-2453 |
+| K018 | Rule language and evaluator | Canonical JSON AST with Kleene logic and fixed coercions; packs are `RulePack` library items; `IRuleEvaluator` in `Cadence.Rules` | ADR-2461 |
 
 ---
 

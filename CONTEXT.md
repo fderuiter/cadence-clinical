@@ -137,7 +137,7 @@ The Standards Registry holds each standard version a tenant uses (SDTMIG, ADaMIG
 
 ### Rules, Validation Findings and Lineage
 
-Validation, edit-check and conformance rules are versioned data evaluated by one AST engine behind `IRuleEvaluator` (ADR-2254), producing `ValidationFinding`s with workflow and stable identity across runs. Every derived object carries lineage edges written in the same transaction, so any value traces back to its source and any objective forward to its results (ADR-2255).
+Validation, edit-check and conformance rules are versioned data evaluated by one AST engine behind `IRuleEvaluator` (ADR-2254). A **Rule** has an ID, a version, an authority, a citation of the public or sponsor document it implements, an applicability (lifecycle stage, standard, standard version, agency, dataset), a severity and a condition that is true when a record violates it. A **RulePack** groups rules and is a Metadata Registry item: approving it is its release, and a study uses the versions it pins (ADR-2461). Evaluation produces `ValidationFinding`s with workflow and stable identity across runs. Every derived object carries lineage edges written in the same transaction, so any value traces back to its source and any objective forward to its results (ADR-2255).
 
 ### Clinical Kernel Modular Monolith
 

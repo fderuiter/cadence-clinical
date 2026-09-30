@@ -24,10 +24,11 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Architecture/Kern
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host.
 - `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to.
 - `Cadence.Standards`: reads public CDISC Library product content into a `StandardPackage` and ships checksum-verified seeds (see [its README](src/Cadence.Standards/README.md)). References only `Cadence.Kernel.Abstractions`.
+- `Cadence.Rules`: the rule expression language, rule packs and the `IRuleEvaluator` port with its .NET implementation (see [its README](src/Cadence.Rules/README.md) and [Rule packs](../../docs/kernel/RULE_PACKS.md)). References only `Cadence.Kernel.Abstractions`. Its benchmark is `benchmarks/Cadence.Rules.Benchmarks`.
 
 Rendering lives in `packages/templating` (`Cadence.Templating`), outside the kernel.
 
-`Cadence.Kernel.Api` and `Cadence.Standards` set `CadenceRequireXmlDocs`, so every public member needs an XML
+`Cadence.Kernel.Api`, `Cadence.Standards` and `Cadence.Rules` set `CadenceRequireXmlDocs`, so every public member needs an XML
 comment (CS1591 fails the build). The other kernel assemblies do not yet: on 2026-09-30 they had about 890
 undocumented public members (Abstractions 609, Domain 196, Application 46, Persistence 37). Set the property in a
 project once its comments are written ([CONTRIBUTING.md §3](../../CONTRIBUTING.md#3-local-checks)).
@@ -275,8 +276,9 @@ Standard definitions and the governed library are tenant-scoped kernel data (spe
 - Deprecating a standard version or library item stops new pins; it never changes a study that already pinned it.
 - Dataset, variable, value-level and terminology rows are insert-only (`KA001`); the identity and content columns of
   `standard_versions` and `library_items` are immutable (`KS001`, `ImmutableColumnsSql`).
-- Library content is validated per kind by any registered `ILibraryContentValidator`; kinds without one accept any
-  JSON object. Rule packs and mapping specifications add their validators with #4811 and #4810.
+- Library content is validated per kind by any registered `ILibraryContentValidator` (in Abstractions, so other
+  assemblies can provide one); kinds without one accept any JSON object. `AddCadenceRules()` registers the `RulePack`
+  validator (ADR-2461); mapping specifications add theirs with #4810.
 - CT bindings are `CodeSystemVersionRef(code system, version)` until the Concept Registry (#4807) resolves them.
 
 A host that uses the registry also calls `AddKernelStandards()` (handlers) and `AddKernelStandardsPersistence()`

@@ -20,6 +20,9 @@ using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
+using Cadence.Rules;
+using Cadence.Rules.Evaluation;
+using Cadence.Rules.Packs;
 using Cadence.Testing.Time;
 
 using Microsoft.EntityFrameworkCore;
@@ -117,6 +120,7 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddKernelCommandPipeline()
             .AddKernelStandardsPersistence()
             .AddKernelStandards()
+            .AddCadenceRules()
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
     }
 
@@ -153,6 +157,12 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The Standards Registry read side, as a host resolves it.</summary>
     public IStandardsRegistry Standards => Scope().GetRequiredService<IStandardsRegistry>();
+
+    /// <summary>The rule pack loader, as a host resolves it.</summary>
+    public RulePackLoader RulePacks => Scope().GetRequiredService<RulePackLoader>();
+
+    /// <summary>The rule evaluator, as a host resolves it.</summary>
+    public IRuleEvaluator RuleEvaluator => Scope().GetRequiredService<IRuleEvaluator>();
 
     /// <summary>The tenant-scoped context factory the kernel uses, including the tenant directory.</summary>
     internal KernelTenantDbContextFactory TenantContexts => Scope().GetRequiredService<KernelTenantDbContextFactory>();

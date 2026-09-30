@@ -32,6 +32,8 @@
     <ProjectReference Include="..\packages\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
     <ProjectReference Include="..\packages\kernel\src\Cadence.Kernel.Api\Cadence.Kernel.Api.csproj" />
     <ProjectReference Include="..\packages\kernel\src\Cadence.Standards\Cadence.Standards.csproj" />
+    <ProjectReference Include="..\packages\kernel\src\Cadence.Rules\Cadence.Rules.csproj" />
+    <ProjectReference Include="..\packages\kernel\benchmarks\Cadence.Rules.Benchmarks\Cadence.Rules.Benchmarks.csproj" />
     <ProjectReference Include="..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\packages\testing\src\Cadence.Testing.csproj" />
     <ProjectReference Include="..\apps\payments\src\Cadence.Apps.Payments.csproj" />
