@@ -90,10 +90,11 @@ needed; those values are for local use only.
 dotnet run --project apps/apphost/src/Cadence.AppHost.csproj
 ```
 
-The AppHost starts PostgreSQL (database `cadence`, with pgAdmin), MinIO, Keycloak and the gateway,
-execution, designer, ctms, etmf, quality and fileshare services, and sets
-`OTEL_EXPORTER_OTLP_ENDPOINT` so telemetry shows in the Aspire dashboard. Supply `GATEWAY_SECRET` and
-`OIDC_AUTHORITY` in your environment first.
+The AppHost starts PostgreSQL (database `cadence`, with pgAdmin), MinIO, Keycloak (with the `cadence` realm
+imported) and all 18 .NET services on the same host ports as docker compose: the gateway on 8000 and the
+services on 8001 to 8017. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so telemetry shows in the Aspire dashboard.
+Set its secret parameters once with `dotnet user-secrets` first; [apps/apphost](../apps/apphost/README.md)
+lists them.
 
 ### Option C: one service
 
