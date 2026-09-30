@@ -131,9 +131,12 @@ Sources are an explicit allow-list in `KernelSearchStore`. A table is searchable
   - migration `KernelSearchIndexes` (GIN indexes only).
 - **Verification Plan:**
   - `KernelSearchTests`: text reduced to prefix words (operators stripped, any script); no words means no query;
-    identity sources searched only with the reveal capability; kinds filter; limits validated.
+    identity sources searched only with the reveal capability; kinds filter; limits validated; long text cut before
+    codes and words; no store query when no source is left; the store refusing unknown sources.
   - `KernelSearchPostgresTests`:
     - studies, sites and organizations found by title words and exact codes;
     - no object from another tenant is ever returned (PRD-CRF-013);
     - terminology codes and concepts found with their NodeRefs;
+    - code systems, standard versions and library items found with their detail, and exact codes matched in any case;
+    - equal matches ordered by title, with the limit cutting the ordered list;
     - the migration creates every index, and every query expression uses its index.

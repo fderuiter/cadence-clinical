@@ -9,6 +9,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Search;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Explanations;
+using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
 
@@ -99,6 +100,52 @@ public sealed class KernelSearchTests
         await FluentActions.Awaiting(() => search.SearchAsync(Tenant, new SearchRequest("x", Limit: 0), ct)).Should().ThrowAsync<ArgumentOutOfRangeException>();
         await FluentActions.Awaiting(() => search.SearchAsync(Tenant, new SearchRequest("x", Limit: 51), ct)).Should().ThrowAsync<ArgumentOutOfRangeException>();
         await FluentActions.Awaiting(() => search.SearchAsync(default, new SearchRequest("x"), ct)).Should().ThrowAsync<ArgumentException>();
+    }
+
+    /// <summary>
+    /// Text longer than <see cref="KernelSearch.MaxTextLength"/> is cut before it is compared with codes or split into
+    /// words, so a word past the cut never reaches the query.
+    /// </summary>
+    [Fact(DisplayName = "Search_TruncatesLongText_BeforeCodesAndWords")]
+    public async Task SearchTruncatesLongTextBeforeCodesAndWords()
+    {
+        var store = new RecordingStore();
+        var text = new string('a', KernelSearch.MaxTextLength - 1) + " tail";
+
+        await new KernelSearch(store, new Probe(permit: true)).SearchAsync(Tenant, new SearchRequest(text), TestContext.Current.CancellationToken);
+
+        store.Plan!.Text.Should().HaveLength(KernelSearch.MaxTextLength).And.Be(text[..KernelSearch.MaxTextLength]);
+        store.Plan.PrefixQuery.Should().Be(new string('a', KernelSearch.MaxTextLength - 1) + ":*", "\"tail\" lies past the cut");
+    }
+
+    /// <summary>
+    /// When no source is left, because the kinds match none or the only match needs a reveal the actor lacks, the store
+    /// is never asked.
+    /// </summary>
+    [Theory(DisplayName = "Search_WithNoSourceLeft_NeverAsksTheStore")]
+    [InlineData(NodeKinds.Enrollment, true)]
+    [InlineData(NodeKinds.Person, false)]
+    public async Task SearchWithNoSourceLeftNeverAsksTheStore(string kind, bool permitted)
+    {
+        var store = new RecordingStore();
+
+        var hits = await new KernelSearch(store, new Probe(permitted)).SearchAsync(
+            Tenant, new SearchRequest("smith", [kind]), TestContext.Current.CancellationToken);
+
+        hits.Should().BeEmpty();
+        store.Plan.Should().BeNull();
+    }
+
+    /// <summary>The store refuses a source it does not know and returns nothing for no sources, without querying.</summary>
+    [Fact(DisplayName = "Store_RefusesUnknownSources_AndReturnsNothingForNone")]
+    public async Task StoreRefusesUnknownSourcesAndReturnsNothingForNone()
+    {
+        var store = new KernelSearchStore(null!);
+        var ct = TestContext.Current.CancellationToken;
+
+        await FluentActions.Awaiting(() => store.QueryAsync(TenantId.New(), new SearchPlan("x:*", "x", ["studies", "enrollments"], 10), ct))
+            .Should().ThrowAsync<ArgumentException>().WithMessage("*enrollments*");
+        (await store.QueryAsync(TenantId.New(), new SearchPlan("x:*", "x", [], 10), ct)).Should().BeEmpty();
     }
 
     private sealed class RecordingStore : IKernelSearchStore

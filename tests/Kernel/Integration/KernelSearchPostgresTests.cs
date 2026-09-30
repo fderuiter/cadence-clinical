@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,6 +15,8 @@ using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Kernel.Standards;
+using Cadence.Standards;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -160,6 +163,63 @@ public sealed class KernelSearchPostgresTests(KernelPostgresFixture fixture) : I
 
             plan.ToString().Should().Contain(source.IndexName, $"the {source.Name} query should use its index");
         }
+    }
+
+    /// <summary>
+    /// Code systems, standard versions and library items are found by their titles and codes, with their detail
+    /// column (publisher, standard version), and a code typed in another case still counts as an exact match.
+    /// </summary>
+    [Fact(DisplayName = "Search_FindsCodeSystemsStandardsAndLibraryItems")]
+    public async Task SearchFindsCodeSystemsStandardsAndLibraryItems()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        await Send(new ProvisionTenant(tenant, $"T{tenant.Value:N}"[..20], "Search registry", Key(), Reason), ct);
+        var codeSystem = await Send(new RegisterCodeSystem(tenant, CodeSystemId.New(), "urn:test:zephyr", "Zephyr Dictionary", "Zephyr Group", LicenseClass.Open, Key(), Reason), ct);
+        var package = StandardSeeds.LoadAll().Single(s => s.Package.StandardCode == "SDTMIG").Package;
+        var standard = await Send(new RegisterStandardVersion(tenant, StandardVersionId.New(), package, null, Key(), Reason), ct);
+        using var content = JsonDocument.Parse("""{"codelist":"C66770","terms":["mmHg","beats/min"]}""");
+        var item = await Send(new DraftLibraryItem(
+            tenant, LibraryItemId.New(), LibraryItemKind.CodelistSubset, "VS original units", "Vital sign units", content.RootElement, [], Key(), Reason), ct);
+
+        var byName = await Search().SearchAsync(tenant, new SearchRequest("zephyr"), ct);
+        var byLowerCaseCode = await Search().SearchAsync(tenant, new SearchRequest("sdtmig"), ct);
+        var byItemTitle = await Search().SearchAsync(tenant, new SearchRequest("vital sign"), ct);
+
+        byName.Should().ContainSingle().Which.Should().Match<SearchHit>(h =>
+            h.Ref == NodeRef.For(codeSystem, 1) && h.Title == "Zephyr Dictionary" && h.Code == null && h.Detail == "Zephyr Group" && !h.ExactCode);
+        byLowerCaseCode[0].Should().Match<SearchHit>(h =>
+            h.Ref.Kind == NodeKinds.StandardVersion && h.Ref.Id == standard.Value && h.Code == "SDTMIG" && h.ExactCode && h.Detail == package.Version);
+        byItemTitle.Should().ContainSingle().Which.Should().Match<SearchHit>(h =>
+            h.Ref.Kind == NodeKinds.LibraryItem && h.Ref.Id == item.Id.Value && h.Title == "Vital sign units" && h.Code == "VS original units");
+    }
+
+    /// <summary>
+    /// Results that match equally are ordered by title, and the limit cuts the ordered list rather than an arbitrary
+    /// subset.
+    /// </summary>
+    [Fact(DisplayName = "Search_OrdersEqualMatchesByTitle_AndStopsAtTheLimit")]
+    public async Task SearchOrdersEqualMatchesByTitleAndStopsAtTheLimit()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var sponsor = OrganizationId.New();
+        var actor = KernelPostgresFixture.ActorId;
+        await fixture.SeedAsync(
+            new Tenant(tenant, "ORDR", "Order Pharma", actor, Reason),
+            new Organization(sponsor, tenant, "ORDR-ORG", "Order Sponsor", OrganizationKind.Sponsor, actor, Reason),
+            new Study(StudyId.New(), tenant, sponsor, "ORDR-1", "Delta Oncology", "Phase 2", actor, Reason),
+            new Study(StudyId.New(), tenant, sponsor, "ORDR-2", "Alpha Oncology", "Phase 2", actor, Reason),
+            new Study(StudyId.New(), tenant, sponsor, "ORDR-3", "Charlie Oncology", "Phase 2", actor, Reason),
+            new Study(StudyId.New(), tenant, sponsor, "ORDR-4", "Bravo Oncology", "Phase 2", actor, Reason));
+
+        var all = await Search().SearchAsync(tenant, new SearchRequest("oncology", [NodeKinds.Study]), ct);
+        var firstTwo = await Search().SearchAsync(tenant, new SearchRequest("oncology", [NodeKinds.Study], Limit: 2), ct);
+
+        all.Select(h => h.Title).Should().Equal("Alpha Oncology", "Bravo Oncology", "Charlie Oncology", "Delta Oncology");
+        firstTwo.Select(h => h.Title).Should().Equal("Alpha Oncology", "Bravo Oncology");
     }
 
     private KernelSearch Search() => new(new KernelSearchStore(fixture.TenantContexts), new PermitProbe());
