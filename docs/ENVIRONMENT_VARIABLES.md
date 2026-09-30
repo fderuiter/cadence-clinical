@@ -61,6 +61,21 @@ different keys. See [ADR-2494](adr/2026-09-30-field-level-encryption-and-keyed-l
 | `FIELD_ENCRYPTION_KEY` | `packages/security/src/FieldProtection/FieldProtectionServiceCollectionExtensions.cs` (`AddCadenceFieldEncryption`), called by `apps/payments/src/Program.cs` and `apps/econsent/src/Program.cs` | none | yes (payments, econsent); the service refuses to start without a valid key. Rotating it makes existing ciphertext unreadable |
 | `FIELD_LOOKUP_HASH_KEY` | same file (`AddCadenceLookupHashing`), called by `apps/interop/src/Program.cs` | none | yes (interop); the service refuses to start without a valid key. Rotating it orphans stored device-token hashes |
 
+## Object storage
+
+Read by `AddCadenceStorage` in `packages/storage/src/StorageServiceCollectionExtensions.cs`. No service calls it yet;
+a service that does fails at startup when a required key is missing.
+
+| Key | Read by | Default | Required |
+| --- | --- | --- | --- |
+| `Storage__Provider` | `AddCadenceStorage` | none | yes; `s3`, `minio`, or `memory` (in-process, Development only) |
+| `Storage__BucketName` | same (`S3StorageOptions`) | none | yes for `s3` and `minio` |
+| `Storage__Region` | same | `us-east-1` | no |
+| `Storage__ServiceUrl` | same | none (Amazon S3) | yes for `minio`; an S3-compatible endpoint, which turns on path-style addressing |
+| `Storage__ForcePathStyle` | same | on when `Storage__ServiceUrl` is set | no |
+| `Storage__ServerSideEncryption` | same | `AES256` | no; `aws:kms` for KMS, empty to turn it off |
+| `Storage__AccessKeyId`, `Storage__SecretAccessKey` | same | none; the AWS default credential chain (environment, profile, instance or task role) | no; set both or neither. There is no default key |
+
 ## Gateway routing
 
 Read by `apps/gateway/src/Program.cs:105-122`. In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.

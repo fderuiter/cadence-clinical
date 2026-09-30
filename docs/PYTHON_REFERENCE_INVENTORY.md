@@ -21,7 +21,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | [packages/ddf](#packagesddf) | 8 | 0 | 2 |
 | [packages/engine_core](#packagesengine_core) | 21 | 0 | 0 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
-| [packages/storage](#packagesstorage) | 6 | 0 | 0 |
+| [packages/storage](#packagesstorage) | 2 | 0 | 4 |
 
 ## packages/ddf
 
@@ -98,9 +98,9 @@ that they are dropped.
 
 | Python file | What it does | C# today | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `adapters/minio_adapter.py` | MinIO subclass of the S3 adapter | none | Port missing |  |
-| `adapters/s3_adapter.py` | S3 put/get with SHA-256 check, SSE, presigned get/put URLs, multipart | none (only `InMemoryBlobStore`, whose presigned URLs are mock strings) | Port missing |  |
-| `factory.py` | Picks the local, S3 or MinIO adapter from environment | none | Port missing |  |
+| `adapters/minio_adapter.py` | MinIO subclass of the S3 adapter | `S3BlobStore` with `Storage:ServiceUrl` (path-style addressing) | Ported, deletion pending | `S3BlobStoreTests`, `StorageRegistrationTests` |
+| `adapters/s3_adapter.py` | S3 put/get with SHA-256 check, SSE, presigned get/put URLs, multipart | `packages/storage/src/S3BlobStore.cs` | Ported, deletion pending | `S3BlobStoreTests` |
+| `factory.py` | Picks the local, S3 or MinIO adapter from environment | `AddCadenceStorage` (`StorageServiceCollectionExtensions.cs`); the provider is named, never guessed from the endpoint | Ported, deletion pending | `StorageRegistrationTests` |
 | `gdrive.py` | Google Drive run-manifest upload for GxP recordings | none (`pnpm cadence record setup-gdrive` prints "not implemented yet", `packages/cli/src/Commands/RecordCommands.cs:10`) | Port missing |  |
 | `local_store.py` | Filesystem provider with checksum and path-traversal guard | none | Port missing |  |
-| `s3_store.py` | Older S3 provider | none | Port missing | The owner may treat it as a duplicate of `adapters/s3_adapter.py` |
+| `s3_store.py` | Older S3 provider | `S3BlobStore` (a duplicate of `adapters/s3_adapter.py`) | Ported, deletion pending | `S3BlobStoreTests` |
