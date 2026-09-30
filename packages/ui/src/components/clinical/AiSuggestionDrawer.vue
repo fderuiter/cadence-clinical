@@ -385,7 +385,11 @@ const toggleEdit = () => {
 }
 
 .ai-drawer-panel {
-  width: min(640px, 94vw);
+  width: var(
+    --semantic-drawer-width-lg,
+    var(--drawer-width-lg, min(100vw, 640px))
+  );
+  max-width: 100vw;
   height: 100vh;
   background: var(--color-surface, #ffffff);
   border-left: 1px solid var(--color-border, #e2e8f0);
@@ -698,6 +702,40 @@ code.ai-provenance-val {
   }
   100% {
     transform: rotate(360deg);
+  }
+}
+
+/* Mobile Breakpoint Overrides (max-width: 640px) */
+@media (max-width: 640px) {
+  .ai-drawer-panel {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .ai-drawer-header,
+  .ai-drawer-body,
+  .ai-drawer-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .ai-drawer-footer {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ai-footer-right {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .ai-footer-right .btn,
+  .btn-dismiss {
+    width: 100%;
+    min-height: var(--semantic-touch-target-min, 48px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 </style>

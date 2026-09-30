@@ -696,8 +696,11 @@ onUnmounted(() => {
 }
 
 .share-drawer {
-  width: 480px;
-  max-width: 95vw;
+  width: var(
+    --semantic-drawer-width-md,
+    var(--drawer-width-md, min(100vw, 480px))
+  );
+  max-width: 100vw;
   background: #ffffff;
   height: 100%;
   display: flex;
@@ -830,6 +833,7 @@ onUnmounted(() => {
 
 .form-control {
   width: 100%;
+  max-width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1042,5 +1046,61 @@ onUnmounted(() => {
   margin: 0 0 10px 0;
   font-size: 0.8rem;
   color: #991b1b;
+}
+
+/* Mobile Breakpoint Overrides (max-width: 640px) */
+@media (max-width: 640px) {
+  .share-drawer {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .drawer-header,
+  .drawer-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .drawer-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .drawer-actions .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: var(--semantic-touch-target-min, 48px);
+  }
+
+  .url-copy-box {
+    flex-direction: column;
+  }
+
+  .btn-copy-link {
+    width: 100%;
+    min-height: var(--semantic-touch-target-min, 48px);
+  }
+
+  .grant-row-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .grant-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .tab-navigation {
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    min-height: var(--semantic-touch-target-min, 48px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 </style>
