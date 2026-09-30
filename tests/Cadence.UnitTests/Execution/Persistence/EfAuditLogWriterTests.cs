@@ -2,6 +2,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -26,7 +27,7 @@ public class EfAuditLogWriterTests
     private static ExecutionDbContext CreateContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseInMemoryDatabase(databaseName)
-            .AddInterceptors(new GxPAuditInterceptor(() => Actor))
+            .AddInterceptors(new GxPAuditInterceptor(() => Actor, SystemClock.Instance))
             .Options);
 
     private static ClinicalSubject NewSubject(string code) =>

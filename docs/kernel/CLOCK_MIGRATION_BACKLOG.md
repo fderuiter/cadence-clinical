@@ -31,6 +31,10 @@
   `ServerTimestamp`, eConsent's `SignedAt` and `WithdrawalDate`) are `required` with no default, so code that creates a row must pass a time it took from `IClock` (or, for `DeviceTimestamp`, the device's own time).
   The columns were already `timestamp with time zone`, so the change needs no migration
   (`dotnet ef migrations has-pending-model-changes` reports none).
+- `packages/database`'s `GxPAuditInterceptor` takes a required `IClock` and no longer falls back to the wall clock,
+  so every audit field and audit entry timestamp comes from the injected clock (#4784). Execution passes its
+  registered `IClock`. The value is still normalized to UTC `DateTime` before hashing, so the Merkle block hash
+  format is unchanged and no migration is needed. `packages/database` opts in with `CadenceBanWallClock`.
 
 ## What is left
 

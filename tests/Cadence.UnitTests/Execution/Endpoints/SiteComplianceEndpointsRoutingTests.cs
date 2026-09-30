@@ -546,7 +546,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
                     options.UseInternalServiceProvider(inMemoryServices);
                     options.AddInterceptors(
                         new ConcurrencyTokenIncrementInterceptor(),
-                        new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId));
+                        new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId, sp.GetRequiredService<IClock>()));
                 });
 
                 // MassTransit's EF outbox lock-statement provider is configured for Postgres syntax

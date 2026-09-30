@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
@@ -53,7 +54,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
     private static ExecutionDbContext CreateInMemoryContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseInMemoryDatabase(databaseName)
-            .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org"))
+            .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org", SystemClock.Instance))
             .Options);
 
     private static SqliteConnection OpenSqliteConnection()
@@ -66,7 +67,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
     private static ExecutionDbContext CreateSqliteContext(SqliteConnection connection) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseSqlite(connection)
-            .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org"))
+            .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org", SystemClock.Instance))
             .Options);
 
     private static async Task<AuditLogEntry[]> LoadChainAsync(ExecutionDbContext context, string entityName)

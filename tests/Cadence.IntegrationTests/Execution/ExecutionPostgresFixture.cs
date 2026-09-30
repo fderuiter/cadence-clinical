@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -119,7 +120,7 @@ public sealed class ExecutionPostgresFixture : IAsyncLifetime
     {
         var optionsBuilder = new DbContextOptionsBuilder<ExecutionDbContext>();
         optionsBuilder.UseNpgsql(connectionString);
-        optionsBuilder.AddInterceptors(new GxPAuditInterceptor(() => "svc:integration-test"));
+        optionsBuilder.AddInterceptors(new GxPAuditInterceptor(() => "svc:integration-test", SystemClock.Instance));
         return new ExecutionDbContext(optionsBuilder.Options);
     }
 

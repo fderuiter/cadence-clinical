@@ -11,6 +11,7 @@ using Cadence.Apps.Fileshare.Infrastructure.Persistence;
 using Cadence.Apps.Quality.Domain;
 using Cadence.Apps.Quality.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
@@ -38,7 +39,7 @@ public class GxPAuditTrailGenerationTests
         var dbName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<CtmsDbContext>()
             .UseInMemoryDatabase(dbName)
-            .AddInterceptors(new GxPAuditInterceptor(() => TestUser))
+            .AddInterceptors(new GxPAuditInterceptor(() => TestUser, SystemClock.Instance))
             .Options;
 
         await using var context = new CtmsDbContext(options);
@@ -91,7 +92,7 @@ public class GxPAuditTrailGenerationTests
         var dbName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<EtmfDbContext>()
             .UseInMemoryDatabase(dbName)
-            .AddInterceptors(new GxPAuditInterceptor(() => TestUser))
+            .AddInterceptors(new GxPAuditInterceptor(() => TestUser, SystemClock.Instance))
             .Options;
 
         await using var context = new EtmfDbContext(options);
@@ -131,7 +132,7 @@ public class GxPAuditTrailGenerationTests
         var dbName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<QualityDbContext>()
             .UseInMemoryDatabase(dbName)
-            .AddInterceptors(new GxPAuditInterceptor(() => TestUser))
+            .AddInterceptors(new GxPAuditInterceptor(() => TestUser, SystemClock.Instance))
             .Options;
 
         await using var context = new QualityDbContext(options);
@@ -169,7 +170,7 @@ public class GxPAuditTrailGenerationTests
         var dbName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<FileshareDbContext>()
             .UseInMemoryDatabase(dbName)
-            .AddInterceptors(new GxPAuditInterceptor(() => TestUser))
+            .AddInterceptors(new GxPAuditInterceptor(() => TestUser, SystemClock.Instance))
             .Options;
 
         await using var context = new FileshareDbContext(options);
@@ -208,7 +209,7 @@ public class GxPAuditTrailGenerationTests
         var dbName = Guid.NewGuid().ToString();
         var options = new DbContextOptionsBuilder<CtmsDbContext>()
             .UseInMemoryDatabase(dbName)
-            .AddInterceptors(new GxPAuditInterceptor(() => throw new InvalidOperationException("no actor")))
+            .AddInterceptors(new GxPAuditInterceptor(() => throw new InvalidOperationException("no actor"), SystemClock.Instance))
             .Options;
         await using var context = new CtmsDbContext(options);
         context.CtmsSiteMilestones.Add(new CtmsSiteMilestone
@@ -234,7 +235,7 @@ public class GxPAuditTrailGenerationTests
         // Saves with nothing to audit (e.g. outbox bookkeeping in a background scope) must not demand an actor.
         var options = new DbContextOptionsBuilder<CtmsDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .AddInterceptors(new GxPAuditInterceptor(() => throw new InvalidOperationException("no actor")))
+            .AddInterceptors(new GxPAuditInterceptor(() => throw new InvalidOperationException("no actor"), SystemClock.Instance))
             .Options;
         await using var context = new CtmsDbContext(options);
 

@@ -144,7 +144,9 @@ builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
     options.UseNpgsql(executionDbConnectionString);
     options.AddInterceptors(
         concurrencyTokenIncrementInterceptor,
-        new Cadence.Database.GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId));
+        new Cadence.Database.GxPAuditInterceptor(
+            () => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId,
+            sp.GetRequiredService<IClock>()));
 });
 
 builder.Services.AddHealthChecks()

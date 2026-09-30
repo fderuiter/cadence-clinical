@@ -11,6 +11,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -63,7 +64,7 @@ public class SiteComplianceApplicationServiceTests
     private static ExecutionDbContext CreateContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseInMemoryDatabase(databaseName)
-            .AddInterceptors(new GxPAuditInterceptor(() => "user-compliance-1"))
+            .AddInterceptors(new GxPAuditInterceptor(() => "user-compliance-1", SystemClock.Instance))
             .Options);
 
     private static SiteComplianceApplicationService CreateService(

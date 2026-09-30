@@ -1,6 +1,7 @@
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
@@ -48,10 +49,10 @@ public class GxPAuditInterceptorMerkleChainTests
         public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
     }
 
-    private static MerkleChainTestDbContext CreateContext(string databaseName, Func<DateTime>? clockProvider = null) =>
+    private static MerkleChainTestDbContext CreateContext(string databaseName, IClock? clock = null) =>
         new(new DbContextOptionsBuilder<MerkleChainTestDbContext>()
             .UseInMemoryDatabase(databaseName)
-            .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org", clockProvider))
+            .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org", clock ?? SystemClock.Instance))
             .Options);
 
     [Fact]
@@ -90,7 +91,7 @@ public class GxPAuditInterceptorMerkleChainTests
     public async Task SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType()
     {
         var clock = new FakeClock();
-        await using var context = CreateContext(Guid.NewGuid().ToString(), () => clock.UtcNow.UtcDateTime);
+        await using var context = CreateContext(Guid.NewGuid().ToString(), clock);
         var aggregate = new GuidKeyedAggregate(Guid.NewGuid(), "Alpha");
         context.GuidAggregates.Add(aggregate);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -166,8 +167,7 @@ public class GxPAuditInterceptorMerkleChainTests
     public async Task SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain()
     {
         string dbName = Guid.NewGuid().ToString();
-        DateTime fixedTime = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        Func<DateTime> clock = () => fixedTime;
+        var clock = new FakeClock(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
         var aggregate = new GuidKeyedAggregate(Guid.NewGuid(), "Alpha");
 

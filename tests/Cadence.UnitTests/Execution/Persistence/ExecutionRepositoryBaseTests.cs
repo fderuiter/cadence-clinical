@@ -12,6 +12,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -52,7 +53,7 @@ public class ExecutionRepositoryBaseTests
     private static ExecutionDbContext CreateContext(SqliteConnection connection, string actor = "writer", params IInterceptor[] extra) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseSqlite(connection)
-            .AddInterceptors((IInterceptor[])[new ConcurrencyTokenIncrementInterceptor(), new GxPAuditInterceptor(() => actor), .. extra])
+            .AddInterceptors((IInterceptor[])[new ConcurrencyTokenIncrementInterceptor(), new GxPAuditInterceptor(() => actor, SystemClock.Instance), .. extra])
             .Options);
 
     private static async Task SeedComplianceCacheAsync(SqliteConnection connection)
