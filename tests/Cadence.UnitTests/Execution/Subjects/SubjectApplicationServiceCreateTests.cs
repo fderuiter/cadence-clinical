@@ -10,6 +10,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -28,49 +29,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// </summary>
 public class SubjectApplicationServiceCreateTests
 {
-    private sealed record AuditCall(string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
-
-    private sealed class RecordingAuditLogWriter : IAuditLogWriter
-    {
-        public List<AuditCall> Calls { get; } = new();
-
-        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
-            IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct)
-        {
-            Calls.Add(new AuditCall(entityName, recordId, action, userId, changeReason));
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class FakeCurrentAuditContextAccessor : ICurrentAuditContextAccessor
-    {
-        public string UserId { get; init; } = "test-user";
-
-        public string ChangeReason { get; init; } = "test-reason";
-    }
-
-    /// <summary>
-    /// Deliberately not a plain pass-through: a naive fake that returned
-    /// <c>JsonSerializer.Serialize(demographics)</c> unchanged would let a bug that skips encryption
-    /// entirely go undetected. This prefixes and Base64-encodes instead, so a test asserting the persisted
-    /// value is not the raw plaintext actually proves something.
-    /// </summary>
-    private sealed class FakeDemographicsEncryptionService : IDemographicsEncryptionService
-    {
-        private const string Prefix = "FAKE-CIPHER:";
-
-        public int EncryptCallCount { get; private set; }
-
-        public string Encrypt(IReadOnlyDictionary<string, object?> demographics)
-        {
-            EncryptCallCount++;
-            return Prefix + Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(demographics));
-        }
-
-        public IReadOnlyDictionary<string, object?> Decrypt(string ciphertext) =>
-            throw new NotSupportedException("Not exercised by these tests.");
-    }
-
     private sealed class Harness
     {
         public InMemorySubjectRepository Subjects { get; } = new();

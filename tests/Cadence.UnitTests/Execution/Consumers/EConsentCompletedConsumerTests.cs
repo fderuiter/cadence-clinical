@@ -13,6 +13,7 @@ using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.Time;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -159,24 +160,10 @@ public class EConsentCompletedConsumerTests
         public Task SaveChangesAsync(CancellationToken cancellationToken) => unitOfWork.SaveChangesAsync();
     }
 
-    private sealed record AuditWriteCall(string EntityName, string RecordId, string Action, string UserId, string ChangeReason);
-
-    private sealed class FakeAuditLogWriter : IAuditLogWriter
-    {
-        public List<AuditWriteCall> Calls { get; } = [];
-
-        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
-            IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct)
-        {
-            Calls.Add(new AuditWriteCall(entityName, recordId, action, userId, changeReason));
-            return Task.CompletedTask;
-        }
-    }
-
     // ---- Harness plumbing ------------------------------------------------------------------------------
 
     private static async Task<ServiceProvider> StartHarnessAsync(
-        FakeUnitOfWork unitOfWork, FakeAuditLogWriter auditWriter, IClock clock)
+        FakeUnitOfWork unitOfWork, RecordingAuditLogWriter auditWriter, IClock clock)
     {
         var services = new ServiceCollection();
         services.AddSingleton<ISubjectRepository>(new FakeSubjectRepository(unitOfWork));
@@ -228,7 +215,7 @@ public class EConsentCompletedConsumerTests
     {
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork();
-        var auditWriter = new FakeAuditLogWriter();
+        var auditWriter = new RecordingAuditLogWriter();
         var clock = new FakeClock(new DateTimeOffset(2026, 1, 5, 12, 0, 0, TimeSpan.Zero));
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
@@ -288,7 +275,7 @@ public class EConsentCompletedConsumerTests
 
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork();
-        var auditWriter = new FakeAuditLogWriter();
+        var auditWriter = new RecordingAuditLogWriter();
         var clock = new FakeClock();
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
@@ -321,7 +308,7 @@ public class EConsentCompletedConsumerTests
     {
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork();
-        var auditWriter = new FakeAuditLogWriter();
+        var auditWriter = new RecordingAuditLogWriter();
         var clock = new FakeClock();
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
@@ -356,7 +343,7 @@ public class EConsentCompletedConsumerTests
     {
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork();
-        var auditWriter = new FakeAuditLogWriter();
+        var auditWriter = new RecordingAuditLogWriter();
         var clock = new FakeClock();
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
@@ -397,7 +384,7 @@ public class EConsentCompletedConsumerTests
             new SubjectCode("SUBJ-PRE-EXISTING"), StudyA, siteCode: null,
             enrollmentIndex: 4, encryptedDemographics: null, stratFactors: null);
         unitOfWork.Subjects.Add(existingSubject);
-        var auditWriter = new FakeAuditLogWriter();
+        var auditWriter = new RecordingAuditLogWriter();
         var clock = new FakeClock(new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero));
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
@@ -438,7 +425,7 @@ public class EConsentCompletedConsumerTests
     {
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork { ThrowOnSaveChanges = new DbUpdateException("Simulated persistence failure.") };
-        var auditWriter = new FakeAuditLogWriter();
+        var auditWriter = new RecordingAuditLogWriter();
         var clock = new FakeClock();
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, clock);
@@ -470,7 +457,7 @@ public class EConsentCompletedConsumerTests
         var unitOfWork = new FakeUnitOfWork();
         var clock = new FakeClock(SignedAt.AddDays(3));
 
-        await using var provider = await StartHarnessAsync(unitOfWork, new FakeAuditLogWriter(), clock);
+        await using var provider = await StartHarnessAsync(unitOfWork, new RecordingAuditLogWriter(), clock);
         var harness = provider.GetRequiredService<ITestHarness>();
         try
         {
@@ -492,7 +479,7 @@ public class EConsentCompletedConsumerTests
     {
         var ct = TestContext.Current.CancellationToken;
         var unitOfWork = new FakeUnitOfWork();
-        var auditWriter = new FakeAuditLogWriter();
+        var auditWriter = new RecordingAuditLogWriter();
 
         await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, new FakeClock());
         var harness = provider.GetRequiredService<ITestHarness>();

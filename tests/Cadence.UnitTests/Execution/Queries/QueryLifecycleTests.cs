@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
@@ -10,6 +9,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -23,11 +23,6 @@ namespace Cadence.UnitTests.Execution.Queries;
 /// </summary>
 public sealed class QueryLifecycleTests
 {
-    private sealed class FakeAuditContextAccessor(string userId = "cra-user-01", string reason = "Query management") : ICurrentAuditContextAccessor
-    {
-        public string UserId => userId;
-        public string ChangeReason => reason;
-    }
 
     /// <summary>
     /// Validates that raising a clinical discrepancy query initializes it in Open status.
@@ -122,7 +117,7 @@ public sealed class QueryLifecycleTests
     {
         var repo = new InMemoryClinicalQueryRepository();
         var clock = new FakeClock();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor("cra-user-01", "Query management");
 
         var service = new ClinicalQueryApplicationService(repo, audit, clock);
 
@@ -151,7 +146,7 @@ public sealed class QueryLifecycleTests
     {
         var repo = new InMemoryClinicalQueryRepository();
         var clock = new FakeClock();
-        var audit = new FakeAuditContextAccessor();
+        var audit = new FakeCurrentAuditContextAccessor("cra-user-01", "Query management");
 
         var service = new ClinicalQueryApplicationService(repo, audit, clock);
 
@@ -226,7 +221,7 @@ public sealed class QueryLifecycleTests
     public async Task ApplicationService_CloseReopenCancel_WithoutRole_AreDenied(string? role)
     {
         var repo = new InMemoryClinicalQueryRepository();
-        var service = new ClinicalQueryApplicationService(repo, new FakeAuditContextAccessor(), new FakeClock());
+        var service = new ClinicalQueryApplicationService(repo, new FakeCurrentAuditContextAccessor("cra-user-01", "Query management"), new FakeClock());
 
         var query = ClinicalQuery.Raise(
             studyId: new StudyCode("STUDY-001"),
