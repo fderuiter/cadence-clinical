@@ -62,7 +62,7 @@ Two pieces the endpoints depend on are not in place yet:
 
 A new host, `Cadence.Kernel.Host` in `apps/kernel-api`, registers kernel persistence, navigation, search and
 authorization, and maps the read endpoints from `Cadence.Kernel.Api`. What is not in place yet fails closed: before the
-evaluator existed every decision was a denial that named it, and until visibility is decided every object is masked.
+evaluator existed every decision was a denial that named it, and until visibility was decided (ADR-2457) every object was masked.
 
 ## 4. Decision Outcome
 
@@ -167,7 +167,7 @@ with no grant sees every object masked. Until then (#4781) the host masked every
 
 - **Positive:** The web app gets the kernel's own answers over the same gateway, with a generated client. The two
   missing pieces each change one registration in the host.
-- **Positive:** Nothing can be shown wrongly in the meantime: every object is masked until visibility is decided, and
+- **Positive:** Nothing can be shown wrongly: an object is masked unless a grant the reader holds covers it, and
   every decision is the kernel's own, with its reason.
 - **Negative:** Until #4781 decided visibility (ADR-2457), the reads returned masked objects only.
 - **Negative:** One more deployable, on port 8018.
