@@ -7,6 +7,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Search;
+using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Host;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Activity;
@@ -48,7 +49,10 @@ builder.Services
     // The activity stream (ADR-2485). This is the one host with kernel persistence, so it also runs the projector
     // that copies committed events into the stream (ADR-2540 §4.7).
     .AddKernelActivityProjection()
-    .AddKernelActivityStream();
+    .AddKernelActivityStream()
+
+    // The caller's work queues (ADR-2486): each item is kept only where the caller may act on it now.
+    .AddKernelWorkQueues();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 
 // A reader sees what its grants in effect cover (ADR-2457); everything else is masked in place (ADR-2471). Blinding and

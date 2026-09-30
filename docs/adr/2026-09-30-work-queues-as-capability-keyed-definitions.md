@@ -93,7 +93,9 @@ portfolio home's layout remains an application decision.
 
 - Sources for queries, visits, signatures due and SAE follow-ups. They arrive with the applications that own
   those objects.
-- The kernel HTTP endpoint and the Canvas lens UI (web thread, ADR-2540).
+- The kernel HTTP endpoint and the Canvas lens UI (web thread, ADR-2540). _(Update: the kernel API host serves
+  `GET work-queues` and the Canvas shows the caller's queues on study home. See
+  [ADR-2540 §4.8](2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md#48-work-queues).)_
 - Default ordering of Needs Attention (D6, #4845).
 
 ## 5. Consequences & Trade-offs

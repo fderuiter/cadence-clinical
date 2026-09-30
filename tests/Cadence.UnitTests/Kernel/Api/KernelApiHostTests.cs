@@ -23,6 +23,7 @@ using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Tenancy;
+using Cadence.Kernel.WorkQueues;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -67,6 +68,7 @@ public sealed class KernelApiHostTests : IDisposable
         $"/api/v1/kernel/nodes/{Study}/commands", $"/api/v1/kernel/authorization/can-i?capability=x.y&resource={Study}",
         "/api/v1/kernel/search?q=CAD", $"/api/v1/kernel/studies/{Study}/protocol-versions",
         $"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}", $"/api/v1/kernel/activity?scope={Study}",
+        $"/api/v1/kernel/work-queues?within={Study}",
     ];
 
     private readonly FakeNavigator _navigator = new();
@@ -77,6 +79,7 @@ public sealed class KernelApiHostTests : IDisposable
     private readonly FakeAuthorityStore _authority = new();
     private readonly FakeLineage _lineage = new();
     private readonly FakeActivityStore _activity = new();
+    private readonly FakeWorkQueues _queues = new();
     private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
 
     public void Dispose()
@@ -112,6 +115,7 @@ public sealed class KernelApiHostTests : IDisposable
         _search.Requests.Should().BeEmpty();
         _protocol.Tenants.Should().BeEmpty();
         _activity.Queries.Should().BeEmpty();
+        _queues.Queries.Should().BeEmpty();
         (await client.GetAsync(new Uri("/api/v1/kernel/status", UriKind.Relative), ct)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -210,6 +214,10 @@ public sealed class KernelApiHostTests : IDisposable
     [InlineData("/api/v1/kernel/activity?before=not-a-cursor", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/activity?before=AAAA", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/activity?scope=site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.NotFound)]
+    [InlineData("/api/v1/kernel/work-queues?within=nonsense", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/work-queues?limit=0", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/work-queues?limit=201", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/work-queues?within=site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.NotFound)]
     public async Task BadRequestsAndMissingObjects_AnswerWithProblems(string path, HttpStatusCode expected)
     {
         using var client = Client();
@@ -495,6 +503,57 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>
+    /// The caller's work queues (ADR-2486) are read within the scope with the caller's codes and limit, and answer in
+    /// snake_case with the pinned definition, the items oldest first, a masked item in place and the truncation flag.
+    /// </summary>
+    [Fact]
+    public async Task WorkQueues_ReadWithinTheScope_ForTheCaller()
+    {
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var queues = await ReadJsonAsync(client, $"/api/v1/kernel/work-queues?within={Study}&code=protocol_review&code=protocol_review&limit=5", ct);
+
+        var query = _queues.Queries.Should().ContainSingle().Subject;
+        query.Tenant.Should().Be(Tenant);
+        query.Query.Within.Should().Be(Study);
+        query.Query.Codes.Should().Equal("protocol_review");
+        query.Query.Limit.Should().Be(5);
+        var queue = queues.RootElement.EnumerateArray().Should().ContainSingle().Subject;
+        queue.GetProperty("definition").GetString().Should().Be(FakeWorkQueues.Definition.ToString());
+        queue.GetProperty("code").GetString().Should().Be("protocol_review");
+        queue.GetProperty("title").GetString().Should().Be("Protocol versions to review");
+        queue.GetProperty("capability").GetString().Should().Be("protocol.approve");
+        queue.GetProperty("truncated").GetBoolean().Should().BeTrue();
+        var items = queue.GetProperty("items").EnumerateArray().ToList();
+        items[0].GetProperty("subject").GetString().Should().Be(NodeRef.For(Amendment.Id, 4).ToString());
+        items[0].GetProperty("title").GetString().Should().Be("Protocol version 2");
+        items[0].GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+        items[1].GetProperty("subject").ValueKind.Should().Be(JsonValueKind.Null);
+        items[1].GetProperty("title").ValueKind.Should().Be(JsonValueKind.Null);
+        items[1].GetProperty("subject_kind").GetString().Should().Be(NodeKinds.ProtocolVersion);
+        items[1].GetProperty("mask").GetString().Should().Be("NotPermitted");
+    }
+
+    /// <summary>Without a scope the queues span the tenant; a scope the caller may not see is refused before any queue is read.</summary>
+    [Fact]
+    public async Task WorkQueues_WithoutAScope_SpanTheTenant_AndAHiddenScopeIsRefused()
+    {
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var all = await ReadJsonAsync(client, "/api/v1/kernel/work-queues", ct);
+        _queues.Queries.Should().ContainSingle().Which.Query.Within.Should().BeNull();
+
+        _visibility.Hidden[Study.AtVersion(3)] = MaskReason.NotPermitted;
+        var response = await client.GetAsync(new Uri($"/api/v1/kernel/work-queues?within={Study}", UriKind.Relative), ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        _queues.Queries.Should().ContainSingle();
+    }
+
+    /// <summary>
     /// The host decides visibility from the reader's grants (ADR-2457): with no grant in effect every object it reads is
     /// masked in place, and search leaves every hit out.
     /// </summary>
@@ -754,6 +813,8 @@ public sealed class KernelApiHostTests : IDisposable
                 services.AddSingleton<IAmendmentImpact>(_lineage);
                 services.RemoveAll<IActivityStore>();
                 services.AddSingleton<IActivityStore>(_activity);
+                services.RemoveAll<IWorkQueues>();
+                services.AddSingleton<IWorkQueues>(_queues);
 
                 // The activity projector reads the database the host is configured with, which these tests never open.
                 var projector = services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
@@ -932,6 +993,31 @@ public sealed class KernelApiHostTests : IDisposable
             var rows = Entries.Where(e => query.Before is not { } before
                 || e.Recorded < before.Recorded || (e.Recorded == before.Recorded && e.EventId.CompareTo(before.EventId) < 0));
             return Task.FromResult<IReadOnlyList<ActivityEntry>>([.. rows.Take(take)]);
+        }
+    }
+
+    /// <summary>One queue with a visible item and a masked one, truncated.</summary>
+    private sealed class FakeWorkQueues : IWorkQueues
+    {
+        public static readonly NodeRef Definition = NodeRef.For(WorkQueueDefinitionId.New(), 1);
+        private static readonly DateTimeOffset Since = new(2026, 9, 29, 8, 0, 0, TimeSpan.Zero);
+
+        public List<(TenantId Tenant, WorkQueueQuery Query)> Queries { get; } = [];
+
+        public Task<CommandResult<IReadOnlyList<WorkQueue>>> ReadAsync(TenantId tenant, WorkQueueQuery query, CancellationToken cancellationToken)
+        {
+            Queries.Add((tenant, query));
+            IReadOnlyList<WorkQueue> queues =
+            [
+                new WorkQueue(
+                    Definition, "protocol_review", 1, "Protocol versions to review", "protocol.approve",
+                    [
+                        new WorkItem(NodeRef.For(Amendment.Id, 4), NodeKinds.ProtocolVersion, "Protocol version 2", Since, null),
+                        new WorkItem(null, NodeKinds.ProtocolVersion, null, Since.AddHours(1), MaskReason.NotPermitted),
+                    ],
+                    Truncated: true),
+            ];
+            return Task.FromResult(CommandResult<IReadOnlyList<WorkQueue>>.Success(queues));
         }
     }
 

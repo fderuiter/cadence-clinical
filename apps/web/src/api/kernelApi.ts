@@ -31,10 +31,19 @@ export type KernelAmendmentImpact =
   Schemas["Kernel_KernelAmendmentImpactResponse"];
 export type KernelActivityEntry = Schemas["Kernel_KernelActivityEntryResponse"];
 export type KernelActivityPage = Schemas["Kernel_KernelActivityPageResponse"];
+export type KernelWorkQueue = Schemas["Kernel_KernelWorkQueueResponse"];
+export type KernelWorkItem = Schemas["Kernel_KernelWorkItemResponse"];
 
 /** The event families of the kernel's activity stream (spec §5.2). */
 export type KernelEventFamily =
   "Knowledge" | "Execution" | "Evidence" | "Trust" | "Quality" | "Intelligence";
+
+/** Which work queues to read (ADR-2486). The whole tenant when `within` is left out; `limit` is items per queue. */
+export interface KernelWorkQueueQuery {
+  within?: string;
+  codes?: string[];
+  limit?: number;
+}
 
 /** Which activity to read (ADR-2485). The whole tenant when `scope` is left out; `before` is an earlier page's `next`. */
 export interface KernelActivityQuery {
@@ -214,6 +223,28 @@ export const kernelApi = {
             actor,
             from,
             before,
+            limit,
+          },
+        },
+      })
+    );
+  },
+
+  /**
+   * The signed-in person's work queues (ADR-2486): each holds only the items the person may act on now, oldest first.
+   * A `within` scope the person may not see is refused; an item on an object they may not see keeps its place masked.
+   */
+  workQueues({
+    within,
+    codes,
+    limit,
+  }: KernelWorkQueueQuery = {}): Promise<KernelWorkQueue[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/work-queues", {
+        params: {
+          query: {
+            within,
+            code: codes && codes.length > 0 ? codes : undefined,
             limit,
           },
         },

@@ -17,4 +17,5 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `GET` | `/api/v1/kernel/search` | KernelSearch | Finds kernel objects in the caller's tenant by code or title. |
 | `GET` | `/api/v1/kernel/status` | KernelStatus | Returns the Clinical Kernel API's operational status. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/protocol-versions` | KernelListProtocolVersions | A study's protocol versions, newest first, without their content. |
+| `GET` | `/api/v1/kernel/work-queues` | KernelWorkQueues | The caller's work queues: what is due that the caller may act on now. |
 | `GET` | `/healthz` | KernelHealthCheck | Clinical Kernel API health probe. |

@@ -1062,6 +1062,102 @@
           }
         }
       }
+    },
+    "/api/v1/kernel/work-queues": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "The caller\u0027s work queues: what is due that the caller may act on now.",
+        "description": "within is any NodeRef (a study, a site; the whole tenant when absent); code repeats to pick queues; limit is the items per queue, 1 to 200 (default 50). Each item was permitted for the caller by the same evaluator as CanI (ADR-2483).",
+        "operationId": "KernelWorkQueues",
+        "parameters": [
+          {
+            "name": "within",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_KernelWorkQueueResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1798,6 +1894,86 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "Kernel_KernelWorkItemResponse": {
+        "required": [
+          "subject",
+          "subject_kind",
+          "title",
+          "since",
+          "mask"
+        ],
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_kind": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelWorkQueueResponse": {
+        "required": [
+          "definition",
+          "code",
+          "version",
+          "title",
+          "capability",
+          "items",
+          "truncated"
+        ],
+        "type": "object",
+        "properties": {
+          "definition": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "capability": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelWorkItemResponse"
+            }
+          },
+          "truncated": {
+            "type": "boolean"
           }
         }
       },

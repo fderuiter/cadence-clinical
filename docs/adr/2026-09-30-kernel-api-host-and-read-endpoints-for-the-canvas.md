@@ -98,6 +98,7 @@ All are `GET`, all under `/api/v1/kernel`, all answer problem details on failure
 | `nodes/{nodeRef}/dependents?depth=&edge_kind=&valid_at=&known_at=` | Impact: what depends on the object, grouped by kind with counts (Canvas D2). |
 | `protocol-versions/{versionRef}/impact?depth=&valid_at=&known_at=` | Amendment impact (K-PROT-2): the dependents of the version the amendment changes, with the elements it declares it changes. A first version is a 400; it amends nothing. |
 | `activity?scope=&family=&actor=&from=&before=&limit=` | The activity stream (ADR-2485): what happened in a scope, newest first, with an opaque `next` cursor (§4.7). |
+| `work-queues?within=&code=&limit=` | The caller's work queues (ADR-2486): what is due within a scope that the caller may act on now (§4.8). |
 
 - NodeRefs travel as their canonical strings (`kind:id@version`); a malformed one, or one of the wrong kind for the
   endpoint, is a 400.
@@ -187,6 +188,24 @@ tenant resolution and grant-backed visibility; both are in place.
   projected. If the host is scaled out, a second replica's pass can fail on an entry the first just wrote; that failure
   is logged, and the next pass retries it.
 
+### 4.8 Work queues
+
+Added for the Canvas work queue pane (PX-15). ADR-2486 left the HTTP read and the Canvas lens to this ADR.
+
+- `GET work-queues` reads `IWorkQueues` as the signed-in person: one queue per current definition, each with its
+  pinned definition version, code, title, capability and items oldest first. `within` is any NodeRef, and the whole
+  tenant when it is absent (the portfolio read of ADR-2486 §4.3). `code` repeats to pick queues. `limit` is the items
+  per queue, 1 to 200 (default 50), and `truncated` says more are waiting. A malformed `within` or limit is a 400, and
+  a scope the tenant does not hold is a 404.
+- Each item is one the kernel's authority evaluator permits the caller to act on now, with the definition's capability
+  (ADR-2486 §4.2). The read is only as wide as the caller's grants, so it needs no separate read capability.
+- **A `within` scope the caller may not see is refused with 403**, as for activity (§4.7): the queues of a hidden study
+  would describe it. Without `within` there is no gate beyond the tenant, since every item is already filtered to the
+  caller's grants. An item about an object the caller may not see keeps its place, kind and time, with `mask` and no
+  `subject` or `title`. A request with no accountable person is a 403.
+- The host registers `AddKernelWorkQueues()`. `AddKernelPersistence` already registers the definitions and the
+  `protocol.versions_in_review` source; applications add their sources in the host as they arrive (ADR-2486 §4.4).
+
 ## 5. Consequences & Trade-offs
 
 - **Positive:** The web app gets the kernel's own answers over the same gateway, with a generated client. The two
@@ -202,7 +221,7 @@ tenant resolution and grant-backed visibility; both are in place.
   `KernelMigrationHostedService`.
 - `packages/kernel/src/Cadence.Kernel.Api`: `KernelReadEndpoints`, `KernelReadResponses`, `KernelReadMasking`,
   `KernelTenantResolution`, `KernelLineageEndpoints`, `KernelLineageResponses`, `KernelActivityEndpoints`,
-  `KernelProblems`.
+  `KernelWorkQueueEndpoints`, `KernelProblems`.
 - `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host: 403 for a tenant code the directory
   does not know or a missing one, 401 unsigned, reads in the resolved tenant, masking in place and in search, the host's
   grant-backed visibility with and without a grant, protocol
@@ -212,7 +231,8 @@ tenant resolution and grant-backed visibility; both are in place.
   dependents grouped by kind with masked ones counted, an amendment's impact, 400 for bad lineage parameters or a
   first version, 404 for an unknown one, and 403 with no accountable reader. For activity it covers the scope read with
   its filters, a hidden subject masked in place, paging with the cursor, a hidden scope or tenant refused, and 400 and
-  404 problems.
+  404 problems. For work queues it covers the read within a scope for the caller with its codes and limit, a masked
+  item and truncation, the tenant-wide read, a hidden scope refused, and 400 and 404 problems.
 - `tests/Cadence.IntegrationTests/Kernel/KernelApiHostPostgresTests.cs` boots the real host on PostgreSQL with nothing
   faked:
   - Trace, dependents and amendment impact show what a study-site grant covers and mask the rest, with the same counts
@@ -220,5 +240,7 @@ tenant resolution and grant-backed visibility; both are in place.
   - The host's own projector fills the activity stream.
   - A coordinator sees their site's screening and the other site's masked in place.
   - A reader with no grant is refused the study's activity.
+  - An approver granted on the study gets the version in review in the study's work queue; a person with no grant
+    gets the queue empty across the tenant and is refused the study's queues.
 - `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` and
   `tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` cover the route and the port.

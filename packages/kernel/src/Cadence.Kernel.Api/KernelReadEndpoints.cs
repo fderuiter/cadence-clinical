@@ -22,8 +22,8 @@ namespace Cadence.Kernel.Api;
 /// <summary>
 /// The kernel's read endpoints for the Clinical Canvas (ADR-2540): navigation (ADR-2481), dry-run authorization and
 /// the command catalogue with their explanations (ADR-2482, ADR-2483), search (ADR-2484), protocol versions, and
-/// lineage, dependents and amendment impact (<see cref="KernelLineageEndpoints"/>), and the activity stream
-/// (<see cref="KernelActivityEndpoints"/>). They only read: nothing
+/// lineage, dependents and amendment impact (<see cref="KernelLineageEndpoints"/>), the activity stream
+/// (<see cref="KernelActivityEndpoints"/>) and the caller's work queues (<see cref="KernelWorkQueueEndpoints"/>). They only read: nothing
 /// here sends a command. Objects the caller may not see are masked (ADR-2471): kept in place in paths and child
 /// lists, left out of search. Every endpoint acts in the tenant resolved from the caller's verified claims and, for
 /// authorization, as the caller.
@@ -106,6 +106,7 @@ public static class KernelReadEndpoints
 
         KernelLineageEndpoints.Map(reads);
         KernelActivityEndpoints.Map(reads);
+        KernelWorkQueueEndpoints.Map(reads);
         return kernel;
     }
 

@@ -21,6 +21,7 @@ using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.WorkQueues;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Security;
 using Cadence.TestSupport.Kernel.Protocol;
@@ -172,6 +173,48 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
         page.Entries.Should().BeInDescendingOrder(e => e.Recorded);
 
         using var refused = await stranger.GetAsync(new Uri($"/api/v1/kernel/activity?scope={NodeRef.For(study)}", UriKind.Relative), ct);
+        refused.StatusCode.Should().Be(System.Net.HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>
+    /// The host reads the caller's work queues over real grants (ADR-2486): an approver granted on the study gets the
+    /// version in review in the study's queue; a person with no grant gets the same queue empty across the tenant and
+    /// is refused the study's queues, since they may not see the study.
+    /// </summary>
+    [Fact(DisplayName = "HostWorkQueues_HoldWhatTheCallerMayActOn")]
+    public async Task HostWorkQueuesHoldWhatTheCallerMayActOn()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var code = $"T-WQ-{Guid.NewGuid():N}"[..15];
+        var tenant = TenantId.New();
+        await _scenario.OkAsync(new ProvisionTenant(tenant, code, "Queue tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        var (_, study) = await _scenario.NewStudyAsync(tenant, ct);
+        var inReview = await _scenario.InReviewAsync(tenant, study, ct);
+        await _scenario.OkAsync(
+            new DefineWorkQueue(tenant, WorkQueueDefinitionId.New(), "protocol_approvals", "Protocol approvals", "protocol.approve", VerbClass.Approve,
+                KernelWorkItemSources.ProtocolVersionsInReview, KernelProtocolScenario.Key(), "Queue for approvers"),
+            ct);
+        await _scenario.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), "protocol.approve", null, AuthorityScope.Study(study), Tick(), null, false,
+                KernelProtocolScenario.Key(), "Approver appointed"),
+            ct);
+        Tick();
+        using var approver = Client(code, Crc);
+        using var stranger = Client(code, Stranger);
+
+        var queues = await GetAsync<List<KernelWorkQueueResponse>>(approver, $"work-queues?within={NodeRef.For(study)}", ct);
+
+        var queue = queues.Should().ContainSingle().Subject;
+        queue.Code.Should().Be("protocol_approvals");
+        var item = queue.Items.Should().ContainSingle().Subject;
+        NodeRef.Parse(item.Subject!).Unversioned().Should().Be(NodeRef.For(inReview.ProtocolVersionId));
+        item.Mask.Should().BeNull();
+        item.Title.Should().StartWith("Protocol version 1");
+
+        (await GetAsync<List<KernelWorkQueueResponse>>(stranger, "work-queues", ct)).Should().ContainSingle()
+            .Which.Items.Should().BeEmpty("a queue holds only what its reader may act on");
+        using var refused = await stranger.GetAsync(new Uri($"/api/v1/kernel/work-queues?within={NodeRef.For(study)}", UriKind.Relative), ct);
         refused.StatusCode.Should().Be(System.Net.HttpStatusCode.Forbidden);
     }
 

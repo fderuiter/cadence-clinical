@@ -19,6 +19,7 @@ vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
     search: vi.fn(),
     activity: vi.fn(),
+    workQueues: vi.fn(),
     listProtocolVersions: vi.fn(),
     getProtocolVersion: vi.fn(),
     getCommands: vi.fn(),
@@ -97,6 +98,7 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
       },
     ]);
     vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([]);
+    vi.mocked(kernelApi.workQueues).mockResolvedValue([]);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 

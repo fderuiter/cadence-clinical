@@ -196,6 +196,24 @@ describe("kernelApi (ADR-2540)", () => {
     expect(url.searchParams.has("from")).toBe(false);
   });
 
+  it("reads the caller's work queues within a scope", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, []));
+
+    await expect(
+      kernelApi.workQueues({
+        within: STUDY,
+        codes: ["protocol_approvals"],
+        limit: 10,
+      })
+    ).resolves.toEqual([]);
+
+    const { url } = lastRequest();
+    expect(url.pathname).toBe("/api/v1/kernel/work-queues");
+    expect(url.searchParams.get("within")).toBe(STUDY);
+    expect(url.searchParams.getAll("code")).toEqual(["protocol_approvals"]);
+    expect(url.searchParams.get("limit")).toBe("10");
+  });
+
   it("reads the whole tenant's activity when no scope is named", async () => {
     fetchSpy.mockResolvedValueOnce(
       jsonResponse(200, { entries: [], next: null })
