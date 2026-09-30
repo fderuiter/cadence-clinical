@@ -369,6 +369,9 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>, IGxPAuditable
 
 ### 2.4 `SubjectConsent` Aggregate
 
+> [!NOTE]
+> **Superseded in part by #4824 (2026-09-30).** `Create` and `MergeResubmission` no longer take an `IClock` and never default `IcfSignedDate` to the current time. A signed consent requires a date: `Create` throws `ArgumentException` when `icfSigned` is true and `icfSignedDate` is null, and `MergeResubmission` throws `InvalidOperationException`, before changing anything, when neither the request nor the stored row has a date. `SubjectApplicationService.RecordConsentAsync` checks first and returns `SubjectErrors.SignedConsentDateRequired()` (400, `ICF_SIGNED_DATE_REQUIRED`). The sketch below predates this change.
+
 ```csharp
 namespace Cadence.Apps.Execution.Domain.Subjects;
 
@@ -1151,7 +1154,7 @@ Every `scenario_id` in the fixtures (`SCN-001-A` … `SCN-010`) becomes one `[Th
 | `CalculateAge` / `365.25` divisor parity (Rule 7)                                      | `[Theory]` fixed input/expected-output pairs lifted directly from Python `calculate_age` doctest-equivalent behavior, including the two date-string-parsing fallback paths |
 | `normalize_gender` full mapping table (Rule 7)                                         | `[Theory]` over every row in the Rule 7 table, both `preserve_custom` values                                                                                               |
 | `EConsentCompletedConsumer` idempotency + independent consent-cache backfill (SCN-009) | `MassTransit.Testing.ITestHarness`, asserting zero duplicate subjects on redelivery and independent backfill when the subject already exists but the consent row doesn't   |
-| `SubjectConsent.MergeResubmission` field-by-field precedence (Rule 9)                  | `[Theory]` covering each of the four field categories (unconditional replace / date-conditional / protocol-version-conditional)                                            |
+| `SubjectConsent.MergeResubmission` field-by-field precedence (Rule 9)                  | `[Theory]` covering each of the four field categories (unconditional replace / date-conditional / protocol-version-conditional); since #4824, also the signed-without-date rejection |
 | `GxPAuditInterceptor` Merkle chain integrity (§4.4)                                    | Two sequential `SaveChangesAsync` calls on the same entity type assert `BlockHash[n].PredecessorHash == BlockHash[n-1].BlockHash`                                          |
 
 ### 6.3 Integration test strategy

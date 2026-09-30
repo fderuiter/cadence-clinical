@@ -7,7 +7,6 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 
@@ -41,11 +40,6 @@ public class SubjectApplicationServiceStateTests
         }
     }
 
-    private sealed class FakeClock(DateTimeOffset utcNow) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = utcNow;
-    }
-
     private sealed class FakeCurrentAuditContextAccessor : ICurrentAuditContextAccessor
     {
         public string UserId { get; init; } = "test-user";
@@ -74,14 +68,12 @@ public class SubjectApplicationServiceStateTests
 
         public RecordingAuditLogWriter AuditLog { get; } = new();
 
-        public FakeClock Clock { get; } = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-
         public FakeCurrentAuditContextAccessor AuditContext { get; set; } = new();
 
         public Func<ClinicalSubject, CancellationToken, Task<bool>>? ScreeningEligibility { get; set; }
 
         public SubjectApplicationService Service =>
-            new(Subjects, Consents, Compliance, Encryption, AuditLog, Clock, AuditContext, ScreeningEligibility);
+            new(Subjects, Consents, Compliance, Encryption, AuditLog, AuditContext, ScreeningEligibility);
     }
 
     private static readonly StudyCode Study = new("STUDY-001");

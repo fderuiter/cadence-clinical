@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -54,7 +53,7 @@ public class SubjectConsentConfigurationTests
         SubjectConsent.Create(
             new SubjectCode("SUBJ-CONSENT-RT-001"), version ?? SampleVersion, icfSigned: true,
             icfSignedDate: new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
-            requiresReconsent: false, isPaperOverride: false, new FakeClock());
+            requiresReconsent: false, isPaperOverride: false);
 
     // ---- Configuration shape (metadata) ----------------------------------------------------------
 
@@ -142,7 +141,7 @@ public class SubjectConsentConfigurationTests
         var original = CreateConsent();
         var incoming = new ProtocolVersionRef(new StudyCode("STUDY-CONSENT-RT"), "v4.0", 5);
         original.MergeResubmission("v4.0", icfSigned: true, icfSignedDate: null,
-            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: incoming, new FakeClock());
+            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: incoming);
 
         await using (var writeContext = CreateSqliteContext(connection))
         {
@@ -155,12 +154,5 @@ public class SubjectConsentConfigurationTests
             .SingleAsync(TestContext.Current.CancellationToken);
 
         reloaded.ProtocolVersion.Should().Be(incoming);
-    }
-
-    /// <summary>Deterministic <see cref="IClock"/> test double, matching `SubjectConsentTests`' own
-    /// convention of a private fake rather than modifying <c>IClock</c> itself.</summary>
-    private sealed class FakeClock : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
     }
 }

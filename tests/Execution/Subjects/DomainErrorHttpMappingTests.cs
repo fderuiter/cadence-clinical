@@ -34,6 +34,7 @@ public class DomainErrorHttpMappingTests
     [InlineData("BlockedEnrollment", StatusCodes.Status400BadRequest)]
     [InlineData("BlockedActivation", StatusCodes.Status400BadRequest)]
     [InlineData("ReconsentRequired", StatusCodes.Status423Locked)]
+    [InlineData("SignedConsentDateRequired", StatusCodes.Status400BadRequest)]
     [GxPRequirement("PRD-SUB-001")]
     public void ToProblemResult_MapsEachSubjectErrorsFactoryToExpectedStatus(string factory, int expectedStatus)
     {
@@ -151,6 +152,7 @@ public class DomainErrorHttpMappingTests
         "BlockedEnrollment" => SubjectErrors.BlockedEnrollment(new SiteCode("SITE-042")),
         "BlockedActivation" => SubjectErrors.BlockedActivation("SITE-042"),
         "ReconsentRequired" => SubjectErrors.ReconsentRequired("v2", "SUBJ-001", "VISIT-3"),
+        "SignedConsentDateRequired" => SubjectErrors.SignedConsentDateRequired(),
         _ => throw new ArgumentOutOfRangeException(nameof(factory), factory, "Unknown SubjectErrors factory key."),
     };
 }

@@ -351,6 +351,9 @@ Per `02_technical_design.md` §2.4: `ProtocolVersionRef(StudyCode StudyCode, str
 - [x] Boundary check: `VersionTag`/`IcfSigned`/`RequiresReconsent`/`IsPaperOverride` are replaced even when the incoming values equal the existing ones (unconditional replace, not a no-op-on-equal optimization that could mask a bug).
 - [x] Error condition: N/A — this aggregate has no failure-returning methods; `ClearReconsentRequirement` and `MergeResubmission` are always-succeed mutations by design.
 
+> [!NOTE]
+> **Superseded in part by #4824 (2026-09-30).** The two criteria that default `IcfSignedDate` to `clock.UtcNow` no longer hold. A signed consent without a date is now rejected: `Create` and `MergeResubmission` throw, and the application service returns 400 `ICF_SIGNED_DATE_REQUIRED` first (golden-master scenario INV-022). An unsigned consent may have no date. The date-preservation criterion is unchanged.
+
 #### Verification & Test Requirements
 
 `SubjectConsentTests` — `[Theory]` covering each of the four `MergeResubmission` field categories independently (SCN-002's re-submission half) plus the `IcfSignedDate` null/non-null/no-prior-date 3-way matrix explicitly called out in `02_technical_design.md` §6.2.

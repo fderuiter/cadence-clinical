@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Kernel.Time;
 using Cadence.UnitTests.Execution.Fakes;
 
 using FluentAssertions;
@@ -36,11 +35,6 @@ public class SubjectApplicationServiceListTests
             Task.CompletedTask;
     }
 
-    private sealed class FixedClock : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-    }
-
     private sealed class AuditContext : ICurrentAuditContextAccessor
     {
         public string UserId => "test-user";
@@ -52,7 +46,7 @@ public class SubjectApplicationServiceListTests
 
     private SubjectApplicationService CreateService() =>
         new(_subjects, new InMemoryConsentRepository(), new InMemorySiteComplianceRepository(), new UnusedEncryption(),
-            new NoOpAuditLogWriter(), new FixedClock(), new AuditContext());
+            new NoOpAuditLogWriter(), new AuditContext());
 
     private async Task SeedAsync(string subjectCode, string studyCode, string? siteCode, int enrollmentIndex,
         SubjectState status = SubjectState.Screening)

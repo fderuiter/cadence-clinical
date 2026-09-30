@@ -7,7 +7,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -418,7 +417,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     private async Task ReplayHttpScenarioAsync(GoldenMasterScenario scenario)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        JsonElement expectedBody = NormalizeExpectedBody(scenario.ScenarioId, scenario.ExpectedBody!.Value);
+        JsonElement expectedBody = scenario.ExpectedBody!.Value;
 
         // The "<unchanged>" sentinel (SCN-004-A/EDGE-004 only, confirmed directly) needs a pre-dispatch DB
         // snapshot to compare the post-dispatch response against -- captured before SendAsync below runs,
@@ -990,14 +989,13 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
 
         using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
-        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
 
         SubjectConsent consent = await FindConsentByVersionIndexAsync(db, "SUBJ-EDGE-003", versionIndex: 1, tracked: true, ct);
         StudyCode studyCodeBefore = consent.ProtocolVersion.StudyCode;
         int versionIndexBefore = consent.ProtocolVersion.VersionIndex;
 
         consent.MergeResubmission("v1.1", icfSigned: true, icfSignedDate: null, requiresReconsent: false,
-            isPaperOverride: false, incomingProtocolVersion: null, clock);
+            isPaperOverride: false, incomingProtocolVersion: null);
         consent.ReasonForChange = "Correcting version_tag typo, same protocol version";
         await db.SaveChangesAsync(ct);
 
@@ -1188,10 +1186,9 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         var compliance = scope.ServiceProvider.GetRequiredService<ISiteComplianceRepository>();
         var encryption = scope.ServiceProvider.GetRequiredService<IDemographicsEncryptionService>();
         var auditLog = scope.ServiceProvider.GetRequiredService<IAuditLogWriter>();
-        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
         var auditContext = scope.ServiceProvider.GetRequiredService<ICurrentAuditContextAccessor>();
 
-        var svc = new SubjectApplicationService(subjects, consents, compliance, encryption, auditLog, clock, auditContext,
+        var svc = new SubjectApplicationService(subjects, consents, compliance, encryption, auditLog, auditContext,
             screeningEligibility: (_, _) => Task.FromResult(eligible));
 
         Result<SubjectResponse> result = await svc.EvaluateAndTransitionScreeningAsync(subjectId, ct);
@@ -1497,7 +1494,6 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
         using IServiceScope scope = _testApi.Services.CreateSeedingScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         var encryption = scope.ServiceProvider.GetRequiredService<IDemographicsEncryptionService>();
-        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
 
         if (preconditions.TryGetProperty("subject", out JsonElement subjectPrecondition))
         {
@@ -1506,7 +1502,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
 
         if (preconditions.TryGetProperty("existing_consent", out JsonElement consentPrecondition))
         {
-            await EnsureConsentPreconditionAsync(db, consentPrecondition, clock, ct);
+            await EnsureConsentPreconditionAsync(db, consentPrecondition, ct);
         }
 
         await db.SaveChangesAsync(ct);
@@ -1594,7 +1590,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     }
 
     private static async Task EnsureConsentPreconditionAsync(
-        ExecutionDbContext db, JsonElement precondition, IClock clock, CancellationToken ct)
+        ExecutionDbContext db, JsonElement precondition, CancellationToken ct)
     {
         string subjectCodeValue = precondition.GetProperty("subject_id").GetString()!;
         string studyCodeValue = precondition.GetProperty("study_id").GetString()!;
@@ -1637,7 +1633,7 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
 
         var version = new ProtocolVersionRef(studyCodeKey, versionTag, versionIndex);
         SubjectConsent consent = SubjectConsent.Create(subjectCodeKey, version, icfSigned: true, icfSignedDate,
-            requiresReconsent: false, isPaperOverride: false, clock);
+            requiresReconsent: false, isPaperOverride: false);
 
         db.SubjectConsents.Add(consent);
     }
@@ -1793,30 +1789,4 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionApiFactory
     }
 
     private static JsonElement ToJsonElement(object value) => JsonSerializer.SerializeToElement(value);
-
-    /// <summary>
-    /// SCN-002-A's <c>icf_signed_date</c> expected value is <c>"&lt;opaque-defaulted-to-now-UTC&gt;"</c> --
-    /// a documentation-style placeholder distinct from the three canonical sentinels
-    /// <see cref="GoldenMasterAssert.BodyMatches"/> recognizes (<c>&lt;opaque&gt;</c>/
-    /// <c>&lt;opaque-non-null&gt;</c>/<c>&lt;unchanged&gt;</c>; see that type's own remarks on
-    /// MIG-SUBJ-025's scope). Normalized here, in this ticket's own file, to the canonical
-    /// <c>&lt;opaque-non-null&gt;</c> sentinel -- the field's real requirement (present, non-null,
-    /// defaulted server-side) rather than a literal-string match against fixture prose that was never
-    /// meant to be compared verbatim. This is the only scenario anywhere in the nominal/edge-case fixture
-    /// pairs using a non-canonical sentinel inside an otherwise-<see cref="GoldenMasterAssert.BodyMatches"/>-
-    /// shaped body (verified by inspection of every sentinel occurrence in both output files); every other
-    /// non-canonical occurrence belongs to a "service"/"model" scenario already asserted directly, not via
-    /// <see cref="GoldenMasterAssert.BodyMatches"/>, above.
-    /// </summary>
-    private static JsonElement NormalizeExpectedBody(string scenarioId, JsonElement expected)
-    {
-        if (scenarioId != "SCN-002-A")
-        {
-            return expected;
-        }
-
-        JsonNode node = JsonNode.Parse(expected.GetRawText())!;
-        node["icf_signed_date"] = "<opaque-non-null>";
-        return JsonSerializer.SerializeToElement(node);
-    }
 }

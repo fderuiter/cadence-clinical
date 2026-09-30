@@ -8,7 +8,6 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
-using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Subjects;
 
@@ -61,7 +60,6 @@ public sealed class SubjectApplicationService(
     ISiteComplianceRepository compliance,
     IDemographicsEncryptionService demographicsEncryption,
     IAuditLogWriter auditLog,
-    IClock clock,
     ICurrentAuditContextAccessor auditContext,
     Func<ClinicalSubject, CancellationToken, Task<bool>>? screeningEligibility = null) : ISubjectApplicationService
 {
@@ -136,6 +134,13 @@ public sealed class SubjectApplicationService(
 
         var existing = await consents.GetAsync(subject.SubjectCode, studyCode, versionIndex, ct).ConfigureAwait(false);
 
+        // A signed consent needs the date it was signed: from this request, or already on file for this
+        // consent version. It is never defaulted to the current time (#4824).
+        if (request.IcfSigned && (request.IcfSignedDate ?? existing?.IcfSignedDate) is null)
+        {
+            return SubjectErrors.SignedConsentDateRequired();
+        }
+
         SubjectConsent consent;
         if (existing is not null)
         {
@@ -143,14 +148,14 @@ public sealed class SubjectApplicationService(
             // `incomingProtocolVersion` stays null: SubjectConsentRequest carries no wire field distinct
             // from ProtocolVersion.VersionTag (already passed as `versionTag` below) that could supply it.
             existing.MergeResubmission(request.ProtocolVersion.VersionTag, request.IcfSigned, request.IcfSignedDate,
-                request.RequiresReconsent, request.IsPaperOverride, incomingProtocolVersion: null, clock);
+                request.RequiresReconsent, request.IsPaperOverride, incomingProtocolVersion: null);
             consent = existing;
         }
         else
         {
             var version = new ProtocolVersionRef(studyCode, request.ProtocolVersion.VersionTag, versionIndex);
             consent = SubjectConsent.Create(subject.SubjectCode, version, request.IcfSigned, request.IcfSignedDate,
-                request.RequiresReconsent, request.IsPaperOverride, clock);
+                request.RequiresReconsent, request.IsPaperOverride);
             await consents.AddAsync(consent, ct).ConfigureAwait(false);
         }
 

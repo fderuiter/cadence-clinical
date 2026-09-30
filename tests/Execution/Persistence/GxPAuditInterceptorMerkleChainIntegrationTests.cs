@@ -7,7 +7,6 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -48,10 +47,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
     private static readonly StudyCode Study = new("STUDY-MERKLE");
     private static readonly SiteCode Site = new("SITE-MERKLE");
 
-    private sealed class FakeClock : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-    }
+    private static readonly DateTimeOffset SignedDate = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     private static ExecutionDbContext CreateInMemoryContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
@@ -125,7 +121,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
         await using var context = CreateSqliteContext(connection);
         var consent = SubjectConsent.Create(
             new SubjectCode("SUBJ-MERKLE-002"), new ProtocolVersionRef(Study, "v1.0", 1),
-            icfSigned: true, icfSignedDate: null, requiresReconsent: true, isPaperOverride: false, new FakeClock());
+            icfSigned: true, icfSignedDate: SignedDate, requiresReconsent: true, isPaperOverride: false);
 
         context.SubjectConsents.Add(consent);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
