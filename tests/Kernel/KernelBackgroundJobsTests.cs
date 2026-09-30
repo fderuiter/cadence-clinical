@@ -29,10 +29,8 @@ public sealed class KernelBackgroundJobsTests
     /// <summary>
     /// Validates that a host opting in gets exactly the relay and sealing services, resolvable with the host's
     /// publisher, clock and logging, and that the options it configures are the ones they use.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AddKernelBackgroundJobs_RegistersRelayAndSealingServices")]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddKernelBackgroundJobsRegistersRelayAndSealingServices()
     {
         using var services = new ServiceCollection()
@@ -51,10 +49,8 @@ public sealed class KernelBackgroundJobsTests
 
     /// <summary>
     /// Validates that a zero or negative relay batch size is refused at registration rather than failing at run time.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AddKernelBackgroundJobs_RejectsNonPositiveBatchSize")]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddKernelBackgroundJobsRejectsNonPositiveBatchSize()
     {
         var act = () => new ServiceCollection().AddKernelBackgroundJobs(o => o.RelayBatchSize = 0);

@@ -256,6 +256,66 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     }
 
     [Fact]
+    public void FindMappingDrift_ReportsTestsMissingFromTheRtmAndTestsNoLongerDeclared()
+    {
+        string rtm = string.Join("\n",
+            "## 2. Requirements with Mapped Tests",
+            "",
+            "| Requirement ID | Source Document | Title / Description | Mapped Test Cases | Status |",
+            "| :--- | :--- | :--- | :--- | :--- |",
+            "| PRD-A-1 | PRD | **Pipes | and `code` (x) in a title** | `Kept` (tests/S.cs) 🟢<br>`Removed` (tests/S.cs) 🟢 | ✅ **Qualified** |",
+            "",
+            "## 3. Planned Requirements (No Mapped Tests)",
+            "",
+            "| PRD-A-2 | PRD | **Planned** | Sprint Roadmap |");
+        var tests = new[]
+        {
+            new DiscoveredTest("S.Kept", "Kept", "tests/S.cs", 1, ["PRD-A-1"]),
+            new DiscoveredTest("S.Added", "Added", "tests/S.cs", 5, ["PRD-A-2"]),
+            new DiscoveredTest("S.Removed", "Removed", "tests/S.cs", 9, []),
+        };
+        var requirements = new Dictionary<string, RequirementInfo>
+        {
+            ["PRD-A-1"] = new() { Id = "PRD-A-1" },
+            ["PRD-A-2"] = new() { Id = "PRD-A-2" },
+        };
+
+        var drift = RtmGeneratorService.FindMappingDrift(rtm, tests, requirements);
+
+        drift.Should().BeEquivalentTo(
+            "missing from the RTM: PRD-A-2 <- Added (tests/S.cs)",
+            "listed in the RTM but no longer declared: PRD-A-1 <- Removed (tests/S.cs)");
+    }
+
+    [Fact]
+    public void FindMappingDrift_IgnoresUnknownIdsAndAliasesWhichTheRtmListsElsewhere()
+    {
+        var tests = new[] { new DiscoveredTest("S.T", "T", "tests/S.cs", 1, ["SRS-A-1", "PRD-NOPE-1"]) };
+        var requirements = new Dictionary<string, RequirementInfo>
+        {
+            ["SRS-A-1"] = new() { Id = "SRS-A-1", ParentPrdId = "PRD-A-1", IsLegacyAlias = true },
+        };
+
+        RtmGeneratorService.FindMappingDrift("## 2. Requirements with Mapped Tests\n", tests, requirements).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateRtm_FailsOnceATestTagChangesWithoutRegeneratingTheRtm()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "docs", "SDLC"));
+        File.WriteAllText(Path.Combine(_dir, "docs", "SDLC", "prd.md"), "#### PRD-AAA-001: Widget\n#### PRD-AAA-002: Gadget\n");
+        Directory.CreateDirectory(Path.Combine(_dir, "tests"));
+        WriteTaggedTest("First", "PRD-AAA-001");
+
+        RtmGeneratorService.GenerateRtm(draft: true, repoRoot: _dir).Should().Be(0);
+        RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true, repoRoot: _dir).Should().Be(0);
+
+        WriteTaggedTest("Second", "PRD-AAA-002");
+
+        RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true, repoRoot: _dir).Should().Be(1);
+    }
+
+    [Fact]
     public void RepositoryTests_DeclareOnlyRequirementIdsThatExist()
     {
         string repoRoot = Cadence.ToolingCore.OpenApi.OpenApiToolingService.FindRepoRoot();
@@ -267,6 +327,16 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     }
 
     private static TestMappingInfo Mapping(string fullName) => new() { FullName = fullName, TestName = fullName };
+
+    private void WriteTaggedTest(string name, string requirementId) =>
+        File.WriteAllText(Path.Combine(_dir, "tests", $"{name}.cs"), string.Join("\n",
+            "namespace Sample;",
+            $"public class {name}Tests",
+            "{",
+            "    [Fact]",
+            $"    [GxPRequirement(\"{requirementId}\")]",
+            $"    public void {name}() {{ }}",
+            "}"));
 
     private void WriteTrx(string fileName, params (string ClassName, string Method, string Outcome)[] results)
     {

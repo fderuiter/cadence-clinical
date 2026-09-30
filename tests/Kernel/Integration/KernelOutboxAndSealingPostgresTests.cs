@@ -59,10 +59,8 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
     /// <summary>
     /// Validates that the relay delivers each committed event once, in its §5.2 envelope, marks it dispatched, and
     /// delivers nothing on the next pass.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "OutboxRelay_DeliversCommittedEventsOnce_AndMarksThemDispatched")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task OutboxRelayDeliversCommittedEventsOnceAndMarksThemDispatched()
     {
         fixture.SkipIfUnavailable();
@@ -92,10 +90,8 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
     /// <summary>
     /// Validates retry and per-tenant order: when a delivery fails, that event is retried after its backoff with the
     /// error recorded, the same tenant's later events wait behind it, and other tenants are not held up.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "OutboxRelay_FailedDelivery_RetriesAfterBackoff_AndHoldsBackOnlyThatTenant")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task OutboxRelayFailedDeliveryRetriesAfterBackoffAndHoldsBackOnlyThatTenant()
     {
         fixture.SkipIfUnavailable();
@@ -135,10 +131,8 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
     /// <summary>
     /// Validates that relays running at the same time never deliver the same event twice: rows one relay has claimed
     /// are skipped by the other (<c>FOR UPDATE SKIP LOCKED</c>).
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "OutboxRelay_ConcurrentRelays_DeliverEachEventOnce")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task OutboxRelayConcurrentRelaysDeliverEachEventOnce()
     {
         fixture.SkipIfUnavailable();
@@ -163,11 +157,9 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
 
     /// <summary>
     /// Validates the retry schedule: 2^attempts seconds, capped at one hour.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "OutboxRelay_Backoff_DoublesAndIsCapped")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void OutboxRelayBackoffDoublesAndIsCapped()
     {
         KernelOutboxRelay.Backoff(1).Should().Be(TimeSpan.FromSeconds(2));
@@ -179,10 +171,8 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
     /// <summary>
     /// Validates root sealing: an intact chain is sealed at its head by the named sealer account, a second pass with
     /// no new links writes nothing, and new links are sealed at the new head.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AuditSealer_SealsIntactChainAtHead_OnlyWhenItGrows")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task AuditSealerSealsIntactChainAtHeadOnlyWhenItGrows()
     {
         fixture.SkipIfUnavailable();
@@ -210,10 +200,8 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
     /// <summary>
     /// Validates that the sealer never seals a broken chain: after a privileged edit of a link it reports the chain
     /// broken and writes no seal.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AuditSealer_BrokenChain_IsReported_AndNotSealed")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task AuditSealerBrokenChainIsReportedAndNotSealed()
     {
         fixture.SkipIfUnavailable();
@@ -236,10 +224,8 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
     /// <summary>
     /// Validates what a seal adds: if a privileged user deletes the newest link and rewinds the chain head so the
     /// chain is internally consistent again, the verifier still reports it broken because it ends below its seal.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AuditVerifier_ChainCutBelowItsSeal_IsBroken")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task AuditVerifierChainCutBelowItsSealIsBroken()
     {
         fixture.SkipIfUnavailable();
@@ -271,10 +257,8 @@ public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fi
     /// <summary>
     /// Validates that verification while commands are appending never reports an intact chain as broken: the verifier
     /// checks up to the head it read first.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AuditVerifier_WhileCommandsAppend_StaysIntact")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task AuditVerifierWhileCommandsAppendStaysIntact()
     {
         fixture.SkipIfUnavailable();

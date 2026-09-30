@@ -146,10 +146,24 @@ their fully qualified name. Theory cases are merged: a single failing case fails
 
 A test with no result is reported as **NOT RUN**. It is never assumed to have passed. Without any TRX
 results, generation stops with an error unless you run `dotnet cadence generate-rtm --draft` or set
-`RTM_DRAFT=true`. A draft is
-marked **DRAFT ONLY** and every test shows as **UNVERIFIED**.
+`RTM_DRAFT=true`. A draft is marked **DRAFT ONLY** and every test shows as **UNVERIFIED**. `gxp sync` ignores
+`RTM_DRAFT`, so a variable left set in a shell or CI job can't turn documents built from real results into
+drafts.
 
 Set `RTM_STRICT_ALL=true` to make validation fail while any requirement is not qualified.
+
+### Keeping the RTM current
+
+`dotnet cadence check rtm` validates without running any tests. It fails when:
+
+- a test declares a requirement ID that no requirement document defines, or
+- the checked-in RTM lists different tests for a requirement than the tags in `tests/` declare. That happens
+  when a PR adds, removes or moves a tag without re-running `gxp sync`. The error names each test that is
+  missing from the RTM or no longer declares the requirement.
+
+It does not compare test results; only a full `gxp sync` produces those. The check is part of CI's static
+analysis job, not the pre-commit hook, because fixing it means running the whole suite. If you change a tag,
+run `gxp sync` before you open the PR.
 
 Run `gxp sync` with `CADENCE_TEST_POSTGRES` set, so the database-backed tests produce real results instead
 of skips:

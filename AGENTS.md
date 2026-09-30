@@ -147,18 +147,23 @@ No MVC controllers. Group routes with `MapGroup("/api/v1/…")`, return `TypedRe
 
 ### 6. Requirement traceability in tests (21 CFR Part 11)
 
-Tests that verify a regulatory or system requirement declare it twice: an `@req:` tag in the XML doc
-comment and a `[GxPRequirement]` attribute (`Cadence.Testing`). `pnpm cadence gxp sync` turns these
-into the Requirements Traceability Matrix.
+A test that verifies a regulatory or system requirement declares the requirement ID on the test method,
+with a `[GxPRequirement]` attribute (`Cadence.Testing`) or an `@req:` line in its XML doc comment. One form
+is enough. `dotnet cadence gxp sync` turns these into the Requirements Traceability Matrix, and
+[docs/TESTING.md](docs/TESTING.md) has the full rules. The ones agents most often get wrong:
+
+- Tag only the requirement the test's assertions prove. Most tests need no tag.
+- Look the ID up in `docs/SDLC/01_Product_Requirements_Document_PRD.md` before using it. PRD-SYS-001 is
+  audit fields and audit entries; PRD-SYS-053 is the agent lifecycle hooks and never belongs on a product test.
+- Tags on a class do not count, and an unknown ID fails `dotnet cadence check rtm`.
+- After adding, removing or moving a tag, run `dotnet cadence gxp sync` so the RTM lists the test.
 
 ```csharp
 /// <summary>
 /// Enrolling a subject writes an audit entry naming the authenticated user.
-/// @req:PRD-SYS-053
 /// </summary>
 [Fact]
-[Trait("Category", "GxP_OQ")]
-[GxPRequirement("PRD-SYS-053")]
+[GxPRequirement("PRD-SYS-001")]
 public async Task EnrollSubject_WritesAuditEntryWithCaller()
 {
     // Arrange, Act, Assert with FluentAssertions
