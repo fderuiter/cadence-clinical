@@ -85,7 +85,9 @@ public sealed class KernelCommandPipeline(
         var result = await invoker.InvokeAsync(handler, command, context, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            return result;
+            // A concurrent command with the same key can commit between the replay check and the handler's reads, so
+            // the handler sees the winner's state (for example AlreadyExists). The stored outcome wins (K-TX-3).
+            return await ReplayAsync<TResult>(transaction, execution, cancellationToken).ConfigureAwait(false) ?? result;
         }
 
         var resultJson = JsonSerializer.Serialize(result.Value, JsonOptions);
@@ -95,7 +97,9 @@ public sealed class KernelCommandPipeline(
             case CommitOutcome.Committed:
                 return result;
             case CommitOutcome.ConcurrencyConflict:
-                return KernelErrors.ConcurrencyConflict;
+                // The aggregate changed under us; if the change was a same-key command, its outcome is the answer.
+                return await ReplayAsync<TResult>(transaction, execution, cancellationToken).ConfigureAwait(false)
+                    ?? KernelErrors.ConcurrencyConflict;
             case CommitOutcome.IdempotencyRace:
             case CommitOutcome.UniqueConflict:
                 // A concurrent command with the same key may have committed first and tripped a unique constraint on

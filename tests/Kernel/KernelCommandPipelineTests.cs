@@ -1,9 +1,11 @@
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Core.Domain;
 using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
@@ -140,6 +142,97 @@ public sealed partial class KernelCommandPipelineTests
         unitOfWork.Begun.Should().BeFalse();
     }
 
+    /// <summary>
+    /// Validates K-TX-3 under a race, with the interleaving forced: a concurrent send with the same key commits after
+    /// this send's replay check, so the handler sees the tenant and refuses with AlreadyExists. The pipeline must look
+    /// for the key again and return the winner's result as a replay.
+    /// </summary>
+    [Fact(DisplayName = "Pipeline_HandlerRefusal_AfterSameKeyCommit_ReplaysTheWinner")]
+    public async Task PipelineHandlerRefusalAfterSameKeyCommitReplaysTheWinner()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var command = NewTenant();
+        var transaction = new RacingTransaction(WinnerOutcome(command)) { TenantExists = true };
+        await using var services = BuildServices(transaction);
+        var sender = services.GetRequiredService<IKernelCommandSender>();
+
+        var result = await sender.SendAsync(command, cancellationToken: ct);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Replayed.Should().BeTrue();
+        result.Value.Should().Be(command.TenantId);
+        transaction.Lookups.Should().Be(2);
+        transaction.Commits.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Validates K-TX-3 when the winner commits after this send's handler ran: the commit reports a concurrency
+    /// conflict, and the pipeline returns the winner's stored result instead.
+    /// </summary>
+    [Fact(DisplayName = "Pipeline_ConcurrencyConflict_AfterSameKeyCommit_ReplaysTheWinner")]
+    public async Task PipelineConcurrencyConflictAfterSameKeyCommitReplaysTheWinner()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var command = NewTenant();
+        var transaction = new RacingTransaction(WinnerOutcome(command)) { CommitOutcome = CommitOutcome.ConcurrencyConflict };
+        await using var services = BuildServices(transaction);
+        var sender = services.GetRequiredService<IKernelCommandSender>();
+
+        var result = await sender.SendAsync(command, cancellationToken: ct);
+
+        result.Replayed.Should().BeTrue();
+        result.Value.Should().Be(command.TenantId);
+        transaction.Lookups.Should().Be(2);
+        transaction.Commits.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Validates that the re-check only replays a stored outcome: with nothing stored under the key, the handler's
+    /// refusal and the commit's concurrency conflict reach the caller unchanged, and a key stored for a different
+    /// payload is an idempotency conflict.
+    /// </summary>
+    [Fact(DisplayName = "Pipeline_WithNoStoredOutcome_KeepsItsOwnError")]
+    public async Task PipelineWithNoStoredOutcomeKeepsItsOwnError()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var command = NewTenant();
+
+        var refused = new RacingTransaction(winner: null) { TenantExists = true };
+        await using (var services = BuildServices(refused))
+        {
+            (await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: ct))
+                .Error.Should().Be(KernelErrors.AlreadyExists);
+        }
+
+        var conflicted = new RacingTransaction(winner: null) { CommitOutcome = CommitOutcome.ConcurrencyConflict };
+        await using (var services = BuildServices(conflicted))
+        {
+            (await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: ct))
+                .Error.Should().Be(KernelErrors.ConcurrencyConflict);
+        }
+
+        var otherPayload = new RacingTransaction(WinnerOutcome(command with { Name = "Other" })) { TenantExists = true };
+        await using (var services = BuildServices(otherPayload))
+        {
+            (await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: ct))
+                .Error.Should().Be(KernelErrors.IdempotencyConflict);
+        }
+    }
+
+    private static ServiceProvider BuildServices(RacingTransaction transaction) =>
+        new ServiceCollection()
+            .AddSingleton<IClock>(new FakeClock())
+            .AddSingleton<ICurrentActor>(new SettableActor { Actor = Actor.Person("user-1") })
+            .AddSingleton<IAuthorizer>(new PermitAll())
+            .AddSingleton<IKernelUnitOfWorkFactory>(new SingleTransactionFactory(transaction))
+            .AddKernelCommandPipeline()
+            .BuildServiceProvider();
+
+    private static IdempotentOutcome WinnerOutcome(ProvisionTenant winner) =>
+        new(
+            KernelCommandPipeline.ComputeRequestHash(winner, typeof(ProvisionTenant)),
+            JsonSerializer.Serialize(winner.TenantId, KernelCommandPipeline.JsonOptions));
+
     private static ProvisionTenant NewTenant() =>
         new(TenantId.New(), "T-001", "Tenant", "key-1", Reason);
 
@@ -168,5 +261,57 @@ public sealed partial class KernelCommandPipelineTests
             Begun = true;
             throw new InvalidOperationException("The pipeline should have refused the command before opening a unit of work.");
         }
+    }
+
+    private sealed class SingleTransactionFactory(IKernelCommandTransaction transaction) : IKernelUnitOfWorkFactory
+    {
+        public IKernelCommandTransaction Begin(CommandExecution execution) => transaction;
+    }
+
+    /// <summary>
+    /// A transaction in which a concurrent send with the same key commits right after the first idempotency lookup:
+    /// the first lookup finds nothing and every later one finds <paramref name="winner"/>.
+    /// </summary>
+    private sealed class RacingTransaction(IdempotentOutcome? winner) : IKernelCommandTransaction, IKernelUnitOfWork
+    {
+        public bool TenantExists { get; init; }
+
+        public CommitOutcome CommitOutcome { get; init; } = CommitOutcome.Committed;
+
+        public int Lookups { get; private set; }
+
+        public int Commits { get; private set; }
+
+        public IKernelUnitOfWork Work => this;
+
+        public Task<IdempotentOutcome?> FindPriorOutcomeAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(Lookups++ == 0 ? null : winner);
+
+        public Task<CommitOutcome> CommitAsync(string resultJson, CancellationToken cancellationToken)
+        {
+            Commits++;
+            return Task.FromResult(CommitOutcome);
+        }
+
+        public Task RecordDenialAsync(string reason, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The command was permitted.");
+
+        public Task<TAggregate?> FindAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult<TAggregate?>(null);
+
+        public Task<bool> ExistsAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult(TenantExists);
+
+        public void Add(AggregateRootBase aggregate)
+        {
+        }
+
+        public void Raise(object domainEvent, DateTimeOffset? occurredValid = null)
+        {
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

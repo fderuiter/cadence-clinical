@@ -13,8 +13,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 
 ### Validation Result Summary
 
-- **Automated Test Methods Reported:** 734
-- **Passed:** 734 🟢
+- **Automated Test Methods Reported:** 781
+- **Passed:** 781 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate (of executed):** 100.00%
@@ -146,6 +146,15 @@ out so the report only changes when results change; they are in the TRX files un
 | `Guard_NullCurrentTargetingScreening_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
 | `Guard_ReconsentRequiredFanOut_CoversEveryOtherState` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
 | `Guard_SameStateNoOp_AlwaysSucceeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
+| `ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `CrossTenantReadReturnsNothing` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `EveryKernelTableHasTenantIdAndForcedRowLevelSecurity` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `NoTenantCannotConnectAndSeesNothing` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `PersonIsVisibleOnlyToTenantsWithAMembership` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys` | `Cadence.UnitTests.Kernel.KernelDbContextModelTests` | PRD-CRF-013 | 🟢 PASSED |
 | `ProtocolRagService_EvaluateFaithfulness_MatchesProtocolRAGEvaluator` | `Cadence.UnitTests.Packages.ComplianceUnitTests` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED |
 | `ProtocolRAG_EvaluateFaithfulness_DetectsHallucinatedCitations` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED |
 | `ProtocolRAG_EvaluateFaithfulness_FailsClosedForInsufficientInformation` | `Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests` | PRD-SYS-051, PRD-TCK-005 | 🟢 PASSED |
@@ -166,7 +175,7 @@ out so the report only changes when results change; they are in the TRX files un
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
-Qualified Requirements: 6 of 192
+Qualified Requirements: 7 of 192
 
 ## 5. Qualification Review & Authorization
 
@@ -182,30 +191,30 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 - **Signer Identity:** cadence-validation-runner
 - **Timestamp:** 2026-07-23 22:38:25 UTC
 - **Meaning / Purpose:** GxP Qualification Execution Sign-Off
-- **Cryptographic Hash (SHA-256):** ade8846bfbafd8ac62c7886d8153de62be148fa36fb998c50f6bbdbd092f1fd4
+- **Cryptographic Hash (SHA-256):** f8e28c2b99fcd7b68742ebd332441433463de4eb274ca1012974e9633422f508
 -----BEGIN CERTIFICATE-----
-MIIDxTCCAn2gAwIBAgIJAKtiy5kPu5XUMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZI
-AWUDBAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgMGgxIjAgBgNV
-BAoTGUNhZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2Ug
-R3hQIFZhbGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVy
-KTAeFw0yNjA5MjgyMzQ1MDNaFw0yNzA5MjkyMzQ1MDNaMGgxIjAgBgNVBAoTGUNh
-ZGVuY2UgQ2xpbmljYWwgU29mdHdhcmUxQjBABgNVBAMTOUNhZGVuY2UgR3hQIFZh
-bGlkYXRpb24gUnVubmVyIChjYWRlbmNlLXZhbGlkYXRpb24tcnVubmVyKTCCASIw
-DQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1L8sr2gC5QolOcOPXmdkVa61eb
-998hYFSmSRacKnrcNLexYI4ki79J+v3Tv/QGfxFmFnzZNKoX92IOsEHh4uKrNLZs
-y5VyxszcGIBBNbWLWgvQTDIcghFTAIlz/TOM0tIkBo1DuZeakfzALBWfkerHTEnB
-MHPUrgXRI/RT2NXm5CmxM3Lz9k3wOsULBlM0aafSi216U9sOA3kRHNiWkxALhIn2
-j7ZEVd2P/mMywYu4rhySjnCdrow2O1/HPrC2/3Na5ktIDqfpav+We9f1qXf+bVu3
-a1kZT+WhRarcEl/qfTdFCB+LioyzNmb9DxVdNmyYtG/80PFGbIjQGwJwTGECAwEA
-AaMSMBAwDgYDVR0PAQH/BAQDAgbAMD0GCSqGSIb3DQEBCjAwoA0wCwYJYIZIAWUD
-BAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIDAgEgA4IBAQAbgCtarYTM
-6OuYqQqwPoanEJmfiYdLWm7/FtKwX0VZV/otwcSqLRGnv5CfhJY0U+mFhi1/4bM0
-qK37RYT3Y/QtdiD+vw4hwXelbz4i9wQ0wYY9xmF5TZnF+j0sCITq9h95T1tCz9gR
-xmRPWblFqyKy8ikn082Ev6z7a9OGXIEXhcu7zWC/4IHTZFJHlt1e1ADJXeMH1OTc
-QcWOKY+ZBgSawUPZvwJoUhGIE95vthVCk/aepDdMdPzf3qurhuOa+YOFmOXI3P0Z
-vwdpKoP6A4Z7UEGa2AifbYFfGeYLRrqRuI2fk/qEafajzntwaVEZ4aWtXMHwqtkS
-sSKBSCtAhgNf
+MIIDxDCCAnygAwIBAgIIWWxv/Cic5YUwPQYJKoZIhvcNAQEKMDCgDTALBglghkgB
+ZQMEAgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASAwaDEiMCAGA1UE
+ChMZQ2FkZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBH
+eFAgVmFsaWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIp
+MB4XDTI2MDkyOTAxMTUyMFoXDTI3MDkzMDAxMTUyMFowaDEiMCAGA1UEChMZQ2Fk
+ZW5jZSBDbGluaWNhbCBTb2Z0d2FyZTFCMEAGA1UEAxM5Q2FkZW5jZSBHeFAgVmFs
+aWRhdGlvbiBSdW5uZXIgKGNhZGVuY2UtdmFsaWRhdGlvbi1ydW5uZXIpMIIBIjAN
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmGma1rtVUVg7vi8+st/+PanF852j
+Mu696kSwvhIynJJq9Vz4GFFVzDEcbZvOcGRl+IgCSo9Vb/1D1i3JjvKiHOOJsYRp
+RascoTFjjy3KkXnyR6cgE56vZabT8F6lleFVOjaGmP4bC9jyTtLPgKbbw6do8My1
+9krJ/yiLy0bUVH1Fo7DCPVIon6XghxlRffArk06F6hKLwy+Hv7x58TzVK8Wlpl2+
+DjwHlllXycEkEvmefctw/G+YcpaZ+G6VcHLg/vxxnpsehOW2Xl+FBQBRFYaeBq+2
+H4NUecOY4/hrV2c6C5CDUJa5jpM/HKoN8Mu75M1gOH/C7xvUYxz2sZ+J0wIDAQAB
+oxIwEDAOBgNVHQ8BAf8EBAMCBsAwPQYJKoZIhvcNAQEKMDCgDTALBglghkgBZQME
+AgGhGjAYBgkqhkiG9w0BAQgwCwYJYIZIAWUDBAIBogMCASADggEBAFpbfoIMwtgX
+PH30qbgkgxDTz24ZV4OQ9csE/6aRksGSnVkHdUuCBK+zZmj/LiBHZjRHBygpdui6
+snTVbXLUx6QQhCxFvONwRY+V/5raB9j0EpdTc51t/Rm8+bV+L/XUeP3isHXmqDnB
+DgbN+jntHplqNtNMLGVWlI3tv8e5w5wt2gAdiCqsJvALhjj+i2xzXGn/9Uw15Fdj
+E9iEaVige2PArZJDnAEU2F8eWAKkIx31II7BkZUKGIR25w3Poxmyxv7X6Bvs4VYS
+3uvMG8+hCOP6NDEZpYFmsvPTMGiyvjWS7x5zOw/j5G1k58m83qI2NLuYOIm2dGoc
+MiL/9gNUB/4=
 -----END CERTIFICATE-----
 -----BEGIN SIGNATURE-----
-Jm7KUpk9LMffPQfhIJw9qqmvqVkiDBGGXxMNJXExkOdgYsmn2Hrh/uZfr6y+MiYK9rcj6CHikt3Wgl5cyQWGAOrYzRh+97RcDZCGEKCivopNOv6JBjFbot+TSt2q6+yJ16BpFKcO9sn9Hx/girfkN1y41j4LERz6RNr1YITaZPW/VSzGZtRkDwgvKsuogAZnjJ4E4KPj35ar7Tk6pIB8Wo4wPBEEzjqGaPnNr6aSyEXYR+zLypQzXDpQfVaKRCU525U6MzkMFZqJRvXWQYEmdfp1QN9fZEVPbCI/aliKEcM7yGRx3fSokp58kEeVLOdfLUOy+l2XA0SAzZZaaTvR2w==
+Y5EPZ0nKAUsMRu3skXDY+ORDQJK/OoljAFtXAglBZ2zFKOiWGCJnDVx2GqYibErntqziG9/VKZyMNus5kAPT1B8awd+tu0AlxgJ9mqHivtpZp+U6jwgZJaPP8w43J6K5ofNxA3cOUkGdisfi5AtIp09RGk6pHyJuJvcjR/znZ/gH3CaIdRVDD9TH0zVp/sH5nNDzOQGi7C8Qe2K3XPn1cChtUU8+fIQaDIiKW3muOJwzV4eyRKkMXRgv759A9Sxils/2DdvOMRhSKOR6SlZ9CUwsF9IUaDlnseWiZYs5MDCkU1GGNWuWEaikP0DWKZYrJ+AtXBJUh55GmBQ5uicndg==
 -----END SIGNATURE-----
