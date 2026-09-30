@@ -6,6 +6,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 
 | Table | Entity | Columns |
 | --- | --- | --- |
+| [`kernel.attestations`](#kernelattestations) | `Attestation` | 15 |
 | [`kernel.audit_chain_heads`](#kernelaudit_chain_heads) | `AuditChainHead` | 3 |
 | [`kernel.audit_chain_seals`](#kernelaudit_chain_seals) | `AuditChainSeal` | 6 |
 | [`kernel.audit_entries`](#kernelaudit_entries) | `AuditEntryRecord` | 14 |
@@ -21,6 +22,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.organizations`](#kernelorganizations) | `Organization` | 10 |
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.people`](#kernelpeople) | `Person` | 9 |
+| [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
 | [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 13 |
 | [`kernel.sites`](#kernelsites) | `Site` | 11 |
 | [`kernel.standard_datasets`](#kernelstandard_datasets) | `StandardDataset` | 7 |
@@ -33,6 +35,41 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 10 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 8 |
+
+## kernel.attestations
+
+Entity: `Attestation`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `actor_id` | `character varying(255)` | no |  |  |
+| `authenticated_at` | `timestamp with time zone` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `meaning` | `character varying(32)` | no |  |  |
+| `method` | `character varying(64)` | no |  |  |
+| `reason` | `character varying(1000)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `recorded_at` | `timestamp with time zone` | no |  |  |
+| `target_content_hash` | `character varying(71)` | no |  |  |
+| `target_id` | `uuid` | no |  |  |
+| `target_kind` | `character varying(64)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_attestations_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_attestations_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_attestations_tenant_id_target_kind_target_id`: (`tenant_id`, `target_kind`, `target_id`)
+
+Check constraints:
+
+- `ck_attestations_target_content_hash`: `target_content_hash ~ '^sha256:[0-9a-f]{64}$'`
 
 ## kernel.audit_chain_heads
 
@@ -386,6 +423,50 @@ Entity: `Person`
 Indexes:
 
 - `IX_people_email`: unique (`email`)
+
+## kernel.protocol_versions
+
+Entity: `ProtocolVersion`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `amendment` | `jsonb` | yes |  |  |
+| `approval_attestation_id` | `uuid` | yes |  |  |
+| `content` | `text` | no |  |  |
+| `content_hash` | `character varying(71)` | yes |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `number` | `integer` | no |  |  |
+| `parent_version_id` | `uuid` | yes |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `status` | `character varying(16)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+| `withdrawal_attestation_id` | `uuid` | yes |  |  |
+| `withdrawal_reason` | `character varying(1000)` | yes |  |  |
+
+Foreign keys:
+
+- `FK_protocol_versions_attestations_tenant_id_approval_attestati~`: (`tenant_id`, `approval_attestation_id`) references `kernel.attestations` (`tenant_id`, `id`), on delete restrict
+- `FK_protocol_versions_attestations_tenant_id_withdrawal_attesta~`: (`tenant_id`, `withdrawal_attestation_id`) references `kernel.attestations` (`tenant_id`, `id`), on delete restrict
+- `FK_protocol_versions_protocol_versions_tenant_id_parent_versio~`: (`tenant_id`, `parent_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_protocol_versions_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_protocol_versions_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_protocol_versions_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_protocol_versions_tenant_id_approval_attestation_id`: (`tenant_id`, `approval_attestation_id`)
+- `IX_protocol_versions_tenant_id_parent_version_id`: (`tenant_id`, `parent_version_id`)
+- `IX_protocol_versions_tenant_id_study_id_number`: unique (`tenant_id`, `study_id`, `number`)
+- `IX_protocol_versions_tenant_id_withdrawal_attestation_id`: (`tenant_id`, `withdrawal_attestation_id`)
+
+Check constraints:
+
+- `ck_protocol_versions_content_hash`: `content_hash IS NULL OR content_hash ~ '^sha256:[0-9a-f]{64}$'`
+- `ck_protocol_versions_number`: `number > 0`
 
 ## kernel.provenance_activities
 
