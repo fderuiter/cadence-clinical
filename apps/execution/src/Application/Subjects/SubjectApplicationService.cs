@@ -497,6 +497,13 @@ public sealed class SubjectApplicationService(
             }
         }
 
+        // An emergency unblinding needs a clinical justification of at least 50 characters (PRD-SUB-005, #4982).
+        if (target == SubjectState.Unblinded
+            && changeReason.Trim().Length < SubjectAuthority.MinimumUnblindingReasonLength)
+        {
+            return SubjectErrors.UnblindingReasonTooShort(SubjectAuthority.MinimumUnblindingReasonLength);
+        }
+
         // Unblinding records who broke the blind, why and when on the subject itself, not only in the audit
         // entry (#4951); every other target is a plain transition.
         DomainError? transitionError = target == SubjectState.Unblinded
