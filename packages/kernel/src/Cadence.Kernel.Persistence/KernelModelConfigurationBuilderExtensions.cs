@@ -1,3 +1,6 @@
+using Cadence.Kernel.Persistence.Standards;
+using Cadence.Kernel.Standards;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Kernel.Persistence;
@@ -25,6 +28,10 @@ public static class KernelModelConfigurationBuilderExtensions
         configurationBuilder.Properties<CodeSystemVersionId>().HaveConversion<CodeSystemVersionIdValueConverter, EntityIdValueComparer<CodeSystemVersionId>>();
         configurationBuilder.Properties<ConceptId>().HaveConversion<ConceptIdValueConverter, EntityIdValueComparer<ConceptId>>();
         configurationBuilder.Properties<ConceptMappingId>().HaveConversion<ConceptMappingIdValueConverter, EntityIdValueComparer<ConceptMappingId>>();
+        configurationBuilder.Properties<StandardVersionId>().HaveConversion<StandardVersionIdValueConverter, EntityIdValueComparer<StandardVersionId>>();
+        configurationBuilder.Properties<LibraryItemId>().HaveConversion<LibraryItemIdValueConverter, EntityIdValueComparer<LibraryItemId>>();
+        configurationBuilder.Properties<StudyStandardsProfileId>().HaveConversion<StudyStandardsProfileIdValueConverter, EntityIdValueComparer<StudyStandardsProfileId>>();
+
         return configurationBuilder;
     }
 }

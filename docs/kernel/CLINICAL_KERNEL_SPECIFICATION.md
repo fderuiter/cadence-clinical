@@ -296,7 +296,7 @@ changed, pinned to its new version (§3.4; null for events about no aggregate, s
 
 | Family | Examples |
 | --- | --- |
-| Knowledge | `ProtocolVersionDrafted`, `…Approved`, `AmendmentClassified`, `ConceptMapped`, `MappingSpecificationPublished`, `RulePackReleased` |
+| Knowledge | `ProtocolVersionDrafted`, `…Approved`, `AmendmentClassified`, `ConceptMapped`, `MappingSpecificationPublished`, `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
 | Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityGranted`, `StudySiteActivated`, `ParticipantEnrolled`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
 | Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactVersioned`, `IngestionBatchAccepted` |
 | Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
@@ -433,6 +433,18 @@ database lock.
   CT versions) → dataset Artifact`. The dataset Artifact's provenance names all of those inputs.
 - **K-PROJ-3** Standards datasets are generated **continuously** (on events, per study) and validated in
   stream; database lock freezes inputs, it is not when SDTM is first produced.
+
+**Implemented (#4809, ADR-2460):** the Standards Registry and MDR. `StandardVersion` owns its datasets, variables,
+value-level definitions and terminology bindings, identified by `(tenant, standard code, version)` and a SHA-256
+content hash over the canonical package. `LibraryItem` versions collection specifications, mapping
+specifications, rule packs and codelist subsets under one governance envelope (Draft → Approved → Deprecated;
+approval needs an `Approved` Attestation, deprecation a `Responsibility` one, both checked through
+`IAttestationVerifier`). `StudyStandardsProfile` pins a study's approved standard versions, CT versions and library
+items; deprecation never changes a pin. Registered definitions are insert-only (`KA001`) and the identity and content
+columns of versions and items are immutable (`KS001`). `Cadence.Standards` loads CDISC Library product content with
+checksum verification and ships SDTMIG v3.4 (DM, AE, VS, LB) and ADaMIG v1.3 (ADSL) seeds. Until the Concept Registry
+lands, CT bindings are the natural key `(code system, version)`, for example `sdtmct 2024-09-27`. An architecture test
+enforces K-PROJ-1 against the shipped seeds.
 
 ---
 
@@ -1001,6 +1013,7 @@ kernel, is merged into another, or is retired.
 | K010 | Command pipeline and audit | One transaction per command; per-tenant hash chain; insert-only history | ADR-2449 |
 | K011 | Simulation | Evaluate-only over candidate versions; no study branches | ADR-2480 |
 | K012 | Object references and zoom path | `kind:id@version` NodeRef; kernel-computed, presentation-only zoom path | ADR-2481 |
+| K013 | Standards Registry and MDR | Tenant-scoped reference data; one governance envelope for library items; attested approval; immutable once registered | ADR-2460 |
 
 ---
 

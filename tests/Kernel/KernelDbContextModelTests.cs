@@ -39,7 +39,10 @@ public class KernelDbContextModelTests
             "tenants", "organizations", "people", "sites", "studies", "study_sites",
             "provenance_activities", "domain_events", "audit_entries", "audit_chain_heads", "outbox_messages",
             "idempotency_records", "audit_chain_seals", "tenant_memberships",
-            "code_systems", "code_system_versions", "code_system_entries", "concepts", "concept_revisions", "concept_mappings");
+            "code_systems", "code_system_versions", "code_system_entries", "concepts", "concept_revisions", "concept_mappings",
+            "standard_versions", "standard_datasets", "standard_variables", "standard_value_level_definitions",
+            "standard_terminology", "library_items", "study_standards_profiles");
+
         entityTypes.Should().OnlyContain(e => e.GetSchema() == KernelDbContext.Schema);
         entityTypes.SelectMany(e => e.GetProperties())
             .Select(p => p.GetColumnName())

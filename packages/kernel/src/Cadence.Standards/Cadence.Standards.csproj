@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cadence.Standards</RootNamespace>
+    <AssemblyName>Cadence.Standards</AssemblyName>
+    <Description>Standards subsystem (spec §6.3): loaders for public standards content (CDISC Library) into Standards Registry packages. Depends on Cadence.Kernel.Abstractions only.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+  </ItemGroup>
+
+  <!-- Seed content ships inside the assembly and is checksum-verified against Seed/manifest.json when loaded. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Seed\*.json" LogicalName="Cadence.Standards.Seed.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

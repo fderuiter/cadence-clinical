@@ -109,6 +109,10 @@ Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The cha
 
 The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation. Each tenant loads the terminology releases it adopts (ADR-2470); a release is a pinned **CodeSystemVersion**, and a **Coding** is a code in one such version. A concept's label or definition change is a new version; earlier versions keep resolving. A **ConceptMapping** links one concept version to one Coding with a relation and a review status.
 
+### Standards Registry, Metadata Registry and Study Standards
+
+The Standards Registry holds each standard version a tenant uses (SDTMIG, ADaMIG, SENDIG, CDASHIG, …) as data: datasets, variables, value-level definitions and the controlled-terminology versions they bind, with a content hash (ADR-2460). The Metadata Registry (MDR) is the governed library of reusable items (collection specifications, mapping specifications, rule packs, codelist subsets), each versioned by key. Both follow Draft → Approved → Deprecated, with an Attestation for each governance step. A study's standards profile pins the approved standard versions, CT versions and library item versions it uses; deprecation never changes a pin. Standard variable names exist only in this data, never in kernel code (K-PROJ-1).
+
 ### Rules, Validation Findings and Lineage
 
 Validation, edit-check and conformance rules are versioned data evaluated by one AST engine behind `IRuleEvaluator` (ADR-2254), producing `ValidationFinding`s with workflow and stable identity across runs. Every derived object carries lineage edges written in the same transaction, so any value traces back to its source and any objective forward to its results (ADR-2255).

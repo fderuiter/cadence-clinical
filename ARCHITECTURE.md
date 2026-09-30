@@ -58,6 +58,7 @@ Engines are an organising frame, not deployment units. The rules that shape ever
   `Participant`, `Observation`, `Person`, roles, rule engines or audit tables; they reference kernel IDs.
 - **Assemblies (spec §2.4):** `Cadence.Kernel.Abstractions` (IDs, ports, `IClock`) → `Domain` →
   `Application` → `Persistence` (internal) → `Api`; applications reference `Abstractions` only (K-XS-2).
+  `Cadence.Standards` loads public CDISC content into the Standards Registry and also references `Abstractions` only.
 
 The [domain glossary](CONTEXT.md) defines the vocabulary.
 
@@ -76,6 +77,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K009 | Lineage graph in the kernel schema, written transactionally | [ADR-2255](docs/adr/2026-09-29-kernel-lineage-graph-and-scientific-traceability.md) |
 | — | Kernel command pipeline: one transactional write set, per-tenant audit chain, outbox | [ADR-2449](docs/adr/2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md) |
 | — | Per-tenant terminology with pinned code-system versions | [ADR-2470](docs/adr/2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) |
+| — | Standards Registry and MDR as governed, tenant-scoped reference data | [ADR-2460](docs/adr/2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) |
 | — | Simulation evaluates candidate versions and never writes | [ADR-2480](docs/adr/2026-09-30-evaluate-only-simulation-over-candidate-versions.md) |
 | — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
