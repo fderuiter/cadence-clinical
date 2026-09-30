@@ -62,7 +62,7 @@ Two pieces the endpoints depend on are not in place yet:
 
 A new host, `Cadence.Kernel.Host` in `apps/kernel-api`, registers kernel persistence, navigation, search and
 authorization, and maps the read endpoints from `Cadence.Kernel.Api`. What is not in place yet fails closed: before the
-evaluator existed every decision was a denial that named it, and until visibility is decided every object is masked.
+evaluator existed every decision was a denial that named it, and until visibility was decided (ADR-2457) every object was masked.
 
 ## 4. Decision Outcome
 
@@ -153,8 +153,10 @@ Every read runs under the tenant's Row-Level Security, and every object it retur
   edge touching a masked object withholds its activity.
 - A request with no accountable actor sees every object masked, and lineage reads refuse it.
 
-Until visibility is decided from the authority model (#4781) and the IdentityVault (#4782), the host's
-`INodeVisibility` masks every object as `NotPermitted`. #4781 replaces that registration too.
+The host's `INodeVisibility` is the grant-backed visibility ([ADR-2457](2026-09-30-grant-backed-node-visibility.md)):
+an object is visible when a grant the reader holds in effect covers it, and masked `NotPermitted` otherwise, so a reader
+with no grant sees every object masked. Until then (#4781) the host masked every object. Blinding and the IdentityVault
+(#4782) are not decided yet.
 
 ### 4.6 Out of scope
 
@@ -165,21 +167,20 @@ Until visibility is decided from the authority model (#4781) and the IdentityVau
 
 - **Positive:** The web app gets the kernel's own answers over the same gateway, with a generated client. The two
   missing pieces each change one registration in the host.
-- **Positive:** Nothing can be shown wrongly in the meantime: every object is masked until visibility is decided, and
+- **Positive:** Nothing can be shown wrongly: an object is masked unless a grant the reader holds covers it, and
   every decision is the kernel's own, with its reason.
-- **Negative:** Until #4781 decides visibility, the reads return masked objects only, so the Canvas wiring can be
-  exercised with real data only against the tests and a stubbed visibility.
+- **Negative:** Until #4781 decided visibility (ADR-2457), the reads returned masked objects only.
 - **Negative:** One more deployable, on port 8018.
 
 ## 6. Implementation & Verification
 
-- `apps/kernel-api/src`: `Program.cs`, `ClaimsCurrentActor`, `DirectoryTenantResolver`,
-  `UnavailableNodeVisibility`, `KernelDatabaseHealthCheck`,
+- `apps/kernel-api/src`: `Program.cs`, `ClaimsCurrentActor`, `DirectoryTenantResolver`, `KernelDatabaseHealthCheck`,
   `KernelMigrationHostedService`.
 - `packages/kernel/src/Cadence.Kernel.Api`: `KernelReadEndpoints`, `KernelReadResponses`, `KernelReadMasking`,
   `KernelTenantResolution`, `KernelLineageEndpoints`, `KernelLineageResponses`, `KernelProblems`.
 - `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host: 403 for a tenant code the directory
-  does not know or a missing one, 401 unsigned, reads in the resolved tenant, masking in place and in search, protocol
+  does not know or a missing one, 401 unsigned, reads in the resolved tenant, masking in place and in search, the host's
+  grant-backed visibility with and without a grant, protocol
   versions listed, masked and refused for a hidden study, 400 and 404 problems, CanI denied without a grant and
   permitted with one, each explained, no actor for a subject that is no accountable person, the command catalogue,
   search, and the lineage reads: a Trace as the reader with masked objects in place, the default backward walk,
