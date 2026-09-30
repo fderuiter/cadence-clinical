@@ -16,14 +16,17 @@ public sealed class SubjectAuthorityTests
     [InlineData("sub_investigator", true)]
     [InlineData("lead_investigator", true)]
     [InlineData("crc", true)]
-    [InlineData("sponsor_dm", true)]
+    [InlineData("sponsor_dm", false)]
+    [InlineData("data_manager", false)]
+    [InlineData("Data Manager", false)]
+    [InlineData("dm", false)]
     [InlineData("cra", false)]
     [InlineData("monitor", false)]
     [InlineData("auditor", false)]
     [InlineData("subject", false)]
     [InlineData("emergency_unblinder", false)]
     [InlineData("", false)]
-    public void CanManageParticipants_AllowsSiteRolesAndDataManagersOnly(string role, bool expected) =>
+    public void CanManageParticipants_AllowsSiteRolesOnly(string role, bool expected) =>
         SubjectAuthority.CanManageParticipants(role).Should().Be(expected);
 
     [Theory]
