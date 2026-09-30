@@ -5,19 +5,19 @@ in [AGENTS.md](AGENTS.md) and apply to everyone, human or AI agent.
 
 ## Quick reference
 
-| Task | Command |
-| --- | --- |
-| Set up a new machine | `make wizard` |
-| Build | `dotnet build Cadence.sln` |
-| Unit tests | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` |
-| Architecture tests | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| Format check | `dotnet format Cadence.sln --verify-no-changes` |
-| All quality gates | `pnpm cadence check` |
-| Auto-fix | `pnpm cadence fix` |
-| Traceability matrix | `pnpm cadence gxp sync` |
-| New ADR | `pnpm cadence scaffold adr "<title>"` |
-| Docs site locally | `pnpm docs:dev` |
-| All Make targets | `make help` |
+| Task                 | Command                                                                        |
+| -------------------- | ------------------------------------------------------------------------------ |
+| Set up a new machine | `make wizard`                                                                  |
+| Build                | `dotnet build Cadence.sln`                                                     |
+| Unit tests           | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| Architecture tests   | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| Format check         | `dotnet format Cadence.sln --verify-no-changes`                                |
+| All quality gates    | `pnpm cadence check`                                                           |
+| Auto-fix             | `pnpm cadence fix`                                                             |
+| Traceability matrix  | `pnpm cadence gxp sync`                                                        |
+| New ADR              | `pnpm cadence scaffold adr "<title>"`                                          |
+| Docs site locally    | `pnpm docs:dev`                                                                |
+| All Make targets     | `make help`                                                                    |
 
 `pnpm cadence <command>` runs the Cadence CLI from source
 (`dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`). There is no installed
@@ -130,17 +130,17 @@ description.
 
 Every PR updates what its change makes stale, in the same PR:
 
-| If you change… | Update |
-| --- | --- |
-| A service or package's behaviour, endpoints, settings or tests | Its `README.md` |
-| A setting (environment variable or configuration key) | [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) and `.env.example` |
-| Architecture, service map, security model | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Domain vocabulary | [CONTEXT.md](CONTEXT.md) |
-| A requirement | [PRD](docs/SDLC/01_Product_Requirements_Document_PRD.md) or [SRS](docs/SRS.md) with its ID |
+| If you change…                                                              | Update                                                                                                |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| A service or package's behaviour, endpoints, settings or tests              | Its `README.md`                                                                                       |
+| A setting (environment variable or configuration key)                       | [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md) and `.env.example`                     |
+| Architecture, service map, security model                                   | [ARCHITECTURE.md](ARCHITECTURE.md)                                                                    |
+| Domain vocabulary                                                           | [CONTEXT.md](CONTEXT.md)                                                                              |
+| A requirement                                                               | [PRD](docs/SDLC/01_Product_Requirements_Document_PRD.md) or [SRS](docs/SRS.md) with its ID            |
 | A significant decision (new dependency, datastore, contract or schema rule) | A new ADR (`pnpm cadence scaffold adr "<title>"`), linked from [docs/adr/index.md](docs/adr/index.md) |
-| Anything that supersedes an ADR | The old ADR's status and the index ([AGENTS.md](AGENTS.md#architecture-decision-records)) |
-| Kernel concepts or invariants | Raise on the kernel epic; the spec changes only through its owners |
-| A new document | [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md) |
+| Anything that supersedes an ADR                                             | The old ADR's status and the index ([AGENTS.md](AGENTS.md#architecture-decision-records))             |
+| Kernel concepts or invariants                                               | Raise on the kernel epic; the spec changes only through its owners                                    |
+| A new document                                                              | [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md)                                            |
 
 ## 6. Repository hygiene
 
@@ -151,13 +151,13 @@ Every PR updates what its change makes stale, in the same PR:
   `.deid-baseline.txt`. That baseline may only shrink. When a flagged line is not PHI (demo data, a code-system
   URL), put a `deid-ignore` comment on that line rather than adding to the baseline. When the gate reports stale
   baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid`.
-- Do not re-add Python code or tooling; the remaining Python reference sources are listed in
-  [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are
+- Do not re-add Python code or tooling; the remaining Python reference sources are archived under
+  `docs/reference_specs/python/` and listed in [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are
   verified ([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)).
 - `docs/index.md`, `docs/AGENTS.md`, `docs/ARCHITECTURE.md` and `docs/LICENSE.md` are generated by
   `pnpm docs:build` from the root files and are not committed. Edit the root files.
 - The docs site build fails on a dead link, so run `pnpm docs:build` (or `node scripts/build-docs.js
-  --prepare-only && npx vitepress build docs`) after moving or renaming a document.
+--prepare-only && npx vitepress build docs`) after moving or renaming a document.
 
 ## 7. Getting help
 

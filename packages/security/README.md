@@ -15,6 +15,7 @@ signatures and audit digests shared by every Cadence service.
 - Authentication, identity headers and required settings are described in ADR-2250
   (`docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md`) and
   `apps/gateway/README.md`.
+- Python reference sources are archived in `docs/reference_specs/python/security/` (`auditor_token.py`, `cert_store.py`, `crypto_verifier.py`, `fail_fast.py`, `gating.py`, `permissions.py`, `rbac.py`, `regulated_actions.py`, `signing.py`). They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ---
 
@@ -65,14 +66,14 @@ This is byte-for-byte `canonicalSerialize` in `packages/ui/signing.js`, so signa
 Protects individual secret columns at rest (#4770, see
 [ADR-2494](../../docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md)).
 
-| Type | Use |
-| --- | --- |
-| `IFieldEncryptor` / `AesGcmFieldEncryptor` | AES-256-GCM encryption of a value that must be read back. Stored as `enc:v1:<keyId>:<base64(nonce, ciphertext, tag)>`; the purpose string (`<service>.<table>.<column>`) and key id are authenticated, so values cannot be moved between columns. Randomised, so not searchable. |
-| `ILookupHasher` / `HmacLookupHasher` | HMAC-SHA256 "blind index" (64 lowercase hex characters) for a value that only needs to be matched, never read back. |
-| `EncryptedStringConverter`, `PropertyBuilder<string?>.IsEncrypted(...)` | EF Core mapping for an encrypted column; sizes the column with `AesGcmFieldEncryptor.GetMaxStoredLength`. |
-| `IFieldEncryptingDbContext`, `FieldEncryptionModelCacheKeyFactory` | A DbContext with encrypted columns implements the interface and replaces `IModelCacheKeyFactory` in `OnConfiguring`, so models built with different keys are never shared. |
-| `DesignTimeFieldEncryptor` | For `IDesignTimeDbContextFactory` only: builds the model, refuses to encrypt or decrypt. |
-| `FieldDecryptionException` | Thrown on wrong key, wrong purpose, tampering or a non-encrypted value. Reads fail loudly. |
+| Type                                                                    | Use                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IFieldEncryptor` / `AesGcmFieldEncryptor`                              | AES-256-GCM encryption of a value that must be read back. Stored as `enc:v1:<keyId>:<base64(nonce, ciphertext, tag)>`; the purpose string (`<service>.<table>.<column>`) and key id are authenticated, so values cannot be moved between columns. Randomised, so not searchable. |
+| `ILookupHasher` / `HmacLookupHasher`                                    | HMAC-SHA256 "blind index" (64 lowercase hex characters) for a value that only needs to be matched, never read back.                                                                                                                                                              |
+| `EncryptedStringConverter`, `PropertyBuilder<string?>.IsEncrypted(...)` | EF Core mapping for an encrypted column; sizes the column with `AesGcmFieldEncryptor.GetMaxStoredLength`.                                                                                                                                                                        |
+| `IFieldEncryptingDbContext`, `FieldEncryptionModelCacheKeyFactory`      | A DbContext with encrypted columns implements the interface and replaces `IModelCacheKeyFactory` in `OnConfiguring`, so models built with different keys are never shared.                                                                                                       |
+| `DesignTimeFieldEncryptor`                                              | For `IDesignTimeDbContextFactory` only: builds the model, refuses to encrypt or decrypt.                                                                                                                                                                                         |
+| `FieldDecryptionException`                                              | Thrown on wrong key, wrong purpose, tampering or a non-encrypted value. Reads fail loudly.                                                                                                                                                                                       |
 
 Registration (fail closed: a missing or invalid key stops the host at startup; there are no default keys):
 

@@ -17,6 +17,9 @@
     "**/obj": true,
     "**/.git": true,
     "**/.venv": true
+  },
+  "files.readonlyInclude": {
+    "docs/reference_specs/python/**": true
   }
 }
 
