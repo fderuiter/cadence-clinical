@@ -100,7 +100,10 @@ public sealed class GatewayRouteCoverageTests
     private static async Task<IReadOnlyList<string>> MappedPaths<TProgram>()
         where TProgram : class
     {
-        await using var factory = new WebApplicationFactory<TProgram>().WithWebHostBuilder(host => host.UseTestGatewaySecret().UseTestPostgresConnectionString());
+        await using var factory = new WebApplicationFactory<TProgram>().WithWebHostBuilder(host => host
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseTestDemographicsKey());
         return PathsOf(factory.Services);
     }
 

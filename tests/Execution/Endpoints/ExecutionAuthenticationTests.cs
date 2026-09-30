@@ -205,6 +205,7 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
         using var unconfigured = new WebApplicationFactory<Cadence.Apps.Execution.Program>()
             .WithWebHostBuilder(builder => builder
                 .UseTestPostgresConnectionString()
+                .UseTestDemographicsKey()
                 .UseSetting("GATEWAY_SECRET", string.Empty));
 
         Action start = () => unconfigured.CreateClient();

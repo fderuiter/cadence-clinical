@@ -60,7 +60,7 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseTestGatewaySecret();
+        builder.UseTestGatewaySecret().UseTestDemographicsKey();
         builder.UseTestPostgresConnectionString();
 
         builder.ConfigureServices(services =>
