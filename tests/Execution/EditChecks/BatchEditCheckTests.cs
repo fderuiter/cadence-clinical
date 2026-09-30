@@ -17,19 +17,13 @@ namespace Cadence.UnitTests.Execution.EditChecks;
 
 /// <summary>
 /// Golden master parity and concurrency stress tests for batch edit check evaluation.
-/// @req:PRD-SYS-004
-/// @req:SRS-EDC-002
-/// @req:SRS-EDC-005
 /// </summary>
 public sealed class BatchEditCheckTests
 {
     /// <summary>
     /// Validates that batch evaluation accurately aggregates observations across multiple visits without N+1 queries.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public void BatchEvaluation_MultiObservationContext_DetectsDiscrepanciesAcrossVisits()
     {
         var engine = new AstEditCheckEngine();
@@ -91,11 +85,8 @@ public sealed class BatchEditCheckTests
 
     /// <summary>
     /// Validates thread safety and determinism of batch evaluation engine under concurrent subject evaluations.
-    /// @req:PRD-SYS-004
-    /// @req:SRS-EDC-005
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-004")]
     public async Task BatchEvaluation_ConcurrentExecution_ThreadSafeAndDeterministic()
     {
         var engine = new AstEditCheckEngine();

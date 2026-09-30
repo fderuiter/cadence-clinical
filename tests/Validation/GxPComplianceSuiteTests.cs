@@ -29,11 +29,8 @@ public class GxPComplianceSuiteTests
 
     /// <summary>
     /// Verifies SDLC documentation drift and GxP compliance integrity.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "GxPComplianceDriftsIdentified")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestGxPComplianceDriftsIdentified()
     {

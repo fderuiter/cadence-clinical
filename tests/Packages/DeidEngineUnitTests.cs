@@ -242,7 +242,6 @@ public class DeidEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void RedactionManifest_BuildsAndVerifiesSymmetricAndAsymmetricSignatures()
     {
         var record = new List<RedactionRecordItem>

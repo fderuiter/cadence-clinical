@@ -55,11 +55,8 @@ public class PathBoundaryLinterTests
 
     /// <summary>
     /// Test that compliant file paths pass boundary linter validation.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "LinterPositiveCases")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestLinterPositiveCases()
     {
@@ -71,11 +68,8 @@ public class PathBoundaryLinterTests
 
     /// <summary>
     /// Test that invalid or misplaced file paths trigger validation failures.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "LinterNegativeCases")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestLinterNegativeCases()
     {
@@ -94,11 +88,8 @@ public class PathBoundaryLinterTests
 
     /// <summary>
     /// Test layout integrity assertions against required GxP workspace folder structure.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "EnvironmentIntegrityAssertions")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestEnvironmentIntegrityAssertions()
     {

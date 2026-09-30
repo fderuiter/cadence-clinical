@@ -16,7 +16,6 @@ namespace Cadence.UnitTests.Packages;
 public class DomainEngineUnitTests
 {
     [Fact]
-    [GxPRequirement("PRD-RND-001")]
     public void BoinEngine_CalculateBoinBoundaries_ReturnsExpectedBoundaries()
     {
         var (lambdaE, lambdaD) = BoinEngine.CalculateBoinBoundaries(0.25);
@@ -25,7 +24,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-RND-001")]
     public void BoinEngine_EvaluateDoseLevel_EscalatesWhenLowDltRate()
     {
         var config = new BOINConfig(TargetDltRate: 0.25);
@@ -44,7 +42,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-RND-001")]
     public void BoinEngine_EvaluateDoseLevel_StopsTrialWhenExcessiveToxicityAtLowestDose()
     {
         var config = new BOINConfig(TargetDltRate: 0.25, StoppingCutoff: 0.95);
@@ -61,7 +58,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-RND-002")]
     public void BlockRandomizationEngine_GeneratesCanonicalStratumKey()
     {
         var factors = new Dictionary<string, object>
@@ -76,7 +72,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-RND-002")]
     public void BlockRandomizationEngine_Allocate_AssignsArmWithChecksum()
     {
         var config = new StratifiedBlockConfig(
@@ -100,7 +95,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-RND-003")]
     public void MinimizationEngine_Allocate_CalculatesImbalanceAndAllocates()
     {
         var config = new MinimizationConfig(
@@ -125,7 +119,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUP-001")]
     public void DTPLogisticsEngine_CalculateMeanKineticTemperature_ComputesHaynesMkt()
     {
         var readings = new List<TemperatureReading>
@@ -138,7 +131,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUP-001")]
     public void DTPLogisticsEngine_EvaluateDtpDispatch_GeneratesTamperSealWhenEligible()
     {
         var readings = new List<TemperatureReading> { new(5.0), new(5.2) };
@@ -153,7 +145,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-TOX-001")]
     public void LabToxicityGradingEngine_EvaluatesGrade3Alt_AndGeneratesAeDraft()
     {
         var engine = new LabToxicityGradingEngine();
@@ -171,7 +162,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-TOX-001")]
     public void LabToxicityGradingEngine_EvaluateHysLaw_DetectsCriticalHysLawTriad()
     {
         var eval = LabToxicityGradingEngine.EvaluateHysLaw(
@@ -184,7 +174,6 @@ public class DomainEngineUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-RUL-001")]
     public void RuleEvaluator_EvaluatesAstAndJsonLogic()
     {
         var evaluator = new RuleEvaluator();

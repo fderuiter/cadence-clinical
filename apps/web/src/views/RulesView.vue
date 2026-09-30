@@ -740,6 +740,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
+import { useToastStore } from "../stores/toasts.js";
 import { apiClient } from "@/api/apiClient";
 import { executionService } from "@/api/execution";
 import ReasonModal from "../components/ReasonModal.vue";
@@ -747,7 +748,8 @@ import {
   createRuleEditorHTML,
   serializeConditionsTree,
   deserializeConditionsTree,
-  generateCanonicalSignature,
+  canonicalSerialize,
+  sha256,
 } from "ui";
 
 const rulesReasonOptions = [
@@ -761,6 +763,7 @@ const rulesReasonOptions = [
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+const toasts = useToastStore();
 
 // Sub-Issue 11 States
 const activeTab = ref("rules"); // 'rules', 'queries'
@@ -887,11 +890,8 @@ async function triggerAnomalyScan() {
       );
     }
   } catch (err) {
-    console.warn(
-      "Anomaly scan API call failed, providing local notification:",
-      err
-    );
-    alert("Cross-domain anomaly scan completed (local offline fallback).");
+    // A failed scan found nothing; never report it as completed (#4523).
+    toasts.apiError("Cross-domain anomaly scan failed", err);
   } finally {
     scanningAnomalies.value = false;
   }
@@ -1099,9 +1099,12 @@ function handleEditorInput(e) {
     }
   }
 }
-// Identity is established by the gateway from the caller's bearer token; the browser never holds the
-// gateway HMAC secret and never signs identity headers itself (issue #4765).
-function getChangeReasonHeaders(changeReason = "") {
+/**
+ * Headers for a rules API call. The browser sends only the user's change reason: the gateway strips every
+ * identity header (X-User-Id, X-User-Roles, X-Gateway-Signature, ...) from inbound requests and re-issues them,
+ * HMAC-signed, from the validated OIDC token (#4523). A browser must never hold the gateway signing secret.
+ */
+function changeReasonHeaders(changeReason = "") {
   return changeReason ? { "X-Change-Reason": changeReason } : {};
 }
 
@@ -1110,9 +1113,8 @@ async function fetchRules() {
   loadingRules.value = true;
   connectionError.value = false;
   try {
-    const reasonHeaders = getChangeReasonHeaders("Fetch clinical rules");
     const response = await apiClient.get(`/api/v1/studies/study_1/rules`, {
-      headers: reasonHeaders,
+      headers: changeReasonHeaders(),
     });
     activeRules.value = response;
   } catch (err) {
@@ -1181,11 +1183,11 @@ async function triggerPreview() {
   };
 
   try {
-    const reasonHeaders = getChangeReasonHeaders("Rule compilation preview");
+    const signedHeaders = changeReasonHeaders("Rule compilation preview");
 
     try {
       await apiClient.post(`/api/v1/studies/study_1/rules/validate`, payload, {
-        headers: reasonHeaders,
+        headers: signedHeaders,
       });
     } catch (vErr) {
       console.warn("Live-validation endpoint returned errors:", vErr);
@@ -1194,7 +1196,7 @@ async function triggerPreview() {
     const data = await apiClient.post(
       `/api/v1/studies/study_1/rules/preview`,
       payload,
-      { headers: reasonHeaders }
+      { headers: signedHeaders }
     );
     previewXpath.value = data.xpath;
     previewFailures.value = data.failures || [];
@@ -1354,10 +1356,9 @@ async function confirmChangeReason(reasonText) {
         reason: reasonText,
       });
     } catch (err) {
-      console.warn(
-        "Candidate adjudication API call failed, applying local fallback:",
-        err
-      );
+      // The query stays a CANDIDATE and the reason dialog stays open so the user can retry or cancel (#4523).
+      toasts.apiError("Candidate query adjudication failed", err);
+      return;
     }
 
     if (adjAction === "APPROVE") {
@@ -1421,39 +1422,28 @@ async function confirmChangeReason(reasonText) {
         ? `/api/v1/studies/study_1/rules/${editingRuleId.value}`
         : `/api/v1/studies/study_1/rules`;
 
-      const reasonHeaders = getChangeReasonHeaders(reasonText);
+      const signedHeaders = changeReasonHeaders(reasonText);
 
       let saved;
       try {
         if (isEdit) {
           saved = await apiClient.put(url, action.payload, {
-            headers: reasonHeaders,
+            headers: signedHeaders,
           });
         } else {
           saved = await apiClient.post(url, action.payload, {
-            headers: reasonHeaders,
+            headers: signedHeaders,
           });
         }
       } catch (err) {
-        console.warn("Save API failed, falling back to local mock save:", err);
-        saved = {
-          id: isEdit
-            ? editingRuleId.value
-            : `rule_${Math.floor(Math.random() * 1000)}`,
-          type: action.payload.type,
-          target_field: action.payload.target_field,
-          target_form: action.payload.target_form,
-          action: action.payload.action,
-          query_message: action.payload.query_message,
-          condition: action.payload.condition,
-          compiled_xpath: previewXpath.value || "(Local fallback compiled)",
-        };
+        // Never record a rule the backend did not store (#4523); the editor and dialog stay open for a retry.
+        toasts.apiError("Rule save failed", err);
+        return;
       }
 
-      const canonicalSig = await generateCanonicalSignature(
-        action.payload,
-        "internal-ledger-signing-key-12345"
-      );
+      // A content digest, not a signature: the browser holds no signing key (#4765). The server-side audit
+      // trail is the authoritative, signed record of this change.
+      const payloadSha256 = await sha256(canonicalSerialize(action.payload));
 
       // Sync verified record into compliance ledger
       await store.addLedgerBlock(
@@ -1462,26 +1452,23 @@ async function confirmChangeReason(reasonText) {
           ruleId: saved.id,
           type: saved.type,
           xpath: saved.compiled_xpath || previewXpath.value,
-          signature: canonicalSig,
+          payloadSha256,
           payload: action.payload,
-          headers: reasonHeaders,
+          headers: signedHeaders,
         },
         reasonText
       );
 
-      alert(`Rule successfully compiled and signed save verified!`);
+      alert(`Rule saved.`);
     } else if (action.type === "delete") {
       const url = `/api/v1/studies/study_1/rules/${action.ruleId}`;
-      let reasonHeaders;
+      const signedHeaders = changeReasonHeaders(reasonText);
       try {
-        reasonHeaders = getChangeReasonHeaders(reasonText);
-        await apiClient.delete(url, { headers: reasonHeaders });
+        await apiClient.delete(url, { headers: signedHeaders });
       } catch (err) {
-        console.warn(
-          "Delete API failed, falling back to local mock delete:",
-          err
-        );
-        reasonHeaders = {};
+        // The rule was not deleted: no RULE_DELETE ledger block, no success alert (#4523).
+        toasts.apiError("Rule deletion failed", err);
+        return;
       }
 
       // Sync deletion block
@@ -1489,7 +1476,7 @@ async function confirmChangeReason(reasonText) {
         "RULE_DELETE",
         {
           ruleId: action.ruleId,
-          headers: reasonHeaders,
+          headers: signedHeaders,
         },
         reasonText
       );

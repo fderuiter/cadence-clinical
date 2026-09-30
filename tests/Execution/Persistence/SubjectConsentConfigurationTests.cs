@@ -27,7 +27,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// EF Core 10.0.11's InMemory provider — a provider limitation, not a mapping defect, since SQLite/Npgsql
 /// materialize the identical model correctly), so relational metadata and round-trip queries both need a
 /// real relational provider here, unlike `ClinicalSubjectConfigurationTests`' split.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectConsentConfigurationTests
 {
@@ -60,7 +59,6 @@ public class SubjectConsentConfigurationTests
     // ---- Configuration shape (metadata) ----------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsSubjectConsentToSubjectConsentsTable()
     {
         using var connection = OpenSqliteConnection();
@@ -71,7 +69,6 @@ public class SubjectConsentConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsShadowVersionPropertyAsConcurrencyToken()
     {
         using var connection = OpenSqliteConnection();
@@ -86,7 +83,6 @@ public class SubjectConsentConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_ProtocolVersionIsMappedAsComplexProperty()
     {
         using var connection = OpenSqliteConnection();
@@ -102,7 +98,6 @@ public class SubjectConsentConfigurationTests
     // ---- Round-trip persistence -------------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SubjectConsents_GivenPersistedConsent_RoundTripsProtocolVersionExactly()
     {
         // SQLite (a real relational provider), not InMemory: the InMemory provider's query-shaping
@@ -135,7 +130,6 @@ public class SubjectConsentConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SubjectConsents_GivenResubmissionMergeBeforeSave_PersistsUpdatedProtocolVersion()
     {
         // SQLite, not InMemory — see the comment on the round-trip test above for why.

@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { etmfService } from "../api/etmf";
+import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
 
 const defaultDocuments = [
@@ -607,7 +608,12 @@ export const useEtmfStore = defineStore("etmf", {
           etmfService.getDocuments &&
           (etmfService.getDocuments._isMockFunction ||
             typeof etmfService.getDocuments.mock === "object");
-        if (authStore.isDemoMode && !authStore.token && !isMocked) {
+        if (
+          isDemoBuild() &&
+          authStore.isDemoMode &&
+          !authStore.token &&
+          !isMocked
+        ) {
           let allDocs = [];
           if (typeof window !== "undefined" && window.localStorage) {
             const stored = window.localStorage.getItem("demo_documents");
@@ -665,7 +671,12 @@ export const useEtmfStore = defineStore("etmf", {
           etmfService.ingestDocument &&
           (etmfService.ingestDocument._isMockFunction ||
             typeof etmfService.ingestDocument.mock === "object");
-        if (authStore.isDemoMode && !authStore.token && !isMocked) {
+        if (
+          isDemoBuild() &&
+          authStore.isDemoMode &&
+          !authStore.token &&
+          !isMocked
+        ) {
           await new Promise((resolve) => setTimeout(resolve, 300));
           let body = {};
           let changeReason = "Initial upload";
@@ -814,7 +825,9 @@ export const useEtmfStore = defineStore("etmf", {
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.removeItem("demo_documents");
       }
-      this.documentsList = JSON.parse(JSON.stringify(defaultDocuments));
+      this.documentsList = isDemoBuild()
+        ? JSON.parse(JSON.stringify(defaultDocuments))
+        : [];
     },
   },
 });

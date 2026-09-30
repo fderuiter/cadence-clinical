@@ -54,10 +54,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// Validates that one command writes the aggregate with audit fields from the kernel clock and actor, plus exactly
     /// one provenance activity, one event with its outbox row, one audit link at sequence 1 of a fresh tenant chain,
     /// and the idempotency record, all naming the same activity.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ProvisionTenant_Commits_StateProvenanceEventAuditOutboxAndIdempotency_AsOneActivity")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ProvisionTenantCommitsStateProvenanceEventAuditOutboxAndIdempotencyAsOneActivity()
     {
         fixture.SkipIfUnavailable();
@@ -104,10 +102,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates K-TX-3: resending a command with the same key and payload returns the original result without writing
     /// anything, and the same key with a different payload is an idempotency conflict (409).
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Command_SameIdempotencyKey_ReplaysOriginal_AndDifferentPayloadConflicts")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CommandSameIdempotencyKeyReplaysOriginalAndDifferentPayloadConflicts()
     {
         fixture.SkipIfUnavailable();
@@ -128,10 +124,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates that two concurrent sends of the same command both succeed with the same result and write once,
     /// even when the aggregate's own unique key is what rejects the second transaction.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Command_SameKeyConcurrently_WritesOnce_AndBothCallersGetTheResult")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CommandSameKeyConcurrentlyWritesOnceAndBothCallersGetTheResult()
     {
         fixture.SkipIfUnavailable();
@@ -146,10 +140,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
 
     /// <summary>
     /// Validates K-TX-5: with no resolved actor the command is refused (401) before anything is written.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Command_WithoutActor_IsRefused_AndWritesNothing")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CommandWithoutActorIsRefusedAndWritesNothing()
     {
         fixture.SkipIfUnavailable();
@@ -167,10 +159,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates that a command without a reason for change or idempotency key is rejected (422) before anything is
     /// written.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Command_MissingReasonOrKey_IsRejected")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CommandMissingReasonOrKeyIsRejected()
     {
         fixture.SkipIfUnavailable();
@@ -187,10 +177,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates K-AUTH-2: a denied command changes no state but is itself recorded as a provenance activity, a
     /// <c>DecisionDenied</c> event and a "Denied" audit link naming the reason, and returns 403.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Command_Denied_IsAudited_AndChangesNoState")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CommandDeniedIsAuditedAndChangesNoState()
     {
         fixture.SkipIfUnavailable();
@@ -218,11 +206,9 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates K-TX-2: a failure at any point of the commit leaves no state, provenance, event, audit link, outbox
     /// row or idempotency record behind, and the tenant's chain head is not advanced.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Theory(DisplayName = "Commit_FailingAtAnyStage_PersistsNothing")]
     [MemberData(nameof(CommitStages))]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task CommitFailingAtAnyStagePersistsNothing(string stageName)
     {
         fixture.SkipIfUnavailable();
@@ -250,10 +236,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates that a duplicate tenant code under a new key is reported as <c>K.Aggregate.AlreadyExists</c> (409)
     /// rather than an unhandled database error, and that the rejected command leaves nothing behind.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "ProvisionTenant_DuplicateCode_ReturnsAlreadyExists")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ProvisionTenantDuplicateCodeReturnsAlreadyExists()
     {
         fixture.SkipIfUnavailable();
@@ -271,10 +255,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates the organization command end to end: an unknown tenant is refused (404), and a registration in a
     /// provisioned tenant extends that tenant's chain to sequence 2.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "RegisterOrganization_RequiresTenant_AndExtendsTenantChain")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task RegisterOrganizationRequiresTenantAndExtendsTenantChain()
     {
         fixture.SkipIfUnavailable();
@@ -301,10 +283,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates the per-tenant chain under contention: many commands for one tenant at once still produce a gap-free,
     /// unforked chain that the verifier accepts.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AuditChain_ConcurrentCommandsForOneTenant_StayLinear")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task AuditChainConcurrentCommandsForOneTenantStayLinear()
     {
         fixture.SkipIfUnavailable();
@@ -324,10 +304,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates tamper evidence: when a privileged user bypasses the insert-only trigger and edits an audit link, the
     /// verifier reports the chain broken at that link.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "AuditChainVerifier_DetectsEditedLink")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task AuditChainVerifierDetectsEditedLink()
     {
         fixture.SkipIfUnavailable();
@@ -354,11 +332,9 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// <summary>
     /// Validates spec §5.3 item 2: the audit, event, provenance and idempotency tables reject UPDATE, DELETE and
     /// TRUNCATE in the database itself (SQLSTATE KA001).
-    /// @req:PRD-SYS-053
     /// </summary>
     [Theory(DisplayName = "InsertOnlyTables_RejectUpdateDeleteAndTruncate")]
     [MemberData(nameof(InsertOnlyTables))]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task InsertOnlyTablesRejectUpdateDeleteAndTruncate(string table)
     {
         fixture.SkipIfUnavailable();
@@ -380,10 +356,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
 
     /// <summary>
     /// Validates K-TX-1 at the unit of work: a command that loads one aggregate for change cannot load a second.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "UnitOfWork_SecondAggregate_Throws")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task UnitOfWorkSecondAggregateThrows()
     {
         fixture.SkipIfUnavailable();
@@ -404,10 +378,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     /// Validates optimistic concurrency through the unit of work: an update advances <c>VersionIndex</c> by one and is
     /// audited with before and after values, and of two commands holding the same version the second is a
     /// concurrency conflict that writes nothing.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "UnitOfWork_ConcurrentUpdates_SecondIsConflict")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task UnitOfWorkConcurrentUpdatesSecondIsConflict()
     {
         fixture.SkipIfUnavailable();

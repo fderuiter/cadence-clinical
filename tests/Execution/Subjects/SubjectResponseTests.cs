@@ -19,7 +19,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// MIG-SUBJ-008 coverage: <see cref="SubjectResponse.FromAggregate"/> populates every field from the
 /// aggregate's real current state (the legacy hard-coded SCREENING quirk was removed for #4771, D8). Also covers the shared snake_case wire-naming (`01_spec.md` §1.2) for all five
 /// response records this ticket introduces.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SubjectResponseTests
 {
@@ -49,7 +48,6 @@ public class SubjectResponseTests
     // -- FromAggregate: full population from the aggregate's actual current state ---------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void FromAggregate_EnrolledSubjectWithSite_ReflectsAggregatesActualState()
     {
         var subject = CreateEnrolledSubjectWithSiteAndDemographics();
@@ -67,7 +65,6 @@ public class SubjectResponseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void FromAggregate_ScreeningSubject_ReportsScreeningStatus()
     {
         var subject = ClinicalSubject.Create(new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"),
@@ -80,7 +77,6 @@ public class SubjectResponseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void FromAggregate_ForEnrolledSubjectWithSite_ReportsTheRealStatusAndSite()
     {
         // D8 (#4771): responses after a transition used to hard-code SCREENING. They now always map the
@@ -98,7 +94,6 @@ public class SubjectResponseTests
     // -- Wire shape: snake_case JSON property names (01_spec.md §1.2) ---------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectResponse_SerializesWithSpecSnakeCasePropertyNamesAndPlainScalarValues()
     {
         var response = new SubjectResponse(
@@ -131,7 +126,6 @@ public class SubjectResponseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectDetailResponse_SerializesWithSpecSnakeCasePropertyNames()
     {
         var response = new SubjectDetailResponse(
@@ -152,7 +146,6 @@ public class SubjectResponseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void SubjectConsentResponse_SerializesWithSpecSnakeCasePropertyNames()
     {
         var response = new SubjectConsentResponse(
@@ -176,7 +169,6 @@ public class SubjectResponseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ComplianceStatusResponse_SerializesWithSpecSnakeCasePropertyNames()
     {
         var response = new ComplianceStatusResponse(new StudyCode("STUDY-001"), new SiteCode("SITE-001"),
@@ -195,7 +187,6 @@ public class SubjectResponseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void OperationEnvelopeResponse_SerializesWithSpecFieldNames()
     {
         var response = new OperationEnvelopeResponse("success", "Site SITE-001 activated successfully.");

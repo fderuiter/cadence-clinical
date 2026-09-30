@@ -25,11 +25,9 @@ public class KernelDbContextModelTests
 
     /// <summary>
     /// Validates that every kernel table lives in the single <c>kernel</c> schema (ADR-2247) with snake_case columns.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelDbContext_MapsEveryTable_IntoKernelSchema_WithSnakeCaseColumns")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelDbContextMapsEveryTableIntoKernelSchemaWithSnakeCaseColumns()
     {
         using var context = CreateContext();
@@ -47,11 +45,9 @@ public class KernelDbContextModelTests
 
     /// <summary>
     /// Validates that strongly-typed kernel IDs are stored as <c>uuid</c> columns.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelDbContext_StoresStronglyTypedIds_AsUuid")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelDbContextStoresStronglyTypedIdsAsUuid()
     {
         using var context = CreateContext();
@@ -65,11 +61,9 @@ public class KernelDbContextModelTests
 
     /// <summary>
     /// Validates that the checked-in kernel migrations are in sync with the model (no pending model changes).
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelDbContext_Migrations_MatchModel")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelDbContextMigrationsMatchModel()
     {
         using var context = CreateContext();
@@ -81,7 +75,6 @@ public class KernelDbContextModelTests
 
     /// <summary>
     /// Validates the snake_case column-name conversion, including acronyms.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Theory(DisplayName = "KernelDbContext_ToSnakeCase_ConvertsPropertyNames")]
     [InlineData("Id", "id")]
@@ -90,7 +83,6 @@ public class KernelDbContextModelTests
     [InlineData("UsdmPayloadJson", "usdm_payload_json")]
     [InlineData("SDTMDomain", "sdtm_domain")]
     [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelDbContextToSnakeCaseConvertsPropertyNames(string input, string expected)
     {
         KernelDbContext.ToSnakeCase(input).Should().Be(expected);

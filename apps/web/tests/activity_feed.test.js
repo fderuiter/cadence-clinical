@@ -6,6 +6,7 @@ import DocumentsHubView from "../src/views/DocumentsHubView.vue";
 import { useFileshareStore } from "../src/stores/fileshare";
 import { useAuthStore } from "../src/stores/auth";
 import { router } from "../src/router";
+import { fileshareService } from "../src/api/fileshare";
 
 // Mock fileshare API client
 vi.mock("../src/api/fileshare", () => ({
@@ -242,6 +243,8 @@ describe("feat(fileshare): 15 — Per-Document Activity Feed (#4322)", () => {
 
   describe("DocumentsHubView Integration with ActivityFeed", () => {
     it("opens ActivityFeed drawer when clicking the activity button on a document row", async () => {
+      // The hub lists what the server returns; there are no sample rows outside a demo build (#4523).
+      fileshareService.listFiles.mockResolvedValueOnce([{ ...mockFile }]);
       const wrapper = mount(DocumentsHubView, {
         global: {
           plugins: [router],

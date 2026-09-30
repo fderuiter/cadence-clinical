@@ -48,11 +48,8 @@ public class OfflineSchemaDriftTests
 
     /// <summary>
     /// Validate PendingDelta schema compatibility between client and server.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "PendingDeltaSchemaDrift")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestPendingDeltaSchemaDrift()
     {
@@ -65,11 +62,8 @@ public class OfflineSchemaDriftTests
 
     /// <summary>
     /// Validate submission object compatibility.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "SubmissionsSchemaDrift")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestSubmissionsSchemaDrift()
     {
@@ -80,11 +74,8 @@ public class OfflineSchemaDriftTests
 
     /// <summary>
     /// Test detection of field rename drift.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "SimulatedFieldNameRenameDrift")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestSimulatedFieldNameRenameDrift()
     {
@@ -95,11 +86,8 @@ public class OfflineSchemaDriftTests
 
     /// <summary>
     /// Test detection of type mismatch drift.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "SimulatedTypeMismatchDrift")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestSimulatedTypeMismatchDrift()
     {
@@ -110,11 +98,8 @@ public class OfflineSchemaDriftTests
 
     /// <summary>
     /// Validate immunity to formatting and whitespace changes.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "FormattingAndWhitespaceImmunity")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestFormattingAndWhitespaceImmunity()
     {
@@ -125,11 +110,8 @@ public class OfflineSchemaDriftTests
 
     /// <summary>
     /// Validate committed TypeScript DB schemas existence.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "CommittedTypescriptSchemaIsUpToDate")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestCommittedTypescriptSchemaIsUpToDate()
     {
@@ -140,11 +122,8 @@ public class OfflineSchemaDriftTests
 
     /// <summary>
     /// Validate committed schema visualizer HTML artifacts.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "CommittedSchemaVisualizerIsUpToDate")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestCommittedSchemaVisualizerIsUpToDate()
     {
@@ -155,11 +134,8 @@ public class OfflineSchemaDriftTests
 
     /// <summary>
     /// Validate schema visualizers use vendored assets without CDN dependencies.
-    /// @req:PRD-SYS-001
     /// </summary>
     [Fact(DisplayName = "SchemaVisualizersUseVendoredAssets")]
-    [GxPRequirement("PRD-SYS-001")]
-    [Trait("Requirement", "PRD-SYS-001")]
     [Trait("Category", "Validation")]
     public void TestSchemaVisualizersUseVendoredAssets()
     {

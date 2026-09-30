@@ -14,9 +14,7 @@ namespace Cadence.UnitTests.Execution.Security;
 /// gender-mapping table, the fixed `/365.25`-divisor age approximation (including both
 /// date-string-parsing fallback paths), and the `GetSafeDemographics` never-throws fallback
 /// contract across all three legacy input shapes.
-/// @req:PRD-SUB-001
 /// </summary>
-[GxPRequirement("PRD-SUB-001")]
 public class DemographicsNormalizationServiceTests
 {
     private sealed class FakeClock(DateTimeOffset utcNow) : IClock
@@ -70,7 +68,6 @@ public class DemographicsNormalizationServiceTests
     };
 
     [Theory]
-    [GxPRequirement("PRD-SUB-001")]
     [MemberData(nameof(GenderMappingTable))]
     public void NormalizeGender_GivenMappedInput_ReturnsExpectedCodeRegardlessOfPreserveCustom(string input, string expected)
     {
@@ -81,7 +78,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void NormalizeGender_GivenNullInput_ReturnsU()
     {
         var service = CreateService();
@@ -90,7 +86,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void NormalizeGender_GivenUnmappedInputWithPreserveCustomFalse_ReturnsU()
     {
         var service = CreateService();
@@ -99,7 +94,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void NormalizeGender_GivenUnmappedInputWithPreserveCustomTrue_ReturnsTrimmedUppercasedVerbatim()
     {
         var service = CreateService();
@@ -109,7 +103,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void CalculateAge_GivenTwentyYearSpan_ReturnsExactComputedValueNotApproximation()
     {
         var service = CreateService();
@@ -122,7 +115,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void CalculateAge_GivenOneDaySpan_ReturnsExactFixedDivisorValue()
     {
         var service = CreateService();
@@ -135,7 +127,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void CalculateAge_GivenNullBirthDate_ReturnsNull()
     {
         var service = CreateService();
@@ -144,7 +135,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void CalculateAge_GivenNullObservationDate_ReturnsNull()
     {
         var service = CreateService();
@@ -153,7 +143,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenNullSubject_ReturnsDefaultShape()
     {
         var service = CreateService();
@@ -164,7 +153,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenEmptyCiphertextString_ReturnsDefaultShape()
     {
         var service = CreateService();
@@ -173,7 +161,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenDecryptFailure_ReturnsDefaultShapeAndDoesNotThrow()
     {
         var service = CreateService(FakeEncryptionService.ThrowingOnDecrypt());
@@ -185,7 +172,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenRawCiphertextStringShape_DecryptsAndDerivesGenderAndAge()
     {
         var payload = new Dictionary<string, object?> { ["gender"] = "FEMALE", ["birthdate"] = "2000-01-01" };
@@ -200,7 +186,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenDictionaryShapeWithEncryptedDemographicsKey_DecryptsAndDerivesResult()
     {
         var payload = new Dictionary<string, object?> { ["gender"] = "M", ["birthdate"] = "1990-05-15" };
@@ -214,7 +199,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenObjectShapeWithEncryptedDemographicsProperty_DecryptsAndDerivesResult()
     {
         var payload = new Dictionary<string, object?> { ["sex"] = "F" };
@@ -228,7 +212,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenObjectShapeWithNullEncryptedDemographicsProperty_ReturnsDefaultShape()
     {
         var service = CreateService();
@@ -238,7 +221,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenGenderKeyAbsent_FallsBackToSexKey()
     {
         var payload = new Dictionary<string, object?> { ["sex"] = "MALE" };
@@ -248,7 +230,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenPreserveCustomTrue_ForwardsFlagToNormalizeGender()
     {
         var payload = new Dictionary<string, object?> { ["gender"] = "NB" };
@@ -259,7 +240,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenNoBirthDateKeyPresent_ReturnsNullAge()
     {
         var payload = new Dictionary<string, object?> { ["gender"] = "M" };
@@ -269,7 +249,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenIso8601BirthDateWithTAndZOffset_ParsesDateComponentCorrectly()
     {
         var payload = new Dictionary<string, object?> { ["birthdate"] = "2000-06-15T08:30:00Z" };
@@ -283,7 +262,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenDateWithTrailingGarbageAfterWhitespace_FallsBackToLeadingDateToken()
     {
         var payload = new Dictionary<string, object?> { ["date_of_birth"] = "1990-05-15 not-a-real-time" };
@@ -297,7 +275,6 @@ public class DemographicsNormalizationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetSafeDemographics_GivenBirthDateFailingBothParseAttempts_ReturnsNullAgeWithoutThrowing()
     {
         var payload = new Dictionary<string, object?> { ["dob"] = "not-a-date-at-all" };

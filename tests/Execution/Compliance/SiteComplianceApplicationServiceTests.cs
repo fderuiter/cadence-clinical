@@ -30,7 +30,6 @@ namespace Cadence.UnitTests.Execution.Compliance;
 /// `SiteComplianceCacheConfigurationTests`' own established convention for this aggregate, and no
 /// mocking-framework usage appears anywhere else in <c>tests/Execution/</c>) plus a hand-rolled
 /// <see cref="FakeAuditLogWriter"/> that records every call for zero-calls/ordering assertions.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SiteComplianceApplicationServiceTests
 {
@@ -76,7 +75,7 @@ public class SiteComplianceApplicationServiceTests
     // ---- ApplyEtmfWebhookAsync: create branch ------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller()
     {
         string databaseName = Guid.NewGuid().ToString();
@@ -106,7 +105,6 @@ public class SiteComplianceApplicationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ApplyEtmfWebhookAsync_GivenNoExistingRowAndNullMissingArtifacts_CreatesRowWithEmptyMissingDocuments()
     {
         string databaseName = Guid.NewGuid().ToString();
@@ -128,7 +126,7 @@ public class SiteComplianceApplicationServiceTests
     // ---- ApplyEtmfWebhookAsync: upsert (update) branch ---------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller()
     {
         string databaseName = Guid.NewGuid().ToString();
@@ -165,7 +163,6 @@ public class SiteComplianceApplicationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task ApplyEtmfWebhookAsync_GivenNullSiteIdWithNoExistingRow_SucceedsAsNoOpSinceAggregateCannotRepresentASitelessRow()
     {
         // EtmfCompletenessWebhookPayload.SiteId is documented nullable ("study-level milestones are a
@@ -191,7 +188,7 @@ public class SiteComplianceApplicationServiceTests
     // ---- ActivateSiteAsync: blocked path ------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task ActivateSiteAsync_GivenNoComplianceRow_FailsWithBlockedActivationAndWritesAuditEntryFirst()
     {
         string databaseName = Guid.NewGuid().ToString();
@@ -214,7 +211,7 @@ public class SiteComplianceApplicationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry()
     {
         string databaseName = Guid.NewGuid().ToString();
@@ -239,7 +236,7 @@ public class SiteComplianceApplicationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller()
     {
         // Strongest form of the "writes the audit entry before returning the failure" acceptance criterion:
@@ -271,7 +268,7 @@ public class SiteComplianceApplicationServiceTests
     // ---- ActivateSiteAsync: success path -------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete()
     {
         string databaseName = Guid.NewGuid().ToString();
@@ -308,7 +305,6 @@ public class SiteComplianceApplicationServiceTests
     // ---- GetComplianceStatusAsync: always-200, no Result<T> wrapper --------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetComplianceStatusAsync_MethodSignature_HasNoFailureReturnPath()
     {
         // Direct boundary check for the acceptance criterion's own wording: "verify the method signature
@@ -321,7 +317,6 @@ public class SiteComplianceApplicationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetComplianceStatusAsync_GivenNoExistingRow_ReturnsIncompleteWithEmptyMissingDocumentsAndNoException()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -337,7 +332,6 @@ public class SiteComplianceApplicationServiceTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task GetComplianceStatusAsync_GivenExistingRow_ReturnsItsCurrentState()
     {
         string databaseName = Guid.NewGuid().ToString();

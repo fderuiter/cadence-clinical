@@ -441,6 +441,7 @@ import { ref, computed, watch, nextTick, onUnmounted } from "vue";
 import { useEtmfStore } from "../../stores/etmf";
 import { etmfService } from "../../api/etmf";
 import { use2DGrid } from "../../composables/use2DGrid";
+import { useToastStore } from "../../stores/toasts.js";
 
 const props = defineProps({
   documents: {
@@ -879,14 +880,26 @@ async function submitUpload() {
   try {
     const file = selectedFile.value;
 
-    // Helper to read file as text to supply to the indexer/content payload field
-    const fileContent = await new Promise((resolve) => {
+    // Helper to read file as text to supply to the indexer/content payload field. #4523: an unreadable or
+    // empty file aborts the upload; placeholder text is never filed as document content.
+    const fileContent = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        resolve(e.target?.result || "Mock text content of eTMF PDF");
+        const text = e.target?.result;
+        if (text) {
+          resolve(text);
+        } else {
+          reject(
+            new Error(`"${file.name}" is empty; no document content to file.`)
+          );
+        }
       };
       reader.onerror = () => {
-        resolve("Mock fallback PDF plain text index content.");
+        reject(
+          new Error(
+            `"${file.name}" could not be read: ${reader.error?.message || "unknown read error"}`
+          )
+        );
       };
       reader.readAsText(file.slice(0, 5000)); // Read first few KB as text safely
     });
@@ -916,7 +929,7 @@ async function submitUpload() {
     // Success
     closeUploadModal();
   } catch (err) {
-    console.error("Upload failed in component:", err);
+    useToastStore().apiError("eTMF document upload failed", err);
     uploadError.value =
       err.message ||
       "Ingestion transaction rejected. Verify site/study lock status.";

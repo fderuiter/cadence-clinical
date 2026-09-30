@@ -19,11 +19,9 @@ public class KernelIdentifierTests
 {
     /// <summary>
     /// Validates that strongly-typed UUIDv7 entity identifiers generate valid Version 7 UUIDs with time ordering.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Identifiers_MustGenerate_ValidUuidV7")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void IdentifiersMustGenerateValidUuidV7()
     {
         // Arrange & Act
@@ -62,11 +60,9 @@ public class KernelIdentifierTests
 
     /// <summary>
     /// Validates that empty and default states of entity identifier structs behave consistently.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Identifiers_EmptyAndDefaultStates_AreConsistent")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void IdentifiersEmptyAndDefaultStatesAreConsistent()
     {
         // Arrange
@@ -82,11 +78,9 @@ public class KernelIdentifierTests
 
     /// <summary>
     /// Validates string and span parsing for strongly-typed entity identifiers.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Identifiers_ParseAndTryParse_RoundtripCorrectly")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void IdentifiersParseAndTryParseRoundtripCorrectly()
     {
         // Arrange
@@ -119,11 +113,9 @@ public class KernelIdentifierTests
 
     /// <summary>
     /// Validates that TypeConverter enables bidirectional conversion for Minimal API routing and parameter binding.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Identifiers_TypeConverter_ConvertsCorrectly")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void IdentifiersTypeConverterConvertsCorrectly()
     {
         // Arrange
@@ -146,11 +138,9 @@ public class KernelIdentifierTests
 
     /// <summary>
     /// Validates JSON serialization and deserialization across standard and source-generated serializer contexts.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Identifiers_JsonSerialization_Roundtrips")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void IdentifiersJsonSerializationRoundtrips()
     {
         // Arrange
@@ -190,11 +180,9 @@ public class KernelIdentifierTests
 
     /// <summary>
     /// Validates that all canonical Kernel domain entities implement IGxPAuditable with 21 CFR Part 11 audit fields.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelDomain_Entities_Implement_IGxPAuditable")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelDomainEntitiesImplementIGxPAuditable()
     {
         // Arrange
@@ -241,11 +229,9 @@ public class KernelIdentifierTests
 
     /// <summary>
     /// Validates bitemporal dual-clock point-in-time reconstruction for clinical observations under ADR-2246.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Bitemporal_TemporalPeriod_DualClockReconstruction")]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void BitemporalTemporalPeriodDualClockReconstruction()
     {
         // Arrange

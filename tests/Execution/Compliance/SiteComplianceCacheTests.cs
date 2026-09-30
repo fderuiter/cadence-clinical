@@ -16,7 +16,6 @@ namespace Cadence.UnitTests.Execution.Compliance;
 /// the plain upsert-increment (never compare-and-swap) semantics of `ApplyWebhookUpdate`, full-replacement
 /// (not merge) of `MissingDocuments`, and the defensive-encapsulation boundary around the exposed
 /// `IReadOnlyList&lt;string&gt;`.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SiteComplianceCacheTests
 {
@@ -25,7 +24,6 @@ public class SiteComplianceCacheTests
     private const string Milestone = "SITE_ACTIVATION";
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Create_InitialState_HasVersionOneAndSuppliedMissingDocuments()
     {
         var missingDocuments = new[] { "1572", "CV" };
@@ -41,7 +39,6 @@ public class SiteComplianceCacheTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ApplyWebhookUpdate_CalledTwiceInSequence_IncrementsVersionByOneEachCallWithNoRejection()
     {
         var cache = SiteComplianceCache.Create(Study, Site, Milestone, isComplete: false, new[] { "1572" });
@@ -54,7 +51,6 @@ public class SiteComplianceCacheTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ApplyWebhookUpdate_EmptyMissingDocuments_FullyClearsPriorNonEmptyList()
     {
         var cache = SiteComplianceCache.Create(Study, Site, Milestone, isComplete: false,
@@ -67,7 +63,6 @@ public class SiteComplianceCacheTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ApplyWebhookUpdate_AlwaysOverwrites_NeverMergesWithPriorContents()
     {
         var cache = SiteComplianceCache.Create(Study, Site, Milestone, isComplete: false, new[] { "1572" });
@@ -79,7 +74,6 @@ public class SiteComplianceCacheTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void MissingDocuments_CastToMutableListAndMutated_DoesNotAffectAggregateState()
     {
         var cache = SiteComplianceCache.Create(Study, Site, Milestone, isComplete: false, new[] { "1572" });

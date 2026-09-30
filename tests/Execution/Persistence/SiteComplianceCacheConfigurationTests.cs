@@ -25,7 +25,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// column name/type, concurrency-token flags — use SQLite, since relational metadata reads resolve a
 /// `RelationalTypeMapping` internally and are meaningless (or throw) against the InMemory provider's
 /// non-relational type mapping, matching `ClinicalSubjectConfigurationTests`' own convention.
-/// @req:PRD-SUB-001
 /// </summary>
 public class SiteComplianceCacheConfigurationTests
 {
@@ -57,7 +56,6 @@ public class SiteComplianceCacheConfigurationTests
     // ---- Configuration shape (metadata) ----------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsSiteComplianceCacheToSiteComplianceCachesTable()
     {
         using var connection = OpenSqliteConnection();
@@ -71,7 +69,6 @@ public class SiteComplianceCacheConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsMissingDocumentsBackingFieldToNativeTextArrayColumn()
     {
         using var connection = OpenSqliteConnection();
@@ -87,7 +84,6 @@ public class SiteComplianceCacheConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_IgnoresComputedMissingDocumentsPropertyItself()
     {
         using var connection = OpenSqliteConnection();
@@ -100,7 +96,6 @@ public class SiteComplianceCacheConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsVersionAsPlainIntThatIsNotAConcurrencyToken()
     {
         using var connection = OpenSqliteConnection();
@@ -117,7 +112,6 @@ public class SiteComplianceCacheConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void Configure_MapsShadowVersionPropertyAsTheActualConcurrencyToken()
     {
         using var connection = OpenSqliteConnection();
@@ -135,7 +129,6 @@ public class SiteComplianceCacheConfigurationTests
     // ---- Round-trip persistence -------------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SiteComplianceCaches_GivenMissingDocuments_RoundTripsAsNativeArrayInOrder()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -160,7 +153,6 @@ public class SiteComplianceCacheConfigurationTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SiteComplianceCaches_GivenEmptyMissingDocuments_RoundTripsAsEmptyArray()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -182,7 +174,6 @@ public class SiteComplianceCacheConfigurationTests
     // ---- Boundary: two ApplyWebhookUpdate calls, one SaveChangesAsync ------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SiteComplianceCaches_GivenVersionIncrementedTwiceBeforeOneSaveChangesAsync_PersistsFinalValueNotIntermediate()
     {
         var databaseName = Guid.NewGuid().ToString();

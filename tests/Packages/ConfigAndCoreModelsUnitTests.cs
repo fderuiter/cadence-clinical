@@ -17,7 +17,6 @@ namespace Cadence.UnitTests.Packages;
 public class ConfigAndCoreModelsUnitTests
 {
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void Config_CommonOptions_ShipsNoSecretDefaults()
     {
         var options = new CommonOptions();
@@ -54,7 +53,6 @@ public class ConfigAndCoreModelsUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void Config_All23ServiceOptions_InstantiateWithDefaults()
     {
         new NotificationsOptions().SmtpPort.Should().Be(1025);
@@ -112,7 +110,6 @@ public class ConfigAndCoreModelsUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-001")]
     public void Config_Options_BindsFromConfigurationDictionary()
     {
         var dict = new Dictionary<string, string?>

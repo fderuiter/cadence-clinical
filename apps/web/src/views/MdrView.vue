@@ -1877,6 +1877,7 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
+import { useToastStore } from "../stores/toasts.js";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
@@ -1896,6 +1897,7 @@ const mdrReasonOptions = [
 ];
 
 const store = useClinicalStore();
+const toasts = useToastStore();
 const designerStore = useDesignerStore();
 
 const showUsdmJson = ref(false);
@@ -2457,14 +2459,11 @@ async function confirmMutation(finalReason) {
         finalReason
       );
     }
-    // Local fallback replication in sandbox mode
+    // Mirror the saved change in the local study model only once the API accepted it.
     applyMutationLocally(mutation);
   } catch (err) {
-    console.warn(
-      "API save failed, mutation preserved locally inside browser:",
-      err
-    );
-    applyMutationLocally(mutation);
+    // Never show a study design change the MDR did not store (#4523); store.soaError keeps the banner.
+    toasts.apiError("Study design change failed", err);
   }
 }
 

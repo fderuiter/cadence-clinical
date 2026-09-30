@@ -708,6 +708,8 @@ describe("Notifications System End-to-End Visual Integration", () => {
     let originalRes;
 
     beforeEach(() => {
+      // The offline localStorage simulation exists only in a demo build (#4523).
+      vi.stubEnv("VITE_DEMO_MODE", "true");
       window.localStorage.clear();
       authStore.isDemoMode = true;
       authStore.accessToken = null;

@@ -19,7 +19,6 @@ public class LoggerMessageGeneratorTests
     private readonly TestLogger _logger = new();
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void TelemetryLoggerMessages_EmitValidEventIdsAndFormattedMessages()
     {
         _logger.LogTraceparentHeaderInjected("00-trace123-span456-01", "/api/v1/test");
@@ -42,7 +41,6 @@ public class LoggerMessageGeneratorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void EConsentConsumerLoggerMessages_EmitValidEventIdsAndFormattedMessages()
     {
         _logger.LogMalformedConsentEventDropped("SUBJ-001", "STUDY-100");
@@ -70,7 +68,6 @@ public class LoggerMessageGeneratorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void SubjectEndpointsLoggerMessages_EmitValidEventIdsAndFormattedMessages()
     {
         _logger.LogCreatingSubject("SUBJ-101", "STUDY-200");
@@ -106,7 +103,6 @@ public class LoggerMessageGeneratorTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void LoggerMessages_WhenLevelDisabled_ShortCircuitWithoutLogging()
     {
         _logger.EnabledLevel = LogLevel.None;

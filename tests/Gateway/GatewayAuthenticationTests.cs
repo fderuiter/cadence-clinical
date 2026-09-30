@@ -37,7 +37,6 @@ namespace Cadence.UnitTests.Gateway;
 /// Runs the real gateway in front of a header-echoing downstream service and checks that it only forwards
 /// callers holding a valid OIDC token, replaces any identity headers the client sent with ones derived from
 /// that token, and signs them so downstream services can verify them.
-/// @req:PRD-SYS-053
 /// </summary>
 public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.GatewayFixture fixture)
     : IClassFixture<GatewayAuthenticationTests.GatewayFixture>
@@ -46,7 +45,6 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task Healthz_WithoutToken_IsAnonymous()
     {
         using var client = fixture.Gateway.CreateClient();
@@ -58,7 +56,6 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ProxiedRoute_WithoutToken_Returns401AndIsNotForwarded()
     {
         using var client = fixture.Gateway.CreateClient();
@@ -72,7 +69,6 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ProxiedRoute_WithTokenFromUntrustedKey_Returns401()
     {
         using var client = fixture.Gateway.CreateClient();
@@ -86,7 +82,6 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ProxiedRoute_WithValidToken_ForwardsSignedIdentityFromTokenOnly()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -123,7 +118,6 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
 
     [Fact]
     [Trait("Category", "GxP_IQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void HostStartup_WithoutOidcAuthority_FailsFast()
     {
         using var unconfigured = new WebApplicationFactory<Cadence.Apps.Gateway.Program>()

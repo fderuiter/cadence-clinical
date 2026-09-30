@@ -33,7 +33,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// <see cref="SaveChangesResiliencePipelineFactory"/> (#4766): a concurrency conflict is rejected, never retried
 /// over the other writer's change, while transient database failures are still retried, and a retried save
 /// writes each audit entry exactly once. Uses SQLite for real concurrency-token checks.
-/// @req:PRD-SUB-001
 /// </summary>
 public class ExecutionRepositoryBaseTests
 {
@@ -66,7 +65,6 @@ public class ExecutionRepositoryBaseTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SaveChangesAsync_GivenAStaleWrite_RejectsItAndKeepsTheOtherWritersChange()
     {
         using var connection = OpenSqliteConnection();
@@ -98,7 +96,6 @@ public class ExecutionRepositoryBaseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task SaveChangesAsync_GivenARowDeletedAfterItWasRead_RejectsTheSave()
     {
         using var connection = OpenSqliteConnection();
@@ -123,8 +120,7 @@ public class ExecutionRepositoryBaseTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-002")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task TwoConcurrentFormUpdates_OneSucceeds_TheOtherConflicts_AndTheAuditShowsOneChange()
     {
         using var connection = OpenSqliteConnection();
@@ -164,7 +160,7 @@ public class ExecutionRepositoryBaseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_AfterATransientFailure_RetriesAndWritesEachAuditEntryOnce()
     {
         using var connection = OpenSqliteConnection();
@@ -191,7 +187,6 @@ public class ExecutionRepositoryBaseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task Pipeline_DoesNotRetryAConcurrencyConflict()
     {
         int attempts = 0;
@@ -208,7 +203,6 @@ public class ExecutionRepositoryBaseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task Pipeline_RetriesATransientFailure()
     {
         int attempts = 0;
@@ -226,7 +220,6 @@ public class ExecutionRepositoryBaseTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void IsTransient_RecognisesOnlyTransientDatabaseFailures()
     {
         SaveChangesResiliencePipelineFactory.IsTransient(SerializationFailure()).Should().BeTrue();

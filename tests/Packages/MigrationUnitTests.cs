@@ -50,11 +50,9 @@ public class MigrationUnitTests
     /// Every service's model must match its migration snapshot; otherwise MigrateAsync throws
     /// PendingModelChangesWarning at deploy time (ctms and org did, see readiness checklist).
     /// No database connection is needed.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Theory]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     [MemberData(nameof(Factories))]
     public void ServiceDbContext_HasNoModelChangesMissingAMigration(string factoryTypeName)
     {
@@ -71,10 +69,8 @@ public class MigrationUnitTests
     /// <summary>
     /// Design-time tooling (dotnet ef) and the running service must target the same module schema, or
     /// `database update` would apply migrations to a schema the service never reads.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Theory]
-    [GxPRequirement("PRD-SYS-053")]
     [MemberData(nameof(Factories))]
     public void ServiceDbContextFactory_TargetsTheModuleSchemaTheServiceUses(string factoryTypeName)
     {
@@ -96,7 +92,6 @@ public class MigrationUnitTests
     }
 
     [Theory]
-    [GxPRequirement("PRD-SYS-053")]
     [InlineData("ctms")]
     [InlineData("edc")]
     public void WithModuleSchema_SetsSearchPathToModuleThenPublic(string schema)
@@ -107,7 +102,6 @@ public class MigrationUnitTests
     }
 
     [Theory]
-    [GxPRequirement("PRD-SYS-053")]
     [InlineData("Ctms")]
     [InlineData("ctms; DROP SCHEMA public")]
     [InlineData("")]
@@ -119,7 +113,6 @@ public class MigrationUnitTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadencePostgresDbContext_WithoutMigrationFlags_RegistersNoMigrationService()
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
@@ -133,7 +126,6 @@ public class MigrationUnitTests
     }
 
     [Theory]
-    [GxPRequirement("PRD-SYS-053")]
     [InlineData("Database:MigrateOnStartup")]
     [InlineData("Database:MigrateOnly")]
     public void AddCadencePostgresDbContext_WithMigrationFlag_RegistersMigrationService(string key)

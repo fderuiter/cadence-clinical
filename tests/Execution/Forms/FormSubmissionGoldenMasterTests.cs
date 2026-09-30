@@ -15,10 +15,6 @@ namespace Cadence.UnitTests.Execution.Forms;
 /// <summary>
 /// Golden master parity tests verifying eCRF form submission lifecycle states,
 /// 21 CFR Part 11 cryptographic signatures, and audited unlock transitions against Python EDC baseline.
-/// @req:PRD-SYS-001
-/// @req:PRD-SYS-002
-/// @req:PRD-SYS-053
-/// @req:SRS-EDC-002
 /// @req:SRS-EDC-003
 /// </summary>
 public sealed class FormSubmissionGoldenMasterTests
@@ -31,12 +27,9 @@ public sealed class FormSubmissionGoldenMasterTests
 
     /// <summary>
     /// Validates that nominal eCRF form flow executes correctly with cryptographic signature and audited unlock.
-    /// @req:PRD-SYS-002
-    /// @req:PRD-SYS-053
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    [GxPRequirement("PRD-SYS-002")]
     public void NominalFormSubmission_ApprovalAndUnlock_MaintainsRegulatoryIntegrity()
     {
         var payload = "{\"vssbp\": 120, \"vsdpb\": 80, \"pulse\": 72}";

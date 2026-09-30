@@ -14,7 +14,6 @@ namespace Cadence.UnitTests.Execution.Persistence;
 /// <summary>
 /// Coverage for `MIG-SUBJ-007`'s <see cref="GxPAuditInterceptor"/> generalization: field stamping for
 /// non-`string`-`TId` aggregates and the per-entity-type Merkle chain write path.
-/// @req:PRD-SYS-053
 /// </summary>
 public class GxPAuditInterceptorMerkleChainTests
 {
@@ -55,7 +54,7 @@ public class GxPAuditInterceptorMerkleChainTests
             .Options);
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenNonStringTIdAggregate_StampsCreatedFields()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -70,7 +69,7 @@ public class GxPAuditInterceptorMerkleChainTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenModifiedAggregate_IncrementsVersionIndexWithoutOverwritingCreatedBy()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -86,7 +85,7 @@ public class GxPAuditInterceptorMerkleChainTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -110,7 +109,7 @@ public class GxPAuditInterceptorMerkleChainTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -141,7 +140,7 @@ public class GxPAuditInterceptorMerkleChainTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenIGxPAuditableEntityNotInheritingAggregateRootBase_WritesAuditLogEntryWithoutFieldStamping()
     {
         await using var context = CreateContext(Guid.NewGuid().ToString());
@@ -161,7 +160,7 @@ public class GxPAuditInterceptorMerkleChainTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain()
     {
         string dbName = Guid.NewGuid().ToString();
@@ -222,7 +221,7 @@ public class GxPAuditInterceptorMerkleChainTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")]
     public void SaveChanges_Synchronously_WithAnAuditedChange_FailsInsteadOfSkippingTheAudit()
     {
         using var context = CreateContext(Guid.NewGuid().ToString());

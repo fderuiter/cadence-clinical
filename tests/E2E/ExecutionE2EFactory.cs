@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Net.Http;
-using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -19,6 +18,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
+using Npgsql;
+
 using Testcontainers.PostgreSql;
 
 using Xunit;
@@ -27,62 +28,88 @@ namespace Cadence.E2ETests.E2E;
 
 /// <summary>
 /// WebApplicationFactory fixture for Cadence.E2ETests targeting .NET 10 REST API endpoints.
-/// Manages Testcontainers.PostgreSql container lifecycle with resilient InMemory fallback when Docker is offline.
-/// @req:PRD-SYS-001, PRD-SUB-001
+/// The database follows the same opt-ins as <c>ExecutionPostgresFixture</c> in the unit test project:
+/// <list type="number">
+/// <item><c>CADENCE_TEST_POSTGRES</c>: an Npgsql connection string to an existing server; the factory
+/// creates a throwaway database on it and drops it afterwards (works without Docker).</item>
+/// <item><c>CADENCE_TEST_DOCKER=1</c>: a Testcontainers <c>postgres:16-alpine</c> container.</item>
+/// </list>
+/// With neither set the host runs on the EF Core in-memory provider, which is enough for routing and
+/// read paths. Tests that write through enrollment (which needs real transactions and advisory locks)
+/// call <see cref="SkipUnlessPostgres"/> so they report as skipped instead of failing or passing falsely.
 /// </summary>
 public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.Program>, IAsyncLifetime
 {
+    private const string SkipReason =
+        "This E2E test writes through PostgreSQL; set CADENCE_TEST_POSTGRES=<connection string> or CADENCE_TEST_DOCKER=1.";
+
     private PostgreSqlContainer? _postgresContainer;
-    private bool _isDockerAvailable;
+    private string? _adminConnectionString;
+    private string? _databaseName;
+    private string? _connectionString;
     private readonly string _inMemoryDbName = $"e2e-db-{Guid.NewGuid():N}";
 
     public static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
+    /// <summary>True when the host runs against a real PostgreSQL database.</summary>
+    public bool UsesPostgres => _connectionString is not null;
+
+    /// <summary>Skips the calling test unless the host runs against PostgreSQL.</summary>
+    public void SkipUnlessPostgres() => Assert.SkipWhen(!UsesPostgres, SkipReason);
+
     public async ValueTask InitializeAsync()
     {
-        if (CheckDockerSocketAvailable())
+        var external = Environment.GetEnvironmentVariable("CADENCE_TEST_POSTGRES");
+        if (!string.IsNullOrWhiteSpace(external))
         {
-            try
+            _adminConnectionString = external;
+            _databaseName = $"cadence_e2e_{Guid.NewGuid():N}";
+            await using var admin = new NpgsqlConnection(external);
+            await admin.OpenAsync().ConfigureAwait(false);
+            await using var create = new NpgsqlCommand($"CREATE DATABASE \"{_databaseName}\"", admin);
+            await create.ExecuteNonQueryAsync().ConfigureAwait(false);
+            _connectionString = new NpgsqlConnectionStringBuilder(external) { Database = _databaseName }.ConnectionString;
+        }
+        else if (Environment.GetEnvironmentVariable("CADENCE_TEST_DOCKER") == "1")
+        {
+            var userSocket = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".docker/run/docker.sock");
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOCKER_HOST")) && File.Exists(userSocket))
             {
-                var userSocket = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".docker/run/docker.sock");
-                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOCKER_HOST")) && File.Exists(userSocket))
-                {
-                    Environment.SetEnvironmentVariable("DOCKER_HOST", $"unix://{userSocket}");
-                }
-
-                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED")))
-                {
-                    Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
-                }
-
-                _postgresContainer = new PostgreSqlBuilder()
-                    .WithImage("postgres:16-alpine")
-                    .Build();
-
-                await _postgresContainer.StartAsync().ConfigureAwait(false);
-                _isDockerAvailable = true;
+                Environment.SetEnvironmentVariable("DOCKER_HOST", $"unix://{userSocket}");
             }
-            catch
+
+            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED")))
             {
-                _isDockerAvailable = false;
-                if (_postgresContainer != null)
-                {
-                    await _postgresContainer.DisposeAsync().ConfigureAwait(false);
-                    _postgresContainer = null;
-                }
+                Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
             }
+
+            _postgresContainer = new PostgreSqlBuilder()
+                .WithImage("postgres:16-alpine")
+                .Build();
+
+            await _postgresContainer.StartAsync().ConfigureAwait(false);
+            _connectionString = _postgresContainer.GetConnectionString();
         }
     }
 
     public new async ValueTask DisposeAsync()
     {
+        await base.DisposeAsync().ConfigureAwait(false);
+
+        if (_databaseName is not null && _adminConnectionString is not null)
+        {
+            NpgsqlConnection.ClearAllPools();
+            await using var admin = new NpgsqlConnection(_adminConnectionString);
+            await admin.OpenAsync().ConfigureAwait(false);
+            await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)", admin);
+            await drop.ExecuteNonQueryAsync().ConfigureAwait(false);
+        }
+
         if (_postgresContainer != null)
         {
             await _postgresContainer.DisposeAsync().ConfigureAwait(false);
             _postgresContainer = null;
         }
-
-        await base.DisposeAsync().ConfigureAwait(false);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -92,12 +119,12 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
 
         builder.ConfigureServices(services =>
         {
-            if (_isDockerAvailable && _postgresContainer != null)
+            if (_connectionString is not null)
             {
                 services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
                 services.AddDbContext<ExecutionDbContext>((sp, options) =>
                 {
-                    options.UseNpgsql(_postgresContainer.GetConnectionString());
+                    options.UseNpgsql(_connectionString);
                     options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
                     options.AddInterceptors(
                         new ConcurrencyTokenIncrementInterceptor(),
@@ -136,7 +163,7 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
         var host = base.CreateHost(builder);
         using var scope = host.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
-        if (_isDockerAvailable && _postgresContainer != null)
+        if (UsesPostgres)
         {
             db.Database.Migrate();
         }
@@ -145,50 +172,6 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
             db.Database.EnsureCreated();
         }
         return host;
-    }
-
-    private static bool CheckDockerSocketAvailable()
-    {
-        try
-        {
-            var userSocket = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".docker/run/docker.sock");
-            var dockerHost = Environment.GetEnvironmentVariable("DOCKER_HOST");
-            string? sockPath = null;
-
-            if (!string.IsNullOrEmpty(dockerHost))
-            {
-                sockPath = dockerHost.Replace("unix://", string.Empty);
-            }
-            else if (File.Exists("/var/run/docker.sock"))
-            {
-                sockPath = "/var/run/docker.sock";
-            }
-            else if (File.Exists(userSocket))
-            {
-                sockPath = userSocket;
-            }
-
-            if (string.IsNullOrEmpty(sockPath) || !File.Exists(sockPath))
-            {
-                return false;
-            }
-
-            using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified)
-            {
-                ReceiveTimeout = 300,
-                SendTimeout = 300
-            };
-            var endpoint = new UnixDomainSocketEndPoint(sockPath);
-            socket.Connect(endpoint);
-            socket.Send("GET /_ping HTTP/1.0\r\nHost: localhost\r\n\r\n"u8);
-            var buffer = new byte[64];
-            var bytesReceived = socket.Receive(buffer);
-            return bytesReceived > 0 && System.Text.Encoding.ASCII.GetString(buffer, 0, bytesReceived).Contains("OK");
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private static JsonSerializerOptions CreateJsonOptions()

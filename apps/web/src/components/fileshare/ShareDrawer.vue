@@ -636,11 +636,13 @@ async function confirmRevoke() {
   const grant = grantToRevoke.value;
   const fileId = props.files[0]?.id;
   if (fileId) {
-    await fileshareStore.revokeGrant(
+    const revoked = await fileshareStore.revokeGrant(
       fileId,
       grant.id,
       revokeReason.value.trim()
     );
+    // On failure the store has shown an error; keep the dialog open so the user can retry.
+    if (!revoked) return;
     emit("grant-revoked", { fileId, grantId: grant.id });
   }
   grantToRevoke.value = null;

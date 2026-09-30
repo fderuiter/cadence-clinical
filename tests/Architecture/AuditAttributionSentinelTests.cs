@@ -15,13 +15,11 @@ namespace Cadence.ArchitectureTests.Architecture;
 /// Keeps anonymous attribution out of the codebase (#4767): no actor-style member (<c>CreatedBy</c>,
 /// <c>ReaderId</c>, <c>UserId</c>, and so on) may default to a literal such as <c>"system"</c>. An actor is
 /// either the authenticated caller or a named <c>svc:</c> service account set explicitly at the point of work.
-/// @req:PRD-SYS-053
 /// </summary>
 public partial class AuditAttributionSentinelTests
 {
     [Fact(DisplayName = "ActorMembers_MustNotDefaultTo_AnonymousSystemIdentity")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ActorMembersMustNotDefaultToAnonymousSystemIdentity()
     {
         string root = FindRepositoryRoot();
@@ -42,7 +40,6 @@ public partial class AuditAttributionSentinelTests
 
     [Theory(DisplayName = "AnonymousActorDefault_Pattern_CatchesKnownShapes")]
     [Trait("Category", "Architecture")]
-    [GxPRequirement("PRD-SYS-053")]
     [InlineData("    public string CreatedBy { get; set; } = \"system\";", true)]
     [InlineData("    public string ReaderId { get; set; } = \"system\";", true)]
     [InlineData("    private const string DefaultUserId = \"system\";", true)]

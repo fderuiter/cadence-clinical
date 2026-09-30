@@ -1,0 +1,3 @@
+# Local test and coverage output (git-ignored)
+coverage/
+test-results/

@@ -24,9 +24,6 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// Boots the real execution composition root and checks that it only acts on identity the gateway signed:
 /// anonymous and forged callers get 401, callers without the needed role get 403, and a PI signature always
 /// records the authenticated caller rather than whatever the request body claims.
-/// @req:PRD-SYS-053
-/// @req:PRD-SYS-002
-/// @req:PRD-SYS-007
 /// </summary>
 public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : IClassFixture<ExecutionApiFactory>
 {
@@ -39,7 +36,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task Healthz_WithoutCredentials_IsAnonymous()
     {
         using var client = factory.CreateClient();
@@ -51,7 +47,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ApiRequest_WithoutGatewaySignature_Returns401()
     {
         using var client = factory.CreateClient();
@@ -66,7 +61,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ApiRequest_SignedWithWrongSecret_Returns401()
     {
         using var client = factory.CreateClient();
@@ -79,7 +73,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ApiRequest_WithRolesAddedAfterSigning_Returns401()
     {
         using var client = factory.CreateClient();
@@ -95,7 +88,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ApiRequest_WithStaleSignature_Returns401()
     {
         using var client = factory.CreateClient();
@@ -108,7 +100,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task ApiRequest_WithValidSignature_IsAuthenticated()
     {
         using var client = factory.CreateSignedClient(Cra);
@@ -120,7 +111,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-007")]
     public async Task CloseQuery_AsSignedCallerWithoutCraOrDmRole_Returns403()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -139,7 +129,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-007")]
     public async Task CloseQuery_AsSignedCra_Succeeds()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -156,7 +145,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task ApproveForm_WithInvestigatorRoleOnlyInBody_Returns403()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -174,7 +162,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task ApproveForm_NamingAnotherSigner_Returns403()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -192,7 +179,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-002")]
     public async Task ApproveForm_AsSignedInvestigator_RecordsCallerAsSigner()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -214,7 +200,6 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
 
     [Fact]
     [Trait("Category", "GxP_IQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void HostStartup_WithoutGatewaySecret_FailsFast()
     {
         using var unconfigured = new WebApplicationFactory<Cadence.Apps.Execution.Program>()

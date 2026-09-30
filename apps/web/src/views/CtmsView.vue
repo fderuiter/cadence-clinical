@@ -614,7 +614,16 @@
           "
         >
           <strong>Principal Investigator (PI):</strong>
-          {{ piName || "Dr. Arthur Pendragon" }}
+          {{ piName || "Not recorded in the DoA log" }}
+        </div>
+
+        <div
+          v-if="doaLoadError"
+          class="doa-load-error"
+          role="alert"
+          data-testid="doa-load-error"
+        >
+          Delegation of Authority log could not be loaded: {{ doaLoadError }}
         </div>
 
         <div id="ctms-delegation-container">
@@ -639,15 +648,19 @@
                 <td>
                   <strong>{{ d.staff_user_id }}</strong>
                   <div style="font-size: 11px; color: #64748b">
-                    {{ getStaffNameAndRole(d.staff_user_id) }}
+                    {{ getStaffNameAndRole(d) }}
                   </div>
                 </td>
                 <td>
                   <div style="display: flex; flex-direction: column; gap: 4px">
                     <span
-                      v-for="(cert, idx) in getStaffCertificates(
-                        d.staff_user_id
-                      )"
+                      v-if="getStaffCertificates(d).length === 0"
+                      style="font-size: 11px; color: #64748b"
+                    >
+                      Not recorded
+                    </span>
+                    <span
+                      v-for="(cert, idx) in getStaffCertificates(d)"
                       :key="idx"
                       class="badge"
                       style="
@@ -721,7 +734,7 @@
                   </button>
                 </td>
               </tr>
-              <tr v-if="effectiveDelegatedStaff.length === 0">
+              <tr v-if="effectiveDelegatedStaff.length === 0 && !doaLoadError">
                 <td
                   colspan="8"
                   style="text-align: center; color: #64748b; padding: 12px"
@@ -2251,6 +2264,7 @@ import AdaptiveDoseEscalationConsole from "../components/clinical/AdaptiveDoseEs
 import CellGeneTherapyCocConsole from "../components/clinical/CellGeneTherapyCocConsole.vue";
 import apiClient from "../services/api";
 import { getBaseUrl } from "../api/apiClient";
+import { useToastStore } from "../stores/toasts.js";
 
 // Active session store/router setup
 const store = useClinicalStore();
@@ -2276,7 +2290,8 @@ const recruitment = ref([]);
 // Delegation state
 const delegatedStaff = ref([]);
 const auditHistory = ref([]);
-const piName = ref("Dr. Arthur Pendragon");
+const piName = ref("");
+const doaLoadError = ref("");
 
 // Financials & Grant Contracts state
 const investigatorGrant = ref(null);
@@ -2382,85 +2397,20 @@ const openQueriesCountKpi = computed(() => {
   ).length;
 });
 
-// Effective Delegated Staff with fallback defaults for seamless inspection
-const effectiveDelegatedStaff = computed(() => {
-  if (delegatedStaff.value && delegatedStaff.value.length > 0) {
-    return delegatedStaff.value;
-  }
-  return [
-    {
-      record_id: "rec-pi-001",
-      site_id: siteId.value,
-      staff_user_id: "kc-pi-001",
-      task_codes: [
-        "PRINCIPAL_INVESTIGATOR",
-        "SUBJECT_INFORMED_CONSENT",
-        "SAE_REPORTING",
-      ],
-      start_date: "2026-01-15",
-      end_date: null,
-      is_active: true,
-      signed_off: true,
-    },
-    {
-      record_id: "rec-crc-001",
-      site_id: siteId.value,
-      staff_user_id: "kc-crc-001",
-      task_codes: [
-        "CRF_DATA_ENTRY",
-        "SUBJECT_SCREENING",
-        "SUBJECT_INFORMED_CONSENT",
-      ],
-      start_date: "2026-01-20",
-      end_date: null,
-      is_active: true,
-      signed_off: true,
-    },
-    {
-      record_id: "rec-cra-001",
-      site_id: siteId.value,
-      staff_user_id: "cra_fderuiter",
-      task_codes: ["CRF_DATA_ENTRY"],
-      start_date: "2026-02-01",
-      end_date: null,
-      is_active: true,
-      signed_off: false,
-    },
-  ];
-});
+// #4523: the DoA table shows only what the DoA service returned; an empty log is an empty state and a failed
+// load is an error, never sample delegation records.
+const effectiveDelegatedStaff = computed(() => delegatedStaff.value || []);
 
-function getStaffNameAndRole(staffUserId) {
-  if (staffUserId === "kc-pi-001" || staffUserId.includes("pi")) {
-    return "Dr. Arthur Pendragon (Principal Investigator)";
-  }
-  if (staffUserId === "kc-crc-001" || staffUserId.includes("crc")) {
-    return "Sarah Jenkins, RN (Lead Study Coordinator)";
-  }
-  if (staffUserId === "cra_fderuiter" || staffUserId.includes("cra")) {
-    return "Frederick de Ruiter (Lead CRA Monitor)";
-  }
-  return "Clinical Site Investigator / Sub-Investigator";
+// Names, roles and training come from the DoA record when the service provides them; nothing is inferred
+// from the user id (#4523).
+function getStaffNameAndRole(record) {
+  return [record?.staff_name, record?.role].filter(Boolean).join(" · ");
 }
 
-function getStaffCertificates(staffUserId) {
-  if (staffUserId === "kc-pi-001" || staffUserId.includes("pi")) {
-    return [
-      "ICH GCP E6(R2) Certified (Exp: 2027)",
-      "CADENCE-101 Protocol Oversight Training",
-      "Human Subject Protections (CITI)",
-    ];
-  }
-  if (staffUserId === "kc-crc-001" || staffUserId.includes("crc")) {
-    return [
-      "ICH GCP E6(R2) Certified (Exp: 2027)",
-      "CADENCE-101 eCRF System Certification",
-      "IATA Dangerous Goods Transport",
-    ];
-  }
-  return [
-    "ICH GCP E6(R2) Monitoring Certified",
-    "Source Data Verification (SDV) Protocol Training",
-  ];
+function getStaffCertificates(record) {
+  return Array.isArray(record?.training_certificates)
+    ? record.training_certificates
+    : [];
 }
 
 // Modal States
@@ -2579,14 +2529,23 @@ async function loadDelegationData() {
     const res = await apiClient.get(
       `/api/v1/ctms/doa/sites/${siteId.value}/log`
     );
-    delegatedStaff.value = res.delegated_staff || [];
-    auditHistory.value = res.audit_history || [];
-    piName.value = res.pi_name || "Dr. Arthur Pendragon";
+    delegatedStaff.value = res?.delegated_staff || [];
+    auditHistory.value = res?.audit_history || [];
+    piName.value = res?.pi_name || "";
+    doaLoadError.value = "";
   } catch (err) {
-    console.error(
-      "Failed to load delegation log from DoA backend endpoint:",
+    // A superseded duplicate request is aborted by apiClient; the newer request reports its own outcome.
+    if (err?.name === "AbortError") return;
+    delegatedStaff.value = [];
+    auditHistory.value = [];
+    piName.value = "";
+    const toasts = useToastStore();
+    const toastId = toasts.apiError(
+      "Delegation of Authority log could not be loaded",
       err
     );
+    doaLoadError.value =
+      toasts.toasts.find((t) => t.id === toastId)?.message || "Request failed";
   }
 }
 
@@ -3465,5 +3424,15 @@ textarea {
 
 .tab-btn:hover {
   background: #f1f5f9;
+}
+
+.doa-load-error {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 14px;
 }
 </style>

@@ -31,7 +31,6 @@ public sealed partial class KernelCommandPipelineTests
     /// <summary>
     /// Validates K-TX-5 at construction: generic or anonymous ids are refused, and service accounts and agents must
     /// carry their prefix while people may not.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Theory(DisplayName = "Actor_RejectsUnaccountableIds")]
     [InlineData(ActorKind.Person, "system")]
@@ -42,7 +41,6 @@ public sealed partial class KernelCommandPipelineTests
     [InlineData(ActorKind.ServiceAccount, "relay")]
     [InlineData(ActorKind.ServiceAccount, "svc:")]
     [InlineData(ActorKind.AutomationAgent, "coder")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ActorRejectsUnaccountableIds(ActorKind kind, string id)
     {
         var act = () => new Actor(kind, id);
@@ -52,10 +50,8 @@ public sealed partial class KernelCommandPipelineTests
 
     /// <summary>
     /// Validates the accountable actor forms: an OIDC subject for a person and <c>svc:</c>-prefixed service accounts.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Actor_AcceptsPersonsAndNamedServiceAccounts")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ActorAcceptsPersonsAndNamedServiceAccounts()
     {
         Actor.Person("00u1abcd").Should().Be(new Actor(ActorKind.Person, "00u1abcd"));
@@ -66,10 +62,8 @@ public sealed partial class KernelCommandPipelineTests
     /// <summary>
     /// Validates K-ERR-1: every registered kernel error has a unique <c>K.&lt;Area&gt;.&lt;Name&gt;</c> code and an HTTP
     /// status in the 4xx/5xx range.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "KernelErrors_Registry_HasUniqueWellFormedCodes")]
-    [GxPRequirement("PRD-SYS-053")]
     public void KernelErrorsRegistryHasUniqueWellFormedCodes()
     {
         var errors = KernelErrors.All;
@@ -86,10 +80,8 @@ public sealed partial class KernelCommandPipelineTests
     /// <summary>
     /// Validates that the request hash is stable for equal payloads and changes with any field, which is what lets
     /// K-TX-3 tell a replay from a conflicting reuse of a key.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "RequestHash_IsStable_AndCoversEveryField")]
-    [GxPRequirement("PRD-SYS-053")]
     public void RequestHashIsStableAndCoversEveryField()
     {
         var command = NewTenant();
@@ -105,10 +97,8 @@ public sealed partial class KernelCommandPipelineTests
     /// <summary>
     /// Validates that recorded time is truncated to PostgreSQL's microsecond precision, so audit hashes computed before
     /// the write still match after a round-trip.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "RecordedTime_IsTruncatedToMicroseconds")]
-    [GxPRequirement("PRD-SYS-053")]
     public void RecordedTimeIsTruncatedToMicroseconds()
     {
         var value = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.FromHours(2)).AddTicks(1_234_567);
@@ -122,10 +112,8 @@ public sealed partial class KernelCommandPipelineTests
     /// <summary>
     /// Validates the pipeline's order of refusals: payload validation, then actor resolution (K-TX-5), then handler
     /// lookup, each before any unit of work is opened.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact(DisplayName = "Pipeline_RefusesInvalidCommands_BeforeOpeningAUnitOfWork")]
-    [GxPRequirement("PRD-SYS-053")]
     public async Task PipelineRefusesInvalidCommandsBeforeOpeningAUnitOfWork()
     {
         var ct = TestContext.Current.CancellationToken;
