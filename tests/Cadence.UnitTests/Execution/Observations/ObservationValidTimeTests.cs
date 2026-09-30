@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Domain.Observations;
@@ -13,6 +12,7 @@ using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -30,20 +30,14 @@ public sealed class ObservationValidTimeTests
     private static readonly DateTimeOffset RecordedAt = new(2026, 3, 1, 12, 0, 0, TimeSpan.Zero);
     private static readonly DateTime MeasuredAt = new(2026, 2, 20, 8, 30, 0, DateTimeKind.Utc);
 
-    private sealed class FakeAuditContextAccessor : ICurrentAuditContextAccessor
-    {
-        public string UserId => "coordinator-01";
-        public string ChangeReason => "Data entry";
-    }
-
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static ObservationApplicationService ObservationService(InMemoryObservationRepository repository) =>
         new(repository, new InMemorySubjectRepository(), new UcumNormalizationService(), new LabRangeService(),
-            new AstEditCheckEngine(), new FakeClock(RecordedAt), new FakeAuditContextAccessor());
+            new AstEditCheckEngine(), new FakeClock(RecordedAt), new FakeCurrentAuditContextAccessor("coordinator-01", "Data entry"));
 
     private static FormSubmissionApplicationService FormService(InMemoryObservationRepository observations) =>
-        new(new InMemoryFormSubmissionRepository(), observations, new UcumNormalizationService(), new FakeAuditContextAccessor());
+        new(new InMemoryFormSubmissionRepository(), observations, new UcumNormalizationService(), new FakeCurrentAuditContextAccessor("coordinator-01", "Data entry"));
 
     private static ObservationCreateRequest Request(DateTime? observationDate) =>
         new(SubjectId: "SUBJ-VT-01", Domain: "VS", TestCode: "SYSBP", TestName: "Systolic BP",

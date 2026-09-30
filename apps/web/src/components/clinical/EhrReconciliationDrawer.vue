@@ -907,8 +907,11 @@ function formatResolutionAction(act?: string): string {
 }
 
 .ehr-reconciliation-drawer {
-  width: 920px;
-  max-width: 95vw;
+  width: var(
+    --semantic-drawer-width-xl,
+    var(--drawer-width-xl, min(100vw, 920px))
+  );
+  max-width: 100vw;
   height: 100vh;
   background-color: #ffffff;
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
@@ -1157,10 +1160,12 @@ function formatResolutionAction(act?: string): string {
   border-radius: 4px;
   background-color: #ffffff;
   color: #0f172a;
+  max-width: 100%;
 }
 
 .search-input {
   width: 280px;
+  max-width: 100%;
 }
 
 /* Body & Candidate List */
@@ -1743,6 +1748,100 @@ function formatResolutionAction(act?: string): string {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Mobile Breakpoint Overrides (max-width: 640px) */
+@media (max-width: 640px) {
+  .ehr-reconciliation-drawer {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .drawer-header,
+  .context-bar,
+  .toolbar,
+  .drawer-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 12px 16px;
+  }
+
+  .toolbar-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .filter-control {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .select-input,
+  .search-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .search-control {
+    width: 100%;
+  }
+
+  .split-screen-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ehr-pane {
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .card-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .action-btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .action-btn-group .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: var(--semantic-touch-target-min, 48px);
+  }
+
+  .btn-link-provenance {
+    width: 100%;
+    text-align: center;
+    padding: 8px 0;
+    min-height: var(--semantic-touch-target-min, 48px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: var(--semantic-touch-target-min, 48px);
+  }
+
+  .provenance-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
