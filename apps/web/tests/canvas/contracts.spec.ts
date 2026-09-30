@@ -9,7 +9,9 @@ import {
 } from "../../src/canvas/nodeRef";
 import {
   PARTICIPANT_STATES,
+  PARTICIPANT_TRANSITIONS,
   STAGES,
+  participantStateChanges,
   findSection,
   findStage,
 } from "../../src/canvas/lifecycle";
@@ -113,5 +115,58 @@ describe("Canvas lifecycle", () => {
 
     expect(codes.length).toBeGreaterThan(0);
     expect(PARTICIPANT_STATES.map((s) => s.code).sort()).toEqual(codes.sort());
+  });
+
+  it("allows exactly the state changes Execution's transition graph allows", () => {
+    const source = readFileSync(
+      join(
+        repoRoot,
+        "apps/execution/src/Domain/Subjects/SubjectTransitionGraph.cs"
+      ),
+      "utf8"
+    );
+    const codec = readFileSync(
+      join(repoRoot, "apps/execution/src/Domain/Subjects/SubjectStateCodec.cs"),
+      "utf8"
+    );
+    const codeOf = Object.fromEntries(
+      [...codec.matchAll(/\["([A-Z_]+)"\] = SubjectState\.(\w+)/g)].map(
+        ([, code, member]) => [member, code]
+      )
+    );
+    const graph = Object.fromEntries(
+      [
+        ...source.matchAll(
+          /\[SubjectState\.(\w+)\] = new HashSet<SubjectState>\s*(?:\{([^}]*)\}|\(\))/g
+        ),
+      ].map(([, from, targets]) => [
+        codeOf[from],
+        [...(targets ?? "").matchAll(/SubjectState\.(\w+)/g)]
+          .map(([, member]) => codeOf[member])
+          .sort(),
+      ])
+    );
+
+    expect(Object.keys(graph)).toHaveLength(PARTICIPANT_STATES.length);
+    const mirrored = Object.fromEntries(
+      Object.entries(PARTICIPANT_TRANSITIONS).map(([from, to]) => [
+        from,
+        [...to].sort(),
+      ])
+    );
+    expect(mirrored).toEqual(graph);
+  });
+
+  it("offers every allowed change except unblinding, in lifecycle order", () => {
+    expect(participantStateChanges("ACTIVE")).toEqual({
+      targets: ["RECONSENT_REQUIRED", "COMPLETED", "WITHDRAWN"],
+      unblindingWithheld: true,
+    });
+    expect(participantStateChanges("SCREENING")).toEqual({
+      targets: ["SCREEN_FAILED", "ENROLLED", "RECONSENT_REQUIRED", "WITHDRAWN"],
+      unblindingWithheld: false,
+    });
+    expect(participantStateChanges("COMPLETED").targets).toEqual([]);
+    expect(participantStateChanges("NOT_A_STATE").targets).toEqual([]);
   });
 });

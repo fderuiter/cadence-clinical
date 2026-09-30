@@ -115,3 +115,49 @@ export function participantStateLabel(code: string): string {
 export function isParticipantState(code: unknown): code is string {
   return PARTICIPANT_STATES.some((s) => s.code === code);
 }
+
+/**
+ * The state changes Execution allows from each participant state (SubjectTransitionGraph.cs, spec Rule 9).
+ * The canvas offers these and Execution decides; a test fails when this copy drifts from Execution's.
+ */
+export const PARTICIPANT_TRANSITIONS: Readonly<
+  Record<string, readonly string[]>
+> = {
+  SCREENING: ["SCREEN_FAILED", "ENROLLED", "WITHDRAWN", "RECONSENT_REQUIRED"],
+  ENROLLED: ["RANDOMIZED", "WITHDRAWN", "RECONSENT_REQUIRED"],
+  RANDOMIZED: ["ACTIVE", "WITHDRAWN", "UNBLINDED", "RECONSENT_REQUIRED"],
+  ACTIVE: ["COMPLETED", "WITHDRAWN", "UNBLINDED", "RECONSENT_REQUIRED"],
+  UNBLINDED: ["WITHDRAWN", "COMPLETED", "RECONSENT_REQUIRED"],
+  RECONSENT_REQUIRED: [
+    "SCREENING",
+    "ENROLLED",
+    "RANDOMIZED",
+    "ACTIVE",
+    "UNBLINDED",
+    "COMPLETED",
+    "WITHDRAWN",
+  ],
+  SCREEN_FAILED: [],
+  COMPLETED: [],
+  WITHDRAWN: [],
+};
+
+/**
+ * Unblinding breaks the blind for a participant, so it gets its own workflow rather than a menu entry here,
+ * even though Execution accepts it as a state change.
+ */
+const WITHHELD_STATE_CHANGES = new Set(["UNBLINDED"]);
+
+/** The state changes the canvas offers from a state, in lifecycle order, and whether unblinding was left out. */
+export function participantStateChanges(code: string): {
+  targets: string[];
+  unblindingWithheld: boolean;
+} {
+  const allowed = new Set(PARTICIPANT_TRANSITIONS[code] ?? []);
+  return {
+    targets: PARTICIPANT_STATES.map((s) => s.code).filter(
+      (target) => allowed.has(target) && !WITHHELD_STATE_CHANGES.has(target)
+    ),
+    unblindingWithheld: [...allowed].some((t) => WITHHELD_STATE_CHANGES.has(t)),
+  };
+}

@@ -12,6 +12,7 @@ type Schemas = components["schemas"];
 
 export type SubjectSummary = Schemas["Execution_SubjectSummaryResponse"];
 export type SubjectList = Schemas["Execution_SubjectListResponse"];
+export type Subject = Schemas["Execution_SubjectResponse"];
 export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
 export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
 export type Observation = Schemas["Execution_ObservationResponse"];
@@ -23,6 +24,13 @@ export interface RaiseQuery {
   subjectCode: string;
   observation: Observation;
   explanation: string;
+}
+
+export interface AddSubject {
+  studyId: string;
+  subjectCode: string;
+  siteId?: string;
+  reason: string;
 }
 
 export interface ListSubjectsQuery {
@@ -49,6 +57,50 @@ export const executionApi = {
             offset: query.offset,
           },
         },
+      })
+    );
+  },
+
+  /**
+   * Adds a participant to a study in screening (POST /api/v1/execution/subjects). The canvas sends no
+   * demographics and no arm: identity details and randomization are not captured here. The reason reaches
+   * the audit entry as X-Change-Reason.
+   */
+  addSubject({
+    studyId,
+    subjectCode,
+    siteId,
+    reason,
+  }: AddSubject): Promise<Subject> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/subjects", {
+        body: {
+          subject_id: subjectCode,
+          study_id: studyId,
+          site_id: siteId || null,
+          arm_id: null,
+          demographics: null,
+        },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+      })
+    );
+  },
+
+  /**
+   * Moves a participant to another state (PATCH /api/v1/execution/subjects/{subjectId}/state), by id or
+   * subject code. Execution checks the transition and, for enrolment, that the site is activated; the reason
+   * is sent as X-Change-Reason.
+   */
+  changeSubjectState(
+    subjectId: string,
+    state: string,
+    reason: string
+  ): Promise<Subject> {
+    return unwrapResponse(
+      client.PATCH("/api/v1/execution/subjects/{subjectId}/state", {
+        params: { path: { subjectId } },
+        body: { status: state, state: null },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },

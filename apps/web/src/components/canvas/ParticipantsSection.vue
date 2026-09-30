@@ -29,7 +29,23 @@
           ×
         </button>
       </span>
+      <button
+        v-if="!adding"
+        id="btn-add-participant"
+        type="button"
+        class="btn btn-secondary"
+        @click="adding = true"
+      >
+        Add participant
+      </button>
     </header>
+
+    <AddParticipantForm
+      v-if="adding"
+      :default-site-id="siteId"
+      @added="onAdded"
+      @close="adding = false"
+    />
 
     <p id="participants-status-line" class="status-line" role="status">
       {{ statusLine }}
@@ -84,13 +100,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { SubjectSummary } from "../../api/executionApi";
 import {
   PARTICIPANT_STATES,
   participantStateLabel,
 } from "../../canvas/lifecycle";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import AddParticipantForm from "./AddParticipantForm.vue";
 
 /**
  * The study's participants in enrollment order, from Execution, filtered by state and site. The filter lives
@@ -107,6 +124,13 @@ const emit = defineEmits<{
 }>();
 
 const canvas = useStudyCanvasStore();
+const adding = ref(false);
+
+/** Closes the form and selects the new participant when the list could place it. */
+function onAdded(participant: SubjectSummary | null) {
+  adding.value = false;
+  if (participant) emit("select", participant);
+}
 
 const statusLine = computed(() => {
   if (canvas.participantsLoading && !canvas.participants.length) {

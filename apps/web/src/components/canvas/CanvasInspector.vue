@@ -187,6 +187,8 @@
           <dd class="numeric">{{ participant.enrollment_index }}</dd>
         </dl>
 
+        <ParticipantStateChange :participant="participant" />
+
         <router-link
           v-if="recordLocation"
           id="inspector-open-record"
@@ -239,6 +241,7 @@ import type {
   SubjectSummary,
 } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
+import ParticipantStateChange from "./ParticipantStateChange.vue";
 
 /**
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): the selected object's kind,

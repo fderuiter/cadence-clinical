@@ -276,3 +276,84 @@ describe("executionApi: participant data, SDV and queries (#4828)", () => {
     expect(request.body).toEqual({ reason: "Wert falsch — bitte prüfen" });
   });
 });
+
+describe("executionApi: adding participants and changing their state", () => {
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  async function sent(index = 0) {
+    const request = fetchSpy.mock.calls[index][0];
+    return {
+      method: request.method,
+      path: new URL(request.url).pathname,
+      reason: request.headers.get("X-Change-Reason"),
+      body: await request.clone().json(),
+    };
+  }
+
+  it("adds a participant with no demographics or arm, and the reason as X-Change-Reason", async () => {
+    const created = { id: "s1", subject_id: "017-0009", status: "SCREENING" };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, created));
+
+    const result = await executionApi.addSubject({
+      studyId: "CAD-101",
+      subjectCode: "017-0009",
+      siteId: "017",
+      reason: "Signed pre-screening log — 017",
+    });
+
+    expect(result).toEqual(created);
+    expect(await sent()).toEqual({
+      method: "POST",
+      path: "/api/v1/execution/subjects",
+      reason: "UTF-8''Signed%20pre-screening%20log%20%E2%80%94%20017",
+      body: {
+        subject_id: "017-0009",
+        study_id: "CAD-101",
+        site_id: "017",
+        arm_id: null,
+        demographics: null,
+      },
+    });
+  });
+
+  it("sends no site when none is given, rather than an empty code Execution would reject", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, { id: "s1" }));
+
+    await executionApi.addSubject({
+      studyId: "CAD-101",
+      subjectCode: "017-0009",
+      siteId: "",
+      reason: "Referred",
+    });
+
+    expect((await sent()).body.site_id).toBeNull();
+  });
+
+  it("changes a participant's state by id, with the target as status and the reason as X-Change-Reason", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(200, { id: "s1", status: "WITHDRAWN" })
+    );
+
+    await executionApi.changeSubjectState(
+      "s1",
+      "WITHDRAWN",
+      "Consent withdrawn"
+    );
+
+    expect(await sent()).toEqual({
+      method: "PATCH",
+      path: "/api/v1/execution/subjects/s1/state",
+      reason: "Consent withdrawn",
+      body: { status: "WITHDRAWN", state: null },
+    });
+  });
+});

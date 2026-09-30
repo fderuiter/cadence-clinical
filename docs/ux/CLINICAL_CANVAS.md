@@ -353,7 +353,8 @@ work to change course. It adds three constraints for any screen built or rebuilt
 The first shell is in `apps/web` at `/studies/:studyCode` (`StudyCanvasView.vue`). It has the lifecycle
 rail, the three panes, the zoom path and the `⌘K` palette, and shows only what Execution serves today:
 participants by state on study home (an interim count from Execution's list totals until Pulse metrics are
-Indicators, D6), the Participants section, Site activation, and a participant's data (observations by visit
+Indicators, D6), the Participants section (adding a participant in screening, and moving a participant between
+the states Execution allows, less unblinding), Site activation, and a participant's data (observations by visit
 with source data verification, queries with their transitions, and form submissions). Selections are addressed by NodeRef in the
 URL. Trace, Impact, Explain, Simulate and Act are shown disabled, each naming the decision it waits on, and
 stages with no service are empty (§6.1). [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md) tracks what it
