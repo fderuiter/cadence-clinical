@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify ci test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -63,6 +63,9 @@ check: $(CADENCE_CLI) ## Run all 21 quality gates (dotnet cadence check)
 verify: $(CADENCE_CLI) ## Full verification — quality gates + all test suites (use before opening a PR)
 	$(CADENCE_CLI) check
 	$(CADENCE_CLI) test
+
+ci: $(CADENCE_CLI) ## Run the CI workflow's jobs locally (GitHub Actions is off until 2027; needs PostgreSQL)
+	$(CADENCE_CLI) ci
 
 test: $(CADENCE_CLI) ## Run backend unit tests with coverage
 	$(CADENCE_CLI) test

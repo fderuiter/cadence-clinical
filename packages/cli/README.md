@@ -23,6 +23,7 @@ Common commands:
 | `check [gate] [files]`                                                        | Runs all quality gates, or one gate such as `readmes`, `markdown`, `adrs`, `arch-drift`, `imports`, `dependencies`. |
 | `fix`                                                                         | Runs the automatic fixers (`SelfHealService`).                                                                      |
 | `test`                                                                        | Test runner wrapper.                                                                                                |
+| `ci [--job <job>] [--allow-skip] [--list]`                                     | Runs the jobs of `.github/workflows/ci.yml` locally with the same commands (`Services/CiPlan.cs`, `Services/LocalCiRunner.cs`). |
 | `doctor`                                                                      | Checks the local toolchain and environment.                                                                         |
 | `db reset`, `db migrate`, `db status`, `db seed`                              | Database utilities.                                                                                                 |
 | `gxp sync`, `gxp validate`, `gxp verify`, `generate-rtm`                      | Requirements traceability and GxP reports.                                                                          |
@@ -54,6 +55,9 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
 - `tests/Cadence.UnitTests/Packages/CliCommandLineTests.cs`: parses the documented invocations with `Program.BuildRootCommand()` and
   checks that unknown input, missing arguments and bare groups are rejected and that every command has an action and
   a description.
+- `tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs`: reads `.github/workflows/ci.yml` and fails when a job or step
+  is added, renamed, removed or runs a different command without `CiPlan` following. `LocalCiRunnerTests.cs` covers the
+  run rules (`if: always()`, covered steps, missing tools, PostgreSQL, job needs, changed files).
 - `tests/Cadence.UnitTests/Packages/CliDocsParityTests.cs`: the `cli-docs` gate's command discovery.
 - `tests/Cadence.UnitTests/Packages/AgentHookGuardTests.cs`: which commands and payloads the `hook` commands block or allow
   (`Services/AgentHookGuard.cs`).

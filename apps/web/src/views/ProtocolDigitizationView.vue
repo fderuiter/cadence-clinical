@@ -7,8 +7,8 @@
         <p>
           Automated Digital Data Flow (DDF) pipeline: Ingest unstructured
           protocol documents (PDF/DOCX), compile CDISC USDM v4.0 study entities
-          into the study design, and synthesize CDASH eCRFs and Schedule of Activities in
-          &lt; 60s.
+          into the study design, and synthesize CDASH eCRFs and Schedule of
+          Activities in &lt; 60s.
         </p>
       </div>
       <div class="header-badges">
