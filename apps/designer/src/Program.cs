@@ -36,6 +36,15 @@ protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResul
     {
         return TypedResults.Ok(UsdmCompiler.CompileUsdm(request.UsdmJson, request.StudyId, request.VersionTag));
     }
+    catch (DdfCompilationException ex)
+    {
+        // A rule that does not parse, names an unknown item or makes a skip-logic cycle, or a duplicated item.
+        return TypedResults.Problem(
+            title: "The study cannot be compiled.",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status422UnprocessableEntity,
+            extensions: new Dictionary<string, object?> { ["problems"] = ex.Problems });
+    }
     catch (AccessibilityValidationException ex)
     {
         // The compiler never hands out a form that failed its accessibility check; the caller gets what failed.

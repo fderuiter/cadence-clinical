@@ -100,17 +100,17 @@ public class DdfCompilerTests
     }
 
     /// <summary>
-    /// A form the check fails is never returned: an item name that is not a valid XML name renders a broken form.
+    /// A form the check fails is never returned: a study whose name is blank renders a form without a title.
     /// </summary>
     [Fact]
     public void CompileUsdm_RefusesAFormThatFailsTheCheck()
     {
-        const string usdm = """{"study":{"id":"S-1","name":"Broken"},"items":[{"id":"BP","name":"Systolic (mmHg)","type":"integer"}]}""";
+        const string usdm = """{"study":{"id":"S-1","name":"  "},"items":[{"id":"BP","name":"Systolic","type":"integer"}]}""";
 
         var compile = () => UsdmCompiler.CompileUsdm(usdm);
 
         compile.Should().Throw<AccessibilityValidationException>()
-            .Which.Report.LayoutErrors.Should().ContainSingle().Which.Should().StartWith("The form is not well-formed XML");
+            .Which.Report.Violations.Should().ContainSingle().Which["id"].Should().Be("document-title");
     }
 
     /// <summary>

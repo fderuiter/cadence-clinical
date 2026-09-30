@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -59,15 +60,31 @@ public sealed class DesignerCompileAuthorityTests(DesignerCompileAuthorityTests.
     public async Task Compile_AFormThatFailsTheAccessibilityCheck_Returns422WithTheProblems()
     {
         using var client = factory.CreateSignedClient(TestSecurityContext.Identity("designer-1", "Sponsor Designer"));
-        const string broken = """{"study":{"id":"S-1","name":"Broken"},"items":[{"id":"BP","name":"Systolic (mmHg)","type":"integer"}]}""";
+        const string broken = """{"study":{"id":"S-1","name":"  "},"items":[{"id":"BP","name":"Systolic","type":"integer"}]}""";
 
         var response = await client.PostAsJsonAsync(Route, new { usdmJson = broken }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
         problem.GetProperty("title").GetString().Should().Be("The compiled form failed its accessibility check.");
-        problem.GetProperty("layoutErrors").EnumerateArray().Should().ContainSingle()
-            .Which.GetString().Should().StartWith("The form is not well-formed XML");
+        problem.GetProperty("violations").EnumerateArray().Should().ContainSingle()
+            .Which.GetProperty("id").GetString().Should().Be("document-title");
+    }
+
+    [Fact]
+    public async Task Compile_AStudyWithARuleProblem_Returns422WithTheProblems()
+    {
+        using var client = factory.CreateSignedClient(TestSecurityContext.Identity("designer-1", "Sponsor Designer"));
+        const string cyclic = """
+            {"study":{"id":"S-1","name":"Cycle"},"items":[
+              {"id":"A","name":"A","rules":[{"type":"skip_logic","condition":{"op":"==","args":[{"var":"A"},1]}}]}]}
+            """;
+
+        var response = await client.PostAsJsonAsync(Route, new { usdmJson = cyclic }, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+        problem.GetProperty("problems").EnumerateArray().Select(p => p.GetString()).Should().Equal("Skip logic makes a cycle: A -> A.");
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

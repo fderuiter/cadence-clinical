@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\kernel\src\Cadence.Rules\Cadence.Rules.csproj" />
     <ProjectReference Include="..\..\templating\src\Cadence.Templating.csproj" />
   </ItemGroup>
   <ItemGroup>
