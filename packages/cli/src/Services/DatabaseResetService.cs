@@ -9,8 +9,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
-using Neo4j.Driver;
-
 using Npgsql;
 
 using Spectre.Console;
@@ -19,32 +17,15 @@ namespace Cadence.Cli.Services;
 
 public static class DatabaseResetService
 {
-    private static string DefaultNeo4jUri => string.Format("{0}://{1}:{2}", "bolt", "localhost", 7687);
-
-    private static readonly string[] MockStudies =
-    [
-        "study_1|Oncology Phase II|A study for solid tumors.|ver_study_1",
-        "study_001|Cardiovascular Phase III|Cardiovascular study|ver_study_001",
-        "study_abc|Immunology Phase I|Immunology study|ver_study_abc",
-        "study_xyz|Neurology Phase II|Neurology study|ver_study_xyz",
-        "study_123|Pediatric Vaccine Trial|Pediatric trial|ver_study_123",
-        "study_111|Rare Disease Study|Rare disease study|ver_study_111"
-    ];
-
     public static async Task<int> ResetDatabasesAsync(bool allowOffline = true)
     {
-        AnsiConsole.MarkupLine("[bold cyan]Resetting local databases (PostgreSQL/SQLite/Neo4j) via native C#...[/]\n");
+        AnsiConsole.MarkupLine("[bold cyan]Resetting local databases (PostgreSQL/SQLite) via native C#...[/]\n");
 
         // 1. Safety Guard
         ValidateLocalEnvironment();
 
         string pgConnStr = GetPostgresConnectionString();
         ValidateLocalOnly("Postgres", pgConnStr);
-
-        string neo4jUri = Environment.GetEnvironmentVariable("NEO4J_URI") ?? DefaultNeo4jUri;
-        string neo4jUser = Environment.GetEnvironmentVariable("NEO4J_USER") ?? "neo4j";
-        string neo4jPass = Environment.GetEnvironmentVariable("NEO4J_PASSWORD") ?? "password123";
-        ValidateLocalOnly("Neo4j", neo4jUri);
 
         bool allOk = true;
 
@@ -84,26 +65,6 @@ public static class DatabaseResetService
             else
             {
                 AnsiConsole.MarkupLine($"  [red]ERROR: SQLite reset failed: {ex.Message}[/]");
-                allOk = false;
-            }
-        }
-
-        // 4. Neo4j Reset
-        try
-        {
-            AnsiConsole.MarkupLine("\n  3. Purging and reseeding Neo4j graph database...");
-            await ResetNeo4jAsync(neo4jUri, neo4jUser, neo4jPass);
-            AnsiConsole.MarkupLine("  [green][[OK]] Neo4j reset complete.[/]");
-        }
-        catch (Exception ex)
-        {
-            if (allowOffline)
-            {
-                AnsiConsole.MarkupLine($"  [yellow]WARNING: Neo4j reset skipped or failed: {ex.Message}[/]");
-            }
-            else
-            {
-                AnsiConsole.MarkupLine($"  [red]ERROR: Neo4j reset failed: {ex.Message}[/]");
                 allOk = false;
             }
         }
@@ -154,7 +115,7 @@ public static class DatabaseResetService
             {
                 var uri = new Uri($"http://{remainder}");
                 string host = uri.Host;
-                string[] localHosts = ["localhost", "127.0.0.1", "0.0.0.0", "postgres", "neo4j", "db", "host.docker.internal"];
+                string[] localHosts = ["localhost", "127.0.0.1", "0.0.0.0", "postgres", "db", "host.docker.internal"];
 
                 if (!localHosts.Contains(host, StringComparer.OrdinalIgnoreCase) && !host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
                 {
@@ -403,85 +364,6 @@ public static class DatabaseResetService
                 // Ignore transient file lock issues
             }
         }
-    }
-
-    private static async Task ResetNeo4jAsync(string uri, string user, string password)
-    {
-        try
-        {
-            using var driver = GraphDatabase.Driver(uri, AuthTokens.Basic(user, password));
-            await using var session = driver.AsyncSession();
-
-            await session.RunAsync("MATCH (n) DETACH DELETE n");
-
-            foreach (var item in MockStudies)
-            {
-                var parts = item.Split('|');
-                string id = parts[0];
-                string title = parts[1];
-                string desc = parts[2];
-                string versionId = parts[3];
-
-                await session.RunAsync("MERGE (s:Study {id: $study_id}) RETURN s.id", new { study_id = id });
-
-                await session.RunAsync(@"
-                    MATCH (s:Study {id: $study_id})
-                    CREATE (sp:StudyProperties {
-                        title: $title,
-                        desc: $desc
-                    })
-                    CREATE (s)-[:HAS_PROPERTIES]->(sp)
-                ", new { study_id = id, title, desc });
-
-                await session.RunAsync(@"
-                    MATCH (s:Study {id: $study_id})
-                    CREATE (sv:StudyVersion {
-                        id: $version_id,
-                        version_tag: ""1.0"",
-                        status: ""DRAFT"",
-                        version_index: 1,
-                        created_at: datetime(),
-                        created_by: ""system""
-                    })
-                    CREATE (s)-[:HAS_VERSION]->(sv)
-                ", new { study_id = id, version_id = versionId });
-            }
-        }
-        catch
-        {
-            // HTTP API Fallback if Bolt driver is unreachable
-            await ResetNeo4jHttpFallbackAsync(uri, user, password);
-        }
-    }
-
-    private static async Task ResetNeo4jHttpFallbackAsync(string uriStr, string user, string password)
-    {
-        using var client = new HttpClient();
-        string httpUrl = uriStr.Replace("bolt://", "http://").Replace(":7687", ":7474");
-        if (!httpUrl.EndsWith('/')) httpUrl += "/";
-        string endpoint = $"{httpUrl}db/neo4j/tx/commit";
-
-        var authHeader = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{user}:{password}"));
-        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
-
-        var statementsArray = new JsonArray
-        {
-            (JsonNode)new JsonObject { ["statement"] = "MATCH (n) DETACH DELETE n" }
-        };
-        foreach (var item in MockStudies)
-        {
-            var parts = item.Split('|');
-            statementsArray.Add((JsonNode)new JsonObject { ["statement"] = $"MERGE (s:Study {{id: '{parts[0]}'}})" });
-            statementsArray.Add((JsonNode)new JsonObject { ["statement"] = $"MATCH (s:Study {{id: '{parts[0]}'}}) CREATE (sp:StudyProperties {{title: '{parts[1]}', desc: '{parts[2]}'}}), (s)-[:HAS_PROPERTIES]->(sp)" });
-            statementsArray.Add((JsonNode)new JsonObject { ["statement"] = $"MATCH (s:Study {{id: '{parts[0]}'}}) CREATE (sv:StudyVersion {{id: '{parts[3]}', version_tag: '1.0', status: 'DRAFT', version_index: 1}}), (s)-[:HAS_VERSION]->(sv)" });
-        }
-
-        var payload = new JsonObject { ["statements"] = statementsArray };
-        string json = payload.ToJsonString();
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        var resp = await client.PostAsync(endpoint, content);
-        resp.EnsureSuccessStatusCode();
     }
 
     private static string FindRepoRoot()

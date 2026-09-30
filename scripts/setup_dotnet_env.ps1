@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Verifies and provisions the .NET 10 SDK, global CLI tools, development HTTPS certificates,
-    environment configuration (.env), and validates local database connectivity (Postgres / Neo4j).
+    environment configuration (.env), and validates local database connectivity (Postgres).
     Requirements: PRD-SYS-053, ADR-2233
 #>
 
@@ -138,7 +138,6 @@ else {
 # 5. Database Connectivity Checks (Docker / Local)
 Write-Host "`n[5/5] Checking Local Clinical Datastores..." -ForegroundColor Yellow
 $pgPort = 5432
-$neo4jPort = 7687
 
 # Test PostgreSQL port
 $pgSocket = New-Object System.Net.Sockets.TcpClient
@@ -150,18 +149,6 @@ if ($pgSuccess -and $pgSocket.Connected) {
 }
 else {
     Write-Host "  [INFO] PostgreSQL not reachable on port $pgPort (Run 'docker compose -f docker/docker-compose.yml up -d postgres' to start)." -ForegroundColor DarkYellow
-}
-
-# Test Neo4j Bolt port
-$neoSocket = New-Object System.Net.Sockets.TcpClient
-$neoAsync = $neoSocket.BeginConnect("127.0.0.1", $neo4jPort, $null, $null)
-$neoSuccess = $neoAsync.AsyncWaitHandle.WaitOne(1000, $false)
-if ($neoSuccess -and $neoSocket.Connected) {
-    Write-Host "  [OK] Neo4j Bolt detected on port $neo4jPort." -ForegroundColor Green
-    $neoSocket.Close()
-}
-else {
-    Write-Host "  [INFO] Neo4j not reachable on port $neo4jPort (Run 'docker compose -f docker/docker-compose.yml up -d neo4j' to start)." -ForegroundColor DarkYellow
 }
 
 Write-Host "`n=================================================================" -ForegroundColor Cyan

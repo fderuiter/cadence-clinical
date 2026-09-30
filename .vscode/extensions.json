@@ -5,7 +5,6 @@
     "ms-dotnettools.vscode-dotnet-runtime",
     "editorconfig.editorconfig",
     "vue.volar",
-    "neo4j.neo4j-for-vscode",
     "ckolkman.vscode-postgres"
   ]
 }

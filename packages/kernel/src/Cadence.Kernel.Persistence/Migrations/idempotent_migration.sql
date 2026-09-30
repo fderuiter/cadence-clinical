@@ -539,3 +539,67 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929234442_OutboxRelayAndChainSeals') THEN
+    ALTER TABLE kernel.outbox_messages ADD last_error character varying(2000);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929234442_OutboxRelayAndChainSeals') THEN
+    ALTER TABLE kernel.outbox_messages ADD next_attempt_at timestamp with time zone;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929234442_OutboxRelayAndChainSeals') THEN
+    CREATE TABLE kernel.audit_chain_seals (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        sequence bigint NOT NULL,
+        hash character varying(64) NOT NULL,
+        sealed_at timestamp with time zone NOT NULL,
+        sealed_by character varying(256) NOT NULL,
+        CONSTRAINT "PK_audit_chain_seals" PRIMARY KEY (id)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929234442_OutboxRelayAndChainSeals') THEN
+    CREATE INDEX "IX_outbox_messages_tenant_id_enqueued_at" ON kernel.outbox_messages (tenant_id, enqueued_at) WHERE dispatched_at IS NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929234442_OutboxRelayAndChainSeals') THEN
+    CREATE UNIQUE INDEX "IX_audit_chain_seals_tenant_id_sequence" ON kernel.audit_chain_seals (tenant_id, sequence);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929234442_OutboxRelayAndChainSeals') THEN
+    CREATE TRIGGER "trg_audit_chain_seals_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."audit_chain_seals"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_audit_chain_seals_no_truncate" BEFORE TRUNCATE ON "kernel"."audit_chain_seals"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260929234442_OutboxRelayAndChainSeals') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260929234442_OutboxRelayAndChainSeals', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

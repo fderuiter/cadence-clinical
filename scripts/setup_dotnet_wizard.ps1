@@ -108,7 +108,7 @@ if ($certPrompt -ne 'n' -and $certPrompt -ne 'N') {
 # ------------------------------------------------------------------------------
 # Stage 4: Clinical Datastores Verification (Docker)
 # ------------------------------------------------------------------------------
-Invoke-Stage -Number 4 -Total 6 -Title "Clinical Datastores (Docker)" -Description "Probing local PostgreSQL (5432) and Neo4j (7687)..."
+Invoke-Stage -Number 4 -Total 6 -Title "Clinical Datastores (Docker)" -Description "Probing local PostgreSQL (5432)..."
 
 $pgSocket = New-Object System.Net.Sockets.TcpClient
 $pgAsync = $pgSocket.BeginConnect("127.0.0.1", 5432, $null, $null)
@@ -121,16 +121,6 @@ if ($pgSuccess -and $pgSocket.Connected) {
     Write-Host "         Run 'docker compose up -d postgres' to launch local database." -ForegroundColor Gray
 }
 
-$neoSocket = New-Object System.Net.Sockets.TcpClient
-$neoAsync = $neoSocket.BeginConnect("127.0.0.1", 7687, $null, $null)
-$neoSuccess = $neoAsync.AsyncWaitHandle.WaitOne(800, $false)
-if ($neoSuccess -and $neoSocket.Connected) {
-    Write-Host "  [SUCCESS] Neo4j Bolt service running on port 7687." -ForegroundColor Green
-    $neoSocket.Close()
-} else {
-    Write-Host "  [INFO] Neo4j Bolt not responding on port 7687." -ForegroundColor DarkYellow
-    Write-Host "         Run 'docker compose up -d neo4j' to launch protocol graph database." -ForegroundColor Gray
-}
 
 # ------------------------------------------------------------------------------
 # Stage 5: Environment File Configuration

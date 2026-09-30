@@ -61,7 +61,7 @@ public sealed class KernelCommandPipeline(
             command,
             commandType.Name,
             actor,
-            TruncateToMicroseconds(clock.UtcNow),
+            KernelTimestamps.ToStoredPrecision(clock.UtcNow),
             Guid.CreateVersion7(),
             metadata ?? new CommandMetadata(Guid.CreateVersion7()),
             ComputeRequestHash(command, commandType));
@@ -149,12 +149,6 @@ public sealed class KernelCommandPipeline(
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
     }
 
-    /// <summary>PostgreSQL stores microseconds; truncating first keeps hashes stable across a database round-trip.</summary>
-    internal static DateTimeOffset TruncateToMicroseconds(DateTimeOffset value)
-    {
-        var utc = value.ToUniversalTime();
-        return new DateTimeOffset(utc.Ticks - (utc.Ticks % 10), TimeSpan.Zero);
-    }
 
     private interface IHandlerInvoker<TResult>
     {
