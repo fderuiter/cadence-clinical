@@ -24,6 +24,10 @@ describe("Controlled Terminology (CT) Live Validation Unit & UI Tests", () => {
     vi.useFakeTimers();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe("eCRF Concept Code Lookup & Race Conditions", () => {
     it("renders the concept_code field with concept_code input type and lookup container", () => {
       const wrapper = mount(EcrfView);

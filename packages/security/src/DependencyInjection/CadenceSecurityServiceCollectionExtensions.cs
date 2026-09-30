@@ -64,7 +64,6 @@ public static class CadenceSecurityServiceCollectionExtensions
             sp.GetRequiredService<IAuditLogWriter>(),
             options.AuditLogSecretKey ?? sp.GetService<IConfiguration>()?[AuditSecretKey.EnvironmentVariable],
             sp.GetService<IClock>()));
-        services.AddTransient<GxPAuditInterceptor>();
 
         // Authorization Handlers
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();

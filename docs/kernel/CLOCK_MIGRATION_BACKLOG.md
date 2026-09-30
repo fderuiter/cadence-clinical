@@ -16,16 +16,9 @@
   `Infrastructure/SystemClock.cs` are deleted. The semantics are the same: both return `DateTimeOffset` in UTC.
 - `Microsoft.CodeAnalysis.BannedApiAnalyzers` is pinned in `Directory.Packages.props`. The repo-root
   `BannedSymbols.txt` bans `DateTime.Now`, `DateTime.UtcNow`, `DateTimeOffset.Now` and `DateTimeOffset.UtcNow`.
-- The analyzer is enabled for every project under `packages/kernel/` through `packages/kernel/Directory.Build.props`.
-  Because `TreatWarningsAsErrors` is on, a violation there fails the build with RS0030.
-- The analyzer also covers every test project under `tests/` through `tests/Directory.Build.props` (#4913). Tests
-  use `FakeClock`, or `SystemClock.Instance` where the code under test checks the real clock
-  ([TESTING.md, Time in tests](../TESTING.md#time-in-tests)).
-- The analyzer covers every project under `apps/`, the whole project and not only `Domain/`. The repo-root
-  `Directory.Build.props` sets `CadenceBanWallClock` for any project under `apps/` and then adds the analyzer and
-  `BannedSymbols.txt`. Any other project opts in with `<CadenceBanWallClock>true</CadenceBanWallClock>` in its
-  `.csproj`. The apps moved over two at a time (#4942, #4946, #4949, #4953, #4970, #4975, #4984, and payments with
-  the apps-wide default last).
+- `Microsoft.CodeAnalysis.BannedApiAnalyzers` and `BannedSymbols.txt` are included unconditionally in root `Directory.Build.props`, enforcing K-TIME-3 globally across all C# projects in the repository.
+  Because `TreatWarningsAsErrors` is on, a violation fails the build with RS0030. Tests use `FakeClock`, or `SystemClock.Instance`
+  where the code under test checks the real clock ([TESTING.md, Time in tests](../TESTING.md#time-in-tests)).
 - In the app entities every timestamp is a `DateTimeOffset` (execution's `ObservationDate` aside, see below). The
   ones a writer must supply (`CreatedAt`, `UpdatedAt`, `Timestamp`, `ReceivedAt`, interop's `DeviceTimestamp` and
   `ServerTimestamp`, eConsent's `SignedAt` and `WithdrawalDate`) are `required` with no default, so code that creates a row must pass a time it took from `IClock` (or, for `DeviceTimestamp`, the device's own time).
@@ -34,7 +27,7 @@
 - `packages/database`'s `GxPAuditInterceptor` takes a required `IClock` and no longer falls back to the wall clock,
   so every audit field and audit entry timestamp comes from the injected clock (#4784). Execution passes its
   registered `IClock`. The value is still normalized to UTC `DateTime` before hashing, so the Merkle block hash
-  format is unchanged and no migration is needed. `packages/database` opts in with `CadenceBanWallClock`.
+  format is unchanged and no migration is needed.
 
 ## Last packages (done)
 

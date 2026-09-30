@@ -35,6 +35,16 @@ export interface AddSubject {
   reason: string;
 }
 
+export interface CreateFormSubmission {
+  studyId: string;
+  subjectId: string;
+  formId: string;
+  siteId?: string | null;
+  visitId?: string | null;
+  protocolVersion?: string | null;
+  payload?: string | null;
+}
+
 export interface ListSubjectsQuery {
   studyId: string;
   siteId?: string;
@@ -149,6 +159,40 @@ export const executionApi = {
     return unwrapResponse(
       client.GET("/api/v1/execution/forms/subject/{studyId}/{subjectId}", {
         params: { path: { studyId, subjectId: subjectCode } },
+      })
+    );
+  },
+
+  /** Creates an initial form submission (POST /api/v1/execution/forms). */
+  createFormSubmission({
+    studyId,
+    subjectId,
+    formId,
+    siteId,
+    visitId,
+    protocolVersion,
+    payload,
+  }: CreateFormSubmission): Promise<FormSubmission> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/forms", {
+        body: {
+          study_id: studyId,
+          subject_id: subjectId,
+          form_id: formId,
+          site_id: siteId ?? null,
+          visit_id: visitId ?? null,
+          protocol_version: protocolVersion ?? null,
+          payload: payload ?? null,
+        },
+      })
+    );
+  },
+
+  /** Finalizes submission state on backend server (POST /api/v1/execution/forms/{id}/complete). */
+  completeFormSubmission(id: string): Promise<FormSubmission> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/forms/{id}/complete", {
+        params: { path: { id } },
       })
     );
   },

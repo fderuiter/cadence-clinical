@@ -289,10 +289,14 @@ public static class CiPlan
             new("security", "Run dependency audit") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(false, "check", "vulnerabilities")] },
             new("security", "Run secret detection")
             {
-                // CI also runs 'git add .secrets.baseline' first; the local run leaves the index alone.
                 Always = true,
                 CoveredBy = QualitySentinels,
-                Commands = [CadenceCli(false, "check", "clean-secrets"), CadenceCli(false, "check", "security")],
+                Commands =
+                [
+                    CadenceCli(false, "check", "clean-secrets"),
+                    new CiCommand("git", ["diff", "--exit-code", ".secrets.baseline"]),
+                    CadenceCli(false, "check", "security"),
+                ],
             },
             new("security", "Run detect-secrets against the baseline")
             {
