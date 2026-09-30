@@ -22,7 +22,7 @@ Dependencies point inward only (spec §2.4, enforced by `tests/Cadence.Architect
 - `Cadence.Kernel.Domain`: kernel aggregates, state machines and temporal logic. Pure: no EF Core, ASP.NET Core or Npgsql.
 - `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and command handlers, and the authority evaluator (`AuthorityEvaluator`, ADR-2455).
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host ([apps/kernel-api](../../apps/kernel-api/README.md)).
-- `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, and the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
+- `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, and the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions; `KernelLineageEndpoints`: Trace, dependents, amendment impact; `KernelActivityEndpoints`: the activity stream) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
 - `Cadence.Standards`: reads public CDISC Library product content into a `StandardPackage` and ships checksum-verified seeds, and holds the .NET `IMappingEngine` (see [its README](src/Cadence.Standards/README.md)). References only `Cadence.Kernel.Abstractions`.
 - `Cadence.Rules`: the rule expression language, rule packs and the `IRuleEvaluator` port with its .NET implementation (see [its README](src/Cadence.Rules/README.md) and [Rule packs](../../docs/kernel/RULE_PACKS.md)). References only `Cadence.Kernel.Abstractions`. Its benchmark is `benchmarks/Cadence.Rules.Benchmarks`.
 
@@ -617,7 +617,8 @@ stays in place with `Masked` set and `Subject` null.
 - Register `AddKernelActivityStream()` (Application), `AddKernelActivityProjection()` (Persistence) and an
   `INodeVisibility`.
 - The projector copies outbox envelopes into `kernel.activity_entries` every `KernelBackgroundOptions.ActivityInterval`,
-  with the subject's zoom path as its scope. Run it (`runProjector: true`) in one host per deployment.
+  with the subject's zoom path as its scope. Run it (`runProjector: true`) in one host per deployment: today that is
+  the kernel API host, which serves the stream as `GET /api/v1/kernel/activity` (ADR-2540 §4.7).
 - A new event type needs a family in `KernelEventFamilies`; `EveryKernelEventTypeHasAFamily` fails otherwise.
 
 ## Simulation (ADR-2480)

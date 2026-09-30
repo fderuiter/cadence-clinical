@@ -57,15 +57,9 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
     };
 
     private readonly KernelProtocolScenario _scenario = new(fixture);
-    private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
+    private WebApplicationFactory<Cadence.Kernel.Host.Program>? _host;
 
-    public void Dispose()
-    {
-        foreach (var factory in _factories)
-        {
-            factory.Dispose();
-        }
-    }
+    public void Dispose() => _host?.Dispose();
 
     /// <summary>
     /// A coordinator granted at one study site reads, through the host, the approved version's dependents and an
@@ -135,13 +129,59 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
         otherTrace.Nodes.Should().Contain(n => n.Ref == approved.ToString() && n.Mask == null, "the version it came from is still the coordinator's to see");
     }
 
+    /// <summary>
+    /// The host projects committed events into the activity stream itself and serves them per reader (ADR-2485): a
+    /// coordinator granted at one study site reads the study's activity with their own site's screening shown and the
+    /// other site's screening masked in place, and a reader with no grant is refused the study's activity.
+    /// </summary>
+    [Fact(DisplayName = "HostActivity_ProjectsEvents_AndShowsWhatTheReadersGrantCovers")]
+    public async Task HostActivityProjectsEventsAndShowsWhatTheReadersGrantCovers()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var code = $"T-ACT-{Guid.NewGuid():N}"[..16];
+        var tenant = TenantId.New();
+        await _scenario.OkAsync(new ProvisionTenant(tenant, code, "Activity tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        var (_, study) = await _scenario.NewStudyAsync(tenant, ct);
+        var ownSite = await AddStudySiteAsync(tenant, study, ct);
+        var otherSite = await AddStudySiteAsync(tenant, study, ct);
+        var own = NodeRef.For(await ScreenAsync(tenant, ownSite, "ACT-001", ct));
+        var other = NodeRef.For(await ScreenAsync(tenant, otherSite, "ACT-002", ct));
+        await _scenario.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), "observation.record", null, AuthorityScope.StudySite(ownSite), Tick(), null, false,
+                KernelProtocolScenario.Key(), "Appointed"),
+            ct);
+        using var crc = Client(code, Crc);
+        using var stranger = Client(code, Stranger);
+
+        // The host's projector runs every few seconds; wait until both screenings are in the study's stream.
+        KernelActivityPageResponse page;
+        var attempts = 0;
+        do
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(250), ct);
+            page = await GetAsync<KernelActivityPageResponse>(crc, $"activity?scope={NodeRef.For(study)}&family=Execution", ct);
+        }
+        while (page.Entries.Count(e => e.Type == "ParticipantScreened") < 2 && ++attempts < 120);
+
+        var screenings = page.Entries.Where(e => e.Type == "ParticipantScreened").ToList();
+        screenings.Should().HaveCount(2).And.OnlyContain(e => e.SubjectKind == NodeKinds.Enrollment && e.Family == "Execution");
+        screenings.Should().ContainSingle(e => e.Mask == null && e.Subject != null && NodeRef.Parse(e.Subject).Unversioned() == own);
+        screenings.Should().ContainSingle(e => e.Mask == NotPermitted && e.Subject == null);
+        page.Entries.Should().NotContain(e => e.Subject != null && NodeRef.Parse(e.Subject).Unversioned() == other);
+        page.Entries.Should().BeInDescendingOrder(e => e.Recorded);
+
+        using var refused = await stranger.GetAsync(new Uri($"/api/v1/kernel/activity?scope={NodeRef.For(study)}", UriKind.Relative), ct);
+        refused.StatusCode.Should().Be(System.Net.HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>A client signed as <paramref name="userId"/> in <paramref name="tenantCode"/>, on one host per test class.</summary>
     private HttpClient Client(string tenantCode, string userId)
     {
-        var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
+        _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString));
-        _factories.Add(factory);
-        return factory.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
+        return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
 
     private static async Task<T> GetAsync<T>(HttpClient client, string path, CancellationToken ct)

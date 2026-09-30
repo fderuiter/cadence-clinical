@@ -252,6 +252,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/activity": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * What happened in a scope, newest first.
+     * @description scope is any NodeRef (the whole tenant when absent); family repeats (Knowledge, Execution, Evidence, Trust, Quality, Intelligence); actor filters by who did it; from is the earliest recorded time; before is the previous page's next cursor; limit 1 to 200 (default 50). Entries about objects you may not see are masked in place.
+     */
+    get: operations["KernelActivity"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -259,6 +279,26 @@ export interface components {
     Kernel_AnonymousTypeOfstringAndstring: {
       status: null | string;
       service: null | string;
+    };
+    Kernel_KernelActivityEntryResponse: {
+      /** Format: uuid */
+      event_id: string;
+      type: string;
+      family: string;
+      /** Format: date-time */
+      recorded: string;
+      /** Format: date-time */
+      occurred_valid: null | string;
+      actor_id: string;
+      subject_kind: null | string;
+      subject: null | string;
+      mask: null | string;
+      /** Format: uuid */
+      correlation_id: string;
+    };
+    Kernel_KernelActivityPageResponse: {
+      entries: components["schemas"]["Kernel_KernelActivityEntryResponse"][];
+      next: null | string;
     };
     Kernel_KernelAmendmentImpactResponse: {
       amended: string;
@@ -1030,6 +1070,69 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelAmendmentImpactResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelActivity: {
+    parameters: {
+      query?: {
+        scope?: string;
+        family?: string[];
+        actor?: string;
+        from?: string;
+        before?: string;
+        limit?: number | string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelActivityPageResponse"];
         };
       };
       /** @description Bad Request */

@@ -59,6 +59,7 @@ import {
   kernelApi,
   type KernelProtocolVersion,
 } from "../../api/kernelApi";
+import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
 
 /**
@@ -121,18 +122,13 @@ async function load(code: string) {
   noStudy.value = false;
   versions.value = [];
   try {
-    const hits = await kernelApi.search({
-      text: code,
-      kinds: ["study"],
-      limit: 5,
-    });
-    const study = hits.find((hit) => hit.exact_code);
+    const study = await findKernelStudyRef(code);
     if (request !== latest) return;
-    if (!study?.ref) {
+    if (!study) {
       noStudy.value = true;
       return;
     }
-    const listed = await kernelApi.listProtocolVersions(study.ref);
+    const listed = await kernelApi.listProtocolVersions(study);
     if (request === latest) versions.value = listed;
   } catch (e) {
     if (request === latest) {

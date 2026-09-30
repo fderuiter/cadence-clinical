@@ -4,6 +4,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `GET` | `/api/v1/kernel/activity` | KernelActivity | What happened in a scope, newest first. |
 | `GET` | `/api/v1/kernel/authorization/can-i` | KernelCanI | Whether the caller may exercise a capability on an object now, and why. |
 | `GET` | `/api/v1/kernel/nodes/{nodeRef}` | KernelGetNode | Resolves a NodeRef to its summary. |
 | `GET` | `/api/v1/kernel/nodes/{nodeRef}/children` | KernelGetChildren | The children of a scope node, with their own child counts. |

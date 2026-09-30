@@ -97,6 +97,7 @@ All are `GET`, all under `/api/v1/kernel`, all answer problem details on failure
 | `nodes/{nodeRef}/lineage?direction=&depth=&edge_kind=&valid_at=&known_at=` | Trace: the lineage walk from the object, backward (default) or forward, with every object reached and every edge followed (ADR-2471). |
 | `nodes/{nodeRef}/dependents?depth=&edge_kind=&valid_at=&known_at=` | Impact: what depends on the object, grouped by kind with counts (Canvas D2). |
 | `protocol-versions/{versionRef}/impact?depth=&valid_at=&known_at=` | Amendment impact (K-PROT-2): the dependents of the version the amendment changes, with the elements it declares it changes. A first version is a 400; it amends nothing. |
+| `activity?scope=&family=&actor=&from=&before=&limit=` | The activity stream (ADR-2485): what happened in a scope, newest first, with an opaque `next` cursor (§4.7). |
 
 - NodeRefs travel as their canonical strings (`kind:id@version`); a malformed one, or one of the wrong kind for the
   endpoint, is a 400.
@@ -162,6 +163,29 @@ with no grant sees every object masked. Until then (#4781) the host masked every
 
 - Commands over HTTP: the endpoints only read. Command endpoints come with the slices that need them, through the
   kernel command pipeline (K-AUTH-1).
+- Live push of activity (server-sent events). The Canvas reads the stream on demand.
+
+### 4.7 Activity stream
+
+Added for the Canvas activity pane (PX-11). ADR-2485 left the HTTP read and its read authorization until the host had
+tenant resolution and grant-backed visibility; both are in place.
+
+- `GET activity` reads `IActivityStream` as the signed-in person. `scope` is any NodeRef, and the whole tenant when it
+  is absent. `family` repeats and takes the §5.2 family names in any case. `actor` and `from` filter, and `limit` is 1
+  to 200 (default 50). `next` is an opaque base64url cursor (the last entry's recorded time and event id); `before`
+  takes it back as it came. Anything else is a 400, and a scope the tenant does not hold is a 404.
+- **Read authorization is the scope's visibility.** A scope the reader may not see is refused with 403, not listed
+  masked, for the same reason as a hidden study's protocol versions: its entries would describe it. Without a scope the
+  gate is the tenant node, which any grant in effect shows (ADR-2457). This is the capability check ADR-2485 §4.3
+  expected: visibility is computed from the reader's grants through the same scope paths as `CanI`, and a narrower
+  read capability can replace it later without changing the contract.
+- Inside a visible scope, an entry about an object the reader may not see keeps its place, time, type, family and
+  subject kind, with `mask` and no `subject` (ADR-2485 §4.3). A request with no accountable person is a 403.
+- **The host runs the projector.** It is the only process with kernel persistence, so it registers
+  `AddKernelActivityProjection()`, which runs `KernelActivityProjectionService`, and `AddKernelActivityStream()`. ADR-2485
+  requires exactly one projecting host per deployment. The projector is idempotent, and it skips events already
+  projected. If the host is scaled out, a second replica's pass can fail on an entry the first just wrote; that failure
+  is logged, and the next pass retries it.
 
 ## 5. Consequences & Trade-offs
 
@@ -177,7 +201,8 @@ with no grant sees every object masked. Until then (#4781) the host masked every
 - `apps/kernel-api/src`: `Program.cs`, `ClaimsCurrentActor`, `DirectoryTenantResolver`, `KernelDatabaseHealthCheck`,
   `KernelMigrationHostedService`.
 - `packages/kernel/src/Cadence.Kernel.Api`: `KernelReadEndpoints`, `KernelReadResponses`, `KernelReadMasking`,
-  `KernelTenantResolution`, `KernelLineageEndpoints`, `KernelLineageResponses`, `KernelProblems`.
+  `KernelTenantResolution`, `KernelLineageEndpoints`, `KernelLineageResponses`, `KernelActivityEndpoints`,
+  `KernelProblems`.
 - `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host: 403 for a tenant code the directory
   does not know or a missing one, 401 unsigned, reads in the resolved tenant, masking in place and in search, the host's
   grant-backed visibility with and without a grant, protocol
@@ -185,6 +210,15 @@ with no grant sees every object masked. Until then (#4781) the host masked every
   permitted with one, each explained, no actor for a subject that is no accountable person, the command catalogue,
   search, and the lineage reads: a Trace as the reader with masked objects in place, the default backward walk,
   dependents grouped by kind with masked ones counted, an amendment's impact, 400 for bad lineage parameters or a
-  first version, 404 for an unknown one, and 403 with no accountable reader.
+  first version, 404 for an unknown one, and 403 with no accountable reader. For activity it covers the scope read with
+  its filters, a hidden subject masked in place, paging with the cursor, a hidden scope or tenant refused, and 400 and
+  404 problems.
+- `tests/Cadence.IntegrationTests/Kernel/KernelApiHostPostgresTests.cs` boots the real host on PostgreSQL with nothing
+  faked:
+  - Trace, dependents and amendment impact show what a study-site grant covers and mask the rest, with the same counts
+    for a reader with no grant.
+  - The host's own projector fills the activity stream.
+  - A coordinator sees their site's screening and the other site's masked in place.
+  - A reader with no grant is refused the study's activity.
 - `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` and
   `tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` cover the route and the port.
