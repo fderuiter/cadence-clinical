@@ -169,6 +169,32 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
     }
 
     /// <summary>
+    /// Approving or deprecating a library item the tenant does not have is refused before any signature is checked, and
+    /// a study cannot pin one.
+    /// </summary>
+    [Fact(DisplayName = "LibraryItemCommands_RefuseUnknownItems")]
+    public async Task LibraryItemCommandsRefuseUnknownItems()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var graph = KernelSchemaPostgresTests.NewGraph();
+        await fixture.SeedAsync(graph.Tenant, graph.Sponsor, graph.Study);
+        var tenant = graph.Tenant.Id;
+        var sdtmig = await RegisterAsync(tenant, Seed("SDTMIG"), ct);
+        var approval = await SignStandardAsync(tenant, sdtmig, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveStandardVersion(tenant, sdtmig, approval, Key(), Reason), ct)).IsSuccess.Should().BeTrue();
+        var unknown = LibraryItemId.New();
+
+        (await SendAsync(new ApproveLibraryItem(tenant, unknown, AttestationId.New(), Key(), Reason), ct)).Error
+            .Should().Be(StandardsErrors.LibraryItemUnknown);
+        (await SendAsync(new DeprecateLibraryItem(tenant, unknown, AttestationId.New(), Key(), Reason), ct)).Error
+            .Should().Be(StandardsErrors.LibraryItemUnknown);
+        (await DeclareAsync(tenant, graph.Study.Id, StudyStandardsProfileId.New(), sdtmig, unknown, ct)).Error!.Code
+            .Should().Be(StandardsErrors.LibraryItemUnknown.Code);
+        (await fixture.Standards.FindStudyStandardsAsync(tenant, graph.Study.Id, ct)).Should().BeNull();
+    }
+
+    /// <summary>
     /// Validates the database guards: registered definitions are insert-only (SQLSTATE KA001) and the identity and
     /// content columns of a standard version are fixed (SQLSTATE KS001), even for the schema owner.
     /// </summary>

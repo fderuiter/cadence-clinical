@@ -456,6 +456,31 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     }
 
     /// <summary>
+    /// A tenant and an organization each need a code and a name; a blank one is refused before anything is written.
+    /// </summary>
+    [Fact(DisplayName = "IdentityCommands_RefuseBlankCodesAndNames")]
+    public async Task IdentityCommandsRefuseBlankCodesAndNames()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = NewTenant();
+
+        (await fixture.Sender.SendAsync(tenant with { Code = " " }, cancellationToken: ct)).Error.Should().Be(IdentityErrors.CodeRequired);
+        (await fixture.Sender.SendAsync(tenant with { Name = "" }, cancellationToken: ct)).Error.Should().Be(IdentityErrors.NameRequired);
+        (await CountWritesAsync(tenant.TenantId, ct)).Should().Be(new WriteCounts(0, 0, 0, 0));
+
+        (await fixture.Sender.SendAsync(tenant, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+        var organization = NewOrganization(tenant.TenantId);
+        (await fixture.Sender.SendAsync(organization with { Code = "", IdempotencyKey = $"{organization.IdempotencyKey}-a" }, cancellationToken: ct))
+            .Error.Should().Be(IdentityErrors.CodeRequired);
+        (await fixture.Sender.SendAsync(organization with { Name = "  ", IdempotencyKey = $"{organization.IdempotencyKey}-b" }, cancellationToken: ct))
+            .Error.Should().Be(IdentityErrors.NameRequired);
+
+        await using var db = fixture.CreateAdminContext();
+        (await db.Organizations.AsNoTracking().CountAsync(o => o.TenantId == tenant.TenantId, ct)).Should().Be(0);
+    }
+
+    /// <summary>
     /// K-TX-4: a command takes at most one aggregate lock. Asking again for the same aggregate is a no-op; asking for a
     /// second one throws, so two commands can never wait on each other's locks.
     /// </summary>

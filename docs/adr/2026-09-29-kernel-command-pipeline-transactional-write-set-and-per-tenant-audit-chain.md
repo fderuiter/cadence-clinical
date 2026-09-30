@@ -132,12 +132,13 @@ events, outbox, idempotency or chain.
 
 - Code: `packages/kernel/src/Cadence.Kernel.Abstractions/Commands`, `Cadence.Kernel.Application/Commands`,
   `Cadence.Kernel.Persistence/Commands`, migration `20260929223332_CommandPipeline`.
-- `tests/Cadence.IntegrationTests/Kernel/KernelCommandPipelinePostgresTests.cs` (real PostgreSQL): the full write set as one
-  activity; replay and conflicting reuse of a key; concurrent sends with one key write once; no actor and invalid
-  commands write nothing; audited denials; a failure injected at every commit stage persists nothing; duplicate codes
-  map to `K.Aggregate.AlreadyExists`; concurrent commands keep one tenant's chain linear; the verifier detects an
-  edited link; every insert-only table rejects `UPDATE`, `DELETE` and `TRUNCATE`; K-TX-1; optimistic concurrency;
-  the K-TX-4 aggregate lock (one per command, held until disposed, scoped by tenant and type).
+- `tests/Cadence.IntegrationTests/Kernel/KernelCommandPipelinePostgresTests.cs` (real PostgreSQL): the full write set
+  as one activity; replay and conflicting reuse of a key; concurrent sends with one key write once; no actor and
+  invalid commands write nothing; audited denials; a failure injected at every commit stage persists nothing;
+  duplicate codes map to `K.Aggregate.AlreadyExists`; blank tenant and organization codes and names write nothing;
+  concurrent commands keep one tenant's chain linear; the verifier detects an edited link; every insert-only table
+  rejects `UPDATE`, `DELETE` and `TRUNCATE`; K-TX-1; optimistic concurrency; the K-TX-4 aggregate lock (one per
+  command, held until disposed, scoped by tenant and type).
 - `tests/Cadence.UnitTests/Kernel/KernelCommandPipelineTests.cs`: actor rules, error registry, request hash, time
   truncation, the order of refusals before any unit of work opens, and what each commit outcome returns: a same-key
   winner is replayed; otherwise a concurrency conflict, `AlreadyExists` for a unique conflict, and a defect for an

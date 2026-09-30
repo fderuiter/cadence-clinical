@@ -128,7 +128,8 @@ Downloaded content goes through the same `ChecksumVerifier`.
 - **Verification Plan:**
   - unit tests: seed checksums, CDISC Library parsing, content hashing, governance transitions, study pinning rules;
   - PostgreSQL integration tests: register and approve are audited and read back exactly; approval without an
-    accepted attestation fails; registration is once per tenant and tenant-scoped; pins survive deprecation; the
-    database rejects changes to registered definitions (`KA001`, `KS001`);
+    accepted attestation fails; registration is once per tenant and tenant-scoped; pins survive deprecation;
+    approving, deprecating or pinning an unknown library item is refused; the database rejects changes to registered
+    definitions (`KA001`, `KS001`);
   - architecture tests: `Cadence.Standards` references only `Cadence.Kernel.Abstractions`; no identifier or string
     literal in kernel or standards source names a shipped dataset or variable (K-PROJ-1).
