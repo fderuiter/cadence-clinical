@@ -14,7 +14,7 @@ How CI is set up, which checks run where, and how to reproduce and fix each fail
 ### `ci.yml` jobs
 
 1. **Style and Lint Verification**: `dotnet format --verify-no-changes`, the Cadence quality gates, architecture tests (ArchUnitNET), a Native AOT publish of the CLI that fails on any trim or AOT warning, ADR, Markdown, OpenAPI, schema-doc and traceability checks, code duplication, Hadolint, ShellCheck, CODEOWNERS coverage, the docs build and frontend ESLint/Prettier.
-2. **Security and Vulnerability Audit**: static security audit, secret detection, DEID scan and NuGet/npm vulnerability audit.
+2. **Security and Vulnerability Audit**: static security audit, secret baseline immutability verification (`git diff --exit-code .secrets.baseline`), secret detection, DEID scan and NuGet/npm vulnerability audit.
 3. **.NET 10 C# xUnit Verification**: `dotnet build` (warnings are errors), then `dotnet test Cadence.sln`, which runs the unit, integration, architecture and E2E test projects against a `postgres:16` service container (`CADENCE_TEST_POSTGRES`), so the database tests run instead of skipping.
 4. **Frontend Unit Tests**: Vitest across the pnpm workspace.
 5. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `pnpm cadence gxp sync` and fails if they differ from the committed files.
@@ -36,7 +36,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | --------------------- | ------------------------------------------------------------------------------------------ |
 | `dotnet-format`       | Whitespace formatting against `.editorconfig`                                              |
 | `dotnet-format-style` | Roslyn code-style rules                                                                    |
-| `clean-secrets`       | Normalizes `.secrets.baseline`                                                             |
+| `clean-secrets`       | Normalizes `.secrets.baseline` and enforces baseline immutability                         |
 | `duplication`         | Duplicated code blocks over 15 normalized lines                                            |
 | `cli-docs`            | `docs/cli.md` matches the CLI's commands                                                   |
 | `adrs`                | ADR schema and `docs/adr/index.md` consistency                                             |
