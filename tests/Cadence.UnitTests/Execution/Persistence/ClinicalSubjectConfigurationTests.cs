@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -250,7 +251,7 @@ public class ClinicalSubjectConfigurationTests
     public async Task SaveChangesAsync_GivenClinicalSubjectAddedWithGxPAuditInterceptorRegistered_PopulatesAuditFields()
     {
         await using var context = CreateInMemoryContext(
-            Guid.NewGuid().ToString(), new GxPAuditInterceptor(() => "qa.reviewer@site.org"));
+            Guid.NewGuid().ToString(), new GxPAuditInterceptor(() => "qa.reviewer@site.org", SystemClock.Instance));
         var subject = ClinicalSubject.Create(
             new SubjectCode("SUBJ-AUDIT-001"), new StudyCode("STUDY-AUDIT"), siteCode: null,
             enrollmentIndex: 1, encryptedDemographics: null, stratFactors: null);

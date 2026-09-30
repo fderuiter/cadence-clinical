@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
@@ -70,7 +71,7 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
                 options.UseInternalServiceProvider(inMemoryServices);
                 options.AddInterceptors(
                     new ConcurrencyTokenIncrementInterceptor(),
-                    new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId));
+                    new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId, sp.GetRequiredService<IClock>()));
             });
 
             // MassTransit's EF outbox lock-statement provider is configured for Postgres syntax

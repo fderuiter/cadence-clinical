@@ -4,6 +4,7 @@ using System.Threading;
 
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
+using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -15,7 +16,7 @@ namespace Cadence.Database;
 /// EF Core SaveChangesInterceptor enforcing 21 CFR Part 11 immutable audit trail fields and Merkle block hashing.
 /// @req:PRD-SYS-053
 /// </summary>
-public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime>? clockProvider = null) : SaveChangesInterceptor
+public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock) : SaveChangesInterceptor
 {
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
@@ -36,7 +37,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, Func<DateTime
 
         // Resolved only once something is audited; a provider with no actor throws here and the save fails.
         string currentUser = currentUserProvider();
-        DateTime now = AuditLogEntry.NormalizeTimestamp((clockProvider ?? (() => DateTime.UtcNow))());
+        DateTime now = AuditLogEntry.NormalizeTimestamp(clock.UtcNow.UtcDateTime);
 
         foreach (var entry in context.ChangeTracker.Entries<IGxPAuditable>())
         {
