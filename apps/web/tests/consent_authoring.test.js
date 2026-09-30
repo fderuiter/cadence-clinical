@@ -6,6 +6,13 @@ import { useAuthStore } from "../src/stores/auth";
 import { econsentService } from "../src/api/econsent";
 import { router } from "../src/router";
 
+// These tests cover screens that are hidden until their .NET backend exists
+// (#4829), so they treat every screen as available.
+vi.mock("../src/router/availability", async (importOriginal) => ({
+  ...(await importOriginal()),
+  isScreenAvailable: () => true,
+}));
+
 // Mock econsent API client
 vi.mock("../src/api/econsent", () => ({
   econsentService: {

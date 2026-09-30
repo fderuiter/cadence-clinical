@@ -8,6 +8,13 @@ import { notificationsService } from "../src/api/notifications";
 import NotificationsView from "../src/views/NotificationsView.vue";
 import App from "../src/App.vue";
 
+// These tests cover screens that are hidden until their .NET backend exists
+// (#4829), so they treat every screen as available.
+vi.mock("../src/router/availability", async (importOriginal) => ({
+  ...(await importOriginal()),
+  isScreenAvailable: () => true,
+}));
+
 // Mock the notifications service
 vi.mock("../src/api/notifications", () => {
   return {

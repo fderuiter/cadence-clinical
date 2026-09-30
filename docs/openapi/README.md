@@ -13,4 +13,4 @@ The top-level `*_openapi.json` files are the OpenAPI documents the .NET services
 - `apps/web/src/api/types.ts` was generated from `legacy/cdisc_openapi.json` with `openapi-typescript`.
 - `apps/web/src/types/usdm.ts` is generated from every file in `legacy/` by `apps/web/src/types/generate-types.js`, which runs before the web app's build, typecheck and tests.
 
-Most web API calls therefore target endpoints that no .NET service implements yet. Once the web clients move to the specs above, `legacy/` can be deleted. No gate checks the legacy specs.
+Most web API calls therefore target endpoints that no .NET service implements yet; [`docs/web/API_MIGRATION.md`](../web/API_MIGRATION.md) tracks moving the web onto these specs. Once the web clients move to the specs above, `legacy/` can be deleted. No gate checks the legacy specs.

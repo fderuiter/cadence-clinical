@@ -230,9 +230,12 @@ reconstruction uses `(t_clinical, t_inspection_cutoff)`.
 | --- | --- | --- |
 | Effectivity, Enrollment, Applicability, ConsentStatus, Grant, Delegation, Qualification, OrganizationRelationship, StudySite lifecycle, Observation, Assertion, Specimen custody state | DomainEvent, AuditEntry, Attestation, ProvenanceActivity, LineageEdge, ArtifactVersion, ValidationRun | Reference/config data without dispute semantics |
 
-- **K-TIME-1** Bitemporal rows are never `UPDATE`d except to close `recorded_period`.
+- **K-TIME-1** Bitemporal rows are never `UPDATE`d except to close `recorded_period`. They are never deleted or truncated.
+  Enforced by a trigger (SQLSTATE `KT001`).
 - **K-TIME-2** An exclusion constraint (`EXCLUDE USING gist`) prevents overlapping `(tenant, entity, valid,
-  recorded)` rectangles where a single truth is required (ADR-2246).
+  recorded)` rectangles where a single truth is required (ADR-2246). The constraint is deferred to commit, so a correction
+  can close the old row and insert its replacement in one transaction. How to apply both guards to a table:
+  [`packages/kernel/README.md`](../../packages/kernel/README.md#bitemporal-tables-adr-2246).
 - **K-TIME-3** All timestamps are `timestamptz`; the kernel takes time only from `IClock`; `DateTime.Now`
   and `DateTime.UtcNow` are banned in kernel and domain code (#4784).
 - **K-TIME-9** Client-supplied valid time (offline capture, device time) is preserved as captured; the server
@@ -263,6 +266,10 @@ Command → Authenticate → Resolve Actor → Authorize (§9.3) → Check conse
 - **K-TX-5** No kernel write without a resolved Actor. System work runs as a named `ServiceAccount`;
   anonymous or `"system"` fallbacks are rejected (resolves G14).
 
+Implemented by `KernelCommandPipeline` and `KernelCommandTransaction` (ADR-2449): one PostgreSQL transaction per
+command; `KernelDbContext` refuses `SaveChanges` outside it. How to add a command:
+[`packages/kernel/README.md`](../../packages/kernel/README.md#command-pipeline-adr-2449).
+
 ### 5.2 Events
 
 `Envelope{ event_id, type, schema_version, tenant, occurred_valid, recorded, actor, activity_id,
@@ -290,6 +297,10 @@ correlation_id, causation_id, payload }`.
 4. **Reason for change** on every mutating command, stored on the audit entry and any superseding row.
 5. **Reconstructability**: for any `(valid_at, known_at)` the kernel re-derives state from tables;
    time-travel tests assert this per bitemporal aggregate.
+
+Items 1-3 are implemented for the kernel by ADR-2449: the `enforce_insert_only` trigger (SQLSTATE `KA001`) guards
+`audit_entries`, `domain_events`, `provenance_activities` and `idempotency_records`; `audit_chain_heads` serialises
+each tenant's chain; `KernelAuditChainVerifier` re-derives it. Root sealing and the scheduled verifier follow in #4779.
 
 ### 5.4 Error-code registry (resolves G13)
 
@@ -935,6 +946,7 @@ kernel, is merged into another, or is retired.
 | K007 | Neo4j for designer | Dropped for v1 | ADR-2245 |
 | K008 | Rules and standards | Rules as versioned data over one AST; public standards only; Rust runtime seam | ADR-2254 |
 | K009 | Lineage | Lineage graph in the kernel schema, written transactionally, queried both ways | ADR-2255 |
+| K010 | Command pipeline and audit | One transaction per command; per-tenant hash chain; insert-only history | ADR-2449 |
 
 ---
 

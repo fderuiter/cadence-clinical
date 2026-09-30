@@ -10,6 +10,13 @@ import {
   DEFAULT_MOCK_ARTICLES,
 } from "../src/api/knowledge.js";
 
+// These tests cover screens that are hidden until their .NET backend exists
+// (#4829), so they treat every screen as available.
+vi.mock("../src/router/availability", async (importOriginal) => ({
+  ...(await importOriginal()),
+  isScreenAvailable: () => true,
+}));
+
 // Mock knowledge API service
 vi.mock("../src/api/knowledge.js", async (importOriginal) => {
   const actual = await importOriginal();

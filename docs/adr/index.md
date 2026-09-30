@@ -11,6 +11,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 
 ### 1. Core Platform & Execution Engine
 
+- [2026-09-29: ADR-2448 Gateway Routes Verified Against Service Endpoints](2026-09-29-gateway-routes-verified-against-service-endpoints.md)
 - [2026-09-29: ADR-2447 Module Schemas via Search Path and Migration Deployment Modes](2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)
 - [2026-09-28: Topological Tier-Based .NET 10 Migration and Legacy Python Decommissioning](2026-09-28-topological-tier-based-dotnet-10-migration-and-python-decommissioning.md)
 - [2026-09-25: Payments Domain Primitive Decimal Conversion & EF Core Explicit Precision Mapping](2026-09-25-payments-primitive-decimal-conversion-and-explicit-ef-core-precision.md)
@@ -461,6 +462,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-29: ADR-2253 Identity Vault and Layered Participant Identity (K006)](2026-09-29-identity-vault-and-layered-participant-identity.md)
 - [2026-09-29: ADR-2254 Rules as Versioned Data and a Unified Rules Engine (K008)](2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md)
 - [2026-09-29: ADR-2255 Kernel Lineage Graph and Scientific Traceability (K009)](2026-09-29-kernel-lineage-graph-and-scientific-traceability.md)
+- [2026-09-29: ADR-2449 Kernel Command Pipeline, Transactional Write Set and Per-Tenant Audit Chain (K010)](2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md)
 
 - [2026-09-29: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md)
 - [2026-09-29: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md)
@@ -468,3 +470,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-09-29: ADR-2257 Attributable Audit Actors and Named Service Accounts](2026-09-29-attributable-audit-actors-and-named-service-accounts.md)
 - [2026-09-29: ADR-2446 Single Audit Writer and One Chain per Aggregate Type](2026-09-29-single-audit-writer-and-one-chain-per-aggregate.md)
 - [2026-09-29: ADR-2260 No Default Credentials and Fail-Closed Secret Resolution](2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md)
+- [2026-09-29: ADR-2448 Reject Concurrency Conflicts, Retry Only Transient Failures](2026-09-29-reject-concurrency-conflicts-retry-only-transient-failures.md)

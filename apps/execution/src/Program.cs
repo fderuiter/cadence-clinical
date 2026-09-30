@@ -45,10 +45,10 @@ builder.Services.AddCadenceSecurity();
 // another slice's own ConfigureHttpJsonOptions call also runs it on the same options instance.
 builder.Services.ConfigureHttpJsonOptions(options => ExecutionJsonSerialization.Configure(options.SerializerOptions));
 
-// MIG-SUBJ-013 (`02_technical_design.md` §4.2): the shared DbUpdateConcurrencyException retry pipeline
-// every ExecutionRepositoryBase-derived repository's SaveChangesAsync wraps around
-// ExecutionDbContext.SaveChangesAsync — registered once here so all three repositories consume the SAME
-// pipeline instance rather than each building its own. Registered as a singleton ResiliencePipeline (not
+// MIG-SUBJ-013 (`02_technical_design.md` §4.2): the shared transient-failure retry pipeline every
+// ExecutionRepositoryBase-derived repository's SaveChangesAsync wraps around ExecutionDbContext.SaveChangesAsync.
+// Concurrency conflicts are not retried; they surface as 409 through ConcurrencyConflictExceptionHandler (#4766).
+// Registered once here so every repository consumes the SAME pipeline instance rather than each building its own. Registered as a singleton ResiliencePipeline (not
 // via the Polly.Extensions `AddResiliencePipeline` DI helper, which is a separate NuGet package not
 // otherwise needed by this slice) since a stateless retry pipeline has no per-request dependencies.
 builder.Services.AddSingleton(SaveChangesResiliencePipelineFactory.Create());
@@ -61,6 +61,7 @@ builder.Services.AddSingleton(SaveChangesResiliencePipelineFactory.Create());
 // already carries a recognized `code` extension (including ones `ToProblemResult()` itself produced), and
 // leaves anything else — most importantly a bare, non-`DomainError` exception's generic 500 — untouched, so
 // raise site #19's blanket "catch-all downgrades to 400" bug is never reproduced.
+builder.Services.AddExceptionHandler<ConcurrencyConflictExceptionHandler>();
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
