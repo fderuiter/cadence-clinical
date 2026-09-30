@@ -101,6 +101,10 @@ The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users w
 
 The public reference to any kernel object: `kind:id@version`, for example `study_site:<uuid>@3` (ADR-2481). It is the one form used in URLs, the command palette, trace links, event envelopes and lineage edges. The kernel computes the object's zoom path from it (portfolio, study, country, study site, participant); a participant with no responsible site sits directly under its study. The zoom path is presentation only and never grants access.
 
+### Explanation
+
+The kernel's answer to "why": why an action is permitted or denied, why an object is in its state, why a finding was raised or a metric has its value (ADR-2482). It holds a one-sentence claim, reasoning steps, every condition evaluated (met and unmet) with the evidence behind it as NodeRefs, and what would change the outcome. The component that owns the rule produces it; the UI renders it and never composes one.
+
 ### Simulation (candidate version)
 
 Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal.
@@ -165,6 +169,11 @@ A data modeling standard in C# 14 / EF Core 10 replacing Python untyped dictiona
 ### Universal Decimal Precision Standard
 
 A strict numerical modeling policy under 21 CFR Part 11 and IRS 1099 financial audit regulations. All monetary currency values (e.g., site contract fee schedules, investigator procedure costs, withholding deductions, patient stipends, participant travel reimbursements, and invoice totals) and high-precision dosage/lab calculations are strictly forbidden from using binary floating-point types (`float`, `double`). All financial attributes must be modeled exclusively as C# 14 `decimal` (`System.Decimal`, 128-bit fixed-point precision with 28-29 significant digits) mapped to PostgreSQL `numeric(18, 4)` and evaluated using explicit banker's rounding (`MidpointRounding.ToEven`).
+
+### Field-Level Secret Protection
+
+The at-rest rule for secret columns (#4770), implemented by `Cadence.Security.FieldProtection`. A secret the application must read back (a payment processor reference, a signer e-mail) is stored as AES-256-GCM ciphertext bound to its column (`IFieldEncryptor`, EF Core `EncryptedStringConverter`). A secret that only needs to be matched (a device token) is stored as a keyed HMAC-SHA256 lookup hash, also called a blind index (`ILookupHasher`). A secret the platform does not need (card numbers, bank routing and account numbers, raw signature captures) is not stored: the processor keeps it, or a SHA-256 binding to the signed content replaces it. Keys come from configuration (`FIELD_ENCRYPTION_KEY`, `FIELD_LOOKUP_HASH_KEY`) with no defaults, and a missing key stops the service at startup.
+_Avoid_: plaintext secret columns, unkeyed hashes of low-entropy secrets, default or hardcoded keys, equality queries on encrypted columns
 
 ### Canonical Timestamp Normalization Invariant
 

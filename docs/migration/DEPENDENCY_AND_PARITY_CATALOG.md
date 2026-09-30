@@ -1,5 +1,8 @@
 # DEPENDENCY_AND_PARITY_CATALOG.md: Phase 0 Ecosystem Mapping & Test Parity Baseline
 
+> [!NOTE]
+> **Historical record (Phase 0 discovery, September 2026).** It describes the system as it was then. Neo4j, listed here as the designer's store, is retired ([ADR-2245](../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); protocol versions become immutable PostgreSQL snapshots in the kernel. Current system: [ARCHITECTURE.md](../../ARCHITECTURE.md).
+
 **Project:** Cadence Clinical Research Software Platform
 **Target Runtime:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)
 **Governing ADRs:** [ADR-2233](../adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2428](../adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)

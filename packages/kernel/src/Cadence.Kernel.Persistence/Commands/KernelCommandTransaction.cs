@@ -155,14 +155,21 @@ internal sealed class KernelCommandTransaction(
         }
     }
 
-    public async Task RecordDenialAsync(string reason, CancellationToken cancellationToken)
+    public async Task RecordDenialAsync(AuthorizationDecision denial, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(denial);
         using var writes = db.PermitPipelineWrites();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
         AddProvenance("Denied", aggregate: null);
         var payload = JsonSerializer.SerializeToElement(
-            new { command = execution.CommandType, idempotencyKey = Command.IdempotencyKey, reason },
+            new
+            {
+                command = execution.CommandType,
+                idempotencyKey = Command.IdempotencyKey,
+                reason = denial.Reason,
+                conditions = denial.Conditions.Select(c => new { c.Code, c.Description, c.Met, evidence = c.Evidence.Select(e => e.ToString()) }),
+            },
             KernelCommandPipelineJson.Options);
         AddEvent(DecisionDeniedEvent, 1, payload, occurredValid: null);
         await AppendAuditAsync("Denied", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);

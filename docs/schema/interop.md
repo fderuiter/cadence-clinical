@@ -78,7 +78,7 @@ Entity: `DeviceRegistrationRecord`
 | `CalibrationStatus` | `character varying(50)` | no |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
-| `DeviceToken` | `character varying(100)` | no |  |  |
+| `DeviceTokenHash` | `character varying(64)` | no |  |  |
 | `DeviceType` | `character varying(50)` | no |  |  |
 | `FirmwareVersion` | `character varying(50)` | yes |  |  |
 | `IsActive` | `boolean` | no |  |  |
@@ -96,7 +96,7 @@ Entity: `DeviceRegistrationRecord`
 
 Indexes:
 
-- `IX_device_registrations_DeviceToken`: (`DeviceToken`)
+- `IX_device_registrations_DeviceTokenHash`: (`DeviceTokenHash`)
 - `IX_device_registrations_DeviceType`: (`DeviceType`)
 - `IX_device_registrations_IsActive`: (`IsActive`)
 - `IX_device_registrations_SiteId`: (`SiteId`)
@@ -304,7 +304,7 @@ Entity: `SensorDailySummaryRecord`
 | `BestFev1Liters` | `double precision` | yes |  |  |
 | `BestFvcLiters` | `double precision` | yes |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `DeviceToken` | `character varying(100)` | no |  |  |
+| `DeviceTokenHash` | `character varying(64)` | no |  |  |
 | `DeviceType` | `character varying(50)` | no |  |  |
 | `Fev1FvcRatio` | `double precision` | yes |  |  |
 | `Fev1PercentPredicted` | `double precision` | yes |  |  |
@@ -339,7 +339,7 @@ Entity: `SensorDailySummaryRecord`
 
 Indexes:
 
-- `IX_sensor_daily_summaries_DeviceToken`: (`DeviceToken`)
+- `IX_sensor_daily_summaries_DeviceTokenHash`: (`DeviceTokenHash`)
 - `IX_sensor_daily_summaries_DeviceType`: (`DeviceType`)
 - `IX_sensor_daily_summaries_LakehouseRecordId`: (`LakehouseRecordId`)
 - `IX_sensor_daily_summaries_Sha256Hash`: (`Sha256Hash`)
@@ -362,7 +362,7 @@ Entity: `SensorSafetyAlertRecord`
 | `AlertType` | `character varying(50)` | no |  |  |
 | `AuditSignature` | `character varying(255)` | yes |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `DeviceToken` | `character varying(100)` | no |  |  |
+| `DeviceTokenHash` | `character varying(64)` | no |  |  |
 | `DeviceType` | `character varying(50)` | no |  |  |
 | `IsAcknowledged` | `boolean` | no |  |  |
 | `ObservedValue` | `double precision` | no |  |  |
@@ -379,7 +379,7 @@ Indexes:
 
 - `IX_sensor_safety_alerts_AlertId`: (`AlertId`)
 - `IX_sensor_safety_alerts_AlertType`: (`AlertType`)
-- `IX_sensor_safety_alerts_DeviceToken`: (`DeviceToken`)
+- `IX_sensor_safety_alerts_DeviceTokenHash`: (`DeviceTokenHash`)
 - `IX_sensor_safety_alerts_DeviceType`: (`DeviceType`)
 - `IX_sensor_safety_alerts_IsAcknowledged`: (`IsAcknowledged`)
 - `IX_sensor_safety_alerts_Severity`: (`Severity`)
@@ -398,7 +398,7 @@ Entity: `SensorTelemetryStreamRecord`
 | `BatchId` | `character varying(100)` | no |  |  |
 | `ClockDriftOffsetMs` | `double precision` | no |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `DeviceToken` | `character varying(100)` | no |  |  |
+| `DeviceTokenHash` | `character varying(64)` | no |  |  |
 | `DeviceType` | `character varying(50)` | no |  |  |
 | `EndTimestamp` | `timestamp with time zone` | no |  |  |
 | `FeedLakehouseRecordIdsJson` | `jsonb` | no |  |  |
@@ -415,7 +415,7 @@ Entity: `SensorTelemetryStreamRecord`
 Indexes:
 
 - `IX_sensor_telemetry_streams_BatchId`: (`BatchId`)
-- `IX_sensor_telemetry_streams_DeviceToken`: (`DeviceToken`)
+- `IX_sensor_telemetry_streams_DeviceTokenHash`: (`DeviceTokenHash`)
 - `IX_sensor_telemetry_streams_DeviceType`: (`DeviceType`)
 - `IX_sensor_telemetry_streams_RawDataHash`: (`RawDataHash`)
 - `IX_sensor_telemetry_streams_ReceivedAt`: (`ReceivedAt`)

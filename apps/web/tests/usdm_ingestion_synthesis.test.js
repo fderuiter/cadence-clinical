@@ -171,7 +171,7 @@ describe("M5: USDM Ingestion & Synthesis Workspace Experience (MdrView.vue)", ()
 
     // Assert graph entity counts
     const cardText = metricsCard.text();
-    expect(cardText).toContain("Neo4j Graph Entities");
+    expect(cardText).toContain("USDM Study Entities");
     expect(cardText).toContain("Arms: 2");
     expect(cardText).toContain("Epochs: 3");
     expect(cardText).toContain("Visits/Encounters: 4");

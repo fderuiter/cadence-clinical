@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+using Cadence.Kernel.Explanations;
+
 namespace Cadence.Kernel.Commands;
 
 /// <summary>
@@ -12,6 +14,12 @@ namespace Cadence.Kernel.Commands;
 /// </summary>
 public sealed record KernelError(string Code, int HttpStatus, string Message)
 {
+    /// <summary>
+    /// Why the error happened, from the component that decided it (ADR-2482). The UI renders this; the code is for
+    /// support (UX-9). Null when the producer has nothing beyond the message.
+    /// </summary>
+    public Explanation? Explanation { get; init; }
+
     /// <summary>The same registered error with a message specific to this occurrence.</summary>
     public KernelError WithMessage(string message) => this with { Message = message };
 }

@@ -1,4 +1,5 @@
 using Cadence.Apps.Interop.Domain;
+using Cadence.Security.FieldProtection;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -244,8 +245,8 @@ public class DeviceRegistrationRecordConfiguration : IEntityTypeConfiguration<De
         builder.Property(x => x.UdiPiSerial).HasMaxLength(100);
         builder.Property(x => x.UdiPiLot).HasMaxLength(100);
         builder.Property(x => x.MacAddressMasked).HasMaxLength(50);
-        builder.Property(x => x.DeviceToken).HasMaxLength(100).IsRequired();
-        builder.HasIndex(x => x.DeviceToken);
+        builder.Property(x => x.DeviceTokenHash).HasMaxLength(ILookupHasher.HashLength).IsRequired();
+        builder.HasIndex(x => x.DeviceTokenHash);
         builder.Property(x => x.FirmwareVersion).HasMaxLength(50);
         builder.Property(x => x.CalibrationStatus).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.IsActive);
@@ -267,8 +268,8 @@ public class SensorTelemetryStreamRecordConfiguration : IEntityTypeConfiguration
         builder.HasIndex(x => x.SiteId);
         builder.Property(x => x.SubjectId).HasMaxLength(255).IsRequired();
         builder.HasIndex(x => x.SubjectId);
-        builder.Property(x => x.DeviceToken).HasMaxLength(100).IsRequired();
-        builder.HasIndex(x => x.DeviceToken);
+        builder.Property(x => x.DeviceTokenHash).HasMaxLength(ILookupHasher.HashLength).IsRequired();
+        builder.HasIndex(x => x.DeviceTokenHash);
         builder.Property(x => x.DeviceType).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.DeviceType);
         builder.Property(x => x.BatchId).HasMaxLength(100).IsRequired();
@@ -298,8 +299,8 @@ public class SensorDailySummaryRecordConfiguration : IEntityTypeConfiguration<Se
         builder.HasIndex(x => x.SummaryDate);
         builder.Property(x => x.DeviceType).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.DeviceType);
-        builder.Property(x => x.DeviceToken).HasMaxLength(100).IsRequired();
-        builder.HasIndex(x => x.DeviceToken);
+        builder.Property(x => x.DeviceTokenHash).HasMaxLength(ILookupHasher.HashLength).IsRequired();
+        builder.HasIndex(x => x.DeviceTokenHash);
         builder.Property(x => x.SummaryManifestJson).HasColumnType("jsonb");
         builder.Property(x => x.LakehouseRecordId).HasMaxLength(255);
         builder.HasIndex(x => x.LakehouseRecordId);
@@ -325,8 +326,8 @@ public class SensorSafetyAlertRecordConfiguration : IEntityTypeConfiguration<Sen
         builder.HasIndex(x => x.SubjectId);
         builder.Property(x => x.DeviceType).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.DeviceType);
-        builder.Property(x => x.DeviceToken).HasMaxLength(100).IsRequired();
-        builder.HasIndex(x => x.DeviceToken);
+        builder.Property(x => x.DeviceTokenHash).HasMaxLength(ILookupHasher.HashLength).IsRequired();
+        builder.HasIndex(x => x.DeviceTokenHash);
         builder.Property(x => x.AlertType).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.AlertType);
         builder.Property(x => x.Severity).HasMaxLength(50).IsRequired();

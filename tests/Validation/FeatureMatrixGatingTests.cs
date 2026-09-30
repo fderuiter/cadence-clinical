@@ -66,8 +66,8 @@ public class FeatureMatrixGatingTests
     [Trait("Category", "Validation")]
     public void TestFeatureMatrixValidationIgnoringHelperAndExcludedServices()
     {
-        var helperServices = new HashSet<string> { "postgres", "neo4j", "keycloak", "gateway" };
-        var activeServices = new[] { "designer", "execution", "postgres", "neo4j", "keycloak", "gateway" };
+        var helperServices = new HashSet<string> { "postgres", "redis", "keycloak", "gateway" };
+        var activeServices = new[] { "designer", "execution", "postgres", "redis", "keycloak", "gateway" };
 
         var domainServices = activeServices.Where(s => !helperServices.Contains(s)).ToList();
         domainServices.Should().BeEquivalentTo("designer", "execution");

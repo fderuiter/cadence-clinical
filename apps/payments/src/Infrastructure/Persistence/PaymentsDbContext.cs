@@ -2,17 +2,24 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Security.FieldProtection;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cadence.Apps.Payments.Infrastructure.Persistence;
 
 /// <summary>
-/// EF Core 10 DbContext for Payments microservice persistence gateway.
+/// EF Core 10 DbContext for Payments microservice persistence gateway. Payment processor references are encrypted
+/// at rest with <paramref name="fieldEncryptor"/> (#4770).
 /// @req:PRD-SYS-053
 /// </summary>
-public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> options) : DbContext(options)
+public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> options, IFieldEncryptor fieldEncryptor)
+    : DbContext(options), IFieldEncryptingDbContext
 {
+    /// <inheritdoc />
+    public IFieldEncryptor FieldEncryptor { get; } = fieldEncryptor;
+
     public DbSet<BudgetContract> BudgetContracts => Set<BudgetContract>();
     public DbSet<FeeSchedule> FeeSchedules => Set<FeeSchedule>();
     public DbSet<SplitPayeeConfig> SplitPayeeConfigs => Set<SplitPayeeConfig>();
@@ -26,6 +33,12 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
     public DbSet<ErpSyncLog> ErpSyncLogs => Set<ErpSyncLog>();
     public DbSet<ParticipantWallet> ParticipantWallets => Set<ParticipantWallet>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, FieldEncryptionModelCacheKeyFactory>();
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,7 +55,7 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
         modelBuilder.ApplyConfiguration(new InvoiceLineItemConfiguration());
         modelBuilder.ApplyConfiguration(new RemittanceAdviceConfiguration());
         modelBuilder.ApplyConfiguration(new ErpSyncLogConfiguration());
-        modelBuilder.ApplyConfiguration(new ParticipantWalletConfiguration());
+        modelBuilder.ApplyConfiguration(new ParticipantWalletConfiguration(FieldEncryptor));
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
     }
 }

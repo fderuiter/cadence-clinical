@@ -210,6 +210,24 @@ A host that uses the registry also calls `AddKernelStandards()` (handlers), `Add
 Load public content with `StandardSeeds.LoadAll()` or `CdiscLibraryProductReader.Read(...)` and send each package in
 a `RegisterStandardVersion` command.
 
+## Explanations (ADR-2482)
+
+Anything that decides also explains, with one type: `Explanation` (`Cadence.Kernel.Explanations`), holding a claim,
+reasoning steps, every evaluated condition (met or unmet) with its evidence NodeRefs, and next actions. The component
+that owns the rule builds it from the same evaluation that decided; applications and the web app only render it
+(spec §5.5, K-EXP-1).
+
+For authorization, return conditions from your policy and the pipeline does the rest:
+
+```csharp
+AuthorizationDecision.Deny("Protocol v3 training is not current.",
+    EvaluatedCondition.Satisfied("delegation.active", "Delegated eligibility signing", delegationRef),
+    EvaluatedCondition.Unsatisfied("qualification.current", "Complete protocol v3 training", trainingRef));
+```
+
+A denied command returns `K.auth.denied` with `KernelError.Explanation` set, and the `DecisionDenied` event and
+audit entry record the reason and each condition with its evidence.
+
 ## Migrations
 
 ```bash
