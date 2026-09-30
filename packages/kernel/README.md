@@ -51,8 +51,10 @@ PostgreSQL keeps tenants apart, not application code (K-ID-1, K-ID-2):
 - **People (K-ID-4).** `people` is tenant-independent and has no `tenant_id`. A tenant sees a person only through its
   own `tenant_memberships` row.
 - **Jobs that visit every tenant** (outbox relay, verify-and-seal) list tenant ids with the
-  `kernel.tenant_ids()` directory function, then work through a connection scoped to each tenant in turn. The
-  function returns ids only and is the only way to read across tenants.
+  `kernel.tenant_ids()` directory function, then work through a connection scoped to each tenant in turn.
+- **Resolving the gateway's tenant code** (#4780): `ITenantDirectory.FindActiveByCodeAsync(code)` returns the id of
+  the active tenant with that exact code, or null, through `kernel.tenant_id_by_code(text)`, so a host can bind its
+  tenant-scoped reads. The two directory functions return ids only and are the only way to read across tenants.
 
 A new kernel table needs `migrationBuilder.EnableTenantIsolation(KernelDbContext.Schema, "<table>")` in the
 migration that creates it. `KernelTenantIsolationPostgresTests` fails for any kernel table without `tenant_id`, forced
@@ -129,6 +131,9 @@ await sender.SendAsync(new ApproveProtocolVersion(tenant, versionId, signature.V
     - hash changes after review;
     - deletes.
   - `attestations` is insert-only (`KA001`).
+- **Reading versions.** `IProtocolVersionReader` lists a study's versions newest first, or reads one, as
+  `ProtocolVersionSummary` (lineage, status, hash, amendment intent, approval, withdrawal reason; no content). It
+  reads under the tenant's RLS and does not authorize the actor: the host checks the read with `CanI` first.
 - **Reading other aggregates.** A handler that needs another aggregate to decide (a parent version, the study's
   versions) reads it with `IKernelUnitOfWork.ReadAsync`/`ReadAllAsync`. These neither track nor claim it, so the
   command still changes one aggregate (K-TX-1).

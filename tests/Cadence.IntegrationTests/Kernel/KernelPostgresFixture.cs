@@ -23,6 +23,7 @@ using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Rules;
 using Cadence.Rules.Evaluation;
@@ -146,6 +147,12 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The enrollment read port the execution handlers use.</summary>
     public IEnrollmentDirectory Enrollments => Scope().GetRequiredService<IEnrollmentDirectory>();
+
+    /// <summary>The protocol version read port, as a host gets it.</summary>
+    public IProtocolVersionReader ProtocolVersions => Scope().GetRequiredService<IProtocolVersionReader>();
+
+    /// <summary>The tenant code directory, as a host gets it.</summary>
+    public ITenantDirectory TenantDirectory => Scope().GetRequiredService<ITenantDirectory>();
 
     /// <summary>The Concept Registry read port, as applications get it.</summary>
     public IConceptRegistry ConceptRegistry => Scope().GetRequiredService<IConceptRegistry>();

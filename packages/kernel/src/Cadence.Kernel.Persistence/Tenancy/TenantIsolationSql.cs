@@ -28,6 +28,9 @@ internal static class TenantIsolationSql
     /// <summary>Lists every tenant id, for jobs that visit tenants one at a time (ADR-2250 rule 3).</summary>
     public const string DirectoryFunction = "tenant_ids";
 
+    /// <summary>Resolves an active tenant's code to its id, before any tenant-scoped read (#4780).</summary>
+    public const string CodeDirectoryFunction = "tenant_id_by_code";
+
     /// <summary>Name of the isolation policy on every tenant-scoped table.</summary>
     public const string IsolationPolicy = "tenant_isolation";
 
@@ -110,6 +113,28 @@ internal static class TenantIsolationSql
             """;
     }
 
+    /// <summary>
+    /// Creates <see cref="CodeDirectoryFunction"/>: the id of the active tenant with the given code, or null. Like
+    /// <see cref="DirectoryFunction"/> it reads <c>tenants</c> through the directory policy and returns the id alone.
+    /// </summary>
+    public static string CreateCodeDirectory(string schema)
+    {
+        var s = SqlIdentifier.Quote(schema);
+        return $$"""
+            CREATE OR REPLACE FUNCTION {{s}}.{{CodeDirectoryFunction}}(tenant_code text) RETURNS uuid
+            LANGUAGE sql STABLE SECURITY DEFINER
+            SET search_path = pg_catalog, pg_temp
+            SET {{DirectorySetting}} = 'on'
+            AS $fn$
+                SELECT t.id FROM {{s}}."tenants" t WHERE t.code = tenant_code AND t.is_active
+            $fn$;
+            REVOKE ALL ON FUNCTION {{s}}.{{CodeDirectoryFunction}}(text) FROM PUBLIC;
+            """;
+    }
+
+    public static string DropCodeDirectory(string schema) =>
+        $"DROP FUNCTION IF EXISTS {SqlIdentifier.Quote(schema)}.{CodeDirectoryFunction}(text);";
+
     public static string DropDirectory(string schema) =>
         $"DROP FUNCTION IF EXISTS {SqlIdentifier.Quote(schema)}.{DirectoryFunction}();\n"
         + $"DROP POLICY IF EXISTS {DirectoryPolicy} ON {SqlIdentifier.Quote(schema)}.\"tenants\";";
@@ -135,6 +160,12 @@ internal static class TenantIsolationMigrationBuilderExtensions
 
     public static void DropTenantIsolationFunctions(this MigrationBuilder migrationBuilder, string schema) =>
         migrationBuilder.Sql(TenantIsolationSql.DropFunctions(schema));
+
+    public static void CreateTenantCodeDirectory(this MigrationBuilder migrationBuilder, string schema) =>
+        migrationBuilder.Sql(TenantIsolationSql.CreateCodeDirectory(schema));
+
+    public static void DropTenantCodeDirectory(this MigrationBuilder migrationBuilder, string schema) =>
+        migrationBuilder.Sql(TenantIsolationSql.DropCodeDirectory(schema));
 
     public static void EnableTenantIsolation(this MigrationBuilder migrationBuilder, string schema, params string[] tables)
     {
