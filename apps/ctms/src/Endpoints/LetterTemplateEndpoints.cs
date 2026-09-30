@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Ctms.Domain;
+using Cadence.Security.DependencyInjection;
 using Cadence.Templating;
 
 using Microsoft.AspNetCore.Builder;
@@ -20,6 +21,9 @@ namespace Cadence.Apps.Ctms.Endpoints;
 /// </summary>
 public static class LetterTemplateEndpoints
 {
+    /// <summary>The permission that rendering a visit letter requires.</summary>
+    public const string RenderPermission = "ctms_monitoring_visit:create";
+
     /// <summary>The letters CTMS can render, keyed by the value callers pass as <c>templateName</c>.</summary>
     public static TemplateCatalog Catalog { get; } = new(
         typeof(LetterTemplateEndpoints).Assembly,
@@ -35,7 +39,10 @@ public static class LetterTemplateEndpoints
             .WithName("RenderSiteVisitLetter")
             .WithSummary("Renders a CTMS site visit monitoring letter via Liquid template.")
             .Produces<string>(StatusCodes.Status200OK, "text/plain")
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            // Visit letters come from monitoring visit work: CRAs, data managers and system administrators (#4960).
+            .RequirePermission(RenderPermission);
 
         return group;
     }

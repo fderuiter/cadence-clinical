@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Safety.Domain;
+using Cadence.Security.DependencyInjection;
 using Cadence.Templating;
 
 using Microsoft.AspNetCore.Builder;
@@ -17,6 +18,9 @@ public static class IcsrTemplateEndpoints
 {
     public const string IcsrTemplateKey = "e2b_r3_icsr";
 
+    /// <summary>The permission that rendering an ICSR requires.</summary>
+    public const string RenderPermission = "safety_report:create";
+
     public static TemplateCatalog Catalog { get; } = new(
         typeof(IcsrTemplateEndpoints).Assembly,
         new Dictionary<string, string>(StringComparer.Ordinal)
@@ -28,7 +32,10 @@ public static class IcsrTemplateEndpoints
     {
         group.MapPost("/icsr/render", RenderIcsrAsync)
             .WithName("RenderIcsrReport")
-            .WithSummary("Renders an ICSR E2B(R3) safety report as Liquid XML.");
+            .WithSummary("Renders an ICSR E2B(R3) safety report as Liquid XML.")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            // A regulatory safety submission: medical monitors and system administrators (#4960, ADR-2511).
+            .RequirePermission(RenderPermission);
 
         return group;
     }
