@@ -43,13 +43,15 @@ query by hand, set it yourself: `SET search_path TO ctms, public;`.
 | Multi-replica deployment | `Database__MigrateOnly=true` on a one-off job or init container, before the rollout; unset on the replicas | The job migrates and exits 0 (non-zero on failure). Replicas never change the schema. |
 | Regulated release | neither; a DBA applies a reviewed script | See "Idempotent scripts" below. |
 
-A migrate-only job runs the normal service image with the same connection string and secrets as the service
-(services refuse to start without `GATEWAY_SECRET`):
+A migrate-only job runs the normal service image with the same connection string and secrets as the service.
+Services refuse to start without their required settings (`GATEWAY_SECRET`, `AUDIT_LOG_SECRET_KEY` and, for
+execution, `DemographicsEncryption__KeyBase64`; see [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)):
 
 ```bash
 docker run --rm \
   -e ConnectionStrings__cadence="Host=db;Database=cadence;Username=...;Password=..." \
   -e GATEWAY_SECRET=... \
+  -e AUDIT_LOG_SECRET_KEY=... \
   -e Database__MigrateOnly=true \
   cadence/ctms:<version>
 ```
