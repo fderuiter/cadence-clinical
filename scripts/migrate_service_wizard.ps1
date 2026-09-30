@@ -5,7 +5,7 @@
 .DESCRIPTION
     Interactively guides engineers and agents through scaffolding a new .NET 10 microservice
     using Single-Assembly Clean Architecture, GxP audit interceptors, and Result monads.
-    Requirements: PRD-SYS-053, ADR-2233, ADR-2234
+    Requirements: PRD-SYS-053, ADR-2233, ADR-2428
 #>
 
 [CmdletBinding()]

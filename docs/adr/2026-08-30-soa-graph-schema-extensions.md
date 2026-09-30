@@ -1,4 +1,4 @@
-# ADR 2026-08-30: Graph Schema Extensions for Arm-Aware Schedule of Activities (SoA)
+# ADR-2423: Graph Schema Extensions for Arm-Aware Schedule of Activities (SoA)
 
 ## Status
 
@@ -74,4 +74,4 @@ All extended SoA elements (`StudyArm`, `Epoch`, `Visit`, `Procedure`, `TimingWin
 
 - **TDD §3.3:** The baseline metadata schemas.
 - **ADR 2023-01-01:** Neo4j Graph Database for Clinical Metadata.
-- **ADR-057:** Arm-Aware Schedule of Activities (SoA) Matrix Component.
+- **ADR-2343:** Arm-Aware Schedule of Activities (SoA) Matrix Component.

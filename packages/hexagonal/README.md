@@ -1,36 +1,28 @@
-# Hexagonal Package
+# Cadence.Hexagonal
 
-## Overview
+Generic building blocks for ports-and-adapters code: entity and value-object base types, domain events, port interfaces, domain exceptions, and an exception-to-ProblemDetails mapper.
 
-System-wide Hexagonal Architecture Base and Port/Adapter Utilities
+## Project
 
----
+- Project: `packages/hexagonal/src/Cadence.Hexagonal.csproj` (assembly `Cadence.Hexagonal`, namespace `Cadence.Hexagonal`).
+- `DomainPrimitives.cs`: `BaseEntity`, `AggregateRoot`, `ValueObject`, `DomainEvent`.
+- `Ports.cs`: `IRepositoryPort`, `IUseCasePort`, `IEventDispatcherPort`, `IAuditLoggerPort`, `IExternalServiceClientPort`.
+- `DomainExceptions.cs`: `DomainException` and subclasses (`EntityNotFoundException`, `EntityAlreadyExistsException`, `ValidationException`, `ConflictException`, `PreconditionFailedException`, `UnauthorizedActionException`, `DatabaseException`).
+- `ProblemDetails.cs`: `ProblemDetails` record and `DomainErrorMapper`.
+- Python reference sources remain in this folder until each C# port is verified (issue #4789): `__init__.py`, `pyproject.toml`. They are not the implementation.
 
-## Architectural Boundaries
+## Key dependencies
 
-The `hexagonal` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/hexagonal/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+None beyond the .NET base library.
 
----
+## Referenced by
 
-## Public APIs / Exports
+The three test projects only. No application or package uses it; the services use `Cadence.Core.Domain` and ASP.NET Core `ProblemDetails` instead.
 
-Exports shared utilities, domain interfaces, and models for `hexagonal`.
+## Tests
 
----
-
-## Dependencies
-
-This package is maintained as a standard shared library within `packages/hexagonal`.
-
----
-
-## Local Development & Testing
-
-Run unit and contract tests for this package:
+Covered by `tests/Packages/PortedPackagesUnitTests.cs`:
 
 ```bash
-uv run pytest packages/hexagonal
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
 ```

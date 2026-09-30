@@ -1,4 +1,4 @@
-# ADR-85: Backward-Compatible Gateway Signature Verification
+# ADR-085: Backward-Compatible Gateway Signature Verification
 
 - **Status:** Accepted
 - **Date:** 2026-07-27

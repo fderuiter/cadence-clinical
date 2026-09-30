@@ -790,6 +790,16 @@
               </select>
             </div>
             <div class="form-group">
+              <label for="ssu-doc-file">Document File:</label>
+              <input
+                id="ssu-doc-file"
+                type="file"
+                class="text-input"
+                data-testid="ssu-doc-file"
+                @change="onDocFileSelected"
+              />
+            </div>
+            <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>File Name:</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -808,7 +818,7 @@
           </button>
           <button
             class="btn btn-primary"
-            :disabled="!docForm.fileName || isSubmitting"
+            :disabled="!docForm.file || !docForm.fileName || isSubmitting"
             @click="submitDoc"
           >
             Submit Document
@@ -821,6 +831,9 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from "vue";
+
+import { useToastStore } from "../../stores/toasts.js";
+import { ensureOk } from "../../utils/apiErrors.js";
 
 const props = defineProps({
   studyId: {
@@ -872,7 +885,25 @@ const overrideForm = reactive({
 const docForm = reactive({
   type: "FDA_1572",
   fileName: "Form_FDA_1572_Site101_v1.pdf",
+  file: null,
 });
+
+function onDocFileSelected(event) {
+  const file = event.target?.files?.[0] || null;
+  docForm.file = file;
+  if (file) docForm.fileName = file.name;
+}
+
+/** SHA-256 of the file's bytes as lowercase hex. */
+async function sha256Hex(file) {
+  const hashBuffer = await crypto.subtle.digest(
+    "SHA-256",
+    await file.arrayBuffer()
+  );
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 // Data
 const gateData = ref(null);
@@ -1051,10 +1082,18 @@ async function reviewDocument(docId, status) {
 }
 
 async function submitDoc() {
+  const toasts = useToastStore();
+  // #4523: the document hash must be computed from the actual file; never submit a placeholder hash.
+  if (!docForm.file) {
+    toasts.push({
+      title: "Essential document not submitted",
+      message: "Select the document file so its SHA-256 hash can be computed.",
+    });
+    return;
+  }
   isSubmitting.value = true;
   try {
-    const fakeHash =
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    const fileHash = await sha256Hex(docForm.file);
     const res = await fetch("/api/v1/ctms/startup/documents", {
       method: "POST",
       headers: {
@@ -1068,15 +1107,15 @@ async function submitDoc() {
         site_id: activeSiteId.value,
         document_type: docForm.type,
         file_name: docForm.fileName,
-        file_hash: fakeHash,
+        file_hash: fileHash,
       }),
     });
-    if (res.ok) {
-      showUploadDocModal.value = false;
-      await refreshAll();
-    }
+    await ensureOk(res);
+    showUploadDocModal.value = false;
+    docForm.file = null;
+    await refreshAll();
   } catch (err) {
-    console.error("Error submitting document:", err);
+    toasts.apiError("Essential document submission failed", err);
   } finally {
     isSubmitting.value = false;
   }

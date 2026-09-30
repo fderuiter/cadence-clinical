@@ -1,4 +1,4 @@
-# ADR 2026-07-22: API-First Validation and USDM Integration
+# ADR-2267: API-First Validation and USDM Integration
 
 ## Status
 

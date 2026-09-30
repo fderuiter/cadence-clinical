@@ -1,4 +1,6 @@
-# ADR-189: In-Process ASGI Routing with Live Databases
+# ADR-2302: In-Process ASGI Routing with Live Databases
+
+Also known as: ADR-189 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-01

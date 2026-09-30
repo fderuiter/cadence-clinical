@@ -1,4 +1,6 @@
-# ADR-145: Unused ESLint Variable and DEID Exemption in UI Package
+# ADR-2304: Unused ESLint Variable and DEID Exemption in UI Package
+
+Also known as: ADR-145 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-01

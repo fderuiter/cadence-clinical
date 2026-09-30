@@ -1,4 +1,6 @@
-# ADR-111: SAE Reconciliation Architecture
+# ADR-2409: SAE Reconciliation Architecture
+
+Also known as: ADR-111 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-26

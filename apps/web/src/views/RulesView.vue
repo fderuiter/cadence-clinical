@@ -740,6 +740,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
+import { useToastStore } from "../stores/toasts.js";
 import { apiClient } from "@/api/apiClient";
 import { executionService } from "@/api/execution";
 import ReasonModal from "../components/ReasonModal.vue";
@@ -747,7 +748,6 @@ import {
   createRuleEditorHTML,
   serializeConditionsTree,
   deserializeConditionsTree,
-  generateGatewaySignature,
   generateCanonicalSignature,
 } from "ui";
 
@@ -762,6 +762,7 @@ const rulesReasonOptions = [
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+const toasts = useToastStore();
 
 // Sub-Issue 11 States
 const activeTab = ref("rules"); // 'rules', 'queries'
@@ -888,11 +889,8 @@ async function triggerAnomalyScan() {
       );
     }
   } catch (err) {
-    console.warn(
-      "Anomaly scan API call failed, providing local notification:",
-      err
-    );
-    alert("Cross-domain anomaly scan completed (local offline fallback).");
+    // A failed scan found nothing; never report it as completed (#4523).
+    toasts.apiError("Cross-domain anomaly scan failed", err);
   } finally {
     scanningAnomalies.value = false;
   }
@@ -1100,38 +1098,13 @@ function handleEditorInput(e) {
     }
   }
 }
-async function getSignedGatewayHeaders(changeReason = "") {
-  const authStore = useAuthStore();
-  const userId = authStore.userId || "usr_dm_fderuiter";
-  const roles = authStore.normalizedRoles
-    ? authStore.normalizedRoles.join(",")
-    : "data_manager";
-  const timestamp = String(Math.floor(Date.now() / 1000));
-  const secret =
-    import.meta.env?.VITE_GATEWAY_SECRET || "internal-gateway-secret-12345";
-
-  let signature = "mock-sig";
-  try {
-    signature = await generateGatewaySignature(
-      userId,
-      roles,
-      timestamp,
-      "2",
-      changeReason,
-      secret
-    );
-  } catch {
-    // Fallback if crypto.subtle is uninitialized
-  }
-
-  return {
-    "X-User-Id": userId,
-    "X-User-Roles": roles,
-    "X-Gateway-Timestamp": timestamp,
-    "X-Gateway-Signature": signature,
-    "X-Signature-Version": "2",
-    "X-Change-Reason": changeReason,
-  };
+/**
+ * Headers for a rules API call. The browser sends only the user's change reason: the gateway strips every
+ * identity header (X-User-Id, X-User-Roles, X-Gateway-Signature, ...) from inbound requests and re-issues them,
+ * HMAC-signed, from the validated OIDC token (#4523). A browser must never hold the gateway signing secret.
+ */
+function changeReasonHeaders(changeReason = "") {
+  return changeReason ? { "X-Change-Reason": changeReason } : {};
 }
 
 // Fetch active rules from backend REST API
@@ -1139,9 +1112,8 @@ async function fetchRules() {
   loadingRules.value = true;
   connectionError.value = false;
   try {
-    const signedHeaders = await getSignedGatewayHeaders("Fetch clinical rules");
     const response = await apiClient.get(`/api/v1/studies/study_1/rules`, {
-      headers: signedHeaders,
+      headers: changeReasonHeaders(),
     });
     activeRules.value = response;
   } catch (err) {
@@ -1210,9 +1182,7 @@ async function triggerPreview() {
   };
 
   try {
-    const signedHeaders = await getSignedGatewayHeaders(
-      "Rule compilation preview"
-    );
+    const signedHeaders = changeReasonHeaders("Rule compilation preview");
 
     try {
       await apiClient.post(`/api/v1/studies/study_1/rules/validate`, payload, {
@@ -1385,10 +1355,9 @@ async function confirmChangeReason(reasonText) {
         reason: reasonText,
       });
     } catch (err) {
-      console.warn(
-        "Candidate adjudication API call failed, applying local fallback:",
-        err
-      );
+      // The query stays a CANDIDATE and the reason dialog stays open so the user can retry or cancel (#4523).
+      toasts.apiError("Candidate query adjudication failed", err);
+      return;
     }
 
     if (adjAction === "APPROVE") {
@@ -1452,7 +1421,7 @@ async function confirmChangeReason(reasonText) {
         ? `/api/v1/studies/study_1/rules/${editingRuleId.value}`
         : `/api/v1/studies/study_1/rules`;
 
-      const signedHeaders = await getSignedGatewayHeaders(reasonText);
+      const signedHeaders = changeReasonHeaders(reasonText);
 
       let saved;
       try {
@@ -1466,19 +1435,9 @@ async function confirmChangeReason(reasonText) {
           });
         }
       } catch (err) {
-        console.warn("Save API failed, falling back to local mock save:", err);
-        saved = {
-          id: isEdit
-            ? editingRuleId.value
-            : `rule_${Math.floor(Math.random() * 1000)}`,
-          type: action.payload.type,
-          target_field: action.payload.target_field,
-          target_form: action.payload.target_form,
-          action: action.payload.action,
-          query_message: action.payload.query_message,
-          condition: action.payload.condition,
-          compiled_xpath: previewXpath.value || "(Local fallback compiled)",
-        };
+        // Never record a rule the backend did not store (#4523); the editor and dialog stay open for a retry.
+        toasts.apiError("Rule save failed", err);
+        return;
       }
 
       const canonicalSig = await generateCanonicalSignature(
@@ -1503,16 +1462,13 @@ async function confirmChangeReason(reasonText) {
       alert(`Rule successfully compiled and signed save verified!`);
     } else if (action.type === "delete") {
       const url = `/api/v1/studies/study_1/rules/${action.ruleId}`;
-      let signedHeaders;
+      const signedHeaders = changeReasonHeaders(reasonText);
       try {
-        signedHeaders = await getSignedGatewayHeaders(reasonText);
         await apiClient.delete(url, { headers: signedHeaders });
       } catch (err) {
-        console.warn(
-          "Delete API failed, falling back to local mock delete:",
-          err
-        );
-        signedHeaders = {};
+        // The rule was not deleted: no RULE_DELETE ledger block, no success alert (#4523).
+        toasts.apiError("Rule deletion failed", err);
+        return;
       }
 
       // Sync deletion block

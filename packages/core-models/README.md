@@ -1,45 +1,24 @@
-# Core Models Package
+# Cadence.CoreModels
 
-## Overview
+Protocol RAG models and a citation and faithfulness evaluator used by the compliance package.
 
-Core clinical models package
+## Project
 
----
+- Project: `packages/core-models/src/Cadence.CoreModels.csproj` (assembly `Cadence.CoreModels`, namespace `Cadence.CoreModels`).
+- `ProtocolRAGModels.cs`: `ProtocolRAGContextChunk`, `ParsedCitation`.
+- `ProtocolRAGEvaluator.cs`: citation regex and marker formatting, confidence threshold, and the grounded-answer system prompt.
+- Python reference sources remain in this folder until each C# port is verified (issue #4789): `protocol_rag/`, `pyproject.toml`. They are not the implementation.
 
-## Architectural Boundaries
+## Key dependencies
 
-The `core-models` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/core-models/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+None beyond the .NET base library.
 
----
+## Referenced by
 
-## Public APIs / Exports
+`packages/compliance` and `tests/Cadence.UnitTests.csproj`.
 
-Key exported interfaces and components:
-- CITATION_REGEX
-- CONFIDENCE_THRESHOLD
-- ParsedCitation
-- ProtocolRAGContextChunk
-- TIER_2_GROUNDED_RAG_SYSTEM_PROMPT
-- evaluate_rag_faithfulness
-- format_citation_marker
-- format_grounded_rag_prompt
-
----
-
-## Dependencies
-
-This package relies on the following standard dependencies:
-- `pydantic>=2.6.0`
-
----
-
-## Local Development & Testing
-
-Run unit and contract tests for this package:
+## Tests
 
 ```bash
-uv run pytest packages/core-models
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.ConfigAndCoreModelsUnitTests"
 ```

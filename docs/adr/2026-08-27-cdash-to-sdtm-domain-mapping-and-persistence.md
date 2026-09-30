@@ -1,4 +1,6 @@
-# ADR-117: CDASH-to-SDTM Domain Mapping & Mapped Record Database Persistence
+# ADR-2413: CDASH-to-SDTM Domain Mapping & Mapped Record Database Persistence
+
+Also known as: ADR-117 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-27

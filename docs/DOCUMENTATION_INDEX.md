@@ -1,142 +1,138 @@
-# Cadence Clinical Master Documentation Hub
+# Documentation Index
 
-Welcome to the **Cadence Clinical Platform** master documentation index. This portal provides a structured sitemap, architectural taxonomy, and maintenance guide for developers, system architects, and compliance auditors working with the platform.
+The single map of Cadence documentation. Every document is listed once, with its status:
 
----
+- **Normative:** the source of truth; other documents must agree with it.
+- **Current:** maintained with the code; updated in the same pull request as the change.
+- **Generated:** produced by a command; never edit by hand.
+- **Baseline:** written for the pre-kernel, per-service design. Kept for requirement IDs and
+  traceability; a banner at the top says what supersedes it.
+- **Historical:** records of completed work (the Python-to-.NET port).
 
-## Documentation Architecture & Taxonomy
-
-Cadence Clinical documentation is organized into a 6-layer hierarchy to maintain traceability across clinical requirements, architectural design decisions, API contracts, and GxP compliance ledgers:
-
-```mermaid
-graph TD
-    Layer1["1. System Requirements & Scope<br/>(SRS.md, PRD.md, FRD.md)"]
-    Layer2["2. Technical Architecture & Specs<br/>(ARCHITECTURE.md, TDD, Blueprint)"]
-    Layer3["3. REST API Contract Reference<br/>(docs/api/* Microservice Catalogs)"]
-    Layer4["4. Decision Records<br/>(docs/adr/ Domain Categories)"]
-    Layer5["5. Developer & Operational Guides<br/>(AGENTS.md, CONTRIBUTING.md, CLI Guide)"]
-    Layer6["6. Validation & GxP Traceability<br/>(RTM.md, Audit Specs, QA Plan)"]
-
-    Layer1 --> Layer2
-    Layer2 --> Layer3
-    Layer2 --> Layer4
-    Layer4 --> Layer6
-    Layer5 --> Layer2
-```
+When you add a document, add it here. When a change makes a document wrong, fix it in the same PR
+([CONTRIBUTING.md §5](../CONTRIBUTING.md#5-documentation-is-part-of-the-change)).
 
 ---
 
-## 1. System Requirements & Scope
+## Start here
 
-High-level clinical system contracts, product scope, and functional specifications.
+| Document | Status | What it is |
+| --- | --- | --- |
+| [README](../README.md) | Current | What Cadence is, where the code is today, quickstart |
+| [Kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md) | Normative | Clinical Research OS: engines, kernel concepts, invariants (`K-…`), roadmap (§15) |
+| [ARCHITECTURE.md](../ARCHITECTURE.md) | Current | Target architecture, key decisions, running services, security, persistence |
+| [CONTEXT.md](../CONTEXT.md) | Current | Domain glossary: kernel vocabulary and application terms |
+| [AGENTS.md](../AGENTS.md) | Current | Coding rules for humans and AI agents |
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | Current | Setup, workflow, local checks, documentation rules |
 
-- **[Software Requirements Specification (SRS)](SRS.md)** (`SRS.md`): Formally compliant with **ISO/IEC/IEEE 29148:2018** (Clauses 9.5 & 9.6) and **IEC 62304 Class C**, establishing the formal functional baseline across all 24 clinical subsystems, multi-service topology, universal GxP entity schemas, 6 master state lifecycles, atomic 4-part requirements (`SRS-XXX-XXX`), foundational traceability baseline (`Trace-1` through `Trace-34`), and the consolidated Requirements Traceability and Verification Matrix (RTVM).
-- **[Product Requirements Document (PRD)](SDLC/01_Product_Requirements_Document_PRD.md)** (`01_Product_Requirements_Document_PRD.md`): Functional capabilities, user roles, eClinical workflow definitions, and PRD requirement identifiers (`PRD-SYS-xxx`, `PRD-EDC-xxx`, `PRD-CTMS-xxx`, etc.).
-- **[Functional Product Specification & FRD](FUNCTIONAL_PRODUCT_SPECIFICATION.md)** (`FUNCTIONAL_PRODUCT_SPECIFICATION.md`): Reverse-engineered functional requirements document (CAD-SPEC-FRD-001) defining core domain capabilities, system actors, clinical user journeys, and end-to-end data pipelines across all operational subsystems.
+## Kernel and roadmap
 
----
+| Document | Status | What it is |
+| --- | --- | --- |
+| [Kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md) | Normative | The model every capability builds on |
+| [Roadmap (spec §15)](kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) | Normative | Phases 0–5, tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719) |
+| [Kernel decisions K001–K009](../ARCHITECTURE.md#2-key-decisions) | Current | Decisions and their ADRs (ADR-2244 to ADR-2255) |
+| [Execution migration inventory](kernel/EXECUTION_MIGRATION_INVENTORY.md) | Current | What `apps/execution` must change to run on the kernel (roadmap phase 1) |
+| [Clock migration backlog](kernel/CLOCK_MIGRATION_BACKLOG.md) | Current | Remaining `DateTime.Now/UtcNow` call sites to move to `IClock` (K-TIME-3) |
+| [Clinical Canvas](ux/CLINICAL_CANVAS.md) | Current | UI interaction model (study-centric navigation, three panes, six verbs) and the kernel read APIs the UI needs |
 
-## 2. Technical Architecture & Integration Specifications
+## Architecture decision records
 
-Deep technical design specifications, database models, and service boundary definitions.
+| Document | Status | What it is |
+| --- | --- | --- |
+| [ADR index](adr/index.md) | Current | Every ADR by domain, with supersession marked |
+| [ADR template](adr/TEMPLATE.md) | Current | Create new ADRs with `pnpm cadence scaffold adr "<title>"` |
 
-- **[System Architecture Guide](ARCHITECTURE.md)** (`ARCHITECTURE.md`): High-level system architecture, service communication topology, and database split (Neo4j for MDR, PostgreSQL for EDC).
-- **[.NET 10 Platform Modernization Hub](migration/index.md)** (`docs/migration/index.md`): Master Phase 0 modernization baseline, 18-context decomposition, and .NET 10 transition roadmap.
-  - **[Surface & Data Topology Audit](migration/SYSTEM_TOPOLOGY_AUDIT.md)** (`docs/migration/SYSTEM_TOPOLOGY_AUDIT.md`): Complete entry point catalog, persistence models, and dynamic behavior audit.
-  - **[Dependency & Parity Catalog](migration/DEPENDENCY_AND_PARITY_CATALOG.md)** (`docs/migration/DEPENDENCY_AND_PARITY_CATALOG.md`): Python-to-.NET 10 library cross-walk, test fixtures, and golden datasets.
-  - **[Bounded Context Migration Matrix](migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md)** (`docs/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md`): 4-tier dependency sequence and Clean Architecture sentinels.
-  - **[Solution Scaffold Guide](migration/SCAFFOLD_GUIDE.md)** (`docs/migration/SCAFFOLD_GUIDE.md`): Executable solution scaffold guide and verification steps.
-  - **[Forensic Readiness Audit](migration/Migration_Phase0_Readiness_Audit.md)** (`docs/migration/Migration_Phase0_Readiness_Audit.md`): Forensic gap analysis, orphan code audit, floating-point precision risks, and dependency traps.
-  - **[Migration Workflow Playbook](MIGRATION_WORKFLOW.md)** (`docs/MIGRATION_WORKFLOW.md`): Authoritative 6-step service transcription SOP and Python decommissioning recipe.
-- **[Clinical Kernel Specification](kernel/CLINICAL_KERNEL_SPECIFICATION.md)** (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md`): Ontology, invariants and roadmap of the clinical kernel and its six engines.
-  - **[Clinical Canvas](ux/CLINICAL_CANVAS.md)** (`docs/ux/CLINICAL_CANVAS.md`): UI interaction model (study-centric navigation, three panes, six verbs) and the kernel read APIs the UI needs.
-- **[Technical Design Document (TDD)](SDLC/02_Technical_Design_Document_TDD.md)** (`02_Technical_Design_Document_TDD.md`): Internal micro-architecture, database schemas, cryptographic signature specs, and service isolation boundaries.
-- **[API Integration Specification](SDLC/03_API_Integration_Specification.md)** (`03_API_Integration_Specification.md`): Gateway routes, request/response payload contracts, RFC 7807 error formats, and authentication propagation headers.
-- **[Data Standards & Interoperability Blueprint](SDLC/04_Data_Standards_Interoperability_Blueprint.md)** (`04_Data_Standards_Interoperability_Blueprint.md`): CDISC USDM v3.0/v4.0, CDISC ODM, SDTM/ADaM exports, FHIR/eSource, and MedDRA/WHODrug medical coding integration.
+## Developing and running
 
----
+| Document | Status | What it is |
+| --- | --- | --- |
+| [Local development environment](LOCAL_DEV_ENVIRONMENT.md) | Current | Prerequisites, build, run (compose, Aspire, single service), ports |
+| [Environment variables](ENVIRONMENT_VARIABLES.md) | Current | Every setting the code reads, required or optional |
+| [Database layout and migrations](OPERATIONAL_DATABASE.md) | Current | One `cadence` database with a schema per service; migrations at startup or as a job |
+| [Testing and requirement qualification](TESTING.md) | Current | Running the .NET and Vitest suites, PostgreSQL opt-ins, `Cadence.Testing` helpers, requirement tagging and when a requirement counts as qualified |
+| [CI and quality gates](CI.md) | Current | Workflows, CI jobs, the 21 quality gates, the pre-commit hook and a failure runbook |
+| [CLI reference](cli.md) | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`) |
+| [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current | One README per `apps/*` and `packages/*` directory |
+| [REST API reference](api/index.md) | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`) |
+| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm openapi:export`); Python-era specs kept in `openapi/legacy/` |
+| [UI components](components/index.md) | Current | Shared Vue component catalog (`packages/ui`) |
+| [Moving the web app onto the .NET API](web/API_MIGRATION.md) | Current | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833) |
+| [Migration workflow playbook](MIGRATION_WORKFLOW.md) | Current | How to port the remaining Python reference sources to C# |
+| [Operations and deployment guide](SDLC/07_Operations_Deployment_Guide.md) | Baseline | Deployment topology and runbooks; being revised with the production-readiness work |
+| [Lab reference ranges](OPERATIONAL_LAB_RANGES.md) | Baseline | Range selection, scoring and tie-breaking rules |
+| [eTMF inbound email](OPERATIONAL_INBOUND_EMAIL.md) | Baseline | Inbound-email webhook security and processing |
+| [Data lifecycle](DATA_LIFECYCLE.md) | Baseline | eTMF document QC lifecycle |
 
-## 3. Programmatic REST API Contract Reference
+## Requirements, validation and GxP
 
-Comprehensive, statically extracted OpenAPI 3.1.0 specifications across all 20+ microservices with GxP role gates, step-up tokens, and code snippets.
+| Document | Status | What it is |
+| --- | --- | --- |
+| [SDLC documentation suite](SDLC/SDLC_Documentation_Suite.md) | Baseline | Overview of the SDLC document set |
+| [Product requirements (PRD)](SDLC/01_Product_Requirements_Document_PRD.md) | Baseline | `PRD-…` requirement IDs used by tests and the RTM |
+| [Software requirements (SRS)](SRS.md) | Baseline | `SRS-…` and `Trace-…` requirement IDs |
+| [Requirements traceability matrix](SDLC/Requirements_Traceability_Matrix.md) | Generated | Requirement ↔ test mapping (`pnpm cadence gxp sync`) |
+| [IQ/OQ/PQ execution report](SDLC/IQ_OQ_PQ_Execution_Report.md) | Generated | Qualification evidence from the last sync |
+| [Technical design (TDD)](SDLC/02_Technical_Design_Document_TDD.md) | Baseline | Superseded by the kernel spec and ARCHITECTURE.md |
+| [API and integration specification](SDLC/03_API_Integration_Specification.md) | Baseline | Planned integration contracts |
+| [Data standards and interoperability](SDLC/04_Data_Standards_Interoperability_Blueprint.md) | Baseline | CDISC, FHIR and coding dictionaries |
+| [Security, compliance and audit](SDLC/05_Security_Compliance_Audit_Spec.md) | Baseline | Part 11 controls; authentication now per ADR-2256 |
+| [Signature token contract](SDLC/Signature_Token_Cryptographic_Contract.md) | Baseline | E-signature step-up token format (step-up not yet wired, #4759) |
+| [QA and validation plan](SDLC/06_QA_Validation_Plan.md) | Baseline | GAMP 5 strategy and test tiers |
+| [Implementation roadmap](SDLC/08_Implementation_Roadmap.md) | Baseline | Superseded by spec §15 |
+| [Issue structure guide](SDLC/ISSUE_STRUCTURE_GUIDE.md) | Baseline | Issue formatting and work streams; epics now organise the backlog |
+| [Knowledge hub specification](SDLC/SPEC_Knowledge_Support_Hub.md) | Baseline | Knowledge and support hub feature spec |
+| [Neo4j decommissioning specification](SDLC/SPEC_Neo4j_to_Relational_Algebraic_MDR.md) | Baseline | Decided in ADR-2245 |
 
-- **[Master REST API Reference](api/index.md)** (`docs/api/index.md`): Master catalog, gateway proxy topology, Keycloak OIDC headers, and RFC 7807 problem detail models.
-- **[Study Designer & USDM API](api/designer.md)** (`docs/api/designer.md`): CDISC USDM protocol authoring, SoA matrix, and Biomedical Concept endpoints.
-- **[EDC Execution API](api/execution.md)** (`docs/api/execution.md`): Dynamic eCRF schema projection, subject progression, and Dataset-JSON exports.
-- **[CTMS Operations API](api/ctms.md)** (`docs/api/ctms.md`): Monitoring visit reports, site milestones, and 6-facet greenlight activation.
-- **[Safety & Pharmacovigilance API](api/safety.md)** (`docs/api/safety.md`): ICH E2B(R3) ICSR XML, CTCAE grading, and AS2 S/MIME EDI gateway.
-- **[Quality & CAPA API](api/quality.md)** (`docs/api/quality.md`): Protocol deviations, root-cause analyses, Benford CSM forensics, and pHash image duplicate checks.
-- **[Site Payments & Grants API](api/payments.md)** (`docs/api/payments.md`): Procedure fee schedules, multi-payee splits, and participant expense claims.
-- **[Blinded Imaging Adjudication API](api/imaging.md)** (`docs/api/imaging.md`): Blinded dual-reader RECIST 1.1 evaluations and 20% discordance triggers.
+## Product
 
----
+| Document | Status | What it is |
+| --- | --- | --- |
+| [Functional product specification](FUNCTIONAL_PRODUCT_SPECIFICATION.md) | Baseline | Capabilities reverse-engineered from the Python implementation |
+| [Feature matrix](FEATURE_MATRIX.md) | Baseline | Features by service in the per-service design |
+| [Competitive analysis](COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY.md) | Baseline | Product vision and market positioning |
 
-## 4. Architectural Decision Records (ADRs)
+## Design proposals
 
-Immutable chronological records of key architectural and technical decisions made throughout system evolution. All ADRs are categorized into 7 functional domains:
+| Document | Status | What it is |
+| --- | --- | --- |
+| [GxP lifecycle hooks](specs/01-antigravity-gxp-lifecycle-hooks.md) | Baseline | Agent guardrail hooks |
+| [Domain MCP tools and agent sidecars](specs/02-antigravity-domain-mcp-tools-and-agent-sidecars.md) | Baseline | MCP tooling proposal |
+| [Developer tooling and MCP guardrails](specs/developer-tooling-mcp-guardrails.md) | Baseline | CLI, MCP server and staged guardrails |
+| [eCRF designer IDE](specs/ecrf_designer_ide_spec.md) | Baseline | Visual metadata IDE proposal |
 
-- **[Architectural Decision Records Index](adr/index.md)** (`docs/adr/index.md`): Categorized ADR repository including:
-  1. **Core Platform & Engine**: Graph DB, PostgreSQL, Pydantic v2, rules engine, dynamic diffing.
-  2. **API Gateway & Security**: Keycloak identity, RBAC, Gateway aggregation, canonical JSON signatures.
-  3. **Clinical Data Interoperability & Standards**: USDM v3/v4 mapping, ODM, SDTM/ADaM, FHIR, medical coding.
-  4. **Clinical Operations & Business Modules**: CTMS, eTMF, RTSM, eCOA/ePRO, eConsent, SDV/TSDV, Quality/CAPA, eISF.
-  5. **Compliance, Audit & Governance**: 21 CFR Part 11 Audit Trail, Merkle root sealing, shadow triggers.
-  6. **Frontend & Design System**: Vue 3 SPA, pnpm workspace, shared UI primitives, grid layouts.
-  7. **DevOps, Tooling & CI/CD**: Parallel testing, DB CLI tool, markdown/ADR validation scripts.
+## Python-to-.NET port (completed)
 
----
+| Document | Status | What it is |
+| --- | --- | --- |
+| [Modernization hub](migration/index.md) | Historical | Phase 0 baseline and links to the port documents |
+| [System topology audit](migration/SYSTEM_TOPOLOGY_AUDIT.md) | Historical | Entry points and persistence of the Python system |
+| [Dependency and parity catalog](migration/DEPENDENCY_AND_PARITY_CATALOG.md) | Historical | Python-to-.NET library crosswalk |
+| [Bounded context migration matrix](migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md) | Historical | Port sequencing |
+| [Phase 0 decomposition and scaffold](migration/PHASE0_DOMAIN_DECOMPOSITION_AND_SCAFFOLD.md) | Historical | Solution scaffold decisions |
+| [Solution scaffold guide](migration/SCAFFOLD_GUIDE.md) | Historical | How the solution was scaffolded |
+| [Phase 0 readiness audit](migration/Migration_Phase0_Readiness_Audit.md) | Historical | Gap analysis before the port |
+| [Phase 0 working papers](migration/phase0/) | Historical | Validation gate, topology, contexts, plan |
 
-## 5. Developer Experience & Operations
+## Standards reference material
 
-Guidelines for setting up, building, running, and contributing code to Cadence Clinical.
+| Location | What it is |
+| --- | --- |
+| [docs/CDISC](CDISC/README.md) | CDISC Library API description and USDM compliance data |
+| [docs/NCI](NCI/) | NCI EVS REST API description |
+| [docs/schema](schema/) | Generated USDM schema documentation (`pnpm cadence generate-schema-doc`) |
 
-- **[Local Development Environment](LOCAL_DEV_ENVIRONMENT.md)** (`LOCAL_DEV_ENVIRONMENT.md`): Setup instructions, environment variables, Docker services, and database migrations.
-- **[Issue Structure, Work Streams & Project Board Guide](SDLC/ISSUE_STRUCTURE_GUIDE.md)** (`SDLC/ISSUE_STRUCTURE_GUIDE.md`): Standardized issue formatting, 8 parallel work streams, readiness badges, GitHub Project 17 automation, and DoD requirements.
-- **[AI Agent & Development Instructions](AGENTS.md)** (`AGENTS.md`): Architectural guardrails, coding standards, directory targeting rules, and PR verification gates.
-- **[Contributing Guidelines](../CONTRIBUTING.md)** (`CONTRIBUTING.md`): Workspace development standards, code style, formatting tools, and the Issue-to-Doc Sync Workflow.
-- **[Testing and Requirement Qualification](TESTING.md)** (`TESTING.md`): How to run the .NET and Vitest suites, the PostgreSQL opt-ins for database tests, the shared `Cadence.Testing` helpers, requirement tagging rules, and how the RTM decides whether a requirement is qualified.
-- **[Operations & Deployment Guide](SDLC/07_Operations_Deployment_Guide.md)** (`07_Operations_Deployment_Guide.md`): Production deployment topology, Docker orchestration, monitoring, and database backup protocols.
-- **[Moving the Web App onto the .NET API](web/API_MIGRATION.md)** (`web/API_MIGRATION.md`): Which web screens have a .NET backend, which are hidden until their module exists, and how a screen moves onto the real API (epic #4833).
-- **[Database Layout and Migrations Runbook](OPERATIONAL_DATABASE.md)** (`OPERATIONAL_DATABASE.md`): One `cadence` database with a schema per service, how migrations are applied at startup or as a job, idempotent scripts for DBA review, and troubleshooting.
-- **[Lab Reference Ranges Guide](OPERATIONAL_LAB_RANGES.md)** (`OPERATIONAL_LAB_RANGES.md`): Outlines the technical and regulatory mechanisms used to manage, validate, and update laboratory reference ranges, including multi-dimensional scoring and deterministic tie-breaking.
-- **[Inbound Email Ingestion Guide](OPERATIONAL_INBOUND_EMAIL.md)** (`OPERATIONAL_INBOUND_EMAIL.md`): Details security protocols and configurations for the eTMF inbound-email webhook, including HMAC signature validation and attachment processing.
+## Repository policies
 
----
+| Document | What it is |
+| --- | --- |
+| [SECURITY.md](../SECURITY.md) | How to report a vulnerability |
+| [SUPPORT.md](../SUPPORT.md) | Where to get help |
+| [LICENSE](../LICENSE) | ISC license |
+| [Agent working notes](agents/domain.md) | How agents use domain docs, the [issue tracker](agents/issue-tracker.md) and [triage labels](agents/triage-labels.md) |
 
-## 6. Validation & GxP Compliance Ledger
+## Documentation site
 
-GxP audit readiness, requirement traceability, and automated verification reports.
-
-- **[Requirements Traceability Matrix (RTM)](SDLC/Requirements_Traceability_Matrix.md)** (`Requirements_Traceability_Matrix.md`): Automated bidirectional mapping between PRD/SRS requirements, test suite execution results, and ADRs.
-- **[Security, Compliance & Audit Spec](SDLC/05_Security_Compliance_Audit_Spec.md)** (`05_Security_Compliance_Audit_Spec.md`): 21 CFR Part 11 compliance matrix, encryption standards, and security vulnerability exclusion ledger.
-- **[QA Validation Plan](SDLC/06_QA_Validation_Plan.md)** (`06_QA_Validation_Plan.md`): GAMP 5 validation strategy, testing tiers, and qualification execution standards.
-- **[IQ/OQ/PQ Qualification Execution Report](SDLC/IQ_OQ_PQ_Execution_Report.md)** (`IQ_OQ_PQ_Execution_Report.md`): Automated qualification build outputs and release state signatures.
-- **[Feature and Environment Matrix](FEATURE_MATRIX.md)** (`FEATURE_MATRIX.md`): Maps compliance features to designer/execution services and inventories persistence engines and auditing mechanisms.
-- **[Data Lifecycle Guide](DATA_LIFECYCLE.md)** (`DATA_LIFECYCLE.md`): Specifies the electronic Trial Master File (eTMF) Quality Control review lifecycle and data transitions from draft to archive.
-
----
-
-## Developer Guide: Issue-to-Doc Synchronization Workflow
-
-When working on a new GitHub issue or modifying system functionality, follow this 3-tier cascade to ensure documentation remains in sync:
-
-1. **Requirement Level (`PRD` / `SRS`)**:
-   - Check if the change introduces new user capabilities or modifies existing specifications.
-   - If so, update `docs/SDLC/01_Product_Requirements_Document_PRD.md` or `docs/SRS.md` with a unique requirement ID (`PRD-SYS-xxx`, `SRS-XXX-xxx`, or `Trace-x`).
-2. **Architecture & Decision Level (`ADR`)**:
-   - If the change introduces new dependencies, database model changes, shared package utilities, or gateway routes, create a new ADR using the CLI tool:
-     ```bash
-     dotnet cadence scaffold adr "Your Architectural Decision Title"
-     ```
-3. **Traceability Level (`RTM`)**:
-   - Write automated xUnit or Vitest unit/integration tests referencing the requirement ID via `[GxPRequirement("PRD-SYS-xxx")]` and `/// @req:PRD-SYS-XXX`.
-   - Run the unified synchronization command `dotnet cadence gxp sync` to refresh the Requirements Traceability Matrix.
-
-#### Strict Fail-Fast GxP Validation & Draft Mode
-
-To guarantee regulatory data integrity (21 CFR Part 11) and prevent the silent or accidental generation of unverified "PASSED" results, the platform enforces strict validation rules during compliance document generation:
-
-- **Strict Default Fail-Fast**: If `dotnet cadence gxp sync` finds no TRX results under `TestResults/gxp/`, RTM generation stops with exit code 1 and no files are updated. A test without a result is reported as NOT RUN, never as passed.
-- **Visual Draft Bypass**: For development, fast PR checking, or dry-run validation layouts where running full test suites is skipped, run `dotnet cadence generate-rtm --draft` or set the `RTM_DRAFT=true` environment variable.
-- **Draft Document Manifestation**: Under draft mode, document generation completes successfully but prepends a prominent visual warning banner (`> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️`) to the absolute top of `Requirements_Traceability_Matrix.md` and `IQ_OQ_PQ_Execution_Report.md`, and every test status shows as `⚪ (UNVERIFIED)`.
-- **Qualification rules**: [Testing and Requirement Qualification](TESTING.md) (`docs/TESTING.md`) defines how tests declare requirements and when a requirement counts as Qualified, Failed, Not verified or Planned.
+`pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (it also
+runs the quality gates and regenerates the API, schema and RTM documents). The site's home page is
+generated from the root README.

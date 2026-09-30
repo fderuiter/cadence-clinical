@@ -1,4 +1,6 @@
-# ADR-2250: Fail-Closed Gateway Identity and Signed Caller Authentication
+# ADR-2256: Fail-Closed Gateway Identity and Signed Caller Authentication
+
+Also known as: ADR-2250 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-09-29

@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { apiClient } from "../api/apiClient";
+import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
 
 export interface BatchSignPayload {
@@ -25,7 +26,8 @@ export interface BatchSignResponse {
 export const useSignatureStore = defineStore("signatures", {
   state: () => {
     let savedLastSignatureResult = null;
-    if (typeof window !== "undefined" && window.localStorage) {
+    // Only the demo branch below persists a result, so only a demo build restores one (#4523).
+    if (isDemoBuild() && typeof window !== "undefined" && window.localStorage) {
       try {
         const stored = window.localStorage.getItem("lastSignatureResult");
         if (stored) {
@@ -57,7 +59,12 @@ export const useSignatureStore = defineStore("signatures", {
           apiClient.post &&
           ((apiClient.post as any)._isMockFunction ||
             typeof (apiClient.post as any).mock === "object");
-        if (authStore.isDemoMode && !authStore.token && !isMocked) {
+        if (
+          isDemoBuild() &&
+          authStore.isDemoMode &&
+          !authStore.token &&
+          !isMocked
+        ) {
           await new Promise((resolve) => setTimeout(resolve, 300));
           const mockResponse: BatchSignResponse = {
             signature_id:

@@ -172,6 +172,15 @@
           </div>
         </div>
 
+        <div
+          v-if="impactLoadError"
+          class="load-error-state"
+          role="alert"
+          data-testid="impact-load-error"
+        >
+          Live subject-impact analysis unavailable: {{ impactLoadError }}
+        </div>
+
         <div class="impact-metrics-grid">
           <!-- Migrated & Re-Consented -->
           <div class="metric-card metric-green">
@@ -305,8 +314,18 @@
 
       <!-- Tab 2: Visual Graph & Schema Diff Visualizer -->
       <div v-if="activeTab === 'graph'" class="diff-section">
+        <div
+          v-if="diffLoadError"
+          class="load-error-state"
+          role="alert"
+          data-testid="diff-load-error"
+        >
+          Amendment diff could not be loaded from the Designer service:
+          {{ diffLoadError }}. No impact summary or SoA diff is shown.
+        </div>
+
         <!-- Amendment Impact Summary Card -->
-        <div class="impact-summary-header-card">
+        <div v-else class="impact-summary-header-card">
           <div class="summary-top-row">
             <div class="summary-title-group">
               <h3 class="section-title">
@@ -442,7 +461,10 @@
         </div>
 
         <!-- Layer 1: USDM Graph & SoA Matrix Diff -->
-        <div v-if="activeDiffLayer === 'soa'" class="layer-content">
+        <div
+          v-if="activeDiffLayer === 'soa' && !diffLoadError"
+          class="layer-content"
+        >
           <div class="layer-header">
             <h4>Side-by-Side Schedule of Activities &amp; Graph Structure</h4>
             <div class="legend-box">
@@ -1040,6 +1062,16 @@
               <span>🔄 Calculating predictive subject impact analysis...</span>
             </div>
 
+            <div
+              v-else-if="impactLoadError"
+              class="load-error-state"
+              role="alert"
+              data-testid="wizard-impact-load-error"
+            >
+              Predictive subject impact could not be calculated:
+              {{ impactLoadError }}
+            </div>
+
             <div v-else class="impact-summary-box">
               <div class="impact-stat-row">
                 <div class="impact-stat-card card-green">
@@ -1349,9 +1381,11 @@ import { ref, computed, onMounted } from "vue";
 import { apiClient } from "../api/apiClient";
 import { designerService } from "../api/designer";
 import { useClinicalStore } from "../stores/clinical";
+import { useToastStore } from "../stores/toasts.js";
 
 const store = useClinicalStore();
 const clinicalStore = store;
+const toasts = useToastStore();
 
 // Mode & Tab Navigation State
 const activeMode = ref("manager"); // 'manager' | 'coordinator'
@@ -1367,6 +1401,10 @@ const isSubmitting = ref(false);
 const isLoadingImpact = ref(false);
 const isLoadingDiff = ref(false);
 const notificationBanner = ref(null);
+// #4523: set when the live subject-impact / amendment-diff calls fail, so seeded figures are never shown as
+// the verified server analysis.
+const impactLoadError = ref(null);
+const diffLoadError = ref(null);
 
 // Wizard State
 const showCreateModal = ref(false);
@@ -1679,6 +1717,20 @@ const ecrfFormsDiffList = ref([
 ]);
 
 // Live API Integration Functions
+function toastMessage(toastId) {
+  return (
+    toasts.toasts.find((t) => t.id === toastId)?.message || "Request failed"
+  );
+}
+
+function reportFailure(title, err) {
+  const id = toasts.apiError(title, err);
+  notificationBanner.value = {
+    type: "error",
+    message: `${title}: ${toastMessage(id)}`,
+  };
+}
+
 async function fetchSubjectImpact() {
   isLoadingImpact.value = true;
   try {
@@ -1690,10 +1742,13 @@ async function fetchSubjectImpact() {
     if (res && res.categories) {
       wizardImpactData.value = res;
     }
+    impactLoadError.value = null;
   } catch (err) {
-    console.warn(
-      "Live subject-impact API call, using current state fallback:",
-      err
+    // A superseded duplicate request is aborted by apiClient; that is not a failure.
+    if (err?.name === "AbortError") return;
+    wizardImpactData.value = null;
+    impactLoadError.value = toastMessage(
+      toasts.apiError("Subject impact analysis could not be loaded", err)
     );
   } finally {
     isLoadingImpact.value = false;
@@ -1745,10 +1800,10 @@ async function fetchAmendmentDiffAndImpact() {
         graphDiff.value.amendedNodes = amendedFromApi;
       }
     }
+    diffLoadError.value = null;
   } catch (err) {
-    console.warn(
-      "Live amendment diff API call, using verified local fallback:",
-      err
+    diffLoadError.value = toastMessage(
+      toasts.apiError("Amendment diff could not be loaded", err)
     );
   } finally {
     isLoadingDiff.value = false;
@@ -1787,21 +1842,14 @@ async function submitCreateAmendment() {
   isSubmitting.value = true;
   try {
     // 1. Branch in Designer API
-    try {
-      await designerService.createAmendmentBranch({
-        study_id: selectedStudyId.value,
-        base_version_tag: selectedBaseVersion.value,
-        amendment_type: newAmendment.value.amendment_type,
-        requires_reconsent: newAmendment.value.requires_reconsent,
-        change_reason: newAmendment.value.change_reason,
-        branch_name: `amendment-v${newAmendment.value.target_version}-draft`,
-      });
-    } catch (err) {
-      console.warn(
-        "Designer branching API error, proceeding with execution publish:",
-        err
-      );
-    }
+    await designerService.createAmendmentBranch({
+      study_id: selectedStudyId.value,
+      base_version_tag: selectedBaseVersion.value,
+      amendment_type: newAmendment.value.amendment_type,
+      requires_reconsent: newAmendment.value.requires_reconsent,
+      change_reason: newAmendment.value.change_reason,
+      branch_name: `amendment-v${newAmendment.value.target_version}-draft`,
+    });
 
     // 2. Publish in Execution API
     const payload = {
@@ -1812,14 +1860,7 @@ async function submitCreateAmendment() {
       amended_snapshot: { version: newAmendment.value.target_version },
     };
 
-    try {
-      await apiClient.post("/api/v1/execution/amendments/publish", payload);
-    } catch (err) {
-      console.warn(
-        "Publish amendment API error, using local state update:",
-        err
-      );
-    }
+    await apiClient.post("/api/v1/execution/amendments/publish", payload);
 
     selectedAmendedVersion.value = newAmendment.value.target_version;
     requiresReconsent.value = newAmendment.value.requires_reconsent;
@@ -1832,6 +1873,9 @@ async function submitCreateAmendment() {
     closeWizard();
     await fetchSubjectImpact();
     await fetchAmendmentDiffAndImpact();
+  } catch (err) {
+    // #4523: a failed branch or publish leaves the version, gating flag and wizard untouched.
+    reportFailure("Protocol amendment publication failed", err);
   } finally {
     isSubmitting.value = false;
   }
@@ -1847,18 +1891,14 @@ async function submitReconsent() {
   if (!activeModalSubject.value) return;
   isSubmitting.value = true;
   try {
-    try {
-      await apiClient.post("/api/v1/execution/amendments/reconsent", {
-        subject_id: activeModalSubject.value.id,
-        study_id: selectedStudyId.value,
-        protocol_version: selectedAmendedVersion.value,
-        version_index: 2,
-        icf_signed: true,
-        signature_type: reconsentMode.value,
-      });
-    } catch (err) {
-      console.warn("Reconsent API error, using local fallback:", err);
-    }
+    await apiClient.post("/api/v1/execution/amendments/reconsent", {
+      subject_id: activeModalSubject.value.id,
+      study_id: selectedStudyId.value,
+      protocol_version: selectedAmendedVersion.value,
+      version_index: 2,
+      icf_signed: true,
+      signature_type: reconsentMode.value,
+    });
 
     await store.clearReconsentGate(
       activeModalSubject.value.id,
@@ -1872,6 +1912,12 @@ async function submitReconsent() {
     };
 
     showReconsentModal.value = false;
+  } catch (err) {
+    // #4523: the re-consent gate stays locked unless the execution service recorded the signature.
+    reportFailure(
+      `Re-consent for ${activeModalSubject.value.id} was not recorded`,
+      err
+    );
   } finally {
     isSubmitting.value = false;
   }
@@ -1897,17 +1943,10 @@ async function executeBulkReconsent() {
       reason_for_change: bulkReconsentForm.value.reason_for_change,
     };
 
-    try {
-      await apiClient.post(
-        "/api/v1/execution/amendments/bulk-reconsent",
-        payload
-      );
-    } catch (err) {
-      console.warn(
-        "Bulk reconsent API error, applying local state update:",
-        err
-      );
-    }
+    await apiClient.post(
+      "/api/v1/execution/amendments/bulk-reconsent",
+      payload
+    );
 
     // Update local state for all selected subjects
     subjectsList.value.forEach((sub) => {
@@ -1948,6 +1987,9 @@ async function executeBulkReconsent() {
       type: "success",
       message: `Batch 21 CFR Part 11 signature authorized! Cleared re-consent holds for ${subjectCount} subject(s) across active sites.`,
     };
+  } catch (err) {
+    // #4523: no subject is marked signed and no ledger block is written when the bulk call fails.
+    reportFailure("Bulk re-consent was not recorded", err);
   } finally {
     isSubmitting.value = false;
   }
@@ -1989,6 +2031,16 @@ onMounted(() => {
   background: #fee2e2;
   border: 1px solid #fca5a5;
   color: #991b1b;
+}
+
+.load-error-state {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.875rem;
 }
 
 .banner-close {

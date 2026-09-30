@@ -1,4 +1,6 @@
-# ADR-120: Centralized RBAC Matrix for Metadata Designer Mutations
+# ADR-2418: Centralized RBAC Matrix for Metadata Designer Mutations
+
+Also known as: ADR-120 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-28

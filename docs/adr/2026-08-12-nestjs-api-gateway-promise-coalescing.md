@@ -1,4 +1,4 @@
-# ADR-[NUMBER]: NestJS API Gateway Promise Coalescing and Eager Key Prefetching
+# ADR-2367: NestJS API Gateway Promise Coalescing and Eager Key Prefetching
 
 - **Status:** Accepted
 - **Date:** 2026-08-12

@@ -1,33 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// ingestionClient uses openapi-fetch (src/api/client.ts) for JSON calls and plain fetch for the
+// multipart upload. Stub the global fetch before any import so no test reaches the real network.
+const { mockFetch } = vi.hoisted(() => {
+  const mockFetch = vi.fn();
+  vi.stubGlobal("fetch", mockFetch);
+  return { mockFetch };
+});
+
 import { useClinicalStore } from "../src/stores/clinical";
 import { ingestionClient } from "../src/api/ingestionClient";
 import { createPinia, setActivePinia } from "pinia";
-
-// Mock fetch globally
-global.fetch = vi.fn();
-
-// Mock apiClient to prevent actual HTTP calls in store actions
-vi.mock("../src/api/apiClient", () => ({
-  apiClient: {
-    get: vi.fn(),
-    post: vi.fn(),
-  },
-  getBaseUrl: () => "http://localhost:8000",
-}));
+import { jsonResponse, recordedRequest } from "./fetch_mock.js";
 
 describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    mockFetch.mockReset();
   });
 
   describe("ingestionClient.js API Methods", () => {
     it("uploadProtocol constructs FormData and includes authorization and reasoning headers", async () => {
       const mockResponse = { id: "cand_123", status: "PENDING_REVIEW" };
-      global.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      });
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockResponse));
 
       const file = new File(["dummy protocol pdf"], "protocol.pdf", {
         type: "application/pdf",
@@ -36,8 +32,8 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
         changeReason: "Ingesting trial blueprint",
       });
 
-      expect(global.fetch).toHaveBeenCalledTimes(1);
-      const [url, options] = global.fetch.mock.calls[0];
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const [url, options] = mockFetch.mock.calls[0];
       expect(url).toContain("/api/v1/designer/ingestion/upload");
       expect(options.method).toBe("POST");
       expect(options.headers["X-Change-Reason"]).toBe(
@@ -48,11 +44,9 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
     });
 
     it("transitionItem posts status transition with a mandatory reason", async () => {
-      const { apiClient } = await import("../src/api/apiClient");
-      apiClient.post.mockResolvedValueOnce({
-        id: "cand_123",
-        status: "PENDING_REVIEW",
-      });
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ id: "cand_123", status: "PENDING_REVIEW" })
+      );
 
       const result = await ingestionClient.transitionItem(
         "cand_123",
@@ -61,31 +55,44 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
         "Valid study milestone"
       );
 
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/api/v1/designer/ingestion/candidates/cand_123/items/cand_visit_1/transition",
-        { status: "ACCEPTED", reason: "Valid study milestone" },
-        { changeReason: "Review candidate item" }
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const { url, method, headers, body } = await recordedRequest(
+        mockFetch,
+        0
       );
-      expect(result).toBeDefined();
+      expect(method).toBe("POST");
+      expect(new URL(url).pathname).toBe(
+        "/api/v1/designer/ingestion/candidates/cand_123/items/cand_visit_1/transition"
+      );
+      expect(body).toEqual({
+        status: "ACCEPTED",
+        reason: "Valid study milestone",
+      });
+      expect(headers.get("X-Change-Reason")).toBe("Review candidate item");
+      expect(result).toEqual({ id: "cand_123", status: "PENDING_REVIEW" });
     });
 
     it("promoteCandidate submits change reason to promote the draft", async () => {
-      const { apiClient } = await import("../src/api/apiClient");
-      apiClient.post.mockResolvedValueOnce({
-        status: "PROMOTED",
-        version_id: "ver_draft_1",
-      });
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse({ status: "PROMOTED", version_id: "ver_draft_1" })
+      );
 
       const result = await ingestionClient.promoteCandidate(
         "cand_123",
         "Clinical setup promotion"
       );
 
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/api/v1/designer/ingestion/candidates/cand_123/promote",
-        { change_reason: "Clinical setup promotion" },
-        { changeReason: "Clinical setup promotion" }
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const { url, method, headers, body } = await recordedRequest(
+        mockFetch,
+        0
       );
+      expect(method).toBe("POST");
+      expect(new URL(url).pathname).toBe(
+        "/api/v1/designer/ingestion/candidates/cand_123/promote"
+      );
+      expect(body).toEqual({ change_reason: "Clinical setup promotion" });
+      expect(headers.get("X-Change-Reason")).toBe("Clinical setup promotion");
       expect(result.status).toBe("PROMOTED");
     });
   });

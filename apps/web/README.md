@@ -1,56 +1,26 @@
-# Cadence Clinical - Web Frontend Application
+# Web client
 
-## Overview
+Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks only to the API gateway, which forwards requests to the backend services.
 
-This directory contains the primary frontend web application for Cadence Clinical, built using **Vue 3**, **Pinia**, and **Vite**.
+## Layout
 
----
+- `src/main.js`: bootstraps Vue, Pinia and the router, initialises Keycloak (`keycloak-js`), and, in a demo build only, seeds the offline demo identity and the MSW mock worker.
+- `src/api/`: the `apiClient.js` fetch wrapper and per-service clients (`designer.ts`, `execution.ts`, `etmf.ts`, `interop.ts`, `econsent.ts`, `fileshare.ts`, and others).
+- `src/stores/`: Pinia stores; `auth.js` holds the Keycloak session and role normalisation.
+- `src/views/`, `src/components/`, `src/features/`, `src/composables/`, `src/router/`: UI.
+- `src/mocks/`: MSW handlers for offline and demo use.
+- `src/types/generate-types.js`: generates API types before build, test and typecheck.
+- `tests/`: Vitest unit tests; `tests/e2e/`: Playwright specs.
 
-## Architectural Boundaries
+## Authentication
 
-### 🔒 Gateway Integration & Local API Client
+- The client signs in through Keycloak (Authorization Code with PKCE). Defaults: `VITE_KEYCLOAK_URL=http://localhost:8080/`, `VITE_KEYCLOAK_REALM=cadence`, `VITE_KEYCLOAK_CLIENT_ID=cadence-web`. The realm is in `docker/cadence-realm.json`.
+- `apiClient.js` sends the Keycloak access token as `Authorization: Bearer <token>` to `VITE_API_BASE_URL` (default `http://localhost:8000`), and `X-Change-Reason` on mutations when the caller supplies one.
+- The gateway requires a valid bearer token on every proxied route (see [apps/gateway](../gateway/README.md)). When Keycloak is unreachable the app opens the login page and sign-in reports the problem; it does not fall back to a demo identity.
 
-To maintain GxP compliance and enforce Part 11 requirements (e.g. rate-limiting, step-up re-authentication, and signature verification), the frontend SPA does not call backend microservices directly. It communicates **exclusively** with the API Gateway.
+## Demo mode and API failures
 
-#### API Client Wrapper (`apps/web/src/api/apiClient.js`)
-
-The application features a secure, centralized `apiClient` wrapper around the browser `fetch` API:
-
-- **Base URL Configuration:** Automatically reads from `import.meta.env.VITE_API_BASE_URL` at runtime, defaulting to the local API Gateway at `http://localhost:8000`.
-- **Zero-Knowledge Browser Context:** Never stores, manages, or uses signing keys/secrets or generates cryptographic signatures in the browser code.
-- **OIDC Authentication Mapping:** Dynamically resolves the active **Keycloak bearer token** from the Pinia `useAuthStore` and attaches it to all requests as `Authorization: Bearer <token>`.
-- **Change Reason Propagation:** Automatically attaches the custom `X-Change-Reason` header on mutations (`POST`, `PUT`, `DELETE`, `PATCH`) if supplied by the caller, supporting regulatory audit trail requirements.
-
-### 🔑 Keycloak Authentication, Ports, & Role Normalization
-
-To enforce robust Identity and Access Management (IAM), the frontend integrates seamlessly with Keycloak using **Authorization Code Flow + PKCE**.
-
-#### Dev Port & Redirect URI Alignment
-
-The Keycloak client config and local development server ports must be perfectly aligned:
-
-- **Local Dev Server:** Runs on port **`3000`** (strictly locked in `vite.config.js`).
-- **Keycloak Configuration:** The `cadence-realm.json` file (under the `cadence` realm, client `cadence-web`) is configured with matching redirect URIs and web origins:
-  - `redirectUris`: `http://localhost:3000/*`
-  - `webOrigins`: `http://localhost:3000`
-- **Keycloak Base URL:** By default, Keycloak is expected to run at `http://localhost:8080/`.
-
-#### Clinical Role to Keycloak Realm Role Mapping
-
-The application utilizes a Pinia auth store (`apps/web/src/stores/auth.js`) to normalize incoming Keycloak roles into standardized UI-scoped roles. The normalization mapping details are as follows:
-
-| Clinical / Business Role   | Seeded Keycloak Realm Role            | Normalized UI Role(s)      | Mapping & Normalization Logic                                                                                                  |
-| -------------------------- | ------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Site Coordinator / CRC** | `Site Investigator`                   | `site_investigator`, `crc` | Lowercased, spaces/dashes converted to underscores, mapped via `ROLE_ALIASES`.                                                 |
-| **CRA / Monitor**          | `CRA`                                 | `cra`, `monitor`           | Normalizes to `cra` and mapped to `monitor` alias.                                                                             |
-| **Data Manager**           | `Data Manager`                        | `data_manager`             | Lowercased and converted to snake_case.                                                                                        |
-| **TMF Auditor**            | `Auditor`                             | `auditor`, `tmf_auditor`   | Maps Keycloak `Auditor` role to both `auditor` and `tmf_auditor` normalized aliases.                                           |
-| **Study Designer**         | `Sponsor Designer` / `study_designer` | `sponsor_designer`         | Maps Keycloak roles `Sponsor Designer`, `study_designer`, and `designer` into the single canonical UI role `sponsor_designer`. |
-| **Sponsor Admin**          | `Sponsor Admin`                       | `sponsor_admin`            | Lowercased and converted to snake_case.                                                                                        |
-
-This central normalization layer decouples Keycloak-level role naming from UI-level routing and capability checks, providing a robust, GxP-compliant RBAC layer.
-
----
+Demo mode is opt-in at build time: `pnpm --filter web dev --mode demo`, `pnpm --filter web build:demo`, or `VITE_DEMO_MODE=true` (`src/utils/demoMode.js`). Only a demo build signs in with the offline demo identity, starts the MSW mock API and loads sample data. Every other build talks to the gateway. A failed API call shows an error alert (`useToastStore().apiError(title, err)` from `src/stores/toasts.js`) and leaves the screen as it was; never substitute sample data or report success when a call fails. Tests opt into a demo build with `vi.stubEnv("VITE_DEMO_MODE", "true")`.
 
 ## Screen availability
 
@@ -58,70 +28,24 @@ Most screens were written against the Python services and call endpoints no .NET
 
 The clients in `src/api/` are still typed against the Python-era specs in `docs/openapi/legacy/`. They are replaced as each screen moves over.
 
----
+## Scripts
 
-## Public APIs / Exports
+Run from the repository root with pnpm (the workspace is defined in `pnpm-workspace.yaml`):
 
-### 🛠️ Microservice Service Modules
-
-Service-specific endpoint contracts are isolated into standalone service files to interact seamlessly with the API Gateway:
-
-- **Designer (`api/designer.js`):** Integrates with study configuration, CDISC USDM models, and metadata rules.
-- **Execution (`api/execution.js`):** Integrates with clinical EDC data entry, patient consent recording, query lifecycles, and form submissions.
-- **eTMF (`api/etmf.js`):** Integrates with document ingestion, indexing, and expected document list (EDL) completeness tracking.
-- **Interop (`api/interop.js`):** Integrates with FHIR bundle prefills, offline ePRO questionnaire synchronization, and assigned instruments lists.
-
----
+| Command                                | Purpose                                                                                                     |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `pnpm --filter web dev`                | Vite dev server on `http://localhost:3000/cadence-clinical/`; `/api` is proxied to `http://localhost:8000`. |
+| `pnpm --filter web build`              | Production build (also builds `usdm-schemas` and `ui` first, then the docs site).                           |
+| `pnpm --filter web build:demo`         | Build in `demo` mode (MSW enabled).                                                                         |
+| `pnpm --filter web test`               | Vitest with coverage.                                                                                       |
+| `pnpm --filter web test:e2e`           | Playwright; starts the web and subject-portal dev servers.                                                  |
+| `pnpm --filter web lint` / `typecheck` | ESLint / `tsc --noEmit`.                                                                                    |
 
 ## Dependencies
 
-- **Framework & Build:** Vue 3, Pinia, Vite, Vue Router
-- **HTTP Client:** Native `fetch` with `apiClient.js` wrapper
-- **UI Components:** Tailwind CSS / Lucide icons
-- **Package Manager:** pnpm
+- Runtime: `vue`, `vue-router`, `pinia`, `keycloak-js`, `openapi-fetch`, `hls.js`, `vuedraggable`, and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md).
+- Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW, `openapi-typescript`, TypeScript.
 
----
+## Running against the backend
 
-## Local Development & Testing
-
-### ⚙️ Local Development & API Proxy Configuration
-
-During local development, you may configure the local Vite dev server to proxy requests to the API gateway.
-
-#### 1. Environment Variable Override
-
-You can override the target API Gateway URL by creating a local environment file `.env.local`:
-
-```bash
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-#### 2. Vite Proxy Server
-
-Vite is pre-configured (`vite.config.js`) to automatically route any local `/api` traffic to the Gateway:
-
-```javascript
-server: {
-  port: 3000,
-  strictPort: true,
-  proxy: {
-    "/api": {
-      target: "http://localhost:8000",
-      changeOrigin: true,
-      secure: false,
-    },
-  },
-}
-```
-
-This ensures that calling `/api/v1/...` relative paths in local components routes cleanly through the gateway proxy in local browser environments, resolving potential CORS issues or local development routing gaps.
-
----
-
-### 🧪 Testing
-
-Run frontend unit and integration tests using Vitest:
-
-```bash
-pnpm --filter web run test
-```
+Start Keycloak and the services (for example `docker compose -f docker/docker-compose.yml up`, or the gateway and services with `dotnet run`), then `pnpm --filter web dev` and sign in with a user from the `cadence` realm.

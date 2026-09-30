@@ -1,5 +1,8 @@
 # eTMF Inbound-Email Webhook - Operational & Technical Guide
 
+> [!WARNING]
+> **Status: pre-kernel baseline.** Describes the Python eTMF inbound-email webhook. The .NET `apps/etmf` service is a scaffold and does not implement this webhook yet; the Python test suite referenced below has been removed.
+
 **Document ID:** CC-OPS-PRD-TMF-002
 **Version:** 1.0.0
 **Status:** Approved
@@ -151,9 +154,9 @@ To maintain validation integrity under 21 CFR Part 11, the `INBOUND_EMAIL_HMAC_S
 
 ---
 
-## 7. Runnable Pytest Verification Command
+## 7. Verification
 
-System operators can verify the complete signature validation, routing, replay protection, and GxP compliance of the webhook using the automated pytest suite:
+The Python verification suite was removed with the Python services. When the webhook is ported to `apps/etmf`, its tests go under `tests/` and this section will name them. The former command was:
 
 ```bash
 # Run all webhook integration tests

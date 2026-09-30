@@ -1,7 +1,7 @@
 {
   "name": "cadence-clinical-workspace",
   "version": "1.0.0",
-  "description": "> **The Metadata-Driven Clinical Execution Platform.** > *Unifying Clinical Study Design (MDR/SDR) and Electronic Data Capture (EDC) into a single, automated digital data flow.*",
+  "description": "Cadence Clinical Research Software: an operating system for clinical research built on one clinical kernel.",
   "main": "index.js",
   "directories": {
     "doc": "docs",
@@ -28,10 +28,11 @@
     "openapi:export": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- sync-openapi-spec",
     "adr:new": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- scaffold adr",
     "adr:create": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- scaffold adr",
+    "adrs:check": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check adrs",
     "adrs:fix": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- fix",
     "build": "pnpm --filter web build",
     "build:demo": "pnpm --filter web build:demo",
-    "docs:dev": "vitepress dev docs",
+    "docs:dev": "node scripts/build-docs.js --prepare-only && vitepress dev docs",
     "docs:build": "node scripts/build-docs.js",
     "build:docs": "node scripts/build-docs.js"
   },

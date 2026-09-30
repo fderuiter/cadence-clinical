@@ -1,333 +1,268 @@
-# Agent Guidelines: Cadence Clinical Research Software Platform
+# Agent and Contributor Guidelines
 
-## Product Mission
+These rules apply to every change in this repository, by humans and AI agents alike. `CLAUDE.md`
+points here; there is one copy of this file.
 
-Cadence Clinical Research Software is a unified, standalone eClinical platform synthesising
-upstream Clinical Metadata Management (MDR) with downstream Electronic Data
-Capture (EDC) into an automated Digital Data Flow (DDF) platform.
+Read first:
 
----
-
-## Technical Stack & Standards (.NET 10 Target Architecture)
-
-The Cadence platform has executed a clean-break architectural migration to **.NET 10 (C# 14 / ASP.NET Core 10)**. All 18 microservices, shared domain packages, and operational tooling are fully native .NET 10 implementations.
-
-| Concern            | Technology                                                                                                        |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| Language & Runtime | **C# 14 / .NET 10** (`net10.0`, Native AOT ready)                                                                 |
-| Web API Framework  | **ASP.NET Core 10 Minimal APIs** with Endpoint Filters (`IEndpointFilter`)                                        |
-| Data Modeling      | C# 14 `record` types, primary constructors, FluentValidation, `System.Text.Json` source generation                |
-| Async HTTP         | `IHttpClientFactory` with typed HTTP clients and Polly resilience pipelines                                       |
-| Code Style & Lints | **`.editorconfig` + `dotnet format` + Roslyn Analyzers** (`Microsoft.CodeAnalysis.NetAnalyzers`, `SonarAnalyzer`) |
-| Designer DB        | Async **Neo4j.Driver** for .NET 10 (`apps/designer/`)                                                             |
-| Execution DB       | **Entity Framework Core 10 + Npgsql** for PostgreSQL (`apps/execution/`) with `SaveChangesInterceptor`            |
-| Dependency Mgmt    | **Central Package Management (CPM)** via `Directory.Packages.props` and `Directory.Build.props`                   |
-| Clinical Standards | CDISC USDM v3.0/v4.0, CDISC ODM XML/JSON                                                                          |
-| GxP Audit Fields   | `CreatedAt`, `CreatedBy`, `ReasonForChange`, `VersionIndex` (21 CFR Part 11)                                      |
-| CLI & DX Tooling   | Cadence CLI (`dotnet cadence`) in `packages/cli/` built with `Spectre.Console`                                    |
+1. [Kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md): the normative model.
+   Every rule tagged `K-…` is an invariant that becomes a test.
+2. [ARCHITECTURE.md](ARCHITECTURE.md): target architecture and the running services today.
+3. [CONTEXT.md](CONTEXT.md): domain vocabulary.
+4. [CONTRIBUTING.md](CONTRIBUTING.md): workflow, local checks and pull requests.
 
 ---
 
-## Directory Target Rules for Generated Code
+## Product mission
 
-| Code type                           | Target directory                                                                    |
-| ----------------------------------- | ----------------------------------------------------------------------------------- |
-| Solution Root                       | `Cadence.sln`, `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig` |
-| Study authoring / MDR logic         | `apps/designer/`                                                                    |
-| Data capture / eCRF logic           | `apps/execution/`                                                                   |
-| OIDC Auth & Gateway routers         | `apps/gateway/`                                                                     |
-| Shared Domain & Core Ports          | `packages/engine_core/`, `packages/core-models/`                                    |
-| Cross-Service API Contracts         | `packages/contracts/`                                                               |
-| Security & Gateway HMAC Tokens      | `packages/security/`                                                                |
-| Centralized Test Fakes              | `packages/testing/`                                                                 |
-| Unit & Architecture Tests           | `tests/` (`Cadence.UnitTests`, `Cadence.ArchitectureTests`)                         |
-| Developer CLI & Interactive Wizards | `packages/cli/`, `scripts/`                                                         |
-| Git Pre-Commit Quality Gates        | `.githooks/`                                                                        |
-| Architecture Decision Records       | `docs/adr/`                                                                         |
-| Migration Playbook                  | `docs/MIGRATION_WORKFLOW.md`                                                        |
-| GxP compliance docs                 | `docs/SDLC/` (never edit manually — always via `dotnet cadence gxp sync`)          |
+Cadence is an **operating system for clinical research**: one kernel holding a single body of
+clinical truth, six engines (Knowledge, Execution, Evidence, Trust, Quality, Intelligence), and
+products such as EDC, CTMS, eTMF, RTSM, safety and standards conformance built as applications on
+them. No product owns clinical truth, and no representation (SDTM, ADaM, FHIR, the protocol PDF) is
+clinical truth (K-TRUTH-1).
 
----
+## Kernel rules that shape every change
 
-## Python Reference & Transcription Matrix
-
-> **Authoritative Playbook:** For the end-to-end 6-step service transcription recipe, project templates, and migration sequence, refer to `docs/MIGRATION_WORKFLOW.md`.
-
-When transcribing existing Python modules into .NET 10 C# implementations, agents must strictly follow these direct paradigm equivalents:
-
-| Python 3.14+ (Reference Pattern) | .NET 10 / C# 14 (Target Standard)                                | Migration Rule                                                                                            |
-| :------------------------------- | :--------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- |
-| `pydantic.BaseModel`             | `public record Model(...)` with init properties                  | Use immutable records with primary constructors and `System.Text.Json` source generator attributes.       |
-| `FastAPI` APIRouter              | `app.MapGroup("/api/v1/...")`                                    | Use ASP.NET Core 10 Minimal APIs with `TypedResults` (`Ok<T>`, `NotFound`, `BadRequest<ProblemDetails>`). |
-| `FastAPI Depends(...)`           | ASP.NET Core Native DI (`[FromServices]`, constructor injection) | Inject scoped services/ports via endpoint parameters or primary constructors.                             |
-| `FastAPI Middleware`             | Endpoint Filters (`IEndpointFilter`)                             | Apply cross-cutting GxP concerns (HMAC auth, trace context) via filter chains.                            |
-| `SQLAlchemy / SQLModel`          | `Microsoft.EntityFrameworkCore` (`DbContext`)                    | Define domain configurations with Fluent API (`IEntityTypeConfiguration<T>`).                             |
-| `.where(col.is_(True))` (E712)   | `.Where(x => x.IsActive)`                                        | EF Core evaluates strongly-typed boolean expressions to `IS TRUE` SQL on PostgreSQL.                      |
-| `SQLAlchemy Session`             | `IUnitOfWork` / `DbContext`                                      | Encapsulate mutations in Unit of Work; apply `.AsNoTracking()` to all query-only read operations.         |
-| `HTTPX AsyncClient`              | `IHttpClientFactory` + `HttpClient`                              | Use typed HTTP clients configured with transient fault retry policies.                                    |
-| `pytest` + `pytest-asyncio`      | `xunit.v3` (`[Fact]`, `[Theory]`)                                | Use async `Task` test signatures with `FluentAssertions` assertions.                                      |
-| `pytest-archon`                  | `ArchUnitNET` / Roslyn Architecture Analyzers                    | Enforce hexagonal architecture and zero-cross-service database imports at build time.                     |
-| `Ruff` (lint + format)           | `dotnet format` + `.editorconfig` + Roslyn Analyzers             | Code style and warnings are checked at build time; warnings treated as errors.                            |
+- **K-SCOPE-1:** a concept belongs in the kernel only if it explains the provenance, authority,
+  meaning or lifecycle of clinical evidence across more than one application. Otherwise it belongs to
+  an application.
+- **Forbidden redefinitions (spec §2.3):** applications never declare their own `Study`, `Site`,
+  `Participant`/`Subject`, `Observation`, `Organization`, `Person`, `Role`, `Delegation`, `Specimen`,
+  `Estimand` or `*AuditLog` types, and never use `string` study/site/participant IDs. Reference kernel
+  IDs (`StudyId`, `SiteId`, `ParticipantId`, … in `Cadence.Kernel.Abstractions`). Enforced by K-XS-1
+  in `tests/Architecture`; existing violations sit in a baseline that may only shrink.
+- **K-XS-2:** applications reference `Cadence.Kernel.Abstractions` only, never kernel persistence.
+- **Time (K-TIME-3):** never call `DateTime.Now/UtcNow` or `DateTimeOffset.Now/UtcNow` (banned in
+  [`BannedSymbols.txt`](BannedSymbols.txt)). Inject `Cadence.Kernel.Time.IClock`; use `FakeClock`
+  from `Cadence.Testing.Time` in tests.
+- **Hold structural changes that contradict the spec.** If a change needs the spec to change, raise it
+  on the kernel epic (#4719) instead of working around it.
 
 ---
 
-## Critical Coding Patterns (C# 14 / .NET 10)
+## Technical stack
 
-### 1. File-Scoped Namespaces & Using Directives Ordering
+| Concern | Technology |
+| --- | --- |
+| Language and runtime | C# 14 / .NET 10 (`net10.0`, SDK pinned in `global.json`) |
+| Web APIs | ASP.NET Core 10 Minimal APIs, `TypedResults`, endpoint filters (`IEndpointFilter`) |
+| Data modelling | `record` types, primary constructors, FluentValidation, `System.Text.Json` source generation |
+| Persistence | EF Core 10 + Npgsql on PostgreSQL 16+, GxP audit `SaveChangesInterceptor` |
+| Messaging | MassTransit with the EF Core transactional outbox (`apps/execution`) |
+| HTTP clients | `IHttpClientFactory` typed clients with Polly resilience pipelines |
+| Identity | Keycloak OIDC at the gateway; HMAC-signed caller identity to services (`packages/security`) |
+| Style and analysis | `.editorconfig`, `dotnet format`, NetAnalyzers, SonarAnalyzer, BannedApiAnalyzers; warnings are errors |
+| Dependencies | Central Package Management: `Directory.Packages.props`, `Directory.Build.props` |
+| Tests | xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers |
+| Clinical standards | CDISC USDM v3/v4, ODM, CDASH, SDTM/ADaM (Dataset-JSON) |
+| CLI | `packages/cli` (Spectre.Console), run with `pnpm cadence <command>` |
+| Frontend | Vue 3 + Vite (`apps/web`, `apps/subject-portal`, `packages/ui`) |
 
-Every C# file must use modern **file-scoped namespaces**. Using directives must be placed outside the namespace and sorted strictly:
+Neo4j is retired (ADR-2245); do not add Neo4j code.
 
-1. `System` and `System.*` namespaces — alphabetical
-2. Third-party library namespaces — alphabetical
-3. Solution first-party namespaces (`Cadence.*`) — alphabetical
+## Where code goes
+
+| Code | Directory |
+| --- | --- |
+| Kernel (IDs, value objects, `IClock`, domain, persistence) | `packages/kernel/` |
+| Kernel specification and migration inventories | `docs/kernel/` |
+| Data capture / EDC | `apps/execution/` |
+| Other product services (until dispositioned under #4787) | `apps/<service>/` |
+| OIDC gateway | `apps/gateway/` |
+| Shared domain utilities | `packages/engine_core/`, `packages/core-models/` |
+| Cross-service contracts | `packages/contracts/` |
+| Security, signing, gateway authentication | `packages/security/` |
+| Database helpers, audit interceptor | `packages/database/` |
+| Health checks and telemetry | `packages/telemetry/` |
+| Test fakes and helpers | `packages/testing/` |
+| Tests | `tests/` (`Cadence.UnitTests`, `Cadence.ArchitectureTests`, `Cadence.E2ETests`) |
+| Developer CLI and wizards | `packages/cli/`, `scripts/` |
+| Git hooks | `.githooks/` |
+| Architecture decision records | `docs/adr/` |
+| GxP/SDLC documents | `docs/SDLC/` (RTM and IQ/OQ/PQ report are generated; never edit them by hand) |
+
+---
+
+## Coding patterns
+
+### 1. Namespaces and using directives
+
+File-scoped namespaces only. Usings go outside the namespace, `System.*` first, then everything else
+alphabetically, with a blank line between groups (`.editorconfig`: `dotnet_sort_system_directives_first`,
+`dotnet_separate_import_directive_groups`). `dotnet format` enforces this.
 
 ```csharp
-// 1. System usings
-using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 
-// 2. Third-party usings
-using FluentValidation;
+using Cadence.Apps.Execution.Application.Queries;
+using Cadence.Apps.Execution.Endpoints.Filters;
+
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.EntityFrameworkCore;
 
-// 3. First-party Cadence usings
-using Cadence.Core.Domain;
-using Cadence.Execution.Domain.Models;
-using Cadence.Security.Signing;
-
-namespace Cadence.Execution.Endpoints;
-
-public static class SubjectEndpoints
-{
-    // ...
-}
+namespace Cadence.Apps.Execution.Endpoints;
 ```
 
----
+### 2. EF Core queries and audit
 
-### 2. Entity Framework Core 10 Query Rules & GxP Shadow Interceptor
+- Read-only queries use `.AsNoTracking()`.
+- Filter booleans with strongly typed predicates (`.Where(s => s.IsActive)`); EF Core translates them
+  to `IS TRUE`.
+- Every `DbContext` registration includes the GxP audit interceptor, which fills `CreatedAt`,
+  `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR Part 11). Mutating entities implement
+  `IGxPAuditable`.
+- Register contexts with `AddCadencePostgresDbContext` (`packages/database`). It resolves
+  `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`, and fails outside `Development`
+  when neither is set.
 
-> **GxP-critical.** Under 21 CFR Part 11, every entity state mutation must capture immutable audit fields. Read queries must never cause connection leaks or unindexed client-side evaluation.
+### 3. Nullability and immutability
 
-1. **Read Queries Must Use `.AsNoTracking()`:**
-
-   ```csharp
-   // ✔ CORRECT — Zero tracking overhead for read operations
-   var subjects = await dbContext.Subjects
-       .AsNoTracking()
-       .Where(s => s.SiteId == siteId && s.IsActive)
-       .ToListAsync(cancellationToken);
-   ```
-
-2. **GxP Audit Interceptor (`ISaveChangesInterceptor`):**
-   All `DbContext` registrations must include the Cadence GxP Audit Interceptor to automatically populate `CreatedAt`, `CreatedBy`, `ReasonForChange`, and `VersionIndex` before saving changes.
-
----
-
-### 3. Nullable Reference Types & Immutability
-
-The solution enforces `<Nullable>enable</Nullable>` and `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-
-- Use primary constructors for domain records and service classes.
-- Use `init` property accessors on data transfer records.
-- Never suppress nullable warnings with `#pragma warning disable CS8618` without documented GxP justification.
+`<Nullable>enable</Nullable>` and `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` apply
+solution-wide. Use primary constructors and `init` accessors on DTO records. Do not suppress nullable
+warnings (`#pragma warning disable CS8618`) without a documented GxP justification.
 
 ```csharp
-// ✔ CORRECT — Strongly typed, immutable DTO with primary constructor
 public record CreateSubjectCommand(
-    string SiteId,
+    string SiteCode,
     string SubjectIdentifier,
-    DateTime DateOfBirth,
-    string ReasonForChange
-);
+    DateOnly DateOfBirth,
+    string ReasonForChange);
 ```
 
----
+### 4. Minimal API endpoints
 
-### 4. Minimal API Route Definition & Typed Results
+No MVC controllers. Group routes with `MapGroup("/api/v1/…")`, return `TypedResults`, declare
+`Produces`/`ProducesProblem`, and add endpoint filters for cross-cutting rules (for example
+`ChangeReasonHeaderFilter` in `apps/execution/src/Endpoints/Filters`). See
+`apps/execution/src/Endpoints/QueryEndpoints.cs` for a complete example.
 
-Avoid classic MVC controllers. Standardize exclusively on ASP.NET Core 10 Minimal APIs with strongly-typed endpoint results and endpoint filters:
+### 5. Identity and authorization
 
-```csharp
-public static class ClinicalObservationEndpoints
-{
-    public static RouteGroupBuilder MapClinicalObservationEndpoints(this RouteGroupBuilder group)
-    {
-        group.MapPost("/", CreateObservation)
-            .WithName("CreateClinicalObservation")
-            .WithSummary("Registers an eCRF clinical observation.")
-            .AddEndpointFilter<GatewayHmacValidationFilter>()
-            .Produces<ObservationDto>(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+- Every service calls `builder.Services.AddCadenceSecurity()` and `app.UseCadenceSecurity()`. Only
+  health, status and development API-doc endpoints may be `AllowAnonymous()`.
+- Take the caller's identity and roles from the verified claims (for example
+  `apps/execution/src/Endpoints/CallerIdentity.cs`), never from request bodies or unsigned headers.
+- Never add a default or fallback secret. `GATEWAY_SECRET` is required at startup (ADR-2256).
 
-        return group;
-    }
+### 6. Requirement traceability in tests (21 CFR Part 11)
 
-    public static async Task<Results<Created<ObservationDto>, BadRequest<ProblemDetails>>> CreateObservation(
-        CreateObservationRequest request,
-        [FromServices] IObservationApplicationService service,
-        CancellationToken ct)
-    {
-        var result = await service.RecordObservationAsync(request, ct);
-        return result.IsSuccess
-            ? TypedResults.Created($"/api/v1/observations/{result.Value.Id}", result.Value)
-            : TypedResults.BadRequest(result.ToProblemDetails());
-    }
-}
-```
-
----
-
-### 5. Mandatory 21 CFR Part 11 Traceability in Tests
-
-Every test validating a regulatory or system requirement must declare requirement traceability using **both** XML documentation comments and strongly-typed `[GxPRequirement]` attributes:
+Tests that verify a regulatory or system requirement declare it twice: an `@req:` tag in the XML doc
+comment and a `[GxPRequirement]` attribute (`Cadence.Testing`). `pnpm cadence gxp sync` turns these
+into the Requirements Traceability Matrix.
 
 ```csharp
+/// <summary>
+/// Enrolling a subject writes an audit entry naming the authenticated user.
+/// @req:PRD-SYS-053
+/// </summary>
 [Fact]
 [Trait("Category", "GxP_OQ")]
 [GxPRequirement("PRD-SYS-053")]
-public async Task RegisterSubject_WithValidPayload_PersistsAuditTrailAndAdvancesState()
+public async Task EnrollSubject_WritesAuditEntryWithCaller()
 {
-    /// <summary>
-    /// Validates that subject registration generates an immutable audit record with user identity.
-    /// @req:PRD-SYS-053
-    /// </summary>
-
-    // Arrange
-    var repository = new InMemorySubjectRepository();
-    var subject = SubjectFactory.Create(siteId: "SITE-101", status: "ENROLLED");
-
-    // Act
-    await repository.SaveAsync(subject);
-
-    // Assert
-    var persisted = await repository.GetByIdAsync(subject.Id);
-    persisted.Should().NotBeNull();
-    persisted!.VersionIndex.Should().Be(1);
+    // Arrange, Act, Assert with FluentAssertions
 }
 ```
 
----
+### 7. Test infrastructure (`packages/testing`)
 
-### 6. Centralized Test Infrastructure (`Cadence.Testing`)
+Use the shared helpers instead of ad-hoc fakes ([docs/TESTING.md](docs/TESTING.md) describes each one):
 
-When writing tests across microservices or libraries, agents must use `Cadence.Testing` rather than defining ad-hoc mock payloads:
+- `Cadence.Testing.InMemoryRepository<T>` for application-service tests without a database.
+- `Cadence.Testing.Security.TestSecurityContext` (`CreateHmacHeaders`, `CreatePrincipal`,
+  `CreateSignedClient`, `UseTestGatewaySecret`) for authenticated endpoint tests.
+- `Cadence.Testing.Time.FakeClock` for deterministic time.
+- `Cadence.Testing.GoldenMaster` for golden-master comparisons against the Python reference behaviour.
 
-1. **Domain Entity Factories:** Use `SubjectFactory`, `ObservationFactory`, `ProtocolDefinitionFactory` from `Cadence.Testing.Factories`.
-2. **In-Memory Repository Fakes:** Use `InMemoryRepository<T>` from `Cadence.Testing.Fakes` to test application use cases without touching live databases.
-3. **Security Test Context:** Use `TestSecurityContext.CreateHmacHeaders(...)` from `Cadence.Testing.Security`.
+PostgreSQL integration tests need `CADENCE_TEST_POSTGRES=<connection string>` or
+`CADENCE_TEST_DOCKER=1`; without either they are skipped, never faked.
 
----
+### 8. Service boundaries and contracts
 
-### 7. REST API-First Architecture & Microservice Decoupling
+- No project references to another service's persistence layer.
+- Cross-service calls go through typed clients and DTOs in `packages/contracts`, registered with
+  `IHttpClientFactory` and Polly, and carry HMAC signatures from `Cadence.Security`.
+- In the target architecture most of these calls disappear: applications share kernel concepts
+  in-process (ADR-2244). Do not build new cross-service synchronisation for kernel concepts.
 
-To ensure proper GxP boundaries across microservices:
+### 9. Layer purity
 
-1. **No Sibling Database References:** Cross-boundary project references to sibling service persistence layers are strictly prohibited.
-2. **Cross-Service Communication via REST:** All cross-service operations must be executed via typed HTTP clients calling well-defined REST endpoints.
-3. **HMAC Gateway Token Authentication:** Every cross-service HTTP request must include internal gateway signatures generated via `Cadence.Security.Signing`.
+Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoints/`,
+`Microsoft.AspNetCore`, Npgsql or EF Core. `Application/` depends on `Domain/` and ports only.
+`tests/Cadence.ArchitectureTests.csproj` enforces this and the kernel rules above.
 
----
+### 10. Database migrations
 
-### 8. Architecture Unit Tests (`ArchUnitNET`) & Boundary Purity
+- Add a migration: `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` (or
+  `scripts/manage_migrations.sh`). Migrations go to `Infrastructure/Persistence/Migrations/`.
+- Generate an idempotent SQL script for review: `pwsh scripts/manage_migrations.ps1 script <service>`.
+- Verify migrations against real PostgreSQL (see pattern 7).
 
-Clean Architecture layers must maintain strict directional dependency flow:
+### 11. Porting Python reference sources
 
-- `Domain/` (and `Cadence.Core.Domain`) must have **zero** dependencies on `Infrastructure/`, `Endpoints/`, `Microsoft.AspNetCore`, or database drivers (`Npgsql`, `EntityFrameworkCore`).
-- `Application/` depends only on `Domain/` and core ports; it must never reference `Endpoints/` or UI presentation logic.
-- Every mutating entity must implement `IGxPAuditable`.
-- Layer purity is enforced at build/test time via `tests/Cadence.ArchitectureTests.csproj`.
+Some packages still contain the Python implementation as a behavioural reference, deleted as each C#
+port is verified (#4789). Follow [docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md). Equivalents:
 
----
+| Python | .NET 10 |
+| --- | --- |
+| `pydantic.BaseModel` | `record` with primary constructor and `System.Text.Json` source generation |
+| FastAPI `APIRouter` / `Depends` / middleware | `MapGroup` / DI / `IEndpointFilter` |
+| SQLAlchemy / SQLModel session | EF Core `DbContext` with `IEntityTypeConfiguration<T>` |
+| `.where(col.is_(True))` | `.Where(x => x.IsActive)` |
+| `httpx.AsyncClient` | `IHttpClientFactory` typed client |
+| `pytest` / `pytest-asyncio` | xUnit v3 `[Fact]`/`[Theory]` with async `Task` tests |
+| `pytest-archon` | ArchUnitNET |
+| Ruff | `dotnet format` + analyzers |
 
-### 9. Cross-Service Communication via Typed Contracts (`Cadence.Contracts`)
-
-Cross-service HTTP requests must never use raw, unvalidated string URLs:
-
-- All service-to-service DTOs and client interfaces (e.g. `IExecutionApiClient`) must reside in `packages/contracts/`.
-- Typed clients must be registered in DI using `IHttpClientFactory` and configured with `Polly` exponential backoff and transient circuit breakers.
-- Every cross-service request must carry HMAC signatures generated via `Cadence.Security.Signing.HmacSigner`.
-
----
-
-### 10. Database Schema Migrations & Tooling (`scripts/manage_migrations.ps1`)
-
-Entity Framework Core migrations must follow a disciplined, audited change management protocol:
-
-- Use `powershell .\scripts\manage_migrations.ps1 add <service> <MigrationName>` to generate migrations under `Infrastructure/Persistence/Migrations/`.
-- Always generate idempotent SQL scripts (`scripts/manage_migrations.ps1 script <service>`) for DBA inspection and GxP qualification.
-- Migrations must be verified in test suites using Testcontainers PostgreSQL instances.
-
----
-
-### 11. Interactive Developer Wizards (`dotnet cadence wizard`)
-
-Developers and agents should leverage the interactive wizard suite for operational tasks:
-
-- `dotnet cadence wizard onboarding`: Guided tour for SDK, HTTPS dev certs, datastores, and `.env`.
-- `dotnet cadence wizard migrate <service>`: Scaffolds Single-Assembly Clean Architecture layout and project boilerplate.
-- `dotnet cadence wizard decommission <service>`: Guided sequence to retire and safely archive obsolete services.
+Never re-add Python code, Python tooling or compatibility shims.
 
 ---
 
-### 12. ADR Supersession & Living Documentation Lifecycle
+## Architecture decision records
 
-Whenever a .NET 10 implementation supersedes a legacy Python architectural pattern:
+- New decision: `pnpm cadence scaffold adr "<title>"`, then add it to [docs/adr/index.md](docs/adr/index.md).
+- ADR numbers are unique; `pnpm cadence check adrs` fails on duplicates, missing `# ADR-NNNN:` headings
+  and broken index links.
+- When a decision is superseded: set the old ADR's status to
+  `Superseded by ADR-XXXX` (linking the new ADR), add a `> [!NOTE]` callout at the top, annotate its index entry with
+  `*(Superseded by ADR-XXXX)*`, and update [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTEXT.md](CONTEXT.md).
 
-1. Update the legacy ADR status in `docs/adr/` to `* **Status:** Superseded by [ADR-XXXX](path-to-new-adr-placeholder.md)`.
-2. Add the standard `> [!NOTE]` supersession callout at the top.
-3. Annotate the entry in `docs/adr/index.md` with `*(Superseded by ADR-XXXX)*`.
-4. Validate with `dotnet cadence check`.
-5. Update `ARCHITECTURE.md` service status and `CONTEXT.md` domain concepts.
+## Documentation is part of the change
 
----
-
-### 13. Solution Organization & Central Package Management
-
-All microservices under `apps/` and packages under `packages/` are enrolled directly into `Cadence.sln`. Dependencies must use Central Package Management (CPM) via `Directory.Packages.props`, and solution-wide build properties via `Directory.Build.props`.
-
----
-
-### 14. Pre-Commit Quality Gate Enforcement
-
-The repository quality gates and CI pipelines run native .NET 10 checks before any commit is created:
-
-1. `dotnet format Cadence.sln --verify-no-changes` verifies C# style, namespace ordering, and `.editorconfig` rules.
-2. `dotnet cadence check` validates all 21 native quality sentinels including ADR integrity, architecture drift, layer purity, and duplication.
-3. `dotnet cadence fix --all` automatically formats C# code, aligns schemas, and indexes ADR records.
+Every pull request updates the documentation its change affects, in the same PR: the service or
+package README, `ARCHITECTURE.md`, `CONTEXT.md`, `docs/ENVIRONMENT_VARIABLES.md` for new settings, an
+ADR for a new decision, and the [documentation index](docs/DOCUMENTATION_INDEX.md) for new documents.
+Regenerated GxP documents come from `pnpm cadence gxp sync`, never hand edits.
 
 ---
 
-## Primary Developer & Agent CLI Commands (`dotnet cadence`)
+## Commands
 
-Agents should use the native Cadence CLI tool for development, diagnostics, and testing:
+The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` or
+`dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`.
 
-| Task                   | Command                                                       | Description                                                         |
-| :--------------------- | :------------------------------------------------------------ | :------------------------------------------------------------------ |
-| Fast Unit Tests        | `dotnet cadence test --fast`                                  | Runs unit tests across all projects bypassing heavy containers      |
-| Architecture Sentinels | `dotnet test tests/Cadence.ArchitectureTests.csproj`          | Verifies Clean Architecture layer boundaries via ArchUnitNET        |
-| Integration Tests      | `dotnet cadence test --integration`                           | Runs integration test suites with Testcontainers (PG & Neo4j)       |
-| Code Formatting        | `dotnet format`                                               | Verifies and auto-formats C# code against `.editorconfig` rules     |
-| Developer Onboarding   | `dotnet cadence wizard onboarding`                            | Interactive .NET 10 setup, certs, datastores, and environment check |
-| Service Migration      | `dotnet cadence wizard migrate <name>`                        | Interactive scaffolding for Clean Architecture microservices        |
-| Manage Migrations      | `powershell .\scripts\manage_migrations.ps1 add <svc> <name>` | Scaffolds EF Core PostgreSQL migrations                             |
-| Multi-Engine Seeding   | `dotnet cadence db seed --tier full`                          | Seeds multi-engine clinical test scenarios across Neo4j and PG      |
-| GxP Sync               | `dotnet cadence gxp sync`                                     | Executes tests, parses TRX/JUnit XML, regenerates RTM docs          |
+| Task | Command |
+| --- | --- |
+| Build | `dotnet build Cadence.sln` |
+| Unit tests | `dotnet test tests/Cadence.UnitTests.csproj` |
+| Unit tests without integration | `pnpm cadence test --fast` (filters `Category!=Integration`) |
+| Integration tests only | `pnpm cadence test --integration` |
+| Architecture tests | `dotnet test tests/Cadence.ArchitectureTests.csproj` |
+| Formatting | `dotnet format Cadence.sln --verify-no-changes` |
+| All quality gates (pre-commit) | `pnpm cadence check` |
+| One gate | `pnpm cadence check <gate>` (for example `adrs`, `markdown`, `readmes`, `arch-drift`) |
+| Auto-fix | `pnpm cadence fix` |
+| Diagnostics | `pnpm cadence doctor --auto-fix` |
+| Traceability matrix | `pnpm cadence gxp sync` (validate only: `pnpm cadence gxp validate`) |
+| Onboarding wizard | `pnpm cadence wizard onboarding` or `make wizard` |
+| Database reset / seed / status | `pnpm cadence db reset`, `db seed`, `db status` |
+| Migrations | `pwsh scripts/manage_migrations.ps1 add <service> <name>` |
 
----
+The generated reference for every command is [docs/cli.md](docs/cli.md).
 
-## GxP Compliance Sync Protocol
+## GxP compliance sync
 
-The CI `compliance` gate regenerates the Requirements Traceability Matrix (RTM) and diffs it against checked-in files.
-
-### Running GxP Sync
-
-```bash
-dotnet cadence gxp sync
-```
-
-This runs test execution, parses `@req:PRD-SYS-xxx` tags and `.trx` / JUnit results, regenerates `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`, and stages them in git.
+`pnpm cadence gxp sync` runs the tests, reads the `@req:` tags and test results, regenerates
+`docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`, and
+stages them. Run it whenever you add or change requirement-tagged tests.

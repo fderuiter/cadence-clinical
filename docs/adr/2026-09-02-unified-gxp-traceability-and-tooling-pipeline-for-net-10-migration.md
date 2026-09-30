@@ -1,4 +1,6 @@
-# ADR-2235: Unified GxP Traceability and Tooling Pipeline for .NET 10 Migration
+# ADR-2429: Unified GxP Traceability and Tooling Pipeline for .NET 10 Migration
+
+Also known as: ADR-2235 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-09-02
@@ -9,7 +11,7 @@
 
 ## 1. Context & Problem Statement
 
-Cadence Clinical Research Software is executing a clean-break architectural transition to **.NET 10 (C# 14 / ASP.NET Core 10)** per [ADR-2233](2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) and [ADR-2234](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md). As documented in `docs/MIGRATION_WORKFLOW.md`, microservices are systematically transcribed using a 6-step SOP from Python 3.14+ to .NET 10.
+Cadence Clinical Research Software is executing a clean-break architectural transition to **.NET 10 (C# 14 / ASP.NET Core 10)** per [ADR-2233](2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) and [ADR-2428](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md). As documented in `docs/MIGRATION_WORKFLOW.md`, microservices are systematically transcribed using a 6-step SOP from Python 3.14+ to .NET 10.
 
 However, a comprehensive infrastructure and workflow audit identified critical gaps across developer and CI pipelines:
 1. **GxP Compliance & RTM Generation Gap:** `scripts/generate_rtm.py` and `scripts/sync_gxp.py` only scan `.py` test files with pytest, ignoring `.cs` test files (`[GxPRequirement("...")]`, `/// @req:...`) and failing to ingest xUnit/TRX test execution results. As tests transition to .NET, the Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`) drops requirement coverage.

@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Metadata-Driven Grid Layouts via Jinja2 Templating
+# ADR-2273: Metadata-Driven Grid Layouts via Jinja2 Templating
 
 ## Status
 

@@ -1,4 +1,6 @@
-# ADR-117: Offline Data Ingestion & Sync Engine
+# ADR-2416: Offline Data Ingestion & Sync Engine
+
+Also known as: ADR-117 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-27

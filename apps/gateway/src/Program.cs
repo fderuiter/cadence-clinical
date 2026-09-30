@@ -111,23 +111,23 @@ var routes = new[]
 
 var clusters = new[]
 {
-    new ClusterConfig { ClusterId = "designer-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = designerUrl } } } },
-    new ClusterConfig { ClusterId = "execution-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = executionUrl } } } },
-    new ClusterConfig { ClusterId = "etmf-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = etmfUrl } } } },
-    new ClusterConfig { ClusterId = "interop-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = interopUrl } } } },
-    new ClusterConfig { ClusterId = "quality-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = qualityUrl } } } },
-    new ClusterConfig { ClusterId = "notifications-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = notificationsUrl } } } },
-    new ClusterConfig { ClusterId = "ctms-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = ctmsUrl } } } },
-    new ClusterConfig { ClusterId = "safety-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = safetyUrl } } } },
-    new ClusterConfig { ClusterId = "tickets-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = ticketsUrl } } } },
-    new ClusterConfig { ClusterId = "eisf-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = eisfUrl } } } },
-    new ClusterConfig { ClusterId = "econsent-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = econsentUrl } } } },
-    new ClusterConfig { ClusterId = "org-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = orgUrl } } } },
-    new ClusterConfig { ClusterId = "fileshare-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = fileshareUrl } } } },
-    new ClusterConfig { ClusterId = "imaging-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = imagingUrl } } } },
-    new ClusterConfig { ClusterId = "knowledge-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = knowledgeUrl } } } },
-    new ClusterConfig { ClusterId = "payments-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = paymentsUrl } } } },
-    new ClusterConfig { ClusterId = "ai-gateway-cluster", Destinations = new Dictionary<string, DestinationConfig>(StringComparer.OrdinalIgnoreCase) { { "destination", new DestinationConfig { Address = aiGatewayUrl } } } }
+    GatewayClusters.Create("designer-cluster", designerUrl, builder.Configuration),
+    GatewayClusters.Create("execution-cluster", executionUrl, builder.Configuration),
+    GatewayClusters.Create("etmf-cluster", etmfUrl, builder.Configuration),
+    GatewayClusters.Create("interop-cluster", interopUrl, builder.Configuration),
+    GatewayClusters.Create("quality-cluster", qualityUrl, builder.Configuration),
+    GatewayClusters.Create("notifications-cluster", notificationsUrl, builder.Configuration),
+    GatewayClusters.Create("ctms-cluster", ctmsUrl, builder.Configuration),
+    GatewayClusters.Create("safety-cluster", safetyUrl, builder.Configuration),
+    GatewayClusters.Create("tickets-cluster", ticketsUrl, builder.Configuration),
+    GatewayClusters.Create("eisf-cluster", eisfUrl, builder.Configuration),
+    GatewayClusters.Create("econsent-cluster", econsentUrl, builder.Configuration),
+    GatewayClusters.Create("org-cluster", orgUrl, builder.Configuration),
+    GatewayClusters.Create("fileshare-cluster", fileshareUrl, builder.Configuration),
+    GatewayClusters.Create("imaging-cluster", imagingUrl, builder.Configuration),
+    GatewayClusters.Create("knowledge-cluster", knowledgeUrl, builder.Configuration),
+    GatewayClusters.Create("payments-cluster", paymentsUrl, builder.Configuration),
+    GatewayClusters.Create("ai-gateway-cluster", aiGatewayUrl, builder.Configuration),
 };
 
 builder.Services.AddReverseProxy()

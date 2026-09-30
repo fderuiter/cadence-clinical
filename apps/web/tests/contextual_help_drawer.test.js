@@ -68,6 +68,8 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
   };
 
   beforeEach(() => {
+    // Uses the demo personas and roles (demo builds only, #4523).
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     pinia = createPinia();
     setActivePinia(pinia);
     authStore = useAuthStore();
@@ -346,6 +348,13 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
         },
       });
 
+      // The shared router's initial navigation ("/" redirects to a lazily
+      // loaded landing view) can settle at any point after the first mount.
+      // Since #4734 a route change intentionally clears the drawer's search
+      // input and results, so let it settle before exercising search.
+      await router.isReady();
+      await wrapper.vm.$nextTick();
+
       // Open search
       await wrapper.find(".btn-icon-toggle").trigger("click");
       const searchInputEl = wrapper.find("#help-search-input");
@@ -355,8 +364,9 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       await searchInputEl.setValue("safety");
       // The search is debounced by 250 ms; wait for it rather than sleeping a
       // fixed time, which fails when the suite runs under load.
-      await vi.waitFor(() =>
-        expect(wrapper.text()).toContain("Search Results (1)")
+      await vi.waitFor(
+        () => expect(wrapper.text()).toContain("Search Results (1)"),
+        { timeout: 2000 }
       );
       expect(wrapper.text()).toContain("SOP-SAF-301: Adverse Events");
 
@@ -464,6 +474,8 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
       expect(wrapper.find("#contextual-help-drawer").exists()).toBe(true);
       expect(wrapper.text()).toContain("Clinical Guidance & SOPs");
-    });
+      // Navigating lazily imports the route views, which can exceed the
+      // default 5s timeout on a loaded machine.
+    }, 20000);
   });
 });

@@ -31,6 +31,9 @@ Only `/healthz` and `/api/v1/status` are anonymous on the gateway itself.
 | `OIDC_METADATA_ADDRESS` | no | Internal discovery URL when it differs from the public issuer. |
 | `OIDC_REQUIRE_HTTPS_METADATA` | no (default `true`) | Set `false` only for local Keycloak over HTTP. |
 | `<SERVICE>_SERVICE_URL` | no | Backend base URLs, e.g. `EXECUTION_SERVICE_URL`. |
+| `GATEWAY_PROXY_TIMEOUT_SECONDS` | no (default `30`) | Idle time after which a proxied request fails with 504. |
+| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | no (default `10`) | How often each service's `/healthz/ready` is probed. |
+| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS` | no (default `5`) | Time limit for one probe. |
 
 ## Routes
 
@@ -65,6 +68,17 @@ default to `http://localhost:<port>` (the ports in [docs/LOCAL_DEV_ENVIRONMENT.m
 prefix its service does not map, or when a service maps an `/api/v1` endpoint no route reaches. Add or remove a
 route in `src/Program.cs` together with the endpoints it serves
 ([ADR-2448](../../docs/adr/2026-09-29-gateway-routes-verified-against-service-endpoints.md)).
+
+## Timeouts and health checks
+
+Every cluster gets the same policy from `src/GatewayClusters.cs`
+([ADR-2451](../../docs/adr/2026-09-29-gateway-timeouts-and-health-checked-clusters.md)):
+
+- A request fails with **504** once its service has sent nothing for `GATEWAY_PROXY_TIMEOUT_SECONDS`.
+- The gateway probes each service's `/healthz/ready`. After two failed probes in a row it answers **503** for that
+  service without forwarding, until a probe succeeds again. Repeated connection failures also take a service out for
+  30 seconds.
+- The gateway never retries a request, so a write is never sent twice.
 
 ## Tests
 

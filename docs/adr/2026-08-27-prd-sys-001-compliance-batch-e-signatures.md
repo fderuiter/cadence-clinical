@@ -1,4 +1,6 @@
-# ADR-118: 21 CFR Part 11 Batch Electronic Signatures for PI Casebook Sign-Off
+# ADR-2417: 21 CFR Part 11 Batch Electronic Signatures for PI Casebook Sign-Off
+
+Also known as: ADR-118 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-27

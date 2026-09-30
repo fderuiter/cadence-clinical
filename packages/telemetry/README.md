@@ -1,49 +1,28 @@
-# Telemetry Package
+# Cadence.Telemetry
 
-## Overview
+Shared web host defaults for the .NET services: JSON console logging, OpenTelemetry tracing and metrics, ProblemDetails, OpenAPI, health probes and a `traceparent` response header.
 
-Shared OpenTelemetry telemetry module
+## Project
 
----
+- Project: `packages/telemetry/src/Cadence.Telemetry.csproj` (assembly `Cadence.Telemetry`, namespace `Cadence.Telemetry`).
+- `CadenceTelemetryExtensions`:
+  - `AddCadenceWebDefaults()`: JSON console logging, OpenTelemetry (ASP.NET Core, HttpClient, runtime and Npgsql instrumentation), health checks, ProblemDetails and OpenAPI. OTLP export of traces, metrics and logs is enabled only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (the Aspire AppHost sets it); `OTEL_SERVICE_NAME` overrides the service name.
+  - `UseCadenceWebDefaults()`: exception handler, `traceparent` response header, OpenAPI and Scalar UI in Development only, and the probe endpoints.
+  - `MapCadenceProbeEndpoints()`: `GET /healthz/live` (no checks) and `GET /healthz/ready` (checks tagged `ready`, such as a service's DbContext).
+  - `MapCadenceHealthAndStatusEndpoints(serviceName, routePrefix, ...)`: anonymous `GET /healthz` and `GET /api/v1/{routePrefix}/status`.
+- Python reference sources remain in this folder until each C# port is verified (issue #4789): `logging.py`, `tracer.py`, `__init__.py`, `pyproject.toml`. They are not the implementation.
 
-## Architectural Boundaries
+## Key dependencies
 
-The `telemetry` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/telemetry/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+- Framework reference `Microsoft.AspNetCore.App`.
+- Packages: `OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Instrumentation.Http`, `OpenTelemetry.Instrumentation.Runtime`, `OpenTelemetry.Exporter.OpenTelemetryProtocol`, `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`.
 
----
+## Referenced by
 
-## Public APIs / Exports
+Every .NET service under `apps/` except the AppHost.
 
-Key exported interfaces and components:
-- JSONTraceLogFormatter
-- configure_structured_logging
-- extract_trace_context
-- get_tracer
-- inject_trace_context
-- setup_telemetry
-- JSONTraceLogFormatter
-- configure_structured_logging
-
----
-
-## Dependencies
-
-This package relies on the following standard dependencies:
-- `opentelemetry-api>=1.20.0`
-- `opentelemetry-instrumentation-fastapi>=0.41b0`
-- `opentelemetry-instrumentation-httpx>=0.41b0`
-- `opentelemetry-sdk>=1.20.0`
-- `packages-security`
-
----
-
-## Local Development & Testing
-
-Run unit and contract tests for this package:
+## Tests
 
 ```bash
-uv run pytest packages/telemetry
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.TelemetryUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.LoggerMessageGeneratorTests"
 ```

@@ -1,4 +1,4 @@
-# ADR 2026-07-22: Schema Mapping Design
+# ADR-2275: Schema Mapping Design
 
 ## Status
 

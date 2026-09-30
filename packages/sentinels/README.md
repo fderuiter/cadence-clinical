@@ -1,45 +1,26 @@
-# Sentinels Package
+# Cadence.Sentinels
 
-## Overview
+Small engine for running registered quality-gate checks concurrently and collecting their results.
 
-Cadence Clinical Architecture Sentinels
+## Project
 
----
+- Project: `packages/sentinels/src/Cadence.Sentinels.csproj` (assembly `Cadence.Sentinels`, namespace `Cadence.Sentinels`).
+- `SentinelBase.cs`: `ISentinelCheck` and the `SentinelResult` record.
+- `SentinelEngine.cs`: `Register(ISentinelCheck)` and `ExecuteAllAsync(targetGate, ct)`.
+- Python reference sources remain in this folder until each C# port is verified (issue #4789): `base.py`, `engine.py`, `__init__.py`, `pyproject.toml`. They are not the implementation.
 
-## Architectural Boundaries
+## Key dependencies
 
-The `sentinels` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/sentinels/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+None beyond the .NET base library.
 
----
+## Referenced by
 
-## Public APIs / Exports
+The three test projects only. The CLI's `check` command uses its own `QualityGateOrchestrator` rather than this engine.
 
-Key exported interfaces and components:
-- SentinelCheck
-- SentinelEngine
-- SentinelResult
-- SentinelCheck
-- SentinelEngine
-- SentinelResult
+## Tests
 
----
-
-## Dependencies
-
-This package relies on the following standard dependencies:
-- `packages-cli`
-- `packages-tooling-core`
-- `pydantic>=2.0.0`
-
----
-
-## Local Development & Testing
-
-Run unit and contract tests for this package:
+Covered by `tests/Packages/PortedPackagesUnitTests.cs`:
 
 ```bash
-uv run pytest packages/sentinels
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
 ```

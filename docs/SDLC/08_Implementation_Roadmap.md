@@ -1,5 +1,8 @@
 # Cadence Clinical: Global Enterprise Implementation Roadmap & Competitive Superiority Blueprint
 
+> [!WARNING]
+> **Status: superseded.** The current roadmap is [kernel specification §15](../kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap), tracked in epic #4719. This document is kept as the earlier product vision.
+
 ## 1. Executive Vision & Market Positioning
 
 Cadence Clinical is engineered as the world's first **Sovereign, Metadata-Compiled All-in-One eClinical Platform**. Powered by a **CDISC USDM v3.0/v4.0 Graph Spine (Neo4j)**, an **Async PostgreSQL Execution Engine**, and a **Reactive Clinical Event Spine**, Cadence eliminates the architectural fragmentation, multi-week amendment downtime, and batch synchronization lag inherent to legacy incumbent suites (Veeva Vault Clinical, Medidata Clinical Cloud, Oracle Clinical One).

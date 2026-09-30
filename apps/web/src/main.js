@@ -4,7 +4,8 @@ import { createPinia } from "pinia";
 import App from "./App.vue";
 import { router } from "./router";
 import Keycloak from "keycloak-js";
-import { useAuthStore } from "./stores/auth";
+import { DEMO_IDENTITY, DEMO_ROLES, useAuthStore } from "./stores/auth";
+import { isDemoBuild } from "./utils/demoMode";
 import { initHoverDetection } from "ui";
 import { resolveAssetUrl } from "./utils/url";
 import { vKeyboardClick } from "./directives/keyboardClick";
@@ -60,82 +61,57 @@ const checkKeycloakReachable = async () => {
   }
 };
 
-if (import.meta.env.MODE === "demo") {
+// Mounts without a session when Keycloak cannot be used, so the login page can say so. Only a demo build
+// falls back to the offline demo identity (#4523).
+const mountWithoutIdentityProvider = (reason, err) => {
+  console.error(
+    `Keycloak unavailable (${reason}); signing in is disabled.`,
+    err ?? ""
+  );
+  window.keycloakInstance = null;
+  authStore.isDemoMode = false;
+  authStore.setAuth(null);
+  app.mount("#app");
+};
+
+if (isDemoBuild()) {
   console.log(
-    "Running in dedicated public demo mode. Seeding mock clinical credentials and mounting instantly."
+    "Demo build: seeding the offline demo identity; API calls may be served by the MSW mock worker."
   );
   authStore.isDemoMode = true;
   authStore.isAuthenticated = true;
-  authStore.user = {
-    username: "fderuiter",
-    email: "fderuiter@example.com", // deid-ignore
-    firstName: "Frans",
-    lastName: "de Ruiter",
-    id: "fderuiter-id-12345",
-  };
-  authStore.rawRoles = [
-    "Sponsor Admin",
-    "Sponsor Designer",
-    "CRA",
-    "Data Manager",
-    "Site Investigator",
-    "Auditor",
-  ];
+  authStore.user = { ...DEMO_IDENTITY };
+  authStore.rawRoles = [...DEMO_ROLES];
   authStore.persist();
   app.mount("#app");
 } else {
   checkKeycloakReachable().then((reachable) => {
-    const isProduction =
-      (import.meta.env.PROD || import.meta.env.MODE === "production") &&
-      import.meta.env.MODE !== "demo";
-    if (reachable) {
-      keycloak
-        .init({
-          onLoad: "check-sso",
-          silentCheckSsoRedirectUri: resolveAssetUrl("silent-check-sso.html"),
-          pkceMethod: "S256",
-        })
-        .then((authenticated) => {
-          console.log(`Keycloak initialized. Authenticated: ${authenticated}`);
-          authStore.setAuth(keycloak);
-          app.mount("#app");
-        })
-        .catch((err) => {
-          console.error("Keycloak initialization failed:", err);
-          if (isProduction) {
-            authStore.isDemoMode = false;
-            throw new Error(
-              "Production lockdown: Keycloak OIDC initialization failed. Refusing to run in offline demo mode."
-            );
-          } else {
-            authStore.isDemoMode = true;
-            app.mount("#app");
-          }
-        });
-    } else {
-      if (isProduction) {
-        authStore.isDemoMode = false;
-        console.error(
-          "Production lockdown: Keycloak server is offline. Refusing to start in offline demo mode."
-        );
-        throw new Error("Production lockdown: Keycloak server is offline.");
-      } else {
-        console.log(
-          "Keycloak server is offline. Mounting app in offline/demo mode."
-        );
-        authStore.isDemoMode = true;
-        app.mount("#app");
-      }
+    if (!reachable) {
+      mountWithoutIdentityProvider("server unreachable");
+      return;
     }
+    keycloak
+      .init({
+        onLoad: "check-sso",
+        silentCheckSsoRedirectUri: resolveAssetUrl("silent-check-sso.html"),
+        pkceMethod: "S256",
+      })
+      .then((authenticated) => {
+        console.log(`Keycloak initialized. Authenticated: ${authenticated}`);
+        authStore.setAuth(keycloak);
+        app.mount("#app");
+      })
+      .catch((err) =>
+        mountWithoutIdentityProvider("initialization failed", err)
+      );
   });
 }
 
-// Initialize MSW Mock Gateway Worker in development / demo / offline browser mode
+// The MSW mock gateway runs only in a demo build, or when explicitly enabled for local UI work; it must never
+// answer in place of the real API unannounced.
 if (
   typeof window !== "undefined" &&
-  (import.meta.env.DEV ||
-    import.meta.env.MODE === "demo" ||
-    import.meta.env.VITE_ENABLE_MSW === "true")
+  (isDemoBuild() || import.meta.env.VITE_ENABLE_MSW === "true")
 ) {
   import("./mocks/browser.js")
     .then(({ startMswWorker }) => startMswWorker())

@@ -1,49 +1,32 @@
-# Gateway Rewrite Package
+# gateway-rewrite
 
-## Overview
+TypeScript library of NestJS gateway building blocks: JWKS fetch coalescing, ingress header sanitisation, rate limiting, W3C trace-context propagation, a PII-scrubbing Pino logger, and a pre-proxy USDM graph validation interceptor.
 
-Core promise coalescing and key fetching module for NestJS Gateway rewrite
+## Contents
 
----
+`src/index.ts` exports:
 
-## Architectural Boundaries
+- `JwksCoalescerService`, `JwksCoalescerModule`.
+- `IngressHeaderSanitizerMiddleware` (also exported as `IngressHeaderSanitizationMiddleware`), `IngressHeaderSanitizerService`, `IngressHeaderSanitizerModule`, `DEFAULT_ALLOWED_HEADERS`, `DEFAULT_PROHIBITED_HEADERS`.
+- `RateLimiterService`, `RateLimiterModule`, `RateLimitMiddleware`, `RateLimitGuard`.
+- `TraceContextService`, `TraceContextModule`, `TraceContextMiddleware`, `propagateTraceContext`.
+- `PinoLoggerService`, `scrubPii`.
+- `PreProxyGraphValidationInterceptor` (uses `validateUsdmGraph` from [usdm-schemas](../usdm-schemas/README.md)).
 
-The `gateway-rewrite` package operates as a modular shared library within the Cadence Clinical ecosystem:
-- **Code-Adjacent Domain:** Located strictly within `packages/gateway-rewrite/`.
-- **Decoupled Architecture:** Provides explicit interface contracts and reusable domain models without imposing direct database or cross-service runtime bindings.
-- **GxP Audit Compliance:** Maintained under strict versioning and change control standards.
+The package has no application bootstrap: `src/index.ts` only re-exports modules. Nothing starts an HTTP server from it, and neither `docker/docker-compose.yml` nor the nginx front proxy runs or routes to it. The gateway the platform uses is the .NET service in [apps/gateway](../../apps/gateway/README.md).
 
----
+## Scripts
 
-## Public APIs / Exports
-
-Exports shared utilities, domain interfaces, and models for `gateway-rewrite`.
-
-#### Exposed CLI Commands
-- `test`: `vitest run`
-- `build`: `tsc`
-
----
+| Command                               | Purpose            |
+| ------------------------------------- | ------------------ |
+| `pnpm --filter gateway-rewrite test`  | Vitest (`tests/`). |
+| `pnpm --filter gateway-rewrite build` | `tsc` to `dist/`.  |
 
 ## Dependencies
 
-This package relies on the following standard dependencies:
-- `@nestjs/common`
-- `@nestjs/core`
-- `@types/node`
-- `pino`
-- `reflect-metadata`
-- `rxjs`
-- `typescript`
-- `usdm-schemas`
-- `vitest`
+- Runtime: `pino`, `rxjs`, `usdm-schemas` (workspace).
+- Development: `@nestjs/common`, `@nestjs/core`, `reflect-metadata`, TypeScript, Vitest.
 
----
+## Used by
 
-## Local Development & Testing
-
-Run unit and contract tests for this package:
-
-```bash
-pnpm --filter gateway-rewrite test
-```
+No other workspace package or app imports it.

@@ -1,5 +1,8 @@
 # Product Requirements Document (PRD) - Cadence Clinical Platform
 
+> [!WARNING]
+> **Status: pre-kernel baseline, not a validated release.** The requirement IDs (`PRD-…`) remain in use for traceability and the RTM. Product scope is being re-framed by the [kernel specification v0.2](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map). Current system: [ARCHITECTURE.md](../../ARCHITECTURE.md).
+
 ## 1. Document Control & Regulatory Alignment
 
 ### 1.1 Document Metadata
@@ -1127,7 +1130,8 @@ To provide multi-echelon investigational product (IP) inventory tracking, automa
 #### PRD-SCM-002: Continuous Data Logger Ingestion & Mean Kinetic Temperature (MKT) Engine
 - The system must support direct ingestion of digital temperature data logger files (CSV, XML, JSON, PDF) from shipment containers and site storage units.
 - The cold chain engine must calculate Mean Kinetic Temperature (MKT) across the logged time series:
-  $$\Delta H / R = 10000 	ext{ K}, \quad T_{K} = rac{\Delta H / R}{-\ln \left( rac{1}{n} \sum_{i=1}^n e^{-rac{\Delta H / R}{T_i}} ight)}$$
+  $$\Delta H / R = 10000 	ext{ K}, \quad T_{K} = rac{\Delta H / R}{-\ln \left( rac{1}{n} \sum_{i=1}^n e^{-rac{\Delta H / R}{T_i}} 
+ight)}$$
 - If temperatures breach stability budget limits (e.g. cumulative hours above 8°C), the system must automatically transition affected drug kits to `QUARANTINED`, block dispensing in EDC, and notify the Supply Chain Manager.
 
 #### PRD-SCM-003: Automated Lot Expiration Management, Extension & Re-Labeling

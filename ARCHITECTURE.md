@@ -1,388 +1,207 @@
-# Architecture Specification: Cadence Clinical Research Software
+# Cadence Architecture
 
-## 1. System Vision & Problem Statement
+This document describes the system in two views: the **target architecture** (kernel, engines and
+applications) and the **running system today** (a gateway in front of 17 ASP.NET Core services). The
+gap between them is closed by the kernel roadmap.
 
-Traditional clinical trial builds require manual, error-prone translation of narrative protocol documents into disconnected downstream Electronic Data Capture (EDC) databases, Clinical Trial Management Systems (CTMS), and safety reporting workflows. This causes multi-month setup delays, discrepancy risks between protocols and eCRFs, and costly amendment rework.
+The normative source for the target is the
+[Clinical Research OS kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md).
+When this document and the spec disagree, the spec wins; fix this document.
 
-**Cadence Clinical Research Software** establishes a unified, metadata-driven architecture that automates the generation of downstream clinical trial infrastructure directly from digitized protocol definitions (CDISC USDM), bridging upstream **Clinical Metadata Management (MDR/SDR)** with downstream **Electronic Data Capture (EDC)** and operational microservices via an automated **Digital Data Flow (DDF)** pipeline.
-
----
-
-## 2. Core Service Domains & Microservices Catalog
-
-Cadence is structured as a decoupled, reverse-proxy fronted microservices topology where every service encapsulates a specific clinical or platform domain.
-
-```text
- ┌──────────────────────────────────────────────────────────────────────────────────────────┐
- │                                   API GATEWAY & PROXY                                    │
- ├──────────────────────────────────────────────────────────────────────────────────────────┤
- │  • Gateway Proxy (Port 8000)      • Keycloak OIDC Authentication                         │
- │  • HMAC Signature Injection       • 60s Step-Up Re-Authentication Tokens                 │
- └─────────────────────────────┬──────────────────────────────────────────────┬─────────────┘
-                               │                                              │
-                               ▼                                              ▼
- ┌──────────────────────────────────────────────┐ ┌──────────────────────────────────────────────┐
- │          PROTOCOL & STUDY DESIGN             │ │        CLINICAL OPERATIONS & EXECUTION       │
- ├──────────────────────────────────────────────┤ ├──────────────────────────────────────────────┤
- │ • Designer / USDM (Port 8001 : Neo4j)        │ │ • EDC Execution Engine (Port 8002 : Postgres)│
- │ • Knowledge & SOPs (Port 8011 : Postgres)    │ │ • CTMS Operations (Port 8005 : Postgres)     │
- │ • Clinical AI Gateway (Port 8013 : REST)     │ │ • Organization Directory (Port 8008 : PG)    │
- │ • DDF Compiler Engine (packages/ddf)         │ │ • Clinical Issue Hub (Port 8012 : Postgres)  │
- │                                              │ │ • Site Payments & Grants (Port 8014 : PG)    │
- └─────────────────────────────┬────────────────┘ └───────────────────────────┬──────────────────┘
-                               │                                              │
-                               ▼                                              ▼
- ┌──────────────────────────────────────────────┐ ┌──────────────────────────────────────────────┐
- │    PATIENT ENGAGEMENT & INTEROPERABILITY     │ │        SAFETY, QUALITY & GOVERNANCE          │
- ├──────────────────────────────────────────────┤ ├──────────────────────────────────────────────┤
- │ • Subject Portal PWA (Port 5174 : IndexedDB) │ │ • Safety & Pharmacovigilance (Port 8009)     │
- │ • FHIR & eSource Gateway (Port 8007 : PG)    │ │ • Quality & CAPA Management (Port 8006)      │
- │ • Notifications Dispatcher (Port 8010 : PG)  │ │ • Blinded DICOM Adjudication (Port 8015)     │
- │ • Electronic Consent (Port 8017 : Postgres)  │ │ • Electronic Trial Master File (Port 8004)   │
- │                                              │ │ • Electronic Investigator Files (Port 8016)  │
- │                                              │ │ • FileShare & StoragePort (Port 8018 : MinIO)│
- │                                              │ │ • Compliance Engine (Port 8019 : xUnit/GxP)  │
- └──────────────────────────────────────────────┘ └──────────────────────────────────────────────┘
-```
-
-### A. Protocol & Study Design Layer
-
-#### 1. Designer Service (`apps/designer` — Port 8001)
-- **Role:** Study Definition Repository (SDR) and Clinical Metadata Repository (MDR).
-- **Datastore:** Neo4j Graph Database 5.0+.
-- **Core Responsibilities:**
-  - Protocol structure authoring (Study Arms, Epochs, Encounters, Activities, and Biomedical Concepts).
-  - High-density Schedule of Activities (SoA) matrix generation.
-  - Official CDISC USDM v3.0/v4.0 export and validation.
-  - Immutable graph branching and semantic protocol amendment diffing.
-
-#### 2. Knowledge & SOP Service (`apps/knowledge` — Port 8011)
-- **Role:** Clinical SOP Hub & Dynamic Help Drawer Dispatcher.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Contextual SOP delivery mapped to active user persona and frontend route patterns.
-  - Hierarchical specificity scoring for clinical guidance lookup.
-  - Two-tier controlled document versioning (`KnowledgeArticle` and `KnowledgeArticleVersion`).
-
-#### 3. Clinical AI Gateway (`apps/ai_gateway` — Port 8013)
-- **Role:** Intelligent Medical Coding & De-Identification Proxy.
-- **Datastore:** Ephemeral in-memory caching / External REST.
-- **Core Responsibilities:**
-  - Three-tier model routing (Tier 1 Local SLMs, Tier 2 Fast Cloud LLMs, Tier 3 Frontier Models).
-  - Outbound PII/PHI de-identification air-gap with surrogate tokenization.
-  - Hybrid semantic medical coding against MedDRA and WHODrug dictionaries.
-  - 21 CFR Part 11 dual-attribution AI draft ledgers (`DRAFT_AI`).
+| Section | Contents |
+| --- | --- |
+| [1. Target architecture](#1-target-architecture) | Kernel, six engines, applications, invariants |
+| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K009 and their ADRs |
+| [3. Running services today](#3-running-services-today) | Services, ports, gateway routes, maturity |
+| [4. Request path and security](#4-request-path-and-security) | OIDC at the gateway, signed identity in services |
+| [5. Persistence](#5-persistence) | Databases, connection strings, migrations |
+| [6. Cross-cutting building blocks](#6-cross-cutting-building-blocks) | Telemetry, health, time, architecture tests, build |
+| [7. Migration path](#7-migration-path) | How today's services become kernel applications |
 
 ---
 
-### B. Clinical Operations & Execution Layer
+## 1. Target architecture
 
-#### 4. EDC Execution Engine (`apps/execution` — Port 8002)
-- **Role:** Downstream Electronic Data Capture (EDC) Runtime.
-- **Datastore:** PostgreSQL 14+ Relational Database.
-- **Core Responsibilities:**
-  - Dynamic subject eCRF schema projection based on subject-specific protocol version tags.
-  - Subject enrollment lifecycle state machines and visit scheduling.
-  - Real-time edit check execution during site data entry.
-  - Medical coding review, central/local laboratory reference range governance, and CTCAE toxicity grading.
-  - CDISC Dataset-JSON 1.0.0 biostatistical export (SDTM / ADaM).
-
-#### 5. CTMS Operations Service (`apps/ctms` — Port 8005)
-- **Role:** Clinical Trial Management & Site Operational Governance.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Trial and site milestone tracking, CRA workload balancing, and Monitoring Visit Reports (MVR).
-  - 6-Facet Site Greenlight Engine evaluating IRB approvals, CTA contracts, essential regulatory documents, DOA logs, staff training certifications, and investigational product release.
-  - Append-only `CTMSAuditLog` tracking all operational transactions with Part 11 metadata.
-
-#### 6. Organization Directory (`apps/org` — Port 8008)
-- **Role:** Multi-Tenant Organization & Site Directory.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Master directory of Sponsor, CRO, and Site organizations and personnel.
-  - Principal Investigator Electronic Delegation of Authority (DOA) log with electronic signature step-up tokens.
-  - Role-based site scoping and investigator qualification management.
-
-#### 7. Clinical Issue Hub (`apps/tickets` — Port 8012)
-- **Role:** Query Discrepancy Escalation & Support SLA Management.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Multi-tier module-based routing across functional clinical queues.
-  - Dual-target SLA tracking (acknowledgment SLA vs. clinical resolution SLA) with automated escalation.
-  - Controlled reopening window enforcement accompanied by mandatory 21 CFR Part 11 change reasons.
-
-#### 8. Site Payments & Participant Compensation (`apps/payments` — Port 8014)
-- **Role:** Investigator Grant Budgets & Participant Financial Wallet.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Procedure-fee rule engine triggered by eCRF visit completion and CRA Source Data Verification (SDV).
-  - Multi-party payee grant split calculations and 10% statutory closeout holdback escrows.
-  - Participant stipend management, mobile receipt OCR reimbursement approval, and IRS 1099 threshold tracking.
-
----
-
-### C. Patient Engagement & Interoperability Layer
-
-#### 9. Subject Portal (`apps/subject-portal` — Port 5174)
-- **Role:** Offline-First Patient-Facing eCOA/ePRO PWA.
-- **Technology:** Vite + Vue 3 Progressive Web App.
-- **Core Responsibilities:**
-  - Isolated patient-facing interface running under the strict `Subject` role.
-  - IndexedDB offline queue caching ePRO diary submissions during network disconnects.
-  - Visual sync reconciliation queue with collision-free replay strategies.
-
-#### 10. Electronic Consent Service (`apps/econsent` — Port 8017)
-- **Role:** Digital Informed Consent (eConsent) & Re-Consent Engine.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Interactive ICF document compilation with Flesch-Kincaid readability scoring.
-  - Dynamic protocol amendment re-consent gating blocking downstream visit data capture upon protocol revisions.
-  - Minor-to-adult age-of-majority transition tracking.
-  - 21 CFR Part 11 compliant cryptographic signature manifests.
-
-#### 11. Notifications Dispatcher (`apps/notifications` — Port 8010)
-- **Role:** Multi-Channel Clinical Alert & Compliance Messenger.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Asynchronous dispatch across SMTP Email (Jinja2 templates), SMS, HMAC-signed Outbound Webhooks, and In-App inbox.
-  - Mandatory GxP notification policy bypassing user opt-out preferences for safety-critical alerts.
-  - Deterministic notification idempotency keys preventing duplicate alerts across retries.
-
-#### 12. FHIR & eSource Gateway (`apps/interop` — Port 8007)
-- **Role:** EHR Interoperability & Biometric Sensor Streaming.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - SMART on FHIR USCDI clinical data ingestion from hospital EHR systems.
-  - Split-screen CRC review drawer with 1-click clinical acceptance into draft eCRFs.
-  - Open mHealth continuous time-series biometric sensor stream adapter.
-
----
-
-### D. Safety, Quality & Governance Layer
-
-#### 13. Safety & Pharmacovigilance (`apps/safety` — Port 8009)
-- **Role:** Pharmacovigilance Gateway & Regulatory Safety Transmissions.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - ICH E2B(R3) Individual Case Safety Reports (ICSR) ISO 27953-2 XML compilation.
-  - Automated NCI-CTCAE v5.0 laboratory toxicity grading and WHODrug active ingredient hierarchy verification.
-  - B2B AS2 EDI gateway with SHA-256 S/MIME encryption, digital signatures, and synchronous MDN verification.
-
-#### 14. Quality & CAPA Management (`apps/quality` — Port 8006)
-- **Role:** Quality Assurance, Centralized Statistical Monitoring & Forensic Auditing.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Protocol deviation management linked to Root Cause Analysis (RCA) and CAPA corrective workflows.
-  - Centralized Statistical Monitoring (CSM forensics): Benford's Law Chi-Square/MAD, digit preference, and Mahalanobis distance multivariate outlier detection.
-  - 64-bit DCT Perceptual Hashing (pHash) on medical images detecting duplicate scans across sites (Hamming distance $\le 5$).
-
-#### 15. Blinded DICOM Adjudication (`apps/imaging` — Port 8015)
-- **Role:** Clinical Oncology Imaging & RECIST 1.1 Adjudication.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Zero-footprint WebGL Multi-Planar Reconstruction (MPR) axial/sagittal/coronal viewer.
-  - Blinded dual-reader RECIST 1.1 / Lugano oncology evaluations.
-  - Automated 20% Sum of Diameters (SOD) discordance trigger with Chair step-up sign-off.
-
-#### 16. Electronic Trial Master File (`apps/etmf` — Port 8004)
-- **Role:** Regulatory Document Ingestion & Completeness Repository.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - DIA TMF Reference Model v3.2.0 taxonomy classification across 10 canonical zones.
-  - Expected Document Lists (EDLs) and dynamic milestone completeness scoring.
-  - Automated QC lifecycle state engine (`DRAFT` $\rightarrow$ `TECHNICAL_QC` $\rightarrow$ `CLINICAL_QC` $\rightarrow$ `APPROVED`).
-
-#### 17. Electronic Investigator Site Files (`apps/eisf` — Port 8016)
-- **Role:** Site-Scoped Regulatory Binder Repository.
-- **Datastore:** PostgreSQL 16+ (EF Core 10).
-- **Core Responsibilities:**
-  - Site-isolated regulatory binder management inheriting DIA eISF taxonomy structures.
-  - Bidirectional synchronization with Sponsor eTMF artifacts.
-  - Principal Investigator certification audit manifests.
-
-#### 18. FileShare & StoragePort Gateway (`apps/fileshare` — Port 8018)
-- **Role:** Binary Blob Storage & Presigned Transfer URL Broker.
-- **Datastore:** MinIO / S3 Object Storage + PostgreSQL Envelope Metadata.
-- **Core Responsibilities:**
-  - Hexagonal `StoragePort[T]` protocol isolating tenant binary payloads (`/{tenant_id}/{study_id}/{doc_id}`).
-  - Secure short-lived presigned upload and download URLs for direct browser transfer.
-  - SHA-256 Merkle root verification before transitioning draft document envelopes to `COMMITTED`.
-
-#### 19. Compliance Engine (`packages/compliance` — Port 8019)
-- **Role:** Centralized Regulatory Verification & Qualification.
-- **Datastore:** .NET 10 xUnit v3 + Audit Ledgers.
-- **Core Responsibilities:**
-  - Full automated qualification test execution (IQ/OQ/PQ suites).
-  - 100% GxP Requirements Traceability Matrix (RTM) synchronization.
-  - 21 CFR Part 11 audit trail assertion gates.
-
----
-
-## 3. Local Developer Runtime Topology
-
-The developer runtime is containerized using Docker Compose to orchestrate relational databases, graph engines, identity providers, and object storage in a lightweight, single-host configuration.
+Cadence is an **operating system for clinical research**. One kernel holds a single body of clinical
+truth. Six **engines** organise the kernel's concepts; products such as EDC, CTMS, eTMF, RTSM, safety
+and standards conformance are **applications** built on them (spec §2, §12).
 
 ```mermaid
-flowchart TD
-    subgraph Local Developer Host Environment
-        web[web - Clinical Workspace SPA : Port 5173]
-        subject-portal[subject-portal - Subjects PWA : Port 5174]
-        gateway[gateway - ASP.NET Core 10 / YARP API Gateway : Port 8000]
-        keycloak[keycloak - Keycloak IAM : Port 8080]
-
-        subgraph Protocol & Design Microservices
-            designer[designer - MDR/SDR Service : Port 8001]
-            knowledge[knowledge - Clinical SOP Engine : Port 8011]
-            ai_gateway[ai_gateway - Clinical AI Gateway : Port 8013]
-        end
-
-        subgraph Clinical Operations & Execution Microservices
-            execution[execution - Trial EDC Runtime : Port 8002]
-            ctms[ctms - Clinical Trial Management : Port 8005]
-            org[org - Organization Directory : Port 8008]
-            tickets[tickets - Clinical Issue Hub : Port 8012]
-            payments[payments - Site Payments & Grants : Port 8014]
-        end
-
-        subgraph Patient & Interop Microservices
-            interop[interop - EHR FHIR & eSource : Port 8007]
-            notifications[notifications - Alerts & Webhooks : Port 8010]
-            econsent[econsent - Electronic Consent : Port 8017]
-        end
-
-        subgraph Safety, Quality & Governance Microservices
-            etmf[etmf - Electronic Trial Master File : Port 8004]
-            quality[quality - Quality & CAPA Management : Port 8006]
-            safety[safety - Clinical Safety & E2B : Port 8009]
-            imaging[imaging - Blinded DICOM Viewer : Port 8015]
-            eisf[eisf - Investigator Site Files : Port 8016]
-            fileshare[fileshare - Object Storage Gateway : Port 8018]
-        end
-
-        %% Databases & Storage
-        postgres[(PostgreSQL 16+ - Relational Cluster)]
-        neo4j[(Neo4j 5+ - USDM Graph Database)]
-        minio[(MinIO - Encrypted GxP Object Storage)]
+flowchart TB
+    subgraph Apps["Applications (Cadence.Modules.*)"]
+        direction LR
+        EDC[EDC] --- CTMS[CTMS] --- ETMF[eTMF / ISF] --- RTSM[RTSM] --- SAFETY[Safety / PV] --- STD[Standards & conformance] --- MORE[…]
     end
-
-    %% Client Ingestion
-    web -->|REST / OIDC Bearer| gateway
-    subject-portal -->|REST / OIDC Bearer| gateway
-    gateway -->|Keycloak OIDC JWT Validation| keycloak
-
-    %% Gateway Routing with HMAC Signatures
-    gateway --> designer
-    gateway --> knowledge
-    gateway --> ai_gateway
-    gateway --> execution
-    gateway --> ctms
-    gateway --> org
-    gateway --> tickets
-    gateway --> payments
-    gateway --> interop
-    gateway --> notifications
-    gateway --> econsent
-    gateway --> etmf
-    gateway --> quality
-    gateway --> safety
-    gateway --> imaging
-    gateway --> eisf
-    gateway --> fileshare
-
-    %% Persistence Connections
-    designer --> neo4j
-    execution --> postgres
-    ctms --> postgres
-    org --> postgres
-    tickets --> postgres
-    payments --> postgres
-    knowledge --> postgres
-    interop --> postgres
-    notifications --> postgres
-    econsent --> postgres
-    etmf --> postgres
-    quality --> postgres
-    safety --> postgres
-    imaging --> postgres
-    eisf --> postgres
-    fileshare --> postgres
-    fileshare --> minio
+    subgraph Kernel["Clinical kernel (one schema, one transaction boundary)"]
+        direction LR
+        K[Knowledge] --- X[Execution] --- E[Evidence] --- T[Trust] --- Q[Quality] --- I[Intelligence]
+    end
+    Apps -->|kernel IDs, commands, queries| Kernel
+    Kernel --> PG[(PostgreSQL: RLS, bitemporal tstzrange, audit chain, outbox, lineage)]
 ```
 
----
+| Engine | Answers | Examples of kernel concepts |
+| --- | --- | --- |
+| Knowledge | What does it mean, and what is supposed to happen? | Concept Registry, ProtocolVersion, Estimand, CollectionSpec, Standards Registry |
+| Execution | What is happening, where, and to whom? | Organization, Site, StudySite, Participant, Enrollment, Applicability, ClinicalEvent |
+| Evidence | What was observed, collected or produced? | Observation, Assertion, Source, Artifact, Specimen |
+| Trust | Who was allowed, who agreed, where did it come from? | Actor, Delegation, Qualification, ConsentStatus, Attestation, lineage graph |
+| Quality | Is it right, and is it under control? | Rule, ValidationFinding, Risk, Deviation, Lock |
+| Intelligence | What does it imply, and what should happen next? | AutomationAgent, Proposal |
 
-## 4. Digital Data Flow (DDF) Compilation & Execution Pipeline
+Engines are an organising frame, not deployment units. The rules that shape every change:
+
+- **K-TRUTH-1:** no product owns clinical truth; SDTM, ADaM, FHIR and the protocol PDF are projections.
+- **K-SCOPE-1:** a concept belongs in the kernel if it explains the provenance, authority, meaning or
+  lifecycle of clinical evidence across more than one application.
+- **Forbidden redefinitions (spec §2.3):** applications never declare their own `Study`, `Site`,
+  `Participant`, `Observation`, `Person`, roles, rule engines or audit tables; they reference kernel IDs.
+- **Assemblies (spec §2.4):** `Cadence.Kernel.Abstractions` (IDs, ports, `IClock`) → `Domain` →
+  `Application` → `Persistence` (internal) → `Api`; applications reference `Abstractions` only (K-XS-2).
+
+The [domain glossary](CONTEXT.md) defines the vocabulary.
+
+## 2. Key decisions
+
+| # | Decision | ADR |
+| --- | --- | --- |
+| K001 | Modular monolith kernel with a single schema | [ADR-2244](docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md), [ADR-2247](docs/adr/2026-09-29-clinical-kernel-single-database-schema-and-architecture-sentinel-hardening.md) |
+| K002 | Bitemporality with hand-rolled `tstzrange` and exclusion constraints | [ADR-2246](docs/adr/2026-09-29-postgresql-native-bitemporal-interval-standard-via-tstzrange-and-gist.md) |
+| K003 | Tenant isolation through row-level security in a shared schema | [ADR-2250](docs/adr/2026-09-29-kernel-tenant-isolation-via-row-level-security.md) |
+| K004 | Authority computed from evidence by a hand-coded policy evaluator | [ADR-2251](docs/adr/2026-09-29-kernel-authority-computed-from-evidence-policy-engine.md) |
+| K005 | Concept Registry keyed by CDISC Biomedical Concepts | [ADR-2252](docs/adr/2026-09-29-concept-registry-cdisc-biomedical-concepts-as-semantic-key.md) |
+| K006 | Identity vault and layered participant identity | [ADR-2253](docs/adr/2026-09-29-identity-vault-and-layered-participant-identity.md) |
+| K007 | Neo4j dropped; ProtocolVersion snapshots in PostgreSQL | [ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) |
+| K008 | Rules as versioned data over one AST; public standards only; Rust runtime seam later | [ADR-2254](docs/adr/2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md) |
+| K009 | Lineage graph in the kernel schema, written transactionally | [ADR-2255](docs/adr/2026-09-29-kernel-lineage-graph-and-scientific-traceability.md) |
+| — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
+| — | .NET 10 platform standards (C# 14, Minimal APIs, EF Core 10, CPM) | [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) |
+
+The full list is in the [ADR index](docs/adr/index.md).
+
+## 3. Running services today
+
+Every backend is an ASP.NET Core 10 Minimal API host under `apps/<name>/src`, built from
+`Cadence.sln`. Ports are the gateway's defaults (`apps/gateway/src/Program.cs`) and the host ports in
+`docker/docker-compose.yml`. Each service has a README with its details.
+
+| Service | Project | Port | Gateway routes (`/api/v1/…`) | Persistence | Maturity |
+| --- | --- | --- | --- | --- | --- |
+| [gateway](apps/gateway/README.md) | `Cadence.Apps.Gateway` | 8000 (behind the nginx front proxy in compose) | all of the below; each route is tested against the endpoints its service maps ([ADR-2448](docs/adr/2026-09-29-gateway-routes-verified-against-service-endpoints.md)); a stalled service gets a 504 and an unhealthy one a 503 without forwarding ([ADR-2451](docs/adr/2026-09-29-gateway-timeouts-and-health-checked-clusters.md)) | none | Implemented |
+| [designer](apps/designer/README.md) | `Cadence.Apps.Designer` | 8001 | `studies`, `protocols` | none yet | Scaffold |
+| [execution](apps/execution/README.md) | `Cadence.Apps.Execution` | 8002 | `observations`, `forms`, `queries`, `execution` | `ExecutionDbContext` | Implemented (EDC core) |
+| [etmf](apps/etmf/README.md) | `Cadence.Apps.Etmf` | 8003 | `etmf` | `EtmfDbContext` | Scaffold |
+| [interop](apps/interop/README.md) | `Cadence.Apps.Interop` | 8004 | `interop` | `InteropDbContext` | Scaffold |
+| [quality](apps/quality/README.md) | `Cadence.Apps.Quality` | 8005 | `quality` | `QualityDbContext` | Scaffold |
+| [notifications](apps/notifications/README.md) | `Cadence.Apps.Notifications` | 8006 | `notifications` | `NotificationsDbContext` | Scaffold |
+| [ctms](apps/ctms/README.md) | `Cadence.Apps.Ctms` | 8007 | `ctms` | `CtmsDbContext` | Scaffold |
+| [safety](apps/safety/README.md) | `Cadence.Apps.Safety` | 8008 | `safety` | `SafetyDbContext` | Scaffold |
+| [tickets](apps/tickets/README.md) | `Cadence.Apps.Tickets` | 8009 | `tickets` | `TicketsDbContext` | Scaffold |
+| [eisf](apps/eisf/README.md) | `Cadence.Apps.Eisf` | 8010 | `eisf` | `EisfDbContext` | Scaffold |
+| [econsent](apps/econsent/README.md) | `Cadence.Apps.Econsent` | 8011 | `econsent` | `EconsentDbContext` | Scaffold |
+| [org](apps/org/README.md) | `Cadence.Apps.Org` | 8012 | `org` | `OrgDbContext` | Scaffold |
+| [fileshare](apps/fileshare/README.md) | `Cadence.Apps.Fileshare` | 8013 | `fileshare` | `FileshareDbContext` + MinIO | Scaffold |
+| [imaging](apps/imaging/README.md) | `Cadence.Apps.Imaging` | 8014 | `imaging` | `ImagingDbContext` | Scaffold |
+| [knowledge](apps/knowledge/README.md) | `Cadence.Apps.Knowledge` | 8015 | `knowledge` | `KnowledgeDbContext` | Scaffold |
+| [payments](apps/payments/README.md) | `Cadence.Apps.Payments` | 8016 | `payments` | `PaymentsDbContext` | Scaffold |
+| [ai_gateway](apps/ai_gateway/README.md) | `Cadence.Apps.AiGateway` | 8017 | `ai` | none | Scaffold |
+
+"Scaffold" means the host, security, health checks and (usually) a `DbContext` with migrations exist,
+but the service maps at most a few endpoints. Their future as kernel applications is decided in
+[#4787](https://github.com/fderuiter/cadence-clinical/issues/4787) against spec §12.
+
+Other runtime pieces:
+
+| Component | Path | Notes |
+| --- | --- | --- |
+| Web client | `apps/web` | Vue 3 + Vite (port 5173); signs in through Keycloak |
+| Subject portal | `apps/subject-portal` | Participant PWA (port 5174) |
+| Aspire AppHost | `apps/apphost` | Local orchestration of PostgreSQL (database `cadence`), MinIO, Keycloak and a subset of services |
+| Keycloak | `docker/cadence-realm.json` | OIDC identity provider (port 8080), realm `cadence` |
+| PostgreSQL 16 | compose `postgres` | One `cadence` database with a schema per service (ADR-2447) |
+| MinIO, ClamAV | compose profile `storage` | Object storage and upload scanning; no service reads them yet |
+| Front proxy | compose `front-proxy` (nginx) | Port 8000; forwards the web apps' API calls to the gateway |
+| Other compose services | `docker/docker-compose.yml` | `dotnet-dev` (SDK container) |
+
+## 4. Request path and security
 
 ```mermaid
-flowchart TD
-    A[Protocol Authoring: Designer Neo4j] -->|USDM v3/v4 Graph| B[DDF Ingestion & AST Parser]
-    B --> C[DDF Intermediate Representation - IR]
-    C --> D[XPath Rule Compiler]
-    D --> E[CDISC ODM XML & OpenRosa XForms]
-    E --> F[(PostgreSQL EDC Execution Engine)]
-
-    F --> G[Dynamic Subject Schema Projection]
-    G --> H[Site CRC / Subject eCRF Entry]
-    H --> I[Real-Time Edit Checks & GxP Audit Log]
-    I --> J[Dataset-JSON Serializer: SDTM & ADaM]
-    J --> K{Validation Sentinel Gate}
-    K -->|Valid| L[Commit Biostatistical Export Snapshot]
-    K -->|Invalid| M[Log Discrepancy Query & Block Export]
+sequenceDiagram
+    participant C as Web client / portal
+    participant K as Keycloak
+    participant G as Gateway (YARP)
+    participant S as Service
+    C->>K: Sign in (OIDC)
+    C->>G: Request + bearer token
+    G->>G: Validate JWT (OIDC_AUTHORITY), strip client identity headers
+    G->>S: Forward with signed X-User-*, X-Tenant-Id, X-Timestamp, X-Gateway-Signature
+    S->>S: CadenceGateway scheme verifies HMAC (GATEWAY_SECRET) and timestamp (2 min)
+    S-->>C: Response (401 if unsigned, forged or stale; 403 if role not allowed)
 ```
 
----
+Decided in [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md):
 
-## 5. Security Architecture & 21 CFR Part 11 Compliance
+- The gateway requires an authenticated caller on every proxied route and fails at startup without
+  `OIDC_AUTHORITY` or a `GATEWAY_SECRET` of at least 32 characters.
+- Every service calls `AddCadenceSecurity()` / `UseCadenceSecurity()` (`packages/security`). Only
+  health, status and development API-doc endpoints allow anonymous access.
+- Application code takes identity and roles from the verified claims only. A PI signature records the
+  authenticated caller as signer.
+- Not yet done: e-signature step-up (`X-Sig-Token` issuance and verification) and replacing the web
+  client's demo mode, tracked in epic [#4759](https://github.com/fderuiter/cadence-clinical/issues/4759).
 
-Cadence enforces rigorous regulatory controls across all transactions:
+In the target architecture, authority is computed from evidence (training, delegation,
+qualification) by the kernel's policy evaluator (ADR-2251), not from role strings.
 
-1. **Centralized OIDC RBAC**: Keycloak validates JWT tokens, enforcing fine-grained persona permissions (`sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `safety_physician`, `auditor`).
-2. **HMAC-SHA256 Inter-Service Gateway Signatures**: Downstream services reject unauthenticated internal requests lacking valid `X-Gateway-Signature` headers.
-3. **60-Second Signature Step-Up Re-Authentication**: High-stakes mutations (PI batch sign-offs, subject randomization, unblinding) require re-entering password + TOTP to receive a short-lived `sig_token`.
-4. **Monotonic SHA-256 Audit Chaining**: Every mutating transaction records `created_at`, `created_by`, `reason_for_change`, `version_index`, and a cryptographic hash digest chained to its predecessor.
-5. **Strongly-Typed EF Core 10 Predicates**: EF Core 10 strictly evaluates strongly-typed boolean expressions (`.Where(x => x.IsActive)`) translating to PostgreSQL `IS TRUE`, preventing nullable evaluation and client-side discrepancy traps.
+## 5. Persistence
 
----
+- **PostgreSQL 16+ through EF Core 10 + Npgsql.** `AddCadencePostgresDbContext`
+  (`packages/database`) resolves `ConnectionStrings:cadence` (set by the Aspire AppHost), then
+  `POSTGRES_CONNECTION_STRING`. Only the `Development` environment falls back to the local compose
+  database; any other environment fails at startup. Transient-failure retries are enabled.
+- **One database, a schema per service** ([ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)):
+  every service connects to the shared `cadence` database with its search path set to its own module
+  schema (`ctms`, `execution`, …). The kernel owns the `kernel` schema.
+- **Migrations** live in each service's `Infrastructure/Persistence/Migrations/` and are managed with
+  `scripts/manage_migrations.ps1` (see [AGENTS.md §10](AGENTS.md)). `Database__MigrateOnStartup=true`
+  applies them at startup; `Database__MigrateOnly=true` runs them as a deployment job and exits. See the
+  [database runbook](docs/OPERATIONAL_DATABASE.md).
+- **Today** each service has its own `DbContext` in its own schema. **Target:** one kernel schema with
+  row-level security per tenant (ADR-2250), bitemporal `tstzrange` columns (ADR-2246), an audit chain,
+  a transactional outbox and a lineage store (spec §5, §9.6).
+- **Audit:** EF Core `SaveChangesInterceptor` populates `CreatedAt`, `CreatedBy`, `ReasonForChange`
+  and `VersionIndex` (21 CFR Part 11), attributing every write to a real user or a named service account
+  ([ADR-2257](docs/adr/2026-09-29-attributable-audit-actors-and-named-service-accounts.md)). `apps/execution` publishes domain events through the MassTransit
+  EF Core outbox.
 
-## 6. Target .NET 10 Platform Architecture & Standards (ADR-2233 / ADR-2234)
+## 6. Cross-cutting building blocks
 
-Per [ADR-2233](docs/adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) and [ADR-2234](docs/adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md), Cadence has completed its clean-break platform migration to **.NET 10 (C# 14 / ASP.NET Core 10)**:
+| Concern | Where | What it does |
+| --- | --- | --- |
+| Health | `packages/telemetry` | `/healthz/live` (no checks) and `/healthz/ready` (every `DbContext` reachable); `/healthz` returns a static payload |
+| Telemetry | `packages/telemetry` | OpenTelemetry traces, metrics and logs named after the service (`OTEL_SERVICE_NAME`); OTLP export when `OTEL_EXPORTER_OTLP_ENDPOINT` is set |
+| Time | `Cadence.Kernel.Abstractions` `IClock` | `DateTime.Now/UtcNow` are banned ([`BannedSymbols.txt`](BannedSymbols.txt)); take time from `IClock` (K-TIME-3). Remaining call sites: [clock migration backlog](docs/kernel/CLOCK_MIGRATION_BACKLOG.md) |
+| Architecture tests | `tests/Architecture` | K-XS-1, K-XS-2 and K-MOD-1 with a checked-in baseline that may only shrink (`tests/ArchitectureBaselines/`) |
+| Security | `packages/security` | Gateway authentication scheme, HMAC signing, audit digest |
+| Build | `Directory.Build.props`, `Directory.Packages.props` | `net10.0`, nullable enabled, warnings as errors, Central Package Management |
+| Contracts | `packages/contracts` | Typed cross-service DTOs and HTTP clients |
+| DDF compiler | `packages/ddf` | USDM → DDF intermediate representation → CDISC ODM / XForms |
+| De-identification | `packages/deid` | In-process de-identification and canonical signing (ADR-2261) |
 
-### A. Architectural Pillars
-1. **Single-Assembly Clean Architecture**: Each microservice is organized into internal namespace layers (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`) avoiding multi-assembly compilation bloat while enforcing strict directional dependencies.
-2. **ASP.NET Core 10 Minimal APIs**: High-performance endpoint groups (`app.MapGroup(...)`) using `IEndpointFilter` for cross-cutting GxP security, HMAC signature verification, and correlation context propagation.
-3. **Entity Framework Core 10 + GxP Interceptor**: PostgreSQL persistence with compiled models, mandatory `.AsNoTracking()` for read queries, and `GxPAuditInterceptor` with SHA-256 Merkle block hashing for immutable 21 CFR Part 11 audit trails.
-4. **Transactional Outbox & Event Spine**: MassTransit with PostgreSQL transactional outbox guaranteeing atomic database state commits and outbound domain events.
-5. **Cross-Service Typed Contracts (`Cadence.Contracts`)**: Strongly-typed DTO records and `IHttpClientFactory` typed clients configured with `Polly` exponential backoff and circuit breaker pipelines.
-6. **Architecture Sentinels (`ArchUnitNET`)**: Automated tests in `tests/Cadence.ArchitectureTests.csproj` asserting domain purity and mandatory `IGxPAuditable` implementation at build time.
-7. **Async Neo4j.Driver**: Clinical protocol graph management and CDISC USDM v3/v4 authoring in `apps/designer`.
-8. **Central Package Management (CPM)**: Root `Directory.Packages.props` and `Directory.Build.props` governing all NuGet dependencies across `Cadence.sln`.
-9. **Native AOT & Immutability**: C# 14 immutable `record` types, primary constructors, `Result<TValue, DomainError>` monads, and `System.Text.Json` source generator contexts.
-10. **Interactive Developer Wizards**: Unified Cadence CLI wizards (`dotnet cadence wizard ...`) providing interactive guidance for developer onboarding, microservice scaffolding, and database provisioning.
-11. **Regulatory Traceability**: Dual-level xUnit test annotation via XML documentation (`/// @req:PRD-SYS-xxx`) and compile-time attributes (`[GxPRequirement("PRD-SYS-xxx")]`).
+## 7. Migration path
 
-### B. Microservice Port & Architecture Blueprint
+The [kernel roadmap (spec §15)](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) is the plan:
 
-| Service | .NET 10 Host Project | Port | Primary Datastore | Pre-Release Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **API Gateway** | `Cadence.Apps.Gateway` | `8000` | HMAC Router / OIDC / YARP | **Active (.NET 10)** |
-| **Protocol Designer** | `Cadence.Apps.Designer` | `8001` | Neo4j 5+ (USDM v3/v4) | **Active (.NET 10)** |
-| **EDC Execution Engine** | `Cadence.Apps.Execution` | `8002` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Electronic Trial Master File** | `Cadence.Apps.Etmf` | `8004` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **CTMS Operations** | `Cadence.Apps.Ctms` | `8005` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Quality & CAPA** | `Cadence.Apps.Quality` | `8006` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **FHIR & eSource Gateway** | `Cadence.Apps.Interop` | `8007` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Organization Directory** | `Cadence.Apps.Org` | `8008` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Safety & Pharmacovigilance** | `Cadence.Apps.Safety` | `8009` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Notifications Dispatcher** | `Cadence.Apps.Notifications` | `8010` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Knowledge & SOP Engine** | `Cadence.Apps.Knowledge` | `8011` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Clinical Issue Hub** | `Cadence.Apps.Tickets` | `8012` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Clinical AI Gateway** | `Cadence.Apps.AiGateway` | `8013` | Ephemeral / REST | **Active (.NET 10)** |
-| **Site Payments & Grants** | `Cadence.Apps.Payments` | `8014` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Blinded DICOM Adjudication** | `Cadence.Apps.Imaging` | `8015` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Investigator Site Files** | `Cadence.Apps.Eisf` | `8016` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **Electronic Consent** | `Cadence.Apps.Econsent` | `8017` | PostgreSQL 16+ (EF Core 10) | **Active (.NET 10)** |
-| **FileShare Storage Gateway** | `Cadence.Apps.Fileshare` | `8018` | MinIO / S3 + PostgreSQL 16+ | **Active (.NET 10)** |
-| **Compliance Test Engine** | `Cadence.Compliance` | `8019` | xUnit v3 / In-Memory GxP | **Active (.NET 10)** |
+| Phase | Outcome |
+| --- | --- |
+| 0. Foundations | Kernel projects, `IClock`, `tstzrange`, RLS, command pipeline, architecture baseline |
+| 1. EDC on the kernel | `apps/execution` runs on kernel concepts ([migration inventory](docs/kernel/EXECUTION_MIGRATION_INVENTORY.md)) |
+| 2. Knowledge and standards | Concept Registry, executable protocol, standards registry, rules, lineage |
+| 3. Quality and trust expansion | RBQM, computable consent, specimens, ingestion, AI proposals |
+| 4. Analysis and submission | Derivations, ADaM, TLF lineage, Define-XML, submission package |
+| 5. Lifecycle breadth | Feasibility, start-up, finance, recruitment, DCT, regulatory, RWE |
 
-
+Work is tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719). The
+Python-to-.NET port that preceded this is complete; its playbook remains in
+[docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md) for porting the remaining Python reference
+sources ([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)).

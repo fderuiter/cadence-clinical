@@ -1,4 +1,6 @@
-# ADR-2169: Relational Outbox System across Execution and eTMF Services
+# ADR-2362: Relational Outbox System across Execution and eTMF Services
+
+Also known as: ADR-2169 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-11

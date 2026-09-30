@@ -22,6 +22,8 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
   let authStore;
 
   beforeEach(() => {
+    // Uses the demo identity and roles (demo builds only, #4523).
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     pinia = createPinia();
     setActivePinia(pinia);
     clinicalStore = useClinicalStore();

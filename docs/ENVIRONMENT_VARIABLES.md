@@ -61,6 +61,14 @@ Read by `apps/gateway/src/Program.cs:68-84`. Each defaults to `http://localhost:
 | `PAYMENTS_SERVICE_URL` | 8016 |
 | `AI_GATEWAY_SERVICE_URL` | 8017 |
 
+Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClusters.cs` (ADR-2451). Each must be a positive number of seconds; the gateway refuses to start otherwise.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `GATEWAY_PROXY_TIMEOUT_SECONDS` | 30 | A proxied request fails with 504 once its service sends nothing for this long. |
+| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | 10 | How often the gateway probes each service's `/healthz/ready`. Two failures in a row make the gateway answer 503 for that service until a probe succeeds. |
+| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS` | 5 | How long one readiness probe may take before it counts as failed. |
+
 ## Authentication and audit
 
 | Key | Read by | Default | Required |
@@ -89,6 +97,7 @@ Read by `apps/gateway/src/Program.cs:68-84`. Each defaults to `http://localhost:
 | `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:59-60` | off |
 | `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:152` | off |
 | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` | `packages/cli/src/Services/DatabaseResetService.cs:44-46` (Neo4j is being retired, #4790) | `bolt://localhost:7687`, `neo4j`, `password123` |
+| `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Execution/Integration/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped) | none |
 
 ## Web apps
 
@@ -103,4 +112,5 @@ Vite inlines `VITE_*` values at build time. Put overrides in `apps/<app>/.env.lo
 | `VITE_KEYCLOAK_URL` | `apps/web/src/main.js:25`, `apps/subject-portal/src/index.js:2413` | `http://localhost:8080/` |
 | `VITE_KEYCLOAK_REALM` | `apps/web/src/main.js:26`, `apps/subject-portal/src/index.js:2414` | `cadence` |
 | `VITE_KEYCLOAK_CLIENT_ID` | `apps/web/src/main.js:28`, `apps/subject-portal/src/index.js:2415` | `cadence-web` |
-| `VITE_ENABLE_MSW` | `apps/web/src/main.js:138`, `apps/subject-portal/src/index.js:2331` | off (MSW always runs in dev and `--mode demo`) |
+| `VITE_DEMO_MODE` | `apps/web/src/utils/demoMode.js` | off. `true` (or `vite --mode demo`, `pnpm build:demo`) makes a demo build: offline demo identity, MSW mock API and sample data. Any other build shows API failures as errors and never substitutes sample data |
+| `VITE_ENABLE_MSW` | `apps/web/src/main.js`, `apps/subject-portal/src/index.js:2331` | off. Web: starts the MSW mock worker without the rest of demo mode (demo builds start it anyway) |

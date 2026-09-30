@@ -1,5 +1,8 @@
 # Lab Reference Range Management - Operational & Technical Guide
 
+> [!WARNING]
+> **Status: pre-kernel baseline.** Written for the Python implementation. In the .NET code, lab range selection lives in `apps/execution/src/Infrastructure/Normalization/LabRangeService.cs`; under the kernel spec, range flags are derived Observations with versioned range sets (K-FACT-2). Commands below that reference Python tests no longer apply.
+
 **Document ID:** CC-OPS-PRD-LAB-001
 **Version:** 1.0.0
 **Status:** Approved
@@ -255,8 +258,8 @@ async def upgrade_existing_tables(conn):
 Verify that migrations were completed correctly by querying the columns metadata in the target environment:
 
 ```bash
-# Verify schema evolution has succeeded
-uv run pytest tests/test_lab_reference_range_persistence.py -k test_schema_evolution_migration_upgrade --no-cov
+# Verify with the execution observation tests
+dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution.Observations"
 ```
 
 ---
