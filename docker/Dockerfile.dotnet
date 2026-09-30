@@ -10,9 +10,11 @@
 # Dependabot (.github/dependabot.yml) proposes updates; bump the SDK and runtime together.
 FROM mcr.microsoft.com/dotnet/sdk:10.0.401@sha256:35d40304542c8689331f8cab17c65926cdf48fe711e289321d71924b230a7d29 AS dev
 
-# Install curl, git, procps for developer introspection
+# Install curl, ffmpeg, libreoffice, git, procps for developer introspection
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    ffmpeg \
+    libreoffice \
     git \
     procps \
     netcat-traditional \
@@ -61,9 +63,11 @@ RUN dotnet publish ${PROJECT_PATH} -c Release -o /app/publish /p:UseAppHost=fals
 # ------------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.12@sha256:2d584d8147faddb0d678c5748d47953e5b8e18621ed4fb7049a91381d9d7746f AS runtime
 
-# Install curl for container health check parity
+# Install curl, ffmpeg, libreoffice for container health check parity and background workers
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    ffmpeg \
+    libreoffice \
     && rm -rf /var/lib/apt/lists/*
 
 ARG APP_NAME=gateway
