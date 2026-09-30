@@ -27,6 +27,31 @@ public sealed class DdfCompilationException : Exception
     public IReadOnlyList<string> Problems { get; }
 }
 
+/// <summary>
+/// Thrown when a USDM document cannot be read at all: the text is not JSON, or a value has another JSON type than a
+/// USDM study gives it (an array for the study, a number for a name). The caller sent a malformed document (#5040).
+/// </summary>
+public sealed class UsdmFormatException : Exception
+{
+    /// <summary>Creates the exception with a default message.</summary>
+    public UsdmFormatException()
+        : base("The USDM document cannot be read.")
+    {
+    }
+
+    /// <summary>Creates the exception with <paramref name="message"/>.</summary>
+    public UsdmFormatException(string message)
+        : base(message)
+    {
+    }
+
+    /// <summary>Creates the exception with <paramref name="message"/> and the exception that caused it.</summary>
+    public UsdmFormatException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
 /// <summary>Turns item names into XML element names, the same way on every compile.</summary>
 public static partial class DdfIdentifier
 {

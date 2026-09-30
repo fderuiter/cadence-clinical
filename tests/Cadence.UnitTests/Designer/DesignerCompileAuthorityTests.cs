@@ -87,6 +87,24 @@ public sealed class DesignerCompileAuthorityTests(DesignerCompileAuthorityTests.
         problem.GetProperty("problems").EnumerateArray().Select(p => p.GetString()).Should().Equal("Skip logic makes a cycle: A -> A.");
     }
 
+    /// <summary>A document that is not JSON, or not shaped like a USDM study, is the caller's error: 400, never 500 (#5040).</summary>
+    [Theory]
+    [InlineData("{not json")]
+    [InlineData("[]")]
+    [InlineData("\"a string\"")]
+    [InlineData("{\"study\":[1,2]}")]
+    [InlineData("{\"study\":{\"id\":42}}")]
+    public async Task Compile_AMalformedUsdmDocument_Returns400(string usdmJson)
+    {
+        using var client = factory.CreateSignedClient(TestSecurityContext.Identity("designer-1", "Sponsor Designer"));
+
+        var response = await client.PostAsJsonAsync(Route, new { usdmJson }, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync(Ct));
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+        problem.GetProperty("title").GetString().Should().Be("The USDM document cannot be read.");
+    }
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     /// <summary>The Designer service with the test gateway secret.</summary>
