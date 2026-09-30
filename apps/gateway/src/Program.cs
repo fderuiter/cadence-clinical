@@ -141,6 +141,8 @@ var clusters = new[]
     GatewayClusters.Create("ai-gateway-cluster", aiGatewayUrl, builder.Configuration),
 };
 
+builder.Services.AddGatewayRateLimiting(builder.Configuration);
+
 builder.Services.AddReverseProxy()
     .LoadFromMemory(routes, clusters)
     .AddTransforms(GatewayIdentityForwarding.AddSignedIdentityTransform);
@@ -148,6 +150,9 @@ builder.Services.AddReverseProxy()
 var app = builder.Build();
 app.UseCadenceWebDefaults();
 app.UseAuthentication();
+// After authentication, so each signed-in caller has their own limit; before authorization, so a flood of
+// bad tokens is limited per client address too.
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Gateway", version = "10.0" }))

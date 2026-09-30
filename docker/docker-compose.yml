@@ -29,6 +29,9 @@ x-dotnet-env: &dotnet-env
   # Services refuse to start without a secret of at least 32 characters.
   GATEWAY_SECRET: local-dev-gateway-secret-not-for-production # pragma: allowlist secret
   AUDIT_LOG_SECRET_KEY: local-dev-audit-secret-not-for-production # pragma: allowlist secret
+  # The front proxy and gateway reach services over the compose network, so trust X-Forwarded-* from
+  # private addresses. In production, list only the front proxy and gateway addresses.
+  CADENCE_TRUSTED_PROXIES: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
 
 x-db-env: &db-env
   <<: *dotnet-env

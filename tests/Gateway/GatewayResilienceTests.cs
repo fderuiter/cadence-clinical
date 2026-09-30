@@ -110,7 +110,7 @@ public sealed class GatewayResilienceTests
         (DateTime.UtcNow - started).Should().BeLessThan(TimeSpan.FromSeconds(15));
     }
 
-    private static WebApplicationFactory<Cadence.Apps.Gateway.Program> CreateGateway(
+    internal static WebApplicationFactory<Cadence.Apps.Gateway.Program> CreateGateway(
         string executionUrl, params (string Key, string Value)[] settings) =>
         new WebApplicationFactory<Cadence.Apps.Gateway.Program>().WithWebHostBuilder(host =>
         {
@@ -131,11 +131,11 @@ public sealed class GatewayResilienceTests
             }
         });
 
-    private static HttpClient AuthenticatedClient(WebApplicationFactory<Cadence.Apps.Gateway.Program> gateway)
+    internal static HttpClient AuthenticatedClient(WebApplicationFactory<Cadence.Apps.Gateway.Program> gateway, string subject = "cra-01")
     {
         var client = gateway.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", GatewayAuthenticationTests.GatewayFixture.CreateToken("cra-01", ["CRA"]));
+            "Bearer", GatewayAuthenticationTests.GatewayFixture.CreateToken(subject, ["CRA"]));
         return client;
     }
 
