@@ -1,0 +1,456 @@
+{
+  "design": {
+    "schemaVersion": 1,
+    "title": "Something Very Official",
+    "objectives": [
+      {
+        "id": "Objective_1",
+        "level": "Primary",
+        "text": "The primary efficacy objective for this study is to evaluate the efficacy of TCZ compared with placebo in combination with SOC for the treatment of severe COVID-19 pneumonia"
+      },
+      {
+        "id": "Objective_2",
+        "level": "Secondary",
+        "text": "The secondary efficacy objective for this study is to evaluate the efficacy of TCZ compared with placebo in combination with SOC for the treatment of severe COVID-19 pneumonia over the age of <usdm:tag name=\"min_age\"/>"
+      }
+    ],
+    "endpoints": [
+      {
+        "id": "Endpoint_1",
+        "objectiveId": "Objective_1",
+        "level": "Primary",
+        "text": "Clinical status assessed using a 7-category ordinal scale at Day 28"
+      },
+      {
+        "id": "Endpoint_2",
+        "objectiveId": "Objective_2",
+        "level": "Secondary",
+        "text": "Time to clinical improvement (TTCI) defined as a National Early Warning Score 2 (NEWS2) of <=2 maintained for 24 hours"
+      },
+      {
+        "id": "Endpoint_3",
+        "objectiveId": "Objective_2",
+        "level": "Secondary",
+        "text": "Time to improvement of at least 2 categories relative to baseline on a 7-category ordinal scale of clinical status"
+      }
+    ],
+    "estimands": [
+      {
+        "id": "Estimand_1",
+        "endpointId": "Endpoint_1",
+        "populationId": "AnalysisPopulation_1",
+        "armIds": [],
+        "variable": "Clinical status assessed using a 7-category ordinal scale at Day 28",
+        "intercurrentEvents": [
+          {
+            "description": "ICE Text",
+            "strategy": "Other",
+            "strategyText": "Patients with out of range lab values before dosing will be excluded"
+          },
+          {
+            "description": "ICE Text",
+            "strategy": "Other",
+            "strategyText": "A second bad event"
+          },
+          {
+            "description": "ICE Text",
+            "strategy": "Other",
+            "strategyText": "A third bad thing"
+          }
+        ],
+        "summaryMeasure": "Survival of all patients",
+        "interventionIds": [
+          "StudyIntervention_1"
+        ]
+      },
+      {
+        "id": "Estimand_2",
+        "endpointId": "Endpoint_2",
+        "populationId": "AnalysisPopulation_2",
+        "armIds": [],
+        "variable": "Time to clinical improvement (TTCI) defined as a National Early Warning Score 2 (NEWS2) of <=2 maintained for 24 hours",
+        "intercurrentEvents": [
+          {
+            "description": "ICE Text",
+            "strategy": "Other",
+            "strategyText": "Something else bad"
+          }
+        ],
+        "summaryMeasure": "Something else",
+        "interventionIds": [
+          "StudyIntervention_2"
+        ]
+      }
+    ],
+    "populations": [
+      {
+        "id": "StudyDesignPopulation_1",
+        "name": "POP1",
+        "criterionIds": [
+          "EligibilityCriterion_1",
+          "EligibilityCriterion_2",
+          "EligibilityCriterion_3",
+          "EligibilityCriterion_4",
+          "EligibilityCriterion_5"
+        ]
+      },
+      {
+        "id": "AnalysisPopulation_1",
+        "name": "AP_1",
+        "criterionIds": [],
+        "description": "ITT"
+      },
+      {
+        "id": "AnalysisPopulation_2",
+        "name": "AP_4",
+        "criterionIds": [],
+        "description": "ITT"
+      }
+    ],
+    "eligibilityCriteria": [
+      {
+        "id": "EligibilityCriterion_1",
+        "category": "Inclusion",
+        "text": "Subjects shall be between <usdm:tag name=\"min_age\"/> and <usdm:tag name=\"max_age\"/>",
+        "concepts": []
+      },
+      {
+        "id": "EligibilityCriterion_2",
+        "category": "Inclusion",
+        "text": "Subjects shall be between <usdm:tag name=\"min_age\"/> and <usdm:tag name=\"max_agexxx\"/>",
+        "concepts": []
+      },
+      {
+        "id": "EligibilityCriterion_3",
+        "category": "Exclusion",
+        "text": "Subjects has been treated with Drug A at any time in the past",
+        "concepts": []
+      },
+      {
+        "id": "EligibilityCriterion_4",
+        "category": "Exclusion",
+        "text": "Pick up activity <usdm:tag name=\"xxxx\"/>",
+        "concepts": []
+      },
+      {
+        "id": "EligibilityCriterion_5",
+        "category": "Exclusion",
+        "text": "If the value is equal to <usdm:tag name=\"value_key\"/>",
+        "concepts": []
+      }
+    ],
+    "arms": [
+      {
+        "id": "StudyArm_1",
+        "name": "Active",
+        "type": "ActiveComparator",
+        "interventionIds": []
+      },
+      {
+        "id": "StudyArm_2",
+        "name": "Placebo",
+        "type": "PlaceboComparator",
+        "interventionIds": []
+      }
+    ],
+    "epochs": [
+      {
+        "id": "StudyEpoch_1",
+        "name": "Screening",
+        "order": 1
+      },
+      {
+        "id": "StudyEpoch_2",
+        "name": "Baseline",
+        "order": 2
+      },
+      {
+        "id": "StudyEpoch_3",
+        "name": "Treatment",
+        "order": 3
+      },
+      {
+        "id": "StudyEpoch_4",
+        "name": "Follow-Up",
+        "order": 4
+      }
+    ],
+    "cohorts": [
+      {
+        "id": "StudyCohort_1",
+        "name": "COHORT1",
+        "armIds": []
+      },
+      {
+        "id": "StudyCohort_2",
+        "name": "COHORT2",
+        "armIds": []
+      }
+    ],
+    "interventions": [
+      {
+        "id": "StudyIntervention_1",
+        "name": "INT1",
+        "dose": {
+          "amount": 12.0,
+          "unit": "mg"
+        },
+        "route": "Dental Route of Administration",
+        "regimen": "Ten Days Per Month"
+      },
+      {
+        "id": "StudyIntervention_2",
+        "name": "INT2",
+        "dose": {
+          "amount": 12.0,
+          "unit": "mg"
+        },
+        "route": "Dental Route of Administration",
+        "regimen": "Ten Days Per Month"
+      }
+    ],
+    "plannedActivities": [
+      {
+        "id": "ScheduledActivityInstance_1",
+        "name": "E1",
+        "epochId": "StudyEpoch_1",
+        "locations": [
+          "Site"
+        ],
+        "collectionSpecIds": [
+          "Activity_1",
+          "Activity_2",
+          "Activity_3"
+        ],
+        "timing": {
+          "day": -2,
+          "windowBefore": 0,
+          "windowAfter": 0
+        }
+      },
+      {
+        "id": "ScheduledActivityInstance_2",
+        "name": "E2",
+        "epochId": "StudyEpoch_2",
+        "locations": [
+          "Site"
+        ],
+        "collectionSpecIds": [
+          "Activity_2"
+        ],
+        "timing": {
+          "day": 1,
+          "windowBefore": 0,
+          "windowAfter": 0
+        }
+      },
+      {
+        "id": "ScheduledActivityInstance_3",
+        "name": "E3",
+        "epochId": "StudyEpoch_3",
+        "locations": [
+          "Site"
+        ],
+        "collectionSpecIds": [
+          "Activity_2"
+        ],
+        "timing": {
+          "day": 1,
+          "windowBefore": 0,
+          "windowAfter": 0
+        }
+      },
+      {
+        "id": "ScheduledActivityInstance_4",
+        "name": "E4",
+        "epochId": "StudyEpoch_3",
+        "locations": [
+          "Site"
+        ],
+        "collectionSpecIds": [
+          "Activity_2",
+          "Activity_3"
+        ],
+        "timing": {
+          "day": 15,
+          "windowBefore": 1,
+          "windowAfter": 1
+        }
+      },
+      {
+        "id": "ScheduledActivityInstance_5",
+        "name": "E5",
+        "epochId": "StudyEpoch_3",
+        "locations": [
+          "Site"
+        ],
+        "collectionSpecIds": [
+          "Activity_4"
+        ],
+        "timing": {
+          "day": 29,
+          "windowBefore": 1,
+          "windowAfter": 1
+        }
+      },
+      {
+        "id": "ScheduledActivityInstance_6",
+        "name": "E6",
+        "epochId": "StudyEpoch_4",
+        "locations": [
+          "Home",
+          "Telehealth"
+        ],
+        "collectionSpecIds": [
+          "Activity_2"
+        ],
+        "timing": {
+          "day": 43,
+          "windowBefore": 3,
+          "windowAfter": 3
+        }
+      }
+    ],
+    "collectionSpecs": [
+      {
+        "id": "Activity_1",
+        "name": "Demographics",
+        "items": [
+          {
+            "id": "Activity_1.BiomedicalConcept_1",
+            "concept": {
+              "conceptId": "00000000-0000-7000-8000-000000069260",
+              "version": 1
+            },
+            "required": false
+          },
+          {
+            "id": "Activity_1.BiomedicalConcept_2",
+            "concept": {
+              "conceptId": "00000000-0000-7000-8000-000000028421",
+              "version": 1
+            },
+            "required": false
+          },
+          {
+            "id": "Activity_1.BiomedicalConcept_3",
+            "concept": {
+              "conceptId": "00000000-0000-7000-8000-000000017049",
+              "version": 1
+            },
+            "required": false
+          },
+          {
+            "id": "Activity_1.BiomedicalConcept_4",
+            "concept": {
+              "conceptId": "00000000-0000-7000-8000-000000025208",
+              "version": 1
+            },
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "Activity_2",
+        "name": "Procedures",
+        "items": []
+      },
+      {
+        "id": "Activity_3",
+        "name": "Optional Weight",
+        "items": [
+          {
+            "id": "Activity_3.BiomedicalConcept_5",
+            "concept": {
+              "conceptId": "00000000-0000-7000-8000-000000025208",
+              "version": 1
+            },
+            "required": false
+          }
+        ]
+      },
+      {
+        "id": "Activity_4",
+        "name": "Optional",
+        "items": [
+          {
+            "id": "Activity_4.BiomedicalConcept_6",
+            "concept": {
+              "conceptId": "00000000-0000-7000-8000-000000025298",
+              "version": 1
+            },
+            "required": false
+          },
+          {
+            "id": "Activity_4.BiomedicalConcept_7",
+            "concept": {
+              "conceptId": "00000000-0000-7000-8000-000000025299",
+              "version": 1
+            },
+            "required": false
+          }
+        ]
+      }
+    ],
+    "safetyRules": [],
+    "discontinuationRules": []
+  },
+  "notes": [
+    {
+      "source": "StudyIntervention_1",
+      "message": "product codes are not carried; the design names a product by concept."
+    },
+    {
+      "source": "StudyIntervention_2",
+      "message": "product codes are not carried; the design names a product by concept."
+    },
+    {
+      "source": "Objective_2",
+      "message": "the text holds USDM tags, kept as written; their dictionary values are not substituted."
+    },
+    {
+      "source": "AnalysisPopulation_1",
+      "message": "subsetOfIds is not carried; the design has no population hierarchy."
+    },
+    {
+      "source": "AnalysisPopulation_2",
+      "message": "subsetOfIds is not carried; the design has no population hierarchy."
+    },
+    {
+      "source": "EligibilityCriterionItem_1",
+      "message": "the text holds USDM tags, kept as written; their dictionary values are not substituted."
+    },
+    {
+      "source": "EligibilityCriterionItem_2",
+      "message": "the text holds USDM tags, kept as written; their dictionary values are not substituted."
+    },
+    {
+      "source": "EligibilityCriterionItem_4",
+      "message": "the text holds USDM tags, kept as written; their dictionary values are not substituted."
+    },
+    {
+      "source": "EligibilityCriterionItem_5",
+      "message": "the text holds USDM tags, kept as written; their dictionary values are not substituted."
+    },
+    {
+      "source": "Timing_2",
+      "message": "the part of PT15M shorter than a day is not carried."
+    },
+    {
+      "source": "Timing_2",
+      "message": "the part of PT4H shorter than a day is not carried."
+    },
+    {
+      "source": "ScheduledDecisionInstance_1",
+      "message": "decisions and other non-activity instances are not carried."
+    },
+    {
+      "source": "activities",
+      "message": "USDM does not say why data is collected; items have no purpose until an author adds one (K-PROT-3)."
+    },
+    {
+      "source": "indications",
+      "message": "indications are not carried by the protocol design."
+    }
+  ]
+}

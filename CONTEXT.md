@@ -322,7 +322,7 @@ A regulatory enforcement mechanism that automatically blocks site investigators 
 
 ### Unified Study Data Model (USDM)
 
-The CDISC TransCelerate standard defining a machine-readable protocol representation including study design elements, arms, epochs, encounters, activities, and biomedical concepts. In Cadence it is an interchange format: USDM converts in and out of the kernel's protocol design document and is never the stored shape (ADR-2472).
+The CDISC TransCelerate standard defining a machine-readable protocol representation including study design elements, arms, epochs, encounters, activities, and biomedical concepts. In Cadence it is an interchange format: USDM converts in and out of the kernel's protocol design document and is never the stored shape (ADR-2472). `UsdmDesignImporter` (`packages/ddf`) imports a USDM 4 study into a design, resolving its Biomedical Concepts in the tenant and noting what does not map (ADR-2473).
 
 ### Schedule of Activities (SoA) Matrix
 

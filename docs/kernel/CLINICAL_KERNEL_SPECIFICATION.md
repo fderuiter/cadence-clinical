@@ -417,7 +417,7 @@ ProtocolVersion contains:
 
 - **ProtocolVersion** is an immutable, content-addressed snapshot (protocol design document + `content_hash`) with
   `number`, `parent_version`, `amendment?`, `state` and the approving Attestation (ADR-2452). The design document
-  (ADR-2472) is the typed shape above, read strictly; USDM converts in and out of it.
+  (ADR-2472) is the typed shape above, read strictly; USDM converts in and out of it (import: ADR-2473).
 - State machine `Draft → InReview → Approved → Superseded | Withdrawn`.
   - Submitting for review freezes the content and sets `content_hash`, the canonical-JSON SHA-256
     (`ContentHash`). Returning to draft clears it. Reviewers and approvers therefore sign the same hash.

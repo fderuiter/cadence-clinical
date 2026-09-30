@@ -171,6 +171,45 @@ public sealed class ProtocolDesignTests
     }
 
     /// <summary>
+    /// An estimand's compared interventions must be interventions of the design, and an intercurrent-event strategy
+    /// stated only in words (as USDM allows) must carry those words; the valid forms round trip.
+    /// </summary>
+    [Fact(DisplayName = "Read_ChecksEstimandInterventionsAndStrategiesStatedInWords")]
+    public void ReadChecksEstimandInterventionsAndStrategiesStatedInWords()
+    {
+        var complete = Complete();
+        var estimand = complete.Estimands[0];
+        var invalid = complete with
+        {
+            Estimands =
+            [
+                estimand with
+                {
+                    InterventionIds = ["arm.A", "int.missing"],
+                    IntercurrentEvents = [new IntercurrentEvent("Rescue medication", IntercurrentEventStrategy.Other, " ")],
+                },
+            ],
+        };
+        var valid = complete with
+        {
+            Estimands =
+            [
+                estimand with
+                {
+                    InterventionIds = ["int.1"],
+                    IntercurrentEvents = [new IntercurrentEvent("Rescue medication", IntercurrentEventStrategy.Other, "Values after rescue are set to missing.")],
+                },
+            ],
+        };
+
+        ProtocolDesignDocument.Read(ProtocolDesignDocument.Write(invalid)).Problems.Should().BeEquivalentTo(
+            "est.1: interventionIds 'arm.A' is of kind Arm, not Intervention.",
+            "est.1: interventionIds 'int.missing' is not an element of this design.",
+            "est.1: intercurrentEvents.strategyText is required.");
+        ProtocolDesignDocument.Read(ProtocolDesignDocument.Write(valid)).Design.Should().BeEquivalentTo(valid);
+    }
+
+    /// <summary>
     /// The kernel's structural diff (ADR-2480 §4.6) applies to design documents as they are: a design has no differences
     /// from itself, and elements are matched by their stable ids, so a reworded objective is one changed element and
     /// an added arm or a removed rule is one change each (K-PROT-1).

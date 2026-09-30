@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Ddf;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
@@ -112,6 +113,41 @@ public sealed class ProtocolDesignPostgresTests(KernelPostgresFixture fixture) :
 
         result.Error!.Code.Should().Be(ProtocolErrors.ReferenceUnknown.Code);
         result.Error.Message.Should().EndWith($"Unknown: concept {other.Concept}.");
+    }
+
+    /// <summary>
+    /// The CDISC USDM example study imports through the tenant's Concept Registry once its Biomedical Concepts are
+    /// defined there (ADR-2473), and the imported design is a draft that goes into review: every concept it names
+    /// exists in the tenant (K-SEM-1). Before the concepts are defined, the import fails.
+    /// </summary>
+    [Fact(DisplayName = "ImportedUsdmDesign_ResolvesInTheTenant_AndGoesIntoReview")]
+    public async Task ImportedUsdmDesignResolvesInTheTenantAndGoesIntoReview()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _scenario.NewStudyAsync(ct);
+        var usdm = UsdmSamples.CdiscExampleJson();
+
+        var before = await UsdmDesignImporter.ImportAsync(usdm, fixture.ConceptRegistry, tenant, cancellationToken: ct);
+        before.IsSuccess.Should().BeFalse();
+        before.Problems.Should().HaveCount(7, "the example's seven Biomedical Concepts are not in the tenant yet");
+
+        foreach (var code in UsdmSamples.CdiscExampleConceptCodes)
+        {
+            await _scenario.OkAsync(
+                new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.CdiscBiomedicalConcept, code, ConceptKind.BiomedicalConcept, $"CDISC {code}", $"CDISC Biomedical Concept {code}.", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason),
+                ct);
+        }
+
+        var imported = await UsdmDesignImporter.ImportAsync(usdm, fixture.ConceptRegistry, tenant, cancellationToken: ct);
+        imported.Problems.Should().BeEmpty();
+        var id = ProtocolVersionId.New();
+        (await _scenario.CreateDraftAsync(tenant, study, id, ct, ProtocolDesignDocument.Write(imported.Design!))).IsSuccess.Should().BeTrue();
+        var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Imported from USDM"), ct);
+
+        inReview.Status.Should().Be(ProtocolVersionStatus.InReview);
+        await using var db = fixture.CreateContext(tenant);
+        (await db.ProtocolVersions.AsNoTracking().SingleAsync(v => v.Id == id, ct)).Design().Should().BeEquivalentTo(imported.Design);
     }
 
     private static string Write(ConceptRef concept, CodeSystemVersionId codeSystemVersion, ArtifactId? artifact) =>

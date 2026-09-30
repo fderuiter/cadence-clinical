@@ -84,8 +84,9 @@ public sealed record Objective(string Id, ObjectiveLevel Level, string Text) : I
 public sealed record Endpoint(string Id, string ObjectiveId, ObjectiveLevel Level, string Text, ConceptRef? Concept = null) : IProtocolElement;
 
 /// <summary>
-/// An estimand (ICH E9(R1)): the treatment condition (<paramref name="ArmIds"/>), the population, the variable (from
-/// its endpoint), how intercurrent events are handled, and the summary measure.
+/// An estimand (ICH E9(R1)): the treatment condition (<paramref name="ArmIds"/>, and the interventions compared when
+/// they are named, <paramref name="InterventionIds"/>), the population, the variable (from its endpoint), how
+/// intercurrent events are handled, and the population-level summary measure.
 /// </summary>
 public sealed record Estimand(
     string Id,
@@ -94,10 +95,14 @@ public sealed record Estimand(
     IReadOnlyList<string> ArmIds,
     string Variable,
     IReadOnlyList<IntercurrentEvent> IntercurrentEvents,
-    string SummaryMeasure) : IProtocolElement;
+    string SummaryMeasure,
+    IReadOnlyList<string>? InterventionIds = null) : IProtocolElement;
 
-/// <summary>An intercurrent event and the strategy an estimand uses for it.</summary>
-public sealed record IntercurrentEvent(string Description, IntercurrentEventStrategy Strategy);
+/// <summary>
+/// An intercurrent event and the strategy an estimand uses for it. <paramref name="StrategyText"/> states the strategy
+/// in words; it is required when the strategy is <see cref="IntercurrentEventStrategy.Other"/>.
+/// </summary>
+public sealed record IntercurrentEvent(string Description, IntercurrentEventStrategy Strategy, string? StrategyText = null);
 
 /// <summary>An analysis or enrolment population, defined by eligibility criteria.</summary>
 public sealed record Population(string Id, string Name, IReadOnlyList<string> CriterionIds, string? Description = null) : IProtocolElement;
@@ -208,6 +213,9 @@ public enum IntercurrentEventStrategy
     Composite,
     WhileOnTreatment,
     PrincipalStratum,
+
+    /// <summary>A strategy stated only in words (<see cref="IntercurrentEvent.StrategyText"/>), as USDM allows.</summary>
+    Other,
 }
 
 /// <summary>Whether an eligibility criterion includes or excludes.</summary>
