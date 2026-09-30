@@ -90,4 +90,5 @@ When a screen moves onto the real API, replace its `allowUnbackedAction` calls w
 1. Make sure every endpoint the screen needs is in `docs/openapi/*.json` and routed by the gateway. If one is missing, add it to the module's issue rather than stubbing it or adding a mock fallback.
    Check that its request and response schemas are complete too. A type with a custom JSON converter (a value object or a status) comes out as an empty schema unless the service describes it; Execution does this in `apps/execution/src/Infrastructure/OpenApi/ExecutionWireTypesOpenApiTransformer.cs`, so its IDs and codes are strings and its statuses are string enums.
 2. Call it through the typed client generated from those specs, and delete the screen's Python-era client functions and their types.
-3. Add the route name to `AVAILABLE_SCREENS` and update this page and #4829.
+3. Give the screen a view test in `apps/web/tests/` that mounts it and covers its main flow against a mocked client. `tests/available_screen_tests.test.js` fails when a route in `AVAILABLE_SCREENS` has no test file that imports its view (#4529).
+4. Add the route name to `AVAILABLE_SCREENS` and update this page and #4829.
