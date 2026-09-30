@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 
+using Cadence.Kernel.Knowledge;
+
 namespace Cadence.Kernel.Standards;
 
 /// <summary>
@@ -94,13 +96,21 @@ public sealed record WhereCondition(string Variable, IReadOnlyList<string> Value
 /// <summary>
 /// A version of a code system, by natural key: <see cref="CodeSystem"/> is the code system's short name (for CDISC
 /// controlled terminology, the CDISC Library package type such as <c>sdtmct</c>) and <see cref="Version"/> its release
-/// (for CDISC CT, the package date such as <c>2024-09-27</c>). Nothing references "the latest" release (spec §6.1). The
-/// Concept Registry (#4807) resolves these to its own versioned records.
+/// (for CDISC CT, the package date such as <c>2024-09-27</c>). A code system that is not CDISC CT is named by its URI,
+/// such as <c>http://terminology.hl7.org/CodeSystem/mdr</c>. Nothing references "the latest" release (spec §6.1). The
+/// kernel resolves each reference to the tenant's imported Concept Registry version (ADR-2460 §4.2,
+/// <see cref="ResolvedCodeSystemVersion"/>).
 /// </summary>
 public sealed record CodeSystemVersionRef(string CodeSystem, string Version)
 {
+    /// <summary>The Concept Registry code-system URI this reference names, or null when it names none (<see cref="KnownCodeSystems.UriFor"/>).</summary>
+    public string? ToCodeSystemUri() => KnownCodeSystems.UriFor(CodeSystem);
+
     public override string ToString() => $"{CodeSystem}-{Version}";
 }
+
+/// <summary>A terminology reference together with the Concept Registry code-system version it resolved to in the tenant.</summary>
+public sealed record ResolvedCodeSystemVersion(CodeSystemVersionRef Reference, CodeSystemVersionId CodeSystemVersionId);
 
 /// <summary>The simple data types standards publish for variables.</summary>
 public enum StandardDataType

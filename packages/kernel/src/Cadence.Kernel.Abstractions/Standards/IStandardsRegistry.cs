@@ -48,7 +48,14 @@ public sealed record StandardVersionSummary(
     GovernanceStatus Status,
     AttestationId? ApprovalAttestation,
     AttestationId? DeprecationAttestation,
-    IReadOnlyList<CodeSystemVersionRef> ControlledTerminology);
+    IReadOnlyList<CodeSystemVersionRef> ControlledTerminology)
+{
+    /// <summary>
+    /// The bindings the tenant had imported when the standard version was registered, each with its Concept Registry
+    /// version. A binding to a package imported later stays by natural key only (ADR-2460 §4.2).
+    /// </summary>
+    public IReadOnlyList<ResolvedCodeSystemVersion> ResolvedTerminology { get; init; } = [];
+}
 
 /// <summary>A Metadata Registry library item version with its content.</summary>
 public sealed record LibraryItemView(
@@ -75,4 +82,11 @@ public sealed record StudyStandardsProfileView(
     long Revision,
     IReadOnlyList<StandardVersionId> StandardVersions,
     IReadOnlyList<CodeSystemVersionRef> ControlledTerminology,
-    IReadOnlyList<LibraryItemId> LibraryPins);
+    IReadOnlyList<LibraryItemId> LibraryPins)
+{
+    /// <summary>
+    /// Each declared terminology version with the Concept Registry version it resolved to when it was declared. Every
+    /// declaration resolves all of them (ADR-2460 §4.2).
+    /// </summary>
+    public IReadOnlyList<ResolvedCodeSystemVersion> ResolvedTerminology { get; init; } = [];
+}

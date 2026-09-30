@@ -7,6 +7,7 @@ using System.Text.Json;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Domain.Standards;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Standards;
 using Cadence.Standards;
 using Cadence.Standards.CdiscLibrary;
@@ -216,19 +217,93 @@ public class StandardsRegistryTests
         var pins = new[] { pinV1, pinV2 }.ToDictionary(p => p.Id);
         var sdtmct = new CodeSystemVersionRef("sdtmct", "2024-09-27");
 
+        var imported = new Dictionary<CodeSystemVersionRef, CodeSystemVersionId> { [sdtmct] = CodeSystemVersionId.New() };
+
         var profile = StudyStandardsProfile.Create(StudyStandardsProfileId.New(), Tenant, StudyId.New());
 
-        profile.Declare([sdtmig34.Id, sdtmig33.Id], [sdtmct], [], standards, pins)!.Message.Should().Contain("one version of SDTMIG");
-        profile.Declare([draft.Id], [sdtmct], [], standards, pins)!.Code.Should().Be(StandardsErrors.NotApproved.Code);
-        profile.Declare([StandardVersionId.New()], [sdtmct], [], standards, pins)!.Code.Should().Be(StandardsErrors.StandardVersionUnknown.Code);
-        profile.Declare([sdtmig34.Id], [sdtmct, sdtmct with { Version = "2023-12-15" }], [], standards, pins)!.Message.Should().Contain("one version of sdtmct");
-        profile.Declare([sdtmig34.Id], [sdtmct], [pinV1.Id, pinV2.Id], standards, pins)!.Message.Should().Contain("pins one version");
-        profile.Declare([], [sdtmct], [], standards, pins)!.Code.Should().Be(StandardsErrors.DeclarationInvalid.Code);
+        profile.Declare([sdtmig34.Id, sdtmig33.Id], [sdtmct], [], standards, pins, imported)!.Message.Should().Contain("one version of SDTMIG");
+        profile.Declare([draft.Id], [sdtmct], [], standards, pins, imported)!.Code.Should().Be(StandardsErrors.NotApproved.Code);
+        profile.Declare([StandardVersionId.New()], [sdtmct], [], standards, pins, imported)!.Code.Should().Be(StandardsErrors.StandardVersionUnknown.Code);
+        profile.Declare([sdtmig34.Id], [sdtmct, sdtmct with { Version = "2023-12-15" }], [], standards, pins, imported)!.Message.Should().Contain("one version of sdtmct");
+        profile.Declare([sdtmig34.Id], [sdtmct], [pinV1.Id, pinV2.Id], standards, pins, imported)!.Message.Should().Contain("pins one version");
+        profile.Declare([], [sdtmct], [], standards, pins, imported)!.Code.Should().Be(StandardsErrors.DeclarationInvalid.Code);
 
-        profile.Declare([sdtmig34.Id], [sdtmct], [pinV1.Id], standards, pins).Should().BeNull();
+        profile.Declare([sdtmig34.Id], [sdtmct], [pinV1.Id], standards, pins, imported).Should().BeNull();
         profile.StandardVersionIds.Should().Equal(sdtmig34.Id);
         profile.ControlledTerminologyRefs.Should().Equal(sdtmct);
+        profile.ResolvedTerminology.Should().Equal(new ResolvedCodeSystemVersion(sdtmct, imported[sdtmct]));
         profile.LibraryPins.Should().Equal(pinV1.Id);
+    }
+
+    /// <summary>
+    /// A study can declare only terminology its tenant imported: a CDISC CT package type or a code-system URI that the
+    /// Concept Registry holds at that version (ADR-2460 §4.2).
+    /// </summary>
+    [Fact(DisplayName = "StudyStandardsProfile_Declare_RefusesTerminologyNotImported")]
+    [Trait("Category", "Unit")]
+    public void StudyStandardsProfileDeclareRefusesTerminologyNotImported()
+    {
+        var sdtmig = Summary("SDTMIG", "3.4", GovernanceStatus.Approved);
+        var standards = new[] { sdtmig }.ToDictionary(s => s.Id);
+        var pins = new Dictionary<LibraryItemId, LibraryItemView>();
+        var sdtmct = new CodeSystemVersionRef("sdtmct", "2024-09-27");
+        var meddra = new CodeSystemVersionRef(KnownCodeSystems.MedDra, "27.0");
+        var imported = new Dictionary<CodeSystemVersionRef, CodeSystemVersionId>
+        {
+            [sdtmct] = CodeSystemVersionId.New(),
+            [meddra] = CodeSystemVersionId.New(),
+        };
+        var profile = StudyStandardsProfile.Create(StudyStandardsProfileId.New(), Tenant, StudyId.New());
+
+        var notImported = profile.Declare([sdtmig.Id], [sdtmct with { Version = "2023-12-15" }], [], standards, pins, imported)!;
+        notImported.Code.Should().Be(StandardsErrors.DeclarationInvalid.Code);
+        notImported.Message.Should().Contain("sdtmct-2023-12-15 has not been imported");
+
+        var unnamed = profile.Declare([sdtmig.Id], [new CodeSystemVersionRef("MedDRA", "27.0")], [], standards, pins, imported)!;
+        unnamed.Code.Should().Be(StandardsErrors.DeclarationInvalid.Code);
+        unnamed.Message.Should().Contain("'MedDRA' names no code system");
+        profile.ControlledTerminology.Should().BeEmpty("a refused declaration changes nothing");
+
+        profile.Declare([sdtmig.Id], [sdtmct, meddra], [], standards, pins, imported).Should().BeNull();
+        profile.ResolvedTerminology.Should().BeEquivalentTo(
+            [new ResolvedCodeSystemVersion(meddra, imported[meddra]), new ResolvedCodeSystemVersion(sdtmct, imported[sdtmct])],
+            o => o.WithStrictOrdering(),
+            "entries are kept in ordinal order of the code system");
+        profile.ControlledTerminologyVersions.Should().HaveCount(2);
+    }
+
+    [Theory(DisplayName = "KnownCodeSystems_UriFor_MapsBindingNames")]
+    [Trait("Category", "Unit")]
+    [InlineData("sdtmct", KnownCodeSystems.SdtmCt)]
+    [InlineData("define-xmlct", KnownCodeSystems.DefineXmlCt)]
+    [InlineData(KnownCodeSystems.MedDra, KnownCodeSystems.MedDra)]
+    [InlineData("https://www.who-umc.org/whodrug", KnownCodeSystems.WhoDrug)]
+    [InlineData("MedDRA", null)]
+    [InlineData("SDTMCT", null)]
+    [InlineData("urn:oid:2.16.840.1", null)]
+    [InlineData("", null)]
+    public void KnownCodeSystemsUriForMapsBindingNames(string codeSystem, string? expected)
+    {
+        KnownCodeSystems.UriFor(codeSystem).Should().Be(expected);
+        new CodeSystemVersionRef(codeSystem, "1").ToCodeSystemUri().Should().Be(expected);
+    }
+
+    [Fact(DisplayName = "StandardVersion_Register_KeepsResolvedBindingsAndNaturalKeys")]
+    [Trait("Category", "Unit")]
+    public void StandardVersionRegisterKeepsResolvedBindingsAndNaturalKeys()
+    {
+        var package = Seed("SDTMIG");
+        var binding = package.ControlledTerminology.Should().ContainSingle().Subject;
+        var resolved = CodeSystemVersionId.New();
+
+        var (withImport, _) = StandardVersion.Register(StandardVersionId.New(), Tenant, package, null,
+            new Dictionary<CodeSystemVersionRef, CodeSystemVersionId> { [binding] = resolved });
+        var (withoutImport, _) = StandardVersion.Register(StandardVersionId.New(), Tenant, package, null);
+
+        withImport!.Terminology.Should().ContainSingle().Which.CodeSystemVersionId.Should().Be(resolved);
+        withoutImport!.Terminology.Should().ContainSingle().Which.CodeSystemVersionId.Should().BeNull();
+        withImport.ContentHash.Should().Be(withoutImport.ContentHash, "resolution is not part of the published content");
+        withImport.ToPackage().ControlledTerminology.Should().Equal(binding);
     }
 
     private static StandardPackage Seed(string code) =>

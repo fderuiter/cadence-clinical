@@ -83,13 +83,25 @@ tenant boundary stays uniform across the kernel.
   one version per terminology code system and one pin per `(kind, key)`. Deprecation stops new pins but never
   changes a study that already pinned the item.
 
-### 4.2 Terminology binding before the Concept Registry
+### 4.2 Terminology binding to the Concept Registry
 
 A binding is the natural key `CodeSystemVersionRef(CodeSystem, Version)`, for example `("sdtmct", "2024-09-27")`,
-read from CDISC Library codelist links (`/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66741`). When the Concept
-Registry lands (#4807), bindings resolve to `CodeSystemVersionId` through
-`IConceptRegistry.FindCodeSystemVersionAsync(uri, version)`. The natural key is kept because it is what a standard
-publishes and what an auditor reads.
+read from CDISC Library codelist links (`/mdr/ct/packages/sdtmct-2024-09-27/codelists/C66741`). The natural key is
+kept because it is what a standard publishes and what an auditor reads. Since #4888 it is also resolved to the
+tenant's Concept Registry version (ADR-2470):
+
+- The code system is named either by a CDISC CT package type (`sdtmct`, `adamct`, …), which maps to the
+  `KnownCodeSystems.CdiscCt` URI, or by an absolute code-system URI such as `http://terminology.hl7.org/CodeSystem/mdr`
+  (`KnownCodeSystems.UriFor`).
+- Registering a standard version looks each binding up with `IConceptRegistry.FindCodeSystemVersionAsync` and stores
+  the resolved `CodeSystemVersionId` on the binding row (a foreign key to `code_system_versions`). A binding whose
+  package the tenant has not imported yet stays unresolved: a standard may be registered before its terminology.
+- Declaring a study's terminology requires every declared version to resolve; otherwise the declaration is refused
+  with `K.Standards.DeclarationInvalid`. The profile stores the resolved versions next to the natural keys, and
+  `StudyStandardsProfileView.ResolvedTerminology` exposes the pairs, so consumers (mapping specifications,
+  conformance rules) reach the exact codelists without a second lookup.
+- There is no backfill: binding rows are insert-only, and a profile declared before resolution resolves when it is
+  next declared. Event payloads are unchanged.
 
 ### 4.3 Governance and immutability
 
@@ -115,10 +127,11 @@ Downloaded content goes through the same `ChecksumVerifier`.
 
 - **Positive Impact:** mapping specifications, rule packs and findings can name exact, approved, hash-identified
   definitions. A study's standards are a governed, audited declaration instead of a configuration file.
-- **Negative Impact / Technical Debt:** terminology bindings are strings until the Concept Registry lands; public
-  content is duplicated per tenant.
-- **Mitigation Strategy:** a follow-up issue resolves bindings to `CodeSystemVersionId` once #4807 merges. If
-  per-tenant duplication becomes material, a shared read-only catalogue can seed tenants without changing this
+- **Negative Impact / Technical Debt:** public content is duplicated per tenant, and a study must import a CT
+  package into the Concept Registry before it can declare it. Standard versions registered before their CT package
+  was imported keep unresolved bindings.
+- **Mitigation Strategy:** bindings resolve to `CodeSystemVersionId` (§4.2, #4888), and a study declaration always
+  resolves, so an unresolved standard binding never reaches a study. If per-tenant duplication becomes material, a shared read-only catalogue can seed tenants without changing this
   model.
 
 ## 6. Implementation & Verification

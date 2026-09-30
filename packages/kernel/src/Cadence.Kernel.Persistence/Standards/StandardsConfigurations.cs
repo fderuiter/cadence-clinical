@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Persistence.Configurations;
 using Cadence.Kernel.Standards;
@@ -131,6 +132,10 @@ internal sealed class StandardTerminologyBindingConfiguration : IEntityTypeConfi
         builder.HasKey(x => new { x.TenantId, x.StandardVersionId, x.CodeSystem, x.Version });
         builder.Property(x => x.CodeSystem).HasMaxLength(StandardPackageContent.MaxNameLength);
         builder.Property(x => x.Version).HasMaxLength(StandardPackageContent.MaxNameLength);
+        builder.Ignore(x => x.Reference);
+        builder.HasOne<CodeSystemVersion>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.CodeSystemVersionId }).HasPrincipalKey(v => new { v.TenantId, v.Id })
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -168,9 +173,12 @@ internal sealed class StudyStandardsProfileConfiguration : IEntityTypeConfigurat
         builder.PrimitiveCollection(x => x.StandardVersionIds).IsRequired()
             .ElementType(e => e.HasConversion<StandardVersionIdValueConverter>());
         builder.PrimitiveCollection(x => x.ControlledTerminology).IsRequired();
+        builder.PrimitiveCollection(x => x.ControlledTerminologyVersions).IsRequired()
+            .ElementType(e => e.HasConversion<CodeSystemVersionIdValueConverter>());
         builder.PrimitiveCollection(x => x.LibraryPins).IsRequired()
             .ElementType(e => e.HasConversion<LibraryItemIdValueConverter>());
         builder.Ignore(x => x.ControlledTerminologyRefs);
+        builder.Ignore(x => x.ResolvedTerminology);
         builder.HasIndex(x => new { x.TenantId, x.StudyId }).IsUnique();
         builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Study>().WithMany()

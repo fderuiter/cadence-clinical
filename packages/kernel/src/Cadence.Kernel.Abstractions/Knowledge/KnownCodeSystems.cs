@@ -112,6 +112,24 @@ public static partial class KnownCodeSystems
         return false;
     }
 
+    /// <summary>
+    /// The code-system URI a Standards Registry binding names (ADR-2460 §4.2): a CDISC CT package type such as
+    /// <c>sdtmct</c> maps to <see cref="CdiscCt"/>, and an absolute URI such as <see cref="MedDra"/> is used as it is.
+    /// Returns null for any other name, which no Concept Registry code system can have.
+    /// </summary>
+    public static string? UriFor(string codeSystem)
+    {
+        ArgumentNullException.ThrowIfNull(codeSystem);
+        if (PackageType().IsMatch(codeSystem))
+        {
+            return CdiscCtPackagePrefix + codeSystem;
+        }
+
+        return Uri.TryCreate(codeSystem, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            ? codeSystem
+            : null;
+    }
+
     [GeneratedRegex("^[a-z][a-z0-9-]*ct$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 100)]
     private static partial Regex PackageType();
 }

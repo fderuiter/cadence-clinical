@@ -1,4 +1,4 @@
-DO $EF$
+﻿DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -3095,6 +3095,45 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930094042_EffectivityAndStudySiteActivation') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930094042_EffectivityAndStudySiteActivation', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930102009_ResolvedTerminologyBindings') THEN
+    ALTER TABLE kernel.study_standards_profiles ADD controlled_terminology_versions uuid[] NOT NULL DEFAULT ARRAY[]::uuid[];
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930102009_ResolvedTerminologyBindings') THEN
+    ALTER TABLE kernel.standard_terminology ADD code_system_version_id uuid;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930102009_ResolvedTerminologyBindings') THEN
+    CREATE INDEX "IX_standard_terminology_tenant_id_code_system_version_id" ON kernel.standard_terminology (tenant_id, code_system_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930102009_ResolvedTerminologyBindings') THEN
+    ALTER TABLE kernel.standard_terminology ADD CONSTRAINT "FK_standard_terminology_code_system_versions_tenant_id_code_sy~" FOREIGN KEY (tenant_id, code_system_version_id) REFERENCES kernel.code_system_versions (tenant_id, id) ON DELETE RESTRICT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930102009_ResolvedTerminologyBindings') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930102009_ResolvedTerminologyBindings', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;
