@@ -10,6 +10,7 @@ using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Standards;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Trust;
@@ -18,12 +19,41 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Kernel.Application.Standards;
 
+/// <summary>
+/// Resolves Standards Registry terminology bindings to the tenant's Concept Registry code-system versions
+/// (ADR-2460 §4.2): <c>(sdtmct, 2024-09-27)</c> is the version <c>2024-09-27</c> of
+/// <see cref="KnownCodeSystems.SdtmCt"/>, and a URI-named code system is looked up by its URI.
+/// </summary>
+internal static class TerminologyResolution
+{
+    /// <summary>The references the tenant has imported, each with its code-system version. Others are absent.</summary>
+    public static async Task<IReadOnlyDictionary<CodeSystemVersionRef, CodeSystemVersionId>> ResolveAsync(
+        IConceptRegistry concepts, TenantId tenant, IEnumerable<CodeSystemVersionRef> references, CancellationToken cancellationToken)
+    {
+        var resolved = new Dictionary<CodeSystemVersionRef, CodeSystemVersionId>();
+        foreach (var reference in references.Distinct())
+        {
+            if (reference.ToCodeSystemUri() is { } uri && !string.IsNullOrWhiteSpace(reference.Version)
+                && await concepts.FindCodeSystemVersionAsync(tenant, uri, reference.Version, cancellationToken).ConfigureAwait(false) is { } version)
+            {
+                resolved[reference] = version.Id;
+            }
+        }
+
+        return resolved;
+    }
+}
+
 /// <summary>Handles <see cref="RegisterStandardVersion"/>.</summary>
-internal sealed class RegisterStandardVersionHandler(IStandardsRegistry registry) : ICommandHandler<RegisterStandardVersion, StandardVersionId>
+internal sealed class RegisterStandardVersionHandler(IStandardsRegistry registry, IConceptRegistry concepts) : ICommandHandler<RegisterStandardVersion, StandardVersionId>
 {
     public async Task<CommandResult<StandardVersionId>> HandleAsync(RegisterStandardVersion command, ICommandContext context, CancellationToken cancellationToken)
     {
-        var (version, error) = StandardVersion.Register(command.StandardVersionId, command.TenantId, command.Package, command.ExpectedContentHash);
+        ArgumentNullException.ThrowIfNull(command.Package);
+        var terminology = await TerminologyResolution.ResolveAsync(
+            concepts, command.TenantId, command.Package.ControlledTerminology ?? [], cancellationToken).ConfigureAwait(false);
+        var (version, error) = StandardVersion.Register(
+            command.StandardVersionId, command.TenantId, command.Package, command.ExpectedContentHash, terminology);
         if (error is not null)
         {
             return error;
@@ -192,7 +222,7 @@ internal sealed class LibraryItemGovernanceHandler(IAttestationVerifier attestat
 }
 
 /// <summary>Handles <see cref="DeclareStudyStandards"/>.</summary>
-internal sealed class DeclareStudyStandardsHandler(IStandardsRegistry registry) : ICommandHandler<DeclareStudyStandards, StudyStandardsProfileId>
+internal sealed class DeclareStudyStandardsHandler(IStandardsRegistry registry, IConceptRegistry concepts) : ICommandHandler<DeclareStudyStandards, StudyStandardsProfileId>
 {
     public async Task<CommandResult<StudyStandardsProfileId>> HandleAsync(DeclareStudyStandards command, ICommandContext context, CancellationToken cancellationToken)
     {
@@ -223,6 +253,8 @@ internal sealed class DeclareStudyStandardsHandler(IStandardsRegistry registry) 
             }
         }
 
+        var terminology = await TerminologyResolution.ResolveAsync(concepts, command.TenantId, command.ControlledTerminology, cancellationToken).ConfigureAwait(false);
+
         var profile = await context.Work.FindAsync<StudyStandardsProfile>(command.ProfileId, cancellationToken).ConfigureAwait(false);
         var isNew = profile is null;
         if (profile is null)
@@ -239,8 +271,8 @@ internal sealed class DeclareStudyStandardsHandler(IStandardsRegistry registry) 
             return StandardsErrors.DeclarationInvalid.WithMessage($"Profile {command.ProfileId} belongs to another study.");
         }
 
-        var before = (profile.StandardVersionIds, profile.ControlledTerminology, profile.LibraryPins);
-        if (profile.Declare(command.StandardVersions, command.ControlledTerminology, command.LibraryPins, standards, pins) is { } error)
+        var before = (profile.StandardVersionIds, profile.ControlledTerminology, profile.ControlledTerminologyVersions, profile.LibraryPins);
+        if (profile.Declare(command.StandardVersions, command.ControlledTerminology, command.LibraryPins, standards, pins, terminology) is { } error)
         {
             return error;
         }
@@ -251,6 +283,7 @@ internal sealed class DeclareStudyStandardsHandler(IStandardsRegistry registry) 
         }
         else if (before.StandardVersionIds.SequenceEqual(profile.StandardVersionIds)
             && before.ControlledTerminology.SequenceEqual(profile.ControlledTerminology, StringComparer.Ordinal)
+            && before.ControlledTerminologyVersions.SequenceEqual(profile.ControlledTerminologyVersions)
             && before.LibraryPins.SequenceEqual(profile.LibraryPins))
         {
             // Nothing changed: no new revision, no event.
@@ -275,7 +308,8 @@ public static class KernelStandardsServiceCollectionExtensions
     /// <summary>
     /// Registers the standards command handlers. The host must also register kernel persistence's
     /// <see cref="IStandardsRegistry"/> (<c>AddKernelStandardsPersistence</c>); <c>AddKernelPersistence</c> provides the
-    /// <see cref="IAttestationVerifier"/> that approval and deprecation check.
+    /// <see cref="IAttestationVerifier"/> that approval and deprecation check and the <see cref="IConceptRegistry"/> that
+    /// terminology bindings resolve through.
     /// </summary>
     public static IServiceCollection AddKernelStandards(this IServiceCollection services)
     {

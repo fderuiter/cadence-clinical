@@ -86,7 +86,10 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
         return profile is null
             ? null
             : new StudyStandardsProfileView(
-                profile.Id, profile.StudyId, profile.VersionIndex, profile.StandardVersionIds, profile.ControlledTerminologyRefs, profile.LibraryPins);
+                profile.Id, profile.StudyId, profile.VersionIndex, profile.StandardVersionIds, profile.ControlledTerminologyRefs, profile.LibraryPins)
+            {
+                ResolvedTerminology = profile.ResolvedTerminology,
+            };
     }
 
     private static StandardVersionSummary ToSummary(StandardVersion v) => new(
@@ -101,8 +104,15 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
         v.Status,
         v.ApprovalAttestationId,
         v.DeprecationAttestationId,
-        [.. v.Terminology.Select(t => new CodeSystemVersionRef(t.CodeSystem, t.Version))
-            .OrderBy(t => t.CodeSystem, StringComparer.Ordinal).ThenBy(t => t.Version, StringComparer.Ordinal)]);
+        [.. v.Terminology.Select(t => t.Reference)
+            .OrderBy(t => t.CodeSystem, StringComparer.Ordinal).ThenBy(t => t.Version, StringComparer.Ordinal)])
+    {
+        ResolvedTerminology = [.. v.Terminology
+            .OrderBy(t => t.CodeSystem, StringComparer.Ordinal).ThenBy(t => t.Version, StringComparer.Ordinal)
+            .SelectMany(t => t.CodeSystemVersionId is { } resolved
+                ? [new ResolvedCodeSystemVersion(t.Reference, resolved)]
+                : Array.Empty<ResolvedCodeSystemVersion>())],
+    };
 
     private static LibraryItemView ToView(LibraryItem i)
     {

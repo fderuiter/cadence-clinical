@@ -352,7 +352,11 @@ Standard definitions and the governed library are tenant-scoped kernel data (spe
 - Library content is validated per kind by any registered `ILibraryContentValidator` (in Abstractions, so other
   assemblies can provide one); kinds without one accept any JSON object. `AddCadenceRules()` registers the `RulePack`
   validator (ADR-2461); mapping specifications add theirs with #4810.
-- CT bindings are `CodeSystemVersionRef(code system, version)` until the Concept Registry (#4807) resolves them.
+- CT bindings are `CodeSystemVersionRef(code system, version)`, naming a CDISC CT package type (`sdtmct`) or a
+  code-system URI (`KnownCodeSystems.UriFor`), resolved to the tenant's Concept Registry version (ADR-2460 §4.2).
+  `RegisterStandardVersion` stores the resolved `CodeSystemVersionId` when the package is imported and leaves it
+  empty otherwise; `DeclareStudyStandards` refuses (`DeclarationInvalid`) any CT version the tenant has not imported.
+  `StandardVersionSummary.ResolvedTerminology` and `StudyStandardsProfileView.ResolvedTerminology` return the pairs.
 
 A host that uses the registry also calls `AddKernelStandards()` (handlers) and `AddKernelStandardsPersistence()`
 (`IStandardsRegistry`). Approval and deprecation name an attestation recorded with `Attest` on the `standard_version`

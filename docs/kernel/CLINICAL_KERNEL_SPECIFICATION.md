@@ -497,10 +497,11 @@ approval needs an `Approved` Attestation, deprecation a `Responsibility` one, bo
 `IAttestationVerifier`). `StudyStandardsProfile` pins a study's approved standard versions, CT versions and library
 items; deprecation never changes a pin. Registered definitions are insert-only (`KA001`) and the identity and content
 columns of versions and items are immutable (`KS001`). `Cadence.Standards` loads CDISC Library product content with
-checksum verification and ships SDTMIG v3.4 (DM, AE, VS, LB) and ADaMIG v1.3 (ADSL) seeds. Until the Concept Registry
-lands, CT bindings are the natural key `(code system, version)`, for example `sdtmct 2024-09-27`; each CDISC CT package
-type is its own Concept Registry code system (`KnownCodeSystems.CdiscCt`, ADR-2470), so the key names one pinned
-code-system version. An architecture test
+checksum verification and ships SDTMIG v3.4 (DM, AE, VS, LB) and ADaMIG v1.3 (ADSL) seeds. CT bindings keep the
+natural key `(code system, version)`, for example `sdtmct 2024-09-27`, and resolve to the tenant's Concept Registry
+`CodeSystemVersion` (#4888, ADR-2460 §4.2): each CDISC CT package type is its own code system
+(`KnownCodeSystems.CdiscCt`, ADR-2470) and any other code system is named by its URI. A standard version stores the
+resolved version when the package is already imported; a study declaration must resolve every CT version it declares. An architecture test
 enforces K-PROJ-1 against the shipped seeds.
 
 ---

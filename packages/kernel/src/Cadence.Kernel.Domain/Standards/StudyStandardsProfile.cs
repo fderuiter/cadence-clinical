@@ -10,7 +10,8 @@ namespace Cadence.Kernel.Domain.Standards;
 
 /// <summary>
 /// What one study declared it uses (spec §6.3, K-STD-1): standard versions (at most one per standard), controlled
-/// terminology versions (at most one per code system) and pinned library item versions (at most one per kind and key).
+/// terminology versions (at most one per code system, each resolved to a version the tenant imported into the Concept
+/// Registry, ADR-2460 §4.2) and pinned library item versions (at most one per kind and key).
 /// The declaration is revised as a whole; each revision is a new <see cref="AggregateRootBase.VersionIndex"/>, with the
 /// previous one in the audit trail. Whether each reference was approved is checked when it is declared, so a later
 /// deprecation never changes it.
@@ -35,10 +36,22 @@ public sealed class StudyStandardsProfile : AggregateRoot<StudyStandardsProfileI
     /// <summary>Declared terminology versions, each as <c>codeSystem|version</c>, sorted.</summary>
     public string[] ControlledTerminology { get; private set; } = [];
 
+    /// <summary>
+    /// The Concept Registry version of each <see cref="ControlledTerminology"/> entry, in the same order. Empty only for
+    /// a declaration made before terminology was resolved whose packages were never imported.
+    /// </summary>
+    public CodeSystemVersionId[] ControlledTerminologyVersions { get; private set; } = [];
+
     public LibraryItemId[] LibraryPins { get; private set; } = [];
 
     public IReadOnlyList<CodeSystemVersionRef> ControlledTerminologyRefs =>
         [.. ControlledTerminology.Select(Parse)];
+
+    /// <summary>Each declared terminology version with its Concept Registry version.</summary>
+    public IReadOnlyList<ResolvedCodeSystemVersion> ResolvedTerminology =>
+        ControlledTerminologyVersions.Length == ControlledTerminology.Length
+            ? [.. ControlledTerminology.Select(Parse).Zip(ControlledTerminologyVersions, (r, v) => new ResolvedCodeSystemVersion(r, v))]
+            : [];
 
     /// <summary>Starts a study's profile; <see cref="Declare"/> fills it.</summary>
     public static StudyStandardsProfile Create(StudyStandardsProfileId id, TenantId tenantId, StudyId studyId) =>
@@ -46,20 +59,23 @@ public sealed class StudyStandardsProfile : AggregateRoot<StudyStandardsProfileI
 
     /// <summary>
     /// Replaces the declaration. <paramref name="standards"/> and <paramref name="pins"/> are the approved records the
-    /// caller resolved for the requested ids; each id must appear in them.
+    /// caller resolved for the requested ids; each id must appear in them. <paramref name="terminology"/> holds the
+    /// Concept Registry versions the caller found for the declared terminology; each declared version must appear in it.
     /// </summary>
     public KernelError? Declare(
         IReadOnlyList<StandardVersionId> standardVersionIds,
         IReadOnlyList<CodeSystemVersionRef> controlledTerminology,
         IReadOnlyList<LibraryItemId> libraryPins,
         IReadOnlyDictionary<StandardVersionId, StandardVersionSummary> standards,
-        IReadOnlyDictionary<LibraryItemId, LibraryItemView> pins)
+        IReadOnlyDictionary<LibraryItemId, LibraryItemView> pins,
+        IReadOnlyDictionary<CodeSystemVersionRef, CodeSystemVersionId> terminology)
     {
         ArgumentNullException.ThrowIfNull(standardVersionIds);
         ArgumentNullException.ThrowIfNull(controlledTerminology);
         ArgumentNullException.ThrowIfNull(libraryPins);
         ArgumentNullException.ThrowIfNull(standards);
         ArgumentNullException.ThrowIfNull(pins);
+        ArgumentNullException.ThrowIfNull(terminology);
 
         if (standardVersionIds.Count == 0)
         {
@@ -98,6 +114,21 @@ public sealed class StudyStandardsProfile : AggregateRoot<StudyStandardsProfileI
             return StandardsErrors.DeclarationInvalid.WithMessage($"A study declares one version of {duplicateTerminology.Key} terminology.");
         }
 
+        foreach (var reference in controlledTerminology)
+        {
+            if (reference.ToCodeSystemUri() is null)
+            {
+                return StandardsErrors.DeclarationInvalid.WithMessage(
+                    $"'{reference.CodeSystem}' names no code system: use a CDISC CT package type such as 'sdtmct' or a code-system URI.");
+            }
+
+            if (!terminology.ContainsKey(reference))
+            {
+                return StandardsErrors.DeclarationInvalid.WithMessage(
+                    $"{reference} has not been imported into this tenant's Concept Registry; import the package before declaring it.");
+            }
+        }
+
         foreach (var id in libraryPins)
         {
             if (!pins.TryGetValue(id, out var pin))
@@ -119,7 +150,9 @@ public sealed class StudyStandardsProfile : AggregateRoot<StudyStandardsProfileI
         }
 
         StandardVersionIds = [.. standardVersionIds.Distinct().Order()];
-        ControlledTerminology = [.. controlledTerminology.Distinct().Select(t => $"{t.CodeSystem}|{t.Version}").Order(StringComparer.Ordinal)];
+        var declared = controlledTerminology.Distinct().OrderBy(t => $"{t.CodeSystem}|{t.Version}", StringComparer.Ordinal).ToList();
+        ControlledTerminology = [.. declared.Select(t => $"{t.CodeSystem}|{t.Version}")];
+        ControlledTerminologyVersions = [.. declared.Select(t => terminology[t])];
         LibraryPins = [.. libraryPins.Distinct().Order()];
         return null;
     }

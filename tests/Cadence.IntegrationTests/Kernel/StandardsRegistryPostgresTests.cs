@@ -5,8 +5,10 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Application.Knowledge.Terminology;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Standards;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.References;
@@ -14,6 +16,7 @@ using Cadence.Kernel.Standards;
 using Cadence.Kernel.Trust;
 using Cadence.Standards;
 using Cadence.Testing;
+using Cadence.TestSupport.Kernel.Knowledge;
 
 using FluentAssertions;
 
@@ -137,6 +140,8 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
         var standardApproval = await SignStandardAsync(tenant, sdtmig, AttestationMeaning.Approved, ct);
         (await SendAsync(new ApproveStandardVersion(tenant, sdtmig, standardApproval, Key(), Reason), ct)).IsSuccess.Should().BeTrue();
 
+        await ImportSdtmCtAsync(tenant, await RegisterSdtmCtAsync(tenant, ct), "2024-09-27", ct);
+
         using var units = JsonDocument.Parse("""{"codelist":"C66770","terms":["mmHg","beats/min"]}""");
         var v1 = await DraftAsync(tenant, units.RootElement, [sdtmig], ct);
         var v2 = await DraftAsync(tenant, units.RootElement, [sdtmig], ct);
@@ -183,6 +188,7 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
         var sdtmig = await RegisterAsync(tenant, Seed("SDTMIG"), ct);
         var approval = await SignStandardAsync(tenant, sdtmig, AttestationMeaning.Approved, ct);
         (await SendAsync(new ApproveStandardVersion(tenant, sdtmig, approval, Key(), Reason), ct)).IsSuccess.Should().BeTrue();
+        await ImportSdtmCtAsync(tenant, await RegisterSdtmCtAsync(tenant, ct), "2024-09-27", ct);
         var unknown = LibraryItemId.New();
 
         (await SendAsync(new ApproveLibraryItem(tenant, unknown, AttestationId.New(), Key(), Reason), ct)).Error
@@ -192,6 +198,85 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
         (await DeclareAsync(tenant, graph.Study.Id, StudyStandardsProfileId.New(), sdtmig, unknown, ct)).Error!.Code
             .Should().Be(StandardsErrors.LibraryItemUnknown.Code);
         (await fixture.Standards.FindStudyStandardsAsync(tenant, graph.Study.Id, ct)).Should().BeNull();
+    }
+
+    /// <summary>
+    /// Terminology bindings resolve to the tenant's Concept Registry (ADR-2460 §4.2, #4888). A standard version keeps
+    /// the code-system version its binding resolved to when it was registered, or its natural key alone when the
+    /// package was not imported yet. A study can declare only terminology the tenant imported, and it keeps the version
+    /// each declaration resolved to.
+    /// </summary>
+    [Fact(DisplayName = "TerminologyBindings_ResolveToImportedVersions_AndUnimportedDeclarationsAreRefused")]
+    public async Task TerminologyBindingsResolveToImportedVersionsAndUnimportedDeclarationsAreRefused()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var graph = KernelSchemaPostgresTests.NewGraph();
+        await fixture.SeedAsync(graph.Tenant, graph.Sponsor, graph.Study);
+        var tenant = graph.Tenant.Id;
+        var sdtmct = new CodeSystemVersionRef("sdtmct", "2024-09-27");
+
+        var adamig = await RegisterAsync(tenant, Seed("ADaMIG"), ct);
+        var before = await RegisterAsync(tenant, Seed("SDTMIG") with { Version = "3.4-before-import" }, ct);
+        (await fixture.Standards.FindStandardVersionAsync(tenant, before, ct))!.ResolvedTerminology.Should().BeEmpty();
+
+        var codeSystem = await RegisterSdtmCtAsync(tenant, ct);
+        var imported = await ImportSdtmCtAsync(tenant, codeSystem, sdtmct.Version, ct);
+        var sdtmig = await RegisterAsync(tenant, Seed("SDTMIG"), ct);
+        var summary = await fixture.Standards.FindStandardVersionAsync(tenant, sdtmig, ct);
+        summary!.ControlledTerminology.Should().Equal(sdtmct);
+        summary.ResolvedTerminology.Should().Equal(new ResolvedCodeSystemVersion(sdtmct, imported));
+        (await fixture.Standards.FindStandardVersionAsync(tenant, before, ct))!.ResolvedTerminology
+            .Should().BeEmpty("a binding keeps what it resolved to when it was registered");
+
+        var approval = await SignStandardAsync(tenant, sdtmig, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveStandardVersion(tenant, sdtmig, approval, Key(), Reason), ct)).Error.Should().BeNull();
+        var adamApproval = await SignStandardAsync(tenant, adamig, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveStandardVersion(tenant, adamig, adamApproval, Key(), Reason), ct)).Error.Should().BeNull();
+
+        var older = await DeclareTerminologyAsync(tenant, graph.Study.Id, sdtmig, sdtmct with { Version = "2023-12-15" }, ct);
+        older.Error!.Code.Should().Be(StandardsErrors.DeclarationInvalid.Code);
+        older.Error.Message.Should().Contain("sdtmct-2023-12-15 has not been imported");
+        (await DeclareTerminologyAsync(tenant, graph.Study.Id, sdtmig, new CodeSystemVersionRef(KnownCodeSystems.MedDra, "27.0"), ct))
+            .Error!.Message.Should().Contain("has not been imported");
+        (await fixture.Standards.FindStudyStandardsAsync(tenant, graph.Study.Id, ct)).Should().BeNull("a refused declaration writes nothing");
+
+        (await DeclareTerminologyAsync(tenant, graph.Study.Id, sdtmig, sdtmct, ct)).Error.Should().BeNull();
+        var profile = await fixture.Standards.FindStudyStandardsAsync(tenant, graph.Study.Id, ct);
+        profile!.ControlledTerminology.Should().Equal(sdtmct);
+        profile.ResolvedTerminology.Should().Equal(new ResolvedCodeSystemVersion(sdtmct, imported));
+
+        await using var db = fixture.CreateAdminContext();
+        (await db.Set<StandardTerminologyBinding>().AsNoTracking()
+            .Where(b => b.TenantId == tenant && b.StandardVersionId == sdtmig).Select(b => b.CodeSystemVersionId).SingleAsync(ct))
+            .Should().Be(imported);
+    }
+
+    /// <summary>
+    /// A tenant can declare only terminology it imported itself: another tenant's import of the same package does not
+    /// resolve (K-ID-2).
+    /// @req:PRD-CRF-013
+    /// </summary>
+    [Fact(DisplayName = "TerminologyResolution_IsTenantScoped")]
+    [GxPRequirement("PRD-CRF-013")]
+    public async Task TerminologyResolutionIsTenantScoped()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var sdtmct = new CodeSystemVersionRef("sdtmct", "2024-09-27");
+        var importer = KernelSchemaPostgresTests.NewGraph();
+        await fixture.SeedAsync(importer.Tenant, importer.Sponsor, importer.Study);
+        await ImportSdtmCtAsync(importer.Tenant.Id, await RegisterSdtmCtAsync(importer.Tenant.Id, ct), sdtmct.Version, ct);
+
+        var other = KernelSchemaPostgresTests.NewGraph();
+        await fixture.SeedAsync(other.Tenant, other.Sponsor, other.Study);
+        var tenant = other.Tenant.Id;
+        var sdtmig = await RegisterAsync(tenant, Seed("SDTMIG"), ct);
+        (await fixture.Standards.FindStandardVersionAsync(tenant, sdtmig, ct))!.ResolvedTerminology.Should().BeEmpty();
+        var approval = await SignStandardAsync(tenant, sdtmig, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveStandardVersion(tenant, sdtmig, approval, Key(), Reason), ct)).Error.Should().BeNull();
+
+        (await DeclareTerminologyAsync(tenant, other.Study.Id, sdtmig, sdtmct, ct)).Error!.Message.Should().Contain("has not been imported");
     }
 
     /// <summary>
@@ -241,6 +326,30 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
         TenantId tenant, StudyId study, StudyStandardsProfileId profile, StandardVersionId standard, LibraryItemId pin, CancellationToken ct) =>
         SendAsync(new DeclareStudyStandards(
             tenant, study, profile, [standard], [new CodeSystemVersionRef("sdtmct", "2024-09-27")], [pin], Key(), Reason), ct);
+
+    private Task<CommandResult<StudyStandardsProfileId>> DeclareTerminologyAsync(
+        TenantId tenant, StudyId study, StandardVersionId standard, CodeSystemVersionRef terminology, CancellationToken ct) =>
+        SendAsync(new DeclareStudyStandards(tenant, study, StudyStandardsProfileId.New(), [standard], [terminology], [], Key(), Reason), ct);
+
+    private async Task<CodeSystemId> RegisterSdtmCtAsync(TenantId tenant, CancellationToken ct)
+    {
+        var result = await SendAsync(new RegisterCodeSystem(
+            tenant, CodeSystemId.New(), KnownCodeSystems.SdtmCt, "SDTM Controlled Terminology", "CDISC", LicenseClass.Open, Key(), Reason), ct);
+        result.Error.Should().BeNull();
+        return result.Value;
+    }
+
+    /// <summary>Imports the CT fixture as <paramref name="version"/> of the tenant's SDTM CT code system.</summary>
+    private async Task<CodeSystemVersionId> ImportSdtmCtAsync(TenantId tenant, CodeSystemId codeSystem, string version, CancellationToken ct)
+    {
+        var release = new TerminologyRelease(
+            tenant, codeSystem, CodeSystemVersionId.New(), version, new DateOnly(2024, 9, 27), "SDTM Terminology.txt",
+            "https://evs.nci.nih.gov/ftp1/CDISC/SDTM/", TerminologyFixtures.Sha256(TerminologyFixtures.CdiscCt), Reason);
+        var result = await new TerminologyPackageLoader(fixture.Sender)
+            .LoadAsync(release, TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser("sdtmct"), ct);
+        result.Error.Should().BeNull();
+        return result.Value;
+    }
 
     /// <summary>Signs <paramref name="meaning"/> over a standard version's current content hash, as the fixture's person unless another signer is given.</summary>
     private async Task<AttestationId> SignStandardAsync(

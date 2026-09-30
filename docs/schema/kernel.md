@@ -39,13 +39,13 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.roles`](#kernelroles) | `Role` | 9 |
 | [`kernel.sites`](#kernelsites) | `Site` | 11 |
 | [`kernel.standard_datasets`](#kernelstandard_datasets) | `StandardDataset` | 7 |
-| [`kernel.standard_terminology`](#kernelstandard_terminology) | `StandardTerminologyBinding` | 4 |
+| [`kernel.standard_terminology`](#kernelstandard_terminology) | `StandardTerminologyBinding` | 5 |
 | [`kernel.standard_value_level_definitions`](#kernelstandard_value_level_definitions) | `StandardValueLevelDefinition` | 11 |
 | [`kernel.standard_variables`](#kernelstandard_variables) | `StandardVariable` | 13 |
 | [`kernel.standard_versions`](#kernelstandard_versions) | `StandardVersion` | 16 |
 | [`kernel.studies`](#kernelstudies) | `Study` | 11 |
 | [`kernel.study_sites`](#kernelstudy_sites) | `StudySite` | 10 |
-| [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 10 |
+| [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 11 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 8 |
 | [`kernel.validation_detections`](#kernelvalidation_detections) | `ValidationDetectionRecord` | 17 |
@@ -945,10 +945,16 @@ Entity: `StandardTerminologyBinding`
 | `standard_version_id` | `uuid` | no |  | PK |
 | `tenant_id` | `uuid` | no |  | PK |
 | `version` | `character varying(64)` | no |  | PK |
+| `code_system_version_id` | `uuid` | yes |  |  |
 
 Foreign keys:
 
+- `FK_standard_terminology_code_system_versions_tenant_id_code_sy~`: (`tenant_id`, `code_system_version_id`) references `kernel.code_system_versions` (`tenant_id`, `id`), on delete restrict
 - `FK_standard_terminology_standard_versions_tenant_id_standard_v~`: (`tenant_id`, `standard_version_id`) references `kernel.standard_versions` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_standard_terminology_tenant_id_code_system_version_id`: (`tenant_id`, `code_system_version_id`)
 
 ## kernel.standard_value_level_definitions
 
@@ -1101,6 +1107,7 @@ Entity: `StudyStandardsProfile`
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no |  | PK |
 | `controlled_terminology` | `text[]` | no |  |  |
+| `controlled_terminology_versions` | `uuid[]` | no |  |  |
 | `created_at` | `timestamp with time zone` | no |  |  |
 | `created_by` | `character varying(255)` | no |  |  |
 | `library_pins` | `uuid[]` | no |  |  |

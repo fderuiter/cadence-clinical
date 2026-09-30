@@ -21,7 +21,12 @@ public sealed class StandardVersion : AggregateRoot<StandardVersionId>
 
     private StandardVersion() { }
 
-    private StandardVersion(StandardVersionId id, TenantId tenantId, StandardPackage package, string contentHash)
+    private StandardVersion(
+        StandardVersionId id,
+        TenantId tenantId,
+        StandardPackage package,
+        string contentHash,
+        IReadOnlyDictionary<CodeSystemVersionRef, CodeSystemVersionId> resolvedTerminology)
         : base(id)
     {
         TenantId = tenantId;
@@ -36,7 +41,8 @@ public sealed class StandardVersion : AggregateRoot<StandardVersionId>
 
         _datasets.AddRange(package.Datasets.Select(d => new StandardDataset(tenantId, id, d)));
         _valueLevelDefinitions.AddRange(package.ValueLevelDefinitions.Select((v, i) => new StandardValueLevelDefinition(tenantId, id, i + 1, v)));
-        _terminology.AddRange(package.ControlledTerminology.Select(t => new StandardTerminologyBinding(tenantId, id, t)));
+        _terminology.AddRange(package.ControlledTerminology.Select(t =>
+            new StandardTerminologyBinding(tenantId, id, t, resolvedTerminology.TryGetValue(t, out var resolved) ? resolved : null)));
     }
 
     public TenantId TenantId { get; private set; }
@@ -71,9 +77,15 @@ public sealed class StandardVersion : AggregateRoot<StandardVersionId>
     /// <summary>
     /// Registers a package as a draft. The package is validated and normalized (<see cref="StandardPackageContent"/>);
     /// when <paramref name="expectedContentHash"/> is given it must equal the computed hash.
+    /// <paramref name="resolvedTerminology"/> holds the Concept Registry versions of the terminology bindings the tenant
+    /// has imported (ADR-2460 §4.2); a binding without one is kept by natural key only.
     /// </summary>
     public static (StandardVersion? Version, KernelError? Error) Register(
-        StandardVersionId id, TenantId tenantId, StandardPackage package, string? expectedContentHash)
+        StandardVersionId id,
+        TenantId tenantId,
+        StandardPackage package,
+        string? expectedContentHash,
+        IReadOnlyDictionary<CodeSystemVersionRef, CodeSystemVersionId>? resolvedTerminology = null)
     {
         ArgumentNullException.ThrowIfNull(package);
 
@@ -90,7 +102,7 @@ public sealed class StandardVersion : AggregateRoot<StandardVersionId>
             return (null, StandardsErrors.ContentHashMismatch.WithMessage($"Expected {expectedContentHash}, computed {hash}."));
         }
 
-        return (new StandardVersion(id, tenantId, normalized, hash), null);
+        return (new StandardVersion(id, tenantId, normalized, hash, resolvedTerminology ?? new Dictionary<CodeSystemVersionRef, CodeSystemVersionId>()), null);
     }
 
     /// <summary>Approves a draft. The caller has verified the Attestation.</summary>
@@ -277,12 +289,14 @@ public sealed class StandardTerminologyBinding
 {
     private StandardTerminologyBinding() { }
 
-    internal StandardTerminologyBinding(TenantId tenantId, StandardVersionId standardVersionId, CodeSystemVersionRef reference)
+    internal StandardTerminologyBinding(
+        TenantId tenantId, StandardVersionId standardVersionId, CodeSystemVersionRef reference, CodeSystemVersionId? codeSystemVersionId)
     {
         TenantId = tenantId;
         StandardVersionId = standardVersionId;
         CodeSystem = reference.CodeSystem;
         Version = reference.Version;
+        CodeSystemVersionId = codeSystemVersionId;
     }
 
     public TenantId TenantId { get; private set; }
@@ -292,4 +306,10 @@ public sealed class StandardTerminologyBinding
     public string CodeSystem { get; private set; } = string.Empty;
 
     public string Version { get; private set; } = string.Empty;
+
+    /// <summary>The Concept Registry version the binding resolved to at registration, or null when the tenant had not imported it.</summary>
+    public CodeSystemVersionId? CodeSystemVersionId { get; private set; }
+
+    /// <summary>The binding by natural key.</summary>
+    public CodeSystemVersionRef Reference => new(CodeSystem, Version);
 }
