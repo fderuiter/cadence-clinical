@@ -25,9 +25,11 @@
             <p>An updated protocol consent document version ({{ payload.protocol_version | default: payload.version_number | default: '2.0' }}) has been published for your study.</p>
             <p><strong>Summary of Updates:</strong> {{ payload.change_summary | default: payload.summary_of_changes | default: 'Protocol amendment updates requiring active subject re-consent.' }}</p>
             <p>To ensure continued trial participation and unblock scheduled ePRO diary submissions, please log into your Participant Companion Portal to review and electronically sign the updated consent form.</p>
+            {% if portal_url != null and portal_url != "" %}
             <p style="text-align: center;">
-                <a href="{{ portal_url | default: 'http://localhost:3000' }}" class="button">Log In to Subject Portal</a>
+                <a href="{{ portal_url }}" class="button">Log In to Subject Portal</a>
             </p>
+            {% endif %}
         </div>
         <div class="footer">
             <p>This is an automated system-generated notification from {{ brand_name | default: 'Cadence Clinical Platform' }}.<br>
