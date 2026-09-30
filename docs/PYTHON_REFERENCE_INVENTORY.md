@@ -19,7 +19,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | Package | Port missing | Port untested | Ported, deletion pending |
 | --- | ---: | ---: | ---: |
 | [packages/ddf](#packagesddf) | 1 | 0 | 10 |
-| [packages/engine_core](#packagesengine_core) | 7 | 0 | 15 |
+| [packages/engine_core](#packagesengine_core) | 5 | 0 | 17 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
 | [packages/storage](#packagesstorage) | 0 | 0 | 6 |
 
@@ -43,8 +43,8 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 
 | Python file | What it does | C# today | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `derived/engine.py` | Derived-variable math engine with unit normalisation and plausibility ranges | none | Port missing |  |
-| `derived/models.py` | Formula, plausibility and result models | none | Port missing |  |
+| `derived/engine.py` | Derived-variable math engine with unit normalisation and plausibility ranges | `DerivedVariableEngine` (`packages/engine_core/src/Derived/`), tested by `DerivedVariableEngineTests`; `CUSTOM_AST` formulas are `Cadence.Rules` expressions | Ported, deletion pending | ADR-2522; a missing or unknown sex is an error rather than female or male |
+| `derived/models.py` | Formula, plausibility and result models | records in `packages/engine_core/src/Derived/DerivedModels.cs`; `ComputeChecksum` matches the Python checksum | Ported, deletion pending | ADR-2522 |
 | `financial/contracts.py` | Tiered overhead, payee splits, line-item hash (Decimal) | `ContractCalculations` (`apps/payments/src/Domain/Ledger/`), tested by `ContractCalculationsTests` | Ported, deletion pending | ADR-2521 |
 | `financial/engine.py` | Event-triggered payable engine | none: callers create a `PayableLedger` | Ported, deletion pending | Facade not carried forward (ADR-2521) |
 | `financial/ledger.py` | Payable ledger with holdback reserve accounting | `PayableLedger` (`apps/payments/src/Domain/Ledger/`), tested by `PayableLedgerTests` | Ported, deletion pending | ADR-2521 |
