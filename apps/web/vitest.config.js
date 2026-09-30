@@ -15,19 +15,35 @@ export default mergeConfig(
       coverage: {
         provider: "v8",
         reporter: ["text", "json", "html"],
-        include: [
-          "src/components/ReasonForChangeModal.vue",
-          "src/components/ReasonModal.vue",
-          "src/components/ReviewCommentsSidebar.vue",
-          "src/components/TrivialComponent.vue",
-          "src/stores/signatures.ts",
-          "src/stores/sync.ts",
+        // Every hand-written source file counts (ADR-2530): not the generated client and types, the mock service
+        // worker or the bootstrap in main.js.
+        include: ["src/**/*.{ts,js,vue}"],
+        exclude: [
+          "src/api/generated/**",
+          "src/types/**",
+          "src/mocks/**",
+          "src/main.js",
         ],
         thresholds: {
-          lines: 80,
-          functions: 80,
-          branches: 80,
-          statements: 80,
+          // A ratchet floor under the whole app: raise it when coverage rises, never lower it.
+          lines: 47,
+          statements: 46,
+          functions: 36,
+          branches: 38,
+          // The files ADR-251 put under its 80 percent gate keep it.
+          "src/components/{ReasonForChangeModal,ReasonModal,ReviewCommentsSidebar,TrivialComponent}.vue":
+            {
+              lines: 80,
+              functions: 80,
+              branches: 80,
+              statements: 80,
+            },
+          "src/stores/{signatures,sync}.ts": {
+            lines: 80,
+            functions: 80,
+            branches: 80,
+            statements: 80,
+          },
         },
       },
     },

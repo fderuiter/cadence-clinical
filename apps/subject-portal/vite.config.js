@@ -39,12 +39,22 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      include: ["src/sync-queue.js"],
+      // Every source file counts (ADR-2530); the mock service worker is not hand-written code.
+      include: ["src/**/*.{ts,js,vue}"],
+      exclude: ["src/mocks/**"],
       thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 80,
-        statements: 80,
+        // A ratchet floor under the whole portal: raise it when coverage rises, never lower it.
+        lines: 76,
+        statements: 76,
+        functions: 75,
+        branches: 59,
+        // The file ADR-251 put under its 80 percent gate keeps it.
+        "src/sync-queue.js": {
+          lines: 80,
+          functions: 80,
+          branches: 80,
+          statements: 80,
+        },
       },
     },
   },

@@ -66,6 +66,11 @@ These tests currently use it:
 `pnpm --filter web test` runs Vitest with coverage in jsdom. `pnpm --filter web typecheck` and
 `pnpm --filter web lint` are the other two checks to run before pushing a web change.
 
+Coverage is measured over every hand-written source file in `apps/web` and `apps/subject-portal` (ADR-2530). The
+global thresholds in `apps/web/vitest.config.js` and `apps/subject-portal/vite.config.js` are a ratchet: when a
+change raises coverage, raise the floor to just under the new figure in the same change, and never lower it. A few
+files keep their own 80 percent thresholds.
+
 These three scripts regenerate `apps/web/src/types/usdm.ts` from `docs/openapi/legacy` before they run.
 If that leaves the file modified, restore it with `git checkout apps/web/src/types/usdm.ts` rather than
 committing the regenerated copy.

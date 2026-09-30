@@ -1,5 +1,10 @@
 # ADR-251: Centralized Accessibility Matcher and 80 Percent Coverage Gate
 
+> [!NOTE]
+> Amended by [ADR-2530](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md). The 80 percent
+> gate measured only the files named in `coverage.include`. Coverage is now measured over all web source with a
+> ratchet floor, and the files named here keep their 80 percent thresholds.
+
 - **Status:** Accepted
 - **Date:** 2026-08-02
 - **Authors:** @fderuiter
