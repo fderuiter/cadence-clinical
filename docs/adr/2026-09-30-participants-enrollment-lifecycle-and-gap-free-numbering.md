@@ -175,5 +175,11 @@ withdrawal is proven, and how the database enforces the lifecycle.
     - code uniqueness per study, one active enrollment per study site, and rescreening after a screen failure;
     - refused moves and times;
     - withdrawal refusing wrong-meaning, other-person, stale and unknown attestations;
+    - withdrawal refusing an unknown enrollment, an undefined kind, a terminal enrollment and a future or
+      out-of-order time, even with a valid signature;
+    - concurrent screenings with one subject code, of which exactly one succeeds;
+    - a screening back-dated into an earlier enrollment's active period at the same study site;
+    - numbers staying gap-free when other participants screen-fail or withdraw in between;
+    - tenant isolation of reads, changes, screenings, numbering and signatures;
     - the trigger, the append-only status rows and the exclusion constraint refusing forbidden changes for the
       superuser.

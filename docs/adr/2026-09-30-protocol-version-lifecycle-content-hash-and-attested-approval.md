@@ -158,8 +158,10 @@ the database enforces it. It refines ADR-2245 and does not replace it.
   - `AttestationTests`: signer kind, authentication freshness, target shape, mismatch reasons.
   - `KernelProtocolVersionPostgresTests`, through the pipeline against PostgreSQL:
     - the attested approval path end to end;
-    - rejection of stale, wrong-meaning, unknown and cross-tenant attestations;
-    - forks that keep the parent approved;
-    - withdrawal;
+    - rejection of stale, wrong-meaning, unknown, cross-tenant and other-person attestations;
+    - approval refused for a version that is not in review;
+    - unknown studies and parents, and reused version and attestation ids;
+    - forks that keep the parent approved, and concurrent forks numbered one after another;
+    - withdrawal from review and after approval, never from draft;
     - the trigger refusing every forbidden change for the superuser.
   - `InsertOnlyTables_RejectUpdateDeleteAndTruncate` now covers `attestations`.
