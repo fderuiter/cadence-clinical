@@ -38,12 +38,15 @@ builder.Services
     .AddKernelNavigation()
     .AddKernelSearchStore()
     .AddKernelSearch()
-    .AddKernelAuthorization();
+    .AddKernelAuthorization()
+
+    // Decisions come from the caller's grants, roles and delegations (ADR-2455). The host only reads and never
+    // bootstraps a tenant, so it names no platform operators.
+    .AddKernelAuthorityEvaluator();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 
-// Until the authority slice (#4781) ships the evaluator and visibility, every decision is a denial that says so and
-// every object is masked (ADR-2471, ADR-2540).
-builder.Services.AddSingleton<IAuthorizationEvaluator, UnavailableAuthorizationEvaluator>();
+// Until visibility is decided from the authority model (#4781) and the IdentityVault (#4782), every object is masked
+// (ADR-2471, ADR-2540).
 builder.Services.AddSingleton<INodeVisibility, UnavailableNodeVisibility>();
 
 // The kernel tenant comes from the tenant code the gateway signs, through the kernel's tenant directory (ADR-2540).

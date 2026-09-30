@@ -142,7 +142,7 @@ The kernel's answer to "why": why an action is permitted or denied, why an objec
 
 ### Kernel API host
 
-The one process that serves the kernel over HTTP (`apps/kernel-api`, assembly `Cadence.Kernel.Host`, ADR-2540) and the only one that registers kernel persistence (K-XS-2). The web app reaches it through the gateway at `/api/v1/kernel`: node summaries, zoom paths and children, the command catalogue, CanI, search and protocol versions, each in the kernel tenant found from the caller's signed tenant code and as the person named by the caller's verified claims. Objects the caller may not see come back masked, in place, and are left out of search. Until the authority slice exists every object is masked and every decision is a denial that says so.
+The one process that serves the kernel over HTTP (`apps/kernel-api`, assembly `Cadence.Kernel.Host`, ADR-2540) and the only one that registers kernel persistence (K-XS-2). The web app reaches it through the gateway at `/api/v1/kernel`: node summaries, zoom paths and children, the command catalogue, CanI, search and protocol versions, each in the kernel tenant found from the caller's signed tenant code and as the person named by the caller's verified claims. Objects the caller may not see come back masked, in place, and are left out of search. Dry-run decisions come from the caller's grants, roles and delegations; until visibility is decided from them, every object is masked.
 _Avoid_: serving kernel reads from a product service, taking the tenant from the route, query or body
 
 ### Simulation (candidate version)
