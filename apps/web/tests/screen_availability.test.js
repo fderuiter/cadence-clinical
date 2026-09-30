@@ -29,7 +29,12 @@ describe("Screen availability", () => {
   }
 
   it("marks only screens with a .NET backend as available", () => {
-    expect([...AVAILABLE_SCREENS].sort()).toEqual(["ctms", "ecrf", "ssu"]);
+    expect([...AVAILABLE_SCREENS].sort()).toEqual([
+      "ctms",
+      "ecrf",
+      "ssu",
+      "study",
+    ]);
     expect(isScreenAvailable("login")).toBe(true);
     expect(isScreenAvailable("unavailable")).toBe(true);
     expect(isScreenAvailable("mdr")).toBe(false);

@@ -30,6 +30,16 @@
           <kbd class="shortcut-badge">⌘K</kbd>
         </button>
 
+        <!-- The Clinical Canvas: the study-centric workspace the screens below move into (#4833). -->
+        <router-link
+          id="btn-open-study-canvas"
+          :to="studyCanvasPath"
+          class="cmd-palette-trigger"
+          title="Open the study workspace"
+        >
+          <span class="search-placeholder">Studies</span>
+        </router-link>
+
         <!-- Contextual Help Trigger Button -->
         <button
           id="btn-contextual-help-trigger"
@@ -871,6 +881,11 @@ import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 const authStore = useAuthStore();
 const notificationsStore = useNotificationsStore();
 const clinicalStore = useClinicalStore();
+const studyCanvasPath = computed(() =>
+  clinicalStore.activeStudyId
+    ? `/studies/${encodeURIComponent(clinicalStore.activeStudyId)}`
+    : "/studies"
+);
 const onboardingStore = useOnboardingStore();
 const knowledgeStore = useKnowledgeStore();
 

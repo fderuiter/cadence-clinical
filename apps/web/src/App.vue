@@ -1,5 +1,7 @@
 <template>
-  <AppShell>
+  <!-- The Clinical Canvas brings its own study-centric frame (no product sidebar); other screens use the shell. -->
+  <router-view v-if="canvasLayout" />
+  <AppShell v-else>
     <router-view />
   </AppShell>
   <ContextualHelpDrawer />
@@ -7,7 +9,8 @@
 </template>
 
 <script setup>
-import { onMounted } from "vue";
+import { computed, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { useClinicalStore } from "./stores/clinical";
 import AppShell from "./components/AppShell.vue";
 import ContextualHelpDrawer from "./components/ContextualHelpDrawer.vue";
@@ -15,6 +18,8 @@ import ToastHost from "./components/ToastHost.vue";
 import "./style.css";
 
 const store = useClinicalStore();
+const route = useRoute();
+const canvasLayout = computed(() => route?.meta?.layout === "canvas");
 
 onMounted(async () => {
   if (store.ledgerBlocks.length === 0) {

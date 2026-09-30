@@ -14,6 +14,8 @@
 
 /** Route names whose screens call endpoints the .NET services serve. */
 export const AVAILABLE_SCREENS = new Set([
+  // Clinical Canvas: participants and their counts, and site activation, from Execution.
+  "study",
   // Execution: subjects, forms, observations, SDV, queries (#4828).
   "ecrf",
   // Execution: site activation and eTMF compliance status; the other CTMS tabs run only in a demo build.
