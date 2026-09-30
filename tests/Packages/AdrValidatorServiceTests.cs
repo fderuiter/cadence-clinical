@@ -40,11 +40,9 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     /// <summary>
     /// A directory whose ADRs are uniquely numbered and fully indexed has no integrity errors.
-    /// @req:PRD-SYS-049
     /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
-    [GxPRequirement("PRD-SYS-049")]
     public void FindIntegrityErrors_ConsistentDirectory_ReturnsNoErrors()
     {
         WriteAdr("2026-01-01-first.md", "# ADR-049: First");
@@ -64,11 +62,9 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     /// <summary>
     /// Two ADRs carrying the same number (including zero-padded variants) are reported as a duplicate.
-    /// @req:PRD-SYS-049
     /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
-    [GxPRequirement("PRD-SYS-049")]
     public void FindIntegrityErrors_DuplicateNumber_ReportsBothFiles()
     {
         WriteAdr("2026-01-01-first.md", "# ADR-085: First");
@@ -85,11 +81,9 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     /// <summary>
     /// An ADR whose first line is not a numbered "# ADR-NNNN: Title" heading is rejected.
-    /// @req:PRD-SYS-049
     /// </summary>
     [Theory]
     [Trait("Category", "Tooling")]
-    [GxPRequirement("PRD-SYS-049")]
     [InlineData("# ADR 2026-07-22: Date-Based Title")]
     [InlineData("# ADR-[NUMBER]: Unnumbered Placeholder")]
     [InlineData("# ADR-2026-07-24-slug: Date Used As Number")]
@@ -108,11 +102,9 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     /// <summary>
     /// Index links to files that do not exist are reported with their line number.
-    /// @req:PRD-SYS-049
     /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
-    [GxPRequirement("PRD-SYS-049")]
     public void FindIntegrityErrors_BrokenIndexLink_IsReported()
     {
         WriteAdr("2026-01-01-first.md", "# ADR-100: First");
@@ -130,11 +122,9 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     /// <summary>
     /// An ADR missing from the index, or listed more than once, is reported.
-    /// @req:PRD-SYS-049
     /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
-    [GxPRequirement("PRD-SYS-049")]
     public void FindIntegrityErrors_UnlistedAndDoublyListedAdrs_AreReported()
     {
         WriteAdr("2026-01-01-first.md", "# ADR-100: First");
@@ -154,11 +144,9 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     /// <summary>
     /// Heading parsing accepts three-or-more digit numbers and rejects everything else.
-    /// @req:PRD-SYS-049
     /// </summary>
     [Theory]
     [Trait("Category", "Tooling")]
-    [GxPRequirement("PRD-SYS-049")]
     [InlineData("# ADR-049: Title", 49)]
     [InlineData("# ADR-2250: Title\r", 2250)]
     [InlineData("# ADR-20260929: Title", 20260929)]
@@ -172,11 +160,9 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     /// <summary>
     /// The repository's own docs/adr directory satisfies every integrity rule.
-    /// @req:PRD-SYS-049
     /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
-    [GxPRequirement("PRD-SYS-049")]
     public void FindIntegrityErrors_RepositoryAdrDirectory_IsConsistent()
     {
         string repoAdrDir = Path.Combine(AdrValidatorService.FindRepoRoot(), "docs", "adr");
