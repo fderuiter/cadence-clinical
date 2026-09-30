@@ -1,5 +1,12 @@
 # Data Lifecycle Specification
 
+> [!WARNING]
+> **Status: pre-kernel baseline.** These lifecycle specifications were written for the Python services. The
+> states, transitions and access rules remain the behavioural reference for the .NET ports, but the file paths
+> they cite (`*.py` modules and `tests/test_*.py`) no longer exist. Each service's README says what its .NET
+> code implements today, and the [kernel specification](kernel/CLINICAL_KERNEL_SPECIFICATION.md) defines the
+> target model.
+
 ## 1. Overview
 
 The electronic Trial Master File (eTMF) Quality Control (QC) Review Lifecycle is a critical, multi-stage data review workflow implemented to guarantee data integrity, completeness, and regulatory compliance under FDA 21 CFR Part 11, GAMP 5, and EU Annex 11.
