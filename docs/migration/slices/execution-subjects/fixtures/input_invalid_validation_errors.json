@@ -306,6 +306,24 @@
       "model": "subject_lifecycle",
       "operation": "guard_subject_transition",
       "args": { "current_state": null, "target_state": "ENROLLED" }
+    },
+    {
+      "scenario_id": "INV-022",
+      "raise_site": null,
+      "spec_ref": "01_spec.md §2.2 Rule 9 (icf_signed_date), issue #4824",
+      "description": "POST .../consent with icf_signed=true, no icf_signed_date and no consent row on file for that version -> rejected. No legacy raise site: the legacy system defaulted the date to the time of the request instead (a deliberate departure, see 01_spec.md Rule 9).",
+      "kind": "http",
+      "method": "POST",
+      "route": "/api/v1/execution/subjects/SUBJ-022/consent",
+      "body": {
+        "protocol_version": { "study_id": "STUDY-022", "version_tag": "v1.0", "version_index": 1 },
+        "icf_signed": true,
+        "requires_reconsent": false,
+        "is_paper_override": false
+      },
+      "preconditions": {
+        "subject": { "subject_id": "SUBJ-022", "study_id": "STUDY-022", "status": "SCREENING" }
+      }
     }
   ]
 }

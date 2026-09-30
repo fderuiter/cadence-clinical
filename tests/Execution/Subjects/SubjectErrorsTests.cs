@@ -86,6 +86,16 @@ public class SubjectErrorsTests
     }
 
     [Fact]
+    public void SignedConsentDateRequired_ReturnsFixedCodeAndValidationType()
+    {
+        var error = SubjectErrors.SignedConsentDateRequired();
+
+        error.Code.Should().Be("ICF_SIGNED_DATE_REQUIRED");
+        error.Type.Should().Be(ErrorType.Validation);
+        error.Description.Should().Contain("icf_signed_date");
+    }
+
+    [Fact]
     public void AllFactoryMethods_ProduceDistinctCodes()
     {
         var codes = new[]
@@ -97,9 +107,10 @@ public class SubjectErrorsTests
             SubjectErrors.BlockedEnrollment(null).Code,
             SubjectErrors.BlockedActivation("SITE-042").Code,
             SubjectErrors.ReconsentRequired("v2", "SUBJ-001", "VISIT-3").Code,
+            SubjectErrors.SignedConsentDateRequired().Code,
         };
 
         codes.Should().OnlyHaveUniqueItems();
-        codes.Should().HaveCount(7);
+        codes.Should().HaveCount(8);
     }
 }

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 
@@ -40,11 +39,6 @@ public class SubjectApplicationServiceDetailTests
             Task.CompletedTask;
     }
 
-    private sealed class FakeClock(DateTimeOffset utcNow) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = utcNow;
-    }
-
     private sealed class FakeCurrentAuditContextAccessor : ICurrentAuditContextAccessor
     {
         public string UserId { get; init; } = "test-user";
@@ -64,8 +58,7 @@ public class SubjectApplicationServiceDetailTests
 
         public Harness() =>
             Service = new SubjectApplicationService(Subjects, Consents, Compliance, new FakeDemographicsEncryptionService(),
-                new NoOpAuditLogWriter(), new FakeClock(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)),
-                new FakeCurrentAuditContextAccessor());
+                new NoOpAuditLogWriter(), new FakeCurrentAuditContextAccessor());
     }
 
     private static readonly StudyCode Study = new("STUDY-001");

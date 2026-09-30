@@ -66,6 +66,9 @@
   | `requires_reconsent` | `bool`     |    No    | `false` | If an amendment requires re-consent.                                               |
   | `is_paper_override`  | `bool`     |    No    | `false` | Sovereign site paper consent waiver indicator.                                     |
 
+  > [!IMPORTANT]
+  > **Deliberate departure from legacy (#4824).** Python defaulted an omitted `icf_signed_date` to the time of the request, so a consent entered days after signing recorded the wrong signed date. The .NET port never invents the date. A request with `icf_signed: true` must carry `icf_signed_date` unless a date is already on file for that consent version (Rule 9); otherwise it is rejected with 400 and code `ICF_SIGNED_DATE_REQUIRED`. An unsigned consent may leave the date empty.
+
 #### `SubjectStateUpdateRequest`
 
 - **Route:** `PATCH /api/v1/execution/subjects/{id}/state`
@@ -263,6 +266,7 @@ stateDiagram-v2
    - **Consent field-merge precedence on re-submission:** when `record_consent` finds an existing `SubjectConsent` row for `(subject_id, study_id, version_index)`, the merge is field-by-field, not a full overwrite:
      - `version_tag`, `icf_signed`, `requires_reconsent`, `is_paper_override` are unconditionally replaced from the incoming payload.
      - `icf_signed_date`: replaced only if the incoming payload supplies one; otherwise the existing value is kept, _unless_ the existing row has no date at all, in which case it is defaulted to "now" (UTC).
+       **.NET port (#4824):** the "now" default is not carried over. A signed re-submission with no date, onto a row with no date, is rejected with 400 `ICF_SIGNED_DATE_REQUIRED` and the row is left unchanged. See the `SubjectConsentRequest` note in §1.
      - `protocol_version`: replaced only if the incoming payload supplies a truthy value — an omitted/empty `protocol_version` on a re-submission leaves the existing stored value untouched rather than nulling it out.
    - **`normalize_state`** (`apps/execution/subject_lifecycle.py`) is the single funnel both sides of every transition check pass through: `None` → `None`; an `Enum` member → its `.value` first; anything else → `str(x).strip().upper().replace(" ", "_")` (so e.g. `"in progress"` → `"IN_PROGRESS"`).
    - **Same-state is always a no-op:** `guard_subject_transition` returns immediately, without error, whenever normalized current and target states are equal — including for terminal states (re-submitting `WITHDRAWN → WITHDRAWN` succeeds silently rather than raising). This check runs _before_ the `None`-current and unknown-state checks below.

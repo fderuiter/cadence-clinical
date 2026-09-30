@@ -110,6 +110,7 @@ public static partial class SubjectEndpoints
         group.MapPost("/{subjectId}/consent", RecordSubjectConsentAsync)
             .WithName("RecordSubjectConsent")
             .Produces<SubjectConsentResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>();
 

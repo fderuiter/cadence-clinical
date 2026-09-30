@@ -66,13 +66,15 @@ public sealed class GoldenMasterFixtureLoaderTests
     }
 
     [Fact]
-    public void LoadScenarios_GivenTheRealValidationErrorPair_ReturnsAllTwentyOneScenarioIds()
+    public void LoadScenarios_GivenTheRealValidationErrorPair_ReturnsAllTwentyTwoScenarioIds()
     {
         IReadOnlyList<GoldenMasterScenario> scenarios = GoldenMasterFixtureLoader.LoadScenarios(
             "docs/migration/slices/execution-subjects/fixtures/input_invalid_validation_errors.json",
             "docs/migration/slices/execution-subjects/fixtures/output_expected_errors.json");
 
-        scenarios.Should().HaveCount(21);
+        // INV-001..INV-021 capture legacy raise sites; INV-022 is the signed-consent-without-date rejection
+        // added by #4824, which has no legacy raise site.
+        scenarios.Should().HaveCount(22);
         scenarios.Select(s => s.ScenarioId).Should().OnlyHaveUniqueItems();
 
         // INV-020's expected body carries the same fixed "detail" string as INV-008 -- spot-check that the

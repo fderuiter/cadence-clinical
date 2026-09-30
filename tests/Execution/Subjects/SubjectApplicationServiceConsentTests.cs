@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Kernel.Time;
+using Cadence.Core.Domain;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 
@@ -39,11 +39,6 @@ public class SubjectApplicationServiceConsentTests
         }
     }
 
-    private sealed class FakeClock(DateTimeOffset utcNow) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = utcNow;
-    }
-
     private sealed class FakeCurrentAuditContextAccessor : ICurrentAuditContextAccessor
     {
         public string UserId { get; init; } = "test-user";
@@ -72,17 +67,17 @@ public class SubjectApplicationServiceConsentTests
 
         public RecordingAuditLogWriter AuditLog { get; } = new();
 
-        public FakeClock Clock { get; } = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-
         public FakeCurrentAuditContextAccessor AuditContext { get; } = new();
 
         public SubjectApplicationService Service { get; }
 
         public Harness() =>
-            Service = new SubjectApplicationService(Subjects, Consents, Compliance, Encryption, AuditLog, Clock, AuditContext);
+            Service = new SubjectApplicationService(Subjects, Consents, Compliance, Encryption, AuditLog, AuditContext);
     }
 
     private static readonly StudyCode Study = new("STUDY-001");
+
+    private static readonly DateTimeOffset SignedDate = new(2025, 12, 1, 9, 30, 0, TimeSpan.Zero);
 
     private static async Task<ClinicalSubject> SeedSubjectAsync(InMemorySubjectRepository subjects, string subjectCode)
     {
@@ -92,10 +87,12 @@ public class SubjectApplicationServiceConsentTests
         return subject;
     }
 
+    /// <summary>A signed request carries <see cref="SignedDate"/> unless <paramref name="omitSignedDate"/> is set;
+    /// an unsigned request never carries a date.</summary>
     private static SubjectConsentRequest ConsentRequest(string versionTag, int versionIndex, bool icfSigned = true,
-        bool requiresReconsent = false, bool isPaperOverride = false) =>
-        new(new ProtocolVersionPayload(Study.Value, versionTag, versionIndex), icfSigned, IcfSignedDate: null,
-            requiresReconsent, isPaperOverride);
+        bool requiresReconsent = false, bool isPaperOverride = false, bool omitSignedDate = false) =>
+        new(new ProtocolVersionPayload(Study.Value, versionTag, versionIndex), icfSigned,
+            IcfSignedDate: icfSigned && !omitSignedDate ? SignedDate : null, requiresReconsent, isPaperOverride);
 
     [Fact]
     public async Task RecordConsentAsync_GivenNoExistingRow_CreatesNewConsentNotAMerge()
@@ -253,5 +250,71 @@ public class SubjectApplicationServiceConsentTests
         call.EntityName.Should().Be("SubjectConsent");
         call.Action.Should().Be("RECORD_CONSENT");
         call.RecordId.Should().Be(result.Value!.Id.ToString());
+    }
+
+    [Fact]
+    public async Task RecordConsentAsync_GivenSignedConsentWithoutDateAndNoRowOnFile_ReturnsValidationErrorAndStoresNothing()
+    {
+        var harness = new Harness();
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
+
+        var result = await harness.Service.RecordConsentAsync(subject.SubjectCode.Value,
+            ConsentRequest("v1.0", 1, icfSigned: true, omitSignedDate: true), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error!.Code.Should().Be("ICF_SIGNED_DATE_REQUIRED");
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        (await harness.Consents.GetAsync(subject.SubjectCode, Study, 1, TestContext.Current.CancellationToken))
+            .Should().BeNull("a rejected consent must not be stored");
+        harness.AuditLog.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RecordConsentAsync_GivenSignedResubmissionWithoutDateOntoUnsignedRow_ReturnsValidationErrorAndLeavesRowUnchanged()
+    {
+        var harness = new Harness();
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
+        await harness.Service.RecordConsentAsync(subject.SubjectCode.Value,
+            ConsentRequest("v1.0", 1, icfSigned: false), TestContext.Current.CancellationToken);
+
+        var result = await harness.Service.RecordConsentAsync(subject.SubjectCode.Value,
+            ConsentRequest("v1.1", 1, icfSigned: true, omitSignedDate: true), TestContext.Current.CancellationToken);
+
+        result.Error!.Code.Should().Be("ICF_SIGNED_DATE_REQUIRED");
+        var stored = await harness.Consents.GetAsync(subject.SubjectCode, Study, 1, TestContext.Current.CancellationToken);
+        stored!.IcfSigned.Should().BeFalse();
+        stored.IcfSignedDate.Should().BeNull();
+        stored.ProtocolVersion.VersionTag.Should().Be("v1.0");
+    }
+
+    [Fact]
+    public async Task RecordConsentAsync_GivenSignedResubmissionWithoutDateOntoDatedRow_KeepsTheStoredDate()
+    {
+        var harness = new Harness();
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
+        await harness.Service.RecordConsentAsync(subject.SubjectCode.Value,
+            ConsentRequest("v1.0", 1, icfSigned: true), TestContext.Current.CancellationToken);
+
+        var result = await harness.Service.RecordConsentAsync(subject.SubjectCode.Value,
+            ConsentRequest("v1.0", 1, icfSigned: true, isPaperOverride: true, omitSignedDate: true),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.IcfSignedDate.Should().Be(SignedDate);
+        result.Value.IsPaperOverride.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RecordConsentAsync_GivenUnsignedConsentWithoutDate_StoresItWithNoDate()
+    {
+        var harness = new Harness();
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001");
+
+        var result = await harness.Service.RecordConsentAsync(subject.SubjectCode.Value,
+            ConsentRequest("v1.0", 1, icfSigned: false, requiresReconsent: true), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.IcfSigned.Should().BeFalse();
+        result.Value.IcfSignedDate.Should().BeNull();
     }
 }

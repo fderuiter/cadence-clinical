@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 
@@ -40,11 +39,6 @@ public class SubjectApplicationServiceCreateTests
             Calls.Add(new AuditCall(entityName, recordId, action, userId, changeReason));
             return Task.CompletedTask;
         }
-    }
-
-    private sealed class FakeClock(DateTimeOffset utcNow) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = utcNow;
     }
 
     private sealed class FakeCurrentAuditContextAccessor : ICurrentAuditContextAccessor
@@ -88,14 +82,12 @@ public class SubjectApplicationServiceCreateTests
 
         public RecordingAuditLogWriter AuditLog { get; } = new();
 
-        public FakeClock Clock { get; } = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
-
         public FakeCurrentAuditContextAccessor AuditContext { get; } = new();
 
         public SubjectApplicationService Service { get; }
 
         public Harness() =>
-            Service = new SubjectApplicationService(Subjects, Consents, Compliance, Encryption, AuditLog, Clock, AuditContext);
+            Service = new SubjectApplicationService(Subjects, Consents, Compliance, Encryption, AuditLog, AuditContext);
     }
 
     private static SubjectCreateRequest CreateRequest(string subjectId, string studyId = "STUDY-001",

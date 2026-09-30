@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -44,10 +43,7 @@ public class ConsentRepositoryTests
     private static ConsentRepository CreateRepository(SqliteConnection connection) =>
         new(CreateContext(connection), SaveChangesResiliencePipelineFactory.Create());
 
-    private sealed class FakeClock : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-    }
+    private static readonly DateTimeOffset SignedDate = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     [Fact]
     public async Task ExistsAsync_GivenNoMatchingConsent_ReturnsFalse()
@@ -74,7 +70,7 @@ public class ConsentRepositoryTests
         }
 
         var consent = SubjectConsent.Create(SubjectCode, Version, icfSigned: true,
-            icfSignedDate: null, requiresReconsent: false, isPaperOverride: false, new FakeClock());
+            icfSignedDate: SignedDate, requiresReconsent: false, isPaperOverride: false);
 
         var writeRepository = CreateRepository(connection);
         await writeRepository.AddAsync(consent, TestContext.Current.CancellationToken);
@@ -96,7 +92,7 @@ public class ConsentRepositoryTests
         }
 
         var consent = SubjectConsent.Create(SubjectCode, Version, icfSigned: true,
-            icfSignedDate: null, requiresReconsent: false, isPaperOverride: false, new FakeClock());
+            icfSignedDate: SignedDate, requiresReconsent: false, isPaperOverride: false);
         var writeRepository = CreateRepository(connection);
         await writeRepository.AddAsync(consent, TestContext.Current.CancellationToken);
         await writeRepository.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -132,7 +128,7 @@ public class ConsentRepositoryTests
         }
 
         var consent = SubjectConsent.Create(SubjectCode, Version, icfSigned: true,
-            icfSignedDate: null, requiresReconsent: true, isPaperOverride: false, new FakeClock());
+            icfSignedDate: SignedDate, requiresReconsent: true, isPaperOverride: false);
         var writeRepository = CreateRepository(connection);
         await writeRepository.AddAsync(consent, TestContext.Current.CancellationToken);
         await writeRepository.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -154,7 +150,6 @@ public class ConsentRepositoryTests
             await setup.Database.EnsureCreatedAsync(TestContext.Current.CancellationToken);
         }
 
-        var clock = new FakeClock();
         var otherSubjectVersion = new ProtocolVersionRef(StudyCode, "v1.0", 1);
         var sameSubjectClearedVersion = new ProtocolVersionRef(StudyCode, "v2.0", 2);
         var sameSubjectExcludedVersion = new ProtocolVersionRef(StudyCode, "v3.0", 3);
@@ -162,16 +157,16 @@ public class ConsentRepositoryTests
 
         // Row 1: same subject, requires reconsent, different version index -> must be returned.
         var requiresReconsentRow = SubjectConsent.Create(SubjectCode, otherSubjectVersion, icfSigned: true,
-            icfSignedDate: null, requiresReconsent: true, isPaperOverride: false, clock);
+            icfSignedDate: SignedDate, requiresReconsent: true, isPaperOverride: false);
         // Row 2: same subject, does NOT require reconsent -> must not be returned.
         var doesNotRequireReconsentRow = SubjectConsent.Create(SubjectCode, sameSubjectClearedVersion, icfSigned: true,
-            icfSignedDate: null, requiresReconsent: false, isPaperOverride: false, clock);
+            icfSignedDate: SignedDate, requiresReconsent: false, isPaperOverride: false);
         // Row 3: same subject, requires reconsent, but is the excluded version index -> must not be returned.
         var excludedVersionRow = SubjectConsent.Create(SubjectCode, sameSubjectExcludedVersion, icfSigned: true,
-            icfSignedDate: null, requiresReconsent: true, isPaperOverride: false, clock);
+            icfSignedDate: SignedDate, requiresReconsent: true, isPaperOverride: false);
         // Row 4: a different subject entirely, requires reconsent -> must not be returned (boundary check).
         var differentSubjectRow = SubjectConsent.Create(differentSubjectCode, otherSubjectVersion, icfSigned: true,
-            icfSignedDate: null, requiresReconsent: true, isPaperOverride: false, clock);
+            icfSignedDate: SignedDate, requiresReconsent: true, isPaperOverride: false);
 
         var writeRepository = CreateRepository(connection);
         await writeRepository.AddAsync(requiresReconsentRow, TestContext.Current.CancellationToken);

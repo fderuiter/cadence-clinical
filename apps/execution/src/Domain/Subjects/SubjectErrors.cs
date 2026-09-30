@@ -4,7 +4,8 @@ namespace Cadence.Apps.Execution.Domain.Subjects;
 
 /// <summary>
 /// Single factory for every <see cref="DomainError"/> this slice raises, unifying the 25 legacy
-/// raise sites (`01_spec.md` §5.1) onto 7 stable, machine-readable codes. HTTP status mapping is
+/// raise sites (`01_spec.md` §5.1) onto 7 stable, machine-readable codes, plus one code with no legacy raise
+/// site (<c>ICF_SIGNED_DATE_REQUIRED</c>, #4824). HTTP status mapping is
 /// MIG-SUBJ-010's concern; aggregate-level call sites are MIG-SUBJ-004's.
 /// @req:PRD-SUB-001
 /// </summary>
@@ -35,4 +36,11 @@ public static class SubjectErrors
             $"Protocol Amendment {versionTag} is active. Subject {subjectId} must execute re-consent before data entry on visit {visitId}.")
             with
         { Type = ErrorType.Forbidden };
+
+    /// <summary>A signed consent was submitted without <c>icf_signed_date</c> and no date is on file for that
+    /// consent version. The legacy system defaulted the date to the time of the request; this port rejects it
+    /// instead (#4824).</summary>
+    public static DomainError SignedConsentDateRequired() =>
+        DomainError.Validation("ICF_SIGNED_DATE_REQUIRED",
+            "icf_signed_date is required when icf_signed is true and no signed date is on file for this consent version.");
 }

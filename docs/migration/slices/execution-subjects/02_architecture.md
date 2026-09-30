@@ -392,6 +392,9 @@ public sealed class ClinicalSubject : AggregateRoot<string>
 }
 ```
 
+> [!NOTE]
+> **Superseded by #4824 (2026-09-30).** The `IcfSignedDate = icfSignedDate ?? DateTimeOffset.UtcNow` default below is not implemented. A signed consent requires its signed date; see `02_technical_design.md` §2.4 for the current aggregate.
+
 ```csharp
 // 1. System usings
 using System;

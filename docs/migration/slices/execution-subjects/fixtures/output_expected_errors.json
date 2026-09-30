@@ -163,6 +163,13 @@
         "target_state": "ENROLLED",
         "message": "Transition from None to ENROLLED is forbidden."
       }
+    },
+    {
+      "scenario_id": "INV-022",
+      "raise_site": null,
+      "status": 400,
+      "body": { "detail": "ICF_SIGNED_DATE_REQUIRED" },
+      "note": "Not a legacy behaviour: the legacy system stored the time of the request as the signed date. The .NET port rejects the request (#4824). The code is carried in the ProblemDetails `code` extension, like INVALID_STATE_TRANSITION."
     }
   ]
 }

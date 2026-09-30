@@ -12,7 +12,6 @@ using Cadence.Apps.Execution.Infrastructure.Consumers;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.UnitTests.Execution.Fakes;
 
@@ -38,11 +37,6 @@ namespace Cadence.UnitTests.Execution.Integration;
 [Trait("Category", "Integration")]
 public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fixture) : IClassFixture<ExecutionPostgresFixture>
 {
-    private sealed class TestClock : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = DateTimeOffset.UtcNow;
-    }
-
     private sealed class TestAuditContextAccessor : ICurrentAuditContextAccessor
     {
         public string UserId => "concurrency-test-user";
@@ -72,7 +66,6 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         // Arrange
         const int concurrencyLevel = 20;
         var studyCode = new StudyCode($"STUDY-CONCUR-{Guid.NewGuid():N}");
-        var clock = new TestClock();
         var auditContext = new TestAuditContextAccessor();
         var auditWriter = new NoOpAuditLogWriter();
         var encryption = new TestDemographicsEncryptionService();
@@ -87,7 +80,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         {
             await using var context = ExecutionPostgresFixture.CreateDbContext(connectionString);
             var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
-            var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, clock, auditContext);
+            var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, auditContext);
 
             var request = new SubjectCreateRequest($"SUBJ-PG-{i:D3}", studyCode.Value, "SITE-001", ArmId: null, Demographics: null);
             var result = await service.CreateAsync(request, TestContext.Current.CancellationToken);
@@ -119,7 +112,6 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         // Arrange
         const int concurrencyLevel = 20;
         var studyCode = new StudyCode($"STUDY-EVENT-{Guid.NewGuid():N}");
-        var clock = new TestClock();
         var auditWriter = new NoOpAuditLogWriter();
         var consents = new InMemoryConsentRepository();
 
@@ -130,7 +122,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         {
             await using var context = ExecutionPostgresFixture.CreateDbContext(connectionString);
             var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
-            var consumer = new EConsentCompletedConsumer(repository, consents, auditWriter, new AmbientAuditContextAccessor(new HttpContextAccessor()), clock);
+            var consumer = new EConsentCompletedConsumer(repository, consents, auditWriter, new AmbientAuditContextAccessor(new HttpContextAccessor()));
 
             var consumeContext = Substitute.For<ConsumeContext<EConsentCompletedEvent>>();
             consumeContext.Message.Returns(new EConsentCompletedEvent($"SUBJ-EVT-PG-{i:D3}", studyCode.Value, "SITE-001", "v1.0", 1, DateTimeOffset.UtcNow));
@@ -165,7 +157,6 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         const int perStudyCount = 10;
         var studyA = new StudyCode($"STUDY-A-{Guid.NewGuid():N}");
         var studyB = new StudyCode($"STUDY-B-{Guid.NewGuid():N}");
-        var clock = new TestClock();
         var auditContext = new TestAuditContextAccessor();
         var auditWriter = new NoOpAuditLogWriter();
         var encryption = new TestDemographicsEncryptionService();
@@ -179,7 +170,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         {
             await using var context = ExecutionPostgresFixture.CreateDbContext(connectionString);
             var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
-            var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, clock, auditContext);
+            var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, auditContext);
 
             var request = new SubjectCreateRequest($"SUBJ-A-{i:D3}", studyA.Value, "SITE-001", ArmId: null, Demographics: null);
             var result = await service.CreateAsync(request, TestContext.Current.CancellationToken);
@@ -190,7 +181,7 @@ public sealed class EnrollmentIndexConcurrencyTests(ExecutionPostgresFixture fix
         {
             await using var context = ExecutionPostgresFixture.CreateDbContext(connectionString);
             var repository = new SubjectRepository(context, SaveChangesResiliencePipelineFactory.Create());
-            var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, clock, auditContext);
+            var service = new SubjectApplicationService(repository, consents, compliance, encryption, auditWriter, auditContext);
 
             var request = new SubjectCreateRequest($"SUBJ-B-{i:D3}", studyB.Value, "SITE-001", ArmId: null, Demographics: null);
             var result = await service.CreateAsync(request, TestContext.Current.CancellationToken);

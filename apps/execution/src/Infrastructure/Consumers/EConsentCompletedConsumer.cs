@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Kernel.Time;
 
 using MassTransit;
 
@@ -77,7 +76,6 @@ public sealed class EConsentCompletedConsumer(
     IConsentRepository consents,
     IAuditLogWriter auditLog,
     IAuditActorScope actorScope,
-    IClock clock,
     ILogger<EConsentCompletedConsumer>? logger = null)
     : IConsumer<EConsentCompletedEvent>
 {
@@ -157,7 +155,7 @@ public sealed class EConsentCompletedConsumer(
         if (!consentExists)
         {
             var consent = SubjectConsent.Create(subjectCode, version, icfSigned: true, icfSignedDate: signedAt,
-                requiresReconsent: false, isPaperOverride: false, clock);
+                requiresReconsent: false, isPaperOverride: false);
             await consents.AddAsync(consent, context.CancellationToken).ConfigureAwait(false);
             await auditLog.WriteAsync(nameof(SubjectConsent), consent.Id.ToString(), "INSERT",
                 account.UserId, account.ChangeReason,

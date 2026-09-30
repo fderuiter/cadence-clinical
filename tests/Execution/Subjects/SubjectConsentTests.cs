@@ -1,8 +1,6 @@
 using System;
-using System.Reflection;
 
 using Cadence.Apps.Execution.Domain.Subjects;
-using Cadence.Kernel.Time;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -12,14 +10,13 @@ using Xunit;
 namespace Cadence.UnitTests.Execution.Subjects;
 
 /// <summary>
-/// Coverage for `MIG-SUBJ-005`'s `SubjectConsent` aggregate: `Create`'s `IcfSignedDate` defaulting,
-/// `MergeResubmission`'s Rule 9 four-category field-merge precedence (SCN-002's re-submission half,
-/// per `02_technical_design.md` §6.2), and `ClearReconsentRequirement`.
+/// Coverage for `MIG-SUBJ-005`'s `SubjectConsent` aggregate: the signed-date invariant (a signed consent
+/// always carries the date it was signed and the aggregate never invents one, #4824), `MergeResubmission`'s
+/// Rule 9 four-category field-merge precedence (SCN-002's re-submission half, per
+/// `02_technical_design.md` §6.2), and `ClearReconsentRequirement`.
 /// </summary>
 public class SubjectConsentTests
 {
-    private static readonly DateTimeOffset CreateClockNow = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-    private static readonly DateTimeOffset MergeClockNow = new(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset ExistingDate = new(2025, 3, 15, 12, 30, 0, TimeSpan.Zero);
     private static readonly DateTimeOffset IncomingDate = new(2025, 12, 25, 8, 0, 0, TimeSpan.Zero);
 
@@ -31,37 +28,42 @@ public class SubjectConsentTests
         bool icfSigned = true,
         bool requiresReconsent = false,
         bool isPaperOverride = false,
-        IClock? clock = null,
         ProtocolVersionRef? version = null) =>
         SubjectConsent.Create(
             new SubjectCode("SUBJ-001"),
             version ?? ExistingVersion,
             icfSigned,
-            icfSignedDate,
+            icfSignedDate ?? (icfSigned ? ExistingDate : null),
             requiresReconsent,
-            isPaperOverride,
-            clock ?? new FakeClock(CreateClockNow));
+            isPaperOverride);
 
     [Fact]
-    public void Create_IcfSignedDateOmitted_DefaultsToClockUtcNow()
+    public void Create_SignedWithoutIcfSignedDate_Throws()
     {
-        var clock = new FakeClock(CreateClockNow);
-
-        var consent = SubjectConsent.Create(
+        var act = () => SubjectConsent.Create(
             new SubjectCode("SUBJ-001"), ExistingVersion, icfSigned: true,
-            icfSignedDate: null, requiresReconsent: false, isPaperOverride: false, clock);
+            icfSignedDate: null, requiresReconsent: false, isPaperOverride: false);
 
-        consent.IcfSignedDate.Should().Be(CreateClockNow);
+        act.Should().Throw<ArgumentException>().WithParameterName("icfSignedDate");
     }
 
     [Fact]
-    public void Create_IcfSignedDateSupplied_UsesSuppliedValueNotClock()
+    public void Create_UnsignedWithoutIcfSignedDate_LeavesDateEmpty()
     {
-        var clock = new FakeClock(CreateClockNow);
+        var consent = SubjectConsent.Create(
+            new SubjectCode("SUBJ-001"), ExistingVersion, icfSigned: false,
+            icfSignedDate: null, requiresReconsent: true, isPaperOverride: false);
 
+        consent.IcfSigned.Should().BeFalse();
+        consent.IcfSignedDate.Should().BeNull();
+    }
+
+    [Fact]
+    public void Create_IcfSignedDateSupplied_UsesSuppliedValue()
+    {
         var consent = SubjectConsent.Create(
             new SubjectCode("SUBJ-001"), ExistingVersion, icfSigned: true,
-            icfSignedDate: ExistingDate, requiresReconsent: false, isPaperOverride: false, clock);
+            icfSignedDate: ExistingDate, requiresReconsent: false, isPaperOverride: false);
 
         consent.IcfSignedDate.Should().Be(ExistingDate);
     }
@@ -70,10 +72,9 @@ public class SubjectConsentTests
     public void MergeResubmission_IcfSignedDateNull_ExistingDatePreserved()
     {
         var consent = CreateConsent(icfSignedDate: ExistingDate);
-        var clock = new FakeClock(MergeClockNow);
 
         consent.MergeResubmission("v1.0", icfSigned: true, icfSignedDate: null,
-            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null, clock);
+            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null);
 
         consent.IcfSignedDate.Should().Be(ExistingDate);
     }
@@ -82,46 +83,47 @@ public class SubjectConsentTests
     public void MergeResubmission_IcfSignedDateSupplied_ReplacesExistingDate()
     {
         var consent = CreateConsent(icfSignedDate: ExistingDate);
-        var clock = new FakeClock(MergeClockNow);
 
         consent.MergeResubmission("v1.0", icfSigned: true, icfSignedDate: IncomingDate,
-            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null, clock);
+            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null);
 
         consent.IcfSignedDate.Should().Be(IncomingDate);
     }
 
     [Fact]
-    public void MergeResubmission_NoPriorDateAndIcfSignedDateNull_DefaultsToClockUtcNow()
+    public void MergeResubmission_SignedWithNoDateSuppliedOrStored_ThrowsAndLeavesRowUnchanged()
     {
-        // `Create` always defaults IcfSignedDate to clock.UtcNow when omitted, so a null
-        // IcfSignedDate can only exist as a persistence-round-trip edge case (e.g. a legacy row
-        // migrated with no date recorded) — not reachable through the public API. Set it via the
-        // private setter directly to exercise the acceptance criterion's genuine edge case.
-        var consent = CreateConsent(icfSignedDate: ExistingDate);
-        SetIcfSignedDate(consent, null);
-        var mergeClock = new FakeClock(MergeClockNow);
+        var consent = CreateConsent(icfSigned: false, requiresReconsent: true);
 
-        consent.MergeResubmission("v1.0", icfSigned: true, icfSignedDate: null,
-            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null, mergeClock);
+        var act = () => consent.MergeResubmission("v1.1", icfSigned: true, icfSignedDate: null,
+            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null);
 
-        consent.IcfSignedDate.Should().Be(MergeClockNow);
+        act.Should().Throw<InvalidOperationException>();
+        consent.IcfSigned.Should().BeFalse();
+        consent.IcfSignedDate.Should().BeNull();
+        consent.RequiresReconsent.Should().BeTrue();
+        consent.ProtocolVersion.VersionTag.Should().Be("v1.0");
     }
 
-    private static void SetIcfSignedDate(SubjectConsent consent, DateTimeOffset? value)
+    [Fact]
+    public void MergeResubmission_UnsignedWithNoDate_IsAllowed()
     {
-        var property = typeof(SubjectConsent).GetProperty(nameof(SubjectConsent.IcfSignedDate))
-            ?? throw new InvalidOperationException($"{nameof(SubjectConsent.IcfSignedDate)} property not found via reflection.");
-        property.SetValue(consent, value);
+        var consent = CreateConsent(icfSigned: false);
+
+        consent.MergeResubmission("v1.0", icfSigned: false, icfSignedDate: null,
+            requiresReconsent: true, isPaperOverride: false, incomingProtocolVersion: null);
+
+        consent.IcfSigned.Should().BeFalse();
+        consent.IcfSignedDate.Should().BeNull();
     }
 
     [Fact]
     public void MergeResubmission_IncomingProtocolVersionNull_StoredProtocolVersionUnchanged()
     {
         var consent = CreateConsent(version: ExistingVersion);
-        var clock = new FakeClock(MergeClockNow);
 
         consent.MergeResubmission("v1.0", icfSigned: true, icfSignedDate: ExistingDate,
-            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null, clock);
+            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null);
 
         consent.ProtocolVersion.Should().Be(ExistingVersion with { VersionTag = "v1.0" });
     }
@@ -130,10 +132,9 @@ public class SubjectConsentTests
     public void MergeResubmission_IncomingProtocolVersionSupplied_ReplacesStoredProtocolVersion()
     {
         var consent = CreateConsent(version: ExistingVersion);
-        var clock = new FakeClock(MergeClockNow);
 
         consent.MergeResubmission("v9.9", icfSigned: true, icfSignedDate: ExistingDate,
-            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: IncomingVersion, clock);
+            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: IncomingVersion);
 
         consent.ProtocolVersion.Should().Be(IncomingVersion);
     }
@@ -146,10 +147,9 @@ public class SubjectConsentTests
     public void MergeResubmission_IcfSigned_AlwaysReplacedUnconditionally(bool existing, bool incoming)
     {
         var consent = CreateConsent(icfSigned: existing);
-        var clock = new FakeClock(MergeClockNow);
 
         consent.MergeResubmission("v1.0", icfSigned: incoming, icfSignedDate: ExistingDate,
-            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null, clock);
+            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null);
 
         consent.IcfSigned.Should().Be(incoming);
     }
@@ -162,10 +162,9 @@ public class SubjectConsentTests
     public void MergeResubmission_RequiresReconsent_AlwaysReplacedUnconditionally(bool existing, bool incoming)
     {
         var consent = CreateConsent(requiresReconsent: existing);
-        var clock = new FakeClock(MergeClockNow);
 
         consent.MergeResubmission("v1.0", icfSigned: true, icfSignedDate: ExistingDate,
-            requiresReconsent: incoming, isPaperOverride: false, incomingProtocolVersion: null, clock);
+            requiresReconsent: incoming, isPaperOverride: false, incomingProtocolVersion: null);
 
         consent.RequiresReconsent.Should().Be(incoming);
     }
@@ -178,10 +177,9 @@ public class SubjectConsentTests
     public void MergeResubmission_IsPaperOverride_AlwaysReplacedUnconditionally(bool existing, bool incoming)
     {
         var consent = CreateConsent(isPaperOverride: existing);
-        var clock = new FakeClock(MergeClockNow);
 
         consent.MergeResubmission("v1.0", icfSigned: true, icfSignedDate: ExistingDate,
-            requiresReconsent: false, isPaperOverride: incoming, incomingProtocolVersion: null, clock);
+            requiresReconsent: false, isPaperOverride: incoming, incomingProtocolVersion: null);
 
         consent.IsPaperOverride.Should().Be(incoming);
     }
@@ -192,10 +190,9 @@ public class SubjectConsentTests
     public void MergeResubmission_VersionTag_AlwaysReplacedUnconditionally(string existingTag, string incomingTag)
     {
         var consent = CreateConsent(version: ExistingVersion with { VersionTag = existingTag });
-        var clock = new FakeClock(MergeClockNow);
 
         consent.MergeResubmission(incomingTag, icfSigned: true, icfSignedDate: ExistingDate,
-            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null, clock);
+            requiresReconsent: false, isPaperOverride: false, incomingProtocolVersion: null);
 
         consent.ProtocolVersion.VersionTag.Should().Be(incomingTag);
     }
@@ -208,12 +205,5 @@ public class SubjectConsentTests
         consent.ClearReconsentRequirement();
 
         consent.RequiresReconsent.Should().BeFalse();
-    }
-
-    /// <summary>Deterministic <see cref="IClock"/> test double — see the ticket's guidance to use a
-    /// fake/test-double implementation rather than modifying <c>IClock</c> itself.</summary>
-    private sealed class FakeClock(DateTimeOffset utcNow) : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = utcNow;
     }
 }
