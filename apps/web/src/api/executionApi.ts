@@ -11,6 +11,8 @@ type Schemas = components["schemas"];
 
 export type SubjectSummary = Schemas["Execution_SubjectSummaryResponse"];
 export type SubjectList = Schemas["Execution_SubjectListResponse"];
+export type ComplianceStatus = Schemas["Execution_ComplianceStatusResponse"];
+export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
 
 export interface ListSubjectsQuery {
   studyId: string;
@@ -36,6 +38,43 @@ export const executionApi = {
             offset: query.offset,
           },
         },
+      })
+    );
+  },
+
+  /**
+   * Whether eTMF has reported the site's documents complete for a milestone (default SITE_ACTIVATION).
+   * The service answers even when eTMF has reported nothing: `is_complete` is false and no documents are listed.
+   */
+  getSiteComplianceStatus(
+    siteId: string,
+    studyId: string,
+    milestone?: string
+  ): Promise<ComplianceStatus> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/sites/{siteId}/compliance-status", {
+        params: {
+          path: { siteId },
+          query: { study_id: studyId, milestone },
+        },
+      })
+    );
+  },
+
+  /**
+   * Activates a site for the study. Execution refuses (400) unless eTMF reports the site's activation
+   * documents complete, and audits the attempt either way with the reason sent as X-Change-Reason.
+   */
+  activateSite(
+    siteId: string,
+    studyId: string,
+    changeReason: string
+  ): Promise<OperationEnvelope> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/sites/{siteId}/activate", {
+        params: { path: { siteId } },
+        body: { study_id: studyId },
+        headers: { "X-Change-Reason": changeReason },
       })
     );
   },

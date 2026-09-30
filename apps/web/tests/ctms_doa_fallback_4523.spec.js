@@ -14,6 +14,8 @@ describe("CtmsView DoA log without fabricated delegation records (#4523)", () =>
   let doaResponse;
 
   beforeEach(() => {
+    // These CTMS tabs run only in a demo build; other builds show site activation alone (ctms_site_activation.spec.js).
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     pinia = createPinia();
     setActivePinia(pinia);
     doaResponse = () => Promise.resolve({ delegated_staff: [] });
@@ -27,6 +29,7 @@ describe("CtmsView DoA log without fabricated delegation records (#4523)", () =>
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 

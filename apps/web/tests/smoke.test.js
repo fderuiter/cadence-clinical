@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
@@ -25,6 +25,10 @@ const router = createRouter({
 });
 
 describe("Vue SPA Smoke Tests", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("mounts the root App.vue component with router and pinia", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
@@ -69,7 +73,8 @@ describe("Vue SPA Smoke Tests", () => {
     expect(wrapper.html()).toContain("Subject eCRF Data Entry Form");
   });
 
-  it("mounts CtmsView and renders milestones and visits dashboards", () => {
+  it("mounts CtmsView and renders milestones and visits dashboards (demo build)", () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     const pinia = createPinia();
     setActivePinia(pinia);
 

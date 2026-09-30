@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CtmsView from "../src/views/CtmsView.vue";
@@ -7,7 +7,13 @@ import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue"
 import { apiClient } from "../src/api/apiClient";
 
 describe("CtmsView.vue native list rendering migration", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
+    // These CTMS tabs run only in a demo build; other builds show site activation alone (ctms_site_activation.spec.js).
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     const pinia = createPinia();
     setActivePinia(pinia);
 
