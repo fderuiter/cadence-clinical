@@ -82,6 +82,7 @@ public class ConceptRegistryDomainTests
     [InlineData(KnownCodeSystems.SnomedCt, LicenseClass.AcceptedTerms)]
     [InlineData(KnownCodeSystems.WhoDrug, LicenseClass.Open)]
     [InlineData(KnownCodeSystems.Loinc, LicenseClass.Open)]
+    [InlineData(KnownCodeSystems.SdtmCt, LicenseClass.Licensed)]
     public void CodeSystemRegisterKnownUriWithWrongLicenceIsRefused(string uri, LicenseClass licence)
     {
         CodeSystem.Register(CodeSystemId.New(), Tenant, uri, "x", "y", licence).Error!.Code

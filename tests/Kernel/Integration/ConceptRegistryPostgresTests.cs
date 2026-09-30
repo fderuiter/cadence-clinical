@@ -40,15 +40,15 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var tenant = await NewTenantAsync(ct);
-        var ctSystem = await RegisterAsync(tenant, KnownCodeSystems.NciThesaurus, LicenseClass.Open, ct);
+        var ctSystem = await RegisterAsync(tenant, KnownCodeSystems.SdtmCt, LicenseClass.Open, ct);
 
         var release = Release(tenant, ctSystem, "2024-09-27", TerminologyFixtures.CdiscCt);
         var loader = new TerminologyPackageLoader(fixture.Sender);
-        var loaded = await loader.LoadAsync(release, TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser(), ct);
+        var loaded = await loader.LoadAsync(release, TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser("sdtmct"), ct);
 
         loaded.IsSuccess.Should().BeTrue(loaded.Error?.Message);
         var registry = fixture.ConceptRegistry;
-        var version = await registry.FindCodeSystemVersionAsync(tenant, KnownCodeSystems.NciThesaurus, "2024-09-27", ct);
+        var version = await registry.FindCodeSystemVersionAsync(tenant, KnownCodeSystems.SdtmCt, "2024-09-27", ct);
         version!.Id.Should().Be(loaded.Value);
         version.EntryCount.Should().Be(8);
         version.PackageSha256.Should().Be(TerminologyFixtures.Sha256(TerminologyFixtures.CdiscCt));
@@ -56,9 +56,9 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
         var positions = await registry.GetGroupAsync(tenant, version.Id, "C78431", ct);
         positions.Select(p => p.SubmissionValue).Should().Equal("SITTING", "STANDING", "SUPINE");
         (await registry.LookupAsync(tenant, new Coding(version.Id, "C62167"), ct)).Single().Display.Should().Be("Supine Position");
-        (await registry.FindCodeSystemVersionAsync(tenant, KnownCodeSystems.NciThesaurus, "2025-03-28", ct)).Should().BeNull();
+        (await registry.FindCodeSystemVersionAsync(tenant, KnownCodeSystems.SdtmCt, "2025-03-28", ct)).Should().BeNull();
 
-        var again = await loader.LoadAsync(release, TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser(), ct);
+        var again = await loader.LoadAsync(release, TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser("sdtmct"), ct);
         again.Replayed.Should().BeTrue();
         again.Value.Should().Be(loaded.Value);
 
@@ -88,7 +88,7 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var tenant = await NewTenantAsync(ct);
-        var ctSystem = await RegisterAsync(tenant, KnownCodeSystems.NciThesaurus, LicenseClass.Open, ct);
+        var ctSystem = await RegisterAsync(tenant, KnownCodeSystems.SdtmCt, LicenseClass.Open, ct);
         (await LoadCdiscCtAsync(tenant, ctSystem, ct)).IsSuccess.Should().BeTrue();
 
         var duplicate = await fixture.Sender.SendAsync(
@@ -136,7 +136,7 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var tenant = await NewTenantAsync(ct);
-        var ctSystem = await RegisterAsync(tenant, KnownCodeSystems.NciThesaurus, LicenseClass.Open, ct);
+        var ctSystem = await RegisterAsync(tenant, KnownCodeSystems.SdtmCt, LicenseClass.Open, ct);
         var ctVersion = (await LoadCdiscCtAsync(tenant, ctSystem, ct)).Value;
         var sitting = await DefineAsync(tenant, ConceptOrigin.Sponsor, null, "Sitting position", ct);
 
@@ -191,12 +191,12 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
         var ct = TestContext.Current.CancellationToken;
         var owner = await NewTenantAsync(ct);
         var other = await NewTenantAsync(ct);
-        var ctSystem = await RegisterAsync(owner, KnownCodeSystems.NciThesaurus, LicenseClass.Open, ct);
+        var ctSystem = await RegisterAsync(owner, KnownCodeSystems.SdtmCt, LicenseClass.Open, ct);
         var version = (await LoadCdiscCtAsync(owner, ctSystem, ct)).Value;
         var concept = await DefineAsync(owner, ConceptOrigin.CdiscBiomedicalConcept, "C49676", "Pulse Rate", ct);
 
         var registry = fixture.ConceptRegistry;
-        (await registry.FindCodeSystemVersionAsync(other, KnownCodeSystems.NciThesaurus, "2024-09-27", ct)).Should().BeNull();
+        (await registry.FindCodeSystemVersionAsync(other, KnownCodeSystems.SdtmCt, "2024-09-27", ct)).Should().BeNull();
         (await registry.LookupAsync(other, new Coding(version, "C62122"), ct)).Should().BeEmpty();
         (await registry.ResolveAsync(other, concept, ct)).Should().BeNull();
         (await registry.FindBiomedicalConceptAsync(other, "C49676", ct)).Should().BeNull();
@@ -207,7 +207,7 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
     {
         var tests = new ConceptRegistryPostgresTests(fixture);
         var tenant = await tests.NewTenantAsync(ct);
-        var ctSystem = await tests.RegisterAsync(tenant, KnownCodeSystems.NciThesaurus, LicenseClass.Open, ct);
+        var ctSystem = await tests.RegisterAsync(tenant, KnownCodeSystems.SdtmCt, LicenseClass.Open, ct);
         var version = (await tests.LoadCdiscCtAsync(tenant, ctSystem, ct)).Value;
         var concept = await tests.DefineAsync(tenant, ConceptOrigin.Sponsor, null, "Sitting position", ct);
         var mapping = await tests.MapAsync(tenant, concept, new Coding(version, "C62122"), confirmed: false, ct);
@@ -236,7 +236,7 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
 
     private Task<CommandResult<CodeSystemVersionId>> LoadCdiscCtAsync(TenantId tenant, CodeSystemId codeSystem, CancellationToken ct) =>
         new TerminologyPackageLoader(fixture.Sender).LoadAsync(
-            Release(tenant, codeSystem, "2024-09-27", TerminologyFixtures.CdiscCt), TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser(), ct);
+            Release(tenant, codeSystem, "2024-09-27", TerminologyFixtures.CdiscCt), TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser("sdtmct"), ct);
 
     private async Task<ConceptRef> DefineAsync(TenantId tenant, ConceptOrigin origin, string? code, string label, CancellationToken ct)
     {

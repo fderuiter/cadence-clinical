@@ -25,7 +25,7 @@ public class TerminologyParserTests
     [Fact(DisplayName = "CdiscCt_Parse_GroupsTermsUnderTheirCodelist")]
     public void CdiscCtParseGroupsTermsUnderTheirCodelist()
     {
-        var entries = new CdiscControlledTerminologyParser().Parse(new MemoryStream(TerminologyFixtures.CdiscCt));
+        var entries = new CdiscControlledTerminologyParser("sdtmct").Parse(new MemoryStream(TerminologyFixtures.CdiscCt));
 
         entries.Should().HaveCount(8);
         var codelist = entries.Single(e => e.Code == "C78431");
@@ -44,7 +44,7 @@ public class TerminologyParserTests
     [Fact(DisplayName = "CdiscCt_Parse_MissingColumns_Throws")]
     public void CdiscCtParseMissingColumnsThrows()
     {
-        var act = () => new CdiscControlledTerminologyParser().Parse(new MemoryStream("Code\tName\nC1\tx\n"u8.ToArray()));
+        var act = () => new CdiscControlledTerminologyParser("sdtmct").Parse(new MemoryStream("Code\tName\nC1\tx\n"u8.ToArray()));
 
         act.Should().Throw<FormatException>().WithMessage("*Codelist Code*");
     }
@@ -80,7 +80,7 @@ public class TerminologyParserTests
         var sender = Substitute.For<IKernelCommandSender>();
         var loader = new TerminologyPackageLoader(sender);
 
-        var result = await loader.LoadAsync(Release(new string('0', 64)), TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser(), TestContext.Current.CancellationToken);
+        var result = await loader.LoadAsync(Release(new string('0', 64)), TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser("sdtmct"), TestContext.Current.CancellationToken);
 
         result.Error.Should().Be(KnowledgeErrors.PackageChecksumMismatch with { Message = result.Error!.Message });
         sender.ReceivedCalls().Should().BeEmpty();
@@ -96,7 +96,7 @@ public class TerminologyParserTests
             .Returns(ci => CommandResult<CodeSystemVersionId>.Success(((ImportCodeSystemVersion)ci[0]).CodeSystemVersionId));
         var digest = TerminologyFixtures.Sha256(TerminologyFixtures.CdiscCt);
 
-        var result = await new TerminologyPackageLoader(sender).LoadAsync(Release(digest.ToUpperInvariant()), TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser(), TestContext.Current.CancellationToken);
+        var result = await new TerminologyPackageLoader(sender).LoadAsync(Release(digest.ToUpperInvariant()), TerminologyFixtures.CdiscCt, new CdiscControlledTerminologyParser("sdtmct"), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         sent!.Package.Sha256.Should().Be(digest);
