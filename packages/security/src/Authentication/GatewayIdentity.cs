@@ -46,13 +46,13 @@ public sealed record GatewayIdentity(
     IReadOnlyList<string> SiteIds,
     string? SponsorId = null,
     bool UnblindedAccess = false,
-    string TenantId = GatewayIdentity.DefaultTenantId,
+    string? TenantId = null,
     string? ChangeReason = null,
     string? SigToken = null)
 {
     // ChangeReason is the decoded text the user typed, never its header encoding (see ChangeReasonHeader).
-
-    public const string DefaultTenantId = "tenant_default";
+    // TenantId is the tenant code the sign-in token names, or null when it names none: there is no fallback tenant
+    // (#5038). A kernel host refuses a caller without one.
 
     internal string RolesHeader => string.Join(',', Roles);
 
@@ -75,19 +75,19 @@ public sealed record GatewayIdentity(
             siteId: NullIfBlank(SiteIdsHeader),
             sponsorId: NullIfBlank(SponsorId),
             unblindedAccess: UnblindedAccess,
-            tenantId: TenantId,
+            tenantId: NullIfBlank(TenantId),
             sigToken: NullIfBlank(SigToken));
 
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             [GatewayHeaders.UserId] = UserId,
             [GatewayHeaders.Roles] = RolesHeader,
-            [GatewayHeaders.TenantId] = TenantId,
             [GatewayHeaders.UnblindedAccess] = UnblindedAccess ? "true" : "false",
             [GatewayHeaders.Timestamp] = timestamp,
             [GatewayHeaders.Signature] = signature,
         };
 
+        AddIfPresent(headers, GatewayHeaders.TenantId, TenantId);
         AddIfPresent(headers, GatewayHeaders.SiteId, SiteIdsHeader);
         AddIfPresent(headers, GatewayHeaders.SponsorId, SponsorId);
         // The signature covers the reason as typed; the header carries it in its ASCII wire form (ADR-2495).
