@@ -50,6 +50,9 @@ describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
     authStore = useAuthStore();
     notificationsStore = useNotificationsStore();
 
+    // Prevent network fetch in onMounted
+    vi.spyOn(clinicalStore, "loadSubjects").mockResolvedValue([]);
+
     // Reset router push spy
     useRouter().push.mockClear();
 
