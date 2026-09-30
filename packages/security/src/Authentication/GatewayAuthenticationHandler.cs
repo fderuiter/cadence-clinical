@@ -74,8 +74,8 @@ public sealed class GatewayAuthenticationHandler(
         string sponsorId = headers[GatewayHeaders.SponsorId].ToString();
         string unblindedHeader = headers[GatewayHeaders.UnblindedAccess].ToString();
         bool unblindedAccess = string.Equals(unblindedHeader, "true", StringComparison.OrdinalIgnoreCase);
-        string tenantHeader = headers[GatewayHeaders.TenantId].ToString();
-        string tenantId = string.IsNullOrWhiteSpace(tenantHeader) ? GatewayIdentity.DefaultTenantId : tenantHeader;
+        // A blank tenant stays blank: the caller gets no tenant claim, never a fallback tenant (#5038).
+        string? tenantId = GatewayIdentity.NullIfBlank(headers[GatewayHeaders.TenantId].ToString());
         if (!ChangeReasonHeader.TryDecode(headers[GatewayHeaders.ChangeReason].ToString(), out string? changeReason))
         {
             return Task.FromResult(AuthenticateResult.Fail("X-Change-Reason is not a valid RFC 8187 UTF-8 value."));
@@ -120,8 +120,12 @@ public sealed class GatewayAuthenticationHandler(
         {
             new(CadenceClaimTypes.Subject, userId),
             new(ClaimTypes.NameIdentifier, userId),
-            new(CadenceClaimTypes.TenantId, tenantId),
         };
+        if (tenantId is not null)
+        {
+            claims.Add(new Claim(CadenceClaimTypes.TenantId, tenantId));
+        }
+
         claims.AddRange(normalizedRoles.Select(role => new Claim(ClaimTypes.Role, role)));
         claims.AddRange(sites.Select(site => new Claim(CadenceClaimTypes.SiteId, site)));
         if (!string.IsNullOrWhiteSpace(sponsorId))

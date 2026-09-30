@@ -121,7 +121,7 @@ public sealed class KernelApiHostTests : IDisposable
             (await response.Content.ReadAsStringAsync(ct)).Should().Contain("not an active kernel tenant");
         }
 
-        _directory.Codes.Should().OnlyContain(c => c == GatewayIdentity.DefaultTenantId);
+        _directory.Codes.Should().OnlyContain(c => c == TestSecurityContext.TenantCode);
         _navigator.Tenants.Should().BeEmpty();
         _search.Requests.Should().BeEmpty();
         _protocol.Tenants.Should().BeEmpty();
@@ -129,12 +129,15 @@ public sealed class KernelApiHostTests : IDisposable
         (await client.GetAsync(new Uri("/api/v1/kernel/status", UriKind.Relative), ct)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    /// <summary>A signed identity without a tenant code is refused without asking the tenant directory.</summary>
+    /// <summary>
+    /// A caller whose sign-in names no tenant is signed with no tenant and refused without asking the tenant directory:
+    /// there is no fallback tenant (#5038).
+    /// </summary>
     [Fact]
     public async Task ReadWithoutATenantCode_IsRefused()
     {
-        var factory = Factory(dropClaim: CadenceClaimTypes.TenantId);
-        using var client = factory.CreateSignedClient();
+        var factory = Factory();
+        using var client = factory.CreateSignedClient(TestSecurityContext.DefaultIdentity with { TenantId = null });
         var ct = TestContext.Current.CancellationToken;
 
         var response = await client.GetAsync(new Uri($"/api/v1/kernel/nodes/{Study}", UriKind.Relative), ct);
@@ -189,7 +192,7 @@ public sealed class KernelApiHostTests : IDisposable
         child.GetProperty("group").GetString().Should().Be("DE");
 
         _navigator.Tenants.Should().NotBeEmpty().And.OnlyContain(t => t == Tenant);
-        _directory.Codes.Should().NotBeEmpty().And.OnlyContain(c => c == GatewayIdentity.DefaultTenantId);
+        _directory.Codes.Should().NotBeEmpty().And.OnlyContain(c => c == TestSecurityContext.TenantCode);
     }
 
     /// <summary>A malformed NodeRef is a 400 and an object the tenant does not hold is a 404, both as problem details.</summary>
@@ -816,7 +819,7 @@ public sealed class KernelApiHostTests : IDisposable
     {
         if (knownTenant)
         {
-            _directory.Tenants[GatewayIdentity.DefaultTenantId] = Tenant;
+            _directory.Tenants[TestSecurityContext.TenantCode] = Tenant;
         }
 
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
