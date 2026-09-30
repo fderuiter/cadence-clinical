@@ -6,7 +6,7 @@
  *
  * The rules match `Cadence.Kernel.References.NodeRef`: the kind is registered, the id is a lower-case
  * hyphenated non-empty UUID, and the version is a positive integer without leading zeros. Each reference has
- * one string form. `tests/canvas/nodeRef.spec.ts` fails when `NODE_KINDS` drifts from `NodeKinds.cs`.
+ * one string form. `tests/canvas/contracts.spec.ts` fails when `NODE_KINDS` drifts from `NodeKinds.cs`.
  */
 
 /** Registered node kinds, in the order `NodeKinds.cs` declares them. */
@@ -18,6 +18,7 @@ export const NODE_KINDS = [
   "study",
   "study_site",
   "participant",
+  "enrollment",
   "protocol_version",
   "observation",
   "attestation",
