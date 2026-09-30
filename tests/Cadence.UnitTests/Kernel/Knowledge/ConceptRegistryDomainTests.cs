@@ -145,7 +145,30 @@ public class ConceptRegistryDomainTests
         var mapping = ConceptMapping.Create(ConceptMappingId.New(), Tenant, new ConceptRef(ConceptId.New(), 1),
             new Coding(CodeSystemVersionId.New(), "8480-6"), MappingRelation.Exact, "CDISC BC coding", confirmed).Value!;
 
-        (mapping.Review(next) is null).Should().Be(allowed);
+        var before = mapping.Status;
+        var refused = mapping.Review(next);
+
+        (refused is null).Should().Be(allowed);
+        if (!allowed)
+        {
+            refused!.Code.Should().Be(KnowledgeErrors.MappingTransitionInvalid.Code);
+            mapping.Status.Should().Be(before, "a refused review leaves the mapping as it was");
+        }
+    }
+
+    /// <summary>A concept needs a preferred label and a definition, when defined and on every revision.</summary>
+    [Theory(DisplayName = "Concept_WithoutLabelOrDefinition_IsRefused")]
+    [InlineData(" ", "Maximum hand grip force.")]
+    [InlineData("Grip strength", "")]
+    public void ConceptWithoutLabelOrDefinitionIsRefused(string label, string definition)
+    {
+        Concept.Define(ConceptId.New(), Tenant, ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, label, definition, T0)
+            .Error.Should().Be(KnowledgeErrors.ConceptLabelRequired);
+
+        var concept = Concept.Define(ConceptId.New(), Tenant, ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept,
+            "Grip strength", "Maximum hand grip force.", T0).Value!;
+        concept.Revise(label, definition, T0.AddDays(1)).Should().Be(KnowledgeErrors.ConceptLabelRequired);
+        concept.Current.Version.Should().Be(1);
     }
 
     /// <summary>A mapping without evidence is refused.</summary>

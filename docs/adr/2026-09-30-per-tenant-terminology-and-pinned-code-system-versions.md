@@ -113,7 +113,10 @@ Rules:
 - **Verification Plan:**
   - `ConceptRegistryPostgresTests`: a CDISC CT package loads as one pinned, audited version; a duplicate version is
     refused; a LOINC-coded lab result and an eCRF field for the same Biomedical Concept resolve to the same
-    `ConceptRef`; a revised concept's earlier version resolves unchanged; terminology is invisible to other tenants.
-  - `ConceptRegistryDomainTests` and `TerminologyParserTests`: version pinning, licence classes, mapping review, the
-    three parsers, the checksum check, and the licensed-content repository check.
+    `ConceptRef`; a revised concept's earlier version resolves unchanged; terminology is invisible to other tenants;
+    mapping review refuses unknown mappings and backward moves; registration refuses relative URIs and blank names,
+    and an import into an unregistered code system is refused.
+  - `ConceptRegistryDomainTests` and `TerminologyParserTests`: version pinning, licence classes, mapping review, a
+    concept's required label and definition, the three parsers, the checksum check, and the licensed-content
+    repository check.
   - `KernelTenantIsolationPostgresTests` and `InsertOnlyTables_RejectUpdateDeleteAndTruncate` cover the new tables.
