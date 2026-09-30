@@ -93,6 +93,34 @@
       </div>
     </div>
 
+    <!-- Inline Sync Error Alert Banner -->
+    <div
+      v-if="syncError"
+      class="sync-error-banner alert-banner error-banner"
+      role="alert"
+    >
+      <div class="banner-content">
+        <span class="banner-icon">⚠️</span>
+        <div class="banner-text">
+          <strong class="banner-title">Heartbeat Synchronization Failed</strong>
+          <span class="banner-message">
+            {{
+              syncErrorMessage ||
+              "Failed to record training progress heartbeat. Time tracking has been paused."
+            }}
+          </span>
+        </div>
+      </div>
+      <button
+        class="btn btn-retry btn-sm"
+        :disabled="isSyncing"
+        @click="retrySync"
+      >
+        <span v-if="isSyncing">Syncing...</span>
+        <span v-else>🔄 Retry Sync</span>
+      </button>
+    </div>
+
     <!-- Main Learning & Assessment Workspace -->
     <div v-if="activeCurriculum" class="training-workspace">
       <!-- Navigation Tabs: Modules | Quiz | Certificate -->
@@ -508,6 +536,10 @@ const totalTimeSpent = ref(0);
 const moduleTimer = ref(0);
 let timerInterval = null;
 
+const syncError = ref(false);
+const syncErrorMessage = ref("");
+const isSyncing = ref(false);
+
 const userAnswers = ref({});
 const submittingQuiz = ref(false);
 const quizResult = ref(null);
@@ -572,6 +604,8 @@ async function refreshData() {
 }
 
 async function loadAssignmentDetails(asnId) {
+  syncError.value = false;
+  syncErrorMessage.value = "";
   try {
     const detail = await trainingApi.getAssignmentDetail(asnId);
     activeAssignment.value = detail;
@@ -594,12 +628,34 @@ async function loadAssignmentDetails(asnId) {
 }
 
 function onAssignmentChange() {
+  syncError.value = false;
+  syncErrorMessage.value = "";
   if (selectedAssignmentId.value) {
     loadAssignmentDetails(selectedAssignmentId.value);
     selectedModuleIndex.value = 0;
     moduleTimer.value = 0;
     quizResult.value = null;
     userAnswers.value = {};
+  }
+}
+
+async function retrySync() {
+  if (!activeAssignment.value) return;
+  isSyncing.value = true;
+  try {
+    await trainingApi.recordProgress(activeAssignment.value.id, {
+      time_spent_delta_seconds: 15,
+      reason_for_change: "Heartbeat training time-on-page recording",
+    });
+    syncError.value = false;
+    syncErrorMessage.value = "";
+  } catch (err) {
+    syncError.value = true;
+    syncErrorMessage.value =
+      err?.message ||
+      "Failed to record training progress heartbeat. Time tracking has been paused.";
+  } finally {
+    isSyncing.value = false;
   }
 }
 
@@ -654,6 +710,9 @@ async function handleSignOff() {
 
 function startTimer() {
   timerInterval = setInterval(async () => {
+    if (syncError.value) {
+      return;
+    }
     if (
       activeAssignment.value &&
       activeAssignment.value.status !== "COMPLETED"
@@ -664,12 +723,20 @@ function startTimer() {
       // Periodically sync progress every 15 seconds
       if (moduleTimer.value % 15 === 0) {
         try {
+          isSyncing.value = true;
           await trainingApi.recordProgress(activeAssignment.value.id, {
             time_spent_delta_seconds: 15,
             reason_for_change: "Heartbeat training time-on-page recording",
           });
-        } catch {
-          // Silent heartbeat catch
+          syncError.value = false;
+          syncErrorMessage.value = "";
+        } catch (err) {
+          syncError.value = true;
+          syncErrorMessage.value =
+            err?.message ||
+            "Failed to record training progress heartbeat. Time tracking has been paused.";
+        } finally {
+          isSyncing.value = false;
         }
       }
     }
@@ -1209,5 +1276,65 @@ onUnmounted(() => {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 20px;
+}
+
+/* Inline Sync Error Banner Styles */
+.sync-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm, 6px);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.banner-icon {
+  font-size: 1.25rem;
+}
+
+.banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.banner-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.banner-message {
+  font-size: 0.85rem;
+  color: #7f1d1d;
+}
+
+.btn-retry {
+  background-color: #dc2626;
+  color: #ffffff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-retry:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.btn-retry:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

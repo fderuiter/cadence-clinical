@@ -74,12 +74,14 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
           final_adjudicated_onset_date: "2026-03-15",
           binding_reader: "CHAIR_CUSTOM_DETERMINATION",
           criteria_confirmed: ["CT_SCAN_CONFIRMED"],
-          adjudication_rationale: "Definitive CT imaging confirms acute thrombotic infarction.",
+          adjudication_rationale:
+            "Definitive CT imaging confirms acute thrombotic infarction.",
           electronic_signature: {
             signer_id: "dr_chair",
             signer_name: "Dr. Adjudication Chair",
             signer_role: "CEC_CHAIR",
-            signing_reason: "I confirm this clinical endpoint adjudication determination is final",
+            signing_reason:
+              "I confirm this clinical endpoint adjudication determination is final",
             payload_hash: "abcd1234efgh5678",
             signed_at: "2026-09-30T10:00:00Z",
           },
@@ -105,7 +107,8 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
     wrapper.vm.chairForm.final_classification = "ISCHEMIC_STROKE";
     wrapper.vm.chairForm.final_subtype = "THROMBOTIC";
     wrapper.vm.chairForm.final_adjudicated_onset_date = "2026-03-15";
-    wrapper.vm.chairForm.adjudication_rationale = "Definitive CT imaging confirms acute thrombotic infarction.";
+    wrapper.vm.chairForm.adjudication_rationale =
+      "Definitive CT imaging confirms acute thrombotic infarction.";
 
     await wrapper.vm.submitChairAdjudication();
 
@@ -114,7 +117,8 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
       expect.objectContaining({
         username: "Dr. Adjudication Chair",
         password: "SignOffPassword123!",
-        action: "/api/v1/execution/cec/dossiers/DOSSIER-MACE-001/chair-adjudicate",
+        action:
+          "/api/v1/execution/cec/dossiers/DOSSIER-MACE-001/chair-adjudicate",
         semantic_action: "execution.cec.chair_adjudicate",
       })
     );
@@ -134,7 +138,9 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
 
     expect(wrapper.vm.activeDossier.workflow_status).toBe("FINALIZED_BY_CHAIR");
     expect(wrapper.vm.activeDossier.is_discordant).toBe(false);
-    expect(wrapper.vm.activeDossier.final_consensus_classification).toBe("ISCHEMIC_STROKE");
+    expect(wrapper.vm.activeDossier.final_consensus_classification).toBe(
+      "ISCHEMIC_STROKE"
+    );
   });
 
   it("handles HTTP 401 / REAUTHENTICATION_REQUIRED error during signature verification or submission", async () => {
@@ -144,7 +150,8 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
       status: 401,
       data: {
         code: "REAUTHENTICATION_REQUIRED",
-        message: "Step-up electronic signature re-authentication token missing or invalid",
+        message:
+          "Step-up electronic signature re-authentication token missing or invalid",
       },
     });
 
