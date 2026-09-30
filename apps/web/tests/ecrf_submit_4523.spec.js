@@ -31,6 +31,28 @@ vi.mock("../src/api/execution", () => ({
   },
 }));
 
+// Outside a demo build the eCRF lists the study's subjects from Execution (#4828).
+vi.mock("../src/api/executionApi", () => ({
+  executionApi: {
+    listSubjects: vi.fn().mockResolvedValue({
+      items: [
+        {
+          id: "0198c6f2-0000-7000-8000-000000000001",
+          subject_id: "SUBJ-001",
+          study_id: "TEST-STUDY",
+          site_id: "TEST-SITE",
+          status: "ENROLLED",
+          active_protocol_version: "2.0.0",
+          enrollment_index: 1,
+        },
+      ],
+      total: 1,
+      limit: 200,
+      offset: 0,
+    }),
+  },
+}));
+
 function httpError(status) {
   const err = new Error(`Request failed with status ${status}`);
   err.status = status;
@@ -79,6 +101,14 @@ describe("EcrfView submitEcrf API failure handling (#4523)", () => {
       await flushPromises();
 
       expect(executionService.submitForm).toHaveBeenCalledTimes(1);
+      expect(executionService.submitForm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          study_id: "TEST-STUDY",
+          site_id: "TEST-SITE",
+          subject_id: "SUBJ-001",
+          protocol_version: "2.0.0",
+        })
+      );
       expect(
         store.ledgerBlocks.some((b) => b.action === "SESSION_SUBMIT")
       ).toBe(false);

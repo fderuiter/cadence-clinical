@@ -126,6 +126,13 @@ describe("AmendmentDiffView failure handling (#4523)", () => {
 
     it("executeBulkReconsent marks no subject signed and writes no ledger block", async () => {
       const ledgerSpy = vi.spyOn(store, "addLedgerBlock");
+      // Outside a demo build the store holds no sample subjects (#4828), so give it two gated ones.
+      store.subjects = ["SUBJ-102", "SUBJ-103"].map((id) => ({
+        id,
+        status: "ACTIVE",
+        active_protocol_version: "1.0.0",
+        isGated: true,
+      }));
       const wrapper = await mountView();
       const gated = store.subjects.filter((s) => s.isGated).slice(0, 2);
       expect(gated.length).toBeGreaterThan(0);

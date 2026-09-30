@@ -92,6 +92,9 @@
     >
       <!-- Left Column: CRC Persona Component & CRA Verification Bar Slot -->
       <div class="ecrf-form-column" style="flex: 1 1 580px; min-width: 0">
+        <!-- Outside demo builds the subject list comes from Execution for the chosen study (#4828). -->
+        <StudySubjectsBar v-if="!demoBuild" @loaded="selectListedSubject" />
+
         <!-- CRC Persona Component: Reusable Subject Registration & Screening Card -->
         <SubjectEnrollmentForm
           :can-enroll="
@@ -349,6 +352,7 @@ import CraVerificationConsole from "../components/persona/CraVerificationConsole
 import PiSignatureDrawer from "../components/persona/PiSignatureDrawer.vue";
 import DesignerSchemaPanel from "../components/persona/DesignerSchemaPanel.vue";
 import SubjectEnrollmentForm from "../components/clinical/SubjectEnrollmentForm.vue";
+import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
 import EhrReconciliationDrawer from "../components/clinical/EhrReconciliationDrawer.vue";
 
 // Import Domain Composables
@@ -357,11 +361,13 @@ import { useVerification } from "../composables/useVerification";
 import { usePiSignoff } from "../composables/usePiSignoff";
 import { useSchemaIngestion } from "../composables/useSchemaIngestion";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
 const toasts = useToastStore();
 const route = useRoute();
+const demoBuild = isDemoBuild();
 
 const showEhrReconciliationDrawer = ref(false);
 
@@ -708,7 +714,7 @@ watch(
   { deep: true }
 );
 
-onMounted(() => {
+onMounted(async () => {
   if (route && route.query) {
     if (route.query.studyId) store.activeStudyId = route.query.studyId;
     if (route.query.siteId) store.activeSiteId = route.query.siteId;
@@ -733,8 +739,22 @@ onMounted(() => {
       else selectedVisitId.value = "Screening";
     }
   }
-  loadEcrfSession();
+  if (!demoBuild && store.activeStudyId) {
+    await store.loadSubjects(store.activeStudyId);
+  }
+  selectListedSubject();
 });
+
+/**
+ * Keeps the selected subject one the list holds: the first listed subject when the current one is
+ * not in the study, or none when the study has no subjects. Then loads that subject's session.
+ */
+function selectListedSubject() {
+  if (!store.subjects.some((s) => s.id === selectedSubjectId.value)) {
+    selectedSubjectId.value = store.subjects[0]?.id ?? "";
+  }
+  loadEcrfSession();
+}
 
 function getValidationError(field) {
   const value = store.formValues[field.id];
@@ -1196,17 +1216,35 @@ async function submitEcrf() {
     return;
   }
 
+  // Outside demo builds only a study and subject listed by Execution may be submitted (#4828).
+  const listedSubject = store.subjects.find(
+    (s) => s.id === selectedSubjectId.value
+  );
+  if (!demoBuild && (!store.activeStudyId || !listedSubject)) {
+    toasts.push({
+      tone: "error",
+      title: "Choose a study and subject first",
+      message: "Nothing was submitted.",
+    });
+    return;
+  }
+
   try {
-    const studyId =
-      store.activeStudyId || store.currentUsdm.studyId || "CADENCE-101";
-    const siteId = store.activeSiteId || "SITE-101";
+    const studyId = demoBuild
+      ? store.activeStudyId || store.currentUsdm.studyId || "CADENCE-101"
+      : store.activeStudyId;
+    const siteId = demoBuild
+      ? store.activeSiteId || "SITE-101"
+      : listedSubject.siteId || store.activeSiteId;
     await executionService.submitForm({
       study_id: studyId,
       site_id: siteId,
       subject_id: selectedSubjectId.value,
       visit_id: selectedVisitId.value,
       form_id: "VS_DEMO",
-      protocol_version: "1.0.0",
+      protocol_version: demoBuild
+        ? "1.0.0"
+        : listedSubject.active_protocol_version,
       payload: { ...store.formValues },
     });
   } catch (err) {

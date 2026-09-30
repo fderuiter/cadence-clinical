@@ -36,6 +36,7 @@
     "build:demo": "vite build --mode demo --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
     "dev": "vite",
     "format": "prettier --write .",
+    "generate:api": "node scripts/generate-api-types.js",
     "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
     "prebuild": "pnpm --filter ui build && node src/types/generate-types.js",
     "pretest": "pnpm --filter ui build && node src/types/generate-types.js",

@@ -21,6 +21,8 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
   let authStore: any;
 
   beforeEach(() => {
+    // The shared sample subject pool exists only in a demo build (#4828); other builds list subjects from Execution.
+    vi.stubEnv("VITE_DEMO_MODE", "true");
     pinia = createPinia();
     setActivePinia(pinia);
 

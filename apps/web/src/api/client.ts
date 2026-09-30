@@ -64,7 +64,11 @@ openApiClient.use(authMiddleware);
 export function createOpenApiClient<T extends {} = paths>(
   baseUrl: string = getBaseUrl()
 ) {
-  const client = createClient<T>({ baseUrl });
+  // Resolve fetch per call, as openApiClient does, so tests and the MSW worker see the current global.
+  const client = createClient<T>({
+    baseUrl,
+    fetch: (...args) => globalThis.fetch(...args),
+  });
   client.use(authMiddleware);
   return client;
 }

@@ -19,6 +19,21 @@ describe("CrcFormRenderer.vue", () => {
     pinia = createPinia();
     setActivePinia(pinia);
     clinicalStore = useClinicalStore();
+    // Outside a demo build the store holds only subjects listed by Execution (#4828).
+    clinicalStore.subjects = [
+      {
+        id: "SUBJ-101",
+        status: "ACTIVE",
+        active_protocol_version: "2.0.0",
+        isGated: false,
+      },
+      {
+        id: "SUBJ-102",
+        status: "ACTIVE",
+        active_protocol_version: "1.0.0",
+        isGated: true,
+      },
+    ];
 
     vi.spyOn(apiClient, "get").mockResolvedValue([]);
     vi.spyOn(apiClient, "post").mockResolvedValue({});

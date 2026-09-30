@@ -79,6 +79,13 @@
             "
           >
             <option
+              v-if="!(store?.subjects || clinicalStore.subjects).length"
+              value=""
+              disabled
+            >
+              No subjects listed
+            </option>
+            <option
               v-for="sub in store?.subjects || clinicalStore.subjects"
               :key="sub.id"
               :value="sub.id"

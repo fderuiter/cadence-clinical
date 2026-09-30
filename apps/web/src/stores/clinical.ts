@@ -12,6 +12,8 @@ import { buildLedgerBlock, debounce } from "ui";
 import { useAuthStore } from "./auth.js";
 import { useToastStore } from "./toasts.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import { isDemoBuild } from "../utils/demoMode.js";
+import { executionApi, type SubjectSummary } from "../api/executionApi";
 import { soaClient } from "../api/soaClient.js";
 import {
   executionService,
@@ -159,23 +161,45 @@ export interface IngestionJob {
 }
 
 export interface SubjectFixture {
+  /** The subject code shown to users (Execution's `subject_id`). */
   id: string;
+  /** Execution's record id for the subject; absent on demo sample subjects. */
+  recordId?: string;
   siteId?: string;
   consentDate?: string;
   armId?: string;
   status: string;
   active_protocol_version: string;
-  consentText: string;
-  consentColor: string;
-  category: string;
+  consentText?: string;
+  consentColor?: string;
+  category?: string;
   isGated: boolean;
   label?: string;
+}
+
+/** Maps an Execution subject summary onto the eCRF's subject shape. */
+export function subjectFromExecution(summary: SubjectSummary): SubjectFixture {
+  const isGated = summary.status === "RECONSENT_REQUIRED";
+  return {
+    id: summary.subject_id,
+    recordId: summary.id,
+    siteId: summary.site_id ?? undefined,
+    status: summary.status,
+    active_protocol_version: summary.active_protocol_version,
+    isGated,
+    consentText: isGated ? "Re-consent required" : undefined,
+    consentColor: isGated ? "yellow" : undefined,
+  };
 }
 
 export interface ClinicalState {
   currentUsdm: NormalizedUsdm;
   currentCtmsData: CtmsData;
   subjects: SubjectFixture[];
+  /** Subjects in the active study on the server; the list holds the first page (#4828). */
+  subjectsTotal: number;
+  subjectsLoading: boolean;
+  subjectsError: string | null;
   ecrfFields: ClinicalField[];
   formValues: Record<string, string | number | boolean | null | undefined>;
   fieldVisibility: Record<string, boolean>;
@@ -215,10 +239,13 @@ const useClinicalStoreInner = defineStore("clinical", {
     let savedLedgerBlocks: LedgerBlock[] | null = null;
     let savedUsdm: unknown = null;
     let savedSubjects: SubjectFixture[] | null = null;
+    // Sample subjects and the sample study exist only in a demo build; every other build lists the
+    // study's subjects from Execution (loadSubjects), so nothing on screen is made up (#4828).
+    const demo = isDemoBuild();
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         const storedSubjects = window.localStorage.getItem("subjects");
-        if (storedSubjects) {
+        if (storedSubjects && demo) {
           savedSubjects = JSON.parse(storedSubjects);
         }
         const storedFormValues = window.localStorage.getItem("formValues");
@@ -462,88 +489,93 @@ const useClinicalStoreInner = defineStore("clinical", {
           { siteId: "Site-02", screened: 8, enrolled: 4, target: 15 },
         ],
       },
-      subjects: savedSubjects || [
-        {
-          id: "SUBJ-101",
-          status: "ACTIVE",
-          active_protocol_version: "2.0.0",
-          consentText: "Signed ICF v2.0.0",
-          consentColor: "green",
-          category: "migrated",
-          isGated: false,
-          label: "SUBJ-101 (Active - Migrated v2.0.0)",
-        },
-        {
-          id: "SUBJ-102",
-          status: "ACTIVE",
-          active_protocol_version: "1.0.0",
-          consentText: "Pending ICF v2.0.0",
-          consentColor: "yellow",
-          category: "pending",
-          isGated: true,
-          label: "SUBJ-102 (Active - Pending Re-Consent)",
-        },
-        {
-          id: "SUBJ-103",
-          status: "ENROLLED",
-          active_protocol_version: "1.0.0",
-          consentText: "Pending ICF v2.0.0",
-          consentColor: "yellow",
-          category: "pending",
-          isGated: true,
-          label: "SUBJ-103 (Enrolled - Pending Re-Consent)",
-        },
-        {
-          id: "SUBJ-104",
-          status: "COMPLETED",
-          active_protocol_version: "1.0.0",
-          consentText: "Historical v1.0.0",
-          consentColor: "gray",
-          category: "completedPrev",
-          isGated: false,
-          label: "SUBJ-104 (Completed - Historical v1.0.0)",
-        },
-        {
-          id: "SUBJ-105",
-          status: "ACTIVE",
-          active_protocol_version: "2.0.0",
-          consentText: "Signed ICF v2.0.0",
-          consentColor: "green",
-          category: "migrated",
-          isGated: false,
-          label: "SUBJ-105 (Active - Migrated v2.0.0)",
-        },
-        {
-          id: "SUBJ-001",
-          status: "ACTIVE",
-          active_protocol_version: "2.0.0",
-          consentText: "Signed ICF v2.0.0",
-          consentColor: "green",
-          category: "migrated",
-          isGated: false,
-          label: "SUBJ-001 (Mock Subject)",
-        },
-        {
-          id: "SUBJ-002",
-          status: "ACTIVE",
-          active_protocol_version: "1.0.0",
-          consentText: "Pending ICF v2.0.0",
-          consentColor: "yellow",
-          category: "pending",
-          isGated: true,
-          label: "SUBJ-002 (Screened Cohort - Pending Re-Consent)",
-        },
-        {
-          id: "SUBJ-003",
-          status: "ENROLLED",
-          active_protocol_version: "2.0.0",
-          consentText: "Signed ICF v2.0.0",
-          consentColor: "green",
-          category: "migrated",
-          isGated: false,
-          label: "SUBJ-003 (Post-Randomization)",
-        },
-      ],
+      subjects: demo
+        ? savedSubjects || [
+            {
+              id: "SUBJ-101",
+              status: "ACTIVE",
+              active_protocol_version: "2.0.0",
+              consentText: "Signed ICF v2.0.0",
+              consentColor: "green",
+              category: "migrated",
+              isGated: false,
+              label: "SUBJ-101 (Active - Migrated v2.0.0)",
+            },
+            {
+              id: "SUBJ-102",
+              status: "ACTIVE",
+              active_protocol_version: "1.0.0",
+              consentText: "Pending ICF v2.0.0",
+              consentColor: "yellow",
+              category: "pending",
+              isGated: true,
+              label: "SUBJ-102 (Active - Pending Re-Consent)",
+            },
+            {
+              id: "SUBJ-103",
+              status: "ENROLLED",
+              active_protocol_version: "1.0.0",
+              consentText: "Pending ICF v2.0.0",
+              consentColor: "yellow",
+              category: "pending",
+              isGated: true,
+              label: "SUBJ-103 (Enrolled - Pending Re-Consent)",
+            },
+            {
+              id: "SUBJ-104",
+              status: "COMPLETED",
+              active_protocol_version: "1.0.0",
+              consentText: "Historical v1.0.0",
+              consentColor: "gray",
+              category: "completedPrev",
+              isGated: false,
+              label: "SUBJ-104 (Completed - Historical v1.0.0)",
+            },
+            {
+              id: "SUBJ-105",
+              status: "ACTIVE",
+              active_protocol_version: "2.0.0",
+              consentText: "Signed ICF v2.0.0",
+              consentColor: "green",
+              category: "migrated",
+              isGated: false,
+              label: "SUBJ-105 (Active - Migrated v2.0.0)",
+            },
+            {
+              id: "SUBJ-001",
+              status: "ACTIVE",
+              active_protocol_version: "2.0.0",
+              consentText: "Signed ICF v2.0.0",
+              consentColor: "green",
+              category: "migrated",
+              isGated: false,
+              label: "SUBJ-001 (Mock Subject)",
+            },
+            {
+              id: "SUBJ-002",
+              status: "ACTIVE",
+              active_protocol_version: "1.0.0",
+              consentText: "Pending ICF v2.0.0",
+              consentColor: "yellow",
+              category: "pending",
+              isGated: true,
+              label: "SUBJ-002 (Screened Cohort - Pending Re-Consent)",
+            },
+            {
+              id: "SUBJ-003",
+              status: "ENROLLED",
+              active_protocol_version: "2.0.0",
+              consentText: "Signed ICF v2.0.0",
+              consentColor: "green",
+              category: "migrated",
+              isGated: false,
+              label: "SUBJ-003 (Post-Randomization)",
+            },
+          ]
+        : [],
+      subjectsTotal: 0,
+      subjectsLoading: false,
+      subjectsError: null,
       ecrfFields: [
         {
           id: "concept_code",
@@ -723,7 +755,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       ledgerBlocks: savedLedgerBlocks || [],
       syncInterval: null,
 
-      activeStudyId: "STUDY-USDM-001",
+      activeStudyId: demo ? "STUDY-USDM-001" : "",
       activeSiteId: "SITE-001",
       activeSubjectId: "SUBJ-001",
       activeVisitId: "Screening",
@@ -821,6 +853,37 @@ const useClinicalStoreInner = defineStore("clinical", {
     },
   },
   actions: {
+    /**
+     * Loads the first page of a study's subjects from Execution (GET /api/v1/execution/subjects).
+     * A demo build keeps its sample subjects. On failure the list is left as it was and the error
+     * is shown; sample subjects are never substituted.
+     */
+    async loadSubjects(studyId: string, limit = 200): Promise<boolean> {
+      if (isDemoBuild()) return true;
+      const study = studyId.trim();
+      if (!study) {
+        this.subjects = [];
+        this.subjectsTotal = 0;
+        this.subjectsError = null;
+        return false;
+      }
+      this.subjectsLoading = true;
+      this.subjectsError = null;
+      try {
+        const page = await executionApi.listSubjects({ studyId: study, limit });
+        this.subjects = page.items.map(subjectFromExecution);
+        this.subjectsTotal = Number(page.total);
+        return true;
+      } catch (err) {
+        this.subjectsError =
+          err instanceof Error ? err.message : "Could not load subjects.";
+        useToastStore().apiError("Couldn't load the study's subjects", err);
+        return false;
+      } finally {
+        this.subjectsLoading = false;
+      }
+    },
+
     async evaluateRules() {
       let changed = true;
       let passes = 0;

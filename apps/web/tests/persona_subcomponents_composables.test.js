@@ -34,6 +34,14 @@ describe("Persona Sub-Components & Domain Composables Unit Tests", () => {
     it("correctly identifies gated subjects and clears gating upon consent completion (demo build)", async () => {
       // Re-consent runs on local data only in a demo build (#4827); unbacked_actions.test.js covers the refusal.
       vi.stubEnv("VITE_DEMO_MODE", "true");
+      clinicalStore.subjects = [
+        {
+          id: "SUBJ-002",
+          status: "ACTIVE",
+          active_protocol_version: "1.0.0",
+          isGated: true,
+        },
+      ];
       const activeSubject = ref("SUBJ-002");
       const {
         isReconsentGated,

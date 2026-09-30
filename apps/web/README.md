@@ -5,7 +5,8 @@ Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks 
 ## Layout
 
 - `src/main.js`: bootstraps Vue, Pinia and the router, initialises Keycloak (`keycloak-js`), and, in a demo build only, seeds the offline demo identity and the MSW mock worker.
-- `src/api/`: the `apiClient.js` fetch wrapper and per-service clients (`designer.ts`, `execution.ts`, `etmf.ts`, `interop.ts`, `econsent.ts`, `fileshare.ts`, and others).
+- `src/api/`: the `apiClient.js` fetch wrapper and per-service clients. `executionApi.ts` is typed from the .NET Execution spec through `src/api/generated/execution.ts`; the others (`designer.ts`, `execution.ts`, `etmf.ts`, `interop.ts`, `econsent.ts`, `fileshare.ts`, and more) are Python-era clients.
+- `scripts/generate-api-types.js`: generates `src/api/generated/<service>.ts` from `docs/openapi/<service>_openapi.json` (`pnpm --filter web generate:api`); `tests/api/generated_types.test.js` fails when they drift.
 - `src/stores/`: Pinia stores; `auth.js` holds the Keycloak session and role normalisation.
 - `src/views/`, `src/components/`, `src/features/`, `src/composables/`, `src/router/`: UI.
 - `src/mocks/`: MSW handlers for offline and demo use.
@@ -26,9 +27,9 @@ Some regulated actions have no API at all yet: enrolment and re-consent from the
 
 ## Screen availability
 
-Most screens were written against the Python services and call endpoints no .NET service serves. Only the eCRF and CTMS screens have a backend behind them (Execution). Every other screen is hidden from the sidebar and command palette, and its route shows a "not available yet" page, until its module serves the endpoints it needs. `AVAILABLE_SCREENS` in `src/router/availability.js` lists the visible screens. Every visible screen must have a view test: `tests/available_screen_tests.test.js` fails when a route in `AVAILABLE_SCREENS` has no test that imports its view. Hidden screens get tests when they move onto a real API, not before, because most will be rewritten (#4529). [`docs/web/API_MIGRATION.md`](../../docs/web/API_MIGRATION.md) has the screen-by-screen inventory and the steps for moving a screen over, and epic #4833 has the plan.
+Most screens were written against the Python services and call endpoints no .NET service serves. Only the eCRF and CTMS screens have a backend behind them (Execution). The eCRF lists the subjects of the chosen study from Execution; the study comes from `?studyId=` or the study field above the form. Every other screen is hidden from the sidebar and command palette, and its route shows a "not available yet" page, until its module serves the endpoints it needs. `AVAILABLE_SCREENS` in `src/router/availability.js` lists the visible screens. Every visible screen must have a view test: `tests/available_screen_tests.test.js` fails when a route in `AVAILABLE_SCREENS` has no test that imports its view. Hidden screens get tests when they move onto a real API, not before, because most will be rewritten (#4529). [`docs/web/API_MIGRATION.md`](../../docs/web/API_MIGRATION.md) has the screen-by-screen inventory and the steps for moving a screen over, and epic #4833 has the plan.
 
-The clients in `src/api/` are still typed against the Python-era specs in `docs/openapi/legacy/`. They are replaced as each screen moves over.
+Apart from `executionApi.ts`, the clients in `src/api/` are still typed against the Python-era specs in `docs/openapi/legacy/`. They are replaced as each screen moves over.
 
 ## Scripts
 
@@ -42,6 +43,7 @@ Run from the repository root with pnpm (the workspace is defined in `pnpm-worksp
 | `pnpm --filter web test`               | Vitest with coverage.                                                                                       |
 | `pnpm --filter web test:e2e`           | Playwright; starts the web and subject-portal dev servers.                                                  |
 | `pnpm --filter web lint` / `typecheck` | ESLint / `tsc --noEmit`.                                                                                    |
+| `pnpm --filter web generate:api`       | Regenerates `src/api/generated/` from the .NET services' specs in `docs/openapi/`.                          |
 
 ## Dependencies
 

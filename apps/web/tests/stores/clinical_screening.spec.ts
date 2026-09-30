@@ -43,6 +43,20 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
 
   it("clinicalStore.subjectIds exposes reactive array of all subject IDs", () => {
     const store = useClinicalStore();
+    store.subjects = [
+      {
+        id: "SUBJ-001",
+        status: "ENROLLED",
+        active_protocol_version: "1.0.0",
+        isGated: false,
+      },
+      {
+        id: "SUBJ-002",
+        status: "ENROLLED",
+        active_protocol_version: "1.0.0",
+        isGated: true,
+      },
+    ];
     expect(store.subjectIds).toBeDefined();
     expect(store.subjectIds).toContain("SUBJ-001");
     expect(store.subjectIds).toContain("SUBJ-002");

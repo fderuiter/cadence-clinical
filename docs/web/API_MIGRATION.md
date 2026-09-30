@@ -48,6 +48,12 @@ Calls = distinct API paths reachable from the screen. Missing = paths no .NET se
 
 Result: no screen works end to end against the .NET backend. The eCRF, query, SDV and site activation parts are the only ones with a real backend behind them.
 
+## Moved so far
+
+| Screen | Part                 | Client call                                                    | Notes                                                                                                                                                                                                                                                                                                                            |
+| ------ | -------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| eCRF   | Subject list (#4828) | `executionApi.listSubjects` (`GET /api/v1/execution/subjects`) | The study comes from `?studyId=` or the study field above the form. The list shows the first 200 subjects in enrollment order, by subject code; a `RECONSENT_REQUIRED` subject is gated. Submitting needs a study and a listed subject, and sends the subject's site and protocol version. Sample subjects only in a demo build. |
+
 ## Hidden screens
 
 Screens with no .NET backend are hidden until their module serves the endpoints they need:
@@ -61,7 +67,7 @@ The list of available screens is `AVAILABLE_SCREENS` in `apps/web/src/router/ava
 
 The missing endpoints are tracked by module, not one issue per Python path:
 
-- #4828: what the eCRF needs from Execution, Designer and Notifications (listing subjects, now served, the visit schedule and form definitions, the user's notifications).
+- #4828: what the eCRF needs from Execution, Designer and Notifications (listing subjects, served and used by the eCRF, the visit schedule and form definitions, the user's notifications).
 - #4829: every hidden screen, with the module and kernel roadmap phase (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` §15) that will give it a backend. #4787 decides which scaffold service becomes which module.
 
 ## Actions with no backend
@@ -89,6 +95,6 @@ When a screen moves onto the real API, replace its `allowUnbackedAction` calls w
 
 1. Make sure every endpoint the screen needs is in `docs/openapi/*.json` and routed by the gateway. If one is missing, add it to the module's issue rather than stubbing it or adding a mock fallback.
    Check that its request and response schemas are complete too. A type with a custom JSON converter (a value object or a status) comes out as an empty schema unless the service describes it; Execution does this in `apps/execution/src/Infrastructure/OpenApi/ExecutionWireTypesOpenApiTransformer.cs`, so its IDs and codes are strings and its statuses are string enums.
-2. Call it through the typed client generated from those specs, and delete the screen's Python-era client functions and their types.
+2. Call it through the typed client generated from those specs, and delete the screen's Python-era client functions and their types. The types come from `apps/web/scripts/generate-api-types.js`: add the service to `GENERATED_SERVICES` and run `pnpm --filter web generate:api`, which writes `apps/web/src/api/generated/<service>.ts`. Put the calls in `apps/web/src/api/<service>Api.ts` (see `executionApi.ts`). `tests/api/generated_types.test.js` fails when a checked-in file no longer matches its spec, so regenerate after `pnpm cadence sync-openapi-spec`.
 3. Give the screen a view test in `apps/web/tests/` that mounts it and covers its main flow against a mocked client. `tests/available_screen_tests.test.js` fails when a route in `AVAILABLE_SCREENS` has no test file that imports its view (#4529).
 4. Add the route name to `AVAILABLE_SCREENS` and update this page and #4829.
