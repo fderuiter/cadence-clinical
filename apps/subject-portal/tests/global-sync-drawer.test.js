@@ -1,5 +1,5 @@
 import "fake-indexeddb/auto";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createApp, nextTick } from "vue";
 import App from "../src/App.vue";
 import { state, refreshSubmissionsState } from "../src/index.js";
@@ -10,6 +10,17 @@ import {
 } from "../src/sync-queue.js";
 
 describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
+  let activeApp = null;
+
+  afterEach(() => {
+    if (activeApp) {
+      try {
+        activeApp.unmount();
+      } catch (_) {}
+      activeApp = null;
+    }
+  });
+
   beforeEach(async () => {
     window.__MOCK_TEST_ENV__ = true;
     document.body.innerHTML = `<div id="app"></div>`;
@@ -26,8 +37,8 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
   });
 
   it("should render the persistent dynamic sync status button in the header across views", async () => {
-    const app = createApp(App);
-    app.mount("#app");
+    activeApp = createApp(App);
+    activeApp.mount("#app");
     await nextTick();
 
     const syncBtn = document.getElementById("btn-global-sync-drawer");
@@ -39,8 +50,8 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
   });
 
   it("should toggle the floating drawer open and closed when clicking the status button", async () => {
-    const app = createApp(App);
-    app.mount("#app");
+    activeApp = createApp(App);
+    activeApp.mount("#app");
     await nextTick();
 
     const syncBtn = document.getElementById("btn-global-sync-drawer");
@@ -70,8 +81,8 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
   });
 
   it("should render submission list in the drawer reactively using Vue bindings", async () => {
-    const app = createApp(App);
-    app.mount("#app");
+    activeApp = createApp(App);
+    activeApp.mount("#app");
     await nextTick();
 
     // Add a submission to IndexedDB and refresh state
@@ -103,8 +114,8 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
   });
 
   it("should trigger manual sync process within the floating drawer", async () => {
-    const app = createApp(App);
-    app.mount("#app");
+    activeApp = createApp(App);
+    activeApp.mount("#app");
     await nextTick();
 
     const syncTriggerBtn = document.getElementById("btn-drawer-sync-now");
