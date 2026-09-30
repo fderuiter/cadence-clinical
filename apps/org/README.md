@@ -9,6 +9,7 @@ Organization directory scaffold. It holds the personnel assignment, delegation o
 - Project: `apps/org/src/Cadence.Apps.Org.csproj` (assembly `Cadence.Apps.Org`).
 - `Program.cs`: composition root and route mapping.
 - `Domain/`: EF Core entity classes (personnel assignments, delegations of authority, training logs, audit log).
+  Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `OrgDbContext`, a design-time `OrgDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145321_InitialCreate`.
 
