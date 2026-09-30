@@ -19,7 +19,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | Package | Port missing | Port untested | Ported, deletion pending |
 | --- | ---: | ---: | ---: |
 | [packages/ddf](#packagesddf) | 1 | 0 | 10 |
-| [packages/engine_core](#packagesengine_core) | 19 | 0 | 3 |
+| [packages/engine_core](#packagesengine_core) | 15 | 0 | 7 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
 | [packages/storage](#packagesstorage) | 1 | 0 | 5 |
 
@@ -45,10 +45,10 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | --- | --- | --- | --- | --- |
 | `derived/engine.py` | Derived-variable math engine with unit normalisation and plausibility ranges | none | Port missing |  |
 | `derived/models.py` | Formula, plausibility and result models | none | Port missing |  |
-| `financial/contracts.py` | Tiered overhead, payee splits, line-item hash (Decimal) | none (`apps/payments/src/Domain/PaymentEntities.cs` holds entities only; `tests/Cadence.UnitTests/Payments/PaymentDecimalCalculationTests.cs` computes inline) | Port missing |  |
-| `financial/engine.py` | Event-triggered payable engine | none | Port missing |  |
-| `financial/ledger.py` | Payable ledger with holdback reserve accounting | none | Port missing |  |
-| `financial/models.py` | Fee matrix, grant contract, payable models | entity shapes only in `apps/payments` | Port missing |  |
+| `financial/contracts.py` | Tiered overhead, payee splits, line-item hash (Decimal) | `ContractCalculations` (`apps/payments/src/Domain/Ledger/`), tested by `ContractCalculationsTests` | Ported, deletion pending | ADR-2521 |
+| `financial/engine.py` | Event-triggered payable engine | none: callers create a `PayableLedger` | Ported, deletion pending | Facade not carried forward (ADR-2521) |
+| `financial/ledger.py` | Payable ledger with holdback reserve accounting | `PayableLedger` (`apps/payments/src/Domain/Ledger/`), tested by `PayableLedgerTests` | Ported, deletion pending | ADR-2521 |
+| `financial/models.py` | Fee matrix, grant contract, payable models | records in `apps/payments/src/Domain/Ledger/GrantContractModels.cs` with kernel IDs; limits in `GrantContractValidator` | Ported, deletion pending | ADR-2521 |
 | `fsm/engine.py` | Generic DAG state machine with Part 11 envelope | Superseded: lifecycles are state machines on kernel aggregates in `Cadence.Kernel.Domain` (spec §3), with authorization (`IAuthorizer`), reason for change and audit from the kernel command pipeline | Ported, deletion pending | No generic runtime state machine is carried forward |
 | `fsm/models.py` | State and transition models, `Part11AuditEnvelope` | Superseded with `fsm/engine.py`; the kernel audit log records each command | Ported, deletion pending |  |
 | `fsm/validator.py` | Graph validation (reachability, terminal states) | Superseded with `fsm/engine.py`; each aggregate's transitions are fixed in code and covered by its tests | Ported, deletion pending |  |
