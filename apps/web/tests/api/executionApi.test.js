@@ -263,4 +263,16 @@ describe("executionApi: participant data, SDV and queries (#4828)", () => {
       reason: "Raised in error",
     });
   });
+
+  it("encodes a reason outside printable ASCII (ADR-2495) and keeps the body as typed", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, { id: "q1" }));
+
+    await executionApi.reopenQuery("q1", "Wert falsch — bitte prüfen");
+
+    const request = await sent();
+    expect(request.reason).toBe(
+      "UTF-8''Wert%20falsch%20%E2%80%94%20bitte%20pr%C3%BCfen"
+    );
+    expect(request.body).toEqual({ reason: "Wert falsch — bitte prüfen" });
+  });
 });

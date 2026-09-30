@@ -172,7 +172,7 @@ export const executionApi = {
     return unwrapResponse(
       client.POST("/api/v1/execution/queries/{id}/close", {
         params: { path: { id } },
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },
@@ -183,7 +183,7 @@ export const executionApi = {
       client.POST("/api/v1/execution/queries/{id}/reopen", {
         params: { path: { id } },
         body: { reason },
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },
@@ -194,7 +194,7 @@ export const executionApi = {
       client.POST("/api/v1/execution/queries/{id}/cancel", {
         params: { path: { id } },
         body: { reason },
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },
