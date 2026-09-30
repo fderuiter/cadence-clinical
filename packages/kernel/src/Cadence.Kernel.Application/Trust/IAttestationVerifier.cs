@@ -2,56 +2,39 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Application.Trust;
 
 /// <summary>
-/// Checks that an Attestation (spec §9.5) authorizes a governed action: it exists in the tenant, was made by the
-/// acting person, carries the required meaning, and is bound to the exact target and content hash, so a signed record
-/// cannot silently change. Governance commands (standards and library approval, rule-pack release, finding
-/// acceptance) call it before changing state. The Trust slice (#4729, #4781) implements it over the kernel's
-/// Attestation store; until then a host must register its own, and the kernel refuses to resolve these commands
-/// without one.
+/// Checks that a recorded attestation (spec §9.5) authorizes a governed action: it exists in the tenant, the acting
+/// person signed it, it asserts the required meaning, and it is bound to the exact record and content hash, so a
+/// signed record cannot silently change (21 CFR 11.70). Protocol approval and withdrawal, standards and library
+/// governance, and later locks, reviews and consent call it before changing state. Kernel persistence implements it
+/// over the attestation store (<c>AddKernelPersistence</c>).
 /// </summary>
 public interface IAttestationVerifier
 {
-    ValueTask<AttestationCheck> VerifyAsync(AttestationRequirement requirement, CancellationToken cancellationToken);
+    ValueTask<AttestationVerification> VerifyAsync(AttestationRequirement requirement, CancellationToken cancellationToken);
 }
 
-/// <summary>What an Attestation must satisfy for a governed action.</summary>
-/// <param name="TenantId">The tenant of the command.</param>
-/// <param name="AttestationId">The Attestation the command names.</param>
-/// <param name="Meaning">The required meaning (<see cref="AttestationMeanings"/>).</param>
-/// <param name="TargetKind">The kind of the attested record, for example <c>StandardVersion</c>.</param>
-/// <param name="TargetId">The attested record's id.</param>
-/// <param name="ContentHash">The attested record's content hash.</param>
-/// <param name="Actor">The actor executing the command, who must be the signer.</param>
+/// <summary>What an attestation must satisfy for a governed action.</summary>
+/// <param name="Tenant">The tenant of the command; an attestation from another tenant is not found.</param>
+/// <param name="AttestationId">The attestation the command names.</param>
+/// <param name="Meaning">The meaning it must assert.</param>
+/// <param name="Target">The record and content hash it must sign.</param>
+/// <param name="Signer">The actor executing the command, who must be the person who signed.</param>
 public sealed record AttestationRequirement(
-    TenantId TenantId,
+    TenantId Tenant,
     AttestationId AttestationId,
-    string Meaning,
-    string TargetKind,
-    string TargetId,
-    string ContentHash,
-    Actor Actor);
+    AttestationMeaning Meaning,
+    AttestationTarget Target,
+    Actor Signer);
 
-/// <summary>The outcome of <see cref="IAttestationVerifier.VerifyAsync"/>. A rejection names what is missing (K-AUTH-6).</summary>
-public sealed record AttestationCheck(bool Satisfied, string? Reason = null)
+/// <summary>Whether a requirement is met and, when it is not, why (K-AUTH-6).</summary>
+public sealed record AttestationVerification(bool Satisfied, string? Reason)
 {
-    public static AttestationCheck Accept() => new(true);
+    public static AttestationVerification Met { get; } = new(true, null);
 
-    public static AttestationCheck Reject(string reason) => new(false, reason);
-}
-
-/// <summary>Attestation meanings (spec §9.5) used by kernel governance.</summary>
-public static class AttestationMeanings
-{
-    /// <summary>The signer approves the record for use.</summary>
-    public const string Approved = "Approved";
-
-    /// <summary>The signer takes responsibility for the action, used for deprecation and withdrawal.</summary>
-    public const string Responsibility = "Responsibility";
-
-    /// <summary>The signer reviewed the record.</summary>
-    public const string Reviewed = "Reviewed";
+    public static AttestationVerification Unmet(string reason) => new(false, reason);
 }

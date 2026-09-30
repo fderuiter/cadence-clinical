@@ -192,9 +192,14 @@ public class ConceptRegistryDomainTests
         return dir?.FullName ?? throw new InvalidOperationException("Cadence.sln not found above the test output.");
     }
 
+    /// <summary>
+    /// Walks the working tree, skipping version control, dependencies and git-ignored build output. Build output
+    /// is never committed, and a local docs build (<c>docs/.vitepress/dist</c>) renders ADR pages whose file names
+    /// name the licensed dictionaries they discuss.
+    /// </summary>
     private static IEnumerable<string> Files(string directory)
     {
-        string[] skipped = [".git", "node_modules", "bin", "obj", ".pnpm-store"];
+        string[] skipped = [".git", "node_modules", "bin", "obj", ".pnpm-store", "dist", "coverage", "test-results", "playwright-report"];
         var pending = new Stack<string>([directory]);
         while (pending.Count > 0)
         {

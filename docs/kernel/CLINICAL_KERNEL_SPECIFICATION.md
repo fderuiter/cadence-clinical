@@ -296,7 +296,7 @@ changed, pinned to its new version (§3.4; null for events about no aggregate, s
 
 | Family | Examples |
 | --- | --- |
-| Knowledge | `ProtocolVersionDrafted`, `…Approved`, `AmendmentClassified`, `ConceptMapped`, `MappingSpecificationPublished`, `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
+| Knowledge | `ProtocolVersionDrafted` (carries the amendment's classification), `…Approved`, `…Withdrawn`, `ConceptMapped`, `MappingSpecificationPublished`, `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
 | Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityGranted`, `StudySiteActivated`, `ParticipantEnrolled`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
 | Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactVersioned`, `IngestionBatchAccepted` |
 | Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
@@ -400,15 +400,21 @@ ProtocolVersion contains:
 ```
 
 - **ProtocolVersion** is an immutable, content-addressed snapshot (USDM document + `content_hash`) with
-  `number`, `parent_version`, `amendment_id?`, `state`, `sponsor_approval`.
+  `number`, `parent_version`, `amendment?`, `state` and the approving Attestation (ADR-2452).
 - State machine `Draft → InReview → Approved → Superseded | Withdrawn`.
+  - Submitting for review freezes the content and sets `content_hash`, the canonical-JSON SHA-256
+    (`ContentHash`). Returning to draft clears it. Reviewers and approvers therefore sign the same hash.
   - `Approved` requires an Attestation with meaning `Approved` bound to `content_hash`.
-  - Forking a new draft **does not** change the parent's state (readiness blocker, inventory §4).
+  - Forking a new draft **does not** change the parent's state (readiness blocker, inventory §4). The
+    draft copies the parent's content and takes the next number in the study.
   - `Superseded` is set only when a later version is effective everywhere it will ever be. Approved
     versions legitimately coexist.
-  - `Withdrawn` is terminal and requires a reason and an Attestation.
+  - `Withdrawn` (from `InReview` or `Approved`) is terminal and requires a reason and an Attestation with
+    meaning `Withdrawn`.
+  - A database trigger repeats the state machine and the content freeze for every database user (`KA002`).
 - **Amendment**: intent, rationale, classification (substantial / non-substantial / urgent safety measure),
-  summary of changes, **impacted elements** and a TransitionPolicy (§7.5).
+  summary of changes, **impacted elements** and a TransitionPolicy (§7.5). It is a value carried by the
+  forked version it introduces and freezes with that version (ADR-2452); the first version has none.
 - **K-PROT-1** Every ProtocolVersion element has a stable element ID across versions, so a structural
   diff between versions is computable.
 - **K-PROT-2** **Amendment impact is computable**: given two ProtocolVersions, the kernel lists every
@@ -723,6 +729,11 @@ protocol training + credential + effective dates + site activation state, never 
 - **K-AUTH-6** A denial names the missing evidence (e.g. "protocol v3 training not current"), so the user can
   act on it. The decision carries every condition evaluated, met and unmet, each with its evidence NodeRef, and
   explains itself as an `Explanation` (§5.5); the `DecisionDenied` event and audit entry record the conditions.
+- **K-AUTH-7** Authorization is one decision procedure over `AuthorizationRequest(actor, tenant, capability,
+  resource, at, known_at)`. Every kernel command declares its capability and the object it is authorized against;
+  a command without a declaration is denied. A dry run, `CanI(capability, resource)`, asks the same procedure for
+  the calling actor only. It is not written to the audit chain; it is recorded in the authorization access log
+  (ADR-2483), and the command catalogue for an object lists each command offered on it with its dry-run decision.
 
 ### 9.4 Computable consent
 
@@ -751,10 +762,13 @@ ConsentScope(purpose: MainStudy | FutureResearch | GeneticTesting | CommercialRe
 - **K-PROV-1** Every kernel write is produced by exactly one ProvenanceActivity, in the same transaction.
 - **K-PROV-2** Derived facts name their inputs and the versioned algorithm.
 - **K-PROV-3** AI-assisted actions record model identifier, prompt/plan artifact and the approving actor.
-- `Attestation(id, actor, meaning, target(kind, id, version, content_hash), authenticated_at, method,
-  recorded_at, reason?)`, append-only. Meanings: `Authored`, `Reviewed`, `Approved`, `Verified`,
-  `Responsibility`, `Consented`. Binding to a content hash means a signed record cannot silently change
-  (21 CFR 11.70, PRD-SYS-053).
+- `Attestation(id, actor, meaning, target(kind, id, content_hash), authenticated_at, method, recorded_at,
+  reason)`, append-only. Meanings: `Authored`, `Reviewed`, `Approved`, `Verified`, `Responsibility`,
+  `Consented`, `Withdrawn`. Binding to a content hash means a signed record cannot silently change
+  (21 CFR 11.70). Only a person signs. The authentication must be at most five minutes old, and the target's
+  current content must have the signed hash. Commands that need a signature name an Attestation, which
+  `IAttestationVerifier` checks within the tenant: the acting person must be the signer (ADR-2452). Content hashes
+  are `sha256:` and lower-case hex over canonical JSON, for protocol versions and standards metadata alike.
 
 ### 9.6 Lineage graph (ADR-2255)
 
@@ -1027,7 +1041,7 @@ kernel, is merged into another, or is retired.
 | K004 | Policy engine | Hand-coded evaluator behind `IAuthorizer`, authority computed from evidence | ADR-2251 |
 | K005 | Concept vocabulary | Concept Registry keyed by CDISC Biomedical Concepts with mapped external codes; per-tenant, pinned terminology | ADR-2252, ADR-2470 |
 | K006 | Identity vault | Separate schema and key hierarchy, same deployment; layered identity | ADR-2253 |
-| K007 | Neo4j for designer | Dropped for v1 | ADR-2245 |
+| K007 | Neo4j for designer | Dropped for v1; protocol lifecycle in PostgreSQL | ADR-2245, ADR-2452 |
 | K008 | Rules and standards | Rules as versioned data over one AST; public standards only; Rust runtime seam | ADR-2254 |
 | K009 | Lineage | Lineage graph in the kernel schema, written transactionally, queried both ways | ADR-2255 |
 | K010 | Command pipeline and audit | One transaction per command; per-tenant hash chain; insert-only history | ADR-2449 |
@@ -1035,6 +1049,7 @@ kernel, is merged into another, or is retired.
 | K012 | Object references and zoom path | `kind:id@version` NodeRef; kernel-computed, presentation-only zoom path | ADR-2481 |
 | K013 | Standards Registry and MDR | Tenant-scoped reference data; one governance envelope for library items; attested approval; immutable once registered | ADR-2460 |
 | K014 | Explanations | One `Explanation` type produced by the rule owner; authorization returns met and unmet conditions with evidence | ADR-2482 |
+| K015 | Dry-run authorization | One evaluator for commands and `CanI`; declared command capabilities; dry runs in the access log, not the audit chain | ADR-2483 |
 
 ---
 

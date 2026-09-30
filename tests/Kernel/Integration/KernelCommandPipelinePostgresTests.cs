@@ -333,8 +333,8 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
     }
 
     /// <summary>
-    /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency and seal tables reject UPDATE, DELETE and
-    /// TRUNCATE in the database itself (SQLSTATE KA001).
+    /// Validates spec §5.3 item 2: the audit, event, provenance, idempotency, seal and attestation tables reject UPDATE,
+    /// DELETE and TRUNCATE in the database itself (SQLSTATE KA001).
     /// </summary>
     [Theory(DisplayName = "InsertOnlyTables_RejectUpdateDeleteAndTruncate")]
     [MemberData(nameof(InsertOnlyTables))]
@@ -346,6 +346,12 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         (await fixture.Sender.SendAsync(tenant, cancellationToken: ct)).IsSuccess.Should().BeTrue();
         await ConceptRegistryPostgresTests.SeedAsync(fixture, ct);
         await fixture.AuditChainSealer.SealAllAsync(ct);
+        if (table == "attestations")
+        {
+            var scenario = new KernelProtocolScenario(fixture);
+            var (studyTenant, study) = await scenario.NewStudyAsync(ct);
+            await scenario.ApprovedAsync(studyTenant, study, ct);
+        }
 
         // The Standards Registry definition tables fill only when a standard version is registered.
         var package = StandardSeeds.LoadAll().Single(s => s.Package.StandardCode == "SDTMIG").Package with

@@ -37,7 +37,7 @@ public static class UsdmCompiler
     public static DDFCompilationResult Compile(ProtocolVersion protocolVersion, CompileOptions? options = null, ITemplateRenderer? templateRenderer = null)
     {
         ArgumentNullException.ThrowIfNull(protocolVersion);
-        return CompileUsdm(protocolVersion.UsdmPayloadJson, protocolVersion.StudyId.ToString(), protocolVersion.VersionTag, options, templateRenderer);
+        return CompileUsdm(protocolVersion.Content, protocolVersion.StudyId.ToString(), $"v{protocolVersion.Number}", options, templateRenderer);
     }
 
     /// <summary>

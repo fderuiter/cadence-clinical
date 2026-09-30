@@ -1,4 +1,4 @@
-﻿DO $EF$
+DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -1599,6 +1599,211 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930014016_StandardsRegistry') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930014016_StandardsRegistry', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    CREATE TABLE kernel.attestations (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        actor_id character varying(255) NOT NULL,
+        meaning character varying(32) NOT NULL,
+        target_kind character varying(64) NOT NULL,
+        target_id uuid NOT NULL,
+        target_content_hash character varying(71) NOT NULL,
+        authenticated_at timestamp with time zone NOT NULL,
+        method character varying(64) NOT NULL,
+        recorded_at timestamp with time zone NOT NULL,
+        reason character varying(1000) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_attestations" PRIMARY KEY (id),
+        CONSTRAINT "AK_attestations_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_attestations_target_content_hash CHECK (target_content_hash ~ '^sha256:[0-9a-f]{64}$'),
+        CONSTRAINT "FK_attestations_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    CREATE TABLE kernel.protocol_versions (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        number integer NOT NULL,
+        parent_version_id uuid,
+        status character varying(16) NOT NULL,
+        content text NOT NULL,
+        content_hash character varying(71),
+        amendment jsonb,
+        approval_attestation_id uuid,
+        withdrawal_attestation_id uuid,
+        withdrawal_reason character varying(1000),
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_protocol_versions" PRIMARY KEY (id),
+        CONSTRAINT "AK_protocol_versions_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_protocol_versions_content_hash CHECK (content_hash IS NULL OR content_hash ~ '^sha256:[0-9a-f]{64}$'),
+        CONSTRAINT ck_protocol_versions_number CHECK (number > 0),
+        CONSTRAINT "FK_protocol_versions_attestations_tenant_id_approval_attestati~" FOREIGN KEY (tenant_id, approval_attestation_id) REFERENCES kernel.attestations (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_protocol_versions_attestations_tenant_id_withdrawal_attesta~" FOREIGN KEY (tenant_id, withdrawal_attestation_id) REFERENCES kernel.attestations (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_protocol_versions_protocol_versions_tenant_id_parent_versio~" FOREIGN KEY (tenant_id, parent_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_protocol_versions_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_protocol_versions_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    CREATE INDEX "IX_attestations_tenant_id_target_kind_target_id" ON kernel.attestations (tenant_id, target_kind, target_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    CREATE INDEX "IX_protocol_versions_tenant_id_approval_attestation_id" ON kernel.protocol_versions (tenant_id, approval_attestation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    CREATE INDEX "IX_protocol_versions_tenant_id_parent_version_id" ON kernel.protocol_versions (tenant_id, parent_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    CREATE UNIQUE INDEX "IX_protocol_versions_tenant_id_study_id_number" ON kernel.protocol_versions (tenant_id, study_id, number);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    CREATE INDEX "IX_protocol_versions_tenant_id_withdrawal_attestation_id" ON kernel.protocol_versions (tenant_id, withdrawal_attestation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    ALTER TABLE "kernel"."attestations" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."attestations" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."attestations"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    ALTER TABLE "kernel"."protocol_versions" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."protocol_versions" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."protocol_versions"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    CREATE TRIGGER "trg_attestations_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."attestations"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_attestations_no_truncate" BEFORE TRUNCATE ON "kernel"."attestations"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    CREATE OR REPLACE FUNCTION "kernel".enforce_protocol_version_lifecycle() RETURNS trigger
+    LANGUAGE plpgsql AS $fn$
+    BEGIN
+        IF TG_OP IN ('DELETE', 'TRUNCATE') THEN
+            RAISE EXCEPTION 'K-PROT: protocol versions are never deleted (%)', TG_OP USING ERRCODE = 'KA002';
+        END IF;
+
+        IF TG_OP = 'INSERT' THEN
+            IF NEW.status <> 'Draft' OR NEW.content_hash IS NOT NULL
+                OR NEW.approval_attestation_id IS NOT NULL OR NEW.withdrawal_attestation_id IS NOT NULL
+                OR NEW.withdrawal_reason IS NOT NULL THEN
+                RAISE EXCEPTION 'K-PROT: a protocol version starts as a draft without a hash or attestations'
+                    USING ERRCODE = 'KA002';
+            END IF;
+            RETURN NEW;
+        END IF;
+
+        IF OLD.status IN ('Superseded', 'Withdrawn') THEN
+            RAISE EXCEPTION 'K-PROT: protocol version % is % and final', OLD.id, OLD.status USING ERRCODE = 'KA002';
+        END IF;
+
+        IF NEW.id <> OLD.id OR NEW.tenant_id <> OLD.tenant_id OR NEW.study_id <> OLD.study_id
+            OR NEW.number <> OLD.number OR NEW.parent_version_id IS DISTINCT FROM OLD.parent_version_id THEN
+            RAISE EXCEPTION 'K-PROT: the identity of protocol version % cannot change', OLD.id USING ERRCODE = 'KA002';
+        END IF;
+
+        IF OLD.status <> 'Draft'
+            AND (NEW.content IS DISTINCT FROM OLD.content OR NEW.amendment IS DISTINCT FROM OLD.amendment) THEN
+            RAISE EXCEPTION 'K-PROT: protocol version % is % and its content is frozen', OLD.id, OLD.status
+                USING ERRCODE = 'KA002';
+        END IF;
+
+        IF NEW.status <> OLD.status AND (OLD.status, NEW.status) NOT IN (
+            ('Draft', 'InReview'), ('InReview', 'Draft'), ('InReview', 'Approved'), ('InReview', 'Withdrawn'),
+            ('Approved', 'Superseded'), ('Approved', 'Withdrawn')) THEN
+            RAISE EXCEPTION 'K-PROT: protocol version % cannot move from % to %', OLD.id, OLD.status, NEW.status
+                USING ERRCODE = 'KA002';
+        END IF;
+
+        IF (NEW.status = 'Draft') <> (NEW.content_hash IS NULL)
+            OR (OLD.status <> 'Draft' AND NEW.status <> 'Draft' AND NEW.content_hash IS DISTINCT FROM OLD.content_hash) THEN
+            RAISE EXCEPTION 'K-PROT: the content hash of protocol version % is set on review and never changes after', OLD.id
+                USING ERRCODE = 'KA002';
+        END IF;
+
+        IF (OLD.approval_attestation_id IS NOT NULL AND NEW.approval_attestation_id IS DISTINCT FROM OLD.approval_attestation_id)
+            OR (NEW.status IN ('Approved', 'Superseded') AND NEW.approval_attestation_id IS NULL)
+            OR (NEW.status = 'Withdrawn' AND (NEW.withdrawal_attestation_id IS NULL OR NEW.withdrawal_reason IS NULL))
+            OR (NEW.status <> 'Withdrawn' AND (NEW.withdrawal_attestation_id IS NOT NULL OR NEW.withdrawal_reason IS NOT NULL)) THEN
+            RAISE EXCEPTION 'K-PROT: approval and withdrawal of protocol version % need their attestation', OLD.id
+                USING ERRCODE = 'KA002';
+        END IF;
+
+        RETURN NEW;
+    END;
+    $fn$;
+
+    CREATE TRIGGER trg_protocol_versions_lifecycle BEFORE INSERT OR UPDATE OR DELETE ON "kernel"."protocol_versions"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_protocol_version_lifecycle();
+    CREATE TRIGGER trg_protocol_versions_no_truncate BEFORE TRUNCATE ON "kernel"."protocol_versions"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_protocol_version_lifecycle();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930032422_ProtocolVersionsAndAttestations') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930032422_ProtocolVersionsAndAttestations', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;

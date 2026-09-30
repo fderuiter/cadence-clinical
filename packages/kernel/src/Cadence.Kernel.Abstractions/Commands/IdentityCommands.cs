@@ -1,3 +1,5 @@
+using Cadence.Kernel.Authorization;
+
 namespace Cadence.Kernel.Commands;
 
 /// <summary>
@@ -5,6 +7,7 @@ namespace Cadence.Kernel.Commands;
 /// <see cref="ICommand.TenantId"/> is the new tenant's id, chosen by the caller (UUIDv7).
 /// @req:PRD-SYS-053
 /// </summary>
+[KernelCapability("tenant.provision", VerbClass.Execute, InCatalogue = false)]
 public sealed record ProvisionTenant(
     TenantId TenantId,
     string Code,
@@ -16,6 +19,7 @@ public sealed record ProvisionTenant(
 /// Registers an organization (sponsor, CRO, site institution, vendor, …) in a tenant (spec §7.1).
 /// @req:PRD-SYS-053
 /// </summary>
+[KernelCapability("organization.register", VerbClass.Execute)]
 public sealed record RegisterOrganization(
     TenantId TenantId,
     OrganizationId OrganizationId,

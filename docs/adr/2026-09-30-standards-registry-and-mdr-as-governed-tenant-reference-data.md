@@ -95,8 +95,8 @@ publishes and what an auditor reads.
 
 - Approve requires an Attestation with meaning `Approved`; deprecate requires one with meaning `Responsibility`.
   Both are checked through the `IAttestationVerifier` port with the target's kind, id and content hash, so a
-  signature over different content is rejected. The Trust engine implements the port with #4729 and #4781; hosts
-  register it.
+  signature over different content is rejected. Kernel persistence implements the port over the Attestation store
+  (ADR-2452), and the signer must be the person executing the command.
 - Every governance change is an ordinary kernel command: audited, idempotent and attributed (ADR-2449).
 - In the database, dataset, variable, value-level and terminology rows are insert-only (`enforce_insert_only`,
   SQLSTATE `KA001`, no `UPDATE` grant). The identity and content columns of `standard_versions` and

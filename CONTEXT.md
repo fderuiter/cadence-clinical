@@ -21,8 +21,10 @@ recorded period (K-TIME-1). Code takes time only from `IClock` (K-TIME-3).
 
 ### ProtocolVersion, Amendment and Effectivity
 
-A **ProtocolVersion** is one immutable version of the executable protocol; an **Amendment** produces a
-new one. **Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or
+A **ProtocolVersion** is one version of the executable protocol, numbered within its study. It moves
+`Draft → InReview → Approved → Superseded | Withdrawn`. Submitting it for review freezes its content under a
+**content hash**; approval and withdrawal each need an Attestation on that hash. An **Amendment** is carried
+by the draft forked from an approved version, and the parent stays approved (ADR-2452). **Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or
 StudySite): approval is not effectiveness, and `Effective` requires evidence artifacts such as the
 ethics approval (K-TIME-4, K-TIME-5).
 
@@ -73,8 +75,9 @@ a participant, its collection event, chain of custody, consent scope and derived
 
 ### Attestation
 
-A signed statement by an authenticated actor, including electronic signatures under 21 CFR Part 11.
-Append-only.
+A signed statement by an authenticated person, including electronic signatures under 21 CFR Part 11: a
+meaning (Approved, Reviewed, Withdrawn, …) about one record's exact content, named by its content hash, with
+when and how the signer authenticated. Append-only; commands that need a signature name an Attestation.
 
 ### Authority (Actor, Capability, Delegation, Qualification)
 
@@ -100,6 +103,10 @@ The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users w
 ### NodeRef and zoom path
 
 The public reference to any kernel object: `kind:id@version`, for example `study_site:<uuid>@3` (ADR-2481). It is the one form used in URLs, the command palette, trace links, event envelopes and lineage edges. The kernel computes the object's zoom path from it (portfolio, study, country, study site, participant); a participant with no responsible site sits directly under its study. The zoom path is presentation only and never grants access.
+
+### Capability and dry run (CanI)
+
+A capability is a `resource.action` token with a verb class (Read, Propose, Execute, Approve), for example `concept.revise`. Every kernel command declares the capability it needs and the object it is checked against. A dry run, `CanI(capability, object)`, asks the kernel whether the signed-in actor could act without acting; it gets exactly the decision the command would get, and is recorded in the access log rather than the audit trail (ADR-2483). The command catalogue lists the commands offered on an object with those decisions, which the command palette renders.
 
 ### Explanation
 

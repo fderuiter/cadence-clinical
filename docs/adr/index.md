@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K014 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K015 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -26,7 +26,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K004 | Policy engine (authority computed from evidence) | [ADR-2251](2026-09-29-kernel-authority-computed-from-evidence-policy-engine.md) |
 | K005 | Concept vocabulary (Concept Registry keyed by CDISC Biomedical Concepts) | [ADR-2252](2026-09-29-concept-registry-cdisc-biomedical-concepts-as-semantic-key.md), [ADR-2470](2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) |
 | K006 | Identity vault and layered identity | [ADR-2253](2026-09-29-identity-vault-and-layered-participant-identity.md) |
-| K007 | Neo4j for the designer (dropped for v1) | [ADR-2245](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) |
+| K007 | Neo4j for the designer (dropped for v1); protocol version lifecycle | [ADR-2245](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md), [ADR-2452](2026-09-30-protocol-version-lifecycle-content-hash-and-attested-approval.md) |
 | K008 | Rules and standards (rules as versioned data) | [ADR-2254](2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md) |
 | K009 | Lineage graph | [ADR-2255](2026-09-29-kernel-lineage-graph-and-scientific-traceability.md) |
 | K010 | Command pipeline and per-tenant audit chain | [ADR-2449](2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md) |
@@ -34,10 +34,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K012 | Public NodeRef and kernel-computed zoom path | [ADR-2481](2026-09-30-public-noderef-and-kernel-computed-zoom-path.md) |
 | K013 | Standards Registry and MDR (tenant-scoped, governed reference data) | [ADR-2460](2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) |
 | K014 | Explanation model produced by the rule owner | [ADR-2482](2026-09-30-explanation-model-produced-by-the-rule-owner.md) |
+| K015 | Dry-run authorization and the command catalogue | [ADR-2483](2026-09-30-dry-run-authorization-and-command-catalogue.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K014)
+### 0. Clinical Kernel (K001–K015)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -50,11 +51,13 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2254: Rules as Versioned Data, Continuous Standards Conformance and a Unified Rules Engine (K008)](2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md) (2026-09-29)
 - [ADR-2255: Kernel Lineage Graph and End-to-End Scientific Traceability (K009)](2026-09-29-kernel-lineage-graph-and-scientific-traceability.md) (2026-09-29)
 - [ADR-2449: Kernel Command Pipeline, Transactional Write Set and Per-Tenant Audit Chain](2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md) (2026-09-29)
+- [ADR-2452: Protocol Version Lifecycle, Content-Hash Freezing and Attested Approval](2026-09-30-protocol-version-lifecycle-content-hash-and-attested-approval.md) (2026-09-30)
 - [ADR-2460: Standards Registry and Metadata Registry as Governed, Tenant-Scoped Reference Data](2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) (2026-09-30)
 - [ADR-2470: Per-Tenant Terminology, Pinned Code-System Versions and Versioned Concepts](2026-09-30-per-tenant-terminology-and-pinned-code-system-versions.md) (2026-09-30)
 - [ADR-2480: Evaluate-Only Simulation over Candidate Versions](2026-09-30-evaluate-only-simulation-over-candidate-versions.md) (2026-09-30)
 - [ADR-2481: Public NodeRef and Kernel-Computed Zoom Path](2026-09-30-public-noderef-and-kernel-computed-zoom-path.md) (2026-09-30)
 - [ADR-2482: Explanation Model Produced by the Rule Owner](2026-09-30-explanation-model-produced-by-the-rule-owner.md) (2026-09-30)
+- [ADR-2483: Dry-Run Authorization and the Command Catalogue](2026-09-30-dry-run-authorization-and-command-catalogue.md) (2026-09-30)
 
 ### 1. Core Platform & Execution Engine
 

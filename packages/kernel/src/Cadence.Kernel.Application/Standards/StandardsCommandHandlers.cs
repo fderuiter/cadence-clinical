@@ -10,7 +10,9 @@ using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Standards;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Trust;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -70,20 +72,18 @@ internal sealed class StandardVersionGovernanceHandler(IAttestationVerifier atte
     ICommandHandler<ApproveStandardVersion, StandardVersionId>,
     ICommandHandler<DeprecateStandardVersion, StandardVersionId>
 {
-    public const string TargetKind = "StandardVersion";
-
     public Task<CommandResult<StandardVersionId>> HandleAsync(ApproveStandardVersion command, ICommandContext context, CancellationToken cancellationToken) =>
-        ChangeAsync(command.StandardVersionId, command.AttestationId, AttestationMeanings.Approved, context, cancellationToken, (v, a) =>
+        ChangeAsync(command.StandardVersionId, command.AttestationId, AttestationMeaning.Approved, context, cancellationToken, (v, a) =>
             v.Approve(a) ?? Raise(context, new StandardVersionApproved(command.TenantId, v.Id, a)));
 
     public Task<CommandResult<StandardVersionId>> HandleAsync(DeprecateStandardVersion command, ICommandContext context, CancellationToken cancellationToken) =>
-        ChangeAsync(command.StandardVersionId, command.AttestationId, AttestationMeanings.Responsibility, context, cancellationToken, (v, a) =>
+        ChangeAsync(command.StandardVersionId, command.AttestationId, AttestationMeaning.Responsibility, context, cancellationToken, (v, a) =>
             v.Deprecate(a) ?? Raise(context, new StandardVersionDeprecated(command.TenantId, v.Id, a)));
 
     private async Task<CommandResult<StandardVersionId>> ChangeAsync(
         StandardVersionId id,
         AttestationId attestation,
-        string meaning,
+        AttestationMeaning meaning,
         ICommandContext context,
         CancellationToken cancellationToken,
         Func<StandardVersion, AttestationId, KernelError?> change)
@@ -95,7 +95,7 @@ internal sealed class StandardVersionGovernanceHandler(IAttestationVerifier atte
         }
 
         var check = await attestations.VerifyAsync(
-            new AttestationRequirement(context.TenantId, attestation, meaning, TargetKind, id.ToString(), version.ContentHash, context.Actor),
+            new AttestationRequirement(context.TenantId, attestation, meaning, new AttestationTarget(NodeKinds.StandardVersion, id.Value, version.ContentHash), context.Actor),
             cancellationToken).ConfigureAwait(false);
         if (!check.Satisfied)
         {
@@ -164,20 +164,18 @@ internal sealed class LibraryItemGovernanceHandler(IAttestationVerifier attestat
     ICommandHandler<ApproveLibraryItem, LibraryItemVersion>,
     ICommandHandler<DeprecateLibraryItem, LibraryItemVersion>
 {
-    public const string TargetKind = "LibraryItem";
-
     public Task<CommandResult<LibraryItemVersion>> HandleAsync(ApproveLibraryItem command, ICommandContext context, CancellationToken cancellationToken) =>
-        ChangeAsync(command.LibraryItemId, command.AttestationId, AttestationMeanings.Approved, context, cancellationToken, (i, a) =>
+        ChangeAsync(command.LibraryItemId, command.AttestationId, AttestationMeaning.Approved, context, cancellationToken, (i, a) =>
             i.Approve(a) ?? Raise(context, new LibraryItemApproved(command.TenantId, i.Id, i.Kind, i.Key, i.ItemVersion, a)));
 
     public Task<CommandResult<LibraryItemVersion>> HandleAsync(DeprecateLibraryItem command, ICommandContext context, CancellationToken cancellationToken) =>
-        ChangeAsync(command.LibraryItemId, command.AttestationId, AttestationMeanings.Responsibility, context, cancellationToken, (i, a) =>
+        ChangeAsync(command.LibraryItemId, command.AttestationId, AttestationMeaning.Responsibility, context, cancellationToken, (i, a) =>
             i.Deprecate(a) ?? Raise(context, new LibraryItemDeprecated(command.TenantId, i.Id, i.Kind, i.Key, i.ItemVersion, a)));
 
     private async Task<CommandResult<LibraryItemVersion>> ChangeAsync(
         LibraryItemId id,
         AttestationId attestation,
-        string meaning,
+        AttestationMeaning meaning,
         ICommandContext context,
         CancellationToken cancellationToken,
         Func<LibraryItem, AttestationId, KernelError?> change)
@@ -189,7 +187,7 @@ internal sealed class LibraryItemGovernanceHandler(IAttestationVerifier attestat
         }
 
         var check = await attestations.VerifyAsync(
-            new AttestationRequirement(context.TenantId, attestation, meaning, TargetKind, id.ToString(), item.ContentHash, context.Actor),
+            new AttestationRequirement(context.TenantId, attestation, meaning, new AttestationTarget(NodeKinds.LibraryItem, id.Value, item.ContentHash), context.Actor),
             cancellationToken).ConfigureAwait(false);
         if (!check.Satisfied)
         {
@@ -289,7 +287,8 @@ public static class KernelStandardsServiceCollectionExtensions
 {
     /// <summary>
     /// Registers the standards command handlers. The host must also register kernel persistence's
-    /// <see cref="IStandardsRegistry"/> (<c>AddKernelStandardsPersistence</c>) and an <see cref="IAttestationVerifier"/>.
+    /// <see cref="IStandardsRegistry"/> (<c>AddKernelStandardsPersistence</c>); <c>AddKernelPersistence</c> provides the
+    /// <see cref="IAttestationVerifier"/> that approval and deprecation check.
     /// </summary>
     public static IServiceCollection AddKernelStandards(this IServiceCollection services)
     {

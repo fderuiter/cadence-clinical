@@ -50,6 +50,10 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<ConceptMapping> ConceptMappings => Set<ConceptMapping>();
 
+    public DbSet<ProtocolVersion> ProtocolVersions => Set<ProtocolVersion>();
+
+    public DbSet<Attestation> Attestations => Set<Attestation>();
+
     public DbSet<ProvenanceActivityRecord> ProvenanceActivities => Set<ProvenanceActivityRecord>();
 
     public DbSet<DomainEventRecord> DomainEvents => Set<DomainEventRecord>();

@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
+using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Background;
@@ -9,6 +10,7 @@ using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Knowledge;
 using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Persistence.Trust;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -55,6 +57,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelUnitOfWorkFactory>();
         services.TryAddSingleton<IKernelUnitOfWorkFactory>(sp => sp.GetRequiredService<KernelUnitOfWorkFactory>());
         services.TryAddSingleton<KernelAuditChainVerifier>();
+        services.TryAddSingleton<IAttestationVerifier, KernelAttestationVerifier>();
         services.TryAddSingleton<KernelAuditChainSealer>();
         services.TryAddSingleton<IConceptRegistry, KernelConceptRegistry>();
 

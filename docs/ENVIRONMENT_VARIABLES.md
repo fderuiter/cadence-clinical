@@ -37,7 +37,7 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 
 | Key | Read by | Default | Required |
 | --- | --- | --- | --- |
-| `DemographicsEncryption__KeyBase64` | `apps/execution/src/Program.cs:105` (`DemographicsEncryptionOptions`) | none | yes; Base64 of a 16, 24 or 32 byte AES key (`openssl rand -base64 32`). The service refuses to start without a valid key |
+| `DemographicsEncryption__KeyBase64` | `apps/execution/src/Program.cs:105` (`DemographicsEncryptionOptions`) | none | yes; Base64 of a 16, 24 or 32 byte AES key (`openssl rand -base64 32`). The service refuses to start without a valid key. Under the Aspire AppHost, set it as the `demographics-encryption-key` parameter |
 
 ## Field-level protection
 

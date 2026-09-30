@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -100,6 +101,18 @@ public interface IKernelUnitOfWork
 
     /// <summary>True when an aggregate of this type and id exists (read-only; does not claim the aggregate).</summary>
     Task<bool> ExistsAsync<TAggregate>(object id, CancellationToken cancellationToken)
+        where TAggregate : AggregateRootBase;
+
+    /// <summary>
+    /// Reads another aggregate without changing it: not tracked and not claimed, so the command may still change one
+    /// aggregate of its own (K-TX-1). Use it for facts a decision depends on, such as an attestation or a parent version.
+    /// </summary>
+    Task<TAggregate?> ReadAsync<TAggregate>(object id, CancellationToken cancellationToken)
+        where TAggregate : AggregateRootBase;
+
+    /// <summary>Reads every aggregate of a type that matches <paramref name="filter"/>, without tracking or claiming it.</summary>
+    Task<IReadOnlyList<TAggregate>> ReadAllAsync<TAggregate>(
+        Expression<Func<TAggregate, bool>> filter, CancellationToken cancellationToken)
         where TAggregate : AggregateRootBase;
 
     /// <summary>Adds a new aggregate.</summary>

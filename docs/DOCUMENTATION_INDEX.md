@@ -31,7 +31,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | --- | --- | --- |
 | [Kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md) | Normative | The model every capability builds on |
 | [Roadmap (spec §15)](kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) | Normative | Phases 0–5, tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719) |
-| [Kernel decisions K001–K009](../ARCHITECTURE.md#2-key-decisions) | Current | Decisions and their ADRs (ADR-2244 to ADR-2255) |
+| [Kernel decisions K001–K014](adr/index.md) | Current | Kernel decisions and their ADRs; [ARCHITECTURE §2](../ARCHITECTURE.md#2-key-decisions) summarises them with the platform decisions |
+| [Kernel package guide](https://github.com/fderuiter/cadence-clinical/blob/main/packages/kernel/README.md) | Current | How the kernel projects are built and used: command pipeline, tenancy, NodeRef, explanations, Concept and Standards Registries |
 | [Execution migration inventory](kernel/EXECUTION_MIGRATION_INVENTORY.md) | Current | What `apps/execution` must change to run on the kernel (roadmap phase 1) |
 | [Clock migration backlog](kernel/CLOCK_MIGRATION_BACKLOG.md) | Current | Remaining `DateTime.Now/UtcNow` call sites to move to `IClock` (K-TIME-3) |
 | [Clinical Canvas](ux/CLINICAL_CANVAS.md) | Current | UI interaction model (study-centric navigation, three panes, six verbs) and the kernel read APIs the UI needs |
@@ -77,8 +78,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [Technical design (TDD)](SDLC/02_Technical_Design_Document_TDD.md) | Baseline | Superseded by the kernel spec and ARCHITECTURE.md |
 | [API and integration specification](SDLC/03_API_Integration_Specification.md) | Baseline | Planned integration contracts |
 | [Data standards and interoperability](SDLC/04_Data_Standards_Interoperability_Blueprint.md) | Baseline | CDISC, FHIR and coding dictionaries |
-| [Security, compliance and audit](SDLC/05_Security_Compliance_Audit_Spec.md) | Baseline | Part 11 controls; authentication now per ADR-2256 |
-| [Signature token contract](SDLC/Signature_Token_Cryptographic_Contract.md) | Baseline | E-signature step-up token format (step-up not yet wired, #4759) |
+| [Security, compliance and audit](SDLC/05_Security_Compliance_Audit_Spec.md) | Baseline | Part 11 controls; current controls are in [ARCHITECTURE §4](../ARCHITECTURE.md#4-request-path-and-security) (ADR-2256, ADR-2259, ADR-2493, ADR-2494) |
+| [Signature token contract](SDLC/Signature_Token_Cryptographic_Contract.md) | Current | E-signature step-up token: claims, issuance at the gateway and verification in services (ADR-2259); used today by PI form approval |
 | [QA and validation plan](SDLC/06_QA_Validation_Plan.md) | Baseline | GAMP 5 strategy and test tiers |
 | [Implementation roadmap](SDLC/08_Implementation_Roadmap.md) | Baseline | Superseded by spec §15 |
 | [Issue structure guide](SDLC/ISSUE_STRUCTURE_GUIDE.md) | Baseline | Issue formatting and work streams; epics now organise the backlog |
