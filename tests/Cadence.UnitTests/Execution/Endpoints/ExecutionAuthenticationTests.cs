@@ -11,7 +11,6 @@ using Cadence.Testing.Security;
 
 using FluentAssertions;
 
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Options;
 
 using Xunit;
@@ -108,15 +107,13 @@ public sealed class ExecutionAuthenticationTests(ExecutionApiFactory factory) : 
     [Trait("Category", "GxP_IQ")]
     public void HostStartup_WithoutGatewaySecret_FailsFast()
     {
-        using var unconfigured = new WebApplicationFactory<Cadence.Apps.Execution.Program>()
-            .WithWebHostBuilder(builder => builder
-                .UseTestPostgresConnectionString()
-                .UseTestDemographicsKey()
-                .UseSetting("GATEWAY_SECRET", string.Empty));
+        using var unconfigured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
+            .UseTestPostgresConnectionString()
+            .UseTestDemographicsKey()
+            .UseSetting("GATEWAY_SECRET", string.Empty));
 
-        Action start = () => unconfigured.CreateClient();
-
-        start.Should().Throw<OptionsValidationException>().WithMessage("*GATEWAY_SECRET*");
+        unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>()
+            .Which.Message.Should().Contain("GATEWAY_SECRET");
     }
 
     private static async Task<HttpResponseMessage> SendWithHeadersAsync(

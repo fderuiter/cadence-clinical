@@ -110,6 +110,11 @@ Use `packages/testing/src` rather than writing ad-hoc fakes:
 - `GoldenMasterFixtureLoader` and `GoldenMasterAssert`: golden-master scenarios ported from the Python
   reference.
 - `GxPRequirementAttribute`: declares which requirement a test verifies. See below.
+- `StartupValidationFactory<TEntryPoint>` (`Cadence.Testing.Hosting`): builds a service's real `Program` host
+  without starting it and runs its `ValidateOnStart` checks on the test thread (`ValidateStartup()` returns the
+  exception, or `null`). Use it to test that a service refuses bad configuration. Asserting the failure through
+  `CreateClient()` is racy: `Program` runs on its own thread and disposes the host when its start fails, so the
+  test can see an `ObjectDisposedException` instead of the `OptionsValidationException`.
 
 When a `WebApplicationFactory` swaps a host's `DbContext` for a test provider, remove
 `IDbContextOptionsConfiguration<TContext>` as well as `DbContextOptions<TContext>` before calling `AddDbContext`.

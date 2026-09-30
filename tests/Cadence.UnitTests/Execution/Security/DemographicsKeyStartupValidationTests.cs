@@ -8,7 +8,6 @@ using Cadence.Testing.Security;
 
 using FluentAssertions;
 
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Options;
 
 using Xunit;
@@ -29,15 +28,26 @@ public sealed class DemographicsKeyStartupValidationTests
     [GxPRequirement("PRD-SYS-190")]
     public void HostStartup_WithoutAValidDemographicsKey_FailsFast(string keyBase64)
     {
-        using var unconfigured = new WebApplicationFactory<Cadence.Apps.Execution.Program>()
-            .WithWebHostBuilder(builder => builder
-                .UseTestGatewaySecret()
-                .UseTestPostgresConnectionString()
-                .UseSetting("DemographicsEncryption:KeyBase64", keyBase64));
+        using var unconfigured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseSetting("DemographicsEncryption:KeyBase64", keyBase64));
 
-        Action start = () => unconfigured.CreateClient();
+        unconfigured.ValidateStartup().Should().BeOfType<OptionsValidationException>()
+            .Which.Message.Should().Contain("DemographicsEncryption__KeyBase64");
+    }
 
-        start.Should().Throw<OptionsValidationException>().WithMessage("*DemographicsEncryption__KeyBase64*");
+    /// <summary>The same host with a valid key passes startup validation, so the refusals above are the key's.</summary>
+    [Fact]
+    [Trait("Category", "GxP_IQ")]
+    public void HostStartup_WithAValidDemographicsKey_PassesValidation()
+    {
+        using var configured = new StartupValidationFactory<Cadence.Apps.Execution.Program>(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestPostgresConnectionString()
+            .UseTestDemographicsKey());
+
+        configured.ValidateStartup().Should().BeNull();
     }
 
     [Theory]
