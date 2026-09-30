@@ -286,6 +286,7 @@ public static class CiPlan
             new("security", "Run static analysis") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(false, "check", "audit-security")] },
             new("security", "Build container image for security scan") { NotRunLocally = $"{PushOnly}, and it needs Docker" },
             new("security", "Run container vulnerability scan") { NotRunLocally = $"{PushOnly}, and it needs Docker and Trivy" },
+            new("security", "Upload Trivy scan results to GitHub Security tab") { NotRunLocally = $"{PushOnly}, and it needs GitHub SARIF upload" },
             new("security", "Run dependency audit") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(false, "check", "vulnerabilities")] },
             new("security", "Run secret detection")
             {
