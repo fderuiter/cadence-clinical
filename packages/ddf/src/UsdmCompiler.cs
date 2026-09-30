@@ -33,12 +33,19 @@ public static class UsdmCompiler
     /// <summary>
     /// Compiles raw CDISC USDM v3.0/v4.0 JSON into DDF Intermediate Representation and runtime schemas.
     /// </summary>
+    /// <remarks>
+    /// Unless <see cref="CompileOptions.ValidateAccessibility"/> is off, the rendered OpenRosa form goes through
+    /// <paramref name="accessibilityValidator"/> (the built-in <see cref="XFormsAccessibilityValidator"/> when none is
+    /// given), and a form that fails is never returned.
+    /// </remarks>
+    /// <exception cref="AccessibilityValidationException">The rendered form failed its accessibility check.</exception>
     public static DDFCompilationResult CompileUsdm(
         string usdmJson,
         string? fallbackStudyId = null,
         string? versionTag = null,
         CompileOptions? options = null,
-        ITemplateRenderer? templateRenderer = null)
+        ITemplateRenderer? templateRenderer = null,
+        IAccessibilityValidator? accessibilityValidator = null)
     {
         options ??= new CompileOptions();
         var (studyIr, warnings) = ParseUsdmToIr(usdmJson, fallbackStudyId, versionTag);
@@ -48,9 +55,18 @@ public static class UsdmCompiler
         string openRosaXml = renderer.Render(Templates, OpenRosaTemplateKey, studyIr);
         string formHash = ComputeSha256Hash(openRosaXml);
 
-        var accessibility = options.ValidateAccessibility
-            ? new AccessibilityReport(Status: "PASS", FormHash: formHash, Violations: [])
-            : null;
+        AccessibilityReport? accessibility = null;
+        if (options.ValidateAccessibility)
+        {
+            var validator = accessibilityValidator ?? XFormsAccessibilityValidator.Instance;
+            var report = validator.Validate(openRosaXml) with { FormHash = formHash };
+            if (!AccessibilityStatus.Passes(report))
+            {
+                throw new AccessibilityValidationException(report);
+            }
+
+            accessibility = report;
+        }
 
         return new DDFCompilationResult(
             StudyId: studyIr.StudyId,

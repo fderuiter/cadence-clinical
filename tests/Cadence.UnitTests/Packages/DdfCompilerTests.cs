@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+
 using Cadence.Ddf;
 
 using FluentAssertions;
@@ -81,22 +84,91 @@ public class DdfCompilerTests
     }
 
     /// <summary>
-    /// Validates that UsdmCompiler with ValidateAccessibility option produces an accessibility validation report.
+    /// The compiler runs the built-in accessibility check on the rendered form and returns its real report.
     /// </summary>
-    [Fact(DisplayName = "UsdmCompiler_Compile_WithAccessibilityValidation_ProducesReport")]
-    [Trait("Category", "GxP_OQ")]
-    public void UsdmCompilerCompileWithAccessibilityValidationProducesReport()
+    [Fact]
+    public void CompileUsdm_ChecksTheRenderedFormAndReturnsTheReport()
     {
-        // Arrange
-        var options = new CompileOptions { ValidateAccessibility = true };
+        var result = UsdmCompiler.CompileUsdm(SampleUsdmJson);
 
-        // Act
-        var result = UsdmCompiler.CompileUsdm(SampleUsdmJson, options: options);
-
-        // Assert
         result.AccessibilityReport.Should().NotBeNull();
-        result.AccessibilityReport!.Status.Should().Be("PASS");
-        result.AccessibilityReport!.FormHash.Should().Be(result.FormHash);
-        result.AccessibilityReport!.Violations.Should().BeEmpty();
+        result.AccessibilityReport!.Status.Should().Be(AccessibilityStatus.Pass);
+        result.AccessibilityReport.FormHash.Should().Be(result.FormHash);
+        result.AccessibilityReport.Violations.Should().BeEmpty();
+        result.AccessibilityReport.LayoutErrors.Should().BeEmpty();
+        result.AccessibilityReport.Passes!.Select(p => p["id"]).Should().Contain(["document-title", "label"]);
+    }
+
+    /// <summary>
+    /// A form the check fails is never returned: an item name that is not a valid XML name renders a broken form.
+    /// </summary>
+    [Fact]
+    public void CompileUsdm_RefusesAFormThatFailsTheCheck()
+    {
+        const string usdm = """{"study":{"id":"S-1","name":"Broken"},"items":[{"id":"BP","name":"Systolic (mmHg)","type":"integer"}]}""";
+
+        var compile = () => UsdmCompiler.CompileUsdm(usdm);
+
+        compile.Should().Throw<AccessibilityValidationException>()
+            .Which.Report.LayoutErrors.Should().ContainSingle().Which.Should().StartWith("The form is not well-formed XML");
+    }
+
+    /// <summary>
+    /// A supplied validator replaces the built-in one, and its violations stop the compile.
+    /// </summary>
+    [Fact]
+    public void CompileUsdm_UsesTheSuppliedValidator_AndStopsOnItsViolations()
+    {
+        var validator = new FixedValidator(new AccessibilityReport(
+            Status: AccessibilityStatus.Fail,
+            Violations: [new Dictionary<string, object?> { ["id"] = "color-contrast", ["description"] = "Contrast is too low." }]));
+
+        var compile = () => UsdmCompiler.CompileUsdm(SampleUsdmJson, accessibilityValidator: validator);
+
+        compile.Should().Throw<AccessibilityValidationException>().WithMessage("*color-contrast*Contrast is too low.*");
+        validator.Calls.Should().Be(1);
+    }
+
+    /// <summary>
+    /// A report that says PASS while it lists a violation or a layout error does not let the form through.
+    /// </summary>
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void CompileUsdm_DoesNotTrustAPassStatusThatListsProblems(bool violation, bool layoutError)
+    {
+        var validator = new FixedValidator(new AccessibilityReport(
+            Status: AccessibilityStatus.Pass,
+            Violations: violation ? [new Dictionary<string, object?> { ["id"] = "label" }] : [],
+            LayoutErrors: layoutError ? ["The control /data/x has no bind."] : []));
+
+        var compile = () => UsdmCompiler.CompileUsdm(SampleUsdmJson, accessibilityValidator: validator);
+
+        compile.Should().Throw<AccessibilityValidationException>();
+    }
+
+    /// <summary>
+    /// With the check turned off the validator is not called and the result carries no report.
+    /// </summary>
+    [Fact]
+    public void CompileUsdm_WithTheCheckOff_ReturnsNoReport()
+    {
+        var validator = new FixedValidator(new AccessibilityReport(Status: AccessibilityStatus.Fail));
+
+        var result = UsdmCompiler.CompileUsdm(SampleUsdmJson, options: new CompileOptions(ValidateAccessibility: false), accessibilityValidator: validator);
+
+        result.AccessibilityReport.Should().BeNull();
+        validator.Calls.Should().Be(0);
+    }
+
+    private sealed class FixedValidator(AccessibilityReport report) : IAccessibilityValidator
+    {
+        public int Calls { get; private set; }
+
+        public AccessibilityReport Validate(string openRosaXml)
+        {
+            Calls++;
+            return report;
+        }
     }
 }

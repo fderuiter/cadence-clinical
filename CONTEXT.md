@@ -944,6 +944,11 @@ _Avoid_: Promoting pre-release development environments as production-qualified 
 The automated, bi-directional translation pipeline bridging upstream CDISC USDM protocol definitions (ProtocolVersion snapshots in PostgreSQL, ADR-2245) to downstream OpenRosa/Enketo XForms and relational eCRF tables in PostgreSQL via a strongly-typed DDF Intermediate Representation (IR) and XPath Rule Compiler.
 _Avoid_: Manual protocol-to-EDC build translation, lossy template dictionaries
 
+### Form Accessibility Check
+
+The last step of a DDF compile: the rendered OpenRosa form goes through an `IAccessibilityValidator` (by default `XFormsAccessibilityValidator`, a structural WCAG 2.1 review of titles, labels, label languages, choice labels and bindings), and a form whose report lists any violation or layout error is refused with `AccessibilityValidationException` rather than returned (ADR-2501).
+_Avoid_: An accessibility report that says PASS without a check having run
+
 ### Programmatic API Documentation Engine
 
 An automated static analysis pipeline that inspects OpenAPI 3.1.0 schemas and FastAPI route metadata across all monorepo microservices (`apps/*`), compiling rich, searchable VitePress Markdown reference documents (`docs/api/*`) with request/response schema tables, GxP role authorizations, RFC 7807 problem detail models, and step-up signature parameters without requiring live runtime databases.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 using Cadence.Apps.Designer;
 using Cadence.Ddf;
@@ -7,6 +8,7 @@ using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,14 +30,30 @@ api.MapGet("/", () => TypedResults.Ok(Array.Empty<string>()))
     .WithSummary("Lists active CDISC USDM study protocol definitions.");
 
 var protocols = app.MapGroup("/api/v1/protocols");
-protocols.MapPost("/compile", (CompileProtocolRequest request) =>
+protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResult> (CompileProtocolRequest request) =>
 {
-    var result = UsdmCompiler.CompileUsdm(request.UsdmJson, request.StudyId, request.VersionTag);
-    return TypedResults.Ok(result);
+    try
+    {
+        return TypedResults.Ok(UsdmCompiler.CompileUsdm(request.UsdmJson, request.StudyId, request.VersionTag));
+    }
+    catch (AccessibilityValidationException ex)
+    {
+        // The compiler never hands out a form that failed its accessibility check; the caller gets what failed.
+        return TypedResults.Problem(
+            title: "The compiled form failed its accessibility check.",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status422UnprocessableEntity,
+            extensions: new Dictionary<string, object?>
+            {
+                ["violations"] = ex.Report.Violations,
+                ["layoutErrors"] = ex.Report.LayoutErrors,
+            });
+    }
 })
 .WithName("CompileProtocol")
 .WithSummary("Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas.")
 .ProducesProblem(StatusCodes.Status403Forbidden)
+.ProducesProblem(StatusCodes.Status422UnprocessableEntity)
 // Compiling a protocol is study design work: sponsor designers and system administrators (#4958, ADR-2510).
 .RequirePermission(DesignerPermissions.CompileProtocol);
 

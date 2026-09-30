@@ -201,6 +201,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
