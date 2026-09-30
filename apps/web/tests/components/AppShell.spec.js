@@ -39,7 +39,6 @@ describe("AppShell.vue - Application Shell Component", () => {
   it("renders standard headers and handles slot content", () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = false;
-    authStore.isDemoMode = true;
 
     const wrapper = mount(AppShell, {
       global: {
@@ -62,7 +61,6 @@ describe("AppShell.vue - Application Shell Component", () => {
   it("dynamically shows or hides sidebar navigation items based on normalized roles", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.rawRoles = ["Site Investigator"]; // maps to site_investigator & crc
 
     const wrapper = mount(AppShell, {
@@ -96,7 +94,6 @@ describe("AppShell.vue - Application Shell Component", () => {
   it("triggers login and logout actions on user actions", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.user = { username: "tester123" };
     authStore.rawRoles = ["Sponsor Admin"];
 
@@ -115,7 +112,6 @@ describe("AppShell.vue - Application Shell Component", () => {
 
     // Test Login trigger
     authStore.isAuthenticated = false;
-    authStore.isDemoMode = false;
     const loginSpy = vi.spyOn(authStore, "login").mockResolvedValue(true);
 
     const loginWrapper = mount(AppShell, {

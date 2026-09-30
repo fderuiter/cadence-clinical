@@ -1102,38 +1102,21 @@ async function fetchRactData() {
   try {
     // 1. Fetch RACT factors
     const res = await fetch(
-      `/api/v1/quality/rbqm/ract/factors?study_id=${selectedStudyId.value}`,
-      {
-        headers: {
-          "X-User-Id": "quality.lead@cadence.io",
-          "X-User-Roles": "quality_manager,sponsor_designer",
-        },
-      }
+      `/api/v1/quality/rbqm/ract/factors?study_id=${selectedStudyId.value}`
     );
     if (res.ok) {
       riskFactors.value = await res.json();
     }
 
     // 2. Fetch KRI definitions
-    const kriRes = await fetch("/api/v1/quality/rbqm/kris", {
-      headers: {
-        "X-User-Id": "quality.lead@cadence.io",
-        "X-User-Roles": "quality_manager,sponsor_designer",
-      },
-    });
+    const kriRes = await fetch("/api/v1/quality/rbqm/kris");
     if (kriRes.ok) {
       kriDefinitions.value = await kriRes.json();
     }
 
     // 3. Fetch Site Risk Profiles
     const siteRes = await fetch(
-      `/api/v1/quality/rbqm/site-risk-profiles?study_id=${selectedStudyId.value}`,
-      {
-        headers: {
-          "X-User-Id": "quality.lead@cadence.io",
-          "X-User-Roles": "quality_manager,sponsor_designer",
-        },
-      }
+      `/api/v1/quality/rbqm/site-risk-profiles?study_id=${selectedStudyId.value}`
     );
     if (siteRes.ok) {
       siteProfiles.value = await siteRes.json();
@@ -1153,8 +1136,6 @@ async function seedDefaults() {
       {
         method: "POST",
         headers: {
-          "X-User-Id": "quality.lead@cadence.io",
-          "X-User-Roles": "quality_manager,sponsor_designer",
           "X-Change-Reason": "Seed standard TransCelerate defaults",
         },
       }
@@ -1177,8 +1158,6 @@ async function computeSiteRiskProfiles() {
       {
         method: "POST",
         headers: {
-          "X-User-Id": "quality.lead@cadence.io",
-          "X-User-Roles": "quality_manager,sponsor_designer",
           "X-Change-Reason": "Batch Site Risk Index calculation",
         },
       }
@@ -1240,8 +1219,6 @@ async function saveRiskFactor() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            "X-User-Id": "quality.lead@cadence.io",
-            "X-User-Roles": "quality_manager,sponsor_designer",
             "X-Change-Reason": riskForm.value.reason_for_change,
           },
           body: JSON.stringify({
@@ -1264,8 +1241,6 @@ async function saveRiskFactor() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-User-Id": "quality.lead@cadence.io",
-          "X-User-Roles": "quality_manager,sponsor_designer",
           "X-Change-Reason": riskForm.value.reason_for_change,
         },
         body: JSON.stringify({
@@ -1300,8 +1275,6 @@ async function deleteFactor(factorId: string) {
     const res = await fetch(`/api/v1/quality/rbqm/ract/factors/${factorId}`, {
       method: "DELETE",
       headers: {
-        "X-User-Id": "quality.lead@cadence.io",
-        "X-User-Roles": "quality_manager,sponsor_designer",
         "X-Change-Reason": "Decommission risk factor from matrix",
       },
     });
@@ -1327,8 +1300,6 @@ async function compileDossier() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-User-Id": "quality.lead@cadence.io",
-        "X-User-Roles": "quality_manager,sponsor_designer",
         "X-Change-Reason":
           "Compile 1-Click Centralized Monitoring Inspection Dossier",
       },

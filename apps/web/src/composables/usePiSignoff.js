@@ -34,7 +34,7 @@ export function usePiSignoff(store, authStore) {
   ];
 
   const showReauthModal = ref(false);
-  const reauthUsername = ref(store?.user?.username || "fderuiter");
+  const reauthUsername = ref(store?.user?.username || "");
   const reauthPassword = ref("");
   const reauthTotp = ref("");
   const reauthError = ref("");
@@ -53,7 +53,7 @@ export function usePiSignoff(store, authStore) {
     }
     reauthAction.value = "BATCH_SIGN_OFF";
     reauthUsername.value =
-      store?.user?.username || authStore?.identity?.username || "fderuiter";
+      store?.user?.username || authStore?.identity?.username || "";
     reauthPassword.value = "";
     reauthTotp.value = "";
     reauthError.value = "";

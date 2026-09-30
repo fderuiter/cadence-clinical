@@ -76,7 +76,6 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
     knowledgeStore = useKnowledgeStore();
 
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = true;
     authStore.currentPersona = "site_crc";
 
     vi.clearAllMocks();
@@ -457,7 +456,6 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
 
     it("mounts ContextualHelpDrawer in App.vue and verifies presence across routes", async () => {
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Sponsor Admin", "Site Investigator", "CRC"];
 
       await router.push("/ecrf");

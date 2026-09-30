@@ -1,46 +1,21 @@
 import { test as setup, expect } from "@playwright/test";
+import { signInWithKeycloak } from "./helpers/keycloakLogin";
 
 const authFile = "playwright/.auth/user.json";
 
-setup("authenticate as admin", async ({ page }) => {
-  // Navigate to login page under the /cadence-clinical/ base path
-  await page.goto("/cadence-clinical/login");
+/**
+ * Signs in once through Keycloak and saves the browser state (the Keycloak SSO
+ * cookie) so every project test starts with a real session that the app
+ * restores with check-sso. Requires the docker Keycloak realm to be running.
+ */
+setup("authenticate through Keycloak", async ({ page }) => {
+  const username = process.env.E2E_USERNAME || "designer.lead";
 
-  // Inject authentication state directly into sessionStorage and localStorage to simulate OIDC session
-  await page.evaluate(() => {
-    const authData = {
-      isAuthenticated: true,
-      accessToken: "mock-access-token-xyz-123",
-      idToken: "mock-id-token-abc",
-      refreshToken: "mock-refresh-token-pqr",
-      user: {
-        username: "admin@cadence.clinical",
-        email: "admin@cadence.clinical",
-        firstName: "Admin",
-        lastName: "Cadence",
-        id: "admin-id-123",
-      },
-      rawRoles: [
-        "Sponsor Admin",
-        "Sponsor Designer",
-        "CRA",
-        "Data Manager",
-        "Site Investigator",
-        "Auditor",
-      ],
-      isDemoMode: true,
-    };
-    window.sessionStorage.setItem("cadence_auth", JSON.stringify(authData));
-    window.localStorage.setItem("cadence_auth", JSON.stringify(authData));
-  });
+  await signInWithKeycloak(page, username);
 
-  // Navigate to main workspace page
   await page.goto("/cadence-clinical/");
   await page.waitForLoadState("networkidle");
-
-  // Ensure that we are not on the login page anymore and are authenticated
   await expect(page).not.toHaveURL(/.*login/);
 
-  // Save storage state for all project tests
   await page.context().storageState({ path: authFile });
 });

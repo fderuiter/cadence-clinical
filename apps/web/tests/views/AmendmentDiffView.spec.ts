@@ -65,7 +65,6 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     clinicalStore = useClinicalStore();
 
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.rawRoles = ["Sponsor Designer", "Medical Monitor"];
 
     vi.mocked(apiClient.get).mockImplementation((url) => {

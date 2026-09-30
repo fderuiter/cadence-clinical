@@ -110,7 +110,7 @@ test.describe("eTMF Document Management Workflow", () => {
     const etmf = new EtmfPage(page);
     await etmf.goto();
 
-    // In demo mode, we should have the mock uploaded document or some documents. Let's upload a document first:
+    // Upload a document first so there is something to sign:
     const tempFilePath = path.join(__dirname, "sample_protocol.pdf");
     fs.writeFileSync(tempFilePath, "Mock PDF Content");
 

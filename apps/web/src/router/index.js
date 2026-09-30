@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
@@ -97,7 +98,7 @@ const routes = [
     name: "icf-builder",
     component: () => import("../views/ICFBuilderView.vue"),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
     },
   },
   {
@@ -506,7 +507,7 @@ const routes = [
     name: "lay-summaries",
     component: () => import("../views/LaySummaryPortal.vue"),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
     },
   },
 ];
@@ -517,30 +518,20 @@ export const router = createRouter({
   routes,
 });
 
-// OIDC & RBAC Navigation guard (modern Vue Router v4 return-based guard)
+// OIDC & RBAC navigation guard. Sessions come only from Keycloak: an
+// unauthenticated user, or one whose token can no longer be refreshed, is sent
+// to the sign-in page.
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
 
   if (requiresAuth) {
-    // Verify active OIDC session integrity using Keycloak client APIs rather than trusting local/session storage
-    if (window.keycloakInstance && !authStore.isDemoMode) {
+    if (authStore.isAuthenticated) {
       try {
-        await window.keycloakInstance.updateToken(5);
-        authStore.setAuth(window.keycloakInstance);
+        await authStore.refresh(TOKEN_MIN_VALIDITY_SECONDS);
       } catch (err) {
-        console.error(
-          "OIDC Active session integrity verification failed via Keycloak SDK:",
-          err
-        );
-        authStore.setAuth(null);
-        return { path: "/login", query: { redirect: to.fullPath } };
-      }
-
-      if (!window.keycloakInstance.authenticated) {
-        authStore.setAuth(null);
-        return { path: "/login", query: { redirect: to.fullPath } };
+        console.error("Keycloak session could not be refreshed:", err);
       }
     }
 

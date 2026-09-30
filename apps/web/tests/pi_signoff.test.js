@@ -28,6 +28,15 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     setActivePinia(pinia);
     clinicalStore = useClinicalStore();
     authStore = useAuthStore();
+    authStore.setAuth({
+      authenticated: true,
+      token: "pi-access-token",
+      tokenParsed: {
+        sub: "pi-user-id",
+        preferred_username: "pi_user",
+        realm_access: { roles: ["Monitor", "Sponsor Admin"] },
+      },
+    });
 
     // Reset mocks
     vi.clearAllMocks();
@@ -108,7 +117,7 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     // Verify correct API invocation
     expect(soaClient.verifySignature).toHaveBeenCalledWith(
       {
-        username: "fderuiter",
+        username: "pi_user",
         password: "valid_password", // pragma: allowlist secret
         totp: null,
         action: "/api/v1/execution/batch-sign-off",
@@ -125,8 +134,8 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
         signingReason: "PI approval and sign-off.",
       },
       {
-        userId: "fderuiter",
-        roles: "Monitor,Sponsor Admin",
+        userId: "pi_user",
+        roles: "monitor,sponsor_admin",
         changeReason: "PI approval and sign-off.",
         sigToken: "mock-jwt-sig-token",
       },

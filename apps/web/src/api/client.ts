@@ -1,6 +1,6 @@
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
-import { useAuthStore } from "../stores/auth";
+import { getBearerToken } from "./authorization.js";
 
 export const getBaseUrl = (): string => {
   return (
@@ -30,14 +30,11 @@ export class ApiError extends Error {
 
 const authMiddleware: Middleware = {
   async onRequest({ request, options }) {
-    try {
-      const authStore = useAuthStore();
-      const token = authStore?.token || authStore?.accessToken;
-      if (token && !request.headers.has("Authorization")) {
+    if (!request.headers.has("Authorization")) {
+      const token = await getBearerToken();
+      if (token) {
         request.headers.set("Authorization", `Bearer ${token}`);
       }
-    } catch {
-      // Pinia store not active or initialized
     }
 
     // openapi-fetch copies custom init keys (like `changeReason`) onto the Request object; the

@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
-import { useNotificationsStore } from "./notifications.js";
+import { getKeycloakClient } from "../auth/keycloak.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+import { useNotificationsStore } from "./notifications.js";
 
 /**
  * Seeding Gap Documentation Resolved:
@@ -73,46 +74,44 @@ export const ROLE_ALIASES = {
   ],
 };
 
+/**
+ * Workspace personas. A persona only selects which workspace, help content and
+ * onboarding tour the UI shows; it never grants a role. Roles always come from
+ * the Keycloak access token (`realm_access.roles`). A user can view a persona
+ * only when their token carries one of the persona's `requires` roles, and
+ * `super_admin` requires the `Sponsor Admin` realm role.
+ * Presets are listed in the order used to pick a user's default persona.
+ */
 export const PERSONA_PRESETS = [
   {
     key: "super_admin",
     label: "👑 Super Admin (All Access)",
-    roles: [
-      "Sponsor Admin",
-      "Sponsor Designer",
-      "Data Manager",
-      "Site Investigator",
-      "CRC",
-      "CRA",
-      "Monitor",
-      "Auditor",
-      "TMF Auditor",
-    ],
+    requires: ["sponsor_admin"],
   },
   {
     key: "sponsor_designer",
     label: "📋 Sponsor Protocol Designer",
-    roles: ["Sponsor Designer", "Data Manager"],
-  },
-  {
-    key: "site_crc",
-    label: "🩺 Site Coordinator / CRC",
-    roles: ["Site Investigator", "CRC"],
-  },
-  {
-    key: "cra_monitor",
-    label: "📊 CRA Clinical Monitor",
-    roles: ["CRA", "Monitor"],
+    requires: ["sponsor_designer"],
   },
   {
     key: "data_manager",
     label: "⚙️ Clinical Data Manager",
-    roles: ["Data Manager", "Sponsor Designer"],
+    requires: ["data_manager"],
+  },
+  {
+    key: "site_crc",
+    label: "🩺 Site Coordinator / CRC",
+    requires: ["site_investigator", "crc"],
+  },
+  {
+    key: "cra_monitor",
+    label: "📊 CRA Clinical Monitor",
+    requires: ["cra", "monitor"],
   },
   {
     key: "auditor",
     label: "🔒 GxP & Part 11 Auditor",
-    roles: ["Auditor", "TMF Auditor"],
+    requires: ["auditor", "tmf_auditor"],
   },
 ];
 
@@ -134,222 +133,218 @@ export function normalizeRole(role) {
   return normalized;
 }
 
+/** Storage key older builds used to persist tokens; purged on start-up. */
+const LEGACY_AUTH_STORAGE_KEY = "cadence_auth";
+
+function purgeLegacyAuthStorage() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage?.removeItem(LEGACY_AUTH_STORAGE_KEY);
+    window.localStorage?.removeItem(LEGACY_AUTH_STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable (private mode, sandboxed frames).
+  }
+}
+
+/**
+ * True when one of the user's realm roles is, or implies (via ROLE_ALIASES),
+ * one of the normalized `targets`. Implication runs one way only: a Sponsor
+ * Admin holds `crc`, but a CRC does not hold `sponsor_admin`.
+ */
+function holdsAnyRole(rawRoles, targets) {
+  return (rawRoles || []).map(normalizeRole).some((role) => {
+    if (targets.includes(role)) return true;
+    return (ROLE_ALIASES[role] || []).some((alias) => targets.includes(alias));
+  });
+}
+
+/** Personas the given realm roles entitle the user to view. */
+export function personasForRoles(rawRoles) {
+  return PERSONA_PRESETS.filter((p) => holdsAnyRole(rawRoles, p.requires));
+}
+
+/**
+ * @typedef {object} AuthUser
+ * @property {string} username - `preferred_username` claim
+ * @property {string} email
+ * @property {string} firstName
+ * @property {string} lastName
+ * @property {string} id - `sub` claim
+ */
+
+function emptyAuthState() {
+  return {
+    isAuthenticated: false,
+    /** @type {string | null} */
+    accessToken: null,
+    /** @type {string | null} */
+    idToken: null,
+    /** @type {number | null} epoch milliseconds */
+    tokenExpiresAt: null,
+    /** @type {AuthUser | null} */
+    user: null,
+    /** @type {string[]} Keycloak realm roles from `realm_access.roles` */
+    rawRoles: [],
+    /** @type {string | null} */
+    currentPersona: null,
+    /** @type {string | null} */
+    authError: null,
+    /** True only in a demo build; nothing at run time can turn it on (#4523). */
+    isDemoMode: isDemoBuild(),
+  };
+}
+
+/**
+ * Authentication state for the signed-in Keycloak user.
+ *
+ * Identity and roles come only from the Keycloak token. There is no offline
+ * sign-in: when no one is signed in the store is empty and the router sends the
+ * user to the sign-in page. Tokens are kept in memory only. The one exception
+ * is a demo build (`isDemoBuild()`), which has no identity provider and signs
+ * in a fixed offline demo identity instead (`startDemoSession`).
+ */
 export const useAuthStore = defineStore("auth", {
   state: () => {
-    let saved = {};
-    if (typeof window !== "undefined") {
-      try {
-        const stored =
-          (window.sessionStorage &&
-            window.sessionStorage.getItem("cadence_auth")) ||
-          (window.localStorage && window.localStorage.getItem("cadence_auth"));
-        if (stored) {
-          saved = JSON.parse(stored);
-        }
-      } catch (e) {
-        console.error("Failed to parse auth from storage", e);
-      }
-    }
-
-    let restoredPersona = "super_admin";
-    let hasSavedPersona = false;
-    if (saved && typeof saved.currentPersona === "string") {
-      const preset = PERSONA_PRESETS.find(
-        (p) => p.key === saved.currentPersona
-      );
-      if (preset) {
-        restoredPersona = saved.currentPersona;
-        hasSavedPersona = true;
-      }
-    }
-
-    const matchedPreset = PERSONA_PRESETS.find(
-      (p) => p.key === restoredPersona
-    );
-    const defaultRoles =
-      hasSavedPersona && matchedPreset
-        ? [...matchedPreset.roles]
-        : [
-            "Sponsor Admin",
-            "Sponsor Designer",
-            "Data Manager",
-            "Site Investigator",
-            "CRC",
-            "CRA",
-            "Monitor",
-            "Auditor",
-          ];
-
-    const restoredRoles =
-      saved && Array.isArray(saved.rawRoles) && saved.rawRoles.length > 0
-        ? saved.rawRoles
-        : defaultRoles;
-
-    return {
-      isAuthenticated: saved.isAuthenticated || false,
-      accessToken: saved.accessToken || null,
-      idToken: saved.idToken || null,
-      refreshToken: saved.refreshToken || null,
-      user: saved.user || null, // includes identity details like username, email, firstName, lastName, and id
-      // Outside a demo build nothing grants roles except a verified token.
-      rawRoles: isDemoBuild() ? restoredRoles : saved.rawRoles || [],
-      currentPersona: restoredPersona,
-      // Only a demo build can run in demo mode; a stored flag cannot turn it on (#4523).
-      isDemoMode: isDemoBuild(),
-    };
+    purgeLegacyAuthStorage();
+    return emptyAuthState();
   },
   getters: {
-    identity: (state) => {
-      if (state.isDemoMode && !state.isAuthenticated) {
-        return { ...DEMO_IDENTITY };
-      }
-      return state.user;
-    },
+    identity: (state) => state.user,
     token: (state) => state.accessToken,
-    normalizedRoles: (state) => {
-      // Normalize raw roles to UI roles
-      return (state.rawRoles || []).map(normalizeRole);
-    },
+    userId: (state) => state.user?.id || null,
+    normalizedRoles: (state) => (state.rawRoles || []).map(normalizeRole),
     hasRole: (state) => (role) => {
       if (!role) return false;
-      const normalized = normalizeRole(role);
-      const targetRoles = ROLE_ALIASES[normalized] || [normalized];
-      const userRoles = (state.rawRoles || []).map(normalizeRole);
-      return userRoles.some((uRole) => {
-        if (targetRoles.includes(uRole)) return true;
-        const aliases = ROLE_ALIASES[uRole] || [];
-        return aliases.some((alias) => targetRoles.includes(alias));
-      });
+      return holdsAnyRole(state.rawRoles, [normalizeRole(role)]);
     },
-    isCrc: (state) => {
-      const userRoles = (state.rawRoles || []).map(normalizeRole);
-      const crcTargets = ["crc", "site_investigator"];
-      return userRoles.some((uRole) => {
-        if (crcTargets.includes(uRole)) return true;
-        const aliases = ROLE_ALIASES[uRole] || [];
-        return aliases.some((alias) => crcTargets.includes(alias));
-      });
-    },
+    isCrc: (state) =>
+      holdsAnyRole(state.rawRoles, ["crc", "site_investigator"]),
+    availablePersonas: (state) => personasForRoles(state.rawRoles),
   },
   actions: {
-    persist() {
-      if (typeof window !== "undefined") {
-        if (!this.isAuthenticated) {
-          if (window.sessionStorage) {
-            window.sessionStorage.removeItem("cadence_auth");
-          }
-          if (window.localStorage) {
-            window.localStorage.removeItem("cadence_auth");
-          }
-          return;
-        }
-        if (window.sessionStorage) {
-          window.sessionStorage.setItem(
-            "cadence_auth",
-            JSON.stringify({
-              isAuthenticated: this.isAuthenticated,
-              accessToken: this.accessToken,
-              idToken: this.idToken,
-              refreshToken: this.refreshToken,
-              user: this.user,
-              rawRoles: this.rawRoles,
-              currentPersona: this.currentPersona,
-              isDemoMode: this.isDemoMode,
-            })
-          );
-        }
-      }
-    },
+    /**
+     * Copies identity, roles and tokens from an authenticated keycloak-js
+     * instance. Anything else clears the session.
+     */
     setAuth(keycloak) {
-      if (keycloak && keycloak.authenticated) {
-        this.isAuthenticated = true;
-        this.accessToken = keycloak.token || null;
-        this.idToken = keycloak.idToken || null;
-        this.refreshToken = keycloak.refreshToken || null;
-        this.isDemoMode = false;
+      if (!keycloak || !keycloak.authenticated || !keycloak.token) {
+        this.clearAuth();
+        return;
+      }
+      const claims = keycloak.tokenParsed || {};
+      this.isAuthenticated = true;
+      this.accessToken = keycloak.token;
+      this.idToken = keycloak.idToken || null;
+      this.tokenExpiresAt = claims.exp ? claims.exp * 1000 : null;
+      this.user = {
+        username: claims.preferred_username || claims.sub || "",
+        email: claims.email || "",
+        firstName: claims.given_name || "",
+        lastName: claims.family_name || "",
+        id: claims.sub || "",
+      };
+      this.rawRoles = Array.isArray(claims.realm_access?.roles)
+        ? [...claims.realm_access.roles]
+        : [];
+      this.authError = null;
 
-        const tokenParsed = keycloak.tokenParsed || {};
-        this.user = {
-          username:
-            tokenParsed.preferred_username || tokenParsed.username || "unknown",
-          email: tokenParsed.email || "",
-          firstName: tokenParsed.given_name || "",
-          lastName: tokenParsed.family_name || "",
-          id: tokenParsed.sub || "unknown-sub",
-        };
-        this.rawRoles = tokenParsed.realm_access?.roles || [];
-      } else {
-        this.isAuthenticated = false;
-        this.accessToken = null;
-        this.idToken = null;
-        this.refreshToken = null;
-        this.user = null;
-        this.rawRoles = [];
-        this.currentPersona = "super_admin";
+      const entitled = personasForRoles(this.rawRoles);
+      if (!entitled.some((p) => p.key === this.currentPersona)) {
+        this.currentPersona = entitled[0]?.key || null;
       }
-      this.persist();
     },
+    clearAuth() {
+      const authError = this.authError;
+      Object.assign(this, emptyAuthState());
+      this.authError = authError;
+    },
+    /**
+     * Signs in the offline demo identity. Only a demo build can do this; in any
+     * other build it throws, so no code path can sign in without Keycloak.
+     */
+    startDemoSession() {
+      if (!isDemoBuild()) {
+        throw new Error("Demo sign-in is only available in a demo build.");
+      }
+      Object.assign(this, emptyAuthState());
+      this.isAuthenticated = true;
+      this.user = { ...DEMO_IDENTITY };
+      this.rawRoles = [...DEMO_ROLES];
+      this.currentPersona = personasForRoles(this.rawRoles)[0]?.key || null;
+    },
+    /** Starts the Keycloak authorization code + PKCE sign-in redirect. */
     async login(options = {}) {
-      if (window.keycloakInstance && !this.isDemoMode) {
-        await window.keycloakInstance.login(options);
-      } else {
-        if (!isDemoBuild()) {
-          throw new Error(
-            "Sign-in is unavailable: the identity provider could not be reached."
-          );
-        }
-        // Demo build: an offline identity with every persona's roles.
-        this.isAuthenticated = true;
-        this.isDemoMode = true;
-        this.user = { ...DEMO_IDENTITY };
-        this.rawRoles = [...DEMO_ROLES];
+      if (isDemoBuild()) {
+        this.startDemoSession();
+        return;
       }
-      this.persist();
-    },
-    switchPersona(personaKey) {
-      const found = PERSONA_PRESETS.find((p) => p.key === personaKey);
-      if (found) {
-        this.currentPersona = personaKey;
-        this.rawRoles = [...found.roles];
-        this.persist();
-        try {
-          const notificationsStore = useNotificationsStore();
-          notificationsStore.fetchNotifications();
-        } catch {
-          // Pinia store not ready or active
-        }
+      const keycloak = getKeycloakClient();
+      if (!keycloak) {
+        throw new Error(
+          "Keycloak sign-in is unavailable. The identity provider could not be initialised."
+        );
       }
+      await keycloak.login(options);
     },
+    /** Clears the local session and ends the Keycloak SSO session. */
     async logout(options = {}) {
-      if (window.keycloakInstance && !this.isDemoMode) {
-        await window.keycloakInstance.logout(options);
-      } else {
-        this.isAuthenticated = false;
-        this.rawRoles = [];
+      const keycloak = getKeycloakClient();
+      this.authError = null;
+      this.clearAuth();
+      purgeLegacyAuthStorage();
+      if (keycloak) {
+        await keycloak.logout(options);
       }
-      this.currentPersona = "super_admin";
-      this.user = null;
-      this.accessToken = null;
-      this.idToken = null;
-      this.refreshToken = null;
-      this.persist();
     },
+    /**
+     * Refreshes the access token when it expires within `minValidity` seconds.
+     * A failed refresh ends the session so the user signs in again.
+     */
     async refresh(minValidity = 30) {
-      if (window.keycloakInstance && !this.isDemoMode) {
-        try {
-          const refreshed =
-            await window.keycloakInstance.updateToken(minValidity);
-          if (refreshed) {
-            this.setAuth(window.keycloakInstance);
-          }
-          return refreshed;
-        } catch (err) {
-          console.error("Failed to refresh token:", err);
-          this.setAuth(null);
-          throw err;
-        }
+      const keycloak = getKeycloakClient();
+      if (!keycloak || !this.isAuthenticated) {
+        return false;
       }
-      return false;
+      try {
+        const refreshed = await keycloak.updateToken(minValidity);
+        this.setAuth(keycloak);
+        return refreshed;
+      } catch (err) {
+        this.clearAuth();
+        throw err;
+      }
+    },
+    /**
+     * Returns an access token valid for at least `minValidity` seconds, or
+     * null when no one is signed in or the session could not be refreshed.
+     */
+    async ensureFreshToken(minValidity = 30) {
+      if (!this.isAuthenticated) {
+        return null;
+      }
+      try {
+        await this.refresh(minValidity);
+      } catch {
+        return null;
+      }
+      return this.accessToken;
+    },
+    /**
+     * Switches the workspace persona. Only personas the token's roles entitle
+     * the user to are accepted; roles are never changed.
+     */
+    switchPersona(personaKey) {
+      const entitled = personasForRoles(this.rawRoles);
+      if (!entitled.some((p) => p.key === personaKey)) {
+        return false;
+      }
+      this.currentPersona = personaKey;
+      try {
+        useNotificationsStore().fetchNotifications();
+      } catch {
+        // Pinia store not ready or active
+      }
+      return true;
     },
   },
 });

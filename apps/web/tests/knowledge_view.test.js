@@ -3,6 +3,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { router } from "../src/router/index.js";
 import { useAuthStore } from "../src/stores/auth.js";
+import { signInAs } from "./helpers/signIn.js";
 import KnowledgeView from "../src/views/KnowledgeView.vue";
 import AppShell from "../src/components/AppShell.vue";
 import {
@@ -209,10 +210,10 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
     setActivePinia(pinia);
     authStore = useAuthStore();
 
-    authStore.isAuthenticated = true;
-    authStore.isDemoMode = true;
+    // Sponsor Admins may view every persona's workspace; switching the view
+    // never changes the token roles.
+    signInAs(authStore, ["Sponsor Admin"], { username: "admin.user" });
     authStore.switchPersona("super_admin");
-    authStore.user = { username: "admin.user" };
 
     vi.clearAllMocks();
   });
