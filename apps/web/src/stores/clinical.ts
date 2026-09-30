@@ -210,197 +210,362 @@ export interface ClinicalState {
   debouncedEvaluateRules?: () => void;
 }
 
+export function getCurrentPersonaKey(): string {
+  if (typeof window !== "undefined") {
+    try {
+      const authStore = useAuthStore();
+      if (authStore && authStore.currentPersona) {
+        return authStore.currentPersona;
+      }
+    } catch {
+      // Pinia or auth store may not be initialized yet
+    }
+  }
+  return "super_admin";
+}
+
+export function getStorageKey(baseKey: string, personaKey?: string): string {
+  const persona = personaKey || getCurrentPersonaKey();
+  const scopedKey = `clinical_${persona}_${baseKey}`;
+  if (typeof window !== "undefined" && window.localStorage) {
+    if (window.localStorage.getItem(scopedKey) !== null) {
+      return scopedKey;
+    }
+    if (window.localStorage.getItem(baseKey) !== null) {
+      return baseKey;
+    }
+  }
+  return scopedKey;
+}
+
+export function readStorageItem(
+  baseKey: string,
+  personaKey?: string
+): string | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  const persona = personaKey || getCurrentPersonaKey();
+  const scopedKey = `clinical_${persona}_${baseKey}`;
+  const scopedValue = window.localStorage.getItem(scopedKey);
+  if (scopedValue !== null) {
+    return scopedValue;
+  }
+  const unscopedValue = window.localStorage.getItem(baseKey);
+  if (unscopedValue !== null) {
+    try {
+      window.localStorage.setItem(scopedKey, unscopedValue);
+    } catch (e) {
+      console.error(`Failed to migrate ${baseKey} to ${scopedKey}`, e);
+    }
+    return unscopedValue;
+  }
+  return null;
+}
+
+export const DEFAULT_CLINICAL_USDM = Object.freeze({
+  studyId: "STUDY-USDM-001",
+  studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
+  objectives: [
+    {
+      id: "OBJ-001",
+      type: "Primary",
+      description:
+        "Evaluate the reduction of mean sitting Systolic Blood Pressure (SBP) from baseline.",
+    },
+    {
+      id: "OBJ-002",
+      type: "Secondary",
+      description:
+        "Evaluate safety and tolerability of daily oral administration of Cadence-001.",
+    },
+  ],
+  arms: [
+    { arm_id: "ARM-A", arm_name: "Arm A: Active 10mg daily" },
+    { arm_id: "ARM-B", arm_name: "Arm B: Placebo Control" },
+  ],
+  epochs: [
+    { epoch_id: "EP-SCR", epoch_name: "Screening", sequence: 1 },
+    {
+      epoch_id: "EP-TRT-A",
+      epoch_name: "Treatment Phase",
+      sequence: 2,
+      arm_id: "ARM-A",
+    },
+    {
+      epoch_id: "EP-TRT-B",
+      epoch_name: "Treatment Phase",
+      sequence: 2,
+      arm_id: "ARM-B",
+    },
+  ],
+  encounters: [
+    {
+      encounter_id: "V-SCR",
+      encounter_name: "Day -7 to -1",
+      epoch_id: "EP-SCR",
+      sequence: 1,
+    },
+    {
+      encounter_id: "V-TRT-A1",
+      encounter_name: "Week 2",
+      epoch_id: "EP-TRT-A",
+      sequence: 2,
+    },
+    {
+      encounter_id: "V-TRT-A2",
+      encounter_name: "Week 4",
+      epoch_id: "EP-TRT-A",
+      sequence: 3,
+    },
+    {
+      encounter_id: "V-TRT-B1",
+      encounter_name: "Week 2",
+      epoch_id: "EP-TRT-B",
+      sequence: 4,
+    },
+  ],
+  rows: [
+    {
+      activity_id: "ACT-DEM",
+      activity_name: "Informed Consent & Demographics",
+      cells: [
+        {
+          encounter_id: "V-SCR",
+          is_applicable: true,
+          details: "Mandatory",
+        },
+        { encounter_id: "V-TRT-A1", is_applicable: false },
+        { encounter_id: "V-TRT-A2", is_applicable: false },
+        { encounter_id: "V-TRT-B1", is_applicable: false },
+      ],
+    },
+    {
+      activity_id: "ACT-VS",
+      activity_name: "Vital Signs (BP & Pulse)",
+      cells: [
+        {
+          encounter_id: "V-SCR",
+          is_applicable: true,
+          details: "Day -7",
+        },
+        {
+          encounter_id: "V-TRT-A1",
+          is_applicable: true,
+          details: "Within 10 mins",
+        },
+        {
+          encounter_id: "V-TRT-A2",
+          is_applicable: true,
+          details: "Conditional",
+        },
+        {
+          encounter_id: "V-TRT-B1",
+          is_applicable: true,
+          details: "Within 10 mins",
+        },
+      ],
+    },
+    {
+      activity_id: "ACT-AE",
+      activity_name: "Adverse Events Check",
+      cells: [
+        { encounter_id: "V-SCR", is_applicable: false },
+        {
+          encounter_id: "V-TRT-A1",
+          is_applicable: true,
+          details: "Continuous",
+        },
+        {
+          encounter_id: "V-TRT-A2",
+          is_applicable: true,
+          details: "Continuous",
+        },
+        {
+          encounter_id: "V-TRT-B1",
+          is_applicable: true,
+          details: "Optional",
+        },
+      ],
+    },
+    {
+      activity_id: "ACT-MED",
+      activity_name: "Study Medication Log",
+      cells: [
+        { encounter_id: "V-SCR", is_applicable: false },
+        {
+          encounter_id: "V-TRT-A1",
+          is_applicable: true,
+          details: "Daily entry",
+        },
+        {
+          encounter_id: "V-TRT-A2",
+          is_applicable: true,
+          details: "Daily entry",
+        },
+        {
+          encounter_id: "V-TRT-B1",
+          is_applicable: true,
+          details: "Daily entry",
+        },
+      ],
+    },
+  ],
+});
+
+export const DEFAULT_DEMO_SUBJECTS: SubjectFixture[] = [
+  {
+    id: "SUBJ-101",
+    status: "ACTIVE",
+    active_protocol_version: "2.0.0",
+    consentText: "Signed ICF v2.0.0",
+    consentColor: "green",
+    category: "migrated",
+    isGated: false,
+    label: "SUBJ-101 (Active - Migrated v2.0.0)",
+  },
+  {
+    id: "SUBJ-102",
+    status: "ACTIVE",
+    active_protocol_version: "1.0.0",
+    consentText: "Pending ICF v2.0.0",
+    consentColor: "yellow",
+    category: "pending",
+    isGated: true,
+    label: "SUBJ-102 (Active - Pending Re-Consent)",
+  },
+  {
+    id: "SUBJ-103",
+    status: "ENROLLED",
+    active_protocol_version: "1.0.0",
+    consentText: "Pending ICF v2.0.0",
+    consentColor: "yellow",
+    category: "pending",
+    isGated: true,
+    label: "SUBJ-103 (Enrolled - Pending Re-Consent)",
+  },
+  {
+    id: "SUBJ-104",
+    status: "COMPLETED",
+    active_protocol_version: "1.0.0",
+    consentText: "Historical v1.0.0",
+    consentColor: "gray",
+    category: "completedPrev",
+    isGated: false,
+    label: "SUBJ-104 (Completed - Historical v1.0.0)",
+  },
+  {
+    id: "SUBJ-105",
+    status: "ACTIVE",
+    active_protocol_version: "2.0.0",
+    consentText: "Signed ICF v2.0.0",
+    consentColor: "green",
+    category: "migrated",
+    isGated: false,
+    label: "SUBJ-105 (Active - Migrated v2.0.0)",
+  },
+  {
+    id: "SUBJ-001",
+    status: "ACTIVE",
+    active_protocol_version: "2.0.0",
+    consentText: "Signed ICF v2.0.0",
+    consentColor: "green",
+    category: "migrated",
+    isGated: false,
+    label: "SUBJ-001 (Mock Subject)",
+  },
+  {
+    id: "SUBJ-002",
+    status: "ACTIVE",
+    active_protocol_version: "1.0.0",
+    consentText: "Pending ICF v2.0.0",
+    consentColor: "yellow",
+    category: "pending",
+    isGated: true,
+    label: "SUBJ-002 (Screened Cohort - Pending Re-Consent)",
+  },
+  {
+    id: "SUBJ-003",
+    status: "ENROLLED",
+    active_protocol_version: "2.0.0",
+    consentText: "Signed ICF v2.0.0",
+    consentColor: "green",
+    category: "migrated",
+    isGated: false,
+    label: "SUBJ-003 (Post-Randomization)",
+  },
+];
+
+export const DEFAULT_FORM_VALUES: Record<
+  string,
+  string | number | boolean | null | undefined
+> = {
+  concept_code: "",
+  brthdt: "1980-05-12", // deid-ignore
+  sex: "F",
+  vssbp: "120",
+  vsdpb: "80",
+  pulse: "72",
+  pulse_details: "",
+  weight: "70",
+  height: "1.75",
+  bmi_status: "Normal",
+  concept_code_vs: "",
+};
+
+function readPersonaStorage(personaKey?: string) {
+  const persona = personaKey || getCurrentPersonaKey();
+  let savedSubjects: SubjectFixture[] | null = null;
+  let savedFormValues: Record<
+    string,
+    string | number | boolean | null | undefined
+  > | null = null;
+  let savedFormQueries: Record<string, ClinicalQuery> | null = null;
+  let savedLedgerBlocks: LedgerBlock[] | null = null;
+  let savedUsdm: unknown = null;
+
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      const storedSubjects = readStorageItem("subjects", persona);
+      if (storedSubjects && isDemoBuild()) {
+        savedSubjects = JSON.parse(storedSubjects);
+      }
+      const storedFormValues = readStorageItem("formValues", persona);
+      if (storedFormValues) {
+        savedFormValues = JSON.parse(storedFormValues);
+      }
+      const storedFormQueries = readStorageItem("formQueries", persona);
+      if (storedFormQueries) {
+        savedFormQueries = JSON.parse(storedFormQueries);
+      }
+      const storedLedgerBlocks = readStorageItem("ledgerBlocks", persona);
+      if (storedLedgerBlocks) {
+        savedLedgerBlocks = JSON.parse(storedLedgerBlocks);
+      }
+      const storedUsdm = readStorageItem("currentUsdm", persona);
+      if (storedUsdm) {
+        savedUsdm = JSON.parse(storedUsdm);
+      }
+    } catch (e) {
+      console.error("Failed to parse saved state from localStorage", e);
+    }
+  }
+
+  return {
+    savedSubjects,
+    savedFormValues,
+    savedFormQueries,
+    savedLedgerBlocks,
+    savedUsdm,
+  };
+}
+
 const useClinicalStoreInner = defineStore("clinical", {
   state: (): ClinicalState => {
-    let savedFormValues: Record<
-      string,
-      string | number | boolean | null | undefined
-    > | null = null;
-    let savedFormQueries: Record<string, ClinicalQuery> | null = null;
-    let savedLedgerBlocks: LedgerBlock[] | null = null;
-    let savedUsdm: unknown = null;
-    let savedSubjects: SubjectFixture[] | null = null;
-    // Sample subjects and the sample study exist only in a demo build; every other build lists the
-    // study's subjects from Execution (loadSubjects), so nothing on screen is made up (#4828).
+    const initial = readPersonaStorage();
     const demo = isDemoBuild();
-    if (typeof window !== "undefined" && window.localStorage) {
-      try {
-        const storedSubjects = window.localStorage.getItem("subjects");
-        if (storedSubjects && demo) {
-          savedSubjects = JSON.parse(storedSubjects);
-        }
-        const storedFormValues = window.localStorage.getItem("formValues");
-        if (storedFormValues) {
-          savedFormValues = JSON.parse(storedFormValues);
-        }
-        const storedFormQueries = window.localStorage.getItem("formQueries");
-        if (storedFormQueries) {
-          savedFormQueries = JSON.parse(storedFormQueries);
-        }
-        const storedLedgerBlocks = window.localStorage.getItem("ledgerBlocks");
-        if (storedLedgerBlocks) {
-          savedLedgerBlocks = JSON.parse(storedLedgerBlocks);
-        }
-        const storedUsdm = window.localStorage.getItem("currentUsdm");
-        if (storedUsdm) {
-          savedUsdm = JSON.parse(storedUsdm);
-        }
-      } catch (e) {
-        console.error("Failed to parse saved state from localStorage", e);
-      }
-    }
 
     return {
       currentUsdm: normalizeUsdm(
-        savedUsdm || {
-          studyId: "STUDY-USDM-001",
-          studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
-          objectives: [
-            {
-              id: "OBJ-001",
-              type: "Primary",
-              description:
-                "Evaluate the reduction of mean sitting Systolic Blood Pressure (SBP) from baseline.",
-            },
-            {
-              id: "OBJ-002",
-              type: "Secondary",
-              description:
-                "Evaluate safety and tolerability of daily oral administration of Cadence-001.",
-            },
-          ],
-          arms: [
-            { arm_id: "ARM-A", arm_name: "Arm A: Active 10mg daily" },
-            { arm_id: "ARM-B", arm_name: "Arm B: Placebo Control" },
-          ],
-          epochs: [
-            { epoch_id: "EP-SCR", epoch_name: "Screening", sequence: 1 },
-            {
-              epoch_id: "EP-TRT-A",
-              epoch_name: "Treatment Phase",
-              sequence: 2,
-              arm_id: "ARM-A",
-            },
-            {
-              epoch_id: "EP-TRT-B",
-              epoch_name: "Treatment Phase",
-              sequence: 2,
-              arm_id: "ARM-B",
-            },
-          ],
-          encounters: [
-            {
-              encounter_id: "V-SCR",
-              encounter_name: "Day -7 to -1",
-              epoch_id: "EP-SCR",
-              sequence: 1,
-            },
-            {
-              encounter_id: "V-TRT-A1",
-              encounter_name: "Week 2",
-              epoch_id: "EP-TRT-A",
-              sequence: 2,
-            },
-            {
-              encounter_id: "V-TRT-A2",
-              encounter_name: "Week 4",
-              epoch_id: "EP-TRT-A",
-              sequence: 3,
-            },
-            {
-              encounter_id: "V-TRT-B1",
-              encounter_name: "Week 2",
-              epoch_id: "EP-TRT-B",
-              sequence: 4,
-            },
-          ],
-          rows: [
-            {
-              activity_id: "ACT-DEM",
-              activity_name: "Informed Consent & Demographics",
-              cells: [
-                {
-                  encounter_id: "V-SCR",
-                  is_applicable: true,
-                  details: "Mandatory",
-                },
-                { encounter_id: "V-TRT-A1", is_applicable: false },
-                { encounter_id: "V-TRT-A2", is_applicable: false },
-                { encounter_id: "V-TRT-B1", is_applicable: false },
-              ],
-            },
-            {
-              activity_id: "ACT-VS",
-              activity_name: "Vital Signs (BP & Pulse)",
-              cells: [
-                {
-                  encounter_id: "V-SCR",
-                  is_applicable: true,
-                  details: "Day -7",
-                },
-                {
-                  encounter_id: "V-TRT-A1",
-                  is_applicable: true,
-                  details: "Within 10 mins",
-                },
-                {
-                  encounter_id: "V-TRT-A2",
-                  is_applicable: true,
-                  details: "Conditional",
-                },
-                {
-                  encounter_id: "V-TRT-B1",
-                  is_applicable: true,
-                  details: "Within 10 mins",
-                },
-              ],
-            },
-            {
-              activity_id: "ACT-AE",
-              activity_name: "Adverse Events Check",
-              cells: [
-                { encounter_id: "V-SCR", is_applicable: false },
-                {
-                  encounter_id: "V-TRT-A1",
-                  is_applicable: true,
-                  details: "Continuous",
-                },
-                {
-                  encounter_id: "V-TRT-A2",
-                  is_applicable: true,
-                  details: "Continuous",
-                },
-                {
-                  encounter_id: "V-TRT-B1",
-                  is_applicable: true,
-                  details: "Optional",
-                },
-              ],
-            },
-            {
-              activity_id: "ACT-MED",
-              activity_name: "Study Medication Log",
-              cells: [
-                { encounter_id: "V-SCR", is_applicable: false },
-                {
-                  encounter_id: "V-TRT-A1",
-                  is_applicable: true,
-                  details: "Daily entry",
-                },
-                {
-                  encounter_id: "V-TRT-A2",
-                  is_applicable: true,
-                  details: "Daily entry",
-                },
-                {
-                  encounter_id: "V-TRT-B1",
-                  is_applicable: true,
-                  details: "Daily entry",
-                },
-              ],
-            },
-          ],
-        }
+        initial.savedUsdm || JSON.parse(JSON.stringify(DEFAULT_CLINICAL_USDM))
       ),
       currentCtmsData: {
         milestones: [
@@ -471,88 +636,8 @@ const useClinicalStoreInner = defineStore("clinical", {
         ],
       },
       subjects: demo
-        ? savedSubjects || [
-            {
-              id: "SUBJ-101",
-              status: "ACTIVE",
-              active_protocol_version: "2.0.0",
-              consentText: "Signed ICF v2.0.0",
-              consentColor: "green",
-              category: "migrated",
-              isGated: false,
-              label: "SUBJ-101 (Active - Migrated v2.0.0)",
-            },
-            {
-              id: "SUBJ-102",
-              status: "ACTIVE",
-              active_protocol_version: "1.0.0",
-              consentText: "Pending ICF v2.0.0",
-              consentColor: "yellow",
-              category: "pending",
-              isGated: true,
-              label: "SUBJ-102 (Active - Pending Re-Consent)",
-            },
-            {
-              id: "SUBJ-103",
-              status: "ENROLLED",
-              active_protocol_version: "1.0.0",
-              consentText: "Pending ICF v2.0.0",
-              consentColor: "yellow",
-              category: "pending",
-              isGated: true,
-              label: "SUBJ-103 (Enrolled - Pending Re-Consent)",
-            },
-            {
-              id: "SUBJ-104",
-              status: "COMPLETED",
-              active_protocol_version: "1.0.0",
-              consentText: "Historical v1.0.0",
-              consentColor: "gray",
-              category: "completedPrev",
-              isGated: false,
-              label: "SUBJ-104 (Completed - Historical v1.0.0)",
-            },
-            {
-              id: "SUBJ-105",
-              status: "ACTIVE",
-              active_protocol_version: "2.0.0",
-              consentText: "Signed ICF v2.0.0",
-              consentColor: "green",
-              category: "migrated",
-              isGated: false,
-              label: "SUBJ-105 (Active - Migrated v2.0.0)",
-            },
-            {
-              id: "SUBJ-001",
-              status: "ACTIVE",
-              active_protocol_version: "2.0.0",
-              consentText: "Signed ICF v2.0.0",
-              consentColor: "green",
-              category: "migrated",
-              isGated: false,
-              label: "SUBJ-001 (Mock Subject)",
-            },
-            {
-              id: "SUBJ-002",
-              status: "ACTIVE",
-              active_protocol_version: "1.0.0",
-              consentText: "Pending ICF v2.0.0",
-              consentColor: "yellow",
-              category: "pending",
-              isGated: true,
-              label: "SUBJ-002 (Screened Cohort - Pending Re-Consent)",
-            },
-            {
-              id: "SUBJ-003",
-              status: "ENROLLED",
-              active_protocol_version: "2.0.0",
-              consentText: "Signed ICF v2.0.0",
-              consentColor: "green",
-              category: "migrated",
-              isGated: false,
-              label: "SUBJ-003 (Post-Randomization)",
-            },
-          ]
+        ? initial.savedSubjects ||
+          JSON.parse(JSON.stringify(DEFAULT_DEMO_SUBJECTS))
         : [],
       subjectsTotal: 0,
       subjectsLoading: false,
@@ -715,22 +800,10 @@ const useClinicalStoreInner = defineStore("clinical", {
           },
         },
       ],
-      formValues: savedFormValues || {
-        concept_code: "",
-        brthdt: "1980-05-12", // deid-ignore
-        sex: "F",
-        vssbp: "120",
-        vsdpb: "80",
-        pulse: "72",
-        pulse_details: "",
-        weight: "70",
-        height: "1.75",
-        bmi_status: "Normal",
-        concept_code_vs: "",
-      },
+      formValues: initial.savedFormValues || { ...DEFAULT_FORM_VALUES },
       fieldVisibility: {},
-      formQueries: savedFormQueries || {},
-      ledgerBlocks: savedLedgerBlocks || [],
+      formQueries: initial.savedFormQueries || {},
+      ledgerBlocks: initial.savedLedgerBlocks || [],
 
       activeStudyId: demo ? "STUDY-USDM-001" : "",
       activeSiteId: demo ? "SITE-001" : "",
@@ -853,6 +926,25 @@ const useClinicalStoreInner = defineStore("clinical", {
       }
     },
 
+    loadPersonaState(personaKey?: string) {
+      const targetPersona = personaKey || getCurrentPersonaKey();
+      const loaded = readPersonaStorage(targetPersona);
+      const demo = isDemoBuild();
+
+      this.subjects = demo
+        ? loaded.savedSubjects ||
+          JSON.parse(JSON.stringify(DEFAULT_DEMO_SUBJECTS))
+        : [];
+      this.formValues = loaded.savedFormValues || { ...DEFAULT_FORM_VALUES };
+      this.formQueries = loaded.savedFormQueries || {};
+      this.ledgerBlocks = loaded.savedLedgerBlocks || [];
+      this.currentUsdm = normalizeUsdm(
+        loaded.savedUsdm || JSON.parse(JSON.stringify(DEFAULT_CLINICAL_USDM))
+      );
+
+      this.evaluateRules();
+    },
+
     async evaluateRules() {
       let changed = true;
       let passes = 0;
@@ -955,21 +1047,24 @@ const useClinicalStoreInner = defineStore("clinical", {
 
       // Save persistent fields to localStorage
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
         window.localStorage.setItem(
-          "formValues",
+          getStorageKey("subjects"),
+          JSON.stringify(this.subjects)
+        );
+        window.localStorage.setItem(
+          getStorageKey("formValues"),
           JSON.stringify(this.formValues)
         );
         window.localStorage.setItem(
-          "formQueries",
+          getStorageKey("formQueries"),
           JSON.stringify(this.formQueries)
         );
         window.localStorage.setItem(
-          "ledgerBlocks",
+          getStorageKey("ledgerBlocks"),
           JSON.stringify(this.ledgerBlocks)
         );
         window.localStorage.setItem(
-          "currentUsdm",
+          getStorageKey("currentUsdm"),
           JSON.stringify(this.currentUsdm)
         );
       }
@@ -1019,7 +1114,10 @@ const useClinicalStoreInner = defineStore("clinical", {
       );
 
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
+        window.localStorage.setItem(
+          getStorageKey("subjects"),
+          JSON.stringify(this.subjects)
+        );
       }
     },
     getEcrfFieldsForVersion(version: string = "1.0.0"): ClinicalField[] {
@@ -1155,9 +1253,12 @@ const useClinicalStoreInner = defineStore("clinical", {
       );
 
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
         window.localStorage.setItem(
-          "cadence_clinical_subjects",
+          getStorageKey("subjects"),
+          JSON.stringify(this.subjects)
+        );
+        window.localStorage.setItem(
+          getStorageKey("cadence_clinical_subjects"),
           JSON.stringify(this.subjects)
         );
       }
@@ -1177,7 +1278,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       this.ledgerBlocks = [];
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.setItem(
-          "ledgerBlocks",
+          getStorageKey("ledgerBlocks"),
           JSON.stringify(this.ledgerBlocks)
         );
       }
