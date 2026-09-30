@@ -19,7 +19,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | Package | Port missing | Port untested | Ported, deletion pending |
 | --- | ---: | ---: | ---: |
 | [packages/ddf](#packagesddf) | 1 | 0 | 10 |
-| [packages/engine_core](#packagesengine_core) | 9 | 0 | 13 |
+| [packages/engine_core](#packagesengine_core) | 7 | 0 | 15 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
 | [packages/storage](#packagesstorage) | 0 | 0 | 6 |
 
@@ -55,8 +55,8 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | `operations/engine.py` | Site startup greenlight facade | none | Port missing |  |
 | `operations/evaluator.py` | Greenlight rules: IRB, contract, staff qualification, facility, IP depot | none | Port missing | Spec K-TIME-4/5 and K-AUTH-5 are the target |
 | `operations/models.py` | Greenlight models | none | Port missing |  |
-| `rules/ast.py` | Rule AST with `validate_node` shape validation (operand counts, required fields) | `packages/engine_core/src/Rules/RuleAst.cs` (plain classes, no validation) | Port missing | Node validation not ported |
-| `rules/sentinels.py` | Field-reference extraction, complexity, unresolved references, cycle detection | none | Port missing |  |
+| `rules/ast.py` | Rule AST with `validate_node` shape validation (operand counts, required fields) | Not carried forward ([ADR-2506](adr/2026-09-30-the-engine-core-rule-ast-is-superseded-by-the-one-rule-language.md)): strict `RuleExpressionJson` parsing in the one rule language (K-RULE-3). The unused `Cadence.Core.Domain.Rules` engine goes with the approved deletion | Ported, deletion pending | `RuleExpressionTests` |
+| `rules/sentinels.py` | Field-reference extraction, complexity, unresolved references, cycle detection | Not carried forward ([ADR-2506](adr/2026-09-30-the-engine-core-rule-ast-is-superseded-by-the-one-rule-language.md)): `RuleExpressionJson.MaxDepth`/`MaxNodes`; unknown items and skip-logic cycles in the DDF compile (ADR-2502); pack references to the `CollectionSpec` in #4728; derived-variable cycles in #5043 | Ported, deletion pending | `RuleExpressionTests`, `DdfRulesTests` |
 | `sla/engine.py` | SLA countdown clocks with business hours and escalation tiers | `SlaEngine` (`packages/engine_core/src/Sla/`), tested by `SlaEngineTests`; the caller passes the instant a clock is read at | Ported, deletion pending | A schedule that can never run is refused (the Python looped forever) |
 | `sla/models.py` | SLA models | records in `packages/engine_core/src/Sla/SlaModels.cs`; `SlaPolicy.ComputeChecksum` matches the Python checksum | Ported, deletion pending | Audit fields left to the store's GxP audit interceptor |
 | `supply/engine.py` | `PredictiveSupplyEngine` facade (forecast, hierarchy, DTP, unblinding) | none: callers use the engines directly | Ported, deletion pending | Not carried forward (ADR-2520) |

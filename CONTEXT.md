@@ -1015,6 +1015,8 @@ _Avoid_: Hardcoded Python if/else statements for protocol-specific rules, ad-hoc
 A sandboxed, AST-based expression evaluation engine for cross-form edit checks, dynamic skip logic, and protocol feasibility without executing arbitrary un-sandboxed code.
 _Avoid_: Unsafe Python eval() or exec() calls in clinical data pipelines
 
+> Retired by ADR-2506. The one rule language behind `IRuleEvaluator` (ADR-2461, K-RULE-3) replaces it, with its static checks in rule parsing and the DDF compile.
+
 ### Vector-Based Clinical Timeline Engine
 
 A mathematical scheduling engine that computes clinical encounter visit dates, permissible protocol windows, and automated out-of-window deviation flags dynamically from relative anchor event offsets.
