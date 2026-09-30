@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -65,7 +66,7 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
     /// A coordinator granted at one study site reads, through the host, the approved version's dependents and an
     /// amendment's impact: the enrollment at their site, the design elements and the version are shown; the enrollment
     /// at the other site keeps its place masked as not permitted. A reader with no grant gets the same counts with
-    /// everything masked, and the amendment's changed elements are listed for both.
+    /// everything masked. The amendment's impact report describes its content, so the reader with no grant is refused it.
     /// </summary>
     [Fact(DisplayName = "HostLineageReads_ShowWhatTheReadersGrantCovers_AndMaskTheRest")]
     public async Task HostLineageReadsShowWhatTheReadersGrantCoversAndMaskTheRest()
@@ -117,10 +118,12 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
         impacted.Should().ContainSingle(o => o.Ref == ownEnrollment.ToString());
         impacted.Should().ContainSingle(o => o.Kind == NodeKinds.Enrollment && o.Mask == NotPermitted);
         impacted.Should().Contain(o => o.Ref == NodeRef.For(ProtocolElementId.For(study, "obj.1"), 1).ToString());
-        var strangerImpact = await GetAsync<KernelAmendmentImpactResponse>(stranger, $"protocol-versions/{NodeRef.For(amendment)}/impact", ct);
-        strangerImpact.ChangedElements.Should().BeEquivalentTo(impact.ChangedElements);
-        strangerImpact.Dependents.Total.Should().Be(impact.Dependents.Total);
-        strangerImpact.Dependents.Groups.SelectMany(g => g.Objects).Should().OnlyContain(o => o.Ref == null && o.Mask == NotPermitted);
+        impact.Schedule.Should().NotBeNull("the design is typed, so the report carries its schedule directives (ADR-2475)");
+        using (var refused = await stranger.GetAsync(new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(amendment)}/impact", UriKind.Relative), ct))
+        {
+            refused.StatusCode.Should().Be(HttpStatusCode.Forbidden, "the report describes a version the stranger may not see (ADR-2475 §4.4)");
+        }
+
 
         var trace = await GetAsync<KernelLineageResponse>(crc, $"nodes/{ownEnrollment}/lineage", ct);
         trace.Nodes.Should().Contain(n => n.Ref == approved.ToString() && n.Mask == null);
