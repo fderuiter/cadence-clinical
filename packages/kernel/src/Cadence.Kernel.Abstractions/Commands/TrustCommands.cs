@@ -1,5 +1,6 @@
 using System;
 
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Commands;
@@ -14,6 +15,7 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>AuthenticatedAt</c>: When the signer last authenticated, from the identity provider (<c>auth_time</c>).</para>
 /// <para><c>Method</c>: How the signer authenticated, for example the token's <c>amr</c> values (<c>pwd+otp</c>).</para>
 /// </remarks>
+[KernelCapability("attestation.sign", VerbClass.Execute, InCatalogue = false)]
 public sealed record Attest(
     TenantId TenantId,
     AttestationId AttestationId,

@@ -729,6 +729,11 @@ protocol training + credential + effective dates + site activation state, never 
 - **K-AUTH-6** A denial names the missing evidence (e.g. "protocol v3 training not current"), so the user can
   act on it. The decision carries every condition evaluated, met and unmet, each with its evidence NodeRef, and
   explains itself as an `Explanation` (§5.5); the `DecisionDenied` event and audit entry record the conditions.
+- **K-AUTH-7** Authorization is one decision procedure over `AuthorizationRequest(actor, tenant, capability,
+  resource, at, known_at)`. Every kernel command declares its capability and the object it is authorized against;
+  a command without a declaration is denied. A dry run, `CanI(capability, resource)`, asks the same procedure for
+  the calling actor only. It is not written to the audit chain; it is recorded in the authorization access log
+  (ADR-2483), and the command catalogue for an object lists each command offered on it with its dry-run decision.
 
 ### 9.4 Computable consent
 
@@ -1044,6 +1049,7 @@ kernel, is merged into another, or is retired.
 | K012 | Object references and zoom path | `kind:id@version` NodeRef; kernel-computed, presentation-only zoom path | ADR-2481 |
 | K013 | Standards Registry and MDR | Tenant-scoped reference data; one governance envelope for library items; attested approval; immutable once registered | ADR-2460 |
 | K014 | Explanations | One `Explanation` type produced by the rule owner; authorization returns met and unmet conditions with evidence | ADR-2482 |
+| K015 | Dry-run authorization | One evaluator for commands and `CanI`; declared command capabilities; dry runs in the access log, not the audit chain | ADR-2483 |
 
 ---
 

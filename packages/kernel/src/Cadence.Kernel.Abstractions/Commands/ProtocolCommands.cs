@@ -1,3 +1,4 @@
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Protocol;
 
 namespace Cadence.Kernel.Commands;
@@ -9,6 +10,7 @@ namespace Cadence.Kernel.Commands;
 /// <remarks>
 /// <para><c>Content</c>: The protocol document as JSON (CDISC USDM is the interchange format).</para>
 /// </remarks>
+[KernelCapability("protocol.draft", VerbClass.Propose, Resource = nameof(CreateProtocolDraft.StudyId))]
 public sealed record CreateProtocolDraft(
     TenantId TenantId,
     StudyId StudyId,
@@ -21,6 +23,7 @@ public sealed record CreateProtocolDraft(
 /// <remarks>
 /// <para><c>Amendment</c>: The replacement amendment of a forked draft; null keeps the current one.</para>
 /// </remarks>
+[KernelCapability("protocol.revise_draft", VerbClass.Propose, Resource = nameof(ReviseProtocolDraft.ProtocolVersionId))]
 public sealed record ReviseProtocolDraft(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -30,6 +33,7 @@ public sealed record ReviseProtocolDraft(
     string ReasonForChange) : ICommand<ProtocolVersionState>;
 
 /// <summary>Freezes a draft for review and computes its content hash, which approval attestations bind to.</summary>
+[KernelCapability("protocol.submit_for_review", VerbClass.Propose, Resource = nameof(SubmitProtocolVersionForReview.ProtocolVersionId))]
 public sealed record SubmitProtocolVersionForReview(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -37,6 +41,7 @@ public sealed record SubmitProtocolVersionForReview(
     string ReasonForChange) : ICommand<ProtocolVersionState>;
 
 /// <summary>Returns a version in review to draft so it can be revised; its content hash is cleared.</summary>
+[KernelCapability("protocol.return_to_draft", VerbClass.Approve, Resource = nameof(ReturnProtocolVersionToDraft.ProtocolVersionId))]
 public sealed record ReturnProtocolVersionToDraft(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -47,6 +52,7 @@ public sealed record ReturnProtocolVersionToDraft(
 /// Approves a version in review. <c>AttestationId</c> must name an attestation with meaning
 /// <c>Approved</c> bound to this version's content hash.
 /// </summary>
+[KernelCapability("protocol.approve", VerbClass.Approve, Resource = nameof(ApproveProtocolVersion.ProtocolVersionId))]
 public sealed record ApproveProtocolVersion(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -59,6 +65,7 @@ public sealed record ApproveProtocolVersion(
 /// <c>AttestationId</c> must name an attestation with meaning <c>Withdrawn</c> bound to the version's
 /// content hash.
 /// </summary>
+[KernelCapability("protocol.withdraw", VerbClass.Approve, Resource = nameof(WithdrawProtocolVersion.ProtocolVersionId))]
 public sealed record WithdrawProtocolVersion(
     TenantId TenantId,
     ProtocolVersionId ProtocolVersionId,
@@ -70,6 +77,7 @@ public sealed record WithdrawProtocolVersion(
 /// Starts an amended draft from an approved version. The draft copies the parent's content, takes the study's next
 /// number and carries <c>Amendment</c>. The parent stays approved (spec §6.2).
 /// </summary>
+[KernelCapability("protocol.amend", VerbClass.Propose, Resource = nameof(ForkProtocolVersion.ParentVersionId))]
 public sealed record ForkProtocolVersion(
     TenantId TenantId,
     ProtocolVersionId ParentVersionId,

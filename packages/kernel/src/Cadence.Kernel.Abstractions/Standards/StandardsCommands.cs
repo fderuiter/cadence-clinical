@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 
 namespace Cadence.Kernel.Standards;
@@ -43,6 +44,7 @@ public enum LibraryItemKind
 /// (spec §6.3). The package is stored as given; its content hash is computed by the kernel and, when
 /// <see cref="ExpectedContentHash"/> is set, must match it.
 /// </summary>
+[KernelCapability("standard.register", VerbClass.Execute)]
 public sealed record RegisterStandardVersion(
     TenantId TenantId,
     StandardVersionId StandardVersionId,
@@ -52,6 +54,7 @@ public sealed record RegisterStandardVersion(
     string ReasonForChange) : ICommand<StandardVersionId>;
 
 /// <summary>Approves a draft standard version for use by studies. Needs an <c>Approved</c> Attestation bound to its content hash.</summary>
+[KernelCapability("standard.approve", VerbClass.Approve, Resource = nameof(ApproveStandardVersion.StandardVersionId))]
 public sealed record ApproveStandardVersion(
     TenantId TenantId,
     StandardVersionId StandardVersionId,
@@ -63,6 +66,7 @@ public sealed record ApproveStandardVersion(
 /// Deprecates a standard version: no new study may declare it; studies that declared it keep it. Needs a
 /// <c>Responsibility</c> Attestation bound to its content hash.
 /// </summary>
+[KernelCapability("standard.deprecate", VerbClass.Approve, Resource = nameof(DeprecateStandardVersion.StandardVersionId))]
 public sealed record DeprecateStandardVersion(
     TenantId TenantId,
     StandardVersionId StandardVersionId,
@@ -75,6 +79,7 @@ public sealed record DeprecateStandardVersion(
 /// <see cref="Kind"/>; the kernel assigns the version number (one more than the key's latest version).
 /// <see cref="Content"/> must be a JSON object valid for the kind.
 /// </summary>
+[KernelCapability("library_item.draft", VerbClass.Propose)]
 public sealed record DraftLibraryItem(
     TenantId TenantId,
     LibraryItemId LibraryItemId,
@@ -87,6 +92,7 @@ public sealed record DraftLibraryItem(
     string ReasonForChange) : ICommand<LibraryItemVersion>;
 
 /// <summary>Approves a draft library item version. Needs an <c>Approved</c> Attestation bound to its content hash.</summary>
+[KernelCapability("library_item.approve", VerbClass.Approve, Resource = nameof(ApproveLibraryItem.LibraryItemId))]
 public sealed record ApproveLibraryItem(
     TenantId TenantId,
     LibraryItemId LibraryItemId,
@@ -95,6 +101,7 @@ public sealed record ApproveLibraryItem(
     string ReasonForChange) : ICommand<LibraryItemVersion>;
 
 /// <summary>Deprecates a library item version. Needs a <c>Responsibility</c> Attestation. Pinned studies keep it.</summary>
+[KernelCapability("library_item.deprecate", VerbClass.Approve, Resource = nameof(DeprecateLibraryItem.LibraryItemId))]
 public sealed record DeprecateLibraryItem(
     TenantId TenantId,
     LibraryItemId LibraryItemId,
@@ -108,6 +115,7 @@ public sealed record DeprecateLibraryItem(
 /// declared must be <see cref="GovernanceStatus.Approved"/> when it is declared; later deprecation never changes the
 /// declaration. The declaration replaces the previous one as a whole.
 /// </summary>
+[KernelCapability("study.declare_standards", VerbClass.Execute, Resource = nameof(DeclareStudyStandards.StudyId))]
 public sealed record DeclareStudyStandards(
     TenantId TenantId,
     StudyId StudyId,
