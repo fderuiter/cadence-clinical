@@ -147,10 +147,8 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
 
     /// <summary>
     /// Revising a concept creates version 2 while version 1 resolves exactly as it was, with its mappings.
-    /// @req:PRD-MDR-002
     /// </summary>
     [Fact(DisplayName = "Concept_Revised_OldVersionStillResolvesUnchanged")]
-    [GxPRequirement("PRD-MDR-002")]
     public async Task ConceptRevisedOldVersionStillResolvesUnchanged()
     {
         fixture.SkipIfUnavailable();

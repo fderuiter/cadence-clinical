@@ -36,10 +36,8 @@ public class ConceptRegistryDomainTests
     /// <summary>
     /// Revising a concept adds a version and keeps the earlier one exactly as it was, so a fact that referenced
     /// version 1 keeps its meaning.
-    /// @req:PRD-MDR-002
     /// </summary>
     [Fact(DisplayName = "Concept_Revise_AddsAVersion_AndKeepsTheEarlierOneUnchanged")]
-    [Cadence.Testing.GxPRequirement("PRD-MDR-002")]
     public void ConceptReviseAddsAVersionAndKeepsTheEarlierOneUnchanged()
     {
         var concept = Concept.Define(ConceptId.New(), Tenant, ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept,
