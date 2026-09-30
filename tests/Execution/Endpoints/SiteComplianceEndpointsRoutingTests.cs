@@ -34,6 +34,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -537,6 +538,8 @@ public sealed class ExecutionProgramStartupTests : IDisposable
                     .BuildServiceProvider();
 
                 services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
+
+                services.RemoveAll<IDbContextOptionsConfiguration<ExecutionDbContext>>();
                 services.AddDbContext<ExecutionDbContext>((sp, options) =>
                 {
                     options.UseInMemoryDatabase(_databaseName);

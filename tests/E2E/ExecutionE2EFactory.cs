@@ -14,6 +14,7 @@ using Cadence.Testing.Security;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -122,6 +123,7 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
             if (_connectionString is not null)
             {
                 services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<ExecutionDbContext>>();
                 services.AddDbContext<ExecutionDbContext>((sp, options) =>
                 {
                     options.UseNpgsql(_connectionString);
@@ -138,6 +140,8 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
                     .BuildServiceProvider();
 
                 services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
+
+                services.RemoveAll<IDbContextOptionsConfiguration<ExecutionDbContext>>();
                 services.AddDbContext<ExecutionDbContext>((sp, options) =>
                 {
                     options.UseInMemoryDatabase(_inMemoryDbName);

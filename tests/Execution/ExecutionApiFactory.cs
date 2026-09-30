@@ -11,6 +11,7 @@ using Cadence.Testing.Security;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -74,6 +75,9 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
                 .BuildServiceProvider();
 
             services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
+            // AddDbContext composes every registered configuration action (EF Core 9+), so Program.cs's own
+            // (Npgsql plus its GxPAuditInterceptor) must go too, or each save runs two audit interceptors (#4922).
+            services.RemoveAll<IDbContextOptionsConfiguration<ExecutionDbContext>>();
             services.AddDbContext<ExecutionDbContext>((sp, options) =>
             {
                 options.UseInMemoryDatabase(_databaseName);

@@ -58,7 +58,8 @@ public sealed class ChangeReasonEncodingTests(ExecutionApiFactory factory) : ICl
         var response = await client.SendAsync(request, Ct);
 
         response.IsSuccessStatusCode.Should().BeTrue(await response.Content.ReadAsStringAsync(Ct));
-        (await ReasonsForAsync(caller.UserId, "ETMF_COMPLIANCE_UPDATE")).Should().ContainSingle().Which.Should().Be(Typed);
+        // One entry for the new row, labelled with the action and carrying the reason (#4922).
+        (await ReasonsForAsync(caller.UserId)).Should().ContainSingle().Which.Should().Be(Typed);
     }
 
     /// <summary>A subject state change, whose route reads the header itself, audits the typed reason.</summary>
