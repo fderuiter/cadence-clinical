@@ -2,7 +2,7 @@
 
 **Target Architecture:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)
 **Governing ADRs:** [ADR-2233](adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2428](adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
-**Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2), PRD-SYS-053
+**Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2)
 
 ---
 
@@ -195,9 +195,9 @@ public static class SubjectEndpoints
 ### Step 5: Unit & Integration Testing (`tests/`)
 
 - Test application workflows using `xunit.v3`, `FluentAssertions`, and `InMemoryRepository<T>`.
-- Every test validating a regulatory or functional requirement **must** declare:
-  1. XML doc comment with `/// @req:PRD-SYS-XXX`
-  2. `[GxPRequirement("PRD-SYS-xxx")]` custom attribute
+- A test that verifies a requirement declares its ID on the test method, with `[GxPRequirement("PRD-...")]`
+  or an `/// @req:` line; one form is enough. Tag only what the test's assertions prove, and follow the
+  rules in [TESTING.md](TESTING.md).
 
 ```csharp
 namespace Cadence.UnitTests;
@@ -209,16 +209,13 @@ using Cadence.Testing;
 
 public class SubjectRegistrationTests
 {
+    /// <summary>
+    /// Verifies that subject registration initializes the GxP audit trail at version 1.
+    /// </summary>
     [Fact]
-    [Trait("Category", "Unit")]
-    [GxPRequirement("PRD-SYS-053")]
+    [GxPRequirement("PRD-SYS-001")] // audit fields; see docs/TESTING.md before choosing an ID
     public async Task RegisterSubject_WithValidData_IncrementsVersionIndex()
     {
-        /// <summary>
-        /// Verifies that subject registration initializes the GxP audit trail at version 1.
-        /// @req:PRD-SYS-053
-        /// </summary>
-
         // Assertions ...
     }
 }
