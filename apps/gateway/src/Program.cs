@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.RateLimiting;
 
 using Cadence.Apps.Gateway;
+using Cadence.Apps.Gateway.Signatures;
 using Cadence.Security.Authentication;
 using Cadence.Telemetry;
 
@@ -9,8 +11,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Yarp.ReverseProxy.Configuration;
@@ -58,6 +62,28 @@ builder.Services.AddOptions<GatewaySigningOptions>()
         options => options.Secret is { Length: >= GatewayAuthenticationOptions.MinimumSecretLength },
         $"GATEWAY_SECRET must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters.")
     .ValidateOnStart();
+
+// E-signature step-up: signers re-enter their password, which is checked with Keycloak through a client
+// reserved for that purpose (direct access grants only), before a single-use X-Sig-Token is issued.
+builder.Services.AddOptions<SignatureCredentialOptions>()
+    .Configure(options =>
+    {
+        options.TokenEndpoint = SignatureCredentialOptions.ResolveTokenEndpoint(
+            builder.Configuration["OIDC_TOKEN_ENDPOINT"], oidcMetadataAddress, oidcAuthority);
+        options.ClientId = builder.Configuration["OIDC_SIGNATURE_CLIENT_ID"] is { Length: > 0 } clientId
+            ? clientId
+            : SignatureCredentialOptions.DefaultClientId;
+        options.ClientSecret = builder.Configuration["OIDC_SIGNATURE_CLIENT_SECRET"];
+    });
+builder.Services.AddHttpClient<ICredentialVerifier, KeycloakCredentialVerifier>(client => client.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.TryAddSingleton(TimeProvider.System);
+// A tighter per-signer limit on password re-checks, on top of the gateway-wide limit (AddGatewayRateLimiting).
+builder.Services.Configure<RateLimiterOptions>(options =>
+{
+    options.AddPolicy(SignatureTokenEndpoints.RateLimitPolicy, httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.User.FindFirst(CadenceClaimTypes.Subject)?.Value ?? string.Empty,
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = SignatureTokenEndpoints.AttemptsPerMinute, Window = TimeSpan.FromMinutes(1) }));
+});
 
 // Each service's address. Only in Development does a missing address fall back to the local port; anywhere
 // else the gateway refuses to start rather than forwarding to localhost, and an address that is not an
@@ -166,6 +192,7 @@ api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", gateway = "Ca
     .WithSummary("Returns gateway dispatch status.")
     .AllowAnonymous();
 
+app.MapSignatureTokenEndpoints();
 app.MapReverseProxy();
 
 await app.RunAsync();

@@ -62,7 +62,7 @@ Under 21 CFR Part 11 an electronic record's author and signer must be the authen
 - **Negative Impact / Technical Debt:**
   - A signed request can be replayed within the two-minute window, so the internal network must stay private.
   - The web client's demo mode (no token) can no longer call the API; it must sign in through Keycloak.
-  - E-signature step-up (`X-Sig-Token` issuance and server-side verification at approval) is not yet wired.
+  - E-signature step-up (`X-Sig-Token` issuance and server-side verification at approval) was not wired here; ADR-2259 adds it.
 - **Mitigation Strategy:** Rotate `GATEWAY_SECRET` through deployment secrets, never source. Track e-signature step-up and demo-mode retirement under #4761.
 
 ## 6. Implementation & Verification

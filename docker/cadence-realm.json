@@ -3,6 +3,11 @@
   "realm": "cadence",
   "enabled": true,
   "displayName": "${env.BRAND_NAME}",
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "waitIncrementSeconds": 60,
   "roles": {
     "realm": [
       {
@@ -62,6 +67,19 @@
       "publicClient": true,
       "redirectUris": ["http://localhost:3000/*"],
       "webOrigins": ["*"]
+    },
+    {
+      "clientId": "cadence-esignature",
+      "name": "Cadence e-signature re-authentication",
+      "description": "Used only by the gateway to re-check a signer's password before issuing an X-Sig-Token.",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [],
+      "webOrigins": []
     }
   ],
   "users": [

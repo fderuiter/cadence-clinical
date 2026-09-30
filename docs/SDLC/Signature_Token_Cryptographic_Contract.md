@@ -47,13 +47,25 @@ The `X-Sig-Token` is a JSON Web Token (JWT) signed with the **HS256** algorithm.
 }
 ```
 
+### Issuance
+
+The gateway issues tokens at `POST /api/v1/auth/signature-verification` to a caller already signed in with a Keycloak bearer token. The request carries `password`, optional `totp`, `action`, `semantic_action` and optional `batch_id` (and optionally `username`, which must be the caller's own). The gateway re-checks the password with a Keycloak direct-access grant on a client reserved for signing (`OIDC_SIGNATURE_CLIENT_ID`, default `cadence-esignature`), ends the session that grant opened, and answers `{ "sig_token", "expires_in": 60 }` with `Cache-Control: no-store`. Attempts are limited to five per signer per minute, in addition to the realm's brute-force lockout. Implementation: `apps/gateway/src/Signatures/`, `SigTokenIssuer` in `packages/security`; configuration in `apps/gateway/README.md`.
+
+The client then repeats the signature-gated request with the `X-Sig-Token` header. The gateway includes the header in the HMAC-signed identity it forwards, so it cannot be swapped between the gateway and the service.
+
+Signature-gated endpoints today:
+
+| Endpoint | `semantic_action` | `action` |
+| :------- | :---------------- | :------- |
+| `POST /api/v1/execution/forms/{id}/approve` (and the legacy `/api/v1/forms/{id}/approve`) | `execution.form.approve` | `/api/v1/execution/forms/{id}/approve` |
+
 ---
 
 ## 3. Cryptographic & Verification Contract
 
 Downstream microservices (via `GatewayAuthMiddleware` or specific verification components) MUST enforce the following validation pipeline upon receiving a signature-gated mutation.
 
-This verification is centralized via the `verify_and_consume_sig_token` helper in the shared library (`packages/security/sig_token_verifier.py`) which orchestrates the decryption, temporal, identity, and single-use validation steps. Downstream microservices MUST call this helper, while applying any additional domain-specific rules (such as local action gating in eConsent):
+This verification is centralized in `SigTokenVerifier.VerifyAndConsumeSigToken(token, userId, SigTokenBinding, secret)` in `packages/security` (`Cadence.Security.Authentication`). Endpoints apply it with `RequireElectronicSignature(semanticAction, resolveAction)`, which runs before the handler and answers `401` on any failure, so no write happens. Services add any domain-specific rules on top (such as local action gating in eConsent):
 
 1. **Header Presence:** Extract `X-Sig-Token` from the HTTP request headers. If absent, reject with `401 Unauthorized` and payload:
    ```json
@@ -82,9 +94,9 @@ This verification is centralized via the `verify_and_consume_sig_token` helper i
 
 ---
 
-## 5. Versioning & Backward Compatibility
+## 5. Versioning
 
-To prevent service disruptions during upgrades, the API gateway and middleware accept v3 tokens (containing `semantic_action` and `sig_ver`) as well as older v1/v2 tokens. When verifying older tokens without the `semantic_action` claim, the system automatically falls back to loose path-only matching, maintaining complete backward compatibility.
+Only v3 tokens (with `semantic_action` and `sig_ver: "v3"`) are issued and accepted. The .NET verifier rejects older v1/v2 tokens, tokens valid for longer than 60 seconds, and tokens carrying an auditor or inspector role. A token that fails any check is not consumed.
 
 ---
 

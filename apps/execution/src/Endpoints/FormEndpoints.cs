@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -24,6 +25,15 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static class FormEndpoints
 {
+    /// <summary>The semantic action a PI approval's e-signature token must carry.</summary>
+    public const string ApproveSemanticAction = "execution.form.approve";
+
+    /// <summary>
+    /// The concrete action a PI approval's e-signature token must carry: the canonical approval path of that
+    /// submission, whichever route alias the request came in on.
+    /// </summary>
+    public static string ApproveAction(string submissionId) => $"/api/v1/execution/forms/{submissionId}/approve";
+
     public static IEndpointRouteBuilder MapFormEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/execution/forms")
@@ -62,7 +72,8 @@ public static class FormEndpoints
             .Produces<FormSubmissionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status403Forbidden);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
 
         group.MapPost("/{id}/unlock", UnlockFormSubmissionAsync)
             .WithName("UnlockFormSubmission")
@@ -79,7 +90,8 @@ public static class FormEndpoints
         legacyGroup.MapGet("/{id}", GetFormSubmissionByIdAsync);
         legacyGroup.MapPut("/{id}", UpdateFormPayloadAsync);
         legacyGroup.MapPost("/{id}/complete", CompleteFormSubmissionAsync);
-        legacyGroup.MapPost("/{id}/approve", ApproveFormSubmissionAsync);
+        legacyGroup.MapPost("/{id}/approve", ApproveFormSubmissionAsync)
+            .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
         legacyGroup.MapPost("/{id}/unlock", UnlockFormSubmissionAsync);
 
         return app;
@@ -144,6 +156,9 @@ public static class FormEndpoints
         var result = await svc.ApproveAsync(id, request, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
+
+    private static string ApproveActionFor(HttpContext httpContext) =>
+        ApproveAction(httpContext.Request.RouteValues["id"]?.ToString() ?? string.Empty);
 
     public static async Task<IResult> UnlockFormSubmissionAsync(
         string id,

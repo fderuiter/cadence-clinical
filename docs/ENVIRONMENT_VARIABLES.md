@@ -41,7 +41,7 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 
 ## Gateway routing
 
-Read by `apps/gateway/src/Program.cs:79-95`. In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.
+Read by `apps/gateway/src/Program.cs:105-121`. In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.
 
 | Key | Default port |
 | --- | --- |
@@ -81,11 +81,14 @@ Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-24
 
 | Key | Read by | Default | Required |
 | --- | --- | --- | --- |
-| `GATEWAY_SECRET` | `packages/security/src/DependencyInjection/CadenceSecurityServiceCollectionExtensions.cs` (every service), `apps/gateway/src/Program.cs:55`, `packages/security/src/Authentication/SigTokenVerifier.cs:38` | none | yes, 32+ characters; services refuse to start without it |
-| `OIDC_AUTHORITY` | `apps/gateway/src/Program.cs:23` | none | yes (gateway) |
-| `OIDC_METADATA_ADDRESS` | `apps/gateway/src/Program.cs:27` | none | no |
-| `OIDC_AUDIENCE` | `apps/gateway/src/Program.cs:26` | none; validated when set | set it in production |
-| `OIDC_REQUIRE_HTTPS_METADATA` | `apps/gateway/src/Program.cs:38` | `true` | no |
+| `GATEWAY_SECRET` | `packages/security/src/DependencyInjection/CadenceSecurityServiceCollectionExtensions.cs` (every service), `apps/gateway/src/Program.cs:60`, `packages/security/src/Authentication/SigTokenVerifier.cs:130` | none | yes, 32+ characters; services refuse to start without it |
+| `OIDC_AUTHORITY` | `apps/gateway/src/Program.cs:28` | none | yes (gateway) |
+| `OIDC_METADATA_ADDRESS` | `apps/gateway/src/Program.cs:32` | none | no |
+| `OIDC_AUDIENCE` | `apps/gateway/src/Program.cs:31` | none; validated when set | set it in production |
+| `OIDC_REQUIRE_HTTPS_METADATA` | `apps/gateway/src/Program.cs:43` | `true` | no |
+| `OIDC_SIGNATURE_CLIENT_ID` | `apps/gateway/src/Program.cs:73` | `cadence-esignature` | no; Keycloak client with only direct access grants, used for e-signature re-authentication |
+| `OIDC_SIGNATURE_CLIENT_SECRET` | `apps/gateway/src/Program.cs:76` | none | only if that client is confidential |
+| `OIDC_TOKEN_ENDPOINT` | `apps/gateway/src/Program.cs:72` | `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY` | no |
 | `AUDIT_LOG_SECRET_KEY` | `packages/security/src/Audit/AuditSecretKey.cs` (the only resolver; used by `AuditDigestEngine`, both `AuditDigestCalculator`s and `AddCadenceSecurity`) | none | yes; signing or verifying the audit chain throws without it |
 | `GXP_SIGNER_ID` | `packages/compliance/src/GxPSigner.cs:18` | `cadence-validation-runner` | no |
 

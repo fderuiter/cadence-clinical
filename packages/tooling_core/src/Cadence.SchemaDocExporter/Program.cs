@@ -88,6 +88,10 @@ public static class Program
         }
     }
 
+    // Design-time factories have no fallback connection string (ADR-2260). Building the model never opens a
+    // connection, so a credential-free placeholder is enough.
+    private static readonly string[] DesignTimeArguments = ["--connection", "Host=localhost;Database=cadence_schema_export"];
+
     private static IEnumerable<Type> DesignTimeFactories(Assembly assembly) =>
         assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && t.GetInterfaces().Any(IsFactoryInterface))
@@ -100,7 +104,7 @@ public static class Program
     {
         object factory = Activator.CreateInstance(factoryType, nonPublic: true)!;
         var create = factoryType.GetInterfaces().Single(IsFactoryInterface).GetMethod(nameof(IDesignTimeDbContextFactory<DbContext>.CreateDbContext))!;
-        using var context = (DbContext)create.Invoke(factory, [Array.Empty<string>()])!;
+        using var context = (DbContext)create.Invoke(factory, [DesignTimeArguments])!;
 
         string contextName = context.GetType().Name;
         string module = (contextName.EndsWith("DbContext", StringComparison.Ordinal) ? contextName[..^"DbContext".Length] : contextName)
