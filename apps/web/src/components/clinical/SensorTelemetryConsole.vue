@@ -60,7 +60,9 @@
         <div class="metric-content">
           <span class="metric-label">Ingested Readings</span>
           <span class="metric-value">{{
-            metrics.total_readings_ingested.toLocaleString()
+            metrics.total_readings_ingested !== null && metrics.total_readings_ingested !== undefined
+              ? metrics.total_readings_ingested.toLocaleString()
+              : "0"
           }}</span>
           <span class="metric-sub"
             >{{ metrics.total_streams_ingested }} batches processed</span
@@ -319,6 +321,9 @@
 
     <!-- TAB 2: Automated Safety Alerts -->
     <div v-if="activeTab === 'alerts'" class="tab-panel" role="tabpanel">
+      <div v-if="domainErrors.alerts" class="error-banner alerts-warning-banner">
+        ⚠️ Failed to update safety alerts: {{ domainErrors.alerts }}
+      </div>
       <div class="card table-card">
         <div class="card-header">
           <h3 class="card-title">
@@ -531,6 +536,9 @@
           </button>
         </div>
         <div class="modal-body">
+          <div v-if="ackError" class="error-banner modal-error-banner">
+            {{ ackError }}
+          </div>
           <div class="alert-detail-box">
             <p>
               <strong>Subject:</strong>
@@ -608,6 +616,9 @@
           </button>
         </div>
         <div class="modal-body">
+          <div v-if="registerError" class="error-banner modal-error-banner">
+            {{ registerError }}
+          </div>
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label" for="dev-category"
@@ -738,6 +749,9 @@
           </button>
         </div>
         <div class="modal-body">
+          <div v-if="simulateError" class="error-banner modal-error-banner">
+            {{ simulateError }}
+          </div>
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label" for="sim-dev-type"
@@ -817,6 +831,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { interopService } from "../../api/interop";
+import { useToastStore } from "../../stores/toasts";
+import { describeApiError } from "../../utils/apiErrors";
 
 export interface DeviceEntity {
   device_id: string;
@@ -902,6 +918,23 @@ const dailySummaries = ref<DailySummaryEntity[]>([]);
 const safetyAlerts = ref<SafetyAlertEntity[]>([]);
 const selectedAlert = ref<SafetyAlertEntity | null>(null);
 const ackNotes = ref("");
+
+const fetchError = ref<string | null>(null);
+const domainErrors = ref<{
+  devices: string | null;
+  summaries: string | null;
+  alerts: string | null;
+  metrics: string | null;
+}>({
+  devices: null,
+  summaries: null,
+  alerts: null,
+  metrics: null,
+});
+
+const ackError = ref<string | null>(null);
+const registerError = ref<string | null>(null);
+const simulateError = ref<string | null>(null);
 
 const metrics = ref({
   total_streams_ingested: 14,
@@ -1024,6 +1057,9 @@ function formatDate(iso: string | null | undefined): string {
 
 async function refreshData() {
   isLoading.value = true;
+  fetchError.value = null;
+  const toastStore = useToastStore();
+
   try {
     const [devRes, sumRes, alertRes, metricRes] = await Promise.allSettled([
       interopService.listSensorDevices(props.studyId),
@@ -1032,51 +1068,107 @@ async function refreshData() {
       interopService.getSensorMetrics(props.studyId),
     ]);
 
-    if (devRes.status === "fulfilled" && devRes.value?.data?.devices) {
-      devices.value = devRes.value.data.devices;
+    let hasError = false;
+
+    if (devRes.status === "fulfilled") {
+      domainErrors.value.devices = null;
+      if (devRes.value?.data?.devices) {
+        devices.value = devRes.value.data.devices;
+      }
+    } else {
+      hasError = true;
+      const errMsg = describeApiError(devRes.reason);
+      domainErrors.value.devices = errMsg;
+      toastStore.apiError("Failed to refresh sensor devices", devRes.reason);
     }
-    if (sumRes.status === "fulfilled" && sumRes.value?.data?.summaries) {
-      dailySummaries.value = sumRes.value.data.summaries;
+
+    if (sumRes.status === "fulfilled") {
+      domainErrors.value.summaries = null;
+      if (sumRes.value?.data?.summaries) {
+        dailySummaries.value = sumRes.value.data.summaries;
+      }
+    } else {
+      hasError = true;
+      const errMsg = describeApiError(sumRes.reason);
+      domainErrors.value.summaries = errMsg;
+      toastStore.apiError("Failed to refresh daily summaries", sumRes.reason);
     }
-    if (alertRes.status === "fulfilled" && alertRes.value?.data?.alerts) {
-      safetyAlerts.value = alertRes.value.data.alerts;
+
+    if (alertRes.status === "fulfilled") {
+      domainErrors.value.alerts = null;
+      if (alertRes.value?.data?.alerts) {
+        safetyAlerts.value = alertRes.value.data.alerts;
+      }
+    } else {
+      hasError = true;
+      const errMsg = describeApiError(alertRes.reason);
+      domainErrors.value.alerts = errMsg;
+      toastStore.apiError("Failed to refresh safety alerts", alertRes.reason);
     }
-    if (metricRes.status === "fulfilled" && metricRes.value?.data?.metrics) {
-      metrics.value = metricRes.value.data.metrics;
+
+    if (metricRes.status === "fulfilled") {
+      domainErrors.value.metrics = null;
+      if (metricRes.value?.data?.metrics) {
+        metrics.value = { ...metrics.value, ...metricRes.value.data.metrics };
+      }
+    } else {
+      hasError = true;
+      const errMsg = describeApiError(metricRes.reason);
+      domainErrors.value.metrics = errMsg;
+      toastStore.apiError("Failed to refresh sensor metrics", metricRes.reason);
+    }
+
+    if (hasError) {
+      fetchError.value = "Failed to refresh some sensor telemetry data.";
     }
   } catch (err) {
     console.error("Error refreshing sensor telemetry data:", err);
+    fetchError.value = describeApiError(err);
+    toastStore.apiError("Failed to refresh sensor telemetry data", err);
   } finally {
     isLoading.value = false;
   }
 }
 
 function openRegisterDeviceModal() {
+  registerError.value = null;
   showRegisterModal.value = true;
 }
 
 function openSimulateIngestModal() {
+  simulateError.value = null;
   showSimulateModal.value = true;
 }
 
 function openAcknowledgeModal(alert: SafetyAlertEntity) {
   selectedAlert.value = alert;
   ackNotes.value = "";
+  ackError.value = null;
   showAckModal.value = true;
 }
 
 async function submitAcknowledgment() {
   if (!selectedAlert.value) return;
   isSubmitting.value = true;
+  ackError.value = null;
+  const toastStore = useToastStore();
+
   try {
     await interopService.acknowledgeSafetyAlert(selectedAlert.value.alert_id, {
       notes: ackNotes.value,
       audit_signature: `SIG-ACK-${Date.now()}`,
     });
+    toastStore.push({
+      tone: "success",
+      title: "Alert Acknowledged",
+      message: `Safety alert ${selectedAlert.value.alert_id} acknowledged successfully.`,
+    });
     showAckModal.value = false;
     await refreshData();
   } catch (err) {
     console.error("Error acknowledging safety alert:", err);
+    ackError.value = describeApiError(err);
+    toastStore.apiError("Failed to acknowledge safety alert", err);
   } finally {
     isSubmitting.value = false;
   }
@@ -1084,12 +1176,22 @@ async function submitAcknowledgment() {
 
 async function submitDeviceRegistration() {
   isSubmitting.value = true;
+  registerError.value = null;
+  const toastStore = useToastStore();
+
   try {
     await interopService.registerSensorDevice(registerForm.value);
+    toastStore.push({
+      tone: "success",
+      title: "Device Registered",
+      message: `Medical device ${registerForm.value.model_name} registered successfully.`,
+    });
     showRegisterModal.value = false;
     await refreshData();
   } catch (err) {
     console.error("Error registering device:", err);
+    registerError.value = describeApiError(err);
+    toastStore.apiError("Failed to register medical IoT device", err);
   } finally {
     isSubmitting.value = false;
   }
@@ -1097,6 +1199,9 @@ async function submitDeviceRegistration() {
 
 async function submitSimulatedIngestion() {
   isSubmitting.value = true;
+  simulateError.value = null;
+  const toastStore = useToastStore();
+
   try {
     const now = new Date();
     const readings = [];
@@ -1130,10 +1235,17 @@ async function submitSimulatedIngestion() {
       reason_for_change: "Interactive UI telemetry simulation ingestion",
     });
 
+    toastStore.push({
+      tone: "success",
+      title: "Telemetry Ingested",
+      message: "Biometric telemetry stream batch ingested successfully.",
+    });
     showSimulateModal.value = false;
     await refreshData();
   } catch (err) {
     console.error("Error ingesting simulated stream:", err);
+    simulateError.value = describeApiError(err);
+    toastStore.apiError("Failed to ingest biometric telemetry stream", err);
   } finally {
     isSubmitting.value = false;
   }
@@ -1709,5 +1821,10 @@ onMounted(() => {
   font-size: 11px;
   color: var(--text-muted);
   margin-left: 4px;
+}
+
+.modal-error-banner,
+.alerts-warning-banner {
+  margin-bottom: 14px;
 }
 </style>
