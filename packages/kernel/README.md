@@ -423,6 +423,26 @@ stays in place with `Masked` set and `Subject` null.
   with the subject's zoom path as its scope. Run it (`runProjector: true`) in one host per deployment.
 - A new event type needs a family in `KernelEventFamilies`; `EveryKernelEventTypeHasAFamily` fails otherwise.
 
+## Simulation (ADR-2480)
+
+`ISimulationEngine.SimulateAsync(tenant, new SimulationRequest(SimulationCandidate.StoredProtocolVersion(draft)))`
+compares a protocol version with the version it was forked from and returns a `SimulationResult`. It never writes
+(K-SIM-1).
+
+- `SimulationCandidate.UnsavedProtocolVersion(baseVersion, content)` compares content that is not saved anywhere with a
+  version whose content is frozen.
+- The result names its scope (the study), the pinned as-of, both versions with their content hashes, the engine
+  versions, an input hash and a result hash (K-SIM-3).
+- `StructuralDiff` lists the elements added, removed or changed. An element is any JSON object with a string `id`
+  (the USDM convention), and a changed element lists the JSON Pointers of its changed values.
+- The engine checks `simulation.run` at the study through `IAuthorizationProbe`. When the host's `INodeVisibility`
+  hides the study or either version, the diff is withheld in `Masked` and no content hash is returned (K-SIM-4).
+- Register `AddKernelSimulation()` (Application) and `AddKernelSimulationInputs()` (Persistence).
+- `SimulationBoundaryTests` keeps `Cadence.Kernel.Application.Simulation` away from the command sender, the unit of
+  work and persistence, and keeps its persistence reads from calling `SaveChanges`.
+- Schedule changes, projection changes, the validation delta, dependents and saving a result as a Proposal come
+  later, each when the function behind it exists (#4866).
+
 ## Migrations
 
 ```bash

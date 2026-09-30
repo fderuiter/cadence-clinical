@@ -432,7 +432,8 @@ ProtocolVersion contains:
   summary of changes, **impacted elements** and a TransitionPolicy (§7.5). It is a value carried by the
   forked version it introduces and freezes with that version (ADR-2452); the first version has none.
 - **K-PROT-1** Every ProtocolVersion element has a stable element ID across versions, so a structural
-  diff between versions is computable.
+  diff between versions is computable. An element is a JSON object with a non-empty string `id` (the USDM
+  convention), and ids are unique within a version (ADR-2480 §4.6).
 - **K-PROT-2** **Amendment impact is computable**: given two ProtocolVersions, the kernel lists every
   downstream object that references a changed element (CollectionSpecs, mapping specifications, rules,
   RTSM configuration, monitoring plan, consent forms, TMF expected documents, open Proposals). An amendment
@@ -990,6 +991,11 @@ Simulate(scope, candidate, as_of, actor) → SimulationResult{ as_of, candidate,
   are masked, so a simulation cannot reveal blinded data.
 - **K-SIM-5** A saved result is an Artifact referenced by a Proposal. Approving the Proposal does not apply it:
   the real commands run through the pipeline against current state.
+
+A result has only the sections whose pure functions exist; its `engine_versions` name them. The structural diff
+of a protocol candidate reports each element once, by id, with the JSON Pointers of its changed values. When the
+actor may not see the study or a version, the diff is withheld as a masked part and the hashes are computed from the
+mask, not the content (ADR-2480 §4.6).
 
 Running a simulation is a read (`simulation.run` plus the `Read` capabilities for what it reads) and is not
 written to the tenant audit chain; saving it as a Proposal is an audited command. Study data is never branched.
