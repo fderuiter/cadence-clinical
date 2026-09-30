@@ -36,4 +36,10 @@ public enum ArtifactKind
 
     /// <summary>A rendering of a protocol version, such as its PDF.</summary>
     ProtocolRendering,
+
+    /// <summary>A record of completed training or a training certificate: evidence for a qualification (K-AUTH-5).</summary>
+    TrainingRecord,
+
+    /// <summary>A professional credential, such as a licence or a registration: evidence for a qualification (K-AUTH-5).</summary>
+    Credential,
 }

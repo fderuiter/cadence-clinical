@@ -49,6 +49,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K027 | Grant-backed node visibility | [ADR-2457](2026-09-30-grant-backed-node-visibility.md) |
 | K028 | Mapping specifications as governed concept-to-variable maps | [ADR-2463](2026-09-30-mapping-specifications-as-governed-concept-to-variable-maps.md) |
 | K029 | IdentityVault | [ADR-2458](2026-09-30-identity-vault.md) |
+| K031 | Qualifications gate capabilities | [ADR-2459](2026-09-30-qualifications-gate-capabilities.md) |
 | K032 | Visit timing, anchored visits and cycles on the expected schedule | [ADR-2507](2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md) |
 
 ## Domain-Based Decisions Log
@@ -73,6 +74,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2456: Effectivity and Study-Site Activation](2026-09-30-effectivity-and-study-site-activation.md) (2026-09-30)
 - [ADR-2457: Grant-Backed Node Visibility](2026-09-30-grant-backed-node-visibility.md) (2026-09-30)
 - [ADR-2458: The IdentityVault](2026-09-30-identity-vault.md) (2026-09-30)
+- [ADR-2459: Qualifications Gate Capabilities](2026-09-30-qualifications-gate-capabilities.md) (2026-09-30)
 - [ADR-2460: Standards Registry and Metadata Registry as Governed, Tenant-Scoped Reference Data](2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) (2026-09-30)
 - [ADR-2461: Rule Expression Language, Rule-Pack Format and the IRuleEvaluator Port](2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md) (2026-09-30)
 - [ADR-2462: Validation Findings Derived from Immutable Runs and Attested Decisions](2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md) (2026-09-30)

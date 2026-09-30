@@ -120,6 +120,11 @@ the moment any grant above it ends. Revoking a grant supersedes its validity row
 past decisions stay explainable (ADR-2455). What a reader may **see** follows the same grants: what they cover,
 the study and organization above them, and participants and sites through their study sites. Everything else comes
 back masked (ADR-2457).
+A **Qualification** is evidence about an actor (training, protocol training on one protocol version, a credential
+or a certificate) with a code, a bitemporal validity and the training record or credential artifact version that
+proves it. A **qualification requirement** says a capability within a scope needs a current qualification of a code,
+and of a protocol version when it names one. The evaluator applies every requirement in effect over the resource
+after a grant permits, and a denial names what to obtain, or what to renew and when it expired (ADR-2459).
 A **work queue** is a versioned definition keyed by one capability, never a role name. A person's queue holds
 the items a registered source reports as due that the evaluator permits them to act on now, so it follows their
 grants and delegations. Read without a scope, it is the portfolio queue across the tenant's studies (ADR-2486).
