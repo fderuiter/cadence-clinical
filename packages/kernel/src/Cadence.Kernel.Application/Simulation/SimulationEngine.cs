@@ -11,6 +11,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Time;
@@ -80,6 +81,9 @@ public sealed class SimulationEngine(
 
     /// <summary>The section the dependents are reported in, and masked as.</summary>
     public const string DependentsPart = "dependents";
+
+    /// <summary>How many design problems an invalid-content error lists.</summary>
+    private const int MaxReportedProblems = 10;
 
     /// <summary>The engine version recorded when a result carries dependents.</summary>
     public static readonly EngineVersion DependentsEngine = new("lineage.dependents", "1");
@@ -203,18 +207,17 @@ public sealed class SimulationEngine(
             return SimulationErrors.BaseNotFrozen;
         }
 
-        string contentHash;
-        try
+        // Unsaved content is held to the same rule as a stored draft: it must read as a protocol design (ADR-2472).
+        var read = ProtocolDesignDocument.Read(request.Content!);
+        if (!read.IsValid)
         {
-            contentHash = ContentHash.Compute(request.Content!);
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            return SimulationErrors.ContentInvalid;
+            var more = read.Problems.Count > MaxReportedProblems ? $" (and {read.Problems.Count - MaxReportedProblems} more)" : string.Empty;
+            return SimulationErrors.ContentInvalid.WithMessage(
+                $"{SimulationErrors.ContentInvalid.Message} {string.Join(" ", read.Problems.Take(MaxReportedProblems))}{more}");
         }
 
         return CommandResult<(Candidate, ProtocolVersionSnapshot?)>.Success(
-            (new Candidate(null, baseVersion.StudyId, request.Content!, contentHash, 0), baseVersion));
+            (new Candidate(null, baseVersion.StudyId, request.Content!, ContentHash.Compute(request.Content!), 0), baseVersion));
     }
 
     /// <summary>What the result depends on (K-SIM-3). A masked input is represented by its mask, never its hash.</summary>

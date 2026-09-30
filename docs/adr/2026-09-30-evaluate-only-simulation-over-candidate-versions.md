@@ -165,7 +165,8 @@ details:
 
 - **Candidates.** A stored protocol version is compared with the version it was forked from; a study's first version
   has no base, so every element is added. Unsaved content is compared with a named base whose content is frozen (in
-  review or later), so the comparison can be repeated.
+  review or later), so the comparison can be repeated. Unsaved content must read as a protocol design (ADR-2472),
+  the rule a stored draft already meets, so a simulation never evaluates a protocol that could not be saved.
 - **Scope.** The scope of a protocol candidate is its study. `simulation.run` is checked there through
   `IAuthorizationProbe` (ADR-2483), the same path as `CanI`.
 - **Element identity (K-PROT-1).** An element is any JSON object with a non-empty string `id`, the CDISC USDM
@@ -189,8 +190,8 @@ details:
   stored candidate is excluded from the walk, as amendment impact excludes the amended fork, so the two report the
   same objects. Until protocol elements are lineage nodes (#4808) the changed object is the base version as a whole.
   Masked objects are counted and masked by the lineage read; a hidden version withholds the section entirely.
-- **Errors.** Unknown versions, a draft base, content that is not a JSON object and repeated element ids are
-  `K.Simulation.*` errors. A denial is `K.Authorization.Denied` with the evaluator's explanation.
+- **Errors.** Unknown versions, a draft base, unsaved content that is not a protocol design (the error names its
+  design problems) and repeated element ids are `K.Simulation.*` errors. A denial is `K.Authorization.Denied` with the evaluator's explanation.
 
 ## 5. Consequences & Trade-offs
 
