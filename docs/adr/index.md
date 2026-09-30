@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K030 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K031 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -49,11 +49,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K027 | Grant-backed node visibility | [ADR-2457](2026-09-30-grant-backed-node-visibility.md) |
 | K028 | Mapping specifications as governed concept-to-variable maps | [ADR-2463](2026-09-30-mapping-specifications-as-governed-concept-to-variable-maps.md) |
 | K029 | IdentityVault | [ADR-2458](2026-09-30-identity-vault.md) |
-| K030 | Qualifications gate capabilities | [ADR-2459](2026-09-30-qualifications-gate-capabilities.md) |
+| K031 | Qualifications gate capabilities | [ADR-2459](2026-09-30-qualifications-gate-capabilities.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K030)
+### 0. Clinical Kernel (K001–K031)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)

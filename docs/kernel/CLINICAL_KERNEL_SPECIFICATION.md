@@ -826,7 +826,7 @@ in `provenance_activities.authorization`. Separation of duties (step 4) and the 
 conditions of step 3 are still to come. Work-queue definitions and the queue read
 (K-AUTH-8) are implemented (#4849), with protocol versions in review as the first item source.
 
-*Qualifications (#4781, ADR-2459, K030):* `Qualification` (bitemporal `QualificationPeriod` validity, a
+*Qualifications (#4781, ADR-2459, K031):* `Qualification` (bitemporal `QualificationPeriod` validity, a
 `TrainingRecord` or `Credential` artifact version as evidence, a protocol version for protocol training) and
 `QualificationRequirement` (a capability, a qualification code, optionally a protocol version, a scope and bitemporal
 validity), changed by `RecordQualification`, `RevokeQualification`, `DefineQualificationRequirement` and
@@ -1235,7 +1235,7 @@ kernel, is merged into another, or is retired.
 | K027 | Grant-backed visibility | A reader sees what its grants in effect cover and the scope path above them; participants and sites through their study sites; reference data to any grant holder | ADR-2457 |
 | K028 | Mapping specifications | Governed library items pinned to one standard version, CT versions and Concept versions; K-STD-1 checked at protocol submission, gaps accepted as findings; engine behind `IMappingEngine` | ADR-2463 |
 | K029 | IdentityVault | Direct identifiers sealed per record (AES-256-GCM data keys wrapped by a per-tenant key) in the `identity_vault` schema, reached only through its functions; record, reveal, erase and cross-study link are audited kernel commands; residency is a tenant property | ADR-2458 |
-| K030 | Qualifications | Actor prerequisites are bitemporal Qualifications with artifact evidence; QualificationRequirements name the qualification a capability needs within a scope; the evaluator denies naming what to obtain or renew (K-AUTH-5, K-AUTH-6) | ADR-2459 |
+| K031 | Qualifications | Actor prerequisites are bitemporal Qualifications with artifact evidence; QualificationRequirements name the qualification a capability needs within a scope; the evaluator denies naming what to obtain or renew (K-AUTH-5, K-AUTH-6) | ADR-2459 |
 
 ---
 
