@@ -63,25 +63,35 @@
             : "Type a study code to open a study."
         }}
       </p>
+      <p
+        v-if="kernelNote"
+        id="canvas-palette-kernel-note"
+        class="palette-footnote"
+        role="status"
+      >
+        {{ kernelNote }}
+      </p>
       <p class="palette-footnote">
-        Actions and search across every study object arrive once a service
-        serves the kernel's command catalogue (#4847) and search (#4848).
+        Studies are found by code or title among those the kernel lets you see.
+        A participant's commands are under Act in the inspector.
       </p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap";
+import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
 import type { SubjectSummary } from "../../api/executionApi";
 import type { PaletteTarget } from "../../canvas/palette";
 
 /**
  * The Clinical Canvas ⌘K palette (docs/ux/CLINICAL_CANVAS.md §2.5): navigation to stages, sections and the
- * participants the canvas has loaded, and opening a study by code. It offers no action a service cannot run,
- * so it lists no commands until the kernel serves its command catalogue.
+ * participants the canvas has loaded, studies found by kernel search (ADR-2484, ADR-2540), and opening a study by
+ * code. Kernel search leaves out what the reader may not see. The palette offers no action a service cannot run;
+ * a participant's commands are under Act in the inspector.
  */
 interface PaletteItem {
   key: string;
@@ -109,6 +119,59 @@ const active = ref(0);
 // Execution accepts any non-blank study code up to 255 characters, compared exactly.
 const MAX_STUDY_CODE = 255;
 const MAX_RESULTS = 12;
+const MAX_KERNEL_HITS = 5;
+const MIN_SEARCH_LENGTH = 2;
+const SEARCH_DELAY_MS = 250;
+
+const kernelHits = ref<KernelSearchHit[]>([]);
+const kernelNote = ref("");
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+let latestSearch = 0;
+
+async function searchKernel(text: string) {
+  const request = ++latestSearch;
+  try {
+    const hits = await kernelApi.search({
+      text,
+      kinds: ["study"],
+      limit: MAX_KERNEL_HITS,
+    });
+    if (request !== latestSearch) return;
+    kernelHits.value = hits;
+    kernelNote.value = "";
+  } catch (e) {
+    if (request !== latestSearch) return;
+    kernelHits.value = [];
+    kernelNote.value = `Studies can't be searched right now: ${e instanceof Error ? e.message : String(e)}`;
+  }
+}
+
+watch(query, (value) => {
+  clearTimeout(searchTimer);
+  latestSearch++;
+  const text = value.trim();
+  kernelHits.value = [];
+  if (text.length < MIN_SEARCH_LENGTH || text.length > MAX_STUDY_CODE) {
+    kernelNote.value = "";
+    return;
+  }
+  searchTimer = setTimeout(() => searchKernel(text), SEARCH_DELAY_MS);
+});
+
+onBeforeUnmount(() => clearTimeout(searchTimer));
+
+// A study hit opens the study it names by its code; one without a code has nowhere to open.
+const studyHits = computed<PaletteItem[]>(() =>
+  kernelHits.value
+    .filter((hit) => hit.code && hit.code !== props.studyCode)
+    .map((hit) => ({
+      key: `kernel:${hit.ref}`,
+      group: "Study",
+      label: hit.code as string,
+      detail: hit.title,
+      target: { studyCode: hit.code as string },
+    }))
+);
 
 const items = computed<PaletteItem[]>(() => {
   const study = props.studyCode;
@@ -171,8 +234,13 @@ const results = computed<PaletteItem[]>(() => {
           .includes(needle)
       )
     : items.value;
-  const shown = matches.slice(0, MAX_RESULTS);
-  if (text && text.length <= MAX_STUDY_CODE && text !== props.studyCode) {
+  const shown = [...matches.slice(0, MAX_RESULTS), ...studyHits.value];
+  if (
+    text &&
+    text.length <= MAX_STUDY_CODE &&
+    text !== props.studyCode &&
+    !studyHits.value.some((item) => item.target.studyCode === text)
+  ) {
     shown.push({
       key: `open:${text}`,
       group: "Open study",

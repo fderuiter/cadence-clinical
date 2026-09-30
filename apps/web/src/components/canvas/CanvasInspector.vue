@@ -28,29 +28,68 @@
         <button
           id="verb-details"
           type="button"
-          class="verb verb-current"
-          aria-pressed="true"
+          class="verb"
+          :class="{ 'verb-current': currentVerb === 'details' }"
+          :aria-pressed="currentVerb === 'details'"
+          @click="choose('details')"
         >
           Details
         </button>
-        <button
-          v-for="verb in UNAVAILABLE_VERBS"
-          :id="`verb-${verb.id}`"
-          :key="verb.id"
-          type="button"
-          class="verb"
-          aria-disabled="true"
-          :aria-describedby="shownVerb === verb.id ? 'verb-note' : undefined"
-          @click="shownVerb = verb.id"
-        >
-          {{ verb.label }}
-        </button>
+        <template v-for="verb in verbs" :key="verb.id">
+          <button
+            v-if="verb.live"
+            :id="`verb-${verb.id}`"
+            type="button"
+            class="verb"
+            :class="{ 'verb-current': currentVerb === verb.id }"
+            :aria-pressed="currentVerb === verb.id"
+            @click="choose(verb.id)"
+          >
+            {{ verb.label }}
+          </button>
+          <button
+            v-else
+            :id="`verb-${verb.id}`"
+            type="button"
+            class="verb"
+            aria-disabled="true"
+            :aria-describedby="shownVerb === verb.id ? 'verb-note' : undefined"
+            @click="shownVerb = verb.id"
+          >
+            {{ verb.label }}
+          </button>
+        </template>
       </div>
       <p v-if="shownVerbNote" id="verb-note" class="verb-note" role="status">
         {{ shownVerbNote }}
       </p>
 
-      <template v-if="observation">
+      <KernelActPanel
+        v-if="currentVerb === 'act' && kernelRef"
+        :node-ref="kernelRef"
+        @explain="explainCommand"
+      />
+
+      <section
+        v-else-if="currentVerb === 'explain' && kernelRef"
+        id="kernel-explain"
+        class="sdv"
+        aria-labelledby="kernel-explain-title"
+      >
+        <h3 id="kernel-explain-title">
+          {{ explained ? `Why: ${explained.command}` : "Explain" }}
+        </h3>
+        <KernelExplanation
+          v-if="explained"
+          :explanation="explained.decision.explanation"
+        />
+        <p v-else id="kernel-explain-empty" class="inspector-empty">
+          Choose Explain beside a command under Act to see the kernel's reasons
+          for its decision.
+        </p>
+      </section>
+
+      <template v-else-if="observation">
         <dl class="details">
           <dt>Result</dt>
           <dd id="inspector-result" class="numeric">
@@ -245,12 +284,17 @@ import type {
 } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
+import KernelActPanel from "./KernelActPanel.vue";
+import KernelExplanation from "./KernelExplanation.vue";
+import type { KernelCommand } from "../../api/kernelApi";
+import { parseNodeRef } from "../../canvas/nodeRef";
 
 /**
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): the selected object's kind,
- * title and node reference, its verbs and its details. Trace, Impact, Explain, Simulate and Act are shown
- * disabled, each saying what it waits on, until the kernel serves them; nothing here is computed in the
- * browser (§6.1).
+ * title and node reference, its verbs and its details. Act and Explain read the kernel's command catalogue and its
+ * explanations for a selected participant (ADR-2540); Trace, Impact and Simulate, and Act and Explain on an
+ * observation (which has no kernel reference yet), are shown disabled, each saying what it waits on. Nothing here is
+ * computed in the browser (§6.1).
  */
 const props = defineProps<{
   studyCode: string;
@@ -280,38 +324,73 @@ const props = defineProps<{
   flagSdv?: (observation: Observation, reason: string) => Promise<boolean>;
 }>();
 
-const UNAVAILABLE_VERBS = [
+const NO_KERNEL_REF =
+  "an observation has no kernel reference yet, so the kernel can't answer for it.";
+
+/** The selection's kernel reference, when the kernel can answer for it: a participant, not an observation. */
+const kernelRef = computed(() =>
+  !props.observation && props.participant && parseNodeRef(props.nodeRef)
+    ? props.nodeRef
+    : ""
+);
+
+interface Verb {
+  id: "trace" | "impact" | "explain" | "simulate" | "act";
+  label: string;
+  live: boolean;
+  note: string;
+}
+
+const verbs = computed<Verb[]>(() => [
   {
     id: "trace",
     label: "Trace",
-    note: "Trace needs the kernel's lineage read API (#4840), which no service serves yet.",
+    live: false,
+    note: "Trace needs the kernel's lineage over the API (#4840), which the kernel host doesn't serve yet.",
   },
   {
     id: "impact",
     label: "Impact",
-    note: "Impact needs the kernel's dependents query over the lineage graph (#4841), which no service serves yet.",
+    live: false,
+    note: "Impact needs the kernel's dependents query over the API (#4841), which the kernel host doesn't serve yet.",
   },
   {
     id: "explain",
     label: "Explain",
-    note: "Explain renders the kernel's explanations (ADR-2482, #4842), which no service serves over the API yet.",
+    live: Boolean(kernelRef.value),
+    note: `Explain shows the kernel's reasons (ADR-2482), but ${NO_KERNEL_REF}`,
   },
   {
     id: "simulate",
     label: "Simulate",
-    note: "Simulate needs the evaluate-only simulation engine (ADR-2480, #4866), which isn't built yet.",
+    live: false,
+    note: "Simulate needs the evaluate-only simulation engine over the API (ADR-2480, #4866), which the kernel host doesn't serve yet.",
   },
   {
     id: "act",
     label: "Act",
-    note: "Act offers the commands you may run from the kernel's command catalogue (ADR-2483, #4847), which no service serves over the API yet.",
+    live: Boolean(kernelRef.value),
+    note: `Act offers the kernel's commands with your dry-run decisions (ADR-2483), but ${NO_KERNEL_REF}`,
   },
-] as const;
+]);
 
+type VerbId = "details" | "act" | "explain";
+const currentVerb = ref<VerbId>("details");
+const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
 const shownVerbNote = computed(
-  () => UNAVAILABLE_VERBS.find((v) => v.id === shownVerb.value)?.note ?? ""
+  () => verbs.value.find((v) => !v.live && v.id === shownVerb.value)?.note ?? ""
 );
+
+function choose(verb: VerbId) {
+  currentVerb.value = verb;
+  shownVerb.value = null;
+}
+
+function explainCommand(command: KernelCommand) {
+  explained.value = command;
+  choose("explain");
+}
 
 const flagReason = ref("");
 const sdvBusy = ref(false);
@@ -331,6 +410,8 @@ watch(
   () => [props.nodeRef, props.observation?.id],
   () => {
     shownVerb.value = null;
+    currentVerb.value = "details";
+    explained.value = null;
     flagReason.value = "";
     queryText.value = "";
   }
