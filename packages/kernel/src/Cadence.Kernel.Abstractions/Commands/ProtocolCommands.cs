@@ -104,7 +104,10 @@ public static class ProtocolErrors
         new("K.Protocol.ContentRequired", 422, "The protocol content is required.");
 
     public static readonly KernelError ContentInvalid =
-        new("K.Protocol.ContentInvalid", 422, "The protocol content must be a JSON object.");
+        new("K.Protocol.ContentInvalid", 422, "The protocol content must be a protocol design document (ADR-2472).");
+
+    public static readonly KernelError ReferenceUnknown =
+        new("K.Protocol.ReferenceUnknown", 422, "The protocol design refers to a concept version, code-system version or artifact the tenant does not have.");
 
     public static readonly KernelError StudyUnknown =
         new("K.Protocol.StudyUnknown", 404, "The study does not exist.");

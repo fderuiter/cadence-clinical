@@ -8,8 +8,10 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Persistence.Protocol;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Trust;
 using Cadence.Testing;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
@@ -51,7 +53,17 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
         var ct = TestContext.Current.CancellationToken;
         var (tenant, study) = await _scenario.NewStudyAsync(ct);
         var id = ProtocolVersionId.New();
-        const string revised = """{ "study": { "arms": ["A", "B", "C"], "name": "CARDIO-1" } }""";
+        const string revised = """
+            {
+              "schemaVersion": 1,
+              "title": "CARDIO-1",
+              "arms": [
+                { "id": "arm.A", "name": "Active", "type": "Experimental", "interventionIds": [] },
+                { "id": "arm.B", "name": "Placebo", "type": "PlaceboComparator", "interventionIds": [] },
+                { "id": "arm.C", "name": "Cohort C", "type": "Experimental", "interventionIds": [] }
+              ]
+            }
+            """;
 
         var draft = await _scenario.CreateDraftAsync(tenant, study, id, ct);
         await _scenario.OkAsync(new ReviseProtocolDraft(tenant, id, revised, null, KernelProtocolScenario.Key(), "Add arm C"), ct);
@@ -94,7 +106,7 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
         var reviewed = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Reviewed, KernelProtocolScenario.Target(first)), ct);
 
         await _scenario.OkAsync(new ReturnProtocolVersionToDraft(tenant, id, KernelProtocolScenario.Key(), "Changes requested"), ct);
-        await _scenario.OkAsync(new ReviseProtocolDraft(tenant, id, """{"study":{"name":"CARDIO-1b"}}""", null, KernelProtocolScenario.Key(), "Rename"), ct);
+        await _scenario.OkAsync(new ReviseProtocolDraft(tenant, id, ProtocolDesignDocument.Write(ProtocolDesignSamples.MinimalDesign() with { Title = "CARDIO-1b" }), null, KernelProtocolScenario.Key(), "Rename"), ct);
         var second = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Resubmit"), ct);
         second.ContentHash.Should().NotBe(first.ContentHash);
 

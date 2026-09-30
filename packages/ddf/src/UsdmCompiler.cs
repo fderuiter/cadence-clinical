@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-using Cadence.Kernel.Domain.Entities;
 using Cadence.Templating;
 
 namespace Cadence.Ddf;
@@ -30,15 +29,6 @@ public static class UsdmCompiler
             [OdmTemplateKey] = "odm_template.xml.liquid",
             [OpenRosaTemplateKey] = "openrosa_template.xml.liquid",
         });
-
-    /// <summary>
-    /// Compiles an immutable ProtocolVersion snapshot entity into a complete DDF compilation artifact.
-    /// </summary>
-    public static DDFCompilationResult Compile(ProtocolVersion protocolVersion, CompileOptions? options = null, ITemplateRenderer? templateRenderer = null)
-    {
-        ArgumentNullException.ThrowIfNull(protocolVersion);
-        return CompileUsdm(protocolVersion.Content, protocolVersion.StudyId.ToString(), $"v{protocolVersion.Number}", options, templateRenderer);
-    }
 
     /// <summary>
     /// Compiles raw CDISC USDM v3.0/v4.0 JSON into DDF Intermediate Representation and runtime schemas.
