@@ -7,6 +7,7 @@ import { kernelApi } from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 import CanvasInspector from "../../src/components/canvas/CanvasInspector.vue";
+import CanvasPalette from "../../src/components/canvas/CanvasPalette.vue";
 
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
@@ -17,7 +18,7 @@ vi.mock("../../src/api/executionApi", () => ({
 }));
 
 vi.mock("../../src/api/kernelApi", () => ({
-  kernelApi: { getCommands: vi.fn() },
+  kernelApi: { getCommands: vi.fn(), search: vi.fn() },
 }));
 
 const ID = "0192f3c4-5e6a-7b8c-9d0e-000000000001";
@@ -284,5 +285,116 @@ describe("CanvasInspector on an observation", () => {
     }
     expect(kernelApi.getCommands).not.toHaveBeenCalled();
     wrapper.unmount();
+  });
+});
+
+describe("⌘K palette kernel search (ADR-2484)", () => {
+  let wrapper;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(kernelApi.search).mockReset();
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+    vi.useRealTimers();
+  });
+
+  function mountPalette() {
+    wrapper = mount(CanvasPalette, {
+      props: { studyCode: "CAD-101", participants: [] },
+      attachTo: document.body,
+    });
+  }
+
+  async function type(text) {
+    await wrapper.find("#canvas-palette-input").setValue(text);
+    await vi.advanceTimersByTimeAsync(300);
+    await flushPromises();
+  }
+
+  it("finds studies the kernel lets the reader see and opens one by its code", async () => {
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: "study:0192f3c4-5e6a-7b8c-9d0e-00000000000b@2",
+        kind: "study",
+        title: "Oncology 401",
+        code: "ONC-401",
+        detail: null,
+        exact_code: false,
+        rank: 0.8,
+      },
+    ]);
+    mountPalette();
+
+    await type("onc");
+
+    expect(kernelApi.search).toHaveBeenCalledTimes(1);
+    expect(kernelApi.search).toHaveBeenCalledWith({
+      text: "onc",
+      kinds: ["study"],
+      limit: 5,
+    });
+    const options = wrapper.findAll("#canvas-palette-list [role=option]");
+    const study = options.find((o) => o.text().includes("Oncology 401"));
+    expect(study.text()).toContain("ONC-401");
+    await study.trigger("click");
+    expect(wrapper.emitted("go")).toEqual([[{ studyCode: "ONC-401" }]]);
+  });
+
+  it("offers the kernel's study rather than a second 'Open study' row for the same code", async () => {
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: "study:0192f3c4-5e6a-7b8c-9d0e-00000000000b@2",
+        kind: "study",
+        title: "Oncology 401",
+        code: "ONC-401",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+    mountPalette();
+
+    await type("ONC-401");
+
+    const labels = wrapper
+      .findAll("#canvas-palette-list [role=option]")
+      .map((o) => o.find(".palette-group").text());
+    expect(labels.filter((g) => g === "Open study")).toHaveLength(0);
+    expect(labels).toContain("Study");
+  });
+
+  it("waits for typing to pause and skips one-character queries", async () => {
+    vi.mocked(kernelApi.search).mockResolvedValue([]);
+    mountPalette();
+
+    await wrapper.find("#canvas-palette-input").setValue("o");
+    await wrapper.find("#canvas-palette-input").setValue("on");
+    await wrapper.find("#canvas-palette-input").setValue("onc");
+    await vi.advanceTimersByTimeAsync(300);
+    await flushPromises();
+    await type("x");
+
+    expect(kernelApi.search).toHaveBeenCalledTimes(1);
+    expect(kernelApi.search.mock.calls[0][0].text).toBe("onc");
+  });
+
+  it("says when studies can't be searched, and still offers opening by code", async () => {
+    vi.mocked(kernelApi.search).mockRejectedValue(
+      new ApiError("Your sign-in's tenant is not an active kernel tenant.", 403)
+    );
+    mountPalette();
+
+    await type("onc-401");
+
+    expect(wrapper.find("#canvas-palette-kernel-note").text()).toBe(
+      "Studies can't be searched right now: Your sign-in's tenant is not an active kernel tenant."
+    );
+    const groups = wrapper
+      .findAll("#canvas-palette-list [role=option]")
+      .map((o) => o.find(".palette-group").text());
+    expect(groups).toContain("Open study");
   });
 });

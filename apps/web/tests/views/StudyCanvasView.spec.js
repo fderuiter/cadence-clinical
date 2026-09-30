@@ -9,6 +9,10 @@ import { router as appRouter } from "../../src/router";
 import App from "../../src/App.vue";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
+vi.mock("../../src/api/kernelApi", () => ({
+  kernelApi: { search: vi.fn(async () => []), getCommands: vi.fn() },
+}));
+
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
