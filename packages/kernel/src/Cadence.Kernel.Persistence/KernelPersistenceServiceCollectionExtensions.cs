@@ -89,6 +89,8 @@ public static class KernelPersistenceServiceCollectionExtensions
         var options = new KernelBackgroundOptions();
         configure?.Invoke(options);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.RelayBatchSize);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.ActivityBatchSize);
+        ArgumentOutOfRangeException.ThrowIfLessThan(options.ActivityLookBack, TimeSpan.Zero);
 
         services.AddSingleton(options);
         services.TryAddSingleton<KernelOutboxRelay>();

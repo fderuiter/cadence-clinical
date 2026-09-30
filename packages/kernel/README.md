@@ -370,6 +370,19 @@ var dossier = await lineage.DossierAsync(tenant, reader, node);
 - Objects the reader may not see (the host's `INodeVisibility`) come back masked: no `Ref`, a `masked:n` handle and a
   `MaskReason`. They are never dropped.
 
+## Activity stream (ADR-2485)
+
+`IActivityStream.ReadAsync(tenant, new ActivityQuery(Scope: NodeRef.For(study), Families: [EventFamily.Trust]))`
+returns an `ActivityPage` of `ActivityEntry`s, newest first, with a cursor (`Next`) to pass as `Before`. Each entry
+names its event type, family, actor, time and subject NodeRef. When the reader may not see the subject, the entry
+stays in place with `Masked` set and `Subject` null.
+
+- Register `AddKernelActivityStream()` (Application), `AddKernelActivityProjection()` (Persistence) and an
+  `INodeVisibility`.
+- The projector copies outbox envelopes into `kernel.activity_entries` every `KernelBackgroundOptions.ActivityInterval`,
+  with the subject's zoom path as its scope. Run it (`runProjector: true`) in one host per deployment.
+- A new event type needs a family in `KernelEventFamilies`; `EveryKernelEventTypeHasAFamily` fails otherwise.
+
 ## Migrations
 
 ```bash

@@ -25,6 +25,18 @@ public sealed class KernelBackgroundOptions
 
     /// <summary>How often every tenant's lineage is checked for derived objects without inputs (K-LIN-1).</summary>
     public TimeSpan LineageCheckInterval { get; set; } = TimeSpan.FromHours(1);
+
+    /// <summary>How long the activity projector waits after a pass that found nothing new (ADR-2485).</summary>
+    public TimeSpan ActivityInterval { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>Events projected per tenant in one activity pass.</summary>
+    public int ActivityBatchSize { get; set; } = 200;
+
+    /// <summary>
+    /// How far before the newest projected event the projector looks again, so events whose transactions committed
+    /// out of order are still picked up; already-projected events are skipped.
+    /// </summary>
+    public TimeSpan ActivityLookBack { get; set; } = TimeSpan.FromMinutes(5);
 }
 
 /// <summary>Runs <see cref="KernelOutboxRelay"/> continuously: back to back while there is a backlog, then on an interval.</summary>

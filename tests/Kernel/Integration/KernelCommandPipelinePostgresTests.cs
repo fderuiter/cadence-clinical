@@ -6,10 +6,14 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Persistence;
+using Cadence.Kernel.Persistence.Activity;
+using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Standards;
@@ -365,6 +369,14 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         var register = new RegisterStandardVersion(
             tenant.TenantId, StandardVersionId.New(), package, null, $"key-{Guid.NewGuid():N}", Reason);
         (await fixture.Sender.SendAsync(register, cancellationToken: ct)).IsSuccess.Should().BeTrue();
+
+        // The activity stream fills only when the projector runs (ADR-2485).
+        if (table == "activity_entries")
+        {
+            await new KernelActivityProjector(
+                fixture.TenantContexts, new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts)), new KernelBackgroundOptions())
+                .ProjectAsync(tenant.TenantId, ct);
+        }
 
         foreach (var statement in new[]
         {

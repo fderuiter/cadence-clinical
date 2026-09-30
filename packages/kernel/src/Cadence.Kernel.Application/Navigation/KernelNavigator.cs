@@ -31,7 +31,8 @@ public interface IKernelScopeGraph
 
 /// <summary>
 /// The presentation hierarchy the zoom path follows (ADR-2481 §4.3):
-/// <c>tenant → study → [country] → study_site → participant</c>, and <c>tenant → organization → site</c>.
+/// <c>tenant → study → [country] → study_site → participant</c>, and <c>tenant → organization → site</c>. Protocol
+/// versions and study standards sit under their study, and an attestation under the object it signs (ADR-2485).
 /// It is presentation only and never implies authority.
 /// </summary>
 public static class ZoomRules

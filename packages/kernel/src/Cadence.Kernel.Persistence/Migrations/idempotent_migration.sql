@@ -1,4 +1,4 @@
-﻿DO $EF$
+DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -2198,6 +2198,73 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930045723_LineageStore') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930045723_LineageStore', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930053132_KernelActivityStream') THEN
+    CREATE TABLE kernel.activity_entries (
+        tenant_id uuid NOT NULL,
+        event_id uuid NOT NULL,
+        recorded timestamp with time zone NOT NULL,
+        occurred_valid timestamp with time zone,
+        actor_id character varying(255) NOT NULL,
+        type character varying(128) NOT NULL,
+        family character varying(32) NOT NULL,
+        subject_kind character varying(48),
+        subject character varying(128),
+        scope text[] NOT NULL,
+        correlation_id uuid NOT NULL,
+        CONSTRAINT "PK_activity_entries" PRIMARY KEY (tenant_id, event_id),
+        CONSTRAINT "FK_activity_entries_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930053132_KernelActivityStream') THEN
+    CREATE INDEX "IX_activity_entries_scope" ON kernel.activity_entries USING gin (scope);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930053132_KernelActivityStream') THEN
+    CREATE INDEX "IX_activity_entries_tenant_id_recorded_event_id" ON kernel.activity_entries (tenant_id, recorded DESC, event_id DESC);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930053132_KernelActivityStream') THEN
+    ALTER TABLE "kernel"."activity_entries" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."activity_entries" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."activity_entries"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930053132_KernelActivityStream') THEN
+    CREATE TRIGGER "trg_activity_entries_insert_only" BEFORE UPDATE OR DELETE ON "kernel"."activity_entries"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_insert_only();
+    CREATE TRIGGER "trg_activity_entries_no_truncate" BEFORE TRUNCATE ON "kernel"."activity_entries"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_insert_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930053132_KernelActivityStream') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930053132_KernelActivityStream', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;

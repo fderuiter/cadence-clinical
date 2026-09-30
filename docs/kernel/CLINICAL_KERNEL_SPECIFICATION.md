@@ -216,7 +216,8 @@ Without a version the reference means "as of the read's `(valid_at, known_at)`".
 - **K-ID-7** The presentation zoom path is computed by the kernel from a NodeRef:
   `tenant → study → [country] → study_site → participant → clinical event → observation`, and
   `tenant → organization → site`. A participant without a responsible study site sits directly under its study.
-  The zoom path is presentation only and never implies authority (§9.3).
+  Protocol versions and study standards profiles sit under their study, and an attestation under the object it
+  signs (ADR-2485). The zoom path is presentation only and never implies authority (§9.3).
 - **K-ID-8** Search (ADR-2484) finds kernel objects by code and title within one tenant and returns NodeRefs. It
   queries the source tables themselves with PostgreSQL full-text search, never a copy, so Row-Level Security,
   deletion and crypto-shredding apply to it exactly as to the source. Searchable tables are an explicit
@@ -313,6 +314,12 @@ changed, pinned to its new version (§3.4; null for events about no aggregate, s
 
 - **K-EVT-1** Event schemas are additive-only within a major version; consumers tolerate unknown fields.
 - **K-EVT-2** Events are the integration contract; they are not replayed to rebuild clinical state.
+- **K-EVT-3** People read events through the activity stream (ADR-2485), a projection separate from the
+  integration contract. Each entry carries its family, actor, time and subject NodeRef, and its scope: the
+  subject's zoom path when the event happened. It carries no payload. Every read is masked per reader through the
+  D1 visibility contract, so an entry about an object the reader may not see (blinded, not permitted, identity) is
+  returned in place with the reason and without the reference, never dropped. Projecting never changes the outbox
+  or integration delivery.
 
 ### 5.3 Audit guarantees
 
@@ -1090,6 +1097,7 @@ kernel, is merged into another, or is retired.
 | K016 | Search | PostgreSQL full-text search over the source tables under RLS; NodeRef results; identity content excluded | ADR-2484 |
 | K017 | Participants and enrollment | Identity-only Participant; bitemporal Enrollment status rows; gap-free numbers under the Study advisory lock; attested withdrawal | ADR-2453 |
 | K018 | Rule language and evaluator | Canonical JSON AST with Kleene logic and fixed coercions; packs are `RulePack` library items; `IRuleEvaluator` in `Cadence.Rules` | ADR-2461 |
+| K019 | Activity stream | Asynchronous projection of outbox envelopes scoped by zoom path; payload-free; masked per reader at read time | ADR-2485 |
 
 ---
 

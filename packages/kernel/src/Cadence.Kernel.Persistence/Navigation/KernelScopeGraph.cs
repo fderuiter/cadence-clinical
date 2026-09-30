@@ -5,9 +5,11 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
+using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +19,8 @@ namespace Cadence.Kernel.Persistence.Navigation;
 
 /// <summary>
 /// Reads the zoom hierarchy from the kernel tables (ADR-2481 §4.3). Read-only (<c>AsNoTracking</c>), through a context
-/// bound to the caller's tenant by Row-Level Security (K-ID-2), with the tenant also in every predicate. Kinds whose tables do not exist yet (participant, observation, …) resolve to nothing until their slice
+/// bound to the caller's tenant by Row-Level Security (K-ID-2), with the tenant also in every predicate. Protocol versions and study standards sit under their study, and an attestation under the object it signs
+/// (ADR-2485). Kinds whose tables do not exist yet (participant, observation, …) resolve to nothing until their slice
 /// maps them. Current-state objects are returned at their current version, whatever version the reference names;
 /// the returned <see cref="NodeSummary.Ref"/> says which version that is.
 /// </summary>
@@ -78,6 +81,45 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                 return studySite is null
                     ? null
                     : new ScopeNode(StudySiteSummary(studySite), NodeRef.For(studySite.StudyId), studySite.Country);
+
+            case NodeKinds.ProtocolVersion:
+                var protocolVersionId = ProtocolVersionId.FromGuid(node.Id);
+                var protocolVersion = await db.ProtocolVersions.AsNoTracking()
+                    .Where(p => p.TenantId == tenant && p.Id == protocolVersionId)
+                    .Select(p => new { p.StudyId, p.Number, p.Status, p.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return protocolVersion is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(
+                            NodeRef.For(protocolVersionId, protocolVersion.VersionIndex),
+                            $"Protocol version {protocolVersion.Number}",
+                            $"v{protocolVersion.Number}",
+                            protocolVersion.Status.ToString()),
+                        NodeRef.For(protocolVersion.StudyId));
+
+            case NodeKinds.StudyStandardsProfile:
+                var profileId = StudyStandardsProfileId.FromGuid(node.Id);
+                var profile = await db.Set<StudyStandardsProfile>().AsNoTracking()
+                    .Where(p => p.TenantId == tenant && p.Id == profileId)
+                    .Select(p => new { p.StudyId, p.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return profile is null
+                    ? null
+                    : new ScopeNode(new NodeSummary(NodeRef.For(profileId, profile.VersionIndex), "Study standards", Code: null), NodeRef.For(profile.StudyId));
+
+            case NodeKinds.Attestation:
+                // An attestation sits under the object it signs, so a study's activity includes the signatures on it.
+                var attestationId = AttestationId.FromGuid(node.Id);
+                var attestation = await db.Attestations.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && a.Id == attestationId)
+                    .Select(a => new { a.Meaning, a.TargetKind, a.TargetId, a.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return attestation is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(attestationId, attestation.VersionIndex), $"{attestation.Meaning} attestation", Code: null),
+                        new NodeRef(attestation.TargetKind, attestation.TargetId));
 
             default:
                 return null;

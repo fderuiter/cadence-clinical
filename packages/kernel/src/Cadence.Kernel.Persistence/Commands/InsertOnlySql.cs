@@ -29,6 +29,9 @@ internal static class InsertOnlySql
 
         // Standards Registry definitions: fixed once their standard version is registered (spec §6.3).
         "standard_datasets", "standard_variables", "standard_value_level_definitions", "standard_terminology",
+
+        // Activity stream projection (ADR-2485): a projected event never changes.
+        "activity_entries",
     ];
 
     public static string CreateFunction(string schema) => $$"""
