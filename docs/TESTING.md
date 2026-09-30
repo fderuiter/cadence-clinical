@@ -92,6 +92,13 @@ Use `packages/testing/src` rather than writing ad-hoc fakes:
   reference.
 - `GxPRequirementAttribute`: declares which requirement a test verifies. See below.
 
+When a `WebApplicationFactory` swaps a host's `DbContext` for a test provider, remove
+`IDbContextOptionsConfiguration<TContext>` as well as `DbContextOptions<TContext>` before calling `AddDbContext`.
+Since EF Core 9 every registered options action runs, so the host's own action would add its interceptors a second
+time and the GxP audit interceptor would write every entry twice (#4922).
+`ExecutionAuditInterceptorRegistrationTests` checks that the execution composition root and `ExecutionApiFactory`
+each carry the audit interceptor once.
+
 ## Time in tests
 
 Tests follow K-TIME-3 like the kernel does: `tests/Directory.Build.props` enables the banned-API analyzer with

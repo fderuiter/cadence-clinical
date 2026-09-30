@@ -72,6 +72,10 @@ public sealed class SiteComplianceApplicationService(
 
         if (changed is not null)
         {
+            // The recorded action below labels this row's audit entry; the row carries the same reason in case an
+            // entry is ever written from the row itself (#4922).
+            changed.ReasonForChange = auditContext.ChangeReason;
+
             // The legacy wrote no audit entry here (01_spec.md §1.1); #4767 closes that gap so every
             // compliance change is attributable to the integration that reported it.
             await auditLog.WriteAsync(SiteComplianceEntityName, changed.Id.ToString(), "ETMF_COMPLIANCE_UPDATE",
