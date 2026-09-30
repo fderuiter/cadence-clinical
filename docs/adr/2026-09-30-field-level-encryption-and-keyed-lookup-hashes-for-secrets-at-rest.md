@@ -142,4 +142,5 @@ still holds it. `Down` restores the old columns empty.
   - The three migrations were applied to PostgreSQL 16 over seeded plaintext rows, rolled back and re-applied; after
     `VACUUM FULL` the table files contained none of the seeded secrets, and the SQL-computed signature bindings
     matched `ConsentSignatureBinding.Compute`.
-  - All tests carry `[GxPRequirement("PRD-SYS-053")]` and `[Trait("Category", "GxP_OQ")]`.
+  - The tests carry no requirement tag: PRD-SYS-053 covers agent lifecycle hooks, and no PRD requirement names
+    field-level protection yet.
