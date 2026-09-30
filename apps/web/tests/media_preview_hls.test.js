@@ -31,7 +31,6 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
     setActivePinia(createPinia());
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.user = { username: "lead_cra_01" };
     authStore.rawRoles = ["CRA"];
 

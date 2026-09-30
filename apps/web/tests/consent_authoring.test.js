@@ -52,7 +52,6 @@ describe("ConsentAuthoringView.vue Component and RBAC Router Tests", () => {
 
     it("allows authorized role to enter econsent authoring", async () => {
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Sponsor Designer"]; // Normalized to sponsor_designer
 
       await router.push("/econsent-authoring");
@@ -61,7 +60,6 @@ describe("ConsentAuthoringView.vue Component and RBAC Router Tests", () => {
 
     it("denies access to non-authorized roles and redirects to /forbidden", async () => {
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Site Investigator"]; // No design/admin role
 
       await router.push("/econsent-authoring");

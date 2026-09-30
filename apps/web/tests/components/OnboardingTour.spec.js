@@ -5,6 +5,7 @@ import OnboardingTour from "../../src/components/OnboardingTour.vue";
 import AppShell from "../../src/components/AppShell.vue";
 import { useOnboardingStore } from "../../src/stores/onboarding";
 import { useAuthStore } from "../../src/stores/auth";
+import { signInAs } from "../helpers/signIn.js";
 import { createRouter, createWebHistory } from "vue-router";
 
 const DummyView = { template: "<div>Dummy</div>" };
@@ -90,7 +91,7 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
 
     it("maintains distinct step progress and event history per persona", () => {
       const store = useOnboardingStore();
-      const authStore = useAuthStore();
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
 
       // Start in super_admin
       expect(store.currentPersona).toBe("super_admin");
@@ -176,7 +177,6 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
     it("renders popover correctly when active and matches role-based prompts", async () => {
       const store = useOnboardingStore();
       const authStore = useAuthStore();
-      authStore.isDemoMode = false;
       authStore.rawRoles = ["Sponsor Designer"]; // maps to sponsor_designer
 
       const wrapper = mount(OnboardingTour, {
@@ -201,7 +201,6 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
 
     it("displays appropriate prompts for Data Manager", () => {
       const authStore = useAuthStore();
-      authStore.isDemoMode = false;
       authStore.rawRoles = ["Data Manager"]; // maps to data_manager
 
       const wrapper = mount(OnboardingTour, {
@@ -215,7 +214,6 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
 
     it("displays appropriate prompts for Sponsor Admin", () => {
       const authStore = useAuthStore();
-      authStore.isDemoMode = false;
       authStore.rawRoles = ["Sponsor Admin"]; // maps to sponsor_admin
 
       const wrapper = mount(OnboardingTour, {
@@ -248,8 +246,7 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
 
     it("automatically reloads persona onboarding state on authStore persona change", async () => {
       const store = useOnboardingStore();
-      const authStore = useAuthStore();
-      authStore.isDemoMode = false;
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
 
       // Set up existing state for site_crc in localStorage
       window.localStorage.setItem("onboarding_site_crc_current_step", "3");
@@ -276,7 +273,6 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
     it("toggles the telemetry diagnostic panel and handles clear/reset", async () => {
       const store = useOnboardingStore();
       const authStore = useAuthStore();
-      authStore.isDemoMode = true; // puts in demo mode to render standard shell headers
 
       const wrapper = mount(AppShell, {
         global: {

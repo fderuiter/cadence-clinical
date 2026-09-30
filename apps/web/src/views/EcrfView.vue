@@ -469,7 +469,7 @@ function initiateBatchVerify() {
   }
   reauthAction.value = "BULK_SDV";
   reauthUsername.value =
-    store.user.username || authStore.identity?.username || "fderuiter";
+    store.user.username || authStore.identity?.username || "";
   reauthPassword.value = "";
   reauthTotp.value = "";
   reauthError.value = "";
@@ -508,7 +508,7 @@ function handleSignOffSubmit() {
       reauthError.value = "";
       showReauthModal.value = true;
     },
-    store.user.username || authStore.identity?.username || "fderuiter"
+    store.user.username || authStore.identity?.username || ""
   );
 }
 
@@ -918,7 +918,7 @@ function closeQuery(fieldId) {
   pendingCloseQueryFieldId.value = fieldId;
   reauthAction.value = "CLOSE_QUERY";
   reauthUsername.value =
-    store.user.username || authStore.identity?.username || "fderuiter";
+    store.user.username || authStore.identity?.username || "";
   reauthPassword.value = "";
   reauthTotp.value = "";
   reauthError.value = "";

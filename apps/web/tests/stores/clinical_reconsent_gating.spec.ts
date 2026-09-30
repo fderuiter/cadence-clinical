@@ -30,7 +30,6 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
     clinicalStore = useClinicalStore();
 
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.rawRoles = ["Sponsor Designer", "Site Investigator", "CRC"];
   });
 

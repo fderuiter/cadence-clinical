@@ -4,7 +4,8 @@ Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks 
 
 ## Layout
 
-- `src/main.js`: bootstraps Vue, Pinia and the router, initialises Keycloak (`keycloak-js`), and, in a demo build only, seeds the offline demo identity and the MSW mock worker.
+- `src/main.js`: bootstraps Vue and Pinia, restores the Keycloak session (`src/auth/bootstrap.js`) before starting the router, and, in a demo build only, signs in the offline demo identity and starts the MSW mock worker.
+- `src/auth/`: the Keycloak client configuration (`keycloak.js`) and session bootstrap (`bootstrap.js`).
 - `src/api/`: the `apiClient.js` fetch wrapper and per-service clients. `executionApi.ts` is typed from the .NET Execution spec through `src/api/generated/execution.ts`; the others (`designer.ts`, `execution.ts`, `etmf.ts`, `interop.ts`, `econsent.ts`, `fileshare.ts`, and more) are Python-era clients.
 - `scripts/generate-api-types.js`: generates `src/api/generated/<service>.ts` from `docs/openapi/<service>_openapi.json` (`pnpm --filter web generate:api`); the `api-clients` quality gate and `tests/api/generated_types.test.js` fail when they drift from the specs.
 - `src/stores/`: Pinia stores; `auth.js` holds the Keycloak session and role normalisation.
@@ -15,9 +16,13 @@ Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks 
 
 ## Authentication
 
-- The client signs in through Keycloak (Authorization Code with PKCE). Defaults: `VITE_KEYCLOAK_URL=http://localhost:8080/`, `VITE_KEYCLOAK_REALM=cadence`, `VITE_KEYCLOAK_CLIENT_ID=cadence-web`. The realm is in `docker/cadence-realm.json`.
-- `apiClient.js` sends the Keycloak access token as `Authorization: Bearer <token>` to `VITE_API_BASE_URL` (default `http://localhost:8000`), and `X-Change-Reason` on mutations when the caller supplies one.
-- The gateway requires a valid bearer token on every proxied route (see [apps/gateway](../gateway/README.md)). When Keycloak is unreachable the app opens the login page and sign-in reports the problem; it does not fall back to a demo identity.
+Sign-in is Keycloak only ([ADR-2492](../../docs/adr/2026-09-30-keycloak-only-web-sign-in.md)).
+
+- The client is a public OIDC client: authorization code flow with PKCE S256, restoring an existing session with `check-sso` before the router starts. Development defaults: `VITE_KEYCLOAK_URL=http://localhost:8080/`, `VITE_KEYCLOAK_REALM=cadence`, `VITE_KEYCLOAK_CLIENT_ID=cadence-web`. Production builds have no defaults; a missing value is shown on the sign-in page. The realm is in `docker/cadence-realm.json`.
+- Tokens stay in memory and are never written to web storage. They are refreshed before expiry, before navigating to a protected route and before each API call; a failed refresh ends the session and returns to `/login`. Signing out ends the Keycloak session.
+- `src/api/authorization.js` is the only place that adds `Authorization: Bearer <token>`: for `apiClient.js`, the openapi-fetch client, the upload client and direct `fetch("/api/...")` calls. It sends the token only to same-origin `/api/` paths and `VITE_API_BASE_URL` (default `http://localhost:8000`). `apiClient.js` also sends `X-Change-Reason` on mutations when the caller supplies one.
+- Identity and roles come from the token (`preferred_username`, `sub`, `realm_access.roles`). The persona picker only changes the workspace view, lists only the personas the token's roles entitle, and never changes roles.
+- There is no offline sign-in. When Keycloak is unreachable nobody is signed in and the sign-in page reports the problem. The gateway requires a valid bearer token on every proxied route (see [apps/gateway](../gateway/README.md)).
 
 ## Demo mode and API failures
 

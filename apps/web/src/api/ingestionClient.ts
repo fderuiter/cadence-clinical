@@ -1,5 +1,5 @@
 import { openApiClient, unwrapResponse, getBaseUrl } from "./client";
-import { useAuthStore } from "../stores/auth";
+import { getBearerToken } from "./authorization.js";
 import type { paths } from "./types";
 
 export interface IngestionOptions {
@@ -22,14 +22,9 @@ export const ingestionClient = {
     formData.append("file", file);
 
     const headers: Record<string, string> = {};
-    try {
-      const authStore = useAuthStore();
-      const token = authStore?.token || authStore?.accessToken;
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-    } catch {
-      // Pinia inactive
+    const token = await getBearerToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
     if (changeReason) {
       headers["X-Change-Reason"] = changeReason;

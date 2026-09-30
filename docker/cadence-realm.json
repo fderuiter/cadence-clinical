@@ -63,10 +63,21 @@
   "clients": [
     {
       "clientId": "cadence-web",
+      "name": "Cadence web app",
+      "description": "Browser SPA (apps/web). Public client: authorization code flow with PKCE (S256); no client secret.",
       "enabled": true,
+      "protocol": "openid-connect",
       "publicClient": true,
-      "redirectUris": ["http://localhost:3000/*"],
-      "webOrigins": ["*"]
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:3000/cadence-clinical/*"],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
+      }
     },
     {
       "clientId": "cadence-esignature",
@@ -97,6 +108,96 @@
         }
       ],
       "realmRoles": ["Sponsor Designer"]
+    },
+    {
+      "username": "designer.lead",
+      "enabled": true,
+      "email": "designer.lead@example.com",
+      "firstName": "Designer",
+      "lastName": "Lead",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Sponsor Designer", "Data Manager", "Sponsor Admin"]
+    },
+    {
+      "username": "crc.site101",
+      "enabled": true,
+      "email": "crc.site101@example.com",
+      "firstName": "Site",
+      "lastName": "Coordinator",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Site Investigator"]
+    },
+    {
+      "username": "cra.monitor",
+      "enabled": true,
+      "email": "cra.monitor@example.com",
+      "firstName": "CRA",
+      "lastName": "Monitor",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["CRA", "Monitor", "Sponsor Admin"]
+    },
+    {
+      "username": "dm.lead",
+      "enabled": true,
+      "email": "dm.lead@example.com",
+      "firstName": "Data",
+      "lastName": "Manager",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Data Manager", "Sponsor Designer", "Sponsor Admin"]
+    },
+    {
+      "username": "safety.officer",
+      "enabled": true,
+      "email": "safety.officer@example.com",
+      "firstName": "Safety",
+      "lastName": "Officer",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Sponsor Admin"]
+    },
+    {
+      "username": "auditor.lead",
+      "enabled": true,
+      "email": "auditor.lead@example.com",
+      "firstName": "Auditor",
+      "lastName": "Lead",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["Auditor", "Sponsor Admin"]
     }
   ]
 }

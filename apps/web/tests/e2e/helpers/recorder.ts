@@ -1,4 +1,5 @@
 import { Page, expect } from "@playwright/test";
+import { signInWithKeycloak } from "./keycloakLogin";
 
 export interface SentinelRecord {
   consoleErrors: string[];
@@ -149,39 +150,19 @@ export async function smoothType(
 }
 
 /**
- * Switch persona dynamically and navigate to target route.
+ * Sign in as a persona's Keycloak user and navigate to the target route.
+ * `roles` documents the realm roles that user is seeded with in
+ * docker/cadence-realm.json; the app reads roles from the token only.
  */
 export async function setPersonaAndNavigate(
   page: Page,
   persona: {
     username: string;
     roles: string[];
-    isDemoMode?: boolean;
   },
   targetPath: string
 ): Promise<void> {
-  if (page.url() === "about:blank" || !page.url().startsWith("http")) {
-    await page.goto(targetPath);
-  }
-  await page.evaluate((authData) => {
-    const payload = {
-      isAuthenticated: true,
-      accessToken: "mock-jwt-token-persona-switch",
-      idToken: "mock-id-token",
-      refreshToken: "mock-refresh-token",
-      user: {
-        username: authData.username,
-        email: `${authData.username}@cadence.clinical`,
-        firstName: authData.username.toUpperCase(),
-        lastName: "User",
-        id: `usr-${authData.username}`,
-      },
-      rawRoles: authData.roles,
-      isDemoMode: true,
-    };
-    window.sessionStorage.setItem("cadence_auth", JSON.stringify(payload));
-    window.localStorage.setItem("cadence_auth", JSON.stringify(payload));
-  }, persona);
+  await signInWithKeycloak(page, persona.username);
 
   await page.goto(targetPath);
   await page.waitForLoadState("networkidle");

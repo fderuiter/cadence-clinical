@@ -55,7 +55,6 @@ describe("Batch Source Data Verification and GxP Compliance Flow Tests", () => {
 
     // Setup Auth Store values
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.user = {
       username: "cra_tester",
       email: "cra_tester@example.com",

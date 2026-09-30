@@ -102,7 +102,6 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     clinicalStore = useClinicalStore();
 
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     authStore.rawRoles = ["Sponsor Designer", "Data Manager"];
 
     vi.mocked(apiClient.post).mockImplementation((url) => {

@@ -7,6 +7,8 @@ import MdrView from "../src/views/MdrView.vue";
 import EcrfView from "../src/views/EcrfView.vue";
 import CtmsView from "../src/views/CtmsView.vue";
 import AuditView from "../src/views/AuditView.vue";
+import { useAuthStore } from "../src/stores/auth";
+import { signInAs } from "./helpers/signIn.js";
 import RulesView from "../src/views/RulesView.vue";
 import ImagingView from "../src/views/ImagingView.vue";
 
@@ -109,6 +111,7 @@ describe("Vue SPA Smoke Tests", () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");
     const pinia = createPinia();
     setActivePinia(pinia);
+    signInAs(useAuthStore(), ["Data Manager"]);
 
     const wrapper = mount(RulesView, {
       global: {

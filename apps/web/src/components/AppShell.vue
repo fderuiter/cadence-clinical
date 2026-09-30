@@ -51,17 +51,27 @@
           <span class="badge">IEC 62304</span>
         </div>
 
-        <!-- Role / Persona Switcher for Instant Testing -->
-        <div class="persona-switcher-box">
-          <label for="persona-select" class="sr-only">Switch Active Role</label>
+        <!-- Workspace view switcher: only personas the token's roles allow;
+             switching never changes the user's roles. -->
+        <div
+          v-if="authStore.availablePersonas.length > 1"
+          class="persona-switcher-box"
+        >
+          <label for="persona-select" class="sr-only"
+            >Switch workspace view</label
+          >
           <select
             id="persona-select"
             v-model="activePersonaKey"
             class="persona-select"
-            title="Switch active user role & permissions"
+            title="Switch workspace view"
             @change="onPersonaSelect"
           >
-            <option v-for="p in PERSONA_PRESETS" :key="p.key" :value="p.key">
+            <option
+              v-for="p in authStore.availablePersonas"
+              :key="p.key"
+              :value="p.key"
+            >
               {{ p.label }}
             </option>
           </select>
@@ -78,14 +88,14 @@
           </div>
           <div class="user-info">
             <div class="user-name">
-              {{ authStore.identity?.username || "Demo User" }}
+              {{ authStore.identity?.username || "Not signed in" }}
             </div>
             <div class="user-role-label">
               {{ activePersonaLabel }}
             </div>
           </div>
           <button
-            v-if="authStore.isAuthenticated && !authStore.isDemoMode"
+            v-if="authStore.isAuthenticated"
             id="btn-logout"
             class="btn btn-logout-action"
             title="Log out of session"
@@ -94,7 +104,7 @@
             Logout
           </button>
           <button
-            v-else-if="!authStore.isAuthenticated && !authStore.isDemoMode"
+            v-else
             id="btn-login"
             class="btn btn-login-action"
             title="Log in to session"
@@ -893,19 +903,22 @@ const parts = brandName.split(" ");
 const brandNameFirst = parts[0] || "";
 const brandNameRest = parts.slice(1).join(" ") || "";
 
-const activePersonaKey = ref(authStore.currentPersona || "super_admin");
+const activePersonaKey = ref(authStore.currentPersona);
 
 const activePersonaLabel = computed(() => {
   const p = PERSONA_PRESETS.find(
     (preset) => preset.key === activePersonaKey.value
   );
-  return p ? p.label.replace(/^.+?\s/, "") : "Super Admin";
+  return p ? p.label.replace(/^.+?\s/, "") : "";
 });
 
 function onPersonaSelect() {
-  authStore.switchPersona(activePersonaKey.value);
+  if (!authStore.switchPersona(activePersonaKey.value)) {
+    activePersonaKey.value = authStore.currentPersona;
+    return;
+  }
   refreshNotifications();
-  screenReaderAnnouncement.value = `Switched persona to ${activePersonaLabel.value}. Permissions updated.`;
+  screenReaderAnnouncement.value = `Switched workspace view to ${activePersonaLabel.value}.`;
 }
 
 watch(
@@ -923,7 +936,6 @@ watch(
 );
 
 const screenReaderAnnouncement = ref("");
-let refreshTimer = null;
 
 const isCommandPaletteOpen = ref(false);
 const showDiagnosticPanel = ref(false);
@@ -935,35 +947,22 @@ const handleGlobalKeydown = (e) => {
   }
 };
 
-// Watch background session authentication silent refresh events
+// Announce sign-in state changes to screen readers
 watch(
   () => authStore.isAuthenticated,
   (newVal) => {
-    if (newVal) {
-      screenReaderAnnouncement.value =
-        "System status: Session silently re-authenticated and Keycloak tokens refreshed successfully.";
-    } else {
-      screenReaderAnnouncement.value = "System status: Session logged out.";
-    }
+    screenReaderAnnouncement.value = newVal
+      ? "System status: Signed in."
+      : "System status: Signed out.";
   }
 );
 
-// Emulate quiet background token refresh events periodically in demo/sandbox modes
 onMounted(() => {
   document.addEventListener("keydown", handleGlobalKeydown);
-  refreshTimer = setInterval(() => {
-    if (authStore.isAuthenticated) {
-      screenReaderAnnouncement.value =
-        "System status: Quiet background token refresh and security re-authentication completed successfully.";
-    }
-  }, 45000); // Trigger every 45s to avoid flood but remain active
 });
 
 onUnmounted(() => {
   document.removeEventListener("keydown", handleGlobalKeydown);
-  if (refreshTimer) {
-    clearInterval(refreshTimer);
-  }
 });
 
 // Watch offline syncing / ledger transaction commits

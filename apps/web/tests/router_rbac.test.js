@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { router } from "../src/router";
+import { setKeycloakClient } from "../src/auth/keycloak.js";
 import { useAuthStore } from "../src/stores/auth";
 
 describe("Router OIDC & RBAC Navigation Guards", () => {
@@ -9,8 +10,8 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     const pinia = createPinia();
     setActivePinia(pinia);
 
+    setKeycloakClient(null);
     if (typeof window !== "undefined") {
-      delete window.keycloakInstance;
       window.sessionStorage.clear();
       window.localStorage.clear();
     }
@@ -23,7 +24,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should redirect unauthenticated users to /login when attempting to access a protected route", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = false;
-      authStore.isDemoMode = true;
 
       // Navigate to protected MDR view
       await router.push("/mdr");
@@ -48,7 +48,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should route a permitted designer to /unavailable for /mdr, which has no .NET backend yet", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Study Designer"]; // maps to sponsor_designer
 
       await router.push("/mdr");
@@ -59,7 +58,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should redirect to /forbidden if the user does not have the required roles", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Auditor"]; // does not have designer roles
 
       await router.push("/mdr");
@@ -69,7 +67,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should route TMF Auditor to /unavailable for /audit, which has no .NET backend yet", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Auditor"]; // maps to auditor & tmf_auditor
 
       await router.push("/audit");
@@ -80,7 +77,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should allow Site Investigator (CRC) to access /ecrf view", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Site Investigator"]; // maps to site_investigator & crc
 
       await router.push("/ecrf");
@@ -90,7 +86,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should allow CRA to access /ctms view", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["CRA"]; // maps to cra & monitor
 
       await router.push("/ctms");
@@ -100,7 +95,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should route Data Manager to /unavailable for /rules, which has no .NET backend yet", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Data Manager"]; // maps to data_manager
 
       await router.push("/rules");
@@ -111,7 +105,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should still show /forbidden, not /unavailable, when the role is missing", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Auditor"];
 
       await router.push("/rules");
@@ -121,7 +114,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should leave unknown paths alone rather than calling them unavailable", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["CRA"];
 
       await router.push("/no-such-screen");
@@ -141,7 +133,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should dynamically redirect CRC (Site Investigator) to /ecrf when landing on /", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Site Investigator"];
 
       await router.push("/");
@@ -151,7 +142,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should dynamically redirect CRA to /ctms when landing on /", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["CRA"];
 
       await router.push("/");
@@ -161,7 +151,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should land Data Manager on /ecrf while /rules has no .NET backend", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Data Manager"];
 
       await router.push("/");
@@ -171,7 +160,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should land TMF Auditor on /unavailable while no auditor screen has a .NET backend", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Auditor"];
 
       await router.push("/");
@@ -182,7 +170,6 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
     it("should land Study Designer on /unavailable while no designer screen has a .NET backend", async () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = true;
       authStore.rawRoles = ["Study Designer"];
 
       await router.push("/");
@@ -191,21 +178,20 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
   });
 
   describe("Active Keycloak Session Verification & Role Anti-Spoofing", () => {
-    it("should block routing and redirect to login when local storage/session storage values are spoofed but active Keycloak session is missing or invalid", async () => {
+    it("should redirect to login and clear local state when the Keycloak session can no longer be refreshed", async () => {
       const authStore = useAuthStore();
 
-      // Simulate altered/spoofed local state
+      // Simulate locally altered store state
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = false;
       authStore.rawRoles = ["Sponsor Admin"]; // Spoofed admin role
 
       // Mock an invalid/missing Keycloak session
-      window.keycloakInstance = {
+      setKeycloakClient({
         authenticated: false,
         updateToken: async () => {
           throw new Error("Invalid session");
         },
-      };
+      });
 
       await router.push("/mdr");
 
@@ -218,16 +204,15 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(authStore.rawRoles).toEqual([]);
     });
 
-    it("should successfully block navigation to restricted route if spoofed local storage roles don't match active Keycloak session roles", async () => {
+    it("should authorize against the Keycloak token roles, not locally altered roles", async () => {
       const authStore = useAuthStore();
 
-      // Simulate altered/spoofed local state
+      // Simulate locally altered store state
       authStore.isAuthenticated = true;
-      authStore.isDemoMode = false;
       authStore.rawRoles = ["Sponsor Admin"]; // Spoofed admin role
 
       // Mock active Keycloak session with a different, non-admin role (e.g., CRC)
-      window.keycloakInstance = {
+      setKeycloakClient({
         authenticated: true,
         token: "real-token",
         tokenParsed: {
@@ -238,7 +223,7 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
           },
         },
         updateToken: async () => true,
-      };
+      });
 
       await router.push("/mdr");
 

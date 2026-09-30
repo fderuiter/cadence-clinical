@@ -1,9 +1,7 @@
-import { useAuthStore } from "../stores/auth";
+import { getApiBaseUrl, getBearerToken } from "./authorization.js";
 
 // Helper to get the current API base URL dynamically
-export const getBaseUrl = () => {
-  return import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000";
-};
+export const getBaseUrl = getApiBaseUrl;
 
 /**
  * Custom error class representing API network, status, or business failures.
@@ -22,16 +20,11 @@ const pendingRequests = new Map();
 
 /**
  * Generic request helper.
- * Automatically resolves the bearer token from the Pinia auth store if present.
+ * Attaches the signed-in user's Keycloak access token (refreshed first when it
+ * is about to expire) as `Authorization: Bearer <token>`.
  */
 async function request(path, options = {}) {
-  let token = null;
-  try {
-    const authStore = useAuthStore();
-    token = authStore?.token || authStore?.accessToken;
-  } catch {
-    // Pinia not active or initialized, ignore or log
-  }
+  const token = await getBearerToken();
 
   const {
     method = "GET",

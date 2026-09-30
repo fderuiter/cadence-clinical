@@ -20,7 +20,6 @@ describe("Terminology API Client Unit Tests", () => {
     const authStore = useAuthStore();
     authStore.accessToken = "mock-keycloak-jwt-token";
     authStore.isAuthenticated = true;
-    authStore.isDemoMode = false;
     mockFetch.mockReset();
   });
 
