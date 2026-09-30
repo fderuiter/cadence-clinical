@@ -16,7 +16,9 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
     if (activeApp) {
       try {
         activeApp.unmount();
-      } catch (_) {}
+      } catch {
+        /* ignore */
+      }
       activeApp = null;
     }
   });
