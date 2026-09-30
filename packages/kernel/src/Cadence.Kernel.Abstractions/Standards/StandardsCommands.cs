@@ -37,6 +37,9 @@ public enum LibraryItemKind
 
     /// <summary>A sponsor subset of a controlled-terminology codelist.</summary>
     CodelistSubset,
+
+    /// <summary>A set of versioned indicators: Study Pulse metrics, attention rules, KRIs and QTLs (#4845, ADR-2488).</summary>
+    IndicatorSet,
 }
 
 /// <summary>

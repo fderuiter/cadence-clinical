@@ -362,8 +362,8 @@ conditions are the conditions whose `met` is false.
 
 Authorization implements this today: a denied command returns `K.auth.denied` with the explanation, and the
 `DecisionDenied` event and audit entry record every evaluated condition with its evidence. Findings produce theirs
-as `quality.finding/<rule-id>@<version>` (ADR-2462). Applicability and Indicator producers follow as those slices
-land (#4896).
+as `quality.finding/<rule-id>@<version>` (ADR-2462). Indicators produce theirs as `quality.indicator/<id>@<version>` (ADR-2488). Applicability's producer follows as that
+slice lands (#4896).
 
 ---
 
@@ -988,6 +988,14 @@ Deviation(participant/site/study, category, importance, source finding/assertion
   Findings/Assertions, not free text.
 - Audits, inspections and CAPA workflows are QMS application state over these kernel concepts.
 
+Indicators are implemented by #4845 ([ADR-2488](../adr/2026-09-30-study-pulse-metrics-as-versioned-indicators.md)): an `IndicatorSet` library item
+holds versioned indicators (Study Pulse metrics, attention rules, KRIs and QTLs), released by attestation and pinned in
+the study's standards profile like rule packs. Each indicator counts the records of a population for which its
+expression is true, through `IRuleEvaluator`, and reports a count or a percentage against an optional threshold. A
+result names the indicator and set versions, carries input and result hashes and up to 100 contributing objects, and
+has an explanation produced as `quality.indicator/<id>@<version>`. Ranking in Needs Attention is application logic,
+and a study configures its Pulse only by pinning released sets (ADR-2488 §4.5). Signals and population sources follow.
+
 ### 10.5 Locks and freezes (resolves G5)
 
 `Frozen` and `Locked` are Assertions at a scope (form instance, participant, study site, study), each with an
@@ -1180,6 +1188,7 @@ kernel, is merged into another, or is retired.
 | K023 | Work queues | Versioned definitions keyed by a capability; items from a registered source kept per reader by the one evaluator; portfolio queues span a tenant's studies | ADR-2486 |
 | K024 | Effectivity and study-site activation | Bitemporal effectivity per version and scope on artifact-version evidence; most specific scope decides; activation needs a version in force | ADR-2456 |
 | K025 | Expected schedule | Pure function of the design, a reference start and an as-of date; SDTM study days with no day 0; simulation reports schedule changes on the study-day axis | ADR-2487 |
+| K026 | Indicators | Pulse metrics, attention rules, KRIs and QTLs as versioned indicators in released `IndicatorSet` library items; counted through `IRuleEvaluator`; results carry the definition version, hashes, contributors and an explanation | ADR-2488 |
 | K027 | Grant-backed visibility | A reader sees what its grants in effect cover and the scope path above them; participants and sites through their study sites; reference data to any grant holder | ADR-2457 |
 
 ---

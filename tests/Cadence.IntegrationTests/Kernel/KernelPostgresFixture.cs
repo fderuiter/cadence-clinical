@@ -32,6 +32,7 @@ using Cadence.Kernel.Time;
 using Cadence.Kernel.Validation;
 using Cadence.Rules;
 using Cadence.Rules.Evaluation;
+using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
 using Cadence.Testing.Time;
 
@@ -195,6 +196,12 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The rule pack loader, as a host resolves it.</summary>
     public RulePackLoader RulePacks => Scope().GetRequiredService<RulePackLoader>();
+
+    /// <summary>The indicator set loader, as a host resolves it (ADR-2488).</summary>
+    public IndicatorSetLoader IndicatorSets => Scope().GetRequiredService<IndicatorSetLoader>();
+
+    /// <summary>The indicator evaluator, as a host resolves it (ADR-2488).</summary>
+    public IndicatorEvaluator Indicators => Scope().GetRequiredService<IndicatorEvaluator>();
 
     /// <summary>The validation runner, resolved from a fresh scope as a request would get one.</summary>
     public ValidationRunner Validation => Scope().GetRequiredService<ValidationRunner>();

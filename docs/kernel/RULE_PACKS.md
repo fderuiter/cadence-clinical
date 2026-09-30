@@ -4,6 +4,8 @@ How to write, release and run a rule pack. The model is in spec §10.1 and
 [ADR-2461](../adr/2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md); the code is in
 [`packages/kernel/src/Cadence.Rules`](../../packages/kernel/src/Cadence.Rules/README.md).
 
+Study Pulse metrics, KRIs and QTLs use the same expression language in indicator sets: see [INDICATORS.md](INDICATORS.md).
+
 ## What a rule pack may contain (K-RULE-2)
 
 A rule pack implements a **public** standard or regulatory document: CDISC conformance rules, FDA or PMDA validator

@@ -45,6 +45,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K023 | Work queues as capability-keyed definitions | [ADR-2486](2026-09-30-work-queues-as-capability-keyed-definitions.md) |
 | K024 | Effectivity and study-site activation | [ADR-2456](2026-09-30-effectivity-and-study-site-activation.md) |
 | K025 | Expected schedule as a pure function of the protocol design | [ADR-2487](2026-09-30-expected-schedule-as-a-pure-function.md) |
+| K026 | Study Pulse metrics and attention rules as versioned indicators | [ADR-2488](2026-09-30-study-pulse-metrics-as-versioned-indicators.md) |
 | K027 | Grant-backed node visibility | [ADR-2457](2026-09-30-grant-backed-node-visibility.md) |
 
 ## Domain-Based Decisions Log
@@ -83,6 +84,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2485: Reader-Facing Activity Stream Projection](2026-09-30-reader-facing-activity-stream-projection.md) (2026-09-30)
 - [ADR-2486: Work Queues as Capability-Keyed Definitions](2026-09-30-work-queues-as-capability-keyed-definitions.md) (2026-09-30)
 - [ADR-2487: Expected Schedule as a Pure Function of the Protocol Design](2026-09-30-expected-schedule-as-a-pure-function.md) (2026-09-30)
+- [ADR-2488: Study Pulse Metrics and Attention Rules as Versioned Indicators](2026-09-30-study-pulse-metrics-as-versioned-indicators.md) (2026-09-30)
 - [ADR-2540: Kernel API Host and Read Endpoints for the Clinical Canvas](2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) (2026-09-30)
 
 ### 1. Core Platform & Execution Engine
