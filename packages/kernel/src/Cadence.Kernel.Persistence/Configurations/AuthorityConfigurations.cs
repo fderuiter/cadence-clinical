@@ -90,3 +90,25 @@ internal sealed class GrantPeriodConfiguration : IEntityTypeConfiguration<GrantP
         builder.HasIndex(x => new { x.TenantId, x.GrantId });
     }
 }
+
+/// <summary>
+/// EF Core mapping for <c>kernel.work_queue_definitions</c> (Canvas D10, ADR-2486): one row per version of a queue
+/// code, unique in its tenant. Insert-only in the database, so a version never changes after it is defined.
+/// </summary>
+internal sealed class WorkQueueDefinitionConfiguration : IEntityTypeConfiguration<WorkQueueDefinition>
+{
+    public void Configure(EntityTypeBuilder<WorkQueueDefinition> builder)
+    {
+        builder.ToTable("work_queue_definitions", t => t.HasCheckConstraint("ck_work_queue_definitions_version", "version > 0"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Code).HasMaxLength(WorkQueueDefinition.MaxCodeLength).IsRequired();
+        builder.Property(x => x.Title).HasMaxLength(WorkQueueDefinition.MaxTitleLength).IsRequired();
+        builder.Property(x => x.Capability).HasMaxLength(WorkQueueDefinition.MaxTokenLength).IsRequired();
+        builder.Property(x => x.VerbClass).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(x => x.Source).HasMaxLength(WorkQueueDefinition.MaxTokenLength).IsRequired();
+        builder.HasIndex(x => new { x.TenantId, x.Code, x.Version }).IsUnique();
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        AuditColumns.Configure(builder);
+    }
+}

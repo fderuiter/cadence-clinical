@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K021 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K023 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -41,10 +41,11 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K019 | Reader-facing activity stream projection | [ADR-2485](2026-09-30-reader-facing-activity-stream-projection.md) |
 | K020 | Evidence artifacts as immutable, hash-addressed versions | [ADR-2454](2026-09-30-evidence-artifacts-as-immutable-hash-addressed-versions.md) |
 | K021 | Grants, roles and delegation as bitemporal kernel authority | [ADR-2455](2026-09-30-grants-roles-and-delegation-as-bitemporal-kernel-authority.md) |
+| K023 | Work queues as capability-keyed definitions | [ADR-2486](2026-09-30-work-queues-as-capability-keyed-definitions.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K021)
+### 0. Clinical Kernel (K001–K023)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -72,6 +73,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2483: Dry-Run Authorization and the Command Catalogue](2026-09-30-dry-run-authorization-and-command-catalogue.md) (2026-09-30)
 - [ADR-2484: Tenant-Scoped Search over the Source Tables](2026-09-30-tenant-scoped-search-over-source-tables.md) (2026-09-30)
 - [ADR-2485: Reader-Facing Activity Stream Projection](2026-09-30-reader-facing-activity-stream-projection.md) (2026-09-30)
+- [ADR-2486: Work Queues as Capability-Keyed Definitions](2026-09-30-work-queues-as-capability-keyed-definitions.md) (2026-09-30)
 - [ADR-2540: Kernel API Host and Read Endpoints for the Clinical Canvas](2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) (2026-09-30)
 
 ### 1. Core Platform & Execution Engine

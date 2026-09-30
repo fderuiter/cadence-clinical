@@ -414,6 +414,29 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
 - **Tables.** `kernel.roles` is insert-only. `kernel.grant_periods` carries the bitemporal guards.
 - **Not yet:** qualifications, separation of duties, and StudySite, protocol or blinding conditions (rest of #4781).
 
+## Work queues (ADR-2486)
+
+A work queue is a versioned definition keyed by a capability, never a role name.
+
+```csharp
+await sender.SendAsync(new DefineWorkQueue(
+    tenant, WorkQueueDefinitionId.New(), "protocol_approvals", "Protocol approvals", "protocol.approve",
+    VerbClass.Approve, KernelWorkItemSources.ProtocolVersionsInReview, idempotencyKey, "Queue for approvers"));
+var queues = await workQueues.ReadAsync(tenant, new WorkQueueQuery(Within: NodeRef.For(study)), ct);
+```
+
+- **Definitions.** `DefineWorkQueue` adds the next version of a code (`work_queue.define`, Approve, at the
+  tenant). A kernel command's capability must keep the verb class the command declares, and the source must be
+  registered. `kernel.work_queue_definitions` is insert-only; the highest version is current.
+- **Items.** An `IWorkItemSource` returns what is due, oldest first. `IWorkQueues.ReadAsync` keeps an item only
+  when `IAuthorizationProbe.CanIAsync` permits the current actor the queue's capability on it now, so revoking a
+  grant removes its items. Hidden objects are masked in place through `INodeVisibility`.
+- **Scope.** `Within` narrows to a tenant, sponsor organization, study or one object. Without it the read spans
+  every study of the tenant (the portfolio queue).
+- **Sources.** `AddKernelPersistence` registers `protocol.versions_in_review` (due since submission). Applications
+  register their own with `services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, …>())`.
+- Register `AddKernelWorkQueues()` for the read; the `DefineWorkQueue` handler comes with `AddKernelCommandPipeline()`.
+
 ## Search (ADR-2484)
 
 `IKernelSearch.SearchAsync(tenant, new SearchRequest("blood press", Kinds: [NodeKinds.Concept]))` returns `SearchHit`s

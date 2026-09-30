@@ -46,6 +46,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 10 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 8 |
+| [`kernel.work_queue_definitions`](#kernelwork_queue_definitions) | `WorkQueueDefinition` | 12 |
 
 ## kernel.activity_entries
 
@@ -1095,3 +1096,35 @@ Entity: `Tenant`
 Indexes:
 
 - `IX_tenants_code`: unique (`code`)
+
+## kernel.work_queue_definitions
+
+Entity: `WorkQueueDefinition`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `capability` | `character varying(100)` | no |  |  |
+| `code` | `character varying(64)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `source` | `character varying(100)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `title` | `character varying(200)` | no |  |  |
+| `verb_class` | `character varying(16)` | no |  |  |
+| `version` | `integer` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_work_queue_definitions_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_work_queue_definitions_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_work_queue_definitions_tenant_id_code_version`: unique (`tenant_id`, `code`, `version`)
+
+Check constraints:
+
+- `ck_work_queue_definitions_version`: `version > 0`

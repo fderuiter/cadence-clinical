@@ -34,6 +34,7 @@ export const NODE_KINDS = [
   "standard_version",
   "library_item",
   "study_standards_profile",
+  "work_queue_definition",
 ] as const;
 
 export type NodeKind = (typeof NODE_KINDS)[number];

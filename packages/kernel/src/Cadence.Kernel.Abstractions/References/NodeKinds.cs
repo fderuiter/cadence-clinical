@@ -36,6 +36,7 @@ public static class NodeKinds
     public const string StandardVersion = "standard_version";
     public const string LibraryItem = "library_item";
     public const string StudyStandardsProfile = "study_standards_profile";
+    public const string WorkQueueDefinition = "work_queue_definition";
 
     private static readonly FrozenDictionary<Type, string> ByIdType = new Dictionary<Type, string>
     {
@@ -62,6 +63,7 @@ public static class NodeKinds
         [typeof(StandardVersionId)] = StandardVersion,
         [typeof(LibraryItemId)] = LibraryItem,
         [typeof(StudyStandardsProfileId)] = StudyStandardsProfile,
+        [typeof(WorkQueueDefinitionId)] = WorkQueueDefinition,
     }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, Type> ByKind =
