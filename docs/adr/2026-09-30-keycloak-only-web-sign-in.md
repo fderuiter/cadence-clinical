@@ -1,4 +1,4 @@
-# ADR-2492: Keycloak-Only Web Sign-In
+# ADR-2493: Keycloak-Only Web Sign-In
 
 - **Status:** Accepted
 - **Date:** 2026-09-30

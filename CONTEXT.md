@@ -837,7 +837,7 @@ _Avoid_: Silent catch-and-fallback to mock data masking production network error
 
 ### Keycloak-Only Web Sign-In
 
-The `apps/web` authentication model: the SPA signs in only through Keycloak as a public OIDC client (authorization code + PKCE S256, `check-sso` session restore), keeps tokens in memory, refreshes them before expiry, and attaches them as `Authorization: Bearer` in one place (`src/api/authorization.js`). Identity and roles come only from the token; signed-out users are sent to the sign-in page. The compile-time demo build is the one exception (ADR-2492).
+The `apps/web` authentication model: the SPA signs in only through Keycloak as a public OIDC client (authorization code + PKCE S256, `check-sso` session restore), keeps tokens in memory, refreshes them before expiry, and attaches them as `Authorization: Bearer` in one place (`src/api/authorization.js`). Identity and roles come only from the token; signed-out users are sent to the sign-in page. The compile-time demo build is the one exception (ADR-2493).
 _Avoid_: Offline PIN or fallback identities outside a demo build, tokens in `localStorage`/`sessionStorage`, client-side gateway signing or `X-User-*` headers
 
 ### Self-Signed Trust Store Gating
