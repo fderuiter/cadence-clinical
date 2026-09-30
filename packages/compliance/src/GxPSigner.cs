@@ -4,6 +4,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 
+using Cadence.Kernel.Time;
+
 namespace Cadence.Compliance;
 
 public static partial class GxPSigner
@@ -62,10 +64,12 @@ public static partial class GxPSigner
         string signingReason = "GxP Qualification Execution Sign-Off",
         string? timestamp = null,
         RSA? privateKey = null,
-        X509Certificate2? certificate = null)
+        X509Certificate2? certificate = null,
+        IClock? clock = null)
     {
+        clock ??= SystemClock.Instance;
         signerId ??= Environment.GetEnvironmentVariable("GXP_SIGNER_ID") ?? "cadence-validation-runner";
-        timestamp ??= DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", System.Globalization.CultureInfo.InvariantCulture);
+        timestamp ??= clock.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", System.Globalization.CultureInfo.InvariantCulture);
 
         var contentBytes = Encoding.UTF8.GetBytes(content.Trim());
         var sha256Hash = Convert.ToHexStringLower(SHA256.HashData(contentBytes));
@@ -81,7 +85,7 @@ public static partial class GxPSigner
 
         if (certificate == null || privateKey == null)
         {
-            var creds = Pkcs7Signer.GenerateSigningCredentials(signerId);
+            var creds = Pkcs7Signer.GenerateSigningCredentials(signerId, clock);
             certificate ??= creds.Cert;
             privateKey ??= creds.Key;
         }

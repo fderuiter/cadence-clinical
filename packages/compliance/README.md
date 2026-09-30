@@ -32,7 +32,8 @@ in tests. [docs/TESTING.md](../../docs/TESTING.md) has the workflow.
 
 ## Key dependencies
 
-- Project references: `Cadence.CoreModels`, `Cadence.Deid`.
+- Project references: `Cadence.CoreModels`, `Cadence.Deid`, `Cadence.Security`, `Cadence.Kernel.Abstractions`.
+- Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `GxPSigner.SignGxpMarkdown`, `Pkcs7Signer.GenerateSigningCredentials` and `RtmGeneratorService.GenerateRtm` take an `IClock` (default `SystemClock.Instance`), and `ComplianceAuditLogRecord.Timestamp` has no default (#4784).
 - Packages: `System.IdentityModel.Tokens.Jwt`, `Microsoft.IdentityModel.Tokens`, `System.Security.Cryptography.Pkcs`, `Microsoft.AspNetCore.OpenApi`.
 
 ## Referenced by

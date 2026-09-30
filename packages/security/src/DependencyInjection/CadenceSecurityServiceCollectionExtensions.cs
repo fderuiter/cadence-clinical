@@ -1,5 +1,6 @@
 using System;
 
+using Cadence.Kernel.Time;
 using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
@@ -61,7 +62,8 @@ public static class CadenceSecurityServiceCollectionExtensions
         services.AddSingleton<IAuditLogWriter, InMemoryAuditStore>();
         services.AddSingleton(sp => new AuditDigestEngine(
             sp.GetRequiredService<IAuditLogWriter>(),
-            options.AuditLogSecretKey ?? sp.GetService<IConfiguration>()?[AuditSecretKey.EnvironmentVariable]));
+            options.AuditLogSecretKey ?? sp.GetService<IConfiguration>()?[AuditSecretKey.EnvironmentVariable],
+            sp.GetService<IClock>()));
         services.AddTransient<GxPAuditInterceptor>();
 
         // Authorization Handlers

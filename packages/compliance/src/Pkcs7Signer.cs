@@ -4,6 +4,8 @@ using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
+using Cadence.Kernel.Time;
+
 namespace Cadence.Compliance;
 
 /// <summary>
@@ -116,8 +118,11 @@ public class Pkcs7Signer
     /// <summary>
     /// Generates a temporary RSA key pair and self-signed X.509 certificate for GxP signing credentials.
     /// </summary>
-    public static (X509Certificate2 Cert, RSA Key) GenerateSigningCredentials(string signerId = "cadence-validation-runner")
+    public static (X509Certificate2 Cert, RSA Key) GenerateSigningCredentials(
+        string signerId = "cadence-validation-runner",
+        IClock? clock = null)
     {
+        DateTimeOffset now = (clock ?? SystemClock.Instance).UtcNow;
         var rsa = RSA.Create(2048);
         var req = new CertificateRequest(
             new X500DistinguishedName($"CN=Cadence GxP Validation Runner ({signerId}), O=Cadence Clinical Software"),
@@ -134,8 +139,8 @@ public class Pkcs7Signer
         );
 
         var cert = req.CreateSelfSigned(
-            DateTimeOffset.UtcNow.AddDays(-1),
-            DateTimeOffset.UtcNow.AddYears(1)
+            now.AddDays(-1),
+            now.AddYears(1)
         );
 
         return (cert, rsa);

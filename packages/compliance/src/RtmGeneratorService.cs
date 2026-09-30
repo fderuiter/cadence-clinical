@@ -7,6 +7,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
+using Cadence.Kernel.Time;
+
 namespace Cadence.Compliance;
 
 public class RequirementInfo
@@ -89,7 +91,8 @@ public static partial class RtmGeneratorService
         bool validateOnly = false,
         bool dynamicTimestamp = false,
         string? repoRoot = null,
-        bool honorDraftEnvironment = true)
+        bool honorDraftEnvironment = true,
+        IClock? clock = null)
     {
         repoRoot ??= FindRepoRoot();
         outputDir = Path.Combine(repoRoot, outputDir);
@@ -143,7 +146,7 @@ public static partial class RtmGeneratorService
         var unknownTags = FindUnknownTags(tests, allRequirements);
 
         string timestamp = dynamicTimestamp
-            ? DateTimeOffset.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture)
+            ? (clock ?? SystemClock.Instance).UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture)
             : StableTimestamp;
 
         if (!validateOnly)
