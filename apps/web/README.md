@@ -16,7 +16,7 @@ Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks 
 
 ## Authentication
 
-Sign-in is Keycloak only ([ADR-2492](../../docs/adr/2026-09-30-keycloak-only-web-sign-in.md)).
+Sign-in is Keycloak only ([ADR-2493](../../docs/adr/2026-09-30-keycloak-only-web-sign-in.md)).
 
 - The client is a public OIDC client: authorization code flow with PKCE S256, restoring an existing session with `check-sso` before the router starts. Development defaults: `VITE_KEYCLOAK_URL=http://localhost:8080/`, `VITE_KEYCLOAK_REALM=cadence`, `VITE_KEYCLOAK_CLIENT_ID=cadence-web`. Production builds have no defaults; a missing value is shown on the sign-in page. The realm is in `docker/cadence-realm.json`.
 - Tokens stay in memory and are never written to web storage. They are refreshed before expiry, before navigating to a protected route and before each API call; a failed refresh ends the session and returns to `/login`. Signing out ends the Keycloak session.
