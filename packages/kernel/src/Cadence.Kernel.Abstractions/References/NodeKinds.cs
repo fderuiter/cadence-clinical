@@ -20,6 +20,7 @@ public static class NodeKinds
     public const string Study = "study";
     public const string StudySite = "study_site";
     public const string Participant = "participant";
+    public const string Enrollment = "enrollment";
     public const string ProtocolVersion = "protocol_version";
     public const string Observation = "observation";
     public const string Attestation = "attestation";
@@ -41,6 +42,7 @@ public static class NodeKinds
         [typeof(StudyId)] = Study,
         [typeof(StudySiteId)] = StudySite,
         [typeof(ParticipantId)] = Participant,
+        [typeof(EnrollmentId)] = Enrollment,
         [typeof(ProtocolVersionId)] = ProtocolVersion,
         [typeof(ObservationId)] = Observation,
         [typeof(AttestationId)] = Attestation,

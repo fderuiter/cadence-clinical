@@ -112,6 +112,9 @@ internal sealed class StudySiteConfiguration : IEntityTypeConfiguration<StudySit
         builder.Property(x => x.Status).HasMaxLength(32).IsRequired();
         builder.HasIndex(x => new { x.StudyId, x.SiteId }).IsUnique();
         builder.HasAlternateKey(x => new { x.TenantId, x.Id });
+
+        // Lets an enrollment's foreign key prove its study site belongs to the study it names.
+        builder.HasAlternateKey(x => new { x.TenantId, x.Id, x.StudyId });
         builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Study>().WithMany()
             .HasForeignKey(x => new { x.TenantId, x.StudyId }).HasPrincipalKey(x => new { x.TenantId, x.Id })

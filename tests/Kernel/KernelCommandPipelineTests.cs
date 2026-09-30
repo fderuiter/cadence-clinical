@@ -311,6 +311,10 @@ public sealed partial class KernelCommandPipelineTests
             where TAggregate : AggregateRootBase =>
             Task.FromResult<IReadOnlyList<TAggregate>>([]);
 
+        public Task LockAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.CompletedTask;
+
         public Task<bool> ExistsAsync<TAggregate>(object id, CancellationToken cancellationToken)
             where TAggregate : AggregateRootBase =>
             Task.FromResult(TenantExists);

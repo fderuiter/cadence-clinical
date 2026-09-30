@@ -127,6 +127,39 @@ await sender.SendAsync(new ApproveProtocolVersion(tenant, versionId, signature.V
   versions) reads it with `IKernelUnitOfWork.ReadAsync`/`ReadAllAsync`. These neither track nor claim it, so the
   command still changes one aggregate (K-TX-1).
 
+## Participants and enrollment (ADR-2453)
+
+A `Participant` is an identity only; each study membership is an `Enrollment` at one study site (spec §7.4):
+
+```csharp
+await sender.SendAsync(new RegisterParticipant(tenant, participantId, key1, "Consented"), cancellationToken: ct);
+var screened = await sender.SendAsync(
+    new ScreenParticipant(tenant, enrollmentId, participantId, studySiteId, SubjectCode.From("101-001"), screenedAt, key2, "Screening visit"),
+    cancellationToken: ct);
+var enrolled = await sender.SendAsync(
+    new ChangeEnrollmentStatus(tenant, enrollmentId, EnrollmentStatus.Enrolled, enrolledAt, key3, "Eligible"), cancellationToken: ct);
+// enrolled.Value!.EnrollmentNumber is the next number in the study.
+```
+
+- **Lifecycle.** `EnrollmentTransitions` holds the state machine. A change is effective after the current status began
+  and not after it is recorded. `ChangeEnrollmentStatus` cannot withdraw: `WithdrawParticipant` names an attestation
+  with meaning `Withdrawn` over the enrollment's current `ContentHash` (`Attest` accepts `enrollment` targets), signed
+  by the person executing the command.
+- **History.** Every change closes the current row of `enrollment_status_periods` and records the old status up to
+  the change and the new status from it. `IEnrollmentDirectory.StatusAsOfAsync(tenant, enrollment, validAt, knownAt)`
+  reads it, and `ResolveParticipantAsync(tenant, study, code)` resolves a subject code (K-ID-5).
+- **Uniqueness.** Subject codes are unique per study. A participant has at most one active enrollment at a study
+  site at any valid time; rescreening after a screen failure is a new enrollment.
+- **Advisory locks (K-TX-4).** `IKernelUnitOfWork.LockAsync<TAggregate>(id)` takes a PostgreSQL advisory lock on the
+  command's connection until its transaction ends; a command takes at most one. Screening and enrolling take the
+  Study lock, so codes and numbers are checked and assigned one at a time per study, and numbers stay gap-free.
+  Protocol version numbering takes the same lock.
+- **Database guards.** `kernel.enforce_enrollment_lifecycle()` rejects, with SQLSTATE `KE001` and whoever connects:
+  illegal moves, identity or code changes, renumbering, withdrawal without its attestation, changes to a terminal
+  enrollment, deletes and truncates. Status rows are append-only (`KT001`), and the exclusion constraint
+  `ex_enrollment_status_periods_one_active` keeps one active enrollment per participant and study site.
+- **Not yet:** eligibility gating (#4727), StudySite activation gating (#4777) and per-StudySite numbering.
+
 ## Bitemporal tables (ADR-2246)
 
 A bitemporal entity implements `IBitemporalEntity` (`TemporalPeriod Period`, made of two half-open `TimeRange`s).

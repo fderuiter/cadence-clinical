@@ -209,7 +209,7 @@ public class KernelIdentifierTests
         var study = new Study(studyId, tenantId, orgId, "PROTOCOL-101", "Phase 3 Oncology", "Phase 3", "usr_admin", "Study authored");
         var site = new Site(siteId, tenantId, orgId, "SITE-101", "Memorial Hospital", "US", "usr_admin", "Site qualified");
         var studySite = new StudySite(studySiteId, tenantId, studyId, siteId, "Selected", "usr_admin", "Site selected");
-        var participant = new Participant(participantId, tenantId, studyId, studySiteId, "SUBJ-001", "Screened", "usr_cra", "Subject screened");
+        var participant = Participant.Register(participantId, tenantId);
         var observation = new Observation(obsId, tenantId, studyId, participantId, "VITAL_SIGNS", "120/80", period, "usr_crc", "Blood pressure entered");
         var target = new AttestationTarget(AttestationTarget.ProtocolVersionKind, Guid.CreateVersion7(), ContentHash.Compute("{}"));
         var attestation = Attestation.Sign(
@@ -225,11 +225,6 @@ public class KernelIdentifierTests
         participant.Should().BeAssignableTo<IGxPAuditable>();
         observation.Should().BeAssignableTo<IGxPAuditable>();
         attestation.Should().BeAssignableTo<IGxPAuditable>();
-
-        participant.VersionIndex.Should().Be(1);
-        participant.Enroll("usr_pi", "Subject passed inclusion criteria");
-        participant.VersionIndex.Should().Be(2);
-        participant.Status.Should().Be("Enrolled");
     }
 
     /// <summary>

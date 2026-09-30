@@ -31,15 +31,22 @@ ethics approval (K-TIME-4, K-TIME-5).
 ### Participant
 
 The pseudonymous kernel identity of a person taking part in a study. EDC "subject", eCOA "user" and
-RTSM "randomized subject" are views of the same `ParticipantId`. Direct identifiers live only in the
-identity vault (ADR-2253).
+RTSM "randomized subject" are views of the same `ParticipantId`. A Participant holds no study, site, code or
+status: each study membership is an Enrollment. Direct identifiers live only in the identity vault (ADR-2253).
 
 ### Enrollment
 
-A participant's bitemporal membership of a StudySite, with its state machine:
-`Screening → ScreenFailed`, `Screening → Enrolled → Randomized → Active → Completed`, and withdrawal
-from any active state through a dedicated command. `ReconsentRequired` and `Unblinded` are not
-enrollment states.
+A participant's membership of one StudySite, with its state machine:
+`Screening → ScreenFailed`, `Screening → Enrolled → Randomized → Active → Completed`, `Enrolled → Active` for
+non-randomized studies, and withdrawal from any active state through a dedicated command that names a
+`Withdrawn` Attestation. The status history is bitemporal, so the status can be read as of any valid and known
+time. Entering `Enrolled` assigns the **enrollment number**, gap-free per study. `ReconsentRequired` and
+`Unblinded` are not enrollment states (ADR-2453).
+
+### SubjectCode
+
+The human-facing code of a participant in a study (screening or subject number), unique per study and never a
+key. It is turned into a `ParticipantId` only by the resolution query (K-ID-5).
 
 ### Applicability
 

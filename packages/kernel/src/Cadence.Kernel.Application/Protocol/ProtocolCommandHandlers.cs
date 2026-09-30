@@ -32,6 +32,7 @@ internal sealed class CreateProtocolDraftHandler : ICommandHandler<CreateProtoco
         }
 
         var studyId = command.StudyId;
+        await context.Work.LockAsync<Study>(studyId, cancellationToken).ConfigureAwait(false);
         var existing = await context.Work.ReadAllAsync<ProtocolVersion>(v => v.StudyId == studyId, cancellationToken).ConfigureAwait(false);
         if (existing.Count > 0)
         {
@@ -66,9 +67,10 @@ internal sealed class ForkProtocolVersionHandler : ICommandHandler<ForkProtocolV
             return KernelErrors.NotFound.WithMessage("The parent protocol version does not exist.");
         }
 
-        // A concurrent fork can take the same number; the unique (tenant, study, number) index rejects the loser, which
-        // retries with a new idempotency key.
+        // Numbers are taken under the study's lock, so concurrent forks number one after another (K-TX-4); the unique
+        // (tenant, study, number) index stays as the last line of defence.
         var studyId = parent.StudyId;
+        await context.Work.LockAsync<Study>(studyId, cancellationToken).ConfigureAwait(false);
         var siblings = await context.Work.ReadAllAsync<ProtocolVersion>(v => v.StudyId == studyId, cancellationToken).ConfigureAwait(false);
         var number = siblings.Max(v => v.Number) + 1;
 

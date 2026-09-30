@@ -616,6 +616,8 @@ The system must enforce that a subject's state can only mutate according to the 
 | **Active**                  | Completed Last Protocol Visit   | `Completed`        | `Screening`, `Enrolled`, `Randomized` | Requires completion of all mandatory eCRFs.                           |
 | **Active** / **Randomized** | Subject Withdraws Consent       | `Withdrawn`        | All except `Withdrawn`                | Irreversible state. Immediately restricts future clinical data entry. |
 
+The kernel enrollment state machine (kernel specification §7.4, ADR-2453) refines this table: `Enrolled → Active` is allowed for non-randomized studies, withdrawal is allowed from any active state (`Screening`, `Enrolled`, `Randomized`, `Active`) through a dedicated command that names a `Withdrawn` attestation, and an illegal move is refused with `409 Conflict` (`K.Execution.InvalidTransition`).
+
 #### PRD-SUB-002: Partial Visit Query Capability on Withdrawn Subjects
 
 - When a subject transitions to the `Withdrawn` state, the EDC engine must instantly lock all upcoming scheduling visits (e.g., future visits cannot be initialized).

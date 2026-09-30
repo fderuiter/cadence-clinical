@@ -21,6 +21,7 @@ public static class KernelModelConfigurationBuilderExtensions
         configurationBuilder.Properties<SiteId>().HaveConversion<SiteIdValueConverter, EntityIdValueComparer<SiteId>>();
         configurationBuilder.Properties<StudySiteId>().HaveConversion<StudySiteIdValueConverter, EntityIdValueComparer<StudySiteId>>();
         configurationBuilder.Properties<ParticipantId>().HaveConversion<ParticipantIdValueConverter, EntityIdValueComparer<ParticipantId>>();
+        configurationBuilder.Properties<EnrollmentId>().HaveConversion<EnrollmentIdValueConverter, EntityIdValueComparer<EnrollmentId>>();
         configurationBuilder.Properties<ObservationId>().HaveConversion<ObservationIdValueConverter, EntityIdValueComparer<ObservationId>>();
         configurationBuilder.Properties<AttestationId>().HaveConversion<AttestationIdValueConverter, EntityIdValueComparer<AttestationId>>();
         configurationBuilder.Properties<ProtocolVersionId>().HaveConversion<ProtocolVersionIdValueConverter, EntityIdValueComparer<ProtocolVersionId>>();

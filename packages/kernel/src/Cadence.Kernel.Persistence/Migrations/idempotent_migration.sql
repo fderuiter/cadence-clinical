@@ -1834,3 +1834,258 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    ALTER TABLE kernel.study_sites ADD CONSTRAINT "AK_study_sites_tenant_id_id_study_id" UNIQUE (tenant_id, id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE TABLE kernel.participants (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_participants" PRIMARY KEY (id),
+        CONSTRAINT "AK_participants_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "FK_participants_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE TABLE kernel.enrollments (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        participant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        study_site_id uuid NOT NULL,
+        subject_code character varying(64) NOT NULL,
+        status character varying(16) NOT NULL,
+        status_since timestamp with time zone NOT NULL,
+        enrollment_number integer,
+        withdrawal_kind character varying(32),
+        withdrawal_attestation_id uuid,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_enrollments" PRIMARY KEY (id),
+        CONSTRAINT "AK_enrollments_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT "AK_enrollments_tenant_id_id_participant_id_study_site_id" UNIQUE (tenant_id, id, participant_id, study_site_id),
+        CONSTRAINT ck_enrollments_number CHECK (enrollment_number IS NULL OR enrollment_number > 0),
+        CONSTRAINT ck_enrollments_numbered CHECK ((status IN ('Screening', 'ScreenFailed') AND enrollment_number IS NULL) OR (status IN ('Enrolled', 'Randomized', 'Active', 'Completed') AND enrollment_number IS NOT NULL) OR status = 'Withdrawn'),
+        CONSTRAINT "FK_enrollments_attestations_tenant_id_withdrawal_attestation_id" FOREIGN KEY (tenant_id, withdrawal_attestation_id) REFERENCES kernel.attestations (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_enrollments_participants_tenant_id_participant_id" FOREIGN KEY (tenant_id, participant_id) REFERENCES kernel.participants (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_enrollments_study_sites_tenant_id_study_site_id_study_id" FOREIGN KEY (tenant_id, study_site_id, study_id) REFERENCES kernel.study_sites (tenant_id, id, study_id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_enrollments_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE TABLE kernel.enrollment_status_periods (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        enrollment_id uuid NOT NULL,
+        participant_id uuid NOT NULL,
+        study_site_id uuid NOT NULL,
+        status character varying(16) NOT NULL,
+        recorded_period tstzrange NOT NULL,
+        valid_period tstzrange NOT NULL,
+        CONSTRAINT "PK_enrollment_status_periods" PRIMARY KEY (id),
+        CONSTRAINT "FK_enrollment_status_periods_enrollments_tenant_id_enrollment_~" FOREIGN KEY (tenant_id, enrollment_id, participant_id, study_site_id) REFERENCES kernel.enrollments (tenant_id, id, participant_id, study_site_id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE INDEX "IX_enrollment_status_periods_tenant_id_enrollment_id" ON kernel.enrollment_status_periods (tenant_id, enrollment_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE INDEX "IX_enrollment_status_periods_tenant_id_enrollment_id_participa~" ON kernel.enrollment_status_periods (tenant_id, enrollment_id, participant_id, study_site_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE INDEX "IX_enrollments_tenant_id_participant_id" ON kernel.enrollments (tenant_id, participant_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE UNIQUE INDEX "IX_enrollments_tenant_id_study_id_enrollment_number" ON kernel.enrollments (tenant_id, study_id, enrollment_number) WHERE enrollment_number IS NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE UNIQUE INDEX "IX_enrollments_tenant_id_study_id_subject_code" ON kernel.enrollments (tenant_id, study_id, subject_code);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE INDEX "IX_enrollments_tenant_id_study_site_id_study_id" ON kernel.enrollments (tenant_id, study_site_id, study_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE INDEX "IX_enrollments_tenant_id_withdrawal_attestation_id" ON kernel.enrollments (tenant_id, withdrawal_attestation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    ALTER TABLE "kernel"."enrollment_status_periods" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."enrollment_status_periods" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."enrollment_status_periods"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    ALTER TABLE "kernel"."enrollments" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."enrollments" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."enrollments"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    ALTER TABLE "kernel"."participants" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."participants" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."participants"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    ALTER TABLE "kernel"."enrollment_status_periods" ADD CONSTRAINT "ex_enrollment_status_periods_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "enrollment_id" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_enrollment_status_periods_append_only" BEFORE UPDATE OR DELETE ON "kernel"."enrollment_status_periods"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_enrollment_status_periods_no_truncate" BEFORE TRUNCATE ON "kernel"."enrollment_status_periods"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    CREATE OR REPLACE FUNCTION "kernel".enforce_enrollment_lifecycle() RETURNS trigger
+    LANGUAGE plpgsql AS $fn$
+    BEGIN
+        IF TG_OP IN ('DELETE', 'TRUNCATE') THEN
+            RAISE EXCEPTION 'K-ENR: enrollments are never deleted (%)', TG_OP USING ERRCODE = 'KE001';
+        END IF;
+
+        IF TG_OP = 'INSERT' THEN
+            IF NEW.status <> 'Screening' OR NEW.enrollment_number IS NOT NULL
+                OR NEW.withdrawal_kind IS NOT NULL OR NEW.withdrawal_attestation_id IS NOT NULL THEN
+                RAISE EXCEPTION 'K-ENR: an enrollment starts in Screening without a number or withdrawal'
+                    USING ERRCODE = 'KE001';
+            END IF;
+            RETURN NEW;
+        END IF;
+
+        IF OLD.status IN ('ScreenFailed', 'Completed', 'Withdrawn') THEN
+            RAISE EXCEPTION 'K-ENR: enrollment % is % and final', OLD.id, OLD.status USING ERRCODE = 'KE001';
+        END IF;
+
+        IF NEW.id <> OLD.id OR NEW.tenant_id <> OLD.tenant_id OR NEW.participant_id <> OLD.participant_id
+            OR NEW.study_id <> OLD.study_id OR NEW.study_site_id <> OLD.study_site_id
+            OR NEW.subject_code <> OLD.subject_code THEN
+            RAISE EXCEPTION 'K-ENR: the identity of enrollment % cannot change', OLD.id USING ERRCODE = 'KE001';
+        END IF;
+
+        IF NEW.status <> OLD.status AND (OLD.status, NEW.status) NOT IN (
+            ('Screening', 'ScreenFailed'), ('Screening', 'Enrolled'), ('Screening', 'Withdrawn'),
+            ('Enrolled', 'Randomized'), ('Enrolled', 'Active'), ('Enrolled', 'Withdrawn'),
+            ('Randomized', 'Active'), ('Randomized', 'Withdrawn'),
+            ('Active', 'Completed'), ('Active', 'Withdrawn')) THEN
+            RAISE EXCEPTION 'K-ENR: enrollment % cannot move from % to %', OLD.id, OLD.status, NEW.status
+                USING ERRCODE = 'KE001';
+        END IF;
+
+        IF (NEW.status = OLD.status AND NEW.status_since <> OLD.status_since)
+            OR (NEW.status <> OLD.status AND NEW.status_since <= OLD.status_since) THEN
+            RAISE EXCEPTION 'K-ENR: enrollment % changes status only forwards in valid time', OLD.id
+                USING ERRCODE = 'KE001';
+        END IF;
+
+        IF (OLD.enrollment_number IS NOT NULL AND NEW.enrollment_number IS DISTINCT FROM OLD.enrollment_number)
+            OR (OLD.enrollment_number IS NULL AND NEW.enrollment_number IS NOT NULL
+                AND NOT (OLD.status = 'Screening' AND NEW.status = 'Enrolled'))
+            OR (NEW.status = 'Enrolled' AND NEW.enrollment_number IS NULL) THEN
+            RAISE EXCEPTION 'K-ENR: enrollment % is numbered once, on entering Enrolled', OLD.id
+                USING ERRCODE = 'KE001';
+        END IF;
+
+        IF (NEW.status = 'Withdrawn') <> (NEW.withdrawal_kind IS NOT NULL AND NEW.withdrawal_attestation_id IS NOT NULL)
+            OR (NEW.status <> 'Withdrawn' AND (NEW.withdrawal_kind IS NOT NULL OR NEW.withdrawal_attestation_id IS NOT NULL)) THEN
+            RAISE EXCEPTION 'K-ENR: withdrawal of enrollment % needs its kind and attestation', OLD.id
+                USING ERRCODE = 'KE001';
+        END IF;
+
+        RETURN NEW;
+    END;
+    $fn$;
+
+    CREATE TRIGGER trg_enrollments_lifecycle BEFORE INSERT OR UPDATE OR DELETE ON "kernel"."enrollments"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_enrollment_lifecycle();
+    CREATE TRIGGER trg_enrollments_no_truncate BEFORE TRUNCATE ON "kernel"."enrollments"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_enrollment_lifecycle();
+
+    ALTER TABLE "kernel"."enrollment_status_periods" ADD CONSTRAINT ex_enrollment_status_periods_one_active
+        EXCLUDE USING gist (tenant_id WITH =, participant_id WITH =, study_site_id WITH =,
+            valid_period WITH &&, recorded_period WITH &&)
+        WHERE (status IN ('Screening', 'Enrolled', 'Randomized', 'Active'))
+        DEFERRABLE INITIALLY DEFERRED;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930043230_ParticipantsAndEnrollments') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930043230_ParticipantsAndEnrollments', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
