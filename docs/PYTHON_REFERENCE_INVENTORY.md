@@ -21,7 +21,7 @@ Delete the Python file, its row here and, when the folder has no Python left, it
 | [packages/ddf](#packagesddf) | 1 | 0 | 10 |
 | [packages/engine_core](#packagesengine_core) | 7 | 0 | 15 |
 | [packages/security](#packagessecurity) | 9 | 0 | 0 |
-| [packages/storage](#packagesstorage) | 0 | 0 | 6 |
+| [packages/storage](#packagesstorage) | 0 | 0 | 2 |
 
 ## packages/ddf
 
@@ -100,9 +100,5 @@ that they are dropped.
 
 | Python file | What it does | C# today | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `adapters/minio_adapter.py` | MinIO subclass of the S3 adapter | `S3BlobStore` with `Storage:ServiceUrl` (path-style addressing) | Ported, deletion pending | `S3BlobStoreTests`, `StorageRegistrationTests` |
-| `adapters/s3_adapter.py` | S3 put/get with SHA-256 check, SSE, presigned get/put URLs, multipart | `packages/storage/src/S3BlobStore.cs` | Ported, deletion pending | `S3BlobStoreTests` |
-| `factory.py` | Picks the local, S3 or MinIO adapter from environment | `AddCadenceStorage` (`StorageServiceCollectionExtensions.cs`); the provider is named, never guessed from the endpoint | Ported, deletion pending | `StorageRegistrationTests` |
 | `gdrive.py` | Google Drive run-manifest upload for GxP recordings | Not carried forward ([ADR-2505](adr/2026-09-30-recording-evidence-goes-to-controlled-object-storage.md)): recording evidence goes through `IStoragePort<byte[]>` (S3, MinIO or filesystem), which records and checks each object's SHA-256 | Ported, deletion pending | No C# code used Drive; the `record setup-gdrive` stub and the `Google.Apis.Drive.v3` reference are removed |
 | `local_store.py` | Filesystem provider with checksum and path-traversal guard | `packages/storage/src/FileSystemBlobStore.cs` (`Storage:Provider` `filesystem`); unlike the reference, every read is checked against the hash recorded at write time | Ported, deletion pending | `FileSystemBlobStoreTests` |
-| `s3_store.py` | Older S3 provider | `S3BlobStore` (a duplicate of `adapters/s3_adapter.py`) | Ported, deletion pending | `S3BlobStoreTests` |
