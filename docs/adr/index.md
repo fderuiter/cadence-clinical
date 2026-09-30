@@ -221,7 +221,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2357: Declarative Route Dependencies and Fallback Signature Verification](2026-08-11-declarative-dependencies-and-signature-verification-fallback.md) (2026-08-11)
 - [ADR-2358: Gateway Signature Legacy V2 Fallback](2026-08-11-gateway-signature-legacy-v2-fallback.md) (2026-08-11)
 - [ADR-2365: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling](2026-08-11-unified-ports-and-adapters-architecture-transaction-propagation-and-gateway-connection-pooling.md) (2026-08-11)
-- [ADR-2367: NestJS API Gateway Promise Coalescing and Eager Key Prefetching](2026-08-12-nestjs-api-gateway-promise-coalescing.md) (2026-08-12)
+- [ADR-2367: NestJS API Gateway Promise Coalescing and Eager Key Prefetching](2026-08-12-nestjs-api-gateway-promise-coalescing.md) (2026-08-12) *(Superseded by ADR-2256)*
 - [ADR-2369: Secure Unblinding Signature Fallback Restriction & Scope Normalization](2026-08-12-secure-unblinding-signature-fallback-restriction.md) (2026-08-12)
 - [ADR-2371: Unified Cryptographic Fingerprint Verification API](2026-08-12-unified-cryptographic-fingerprint-verification-api.md) (2026-08-12)
 - [ADR-2374: Standalone In-Application Ticketing Service and Platform Integration](2026-08-13-tickets-service-scaffold-and-gateway-integration.md) (2026-08-13)

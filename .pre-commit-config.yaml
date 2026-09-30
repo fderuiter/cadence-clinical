@@ -21,8 +21,20 @@ repos:
     hooks:
       - id: hadolint-docker
 
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+    hooks:
+      - id: actionlint
+
   - repo: local
     hooks:
+      - id: action-pinning-check
+        name: Action Commit SHA Pinning Linter
+        entry: python3 scripts/check-action-pinning.py
+        language: system
+        files: ^\.github/workflows/.*\.yml$
+        pass_filenames: false
+
       - id: prettier-check
         name: Prettier Formatting & Syntax Check
         entry: pnpm exec prettier --check

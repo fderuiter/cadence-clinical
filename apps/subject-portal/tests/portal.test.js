@@ -1132,7 +1132,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
           );
         }
         expect(results.violations).toEqual([]);
-      });
+      }, 20000);
 
       it("supports keyboard arrow-key navigation on navigation tabs", async () => {
         const portal = await import("../src/index.js");

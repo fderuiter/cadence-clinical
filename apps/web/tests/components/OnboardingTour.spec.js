@@ -171,6 +171,67 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.currentStep).toBe(2);
       expect(store.events).toEqual([]); // Falls back to empty array on parse error
     });
+
+    it("persists global dismissal and disabled preference keys and prevents tour popover on unvisited personas", () => {
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+
+      expect(store.currentPersona).toBe("super_admin");
+      expect(store.isActive).toBe(true);
+
+      // Dismiss tour in super_admin
+      store.dismissTour();
+      expect(store.isActive).toBe(false);
+      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe("true");
+
+      // Switch to unvisited persona site_crc
+      authStore.switchPersona("site_crc");
+      store.loadPersonaState("site_crc");
+
+      expect(store.currentPersona).toBe("site_crc");
+      expect(store.isActive).toBe(false); // Kept hidden due to global dismissal flag
+      expect(store.currentStep).toBe(1); // Step position initialized for persona
+
+      // Advance step in site_crc
+      store.nextStep("Step 1 for site_crc");
+      expect(store.currentStep).toBe(2);
+      expect(window.localStorage.getItem("onboarding_site_crc_current_step")).toBe("2");
+
+      // Switch back to super_admin
+      authStore.switchPersona("super_admin");
+      store.loadPersonaState("super_admin");
+      expect(store.currentPersona).toBe("super_admin");
+      expect(store.isActive).toBe(false);
+    });
+
+    it("prevents future prompts across all personas when completely disabled", () => {
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+
+      store.disableTour();
+      expect(store.disabled).toBe(true);
+      expect(store.isActive).toBe(false);
+      expect(window.localStorage.getItem("onboarding_global_disabled")).toBe("true");
+
+      // Switch to unvisited persona site_crc
+      authStore.switchPersona("site_crc");
+      store.loadPersonaState("site_crc");
+
+      expect(store.disabled).toBe(true);
+      expect(store.isActive).toBe(false);
+    });
+
+    it("clears global dismissal and disabled flags when tour is reset or restarted", () => {
+      const store = useOnboardingStore();
+      store.dismissTour();
+      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe("true");
+
+      store.resetTour();
+      expect(store.isActive).toBe(true);
+      expect(store.disabled).toBe(false);
+      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe("false");
+      expect(window.localStorage.getItem("onboarding_global_disabled")).toBe("false");
+    });
   });
 
   describe("OnboardingTour.vue component", () => {
@@ -266,6 +327,32 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
 
       expect(store.currentPersona).toBe("site_crc");
       expect(store.currentStep).toBe(3);
+    });
+
+    it("does not render popover card when switching to an unvisited persona after dismissal", async () => {
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+
+      const wrapper = mount(OnboardingTour, {
+        props: {
+          activeTab: "soa",
+        },
+      });
+
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
+
+      // Dismiss tour
+      await wrapper.find(".btn-tour-dismiss").trigger("click");
+      expect(store.isActive).toBe(false);
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(false);
+
+      // Switch persona to unvisited site_crc
+      authStore.switchPersona("site_crc");
+      await wrapper.vm.$nextTick();
+
+      expect(store.currentPersona).toBe("site_crc");
+      expect(store.isActive).toBe(false);
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(false);
     });
   });
 

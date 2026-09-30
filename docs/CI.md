@@ -13,11 +13,12 @@ How CI is set up, which checks run where, and how to reproduce and fix each fail
 
 ### `ci.yml` jobs
 
-1. **Style and Lint Verification**: `dotnet format --verify-no-changes`, the Cadence quality gates, architecture tests (ArchUnitNET), a Native AOT publish of the CLI that fails on any trim or AOT warning, ADR, Markdown, OpenAPI, schema-doc and traceability checks, code duplication, Hadolint, ShellCheck, CODEOWNERS coverage, the docs build and frontend ESLint/Prettier.
-2. **Security and Vulnerability Audit**: static security audit, secret baseline immutability verification (`git diff --exit-code .secrets.baseline`), secret detection, DEID scan and NuGet/npm vulnerability audit.
-3. **.NET 10 C# xUnit Verification**: `dotnet build` (warnings are errors), then `dotnet test Cadence.sln`, which runs the unit, integration, architecture and E2E test projects against a `postgres:16` service container (`CADENCE_TEST_POSTGRES`), so the database tests run instead of skipping.
-4. **Frontend Unit Tests**: Vitest across the pnpm workspace.
-5. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `pnpm cadence gxp sync` and fails if they differ from the committed files.
+1. **Workflow Action Pinning & Actionlint Gate**: runs `rhysd/actionlint` and `python3 scripts/check-action-pinning.py` to enforce GitHub Actions supply-chain security (pinning third-party action usages to full 40-character commit SHAs) and workflow YAML syntax.
+2. **Style and Lint Verification**: `dotnet format --verify-no-changes`, the Cadence quality gates, architecture tests (ArchUnitNET), a Native AOT publish of the CLI that fails on any trim or AOT warning, ADR, Markdown, OpenAPI, schema-doc and traceability checks, code duplication, Hadolint, ShellCheck, CODEOWNERS coverage, the docs build and frontend ESLint/Prettier.
+3. **Security and Vulnerability Audit**: static security audit, secret baseline immutability verification (`git diff --exit-code .secrets.baseline`), secret detection, DEID scan and NuGet/npm vulnerability audit.
+4. **.NET 10 C# xUnit Verification**: `dotnet build` (warnings are errors), then `dotnet test Cadence.sln`, which runs the unit, integration, architecture and E2E test projects against a `postgres:16` service container (`CADENCE_TEST_POSTGRES`), so the database tests run instead of skipping.
+5. **Frontend Unit Tests**: Vitest across the pnpm workspace.
+6. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `pnpm cadence gxp sync` and fails if they differ from the committed files.
 
 Only on pushes to `main`: accessibility E2E tests, the container build and Trivy vulnerability scan (enforcing fail-closed exit code 1 with SARIF report upload to GitHub Security tab), the production pipeline and the docs deploy. They are kept off pull requests to save Actions minutes.
 
@@ -65,12 +66,15 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 1. `dotnet format Cadence.sln --verify-no-changes --include <staged .cs files>`, skipped when no C# file is staged.
 2. `pnpm cadence check --pre-commit`: all 21 gates, with two shortcuts. The two format gates are skipped because step 1 covers the staged files. The `openapi` gate only checks `docs/api` against the committed `docs/openapi` specs, because exporting the specs from the services takes minutes. `pnpm cadence check`, `make verify` and CI run every gate in full.
 
+Additionally, `.pre-commit-config.yaml` configures `rhysd/actionlint` and local `action-pinning-check` (`scripts/check-action-pinning.py`) hooks to ensure all GitHub Actions references in `.github/workflows/` are syntax-checked and pinned to 40-character commit SHAs.
+
 There is no pre-push hook. The traceability matrix is checked in CI by the compliance job; run `pnpm cadence gxp sync` before pushing test changes.
 
 ```bash
 # Run the same checks without committing
 dotnet format Cadence.sln --verify-no-changes
 pnpm cadence check
+python3 scripts/check-action-pinning.py
 
 # Enable the hooks by hand if setup was skipped
 git config core.hooksPath .githooks
@@ -84,6 +88,7 @@ CI runs in `.github/workflows/ci.yml`. `pnpm cadence ci` reproduces the whole wo
 
 | Failing job or step                                          | Usual cause                                                                       | Reproduce and fix locally                                                                                        |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Workflow Action Pinning & Actionlint Gate                    | Third-party action not pinned to 40-char SHA or actionlint YAML error             | `python3 scripts/check-action-pinning.py` and `pre-commit run actionlint --all-files`                          |
 | Style › Verify .NET C# code formatting                       | Code doesn't match `.editorconfig` or analyzer style                              | `dotnet format Cadence.sln`, then commit                                                                         |
 | Style › Run frontend style and lint                          | ESLint or Prettier findings in `apps/web`, `apps/subject-portal` or `packages/ui` | `pnpm format` and `pnpm -r lint`                                                                                 |
 | Style › Run Cadence quality sentinels, or a single gate step | One of the 21 gates failed; the log names it                                      | `pnpm cadence check <gate>`                                                                                      |
