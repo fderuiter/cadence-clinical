@@ -177,6 +177,9 @@ and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` from those results and stages them.
 documents are still regenerated so the failures are visible, but nothing is staged and the command exits
 non-zero.
 
+Both documents cover requirement-tagged tests only, so adding an untagged test does not change them and parallel
+branches do not conflict on them (ADR-2287).
+
 Tests are found by scanning `tests/` for `[Fact]` and `[Theory]` methods and matched to TRX results by
 their fully qualified name. Theory cases are merged: a single failing case fails the test.
 

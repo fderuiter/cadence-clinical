@@ -52,4 +52,14 @@ Make these files completely deterministic, ensuring they _only_ change when func
 
 - ❌ Line numbers of secrets are not recorded in `.secrets.baseline` (not required by `detect-secrets` anyway).
 
+## Amendment (2026-09-30)
+
+The qualification report still changed on almost every pull request, because its summary counted every test result
+in the suite. Any branch that added an untagged test changed the totals and the integrity stamp, so parallel
+branches conflicted on the report and each needed a rebase and a full `gxp sync` before it could merge. The summary
+now counts only the requirement-tagged test methods listed in the Operational Qualification table: passed, failed,
+skipped and not run. Whole-suite totals stay in the TRX files under `TestResults/gxp/`. The report now changes only
+when a tagged test or its result changes, which is also the only change a reviewer of a qualification record needs
+to see.
+
 This decision implements requirements under Trace-8.
