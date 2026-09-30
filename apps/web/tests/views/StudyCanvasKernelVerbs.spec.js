@@ -32,7 +32,7 @@ const PARTICIPANT = {
   enrollment_index: 1,
 };
 
-// The kernel's fail-closed answer today: the command is offered, denied, and explained.
+// The authority evaluator's answer without a grant: the command is offered, denied, and explained.
 function denied(command, capability) {
   return {
     command,
@@ -41,8 +41,7 @@ function denied(command, capability) {
       verb_class: "Execute",
       resource: REF,
       permitted: false,
-      reason:
-        "Permissions can't be evaluated yet, so no kernel action is permitted.",
+      reason: `crc-7 holds no grant of ${capability}.`,
       explanation: {
         subject: REF,
         claim: `You may not ${capability} on this participant.`,
@@ -50,11 +49,10 @@ function denied(command, capability) {
         steps: [{ claim: "No grant covers this participant.", evidence: [] }],
         conditions: [
           {
-            code: "authority.evaluator",
-            description:
-              "Permissions are evaluated from grants, delegations and qualifications",
+            code: "grant.active",
+            description: `Obtain a grant or delegation of ${capability} covering this participant`,
             met: false,
-            evidence: [],
+            evidence: [REF],
           },
         ],
         next_actions: [
@@ -64,6 +62,32 @@ function denied(command, capability) {
             target: null,
           },
         ],
+      },
+    },
+  };
+}
+
+// A grant in effect covers it: permitted, with the satisfied condition naming the grant.
+function permitted(command, capability) {
+  const decision = denied(command, capability).decision;
+  return {
+    command,
+    decision: {
+      ...decision,
+      permitted: true,
+      reason: null,
+      explanation: {
+        ...decision.explanation,
+        claim: `You may ${capability} on this participant.`,
+        conditions: [
+          {
+            code: "grant.active",
+            description: `Holds ${capability} for Study`,
+            met: true,
+            evidence: ["grant:0192f3c4-5e6a-7b8c-9d0e-00000000000a"],
+          },
+        ],
+        next_actions: [],
       },
     },
   };
@@ -121,7 +145,7 @@ describe("Clinical Canvas kernel verbs: Act and Explain (ADR-2540)", () => {
   it("asks the kernel only when Act is chosen, then lists each command with its decision and reason", async () => {
     vi.mocked(kernelApi.getCommands).mockResolvedValue([
       denied("ChangeParticipantState", "participant.change_state"),
-      denied("WithdrawParticipant", "participant.withdraw"),
+      permitted("WithdrawParticipant", "participant.withdraw"),
     ]);
     await openParticipant();
     expect(kernelApi.getCommands).not.toHaveBeenCalled();
@@ -141,8 +165,10 @@ describe("Clinical Canvas kernel verbs: Act and Explain (ADR-2540)", () => {
     ]);
     expect(items[0].text()).toContain("Not permitted");
     expect(items[0].text()).toContain(
-      "Permissions can't be evaluated yet, so no kernel action is permitted."
+      "crc-7 holds no grant of participant.change_state."
     );
+    expect(items[1].text()).toContain("Permitted");
+    expect(items[1].text()).not.toContain("Not permitted");
     expect(wrapper.find("#inspector-state").exists()).toBe(false);
   });
 
@@ -170,8 +196,9 @@ describe("Clinical Canvas kernel verbs: Act and Explain (ADR-2540)", () => {
       "You may not participant.change_state on this participant."
     );
     expect(explain.find(".condition-unmet").text()).toContain(
-      "Permissions are evaluated from grants, delegations and qualifications"
+      "Obtain a grant or delegation of participant.change_state covering this participant"
     );
+    expect(explain.find(".condition-unmet code").text()).toBe(REF);
     expect(explain.text()).toContain("Ask a study administrator for a grant.");
 
     await wrapper.find("#verb-details").trigger("click");
