@@ -8,6 +8,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Subjects;
 
@@ -61,8 +62,11 @@ public sealed class SubjectApplicationService(
     IDemographicsEncryptionService demographicsEncryption,
     IAuditLogWriter auditLog,
     ICurrentAuditContextAccessor auditContext,
-    Func<ClinicalSubject, CancellationToken, Task<bool>>? screeningEligibility = null) : ISubjectApplicationService
+    Func<ClinicalSubject, CancellationToken, Task<bool>>? screeningEligibility = null,
+    IClock? clock = null) : ISubjectApplicationService
 {
+    private readonly IClock _clock = clock ?? SystemClock.Instance;
+
     // ---- MIG-SUBJ-018: CreateAsync & RecordConsentAsync ----------------------------------------
 
     /// <summary>
@@ -493,13 +497,14 @@ public sealed class SubjectApplicationService(
             }
         }
 
-        var transition = subject.TransitionTo(target);
-        if (transition.IsFailure)
+        // Unblinding records who broke the blind, why and when on the subject itself, not only in the audit
+        // entry (#4951); every other target is a plain transition.
+        DomainError? transitionError = target == SubjectState.Unblinded
+            ? subject.Unblind(auditContext.UserId, changeReason, _clock).Error
+            : subject.TransitionTo(target).Error;
+        if (transitionError is not null)
         {
-            // `!`: same Result<T>.Error non-null-when-IsFailure invariant as UpdateDemographicsAsync above --
-            // this is the one call site 02_technical_design.md §3.2's verbatim AdvanceStateAsync reference
-            // implementation itself uses unmodified.
-            return Result<SubjectResponse>.Failure(transition.Error!);
+            return Result<SubjectResponse>.Failure(transitionError);
         }
 
         subject.ReasonForChange = changeReason;

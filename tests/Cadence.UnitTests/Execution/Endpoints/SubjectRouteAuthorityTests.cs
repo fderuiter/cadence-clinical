@@ -99,15 +99,21 @@ public sealed class SubjectRouteAuthorityTests(ExecutionApiFactory factory) : IC
     }
 
     [Fact]
-    public async Task Unblinding_ByAnEmergencyUnblinder_Succeeds()
+    public async Task Unblinding_ByAnEmergencyUnblinder_RecordsWhoUnblindedAndWhy()
     {
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller("unblinder", "Emergency Unblinder"));
+        var unblinder = Caller("unblinder", "Emergency Unblinder");
+        using var client = factory.CreateSignedClient(unblinder);
 
         var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.OK, await state.Content.ReadAsStringAsync(Ct));
-        (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Unblinded);
+        var stored = await ReadSubjectAsync(subject);
+        stored.Status.Should().Be(SubjectState.Unblinded);
+        stored.IsUnblinded.Should().BeTrue();
+        stored.UnblindedBy.Should().Be(unblinder.UserId);
+        stored.UnblindedReason.Should().Be(Reason);
+        stored.UnblindedAt.Should().NotBeNull();
     }
 
     [Fact]
