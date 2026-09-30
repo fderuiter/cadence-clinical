@@ -294,6 +294,156 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
         await ExecuteAsAdminAsync($"UPDATE kernel.enrollments SET status = 'Randomized', status_since = status_since + interval '1 second' WHERE id = '{id}'", ct);
     }
 
+    /// <summary>
+    /// Validates that two screenings sent at the same time with one subject code in one study cannot both succeed:
+    /// the study's lock (K-TX-4) serializes them, so exactly one gets the code and the other gets SubjectCodeTaken.
+    /// </summary>
+    [Fact(DisplayName = "Screen_ConcurrentScreeningsWithOneCode_OnlyOneGetsTheCode")]
+    public async Task ScreenConcurrentScreeningsWithOneCodeOnlyOneGetsTheCode()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        const int count = 6;
+        var (tenant, study, studySite) = await NewStudySiteAsync(ct);
+        var sites = new StudySiteId[count];
+        var participants = new ParticipantId[count];
+        for (var i = 0; i < count; i++)
+        {
+            sites[i] = i % 2 == 0 ? studySite : await AddStudySiteAsync(tenant, study, ct);
+            participants[i] = await RegisterAsync(tenant, ct);
+        }
+
+        var screenedAt = Tick();
+        Tick();
+        var results = await Task.WhenAll(Enumerable.Range(0, count).Select(i => fixture.Sender.SendAsync(
+            new ScreenParticipant(tenant, EnrollmentId.New(), participants[i], sites[i], SubjectCode.From("SUBJ-001"), screenedAt, KernelProtocolScenario.Key(), "Screening visit"),
+            cancellationToken: ct)));
+
+        results.Count(r => r.IsSuccess).Should().Be(1);
+        results.Where(r => !r.IsSuccess).Should().OnlyContain(r => r.Error == ExecutionErrors.SubjectCodeTaken);
+        await using var db = fixture.CreateContext(tenant);
+        (await db.Enrollments.AsNoTracking().CountAsync(e => e.StudyId == study && e.SubjectCode == SubjectCode.From("SUBJ-001"), ct)).Should().Be(1);
+    }
+
+    /// <summary>
+    /// Validates that the one-active-enrollment rule is checked in valid time, not only against the current status: a
+    /// screening back-dated into the period when an earlier enrollment at the same study site was still screening is
+    /// refused, even though that enrollment has since screen-failed. A screening after the screen failure is accepted.
+    /// </summary>
+    [Fact(DisplayName = "Screen_BackdatedIntoAnEarlierActivePeriod_IsRefused")]
+    public async Task ScreenBackdatedIntoAnEarlierActivePeriodIsRefused()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, _, studySite) = await NewStudySiteAsync(ct);
+        var firstScreenedAt = Tick();
+        var (participant, first) = await ScreenAsync(tenant, studySite, "SUBJ-001", firstScreenedAt, ct);
+        var whileScreening = Tick();
+        var failedAt = Tick();
+        await ChangeAsync(tenant, first, EnrollmentStatus.ScreenFailed, failedAt, ct);
+
+        (await SendScreenAsync(tenant, participant, studySite, "SUBJ-001-B", whileScreening, ct)).Error.Should().Be(ExecutionErrors.AlreadyActiveAtSite);
+        (await SendScreenAsync(tenant, participant, studySite, "SUBJ-001-C", firstScreenedAt, ct)).Error.Should().Be(ExecutionErrors.AlreadyActiveAtSite);
+
+        var rescreen = await SendScreenAsync(tenant, participant, studySite, "SUBJ-001-R", Tick(), ct);
+        rescreen.IsSuccess.Should().BeTrue(rescreen.Error?.Message);
+    }
+
+    /// <summary>
+    /// Validates that enrollment numbers stay gap-free when other participants screen-fail or withdraw in between: a
+    /// number is taken only on entering Enrolled, and a withdrawn participant keeps theirs without it being reused.
+    /// </summary>
+    [Fact(DisplayName = "EnrollmentNumbers_StayGapFree_AcrossScreenFailuresAndWithdrawals")]
+    public async Task EnrollmentNumbersStayGapFreeAcrossScreenFailuresAndWithdrawals()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study, studySite) = await NewStudySiteAsync(ct);
+        var (_, a) = await ScreenAsync(tenant, studySite, "SUBJ-A", Tick(), ct);
+        var (_, b) = await ScreenAsync(tenant, studySite, "SUBJ-B", Tick(), ct);
+        var (_, c) = await ScreenAsync(tenant, studySite, "SUBJ-C", Tick(), ct);
+        var (_, d) = await ScreenAsync(tenant, studySite, "SUBJ-D", Tick(), ct);
+
+        (await ChangeAsync(tenant, a, EnrollmentStatus.Enrolled, Tick(), ct)).EnrollmentNumber.Should().Be(1);
+        await ChangeAsync(tenant, b, EnrollmentStatus.ScreenFailed, Tick(), ct);
+        var cScreening = (await fixture.Enrollments.FindAsync(tenant, c, ct))!;
+        (await SendWithdrawAsync(tenant, c, await AttestAsync(tenant, AttestationMeaning.Withdrawn, cScreening, ct), ct)).IsSuccess.Should().BeTrue();
+        var aEnrolled = (await fixture.Enrollments.FindAsync(tenant, a, ct))!;
+        (await SendWithdrawAsync(tenant, a, await AttestAsync(tenant, AttestationMeaning.Withdrawn, aEnrolled, ct), ct)).IsSuccess.Should().BeTrue();
+        (await ChangeAsync(tenant, d, EnrollmentStatus.Enrolled, Tick(), ct)).EnrollmentNumber.Should().Be(2);
+
+        await using var db = fixture.CreateContext(tenant);
+        var numbers = await db.Enrollments.AsNoTracking().Where(e => e.StudyId == study)
+            .OrderBy(e => e.SubjectCode).Select(e => new { e.SubjectCode, e.Status, e.EnrollmentNumber }).ToListAsync(ct);
+        numbers.Should().Equal(
+            new { SubjectCode = SubjectCode.From("SUBJ-A"), Status = EnrollmentStatus.Withdrawn, EnrollmentNumber = (int?)1 },
+            new { SubjectCode = SubjectCode.From("SUBJ-B"), Status = EnrollmentStatus.ScreenFailed, EnrollmentNumber = (int?)null },
+            new { SubjectCode = SubjectCode.From("SUBJ-C"), Status = EnrollmentStatus.Withdrawn, EnrollmentNumber = (int?)null },
+            new { SubjectCode = SubjectCode.From("SUBJ-D"), Status = EnrollmentStatus.Enrolled, EnrollmentNumber = (int?)2 });
+    }
+
+    /// <summary>
+    /// Validates the withdrawal rules checked before the signature: an unknown enrollment, an undefined withdrawal kind,
+    /// a terminal enrollment and a withdrawal dated in the future are refused even when the actor offers a valid
+    /// Withdrawn attestation over the enrollment's current state, and the enrollment is left unchanged.
+    /// </summary>
+    [Fact(DisplayName = "Withdraw_RefusesUnknownInvalidTerminalAndFutureRequests_EvenWithAValidSignature")]
+    public async Task WithdrawRefusesUnknownInvalidTerminalAndFutureRequestsEvenWithAValidSignature()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, _, studySite) = await NewStudySiteAsync(ct);
+        var (_, enrollment) = await ScreenAsync(tenant, studySite, "SUBJ-001", Tick(), ct);
+        var enrolled = await ChangeAsync(tenant, enrollment, EnrollmentStatus.Enrolled, Tick(), ct);
+        var signed = await AttestAsync(tenant, AttestationMeaning.Withdrawn, enrolled, ct);
+        var (_, failed) = await ScreenAsync(tenant, studySite, "SUBJ-002", Tick(), ct);
+        var screenFailed = await ChangeAsync(tenant, failed, EnrollmentStatus.ScreenFailed, Tick(), ct);
+        var signedFailed = await AttestAsync(tenant, AttestationMeaning.Withdrawn, screenFailed, ct);
+
+        (await SendWithdrawAsync(tenant, EnrollmentId.New(), signed, ct)).Error.Should().Be(KernelErrors.NotFound);
+        (await SendWithdrawAsync(tenant, enrollment, signed, ct, kind: (WithdrawalKind)999)).Error.Should().Be(ExecutionErrors.WithdrawalKindInvalid);
+        (await SendWithdrawAsync(tenant, enrollment, signed, ct, fixture.Clock.UtcNow.AddHours(1))).Error.Should().Be(ExecutionErrors.TransitionTimeInvalid);
+        (await SendWithdrawAsync(tenant, enrollment, signed, ct, enrolled.StatusSince)).Error.Should().Be(ExecutionErrors.TransitionTimeInvalid);
+        (await SendWithdrawAsync(tenant, failed, signedFailed, ct)).Error!.Code.Should().Be(ExecutionErrors.InvalidTransition.Code);
+
+        (await fixture.Enrollments.FindAsync(tenant, enrollment, ct)).Should().Be(enrolled);
+        (await fixture.Enrollments.FindAsync(tenant, failed, ct)).Should().Be(screenFailed);
+        await using var db = fixture.CreateContext(tenant);
+        (await db.DomainEvents.AsNoTracking().CountAsync(e => e.TenantId == tenant && e.Type == "ParticipantWithdrawn", ct)).Should().Be(0);
+    }
+
+    /// <summary>
+    /// Validates tenant isolation for participants and enrollments (row-level security, #4865): another tenant cannot read, resolve,
+    /// change, screen into, number against or sign another tenant's enrollment, participant or study site.
+    /// </summary>
+    [Fact(DisplayName = "Enrollments_AreInvisibleToAnotherTenant")]
+    public async Task EnrollmentsAreInvisibleToAnotherTenant()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study, studySite) = await NewStudySiteAsync(ct);
+        var (participant, enrollment) = await ScreenAsync(tenant, studySite, "SUBJ-001", Tick(), ct);
+        var enrolled = await ChangeAsync(tenant, enrollment, EnrollmentStatus.Enrolled, Tick(), ct);
+        var (other, _, otherSite) = await NewStudySiteAsync(ct);
+        var otherParticipant = await RegisterAsync(other, ct);
+        var directory = fixture.Enrollments;
+
+        (await directory.FindAsync(other, enrollment, ct)).Should().BeNull();
+        (await directory.ResolveParticipantAsync(other, study, SubjectCode.From("SUBJ-001"), ct)).Should().BeNull();
+        (await directory.StatusAsOfAsync(other, enrollment, fixture.Clock.UtcNow, fixture.Clock.UtcNow, ct)).Should().BeNull();
+        (await directory.NextEnrollmentNumberAsync(other, study, ct)).Should().Be(1, "the other tenant sees none of this study's numbers");
+
+        (await SendChangeAsync(other, enrollment, EnrollmentStatus.Randomized, Tick(), ct)).Error.Should().Be(KernelErrors.NotFound);
+        (await SendChangeAsync(other, enrollment, EnrollmentStatus.Enrolled, Tick(), ct)).Error.Should().Be(KernelErrors.NotFound);
+        (await SendScreenAsync(other, participant, otherSite, "SUBJ-X1", Tick(), ct)).Error.Should().Be(ExecutionErrors.ParticipantUnknown);
+        (await SendScreenAsync(other, otherParticipant, studySite, "SUBJ-X2", Tick(), ct)).Error.Should().Be(ExecutionErrors.StudySiteUnknown);
+        var signOther = await _scenario.AttestAsync(
+            other, AttestationMeaning.Withdrawn, new AttestationTarget(NodeKinds.Enrollment, enrollment.Value, enrolled.ContentHash), ct);
+        signOther.Error.Should().Be(TrustErrors.TargetUnknown);
+
+        (await directory.FindAsync(tenant, enrollment, ct)).Should().Be(enrolled);
+    }
+
     private DateTimeOffset Tick() => fixture.Clock.Advance(TimeSpan.FromSeconds(1));
 
     private async Task<(TenantId Tenant, StudyId Study, StudySiteId StudySite)> NewStudySiteAsync(CancellationToken ct)
@@ -368,12 +518,13 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
     }
 
     private Task<CommandResult<EnrollmentState>> SendWithdrawAsync(
-        TenantId tenant, EnrollmentId enrollment, AttestationId attestation, CancellationToken ct, DateTimeOffset? effectiveAt = null)
+        TenantId tenant, EnrollmentId enrollment, AttestationId attestation, CancellationToken ct, DateTimeOffset? effectiveAt = null,
+        WithdrawalKind kind = WithdrawalKind.WithdrawalBySubject)
     {
         var at = effectiveAt ?? fixture.Clock.UtcNow;
         Tick();
         return fixture.Sender.SendAsync(
-            new WithdrawParticipant(tenant, enrollment, WithdrawalKind.WithdrawalBySubject, attestation, at, KernelProtocolScenario.Key(), "Consent withdrawn"),
+            new WithdrawParticipant(tenant, enrollment, kind, attestation, at, KernelProtocolScenario.Key(), "Consent withdrawn"),
             cancellationToken: ct);
     }
 

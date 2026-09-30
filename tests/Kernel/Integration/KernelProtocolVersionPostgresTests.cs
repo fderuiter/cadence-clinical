@@ -255,6 +255,112 @@ public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fix
         await ExecuteAsAdminAsync($"UPDATE kernel.protocol_versions SET status = 'Superseded' WHERE id = '{id}'", ct);
     }
 
+    /// <summary>
+    /// Validates that approval is signed by the person approving (21 CFR 11.50): an Approved attestation over the
+    /// current content, signed by someone else, is refused. A version that is not in review is refused before any
+    /// signature is looked at, whether it is still a draft or already approved.
+    /// </summary>
+    [Fact(DisplayName = "Approve_RefusesAnotherPersonsSignature_AndVersionsNotInReview")]
+    public async Task ApproveRefusesAnotherPersonsSignatureAndVersionsNotInReview()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _scenario.NewStudyAsync(ct);
+        var inReview = await _scenario.InReviewAsync(tenant, study, ct);
+        fixture.CurrentActor.Actor = Actor.Person("someone-else@cadence.test");
+        var someoneElses = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
+        fixture.CurrentActor.Actor = Actor.Person(KernelPostgresFixture.ActorId);
+
+        (await _scenario.ApproveAsync(tenant, inReview.ProtocolVersionId, someoneElses, ct)).Error!.Code.Should().Be(ProtocolErrors.AttestationRejected.Code);
+
+        var signed = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
+        (await _scenario.ApproveAsync(tenant, inReview.ProtocolVersionId, signed, ct)).IsSuccess.Should().BeTrue();
+        (await _scenario.ApproveAsync(tenant, inReview.ProtocolVersionId, signed, ct)).Error!.Code.Should().Be(ProtocolErrors.InvalidTransition.Code);
+
+        var (otherTenant, otherStudy) = await _scenario.NewStudyAsync(ct);
+        var draft = ProtocolVersionId.New();
+        (await _scenario.CreateDraftAsync(otherTenant, otherStudy, draft, ct)).IsSuccess.Should().BeTrue();
+        (await _scenario.ApproveAsync(otherTenant, draft, AttestationId.New(), ct)).Error!.Code.Should().Be(ProtocolErrors.InvalidTransition.Code);
+        (await _scenario.ApproveAsync(otherTenant, ProtocolVersionId.New(), AttestationId.New(), ct)).Error.Should().Be(KernelErrors.NotFound);
+
+        await using var db = fixture.CreateContext(otherTenant);
+        (await db.ProtocolVersions.AsNoTracking().SingleAsync(v => v.Id == draft, ct)).Status.Should().Be(ProtocolVersionStatus.Draft);
+    }
+
+    /// <summary>
+    /// Validates the lookups before a version is created: a first draft for an unknown study and a fork of an unknown
+    /// parent are refused, and a version or attestation id already in use cannot be reused under a new idempotency key.
+    /// </summary>
+    [Fact(DisplayName = "ProtocolCommands_RefuseUnknownStudiesAndParents_AndReusedIds")]
+    public async Task ProtocolCommandsRefuseUnknownStudiesAndParentsAndReusedIds()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _scenario.NewStudyAsync(ct);
+        var (approved, approval) = await _scenario.ApprovedAsync(tenant, study, ct);
+
+        (await _scenario.CreateDraftAsync(tenant, StudyId.New(), ProtocolVersionId.New(), ct)).Error.Should().Be(ProtocolErrors.StudyUnknown);
+        (await fixture.Sender.SendAsync(
+                new ForkProtocolVersion(tenant, ProtocolVersionId.New(), ProtocolVersionId.New(), KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Amendment"),
+                cancellationToken: ct))
+            .Error!.Code.Should().Be(KernelErrors.NotFound.Code);
+
+        (await _scenario.CreateDraftAsync(tenant, study, approved.ProtocolVersionId, ct)).Error.Should().Be(KernelErrors.AlreadyExists);
+        (await fixture.Sender.SendAsync(
+                new ForkProtocolVersion(tenant, approved.ProtocolVersionId, approved.ProtocolVersionId, KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), "Amendment"),
+                cancellationToken: ct))
+            .Error.Should().Be(KernelErrors.AlreadyExists);
+        var reused = _scenario.AttestCommand(tenant, AttestationMeaning.Reviewed, KernelProtocolScenario.Target(approved)) with { AttestationId = approval };
+        (await fixture.Sender.SendAsync(reused, cancellationToken: ct)).Error.Should().Be(KernelErrors.AlreadyExists);
+
+        await using var db = fixture.CreateContext(tenant);
+        (await db.ProtocolVersions.AsNoTracking().CountAsync(v => v.StudyId == study, ct)).Should().Be(1);
+    }
+
+    /// <summary>
+    /// Validates withdrawal from review: a version in review can be withdrawn with a Withdrawn attestation, while a
+    /// draft cannot be withdrawn at all.
+    /// </summary>
+    [Fact(DisplayName = "Withdraw_FromReviewWithASignature_ButNeverADraft")]
+    public async Task WithdrawFromReviewWithASignatureButNeverADraft()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _scenario.NewStudyAsync(ct);
+        var inReview = await _scenario.InReviewAsync(tenant, study, ct);
+        var signed = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Withdrawn, KernelProtocolScenario.Target(inReview)), ct);
+
+        var withdrawn = await _scenario.OkAsync(new WithdrawProtocolVersion(tenant, inReview.ProtocolVersionId, signed, KernelProtocolScenario.Key(), "Study cancelled"), ct);
+        withdrawn.Status.Should().Be(ProtocolVersionStatus.Withdrawn);
+
+        var (otherTenant, otherStudy) = await _scenario.NewStudyAsync(ct);
+        var draft = ProtocolVersionId.New();
+        (await _scenario.CreateDraftAsync(otherTenant, otherStudy, draft, ct)).IsSuccess.Should().BeTrue();
+        (await fixture.Sender.SendAsync(new WithdrawProtocolVersion(otherTenant, draft, AttestationId.New(), KernelProtocolScenario.Key(), "Abandoned"), cancellationToken: ct))
+            .Error!.Code.Should().Be(ProtocolErrors.InvalidTransition.Code);
+    }
+
+    /// <summary>
+    /// Validates that forks sent at the same time number one after another under the study's lock (K-TX-4): each gets
+    /// a distinct number following the parent, with none skipped.
+    /// </summary>
+    [Fact(DisplayName = "Fork_ConcurrentForks_GetConsecutiveNumbers")]
+    public async Task ForkConcurrentForksGetConsecutiveNumbers()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        const int count = 6;
+        var (tenant, study) = await _scenario.NewStudyAsync(ct);
+        var (parent, _) = await _scenario.ApprovedAsync(tenant, study, ct);
+
+        var results = await Task.WhenAll(Enumerable.Range(0, count).Select(i => fixture.Sender.SendAsync(
+            new ForkProtocolVersion(tenant, parent.ProtocolVersionId, ProtocolVersionId.New(), KernelProtocolScenario.Amendment, KernelProtocolScenario.Key(), $"Amendment {i}"),
+            cancellationToken: ct)));
+
+        results.Should().OnlyContain(r => r.IsSuccess);
+        results.Select(r => r.Value!.Number).Should().BeEquivalentTo(Enumerable.Range(2, count));
+    }
+
     private async Task ExecuteAsAdminAsync(string sql, CancellationToken ct)
     {
         await using var connection = new NpgsqlConnection(fixture.AdminConnectionString);
