@@ -46,10 +46,10 @@ fix: $(CADENCE_CLI) ## Auto-fix all C# code formatting, ADRs, and schemas (safe 
 	$(CADENCE_CLI) fix
 
 lint-paths: ## Run lightweight path-pattern boundary linter
-	dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
+	dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
 
 typecheck: ## Run static type checking for repository contracts
-	dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
+	dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
 
 lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint

@@ -87,7 +87,7 @@ All Pull Requests (PRs) must satisfy the Definition of Done before merging into 
 ## 📋 Definition of Done (DoD) Checklist
 
 - [ ] Implementation complete across target file paths.
-- [ ] Unit & integration tests added/updated in `tests/` (`dotnet test tests/Cadence.UnitTests.csproj`).
+- [ ] Unit & integration tests added/updated in `tests/` (`dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`).
 - [ ] Build, format and quality gates clean (`dotnet build Cadence.sln`, `dotnet format Cadence.sln --verify-no-changes`, `pnpm cadence check`).
 - [ ] GxP audit fields preserved/updated (`created_by`, `reason_for_change`, versioning) if models modified.
 - [ ] Traceability docs or ADR updated if architectural/contract changes introduced (`pnpm cadence gxp sync`).

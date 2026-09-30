@@ -76,7 +76,7 @@ Neo4j is retired (ADR-2245); do not add Neo4j code.
 | Database helpers, audit interceptor | `packages/database/` |
 | Health checks and telemetry | `packages/telemetry/` |
 | Test fakes and helpers | `packages/testing/` |
-| Tests | `tests/` (`Cadence.UnitTests`, `Cadence.ArchitectureTests`, `Cadence.E2ETests`) |
+| Tests | `tests/<Project>/` (`Cadence.UnitTests`, `Cadence.IntegrationTests`, `Cadence.ArchitectureTests`, `Cadence.E2ETests`; shared fakes in `Cadence.TestSupport`) |
 | Developer CLI and wizards | `packages/cli/`, `scripts/` |
 | Git hooks | `.githooks/` |
 | Architecture decision records | `docs/adr/` |
@@ -199,7 +199,7 @@ PostgreSQL integration tests need `CADENCE_TEST_POSTGRES=<connection string>` or
 
 Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoints/`,
 `Microsoft.AspNetCore`, Npgsql or EF Core. `Application/` depends on `Domain/` and ports only.
-`tests/Cadence.ArchitectureTests.csproj` enforces this and the kernel rules above.
+`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` enforces this and the kernel rules above.
 
 ### 10. Database migrations
 
@@ -257,10 +257,10 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 | Task | Command |
 | --- | --- |
 | Build | `dotnet build Cadence.sln` |
-| Unit tests | `dotnet test tests/Cadence.UnitTests.csproj` |
+| Unit tests | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` |
 | Unit tests without integration | `pnpm cadence test --fast` (filters `Category!=Integration`) |
-| Integration tests only | `pnpm cadence test --integration` |
-| Architecture tests | `dotnet test tests/Cadence.ArchitectureTests.csproj` |
+| Integration tests only | `pnpm cadence test --integration` (`tests/Cadence.IntegrationTests`, needs PostgreSQL) |
+| Architecture tests | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
 | Formatting | `dotnet format Cadence.sln --verify-no-changes` |
 | All quality gates (pre-commit) | `pnpm cadence check` |
 | One gate | `pnpm cadence check <gate>` (for example `adrs`, `markdown`, `readmes`, `arch-drift`) |

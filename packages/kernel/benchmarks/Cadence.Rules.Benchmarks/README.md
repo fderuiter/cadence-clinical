@@ -13,5 +13,5 @@ runs give different hashes (K-RULE-4).
 
 The baseline for `DotNetRuleEvaluator` is in
 [ADR-2461 §4.5](../../../../docs/adr/2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md). A
-replacement evaluator must give the same hash for the same records and seed. `tests/Kernel/Rules/RuleBenchmarkTests.cs`
+replacement evaluator must give the same hash for the same records and seed. `tests/Cadence.UnitTests/Kernel/Rules/RuleBenchmarkTests.cs`
 keeps the harness reproducible.

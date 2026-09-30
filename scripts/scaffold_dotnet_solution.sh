@@ -174,8 +174,11 @@ for SVC in "${SERVICES[@]}"; do
 done
 
 # Add test projects
-dotnet sln Cadence.sln add tests/Cadence.UnitTests.csproj --solution-folder Tests || true
-dotnet sln Cadence.sln add tests/Cadence.ArchitectureTests.csproj --solution-folder Tests || true
+dotnet sln Cadence.sln add tests/Cadence.UnitTests/Cadence.UnitTests.csproj --solution-folder Tests || true
+dotnet sln Cadence.sln add tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --solution-folder Tests || true
+dotnet sln Cadence.sln add tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --solution-folder Tests || true
+dotnet sln Cadence.sln add tests/Cadence.E2ETests/Cadence.E2ETests.csproj --solution-folder Tests || true
+dotnet sln Cadence.sln add tests/Cadence.TestSupport/Cadence.TestSupport.csproj --solution-folder Tests || true
 
 printf "  %b[SUCCESS] Solution hierarchy synchronized.%b\n" "$GREEN" "$RESET"
 

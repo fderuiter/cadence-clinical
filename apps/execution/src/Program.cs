@@ -256,8 +256,8 @@ await app.RunAsync();
 
 // MIG-SUBJ-023: the standard, minimal ASP.NET Core idiom making the implicit top-level-statement `Program`
 // class (`internal` by default) visible to `Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>`
-// in `tests/Execution/Endpoints/SubjectEndpointsRoutingTests.cs` and, as of MIG-SUBJ-024,
-// `tests/Execution/Endpoints/SiteComplianceEndpointsRoutingTests.cs` -- pure test-visibility plumbing, not
+// in `tests/Cadence.UnitTests/Execution/Endpoints/SubjectEndpointsRoutingTests.cs` and, as of MIG-SUBJ-024,
+// `tests/Cadence.UnitTests/Execution/Endpoints/SiteComplianceEndpointsRoutingTests.cs` -- pure test-visibility plumbing, not
 // composition-root wiring. MIG-SUBJ-025's future `ExecutionApiFactory` needs this exact same marker too, so
 // it stays exactly as MIG-SUBJ-023 first added it.
 namespace Cadence.Apps.Execution

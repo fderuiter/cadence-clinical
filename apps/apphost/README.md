@@ -69,7 +69,7 @@ dashboard prompts for it before starting the containers.
 
 ## Tests
 
-`tests/AppHost/AppHostModelTests.cs` builds the resource graph with `Aspire.Hosting.Testing`, without starting anything, and checks that every service is present on its port, gets the settings it refuses to start without, and that the gateway is told every service URL.
+`tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` builds the resource graph with `Aspire.Hosting.Testing`, without starting anything, and checks that every service is present on its port, gets the settings it refuses to start without, and that the gateway is told every service URL.
 
 ## Run locally
 

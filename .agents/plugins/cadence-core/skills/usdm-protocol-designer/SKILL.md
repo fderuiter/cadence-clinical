@@ -71,12 +71,12 @@ When confirming protocol design choices or arm branching, you **MUST** call `ask
 After adding or updating USDM routes or models in `apps/designer`:
 ```bash
 dotnet cadence check
-dotnet test tests/Cadence.ArchitectureTests.csproj
+dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 ```
 
 ### 4. Verification
 Run designer unit and integration test suites:
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Designer"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Designer"
 ```
 

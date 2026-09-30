@@ -50,5 +50,5 @@ string text = await renderer.RenderAsync(Catalog, templateName, model);
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~TemplateCatalogTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~TemplateCatalogTests"
 ```

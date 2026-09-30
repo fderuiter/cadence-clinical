@@ -73,7 +73,7 @@ The script is unqualified; run it with `SET search_path TO <schema>, public;` af
 scripts/manage_migrations.sh add <service> <MigrationName>
 ```
 
-Then run `dotnet test tests/Cadence.UnitTests.csproj --filter FullyQualifiedName~MigrationUnitTests`. It fails when a
+Then run `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter FullyQualifiedName~MigrationUnitTests`. It fails when a
 DbContext model has changes without a migration, which would otherwise break the next deployment with
 `PendingModelChangesWarning`. Never hand-edit a generated migration to create another module's tables; each module
 owns only its schema.

@@ -17,7 +17,7 @@ A structured diagnosis loop for isolating root causes in multi-service clinical 
 | :--- | :--- | :--- | :--- |
 | **Error Localization** | `grep_search` | `Query="<exception_or_symbol>"`, `SearchPath="apps/"` | Locate error sites, callers, and exception stack traces |
 | **System Diagnostics** | `run_command` | `CommandLine="dotnet cadence doctor --auto-fix"`, `WaitMsBeforeAsync=5000` | Verify environment, schemas, and dependencies |
-| **Isolated Repro** | `run_command` | `CommandLine="dotnet test tests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Run targeted minimal reproduction test |
+| **Isolated Repro** | `run_command` | `CommandLine="dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Run targeted minimal reproduction test |
 | **Task Monitoring** | `manage_task` | `Action="status"`, `TaskId="..."` | Inspect logs and stderr from background test tasks |
 | **Watchdog Timer** | `schedule` | `DurationSeconds=60`, `TimerCondition=<task-id>` | Guard against hanging database locks or workers |
 | **Root-Cause Fix** | `replace_file_content` | Target: source file, single contiguous fix | Apply surgical minimal fix to production code |
@@ -42,7 +42,7 @@ Always construct or run a minimal reproducing test case rather than diagnosing v
 - Use `grep_search` and `find_by_name` to pinpoint relevant test files.
 - Run the failing test in isolation:
   ```bash
-  dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
+  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
   ```
 - If no test exists, author a failing regression test slice using `Cadence.Testing.Factories` and `Cadence.Testing.Fakes`.
 

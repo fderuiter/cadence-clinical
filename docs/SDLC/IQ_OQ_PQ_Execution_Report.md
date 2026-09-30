@@ -13,8 +13,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 
 ### Validation Result Summary
 
-- **Automated Test Methods Reported:** 1063
-- **Passed:** 1062 🟢
+- **Automated Test Methods Reported:** 1082
+- **Passed:** 1081 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 1 ⚪
 - **Overall Operational Pass Rate (of executed):** 100.00%
@@ -31,6 +31,27 @@ out so the report only changes when results change; they are in the TRX files un
 | Test Case Name | Class | Target Req | Status |
 | :--- | :--- | :--- | :--- |
 | `AuditTrailEntitiesMustNotBeDependentOfCascadeDelete` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ChainWrittenToPostgres_VerifiesWhenReadBack` | `Cadence.IntegrationTests.Execution.AuditChainPostgresRoundTripTests` | PRD-SYS-001 | 🟢 PASSED |
+| `CdiscCtPackageLoadsAsOnePinnedVersionWithAuditedDigest` | `Cadence.IntegrationTests.Kernel.ConceptRegistryPostgresTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ReadNeverReturnsAnotherTenantsActivity` | `Cadence.IntegrationTests.Kernel.KernelActivityPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `ChangeStatusRefusesIllegalMovesAndTimes` | `Cadence.IntegrationTests.Kernel.KernelEnrollmentPostgresTests` | PRD-SUB-001 | 🟢 PASSED |
+| `EnrollmentsDatabaseGuardsEnforceTheLifecycleForEveryDatabaseUser` | `Cadence.IntegrationTests.Kernel.KernelEnrollmentPostgresTests` | PRD-SUB-001 | 🟢 PASSED |
+| `DenialIsExplainedAndAuditedWithItsConditions` | `Cadence.IntegrationTests.Kernel.KernelExplanationPostgresTests` | PRD-SYS-001 | 🟢 PASSED |
+| `NavigationNeverCrossesTenants` | `Cadence.IntegrationTests.Kernel.KernelNavigationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `ForkKeepsTheParentApprovedNumbersTheDraftAndStoresTheAmendment` | `Cadence.IntegrationTests.Kernel.KernelProtocolVersionPostgresTests` | PRD-CRF-012 | 🟢 PASSED |
+| `ProtocolVersionsTriggerFreezesApprovedContentForEveryDatabaseUser` | `Cadence.IntegrationTests.Kernel.KernelProtocolVersionPostgresTests` | PRD-CRF-012 | 🟢 PASSED |
+| `SearchNeverReturnsAnotherTenantsObjects` | `Cadence.IntegrationTests.Kernel.KernelSearchPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `CrossTenantReadReturnsNothing` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `EveryKernelTableHasTenantIdAndForcedRowLevelSecurity` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `NoTenantCannotConnectAndSeesNothing` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `PersonIsVisibleOnlyToTenantsWithAMembership` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `TraceFromAnotherTenantSeesNoEdges` | `Cadence.IntegrationTests.Kernel.LineagePostgresTests` | PRD-CRF-013 | 🟢 PASSED |
+| `RulePackDraftedAndReleasedAtRuntimeLoadsAndEvaluates` | `Cadence.IntegrationTests.Kernel.RulePackPostgresTests` | PRD-CRF-004 | 🟢 PASSED |
+| `RegisterAndApproveStandardVersionAreAuditedAndReadBackExactly` | `Cadence.IntegrationTests.Kernel.StandardsRegistryPostgresTests` | PRD-SYS-001 | 🟢 PASSED |
 | `CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
 | `EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
 | `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
@@ -66,7 +87,6 @@ out so the report only changes when results change; they are in the TRX files un
 | `EdgeCaseScenario_MatchesGoldenMaster` | `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests` | PRD-SUB-001 | 🟢 PASSED |
 | `ErrorScenario_MatchesExpectedStatusAndDetail` | `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests` | PRD-SUB-001 | 🟢 PASSED |
 | `NominalScenario_MatchesGoldenMaster` | `Cadence.UnitTests.Execution.GoldenMaster.SubjectGoldenMasterTests` | PRD-SUB-001 | 🟢 PASSED |
-| `ChainWrittenToPostgres_VerifiesWhenReadBack` | `Cadence.UnitTests.Execution.Integration.AuditChainPostgresRoundTripTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ActionWithNoEntityChange_IsWrittenAsAnActionOnlyEntryOnTheSameChain` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ChangeWithoutARecordedAction_IsStillAudited_WithTheEntityStateAsAction` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SubjectUpdate_WritesOneEntryPerChange_AndTheChainVerifies` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
@@ -136,26 +156,6 @@ out so the report only changes when results change; they are in the TRX files un
 | `SignatureVerification_WithoutSignIn_Returns401` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
 | `TokenEndpoint_IsDerivedFromTheOidcSettings` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
 | `EnrollmentTransitionsFollowTheLifecycle` | `Cadence.UnitTests.Kernel.EnrollmentTests` | PRD-SUB-001 | 🟢 PASSED |
-| `CdiscCtPackageLoadsAsOnePinnedVersionWithAuditedDigest` | `Cadence.UnitTests.Kernel.Integration.ConceptRegistryPostgresTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ReadNeverReturnsAnotherTenantsActivity` | `Cadence.UnitTests.Kernel.Integration.KernelActivityPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `ChangeStatusRefusesIllegalMovesAndTimes` | `Cadence.UnitTests.Kernel.Integration.KernelEnrollmentPostgresTests` | PRD-SUB-001 | 🟢 PASSED |
-| `EnrollmentsDatabaseGuardsEnforceTheLifecycleForEveryDatabaseUser` | `Cadence.UnitTests.Kernel.Integration.KernelEnrollmentPostgresTests` | PRD-SUB-001 | 🟢 PASSED |
-| `DenialIsExplainedAndAuditedWithItsConditions` | `Cadence.UnitTests.Kernel.Integration.KernelExplanationPostgresTests` | PRD-SYS-001 | 🟢 PASSED |
-| `NavigationNeverCrossesTenants` | `Cadence.UnitTests.Kernel.Integration.KernelNavigationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `ForkKeepsTheParentApprovedNumbersTheDraftAndStoresTheAmendment` | `Cadence.UnitTests.Kernel.Integration.KernelProtocolVersionPostgresTests` | PRD-CRF-012 | 🟢 PASSED |
-| `ProtocolVersionsTriggerFreezesApprovedContentForEveryDatabaseUser` | `Cadence.UnitTests.Kernel.Integration.KernelProtocolVersionPostgresTests` | PRD-CRF-012 | 🟢 PASSED |
-| `SearchNeverReturnsAnotherTenantsObjects` | `Cadence.UnitTests.Kernel.Integration.KernelSearchPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `CrossTenantReadReturnsNothing` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `EveryKernelTableHasTenantIdAndForcedRowLevelSecurity` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `NoTenantCannotConnectAndSeesNothing` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `PersonIsVisibleOnlyToTenantsWithAMembership` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction` | `Cadence.UnitTests.Kernel.Integration.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `TraceFromAnotherTenantSeesNoEdges` | `Cadence.UnitTests.Kernel.Integration.LineagePostgresTests` | PRD-CRF-013 | 🟢 PASSED |
-| `RulePackDraftedAndReleasedAtRuntimeLoadsAndEvaluates` | `Cadence.UnitTests.Kernel.Integration.RulePackPostgresTests` | PRD-CRF-004 | 🟢 PASSED |
-| `RegisterAndApproveStandardVersionAreAuditedAndReadBackExactly` | `Cadence.UnitTests.Kernel.Integration.StandardsRegistryPostgresTests` | PRD-SYS-001 | 🟢 PASSED |
 | `KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys` | `Cadence.UnitTests.Kernel.KernelDbContextModelTests` | PRD-CRF-013 | 🟢 PASSED |
 | `ForkLeavesTheParentApprovedAndStartsAnAmendedDraft` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | 🟢 PASSED |
 | `LifecycleAllowsOnlyTheSpecifiedTransitions` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | 🟢 PASSED |
@@ -190,4 +190,4 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** 911bd08c6a57c4c953feb1b5f079147d782c9cd752fd2ccc80edc0ac0efef72a
+- **Content Hash (SHA-256):** d3611087d45b438db9219f3933fdaf3ae52deab9ca578b51d82d73bf48747d0a

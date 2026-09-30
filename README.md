@@ -58,7 +58,7 @@ re-founded on the kernel. Both of these are true at once:
 | `apps/web/`, `apps/subject-portal/` | Vue 3 web client and participant PWA |
 | `packages/kernel/` | Clinical kernel projects |
 | `packages/*` | Shared libraries: security, database, telemetry, templating, contracts, DDF compiler, de-identification, testing, CLI |
-| `tests/` | `Cadence.UnitTests`, `Cadence.ArchitectureTests`, `Cadence.E2ETests` |
+| `tests/` | `Cadence.UnitTests`, `Cadence.IntegrationTests`, `Cadence.ArchitectureTests`, `Cadence.E2ETests` (one folder each) |
 | `docs/` | Specifications, ADRs, SDLC/GxP documents ([index](docs/DOCUMENTATION_INDEX.md)) |
 | `docker/` | Compose stack, Dockerfile, Keycloak realm |
 
@@ -72,8 +72,8 @@ git clone https://github.com/fderuiter/cadence-clinical.git
 cd cadence-clinical
 
 dotnet build Cadence.sln                        # warnings are errors
-dotnet test tests/Cadence.UnitTests.csproj      # unit tests
-dotnet test tests/Cadence.ArchitectureTests.csproj
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj      # unit tests
+dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 pnpm install                                    # frontend workspace
 ```
 

@@ -33,12 +33,12 @@ in tests. [docs/TESTING.md](../../docs/TESTING.md) has the workflow.
 
 ## Referenced by
 
-`packages/tooling_core`, `packages/cli`, `tests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests.csproj`. No application references it.
+`packages/tooling_core`, `packages/cli`, `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`, `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`. No application references it.
 
 ## Tests
 
-`tests/Packages/ComplianceUnitTests.cs` and parts of `tests/Packages/PortedPackagesUnitTests.cs`:
+`tests/Cadence.UnitTests/Packages/ComplianceUnitTests.cs` and parts of `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`:
 
 ```bash
-dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.ComplianceUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
+dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.ComplianceUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
 ```

@@ -21,7 +21,7 @@ Executes code implementation tasks adhering to .NET 10 Clean Architecture standa
 | **Format Check** | `run_command` | `CommandLine="dotnet format Cadence.sln --verify-no-changes"`, `WaitMsBeforeAsync=5000` | Verify .editorconfig styling |
 | **Auto-Remediate** | `run_command` | `CommandLine="dotnet format Cadence.sln"`, `WaitMsBeforeAsync=5000` | Auto-format whitespace & namespace order |
 | **Fast Tests** | `run_command` | `CommandLine="dotnet test --filter \"Category!=Integration\""`, `WaitMsBeforeAsync=10000` | Run fast unit tests |
-| **Architecture Sentinels** | `run_command` | `CommandLine="dotnet test tests/Cadence.ArchitectureTests.csproj"` | Verify Clean Architecture layer purity |
+| **Architecture Sentinels** | `run_command` | `CommandLine="dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj"` | Verify Clean Architecture layer purity |
 | **Compliance Sync** | `run_command` | `CommandLine="dotnet cadence gxp sync"` | Sync RTM and IQ/OQ/PQ execution reports |
 | **Walkthrough Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/walkthrough.md` | Emit completion artifact with file links |
 

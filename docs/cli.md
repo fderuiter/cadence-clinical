@@ -90,10 +90,10 @@ See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
 Runs `dotnet test Cadence.sln` from the repository root.
 
-| Option              | Description                              |
-| ------------------- | ---------------------------------------- |
-| `-f\|--fast`        | Adds `--filter "Category!=Integration"`. |
-| `-i\|--integration` | Adds `--filter "Category=Integration"`.  |
+| Option              | Description                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| `-f\|--fast`        | Adds `--filter "Category!=Integration"`: every test project except the integration tests.       |
+| `-i\|--integration` | Runs `tests/Cadence.IntegrationTests` only. It needs PostgreSQL (see [TESTING.md](TESTING.md)). |
 
 With no option, all tests run. If both options are given, `--fast` wins.
 

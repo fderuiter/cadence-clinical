@@ -38,7 +38,7 @@ body:
       label: Evidence
       description: Steps to reproduce, the failing command or test, and `file:line` references at a commit.
       placeholder: |
-        1. `dotnet test tests/Cadence.UnitTests.csproj --filter ...`
+        1. `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter ...`
         2. apps/execution/src/Application/Subjects/SubjectApplicationService.cs:120 @ abc1234
     validations:
       required: true

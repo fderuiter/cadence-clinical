@@ -17,7 +17,7 @@ TDD in Cadence follows a strict, rapid red → green → refactor loop anchored 
 | :--- | :--- | :--- | :--- |
 | **Seam Discovery** | `find_by_name` / `view_file` | Read target service and test suite via `AbsolutePath` | Inspect existing domain seams and test doubles |
 | **Red (Failing Test)** | `replace_file_content` / `write_to_file` | Author new test case with `[GxPRequirement]` and `/// @req:` | Add failing test case testing public interface |
-| **Test Execution** | `run_command` | `CommandLine="dotnet test tests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Execute sub-second unit test verification |
+| **Test Execution** | `run_command` | `CommandLine="dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Execute sub-second unit test verification |
 | **Green (Implementation)**| `replace_file_content` | Target: production code, single contiguous edit | Write minimal production code to pass test |
 | **Quality Sentinel** | `run_command` | `CommandLine="dotnet cadence fix --all && dotnet cadence check"` | Format, verify layer boundaries, and run 21 quality gates |
 | **Compliance Sync** | `run_command` | `CommandLine="dotnet cadence gxp sync"` | Regenerate and stage GxP Traceability Matrix |
@@ -77,7 +77,7 @@ Agree on the public interface boundary before authoring tests:
 - Include the `[GxPRequirement("PRD-SYS-xxx")]` attribute and `/// @req:PRD-SYS-xxx` doc comment.
 - Execute with sub-second fast test runner via `run_command`:
   ```bash
-  dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
+  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
   ```
 - Confirm the test fails for the expected reason (red).
 
@@ -89,7 +89,7 @@ Agree on the public interface boundary before authoring tests:
   - Return `Result<TValue, DomainError>` monads; avoid throwing exceptions for domain logic.
 - Re-run the test via `run_command`:
   ```bash
-  dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
+  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
   ```
 - Confirm the test passes (green).
 

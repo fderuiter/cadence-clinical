@@ -82,7 +82,7 @@ jobs:
       - name: Run architecture tests
         id: run_architecture
         if: always()
-        run: dotnet test tests/Cadence.ArchitectureTests.csproj --no-build
+        run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
 
       # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2496).
       - name: Publish the CLI as Native AOT
@@ -352,6 +352,25 @@ jobs:
       contents: read
     outputs:
       test_outcome: ${{ steps.run_dotnet_tests.outcome }}
+    # tests/Cadence.IntegrationTests and tests/Cadence.E2ETests run against this database; without
+    # CADENCE_TEST_POSTGRES they would be skipped (docs/TESTING.md).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cadence
+          # A throwaway database on the runner; no credential is needed or stored.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: cadence
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cadence"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CADENCE_TEST_POSTGRES: Host=localhost;Port=5432;Database=cadence;Username=cadence
     steps:
       - name: Check out repository
         uses: actions/checkout@v7

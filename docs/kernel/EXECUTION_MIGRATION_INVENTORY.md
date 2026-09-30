@@ -222,7 +222,7 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
 | File | Type(s) | Disposition | Target / change | Evidence / notes |
 | --- | --- | --- | --- | --- |
 | `Domain/Subjects/ClinicalSubject.cs` | `ClinicalSubject` | MIGRATE→KERNEL | Split: kernel `Participant` (exists, thin) and `Enrollment` (missing). The post-randomization lock rule moves to Enrollment. `EncryptedDemographics` goes to the IdentityVault. `StratFactors`/`TreatmentGroupCiphertext`/`RandomizationId`/`KitReference` go to RTSM. `Unblind` becomes an Attestation-bearing event (§5.1). | **K-TIME-8**: `ActiveProtocolVersion` is never assigned beyond `"1.0.0"` (26). **K-AUTH-4**: blinding modelled as a state/flag. `Unblind`/`Withdraw` have no production caller (tests only). Domain depends on `Application.Abstractions` (4). |
-| `Domain/Subjects/DomainErrorExtensions.cs` | `DomainErrorExtensions` | REMAIN EDC-SPECIFIC | Move to `Endpoints/`. The generic part goes to `Cadence.Kernel.Api`. | ASP.NET in `Domain/`, which violates AGENTS §8. Explicitly exempted at `tests/ArchitectureSentinelTests.cs:132`. |
+| `Domain/Subjects/DomainErrorExtensions.cs` | `DomainErrorExtensions` | REMAIN EDC-SPECIFIC | Move to `Endpoints/`. The generic part goes to `Cadence.Kernel.Api`. | ASP.NET in `Domain/`, which violates AGENTS §8. Explicitly exempted at `tests/Cadence.ArchitectureTests/ArchitectureSentinelTests.cs:132`. |
 | `Domain/Subjects/DomainErrorHttpMapping.cs` | `DomainErrorHttpMapping` | REMAIN EDC-SPECIFIC | As above. Split the code table into kernel codes and EDC codes. | As above. |
 | `Domain/Subjects/ProtocolVersionRef.cs` | `ProtocolVersionRef` | REPLACE | `ProtocolVersionId` (exists) referenced from ConsentStatus, not from Applicability (see §3, item 3). | Code-keyed `(StudyCode, VersionTag, VersionIndex)`. |
 | `Domain/Subjects/SiteCode.cs` | `SiteCode` | MIGRATE→KERNEL | Kernel.Abstractions attribute value object (§3.2). Kernel: missing, because the kernel `Site.SiteCode` is a raw `string`. | |
@@ -317,8 +317,8 @@ All paths are relative to `apps/execution/src/` unless they start with `packages
 
    Today `Unblinded` counts as a lifecycle state in `IsPostRandomization()` (`ClinicalSubject.cs:112-113`).
 2. **§11 lists unblinding and withdrawal as reachable logic ("`Unblind`/`Withdraw` … keep logic").** No production
-   code path calls them. Their only callers are `tests/Execution/Subjects/ClinicalSubjectTests.cs` and
-   `tests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs`. The generic `PATCH /state` can reach `WITHDRAWN`/
+   code path calls them. Their only callers are `tests/Cadence.UnitTests/Execution/Subjects/ClinicalSubjectTests.cs` and
+   `tests/Cadence.UnitTests/Execution/GoldenMaster/SubjectGoldenMasterTests.cs`. The generic `PATCH /state` can reach `WITHDRAWN`/
    `UNBLINDED` without setting `WithdrawnAt`/`UnblindedBy`. Only the guard logic is worth migrating; the fields are not.
 3. **§11 says to replace `ProtocolVersionRef` "with Applicability".** `ProtocolVersionRef` is used only by `SubjectConsent`
    (`Domain/Subjects/SubjectConsent.cs:17`). It records *which protocol version a consent covers*, which is the
@@ -395,7 +395,7 @@ block migration into it:
 - `Participant` carries `SubjectCode`/`Status` strings and `StudySiteId`. §5.1 separates Participant from Enrollment.
 - `Cadence.Kernel.Domain` references `Microsoft.EntityFrameworkCore` (csproj line 14), but §9 requires Domain to be pure.
 
-The implemented K-XS-1 sentinel (`tests/ArchitectureSentinelTests.cs:223-228`) checks only 5 type names and none of the
+The implemented K-XS-1 sentinel (`tests/Cadence.ArchitectureTests/ArchitectureSentinelTests.cs:223-228`) checks only 5 type names and none of the
 `string *StudyId|*SiteId|*ParticipantId` member rule. It therefore passes `apps/execution` despite the ~20
 K-XS-1 member violations flagged above.
 
