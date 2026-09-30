@@ -97,7 +97,6 @@ public class SubjectApplicationServiceStateTests
     // -- AdvanceStateAsync: not-found ------------------------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AdvanceStateAsync_GivenSubjectNotFoundByIdOrCode_ReturnsNotFoundError()
     {
         var harness = new Harness();
@@ -178,7 +177,6 @@ public class SubjectApplicationServiceStateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AdvanceStateAsync_GivenSurrogateId_ResolvesTheSameSubjectAsTheDomainCodeWould()
     {
         var harness = new Harness();
@@ -236,7 +234,6 @@ public class SubjectApplicationServiceStateTests
     // -- SCN-005: Rule 2 sovereign site-compliance gate ------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AdvanceStateAsync_GivenNonCompliantSite_TargetingEnrolled_FailsWithBlockedEnrollmentAndWritesBlockedAudit()
     {
         var harness = new Harness();
@@ -258,7 +255,6 @@ public class SubjectApplicationServiceStateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AdvanceStateAsync_GivenNoComplianceRowAtAll_TargetingEnrolled_IsTreatedAsNonCompliant()
     {
         var harness = new Harness();
@@ -293,7 +289,6 @@ public class SubjectApplicationServiceStateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AdvanceStateAsync_GivenNoSiteId_TargetingEnrolled_IsBlockedRatherThanAutoCompliant()
     {
         // fixtures/input_valid_nominal.json's SCN-003-A describes the *legacy* router's own
@@ -319,7 +314,6 @@ public class SubjectApplicationServiceStateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task AdvanceStateAsync_TargetingStateOtherThanEnrolled_NeverConsultsComplianceGate()
     {
         // The Rule 2 gate is scoped to `target == Enrolled` only -- a non-compliant (or entirely unknown)
@@ -338,7 +332,6 @@ public class SubjectApplicationServiceStateTests
     // -- EvaluateAndTransitionScreeningAsync: not-found ------------------------------------------
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EvaluateAndTransitionScreeningAsync_GivenSubjectNotFound_ReturnsNotFoundError()
     {
         var harness = new Harness { ScreeningEligibility = (_, _) => Task.FromResult(true) };
@@ -351,7 +344,6 @@ public class SubjectApplicationServiceStateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EvaluateAndTransitionScreeningAsync_ResolvesSubjectByDomainCode_NotSurrogateId()
     {
         // Deliberately not the dual-lookup helper -- every fixture route for this endpoint passes a domain
@@ -406,7 +398,6 @@ public class SubjectApplicationServiceStateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EvaluateAndTransitionScreeningAsync_GivenEligibleAtNonCompliantSite_FailsIdenticallyToAdvanceStateAsync()
     {
         // SCN-005: the Rule 2 gate must hold identically whether reached via AdvanceStateAsync or
@@ -428,7 +419,6 @@ public class SubjectApplicationServiceStateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EvaluateAndTransitionScreeningAsync_UsesAuditContextUserIdAndChangeReason_NotALiteralFallback()
     {
         var harness = new Harness
@@ -447,7 +437,6 @@ public class SubjectApplicationServiceStateTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public async Task EvaluateAndTransitionScreeningAsync_GivenNoEvaluatorConfigured_ThrowsRatherThanGuessingAVerdict()
     {
         var harness = new Harness(); // ScreeningEligibility left null

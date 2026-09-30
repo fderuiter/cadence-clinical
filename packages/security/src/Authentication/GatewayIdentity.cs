@@ -50,6 +50,8 @@ public sealed record GatewayIdentity(
     string? ChangeReason = null,
     string? SigToken = null)
 {
+    // ChangeReason is the decoded text the user typed, never its header encoding (see ChangeReasonHeader).
+
     public const string DefaultTenantId = "tenant_default";
 
     internal string RolesHeader => string.Join(',', Roles);
@@ -88,7 +90,12 @@ public sealed record GatewayIdentity(
 
         AddIfPresent(headers, GatewayHeaders.SiteId, SiteIdsHeader);
         AddIfPresent(headers, GatewayHeaders.SponsorId, SponsorId);
-        AddIfPresent(headers, GatewayHeaders.ChangeReason, ChangeReason);
+        // The signature covers the reason as typed; the header carries it in its ASCII wire form (ADR-2495).
+        if (NullIfBlank(ChangeReason) is { } changeReason)
+        {
+            headers[GatewayHeaders.ChangeReason] = ChangeReasonHeader.Encode(changeReason);
+        }
+
         AddIfPresent(headers, GatewayHeaders.SigToken, SigToken);
 
         return headers;

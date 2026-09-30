@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import { openApiClient, unwrapResponse } from "./client";
 
 export interface EtmfDocumentParams {
@@ -115,7 +116,7 @@ export const etmfService = {
       headers["X-Sig-Token"] = sigToken;
     }
     if (changeReason) {
-      headers["X-Change-Reason"] = changeReason;
+      headers["X-Change-Reason"] = encodeChangeReason(changeReason);
     }
 
     return unwrapResponse(

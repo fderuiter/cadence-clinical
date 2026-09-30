@@ -132,6 +132,12 @@ Rules:
 - **Tag only what the test asserts.** A test verifies a requirement only when its assertions would fail if
   the requirement were broken. For example, a test that checks a form starts in Draft does not verify the
   audit-trail requirement just because the form has audit fields.
+- **Tag the requirement's own rule, not its neighbourhood.** A test of lookup, error mapping, codecs or a
+  different rule in the same feature (for example a site-compliance gate next to the subject state machine)
+  does not verify the requirement just because it lives in the same test class or file.
+- **A test that contradicts its requirement is a defect report, not a qualification.** If the test's
+  assertions disagree with the requirement text (a different status code, a missing field), don't tag it:
+  raise the difference so the code or the requirement is fixed.
 - **Not every test needs a tag.** Helper, regression and architecture tests that verify no product
   requirement stay untagged. A tag exists to make an RTM claim, not to satisfy a checklist.
 - **Tags on a class do not count.** `@req:` in a class summary is documentation only. It never marks

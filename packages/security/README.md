@@ -23,7 +23,10 @@ signatures and audit digests shared by every Cadence service.
 - **Authentication:** `GatewayAuthenticationHandler` (the `CadenceGateway` scheme: verifies the
   gateway's HMAC-signed identity headers, fail-closed), `GatewayIdentity`, `GatewayHeaders`,
   `CadenceClaimTypes`, `HmacSigner`, `SigTokenVerifier` + `ReplayCache` (single-use e-signature tokens),
-  `AuditorWriteGuardMiddleware`.
+  `AuditorWriteGuardMiddleware`, and `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain
+  printable ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8 for any other text. Every reader decodes the
+  header with it, so the audit trail stores what the user typed
+  ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)).
 - **Authorization:** `PermissionMatrix`, `RoleNormalization`, `Principal`, site/study access evaluators
   and the permission, role, study-scope, change-justification and auditor-read-only handlers.
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.

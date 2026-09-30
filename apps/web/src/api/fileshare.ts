@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import { openApiClient, unwrapResponse, getBaseUrl } from "./client";
 import type { paths } from "./types";
 
@@ -96,7 +97,7 @@ export const fileshareService = {
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/grants", {
         params: { path: { file_id: fileId } },
         body: payload as paths["/api/v1/fileshare/files/{file_id}/grants"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
         ...options,
       })
     );
@@ -120,7 +121,7 @@ export const fileshareService = {
             path: { file_id: fileId, grant_id: grantId },
             query: { reason_for_change: reason },
           },
-          headers: { "X-Change-Reason": reason },
+          headers: { "X-Change-Reason": encodeChangeReason(reason) },
         }
       )
     );
@@ -153,7 +154,7 @@ export const fileshareService = {
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/guest-links", {
         params: { path: { file_id: fileId } },
         body: payload as paths["/api/v1/fileshare/files/{file_id}/guest-links"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
         ...options,
       })
     );
@@ -176,7 +177,7 @@ export const fileshareService = {
             path: { file_id: fileId, guest_link_id: guestLinkId },
             query: { reason_for_change: reason },
           },
-          headers: { "X-Change-Reason": reason },
+          headers: { "X-Change-Reason": encodeChangeReason(reason) },
         }
       )
     );
@@ -217,7 +218,7 @@ export const fileshareService = {
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/hold", {
         params: { path: { file_id: fileId } },
         body: payload as paths["/api/v1/fileshare/files/{file_id}/hold"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
         ...options,
       })
     );
@@ -234,7 +235,7 @@ export const fileshareService = {
           path: { file_id: fileId },
           query: { reason_for_change: reason },
         },
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },
@@ -250,7 +251,7 @@ export const fileshareService = {
           path: { file_id: fileId },
           query: { reason_for_change: reason },
         },
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
   },
@@ -289,7 +290,7 @@ export const fileshareService = {
     return unwrapResponse(
       openApiClient.POST("/api/v1/fileshare/audit/playback", {
         body: payload as paths["/api/v1/fileshare/audit/playback"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
         ...options,
       })
     );
@@ -310,7 +311,7 @@ export const fileshareService = {
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/approve", {
         params: { path: { file_id: fileId } },
         body: payload as paths["/api/v1/fileshare/files/{file_id}/approve"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
         ...options,
       })
     );
@@ -331,7 +332,7 @@ export const fileshareService = {
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/reject", {
         params: { path: { file_id: fileId } },
         body: payload as paths["/api/v1/fileshare/files/{file_id}/reject"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
         ...options,
       })
     );
@@ -352,7 +353,7 @@ export const fileshareService = {
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/rescind-approval", {
         params: { path: { file_id: fileId } },
         body: payload as paths["/api/v1/fileshare/files/{file_id}/rescind-approval"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
         ...options,
       })
     );
@@ -373,7 +374,7 @@ export const fileshareService = {
       openApiClient.POST("/api/v1/fileshare/files/{file_id}/upload-revision", {
         params: { path: { file_id: fileId } },
         body: payload as paths["/api/v1/fileshare/files/{file_id}/upload-revision"]["post"]["requestBody"]["content"]["application/json"],
-        headers: { "X-Change-Reason": reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
         ...options,
       })
     );

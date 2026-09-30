@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import { getApiBaseUrl, getBearerToken } from "./authorization.js";
 
 // Helper to get the current API base URL dynamically
@@ -63,7 +64,8 @@ async function request(path, options = {}) {
     changeReason || headers["X-Change-Reason"] || headers["x-change-reason"];
 
   if (isMutation && resolvedChangeReason) {
-    requestHeaders["X-Change-Reason"] = resolvedChangeReason;
+    requestHeaders["X-Change-Reason"] =
+      encodeChangeReason(resolvedChangeReason);
   }
 
   // Construct URL cleanly reading base URL dynamically

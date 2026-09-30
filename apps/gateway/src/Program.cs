@@ -180,6 +180,7 @@ app.UseAuthentication();
 // bad tokens is limited per client address too.
 app.UseRateLimiter();
 app.UseAuthorization();
+app.UseChangeReasonValidation();
 
 app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Gateway", version = "10.0" }))
     .WithName("HealthCheck")

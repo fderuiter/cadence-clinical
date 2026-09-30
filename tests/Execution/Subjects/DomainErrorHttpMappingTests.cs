@@ -22,7 +22,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// it forces the one family the legacy system lacked a global handler for (`SUBJECT_NOT_FOUND`) to 404, while
 /// leaving anything it does not recognize (most importantly a bare exception's generic 500) untouched, so
 /// raise site #19's blanket downgrade-to-400 bug is never reproduced.
-/// @req:PRD-SUB-001
 /// </summary>
 public class DomainErrorHttpMappingTests
 {
@@ -35,7 +34,6 @@ public class DomainErrorHttpMappingTests
     [InlineData("BlockedActivation", StatusCodes.Status400BadRequest)]
     [InlineData("ReconsentRequired", StatusCodes.Status423Locked)]
     [InlineData("SignedConsentDateRequired", StatusCodes.Status400BadRequest)]
-    [GxPRequirement("PRD-SUB-001")]
     public void ToProblemResult_MapsEachSubjectErrorsFactoryToExpectedStatus(string factory, int expectedStatus)
     {
         var error = CreateSubjectError(factory);
@@ -47,7 +45,6 @@ public class DomainErrorHttpMappingTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ToProblemResult_LockedFactorMutation_Returns422NotTheConflictDefaultOf409()
     {
         var error = SubjectErrors.LockedFactorMutation();
@@ -61,7 +58,6 @@ public class DomainErrorHttpMappingTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ToProblemResult_ReconsentRequired_Returns423NotTheForbiddenDefaultOf403()
     {
         var error = SubjectErrors.ReconsentRequired("v2", "SUBJ-001", "VISIT-3");
@@ -75,7 +71,6 @@ public class DomainErrorHttpMappingTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ToProblemResult_SoftDeleteBlocked_Returns403WithNoOverrideNeeded()
     {
         // SOFT_DELETE_BLOCKED shares `Type = Forbidden` with RECONSENT_REQUIRED but, unlike it, needs no
@@ -88,7 +83,6 @@ public class DomainErrorHttpMappingTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void GetStatusCode_HypotheticalConflictTypedCodeOtherThanLockedFactorMutation_MapsToDefault409()
     {
         // Boundary check: the override table is keyed by Code, not Type. A made-up Conflict-typed error
@@ -102,7 +96,6 @@ public class DomainErrorHttpMappingTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ApplyKnownCodeStatus_NoCodeExtensionPresent_LeavesStatusUnchanged()
     {
         // Simulates the ProblemDetails ASP.NET Core auto-generates for an exception that was never wrapped
@@ -117,7 +110,6 @@ public class DomainErrorHttpMappingTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ApplyKnownCodeStatus_UnrecognizedCodeExtension_LeavesStatusUnchanged()
     {
         var problemDetails = new ProblemDetails { Status = StatusCodes.Status500InternalServerError };
@@ -129,7 +121,6 @@ public class DomainErrorHttpMappingTests
     }
 
     [Fact]
-    [GxPRequirement("PRD-SUB-001")]
     public void ApplyKnownCodeStatus_SubjectNotFoundCode_ForcesStatusTo404()
     {
         // The one family `01_spec.md` §5 flags as never having had a global handler in the legacy system --

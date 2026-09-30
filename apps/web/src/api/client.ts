@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
 import { getBearerToken } from "./authorization.js";
@@ -44,7 +45,7 @@ const authMiddleware: Middleware = {
       (options as unknown as Record<string, unknown>)?.changeReason) as
       string | undefined;
     if (changeReason && !request.headers.has("X-Change-Reason")) {
-      request.headers.set("X-Change-Reason", changeReason);
+      request.headers.set("X-Change-Reason", encodeChangeReason(changeReason));
     }
 
     return request;

@@ -94,4 +94,31 @@ public class ChangeReasonHeaderFilterTests
         invoked().Should().BeTrue();
         result.Should().BeSameAs(NextSentinel);
     }
+
+    [Fact]
+    public async Task InvokeAsync_MalformedEncodedHeader_ShortCircuitsWith400NamingTheEncoding()
+    {
+        var context = CreateContext("UTF-8''bad%ZZ");
+        var (next, invoked) = CreateTrackingNext();
+
+        var result = await new ChangeReasonHeaderFilter().InvokeAsync(context, next);
+
+        invoked().Should().BeFalse();
+        var problem = result.Should().BeOfType<ProblemHttpResult>().Which;
+        problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        problem.ProblemDetails.Detail.Should().Contain("RFC 8187");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_EncodedHeaderOfOnlyWhitespace_IsRejectedLikeABlankOne()
+    {
+        var context = CreateContext("UTF-8''%E3%80%80");
+        var (next, invoked) = CreateTrackingNext();
+
+        var result = await new ChangeReasonHeaderFilter().InvokeAsync(context, next);
+
+        invoked().Should().BeFalse();
+        result.Should().BeOfType<ProblemHttpResult>().Which.ProblemDetails.Detail
+            .Should().Be("X-Change-Reason header is required.");
+    }
 }

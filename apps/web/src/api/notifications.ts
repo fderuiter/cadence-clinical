@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import { openApiClient, unwrapResponse } from "./client";
 
 export interface NotificationFilterOptions {
@@ -56,7 +57,9 @@ export const notificationsService = {
       openApiClient.POST("/api/v1/notifications/{id}/acknowledge", {
         params: { path: { id } },
         headers: {
-          ...(changeReason ? { "X-Change-Reason": changeReason } : {}),
+          ...(changeReason
+            ? { "X-Change-Reason": encodeChangeReason(changeReason) }
+            : {}),
           ...((headers as Record<string, string>) || {}),
         },
         changeReason,
@@ -77,7 +80,9 @@ export const notificationsService = {
       openApiClient.POST("/api/v1/notifications/{id}/resolve", {
         params: { path: { id } },
         headers: {
-          ...(changeReason ? { "X-Change-Reason": changeReason } : {}),
+          ...(changeReason
+            ? { "X-Change-Reason": encodeChangeReason(changeReason) }
+            : {}),
           ...((headers as Record<string, string>) || {}),
         },
         changeReason,

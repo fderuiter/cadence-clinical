@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import { createOpenApiClient, unwrapResponse } from "./client";
 import type { components, paths } from "./generated/execution";
 
@@ -200,7 +201,8 @@ export const executionApi = {
 
   /**
    * Activates a site for the study. Execution refuses (400) unless eTMF reports the site's activation
-   * documents complete, and audits the attempt either way with the reason sent as X-Change-Reason.
+   * documents complete, and audits the attempt either way with the reason sent as X-Change-Reason
+   * (encoded per ADR-2495, so any script reaches the audit trail as typed).
    */
   activateSite(
     siteId: string,
@@ -211,7 +213,7 @@ export const executionApi = {
       client.POST("/api/v1/execution/sites/{siteId}/activate", {
         params: { path: { siteId } },
         body: { study_id: studyId },
-        headers: { "X-Change-Reason": changeReason },
+        headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
       })
     );
   },

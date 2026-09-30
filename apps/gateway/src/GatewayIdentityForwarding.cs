@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -97,7 +98,7 @@ public static class GatewayIdentityForwarding
         bool unblinded = string.Equals(user.FindFirst(CadenceClaimTypes.UnblindedAccess)?.Value, "true", StringComparison.OrdinalIgnoreCase);
 
         string? changeReason = ChangeReasonHeaders
-            .Select(h => httpContext.Request.Headers[h].ToString())
+            .Select(h => ChangeReasonHeader.TryDecode(httpContext.Request.Headers[h].ToString(), out string? reason) ? reason : null)
             .FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
         return new GatewayIdentity(
@@ -110,6 +111,29 @@ public static class GatewayIdentityForwarding
             ChangeReason: changeReason,
             SigToken: httpContext.Request.Headers[GatewayHeaders.SigToken].ToString());
     }
+
+    /// <summary>
+    /// Answers <c>400</c> when a request's reason for change is in the RFC 8187 form but malformed, so a bad
+    /// encoding is reported as such instead of being forwarded without its reason (ADR-2495).
+    /// </summary>
+    public static IApplicationBuilder UseChangeReasonValidation(this IApplicationBuilder app) =>
+        app.Use(async (context, next) =>
+        {
+            foreach (string header in ChangeReasonHeaders)
+            {
+                if (!ChangeReasonHeader.TryDecode(context.Request.Headers[header].ToString(), out _))
+                {
+                    await TypedResults.Problem(
+                        statusCode: StatusCodes.Status400BadRequest,
+                        title: "Malformed reason for change",
+                        detail: $"{header} must be printable ASCII or RFC 8187 \"UTF-8''\" followed by percent-encoded UTF-8.")
+                        .ExecuteAsync(context).ConfigureAwait(false);
+                    return;
+                }
+            }
+
+            await next(context).ConfigureAwait(false);
+        });
 
     /// <summary>
     /// Registers the proxy transform: strip every client-supplied identity header and the bearer token, then
