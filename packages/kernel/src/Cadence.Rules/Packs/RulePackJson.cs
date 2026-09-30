@@ -7,6 +7,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Expressions;
 
 namespace Cadence.Rules.Packs;
@@ -360,11 +361,11 @@ public static partial class RulePackJson
 
     private static string Name(RuleAuthority authority) => Authorities.First(pair => pair.Value == authority).Key;
 
-    private static readonly Dictionary<string, RuleSeverity> SeverityNames =
-        System.Enum.GetValues<RuleSeverity>().ToDictionary(v => v.ToString(), StringComparer.Ordinal);
+    private static readonly Dictionary<string, ValidationSeverity> SeverityNames =
+        System.Enum.GetValues<ValidationSeverity>().ToDictionary(v => v.ToString(), StringComparer.Ordinal);
 
-    private static readonly Dictionary<string, RuleStage> StageNames =
-        System.Enum.GetValues<RuleStage>().ToDictionary(v => v.ToString(), StringComparer.Ordinal);
+    private static readonly Dictionary<string, ValidationStage> StageNames =
+        System.Enum.GetValues<ValidationStage>().ToDictionary(v => v.ToString(), StringComparer.Ordinal);
 
     [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")]
     private static partial Regex RuleId();

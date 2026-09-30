@@ -11,6 +11,7 @@ using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Trust;
+using Cadence.Kernel.Application.Validation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
@@ -21,11 +22,13 @@ using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Validation;
 using Cadence.Rules;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Packs;
@@ -130,6 +133,8 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddKernelCommandPipeline()
             .AddKernelStandardsPersistence()
             .AddKernelStandards()
+            .AddKernelValidationPersistence()
+            .AddKernelValidation()
             .AddCadenceRules()
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
     }
@@ -186,6 +191,12 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The rule pack loader, as a host resolves it.</summary>
     public RulePackLoader RulePacks => Scope().GetRequiredService<RulePackLoader>();
+
+    /// <summary>The validation runner, resolved from a fresh scope as a request would get one.</summary>
+    public ValidationRunner Validation => Scope().GetRequiredService<ValidationRunner>();
+
+    /// <summary>The findings read model, as applications get it.</summary>
+    public IValidationFindings Findings => Scope().GetRequiredService<IValidationFindings>();
 
     /// <summary>The rule evaluator, as a host resolves it.</summary>
     public IRuleEvaluator RuleEvaluator => Scope().GetRequiredService<IRuleEvaluator>();

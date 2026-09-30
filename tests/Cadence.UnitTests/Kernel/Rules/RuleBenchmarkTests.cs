@@ -1,5 +1,6 @@
 using System.Linq;
 
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Benchmarks;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Packs;
@@ -40,7 +41,7 @@ public class RuleBenchmarkTests
 
         new RulePackContentValidator().Validate(RulePackJson.ToJson(pack)).Should().BeEmpty();
         var fired = new DotNetRuleEvaluator()
-            .Evaluate(pack, new RuleEvaluationContext(RuleStage.Collection, RuleBenchmark.AsOf), RuleBenchmark.Dataset(10_000, 7))
+            .Evaluate(pack, new RuleEvaluationContext(ValidationStage.Collection, RuleBenchmark.AsOf), RuleBenchmark.Dataset(10_000, 7))
             .Select(v => v.RuleId).Distinct().Order().ToList();
 
         // B12 reads a variable no record has: an ordering comparison with null is false, so it never fires.

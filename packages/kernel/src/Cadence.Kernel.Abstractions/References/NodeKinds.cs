@@ -3,6 +3,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Validation;
 
 namespace Cadence.Kernel.References;
 
@@ -37,6 +38,8 @@ public static class NodeKinds
     public const string LibraryItem = "library_item";
     public const string StudyStandardsProfile = "study_standards_profile";
     public const string WorkQueueDefinition = "work_queue_definition";
+    public const string ValidationRun = "validation_run";
+    public const string ValidationFinding = "validation_finding";
 
     private static readonly FrozenDictionary<Type, string> ByIdType = new Dictionary<Type, string>
     {
@@ -64,6 +67,8 @@ public static class NodeKinds
         [typeof(LibraryItemId)] = LibraryItem,
         [typeof(StudyStandardsProfileId)] = StudyStandardsProfile,
         [typeof(WorkQueueDefinitionId)] = WorkQueueDefinition,
+        [typeof(ValidationRunId)] = ValidationRun,
+        [typeof(ValidationFindingId)] = ValidationFinding,
     }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, Type> ByKind =

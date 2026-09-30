@@ -2,6 +2,7 @@ using System;
 using System.Text.Json;
 
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Expressions;
 using Cadence.Rules.Packs;
 
@@ -16,17 +17,17 @@ internal static class SampleRulePacks
     public static RulePack Sample()
     {
         var citation = new SourceCitation("Sample public guidance", "4.1", GuidanceUrl);
-        var sdtmig = new RuleApplicability(RuleStage.Standardization, "SDTMIG", "3.4", null, "VITALS");
-        var anyDataset = new RuleApplicability(RuleStage.Standardization, null, null, null, null);
+        var sdtmig = new RuleApplicability(ValidationStage.Standardization, "SDTMIG", "3.4", null, "VITALS");
+        var anyDataset = new RuleApplicability(ValidationStage.Standardization, null, null, null, null);
         return new RulePack(RuleAuthority.Cdisc, "Sample pack",
         [
-            new Rule("R1", 3, RuleAuthority.Cdisc, citation, sdtmig, RuleSeverity.Error,
+            new Rule("R1", 3, RuleAuthority.Cdisc, citation, sdtmig, ValidationSeverity.Error,
                 Condition("""{"op":"<","args":[{"var":"SYS"},{"var":"DIA"}]}"""), "Systolic below diastolic.", "Check the values.", EffectivePeriod.Always),
-            new Rule("R2", 1, RuleAuthority.Cdisc, citation, anyDataset, RuleSeverity.Warning,
+            new Rule("R2", 1, RuleAuthority.Cdisc, citation, anyDataset, ValidationSeverity.Warning,
                 Condition("""{"op":"<","args":[{"var":"SYS"},100]}"""), "Low systolic.", null, EffectivePeriod.Always),
-            new Rule("R3", 1, RuleAuthority.Cdisc, citation, anyDataset, RuleSeverity.Notice,
+            new Rule("R3", 1, RuleAuthority.Cdisc, citation, anyDataset, ValidationSeverity.Notice,
                 Condition("""{"op":"is_not_empty","args":[{"var":"SYS"}]}"""), "Future rule.", null, new EffectivePeriod(new DateOnly(2027, 1, 1), null)),
-            new Rule("R4", 1, RuleAuthority.Cdisc, citation, new RuleApplicability(RuleStage.Design, null, null, null, null), RuleSeverity.Error,
+            new Rule("R4", 1, RuleAuthority.Cdisc, citation, new RuleApplicability(ValidationStage.Design, null, null, null, null), ValidationSeverity.Error,
                 Condition("true"), "Design-stage rule.", null, EffectivePeriod.Always),
         ]);
     }

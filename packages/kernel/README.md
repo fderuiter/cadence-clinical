@@ -319,8 +319,8 @@ Every event envelope carries `Subject`, the NodeRef of the aggregate the command
 to a `NodeSummary`, computes its zoom path (`tenant → study → country → study_site → enrollment`, or
 `tenant → organization → site`) and lists its children with counts. A participant appears in a study as its
 enrollment, titled by its subject code; an enrollment with no responsible study site sits directly under its study
-(`ZoomRules.EnrollmentParent`). Protocol versions and study standards sit under their study, and an attestation under
-the object it signs. When a slice maps a new kind, add its case to `KernelScopeGraph` with the kind's zoom parent.
+(`ZoomRules.EnrollmentParent`). Protocol versions, study standards, validation runs and findings sit under their
+study, and an attestation under the object it signs. When a slice maps a new kind, add its case to `KernelScopeGraph` with the kind's zoom parent.
 
 ## Standards Registry and MDR (ADR-2460)
 
@@ -351,6 +351,30 @@ A host that uses the registry also calls `AddKernelStandards()` (handlers) and `
 or `library_item` target, which the kernel's `IAttestationVerifier` checks.
 Load public content with `StandardSeeds.LoadAll()` or `CdiscLibraryProductReader.Read(...)` and send each package in
 a `RegisterStandardVersion` command.
+
+## Validation runs and findings (ADR-2462)
+
+A validation run records what a study's pinned rule packs detected at one stage (spec §10.3). Send
+`RecordValidationRun`, or let `ValidationRunner` (`Cadence.Rules`) evaluate and send it:
+
+| Command | What it does |
+| --- | --- |
+| `RecordValidationRun` | Records a run: released pack versions, stage, as-of date, standard, agency, versioned inputs, datasets covered and detections |
+| `InvestigateFinding`, `ClassifyFinding`, `ReopenFinding` | Decisions on a finding's workflow; each reads the finding's derived status first |
+| `AcceptFinding`, `ExplainFinding` | Need a `Responsibility` or `Approved` attestation over `FindingDecisionContent.Hash(finding, last detecting run, decision, text)` |
+
+- A finding's ID is `ValidationFindingId.For(tenant, identity)`: study, stage, pack key, rule ID and target, not the
+  rule version. Targets that are kernel objects use a NodeRef without `@version`.
+- Status is derived on read by `FindingLedger`: a run covering the finding's stage, pack and dataset that no longer
+  detects it resolves it, and a decision made before a resolution is void if the finding recurs.
+- `IValidationFindings` finds, lists (filters and `BlockingOnly`) and explains findings, and reads runs.
+- Run tables are insert-only (`KA001`); a decisions record keeps its finding, study and author (`KS001`).
+- A run is `[DerivedObject]`, linked `DefinedBy` its pack versions and `ValidatedBy` its inputs; decisions link
+  `DerivedFrom` their run.
+
+A host registers `AddKernelValidation()` and `AddKernelValidationPersistence()`. Attesting other kinds of record:
+register an `IAttestationTargetCheck` for the kind (`Cadence.Kernel.Application.Trust`); `Attest` consults it after the
+core kinds.
 
 ## Explanations (ADR-2482)
 

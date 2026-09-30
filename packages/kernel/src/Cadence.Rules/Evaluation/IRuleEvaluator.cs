@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Expressions;
 using Cadence.Rules.Packs;
 
@@ -27,7 +28,7 @@ public interface IRuleEvaluator
 /// <see cref="AsOf"/>, and each of its standard, standard version and agency is null or equal to the context's. The
 /// caller supplies <see cref="AsOf"/>; evaluation never reads the clock.
 /// </summary>
-public sealed record RuleEvaluationContext(RuleStage Stage, DateOnly AsOf)
+public sealed record RuleEvaluationContext(ValidationStage Stage, DateOnly AsOf)
 {
     /// <summary>The standard being checked (for example <c>SDTMIG</c>); rules naming another standard do not apply.</summary>
     public string? Standard { get; init; }
@@ -68,7 +69,7 @@ public sealed record ObservedValue(string Variable, RuleValue Value);
 public sealed record RuleViolation(
     string RuleId,
     int RuleVersion,
-    RuleSeverity Severity,
+    ValidationSeverity Severity,
     string Dataset,
     string RecordKey,
     string Explanation,

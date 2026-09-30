@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Expressions;
 
 namespace Cadence.Rules.Packs;
@@ -25,32 +26,6 @@ public enum RuleAuthority
     Study,
 }
 
-/// <summary>How serious a violation is. <see cref="Error"/> blocks where the stage says so (spec §10.2).</summary>
-public enum RuleSeverity
-{
-    /// <summary>Must be fixed or explained; blocks where the stage blocks.</summary>
-    Error,
-    /// <summary>Should be reviewed; never blocks.</summary>
-    Warning,
-    /// <summary>Information only.</summary>
-    Notice,
-}
-
-/// <summary>The lifecycle stage a rule validates (spec §10.2).</summary>
-public enum RuleStage
-{
-    /// <summary>Study design objects before they are published.</summary>
-    Design,
-    /// <summary>Data as it is captured (edit checks); never blocks a kernel write.</summary>
-    Collection,
-    /// <summary>Tabulation datasets such as SDTM and SEND.</summary>
-    Standardization,
-    /// <summary>Analysis datasets such as ADaM.</summary>
-    Analysis,
-    /// <summary>The submission package: Define-XML, reviewer guides, dataset files.</summary>
-    Submission,
-}
-
 /// <summary>
 /// The public document a rule implements (K-RULE-2): for example the CDISC SDTMIG conformance rules, an FDA
 /// validator rule or a technical conformance guide section. Sponsor and study rules cite the sponsor's own document.
@@ -61,7 +36,7 @@ public sealed record SourceCitation(string Document, string? Section, string? Ur
 /// Where a rule applies. A null field matches anything. <see cref="Dataset"/> is compared with the name of the
 /// dataset, domain or record type being checked.
 /// </summary>
-public sealed record RuleApplicability(RuleStage Stage, string? Standard, string? StandardVersion, string? Agency, string? Dataset);
+public sealed record RuleApplicability(ValidationStage Stage, string? Standard, string? StandardVersion, string? Agency, string? Dataset);
 
 /// <summary>The dates a rule applies to: from <see cref="From"/> (inclusive) until <see cref="Until"/> (exclusive).</summary>
 public sealed record EffectivePeriod(DateOnly? From, DateOnly? Until)
@@ -84,7 +59,7 @@ public sealed record Rule(
     RuleAuthority Authority,
     SourceCitation Citation,
     RuleApplicability Applicability,
-    RuleSeverity Severity,
+    ValidationSeverity Severity,
     RuleExpression Condition,
     string Explanation,
     string? RemediationGuidance,

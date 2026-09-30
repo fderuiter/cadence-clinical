@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Expressions;
 using Cadence.Rules.Packs;
@@ -40,7 +41,7 @@ public static class RuleBenchmark
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(records);
 
         var pack = Pack();
-        var context = new RuleEvaluationContext(RuleStage.Collection, AsOf);
+        var context = new RuleEvaluationContext(ValidationStage.Collection, AsOf);
         var allocated = GC.GetTotalAllocatedBytes(precise: true);
         var clock = Stopwatch.StartNew();
         var violations = evaluator.Evaluate(pack, context, Dataset(records, seed));
@@ -94,8 +95,8 @@ public static class RuleBenchmark
         [
             .. rules.Select((r, i) => new Rule(
                 $"B{i + 1:00}", 1, RuleAuthority.Sponsor, citation,
-                new RuleApplicability(RuleStage.Collection, null, null, null, r.Dataset),
-                RuleSeverity.Warning, Parse(r.Condition), $"Benchmark rule {i + 1}.", null, EffectivePeriod.Always)),
+                new RuleApplicability(ValidationStage.Collection, null, null, null, r.Dataset),
+                ValidationSeverity.Warning, Parse(r.Condition), $"Benchmark rule {i + 1}.", null, EffectivePeriod.Always)),
         ]);
     }
 

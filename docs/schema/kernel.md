@@ -46,6 +46,12 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 10 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 8 |
+| [`kernel.validation_detections`](#kernelvalidation_detections) | `ValidationDetectionRecord` | 17 |
+| [`kernel.validation_findings`](#kernelvalidation_findings) | `ValidationFinding` | 14 |
+| [`kernel.validation_run_datasets`](#kernelvalidation_run_datasets) | `ValidationRunDataset` | 3 |
+| [`kernel.validation_run_inputs`](#kernelvalidation_run_inputs) | `ValidationRunInput` | 3 |
+| [`kernel.validation_run_packs`](#kernelvalidation_run_packs) | `ValidationRunPack` | 6 |
+| [`kernel.validation_runs`](#kernelvalidation_runs) | `ValidationRun` | 15 |
 | [`kernel.work_queue_definitions`](#kernelwork_queue_definitions) | `WorkQueueDefinition` | 12 |
 
 ## kernel.activity_entries
@@ -1096,6 +1102,160 @@ Entity: `Tenant`
 Indexes:
 
 - `IX_tenants_code`: unique (`code`)
+
+## kernel.validation_detections
+
+Entity: `ValidationDetectionRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `finding_id` | `uuid` | no |  | PK |
+| `run_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `dataset` | `character varying(64)` | no |  |  |
+| `expected` | `character varying(2000)` | yes |  |  |
+| `message` | `character varying(2000)` | no |  |  |
+| `observed` | `jsonb` | no |  |  |
+| `pack_item_id` | `uuid` | no |  |  |
+| `pack_key` | `character varying(128)` | no |  |  |
+| `rule_id` | `character varying(64)` | no |  |  |
+| `rule_version` | `integer` | no |  |  |
+| `severity` | `character varying(16)` | no |  |  |
+| `stage` | `character varying(32)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `target_key` | `character varying(200)` | no |  |  |
+| `target_kind` | `character varying(32)` | no |  |  |
+| `variable` | `character varying(64)` | yes |  |  |
+
+Foreign keys:
+
+- `FK_validation_detections_validation_run_datasets_tenant_id_run~`: (`tenant_id`, `run_id`, `dataset`) references `kernel.validation_run_datasets` (`tenant_id`, `run_id`, `dataset`), on delete restrict
+- `FK_validation_detections_validation_run_packs_tenant_id_run_id~`: (`tenant_id`, `run_id`, `pack_key`) references `kernel.validation_run_packs` (`tenant_id`, `run_id`, `pack_key`), on delete restrict
+- `FK_validation_detections_validation_runs_tenant_id_run_id`: (`tenant_id`, `run_id`) references `kernel.validation_runs` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_validation_detections_tenant_id_finding_id`: (`tenant_id`, `finding_id`)
+- `IX_validation_detections_tenant_id_run_id_dataset`: (`tenant_id`, `run_id`, `dataset`)
+- `IX_validation_detections_tenant_id_run_id_pack_key`: (`tenant_id`, `run_id`, `pack_key`)
+- `IX_validation_detections_tenant_id_study_id_stage`: (`tenant_id`, `study_id`, `stage`)
+
+## kernel.validation_findings
+
+Entity: `ValidationFinding`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `attestation_id` | `uuid` | yes |  |  |
+| `classification` | `character varying(32)` | yes |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `decided_at` | `timestamp with time zone` | yes |  |  |
+| `decided_by` | `character varying(255)` | yes |  |  |
+| `decided_on_run` | `uuid` | yes |  |  |
+| `decision` | `character varying(32)` | yes |  |  |
+| `decision_text` | `character varying(4000)` | yes |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_validation_findings_attestations_tenant_id_attestation_id`: (`tenant_id`, `attestation_id`) references `kernel.attestations` (`tenant_id`, `id`), on delete restrict
+- `FK_validation_findings_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_validation_findings_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+- `FK_validation_findings_validation_runs_tenant_id_decided_on_run`: (`tenant_id`, `decided_on_run`) references `kernel.validation_runs` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `AK_validation_findings_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_validation_findings_tenant_id_attestation_id`: (`tenant_id`, `attestation_id`)
+- `IX_validation_findings_tenant_id_decided_on_run`: (`tenant_id`, `decided_on_run`)
+- `IX_validation_findings_tenant_id_study_id`: (`tenant_id`, `study_id`)
+
+## kernel.validation_run_datasets
+
+Entity: `ValidationRunDataset`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `dataset` | `character varying(64)` | no |  | PK |
+| `run_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+
+Foreign keys:
+
+- `FK_validation_run_datasets_validation_runs_tenant_id_run_id`: (`tenant_id`, `run_id`) references `kernel.validation_runs` (`tenant_id`, `id`), on delete restrict
+
+## kernel.validation_run_inputs
+
+Entity: `ValidationRunInput`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `input` | `character varying(128)` | no |  | PK |
+| `run_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+
+Foreign keys:
+
+- `FK_validation_run_inputs_validation_runs_tenant_id_run_id`: (`tenant_id`, `run_id`) references `kernel.validation_runs` (`tenant_id`, `id`), on delete restrict
+
+## kernel.validation_run_packs
+
+Entity: `ValidationRunPack`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `pack_key` | `character varying(128)` | no |  | PK |
+| `run_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `content_hash` | `character varying(71)` | no |  |  |
+| `library_item_id` | `uuid` | no |  |  |
+| `pack_version` | `integer` | no |  |  |
+
+Foreign keys:
+
+- `FK_validation_run_packs_library_items_tenant_id_library_item_id`: (`tenant_id`, `library_item_id`) references `kernel.library_items` (`tenant_id`, `id`), on delete restrict
+- `FK_validation_run_packs_validation_runs_tenant_id_run_id`: (`tenant_id`, `run_id`) references `kernel.validation_runs` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_validation_run_packs_tenant_id_library_item_id`: (`tenant_id`, `library_item_id`)
+
+## kernel.validation_runs
+
+Entity: `ValidationRun`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `agency` | `character varying(64)` | yes |  |  |
+| `as_of` | `date` | no |  |  |
+| `completed_at` | `timestamp with time zone` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `detection_count` | `integer` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `stage` | `character varying(32)` | no |  |  |
+| `standard` | `character varying(64)` | yes |  |  |
+| `standard_version` | `character varying(64)` | yes |  |  |
+| `started_at` | `timestamp with time zone` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_validation_runs_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_validation_runs_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_validation_runs_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_validation_runs_tenant_id_study_id_stage_created_at`: (`tenant_id`, `study_id`, `stage`, `created_at`)
 
 ## kernel.work_queue_definitions
 

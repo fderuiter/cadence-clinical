@@ -13,12 +13,14 @@ public static class RulesServiceCollectionExtensions
     /// <summary>
     /// Registers the rules subsystem: the .NET <see cref="IRuleEvaluator"/> (replace the registration to swap engines),
     /// the <see cref="RulePackLoader"/> (needs an <see cref="IStandardsRegistry"/>, from
-    /// <c>AddKernelStandardsPersistence()</c>) and the rule pack content validator that <c>DraftLibraryItem</c> runs.
+    /// <c>AddKernelStandardsPersistence()</c>), the rule pack content validator that <c>DraftLibraryItem</c> runs, and the
+    /// <see cref="ValidationRunner"/> (needs the kernel's <c>IKernelCommandSender</c> and <c>IClock</c>).
     /// </summary>
     public static IServiceCollection AddCadenceRules(this IServiceCollection services)
     {
         services.TryAddSingleton<IRuleEvaluator, DotNetRuleEvaluator>();
         services.TryAddSingleton<RulePackLoader>();
+        services.TryAddScoped<ValidationRunner>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILibraryContentValidator, RulePackContentValidator>());
         return services;
     }

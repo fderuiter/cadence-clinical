@@ -10,6 +10,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Expressions;
 using Cadence.Rules.Packs;
@@ -34,7 +35,7 @@ public sealed class RulePackPostgresTests(KernelPostgresFixture fixture) : IClas
     private const string Reason = "Rule pack test";
     private const string PackKey = "sample-vitals-rules";
 
-    private static readonly RuleEvaluationContext Context = new(RuleStage.Standardization, new DateOnly(2026, 9, 30))
+    private static readonly RuleEvaluationContext Context = new(ValidationStage.Standardization, new DateOnly(2026, 9, 30))
     {
         Standard = "SDTMIG",
         StandardVersion = "3.4",
