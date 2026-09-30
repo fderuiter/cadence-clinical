@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Indicators;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Validation;
 using Cadence.Rules.Expressions;
@@ -15,10 +16,10 @@ namespace Cadence.TestSupport.Kernel.Rules;
 internal static class SampleIndicatorSets
 {
     /// <summary>The population the enrollment indicators count.</summary>
-    public const string Enrollments = "enrollments";
+    public const string Enrollments = KernelPopulations.Enrollments;
 
     /// <summary>The population the quality indicator counts.</summary>
-    public const string Findings = "findings";
+    public const string Findings = KernelPopulations.ValidationFindings;
 
     /// <summary>
     /// Three indicators: enrolled participants (a count with no threshold), the screen failure rate (a percentage that

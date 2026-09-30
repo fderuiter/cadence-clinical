@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Validation;
 using Cadence.Kernel.Domain.Validation;
+using Cadence.Kernel.Indicators;
+using Cadence.Kernel.Persistence.Indicators;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Validation;
@@ -233,7 +235,8 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
 public static class KernelValidationPersistenceServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers <see cref="IValidationFindings"/> and the ledger source the validation handlers read. Call after
+    /// Registers <see cref="IValidationFindings"/>, the ledger source the validation handlers read and the
+    /// <c>validation_findings</c> indicator population (ADR-2488). Call after
     /// <c>AddKernelPersistence</c>.
     /// </summary>
     public static IServiceCollection AddKernelValidationPersistence(this IServiceCollection services)
@@ -242,6 +245,7 @@ public static class KernelValidationPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelValidationStore>();
         services.TryAddSingleton<IValidationLedgerSource>(sp => sp.GetRequiredService<KernelValidationStore>());
         services.TryAddSingleton<IValidationFindings>(sp => sp.GetRequiredService<KernelValidationStore>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IIndicatorPopulationSource, ValidationFindingPopulationSource>());
         return services;
     }
 }

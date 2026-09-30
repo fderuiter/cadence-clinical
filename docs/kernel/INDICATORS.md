@@ -74,3 +74,31 @@ result hashes, and an `Explanation` from `quality.indicator/<id>@<version>`. Ren
 compose one in the application (K-EXP-1).
 
 Ordering breached indicators in Needs Attention is the application's choice (ADR-2488 §4.4).
+
+## A study's Pulse
+
+`StudyIndicators` does the reading for you: it loads the sets the study pinned, reads each population from its
+registered source at the as-of and evaluates.
+
+```csharp
+var result = await studyIndicators.EvaluateAsync(tenant, reader, studyId, asOf, cancellationToken);
+```
+
+Check that the reader may read the study first. Records whose objects the reader may not see (`INodeVisibility`)
+are left out before counting: they are in neither the value nor the contributors. Such a value comes back with
+`Partial = true` and the distinct `HiddenReasons`, never with a count of what was hidden (ADR-2488 §4.7). A pinned
+indicator whose population has no source is refused (`K.Indicators.PopulationUnknown`), and so is a population of
+more than 10,000 records (`K.Indicators.PopulationTooLarge`).
+
+## Populations
+
+A population is read by an `IIndicatorPopulationSource` registered under its name. Values are text; numbers use the
+invariant culture and compare numerically. The kernel provides:
+
+| Population | Object | Variables | As-of |
+| --- | --- | --- | --- |
+| `enrollments` | Enrollment | `STATUS` (an `EnrollmentStatus` name), `STUDY_SITE` (study site id), `ENROLLMENT_NUMBER` (null before enrollment) | The status valid at the as-of, as recorded then; enrollments with no status then are not in it |
+| `validation_findings` | ValidationFinding | `STATUS`, `SEVERITY`, `STAGE`, `PACK`, `RULE`, `DATASET`, `CLASSIFICATION`, `BLOCKS` (`true` or `false`) | As currently known; findings have no bitemporal history |
+
+An application adds a population by registering its own source with
+`services.TryAddEnumerable(ServiceDescriptor.Singleton<IIndicatorPopulationSource, MySource>())`.

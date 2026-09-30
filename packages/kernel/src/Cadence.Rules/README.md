@@ -20,12 +20,16 @@ and release a pack: [docs/kernel/RULE_PACKS.md](../../../../docs/kernel/RULE_PAC
   [docs/kernel/INDICATORS.md](../../../../docs/kernel/INDICATORS.md)). `IndicatorSetJson` reads and writes
   `IndicatorSet` library item content, `IndicatorSetContentValidator` validates it when drafted, `IndicatorSetLoader`
   loads released sets by id or by a study's pins, and `IndicatorEvaluator` counts each population through
-  `IRuleEvaluator` and returns values with hashes, contributing objects and an explanation.
+  `IRuleEvaluator` and returns values with hashes, contributing objects and an explanation. `StudyIndicators` evaluates
+  a study's pinned sets over the populations its registered `IIndicatorPopulationSource`s read, leaving out the
+  records the reader may not see (`INodeVisibility`) and marking such values partial.
 
 ## Registration
 
 `services.AddCadenceRules()` registers `IRuleEvaluator`, `RulePackLoader`, `IndicatorSetLoader`, `IndicatorEvaluator`,
-the two content validators and the scoped `ValidationRunner`. `RulePackLoader` needs `IStandardsRegistry`, which `AddKernelStandardsPersistence()` provides;
+the two content validators and the scoped `ValidationRunner` and `StudyIndicators`. `StudyIndicators` also needs
+`INodeVisibility` and the population sources, which `AddKernelPersistence()` and `AddKernelValidationPersistence()`
+register. `RulePackLoader` needs `IStandardsRegistry`, which `AddKernelStandardsPersistence()` provides;
 `ValidationRunner` also needs the kernel's `IKernelCommandSender` and `IClock`, and the kernel host registers the
 validation handlers with `AddKernelValidation()` and `AddKernelValidationPersistence()`.
 

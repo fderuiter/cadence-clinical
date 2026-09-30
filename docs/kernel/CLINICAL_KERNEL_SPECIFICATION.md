@@ -1005,7 +1005,11 @@ the study's standards profile like rule packs. Each indicator counts the records
 expression is true, through `IRuleEvaluator`, and reports a count or a percentage against an optional threshold. A
 result names the indicator and set versions, carries input and result hashes and up to 100 contributing objects, and
 has an explanation produced as `quality.indicator/<id>@<version>`. Ranking in Needs Attention is application logic,
-and a study configures its Pulse only by pinning released sets (ADR-2488 §4.5). Signals and population sources follow.
+and a study configures its Pulse only by pinning released sets (ADR-2488 §4.5). A study's Pulse reads each population
+from a registered population source (the kernel provides `enrollments` and `validation_findings`) and counts only the
+records the reader may see: hidden records are left out of the value and its contributors, and the value is marked
+partial with the mask reasons but no hidden count, so a number never reveals another site's or blinded data
+(ADR-2488 §4.6, §4.7). Signals follow.
 
 ### 10.5 Locks and freezes (resolves G5)
 
