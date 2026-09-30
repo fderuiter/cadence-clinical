@@ -1,0 +1,264 @@
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Trust;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Events;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Trust;
+
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Cadence.Kernel.Application.Protocol;
+
+/// <summary>Handles <see cref="CreateProtocolDraft"/>: a study's first protocol version.</summary>
+internal sealed class CreateProtocolDraftHandler : ICommandHandler<CreateProtocolDraft, ProtocolVersionState>
+{
+    public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
+        CreateProtocolDraft command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Work.ExistsAsync<ProtocolVersion>(command.ProtocolVersionId, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        if (!await context.Work.ExistsAsync<Study>(command.StudyId, cancellationToken).ConfigureAwait(false))
+        {
+            return ProtocolErrors.StudyUnknown;
+        }
+
+        var studyId = command.StudyId;
+        var existing = await context.Work.ReadAllAsync<ProtocolVersion>(v => v.StudyId == studyId, cancellationToken).ConfigureAwait(false);
+        if (existing.Count > 0)
+        {
+            return ProtocolErrors.FirstVersionExists;
+        }
+
+        var created = ProtocolVersion.CreateFirst(command.ProtocolVersionId, command.TenantId, command.StudyId, command.Content);
+        if (created.Value is not { } version)
+        {
+            return created.Error!;
+        }
+
+        context.Work.Add(version);
+        context.Work.Raise(new ProtocolVersionDrafted(version.TenantId, version.StudyId, version.Id, version.Number, null, null));
+        return ProtocolVersionStates.Of(version);
+    }
+}
+
+/// <summary>Handles <see cref="ForkProtocolVersion"/>: an amended draft numbered after every version in the study.</summary>
+internal sealed class ForkProtocolVersionHandler : ICommandHandler<ForkProtocolVersion, ProtocolVersionState>
+{
+    public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
+        ForkProtocolVersion command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Work.ExistsAsync<ProtocolVersion>(command.ProtocolVersionId, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        if (await context.Work.ReadAsync<ProtocolVersion>(command.ParentVersionId, cancellationToken).ConfigureAwait(false) is not { } parent)
+        {
+            return KernelErrors.NotFound.WithMessage("The parent protocol version does not exist.");
+        }
+
+        // A concurrent fork can take the same number; the unique (tenant, study, number) index rejects the loser, which
+        // retries with a new idempotency key.
+        var studyId = parent.StudyId;
+        var siblings = await context.Work.ReadAllAsync<ProtocolVersion>(v => v.StudyId == studyId, cancellationToken).ConfigureAwait(false);
+        var number = siblings.Max(v => v.Number) + 1;
+
+        var forked = ProtocolVersion.Fork(parent, command.ProtocolVersionId, number, command.Amendment);
+        if (forked.Value is not { } version)
+        {
+            return forked.Error!;
+        }
+
+        context.Work.Add(version);
+        context.Work.Raise(new ProtocolVersionDrafted(
+            version.TenantId, version.StudyId, version.Id, version.Number, version.ParentVersionId, version.Amendment));
+        return ProtocolVersionStates.Of(version);
+    }
+}
+
+/// <summary>Handles <see cref="ReviseProtocolDraft"/>.</summary>
+internal sealed class ReviseProtocolDraftHandler : ICommandHandler<ReviseProtocolDraft, ProtocolVersionState>
+{
+    public Task<CommandResult<ProtocolVersionState>> HandleAsync(
+        ReviseProtocolDraft command, ICommandContext context, CancellationToken cancellationToken) =>
+        ProtocolVersionStates.ChangeAsync(context, command.ProtocolVersionId, cancellationToken, version =>
+            version.Revise(command.Content, command.Amendment)
+            ?? Raise(context, new ProtocolVersionRevised(version.TenantId, version.StudyId, version.Id)));
+
+    private static KernelError? Raise(ICommandContext context, object domainEvent)
+    {
+        context.Work.Raise(domainEvent);
+        return null;
+    }
+}
+
+/// <summary>Handles <see cref="SubmitProtocolVersionForReview"/>.</summary>
+internal sealed class SubmitProtocolVersionForReviewHandler : ICommandHandler<SubmitProtocolVersionForReview, ProtocolVersionState>
+{
+    public Task<CommandResult<ProtocolVersionState>> HandleAsync(
+        SubmitProtocolVersionForReview command, ICommandContext context, CancellationToken cancellationToken) =>
+        ProtocolVersionStates.ChangeAsync(context, command.ProtocolVersionId, cancellationToken, version =>
+        {
+            if (version.SubmitForReview() is { } error)
+            {
+                return error;
+            }
+
+            context.Work.Raise(new ProtocolVersionSubmittedForReview(version.TenantId, version.StudyId, version.Id, version.ContentHash!));
+            return null;
+        });
+}
+
+/// <summary>Handles <see cref="ReturnProtocolVersionToDraft"/>.</summary>
+internal sealed class ReturnProtocolVersionToDraftHandler : ICommandHandler<ReturnProtocolVersionToDraft, ProtocolVersionState>
+{
+    public Task<CommandResult<ProtocolVersionState>> HandleAsync(
+        ReturnProtocolVersionToDraft command, ICommandContext context, CancellationToken cancellationToken) =>
+        ProtocolVersionStates.ChangeAsync(context, command.ProtocolVersionId, cancellationToken, version =>
+        {
+            if (version.ReturnToDraft() is { } error)
+            {
+                return error;
+            }
+
+            context.Work.Raise(new ProtocolVersionReturnedToDraft(version.TenantId, version.StudyId, version.Id));
+            return null;
+        });
+}
+
+/// <summary>
+/// Handles <see cref="ApproveProtocolVersion"/>: the named attestation must mean <c>Approved</c> and sign this
+/// version's content hash (spec §6.2, 21 CFR 11.70).
+/// </summary>
+internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifier) : ICommandHandler<ApproveProtocolVersion, ProtocolVersionState>
+{
+    public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
+        ApproveProtocolVersion command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Work.FindAsync<ProtocolVersion>(command.ProtocolVersionId, cancellationToken).ConfigureAwait(false) is not { } version)
+        {
+            return KernelErrors.NotFound;
+        }
+
+        if (version.Status != ProtocolVersionStatus.InReview)
+        {
+            return version.Approve(command.AttestationId)!;
+        }
+
+        if (await ProtocolVersionStates.VerifyAsync(verifier, context, command.AttestationId, AttestationMeaning.Approved, version, cancellationToken)
+                .ConfigureAwait(false) is { } rejected)
+        {
+            return rejected;
+        }
+
+        version.Approve(command.AttestationId);
+        context.Work.Raise(new ProtocolVersionApproved(
+            version.TenantId, version.StudyId, version.Id, version.Number, version.ContentHash!, command.AttestationId));
+        return ProtocolVersionStates.Of(version);
+    }
+}
+
+/// <summary>
+/// Handles <see cref="WithdrawProtocolVersion"/>: the named attestation must mean <c>Withdrawn</c> and sign this
+/// version's content hash; the reason for change is the withdrawal reason.
+/// </summary>
+internal sealed class WithdrawProtocolVersionHandler(IAttestationVerifier verifier) : ICommandHandler<WithdrawProtocolVersion, ProtocolVersionState>
+{
+    public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
+        WithdrawProtocolVersion command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Work.FindAsync<ProtocolVersion>(command.ProtocolVersionId, cancellationToken).ConfigureAwait(false) is not { } version)
+        {
+            return KernelErrors.NotFound;
+        }
+
+        if (version.Status is not (ProtocolVersionStatus.InReview or ProtocolVersionStatus.Approved))
+        {
+            return version.Withdraw(command.AttestationId, command.ReasonForChange)!;
+        }
+
+        if (await ProtocolVersionStates.VerifyAsync(verifier, context, command.AttestationId, AttestationMeaning.Withdrawn, version, cancellationToken)
+                .ConfigureAwait(false) is { } rejected)
+        {
+            return rejected;
+        }
+
+        if (version.Withdraw(command.AttestationId, command.ReasonForChange) is { } error)
+        {
+            return error;
+        }
+
+        context.Work.Raise(new ProtocolVersionWithdrawn(
+            version.TenantId, version.StudyId, version.Id, command.AttestationId, command.ReasonForChange));
+        return ProtocolVersionStates.Of(version);
+    }
+}
+
+/// <summary>Shared steps of the protocol handlers.</summary>
+internal static class ProtocolVersionStates
+{
+    public static CommandResult<ProtocolVersionState> Of(ProtocolVersion version) =>
+        CommandResult<ProtocolVersionState>.Success(
+            new ProtocolVersionState(version.Id, version.StudyId, version.Number, version.Status, version.ContentHash));
+
+    /// <summary>Loads the version for change, applies <paramref name="change"/> and returns the new state.</summary>
+    public static async Task<CommandResult<ProtocolVersionState>> ChangeAsync(
+        ICommandContext context,
+        ProtocolVersionId id,
+        CancellationToken cancellationToken,
+        Func<ProtocolVersion, KernelError?> change)
+    {
+        if (await context.Work.FindAsync<ProtocolVersion>(id, cancellationToken).ConfigureAwait(false) is not { } version)
+        {
+            return KernelErrors.NotFound;
+        }
+
+        return change(version) is { } error ? CommandResult<ProtocolVersionState>.Failure(error) : Of(version);
+    }
+
+    /// <summary>
+    /// Checks that the acting person signed the attestation over the version's frozen content; returns the rejection,
+    /// or null.
+    /// </summary>
+    public static async Task<KernelError?> VerifyAsync(
+        IAttestationVerifier verifier,
+        ICommandContext context,
+        AttestationId attestation,
+        AttestationMeaning meaning,
+        ProtocolVersion version,
+        CancellationToken cancellationToken)
+    {
+        var verification = await verifier
+            .VerifyAsync(new AttestationRequirement(context.TenantId, attestation, meaning, version.SignableTarget!, context.Actor), cancellationToken)
+            .ConfigureAwait(false);
+        return verification.Satisfied
+            ? null
+            : ProtocolErrors.AttestationRejected.WithMessage(verification.Reason ?? ProtocolErrors.AttestationRejected.Message);
+    }
+}
+
+/// <summary>Registers the protocol version command handlers (spec §6.2).</summary>
+public static class ProtocolServiceCollectionExtensions
+{
+    /// <summary>Called by <see cref="KernelApplicationServiceCollectionExtensions.AddKernelCommandPipeline"/>.</summary>
+    public static IServiceCollection AddKernelProtocolHandlers(this IServiceCollection services)
+    {
+        services.AddTransient<ICommandHandler<CreateProtocolDraft, ProtocolVersionState>, CreateProtocolDraftHandler>();
+        services.AddTransient<ICommandHandler<ReviseProtocolDraft, ProtocolVersionState>, ReviseProtocolDraftHandler>();
+        services.AddTransient<ICommandHandler<SubmitProtocolVersionForReview, ProtocolVersionState>, SubmitProtocolVersionForReviewHandler>();
+        services.AddTransient<ICommandHandler<ReturnProtocolVersionToDraft, ProtocolVersionState>, ReturnProtocolVersionToDraftHandler>();
+        services.AddTransient<ICommandHandler<ApproveProtocolVersion, ProtocolVersionState>, ApproveProtocolVersionHandler>();
+        services.AddTransient<ICommandHandler<WithdrawProtocolVersion, ProtocolVersionState>, WithdrawProtocolVersionHandler>();
+        services.AddTransient<ICommandHandler<ForkProtocolVersion, ProtocolVersionState>, ForkProtocolVersionHandler>();
+        return services;
+    }
+}

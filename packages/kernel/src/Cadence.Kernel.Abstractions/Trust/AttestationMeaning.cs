@@ -2,7 +2,6 @@ namespace Cadence.Kernel.Trust;
 
 /// <summary>
 /// What a signer asserts by an <c>Attestation</c> (spec §9.5, 21 CFR 11.50(a)(3)). Stored and sent by name.
-/// @req:PRD-SYS-053
 /// </summary>
 public enum AttestationMeaning
 {

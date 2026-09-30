@@ -1,127 +1,256 @@
 using System;
+using System.Linq;
+using System.Text.Json;
 
 using Cadence.Core.Domain;
-using Cadence.Kernel.Domain.Bitemporal;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Domain.Entities;
 
 /// <summary>
-/// Canonical ProtocolVersion snapshot aggregate root capturing CDISC USDM study definitions in PostgreSQL.
-/// Conforms to ADR-2245, ADR-2246, and PRD-SYS-053.
+/// One version of a study's executable protocol (spec §6.2): a JSON document (CDISC USDM is the interchange format)
+/// with a per-study <see cref="Number"/>, its parent, the amendment that introduced it, and a lifecycle
+/// <c>Draft → InReview → Approved → Superseded | Withdrawn</c>.
+/// <list type="bullet">
+/// <item>Submitting for review freezes the content and sets <see cref="ContentHash"/> (<see cref="Trust.ContentHash"/>).
+/// From then on the content never changes; returning to draft clears the hash.</item>
+/// <item>Approval and withdrawal name an attestation bound to that hash; the command handler verifies it.</item>
+/// <item>Forking starts a new draft from an approved version and leaves the parent approved: approved versions
+/// coexist until Effectivity (#4777) supersedes one.</item>
+/// </list>
+/// Invalid transitions return <see cref="ProtocolErrors.InvalidTransition"/>; nothing here throws for an expected
+/// failure. The database repeats the content freeze and the transition rules in a trigger.
 /// </summary>
-public class ProtocolVersion : AggregateRoot<ProtocolVersionId>, IBitemporalEntity
+public class ProtocolVersion : AggregateRoot<ProtocolVersionId>
 {
-    public TenantId TenantId { get; private set; }
-    public StudyId StudyId { get; private set; }
-    public string VersionTag { get; private set; } = string.Empty;
-    public ProtocolVersionId? PredecessorVersionId { get; private set; }
-    public ProtocolApprovalStatus Status { get; private set; } = ProtocolApprovalStatus.Draft;
-    public string UsdmPayloadJson { get; private set; } = "{}";
-    public TemporalPeriod Period { get; private set; }
-    public bool IsActive { get; private set; } = true;
-
     protected ProtocolVersion() { }
 
-    public ProtocolVersion(
+    private ProtocolVersion(
         ProtocolVersionId id,
         TenantId tenantId,
         StudyId studyId,
-        string versionTag,
-        long versionIndex,
-        ProtocolVersionId? predecessorVersionId,
-        string usdmPayloadJson,
-        TemporalPeriod period,
-        string createdBy,
-        string reasonForChange)
+        int number,
+        ProtocolVersionId? parentVersionId,
+        string content,
+        ProtocolAmendment? amendment)
         : base(id)
     {
         TenantId = tenantId;
         StudyId = studyId;
-        VersionTag = string.IsNullOrWhiteSpace(versionTag) ? throw new ArgumentException("VersionTag cannot be empty", nameof(versionTag)) : versionTag;
-        VersionIndex = versionIndex > 0 ? versionIndex : 1;
-        PredecessorVersionId = predecessorVersionId;
-        UsdmPayloadJson = string.IsNullOrWhiteSpace(usdmPayloadJson) ? "{}" : usdmPayloadJson;
-        Period = period;
-        CreatedBy = createdBy;
-        ReasonForChange = reasonForChange;
-        Status = ProtocolApprovalStatus.Draft;
+        Number = number;
+        ParentVersionId = parentVersionId;
+        Content = content;
+        Amendment = amendment;
+        Status = ProtocolVersionStatus.Draft;
+    }
+
+    public TenantId TenantId { get; private set; }
+
+    public StudyId StudyId { get; private set; }
+
+    /// <summary>1 for the study's first version, then one more than the highest number in the study.</summary>
+    public int Number { get; private set; }
+
+    /// <summary>The approved version this one was forked from; null for the first version.</summary>
+    public ProtocolVersionId? ParentVersionId { get; private set; }
+
+    public ProtocolVersionStatus Status { get; private set; }
+
+    /// <summary>The protocol document, a JSON object.</summary>
+    public string Content { get; private set; } = "{}";
+
+    /// <summary>Hash of the frozen content; set from submission for review onwards, null for a draft.</summary>
+    public string? ContentHash { get; private set; }
+
+    /// <summary>The amendment a forked version introduces; null for the first version.</summary>
+    public ProtocolAmendment? Amendment { get; private set; }
+
+    public AttestationId? ApprovalAttestationId { get; private set; }
+
+    public AttestationId? WithdrawalAttestationId { get; private set; }
+
+    public string? WithdrawalReason { get; private set; }
+
+    /// <summary>What an attestation about this version signs; null while there is no frozen content.</summary>
+    public AttestationTarget? SignableTarget =>
+        ContentHash is null ? null : new AttestationTarget(AttestationTarget.ProtocolVersionKind, Id.Value, ContentHash);
+
+    /// <summary>Creates a study's first version, numbered 1, as a draft.</summary>
+    public static CommandResult<ProtocolVersion> CreateFirst(ProtocolVersionId id, TenantId tenantId, StudyId studyId, string content)
+    {
+        if (CheckContent(content) is { } invalid)
+        {
+            return invalid;
+        }
+
+        return CommandResult<ProtocolVersion>.Success(new ProtocolVersion(id, tenantId, studyId, 1, null, content, null));
     }
 
     /// <summary>
-    /// Updates the draft USDM payload before formal approval.
+    /// Starts an amended draft from <paramref name="parent"/>, which must be approved and stays approved. The draft
+    /// copies the parent's content.
     /// </summary>
-    public void UpdateDraftPayload(string newPayloadJson, string updatedBy, string reasonForChange)
+    public static CommandResult<ProtocolVersion> Fork(ProtocolVersion parent, ProtocolVersionId id, int number, ProtocolAmendment amendment)
     {
-        if (Status == ProtocolApprovalStatus.Approved || Status == ProtocolApprovalStatus.Superseded)
+        ArgumentNullException.ThrowIfNull(parent);
+        if (parent.Status != ProtocolVersionStatus.Approved)
         {
-            throw new InvalidOperationException($"Approved or superseded protocol versions are permanently immutable under 21 CFR Part 11 (PRD-SYS-053). Fork a new draft version instead.");
+            return ProtocolErrors.InvalidTransition.WithMessage(
+                $"Only an approved protocol version can be forked; version {parent.Number} is {parent.Status}.");
         }
 
-        UsdmPayloadJson = newPayloadJson;
-        CreatedBy = updatedBy;
-        ReasonForChange = reasonForChange;
+        if (number <= parent.Number)
+        {
+            throw new ArgumentOutOfRangeException(nameof(number), number, "A fork is numbered after its parent.");
+        }
+
+        if (CheckAmendment(amendment) is { } invalid)
+        {
+            return invalid;
+        }
+
+        return CommandResult<ProtocolVersion>.Success(
+            new ProtocolVersion(id, parent.TenantId, parent.StudyId, number, parent.Id, parent.Content, amendment));
+    }
+
+    /// <summary>Replaces a draft's content and, for a forked draft, optionally its amendment.</summary>
+    public KernelError? Revise(string content, ProtocolAmendment? amendment)
+    {
+        if (Status != ProtocolVersionStatus.Draft)
+        {
+            return Transition("revised");
+        }
+
+        if (CheckContent(content) is { } invalidContent)
+        {
+            return invalidContent;
+        }
+
+        if (amendment is not null)
+        {
+            if (ParentVersionId is null)
+            {
+                return ProtocolErrors.AmendmentNotAllowed;
+            }
+
+            if (CheckAmendment(amendment) is { } invalidAmendment)
+            {
+                return invalidAmendment;
+            }
+
+            Amendment = amendment;
+        }
+
+        Content = content;
+        return null;
+    }
+
+    /// <summary>Freezes a draft for review and sets its content hash.</summary>
+    public KernelError? SubmitForReview()
+    {
+        if (Status != ProtocolVersionStatus.Draft)
+        {
+            return Transition("submitted for review");
+        }
+
+        ContentHash = Trust.ContentHash.Compute(Content);
+        Status = ProtocolVersionStatus.InReview;
+        return null;
+    }
+
+    /// <summary>Returns a version in review to draft and clears its content hash.</summary>
+    public KernelError? ReturnToDraft()
+    {
+        if (Status != ProtocolVersionStatus.InReview)
+        {
+            return Transition("returned to draft");
+        }
+
+        ContentHash = null;
+        Status = ProtocolVersionStatus.Draft;
+        return null;
+    }
+
+    /// <summary>Approves a version in review. The caller has verified <paramref name="attestation"/>.</summary>
+    public KernelError? Approve(AttestationId attestation)
+    {
+        if (Status != ProtocolVersionStatus.InReview)
+        {
+            return Transition("approved");
+        }
+
+        ApprovalAttestationId = attestation;
+        Status = ProtocolVersionStatus.Approved;
+        return null;
+    }
+
+    /// <summary>Withdraws a version in review or approved; terminal. The caller has verified <paramref name="attestation"/>.</summary>
+    public KernelError? Withdraw(AttestationId attestation, string reason)
+    {
+        if (Status is not (ProtocolVersionStatus.InReview or ProtocolVersionStatus.Approved))
+        {
+            return Transition("withdrawn");
+        }
+
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return KernelErrors.ReasonForChangeRequired;
+        }
+
+        WithdrawalAttestationId = attestation;
+        WithdrawalReason = reason;
+        Status = ProtocolVersionStatus.Withdrawn;
+        return null;
     }
 
     /// <summary>
-    /// Transitions draft protocol to InReview state.
+    /// Marks an approved version superseded once a later version is effective everywhere this one will ever be.
+    /// Only Effectivity (#4777) decides that.
     /// </summary>
-    public void SubmitForReview(string updatedBy, string reasonForChange)
+    public KernelError? Supersede()
     {
-        if (Status != ProtocolApprovalStatus.Draft)
+        if (Status != ProtocolVersionStatus.Approved)
         {
-            throw new InvalidOperationException($"Only Draft protocol versions can be submitted for review. Current status: {Status}");
+            return Transition("superseded");
         }
 
-        Status = ProtocolApprovalStatus.InReview;
-        CreatedBy = updatedBy;
-        ReasonForChange = reasonForChange;
+        Status = ProtocolVersionStatus.Superseded;
+        return null;
     }
 
-    /// <summary>
-    /// Formally approves and locks the protocol version, stamping the approval timestamp and setting bitemporal valid period.
-    /// </summary>
-    public void Approve(DateTimeOffset approvedAt, string approvedBy, string reasonForChange)
+    private KernelError Transition(string change) =>
+        ProtocolErrors.InvalidTransition.WithMessage($"Protocol version {Number} is {Status} and cannot be {change}.");
+
+    private static KernelError? CheckContent(string? content)
     {
-        if (Status != ProtocolApprovalStatus.Draft && Status != ProtocolApprovalStatus.InReview)
+        if (string.IsNullOrWhiteSpace(content))
         {
-            throw new InvalidOperationException($"Protocol version cannot be approved from status: {Status}");
+            return ProtocolErrors.ContentRequired;
         }
 
-        Status = ProtocolApprovalStatus.Approved;
-        CreatedBy = approvedBy;
-        ReasonForChange = reasonForChange;
+        try
+        {
+            using var document = JsonDocument.Parse(content, new JsonDocumentOptions { AllowDuplicateProperties = false });
+            return document.RootElement.ValueKind == JsonValueKind.Object ? null : ProtocolErrors.ContentInvalid;
+        }
+        catch (JsonException)
+        {
+            return ProtocolErrors.ContentInvalid;
+        }
     }
 
-    /// <summary>
-    /// Forks a new immutable draft version from this approved protocol version (e.g. for a protocol amendment).
-    /// </summary>
-    public ProtocolVersion ForkAmendment(
-        ProtocolVersionId newVersionId,
-        string newVersionTag,
-        DateTimeOffset forkedAt,
-        string forkedBy,
-        string reasonForChange)
+    private static KernelError? CheckAmendment(ProtocolAmendment? amendment)
     {
-        if (Status != ProtocolApprovalStatus.Approved)
-        {
-            throw new InvalidOperationException($"Only approved protocol versions can be amended. Current status: {Status}");
-        }
-
-        // Supersede the recorded interval of the prior version as active truth
-        Status = ProtocolApprovalStatus.Superseded;
-        Period = Period.Supersede(forkedAt);
-
-        var nextPeriod = TemporalPeriod.CreateCurrent(forkedAt, forkedAt);
-        return new ProtocolVersion(
-            newVersionId,
-            TenantId,
-            StudyId,
-            newVersionTag,
-            VersionIndex + 1,
-            Id,
-            UsdmPayloadJson,
-            nextPeriod,
-            forkedBy,
-            reasonForChange);
+        var valid = amendment is not null
+            && !string.IsNullOrWhiteSpace(amendment.Intent)
+            && !string.IsNullOrWhiteSpace(amendment.Rationale)
+            && !string.IsNullOrWhiteSpace(amendment.SummaryOfChanges)
+            && amendment.ImpactedElements is { Count: > 0 } elements
+            && elements.All(e => !string.IsNullOrWhiteSpace(e))
+            && Enum.IsDefined(amendment.Classification)
+            && Enum.IsDefined(amendment.TransitionPolicy);
+        return valid ? null : ProtocolErrors.AmendmentInvalid;
     }
 }

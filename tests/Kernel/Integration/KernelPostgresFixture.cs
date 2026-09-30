@@ -76,9 +76,6 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>Records what the outbox relay delivers; a test can make it fail.</summary>
     public TestEventPublisher Publisher { get; } = new();
 
-    /// <summary>The attestation verifier governance commands consult; accepts everything unless a test sets a policy.</summary>
-    public TestAttestationVerifier Attestations { get; } = new();
-
     public void SkipIfUnavailable() => Assert.SkipWhen(ConnectionString is null, SkipReason);
 
     public async ValueTask InitializeAsync()
@@ -113,7 +110,6 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddSingleton<ICurrentActor>(CurrentActor)
             .AddSingleton<IAuthorizer>(Authorizer)
             .AddSingleton<IKernelEventPublisher>(Publisher)
-            .AddSingleton<IAttestationVerifier>(Attestations)
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
             .AddSingleton<KernelOutboxRelay>()
             .AddKernelPersistence(ConnectionString)
@@ -233,25 +229,6 @@ public sealed class TestAuthorizer : IAuthorizer
 
     public ValueTask<AuthorizationDecision> AuthorizeAsync(Actor actor, ICommand command, CancellationToken cancellationToken) =>
         ValueTask.FromResult(Policy?.Invoke(actor, command) ?? AuthorizationDecision.Permit());
-}
-
-/// <summary>
-/// An <see cref="IAttestationVerifier"/> that records what it was asked and accepts everything unless
-/// <see cref="Policy"/> is set. The Trust slice (#4729) replaces it with the kernel's Attestation store.
-/// </summary>
-public sealed class TestAttestationVerifier : IAttestationVerifier
-{
-    private readonly ConcurrentQueue<AttestationRequirement> _requests = new();
-
-    public Func<AttestationRequirement, AttestationCheck>? Policy { get; set; }
-
-    public IReadOnlyList<AttestationRequirement> Requests => [.. _requests];
-
-    public ValueTask<AttestationCheck> VerifyAsync(AttestationRequirement requirement, CancellationToken cancellationToken)
-    {
-        _requests.Enqueue(requirement);
-        return ValueTask.FromResult(Policy?.Invoke(requirement) ?? AttestationCheck.Accept());
-    }
 }
 
 /// <summary>An <see cref="IKernelEventPublisher"/> that records deliveries in order and fails when <see cref="Fail"/> says so.</summary>

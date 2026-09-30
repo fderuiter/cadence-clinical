@@ -1,23 +1,32 @@
 using System;
 using System.Buffers;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+
+using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Domain.Standards;
 
 /// <summary>
 /// Canonical JSON and content hashes for governed metadata (spec §6.3). Object members are written in ordinal key
 /// order with no insignificant whitespace, strings are re-escaped from their decoded value and numbers keep their JSON
-/// text, so the same content hashes to the same value however it was indented or its members ordered. A content hash is <c>sha256:</c> followed by lowercase hex.
+/// text, so the same content hashes to the same value however it was indented or its members ordered. The form and the
+/// hash are the kernel's content hash (<see cref="ContentHash"/>): the same relaxed escaping, and <c>sha256:</c> followed
+/// by lowercase hex, so attestations sign standards metadata exactly as they sign protocol versions (ADR-2452).
 /// </summary>
 public static class CanonicalJson
 {
     /// <summary>Prefix of every content hash.</summary>
-    public const string HashPrefix = "sha256:";
+    public const string HashPrefix = ContentHash.Prefix;
 
-    private static readonly JsonWriterOptions WriterOptions = new() { Indented = false, SkipValidation = false };
+    private static readonly JsonWriterOptions WriterOptions = new()
+    {
+        Indented = false,
+        SkipValidation = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
 
     /// <summary>Serializes <paramref name="element"/> canonically.</summary>
     public static string Serialize(JsonElement element)
@@ -35,11 +44,7 @@ public static class CanonicalJson
     public static string Hash(JsonElement element) => HashText(Serialize(element));
 
     /// <summary>The content hash of already-canonical text.</summary>
-    public static string HashText(string canonical)
-    {
-        ArgumentNullException.ThrowIfNull(canonical);
-        return HashPrefix + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
-    }
+    public static string HashText(string canonical) => ContentHash.OfCanonical(canonical);
 
     private static void Write(Utf8JsonWriter writer, JsonElement element)
     {

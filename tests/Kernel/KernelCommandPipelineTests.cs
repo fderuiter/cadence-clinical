@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -299,6 +301,15 @@ public sealed partial class KernelCommandPipelineTests
         public Task<TAggregate?> FindAsync<TAggregate>(object id, CancellationToken cancellationToken)
             where TAggregate : AggregateRootBase =>
             Task.FromResult<TAggregate?>(null);
+
+        public Task<TAggregate?> ReadAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult<TAggregate?>(null);
+
+        public Task<IReadOnlyList<TAggregate>> ReadAllAsync<TAggregate>(
+            Expression<Func<TAggregate, bool>> filter, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult<IReadOnlyList<TAggregate>>([]);
 
         public Task<bool> ExistsAsync<TAggregate>(object id, CancellationToken cancellationToken)
             where TAggregate : AggregateRootBase =>

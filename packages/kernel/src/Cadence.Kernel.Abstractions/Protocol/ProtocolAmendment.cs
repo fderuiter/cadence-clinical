@@ -6,7 +6,6 @@ namespace Cadence.Kernel.Protocol;
 /// The amendment a forked protocol version introduces (spec §6.2): why it changes, how it is classified, what it
 /// changes, the protocol elements it affects and how current participants transition. It belongs to the version it
 /// introduces and is frozen with it on submission for review.
-/// @req:PRD-SYS-053
 /// </summary>
 /// <param name="Intent">What the amendment sets out to change.</param>
 /// <param name="Rationale">Why.</param>

@@ -6,9 +6,10 @@ The core clinical domain modular monolith (`Cadence.Kernel.*`) providing the uni
 
 As formalized in [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and specified in [`CLINICAL_KERNEL_SPECIFICATION.md`](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md), the Clinical Kernel consolidates:
 - **Identity & Ownership**: Tenant, Organization, Person, Study, Site, StudySite
+- **Executable Protocol**: ProtocolVersion lifecycle with content-hash freezing, attested approval and amendments (ADR-2452)
 - **Clinical Subjects**: Participant, Enrollment, Cohort
 - **Clinical Truth**: Observations, Assertions, Sources, Provenance
-- **Authority**: Actors, Capabilities, Delegations, Attestations (21 CFR Part 11 electronic signatures)
+- **Authority**: Actors, Capabilities, Delegations, Attestations (21 CFR Part 11 electronic signatures bound to content hashes, ADR-2452)
 - **Temporal Integrity**: PostgreSQL native bitemporal intervals (`valid_period`, `recorded_period`) via `tstzrange` and `gist` (ADR-2246)
 - **Tenant Isolation**: `tenant_id` on every tenant-scoped table, composite `(tenant_id, id)` foreign keys and PostgreSQL Row-Level Security enabled and forced on every kernel table (ADR-2250)
 - **Audit Ledger**: one SHA-256 hash chain per tenant over insert-only audit entries, written with provenance, events and outbox rows in each command's transaction (ADR-2449)
@@ -87,6 +88,40 @@ and `Loinc.csv` (`LoincTableParser`); any other source can send `ImportCodeSyste
 Read through `IConceptRegistry` (registered by `AddKernelPersistence`): every lookup names a concept version
 (`ConceptRef`) or a code-system version; there is no "latest". Only confirmed mappings resolve a code to a concept.
 
+## Protocol versions and attestations (ADR-2452)
+
+A study's protocol is a series of numbered `ProtocolVersion`s (spec §6.2). Each moves
+`Draft → InReview → Approved → Superseded | Withdrawn`:
+
+```csharp
+var draft = await sender.SendAsync(new CreateProtocolDraft(tenant, study, versionId, usdmJson, key1, "First draft"), cancellationToken: ct);
+var review = await sender.SendAsync(new SubmitProtocolVersionForReview(tenant, versionId, key2, "Ready for review"), cancellationToken: ct);
+var target = new AttestationTarget(AttestationTarget.ProtocolVersionKind, versionId.Value, review.Value!.ContentHash!);
+var signature = await sender.SendAsync(new Attest(tenant, AttestationId.New(), AttestationMeaning.Approved, target, authTime, "pwd+otp", key3, "Approve v1"), cancellationToken: ct);
+await sender.SendAsync(new ApproveProtocolVersion(tenant, versionId, signature.Value, key4, "Approved by sponsor"), cancellationToken: ct);
+```
+
+- **Freezing.** `SubmitProtocolVersionForReview` freezes the content and sets `ContentHash`: `sha256:` and lower-case
+  hex SHA-256 of the canonical JSON (`Cadence.Kernel.Trust.ContentHash`, the same form as `CanonicalSigner`).
+  `ReturnProtocolVersionToDraft` clears the hash so the draft can be revised.
+- **Signatures.** `Attest` records an append-only `Attestation`. Only a person can sign, the authentication must be at
+  most five minutes old, and the target's current hash must equal the signed one.
+- **Approval and withdrawal.** `ApproveProtocolVersion` and `WithdrawProtocolVersion` name an attestation with meaning
+  `Approved` or `Withdrawn`, signed by the person executing the command. `IAttestationVerifier` checks it within the
+  tenant; `AddKernelPersistence` registers it, and standards governance uses the same verifier.
+- **Forks.** `ForkProtocolVersion` starts an amended draft from an approved version, numbered after every version in
+  the study and carrying a `ProtocolAmendment`. The parent stays approved; `Superseded` is left to Effectivity (#4777).
+- **Database guards.**
+  - `kernel.enforce_protocol_version_lifecycle()` rejects, with SQLSTATE `KA002` and whoever connects:
+    - content changes outside draft;
+    - moves outside the state machine;
+    - hash changes after review;
+    - deletes.
+  - `attestations` is insert-only (`KA001`).
+- **Reading other aggregates.** A handler that needs another aggregate to decide (a parent version, the study's
+  versions) reads it with `IKernelUnitOfWork.ReadAsync`/`ReadAllAsync`. These neither track nor claim it, so the
+  command still changes one aggregate (K-TX-1).
+
 ## Bitemporal tables (ADR-2246)
 
 A bitemporal entity implements `IBitemporalEntity` (`TemporalPeriod Period`, made of two half-open `TimeRange`s).
@@ -131,8 +166,9 @@ rejects a used idempotency key (K-TX-3), runs the handler, and commits in one Po
 | One outbox row per event | `outbox_messages` | delivery bookkeeping only |
 | The stored result for the key | `idempotency_records` | insert-only |
 
-Insert-only tables (these, plus `audit_chain_seals`) reject `UPDATE`, `DELETE` and `TRUNCATE` with SQLSTATE
-`KA001`. `KernelAuditChainVerifier` re-derives a tenant's chain and reports the first broken link.
+Insert-only tables (these, plus `audit_chain_seals`, the terminology tables and `attestations`) reject `UPDATE`,
+`DELETE` and `TRUNCATE` with SQLSTATE `KA001`. `KernelAuditChainVerifier` re-derives a tenant's chain and reports the
+first broken link.
 
 If the handler refuses or the commit conflicts, the pipeline checks the idempotency key again before returning the
 error: a concurrent send with the same key may have committed in between, and its stored result is returned as a
@@ -205,8 +241,9 @@ Standard definitions and the governed library are tenant-scoped kernel data (spe
   JSON object. Rule packs and mapping specifications add their validators with #4811 and #4810.
 - CT bindings are `CodeSystemVersionRef(code system, version)` until the Concept Registry (#4807) resolves them.
 
-A host that uses the registry also calls `AddKernelStandards()` (handlers), `AddKernelStandardsPersistence()`
-(`IStandardsRegistry`) and registers an `IAttestationVerifier`; the Trust engine provides one with #4729/#4781.
+A host that uses the registry also calls `AddKernelStandards()` (handlers) and `AddKernelStandardsPersistence()`
+(`IStandardsRegistry`). Approval and deprecation name an attestation recorded with `Attest` on the `standard_version`
+or `library_item` target, which the kernel's `IAttestationVerifier` checks.
 Load public content with `StandardSeeds.LoadAll()` or `CdiscLibraryProductReader.Read(...)` and send each package in
 a `RegisterStandardVersion` command.
 

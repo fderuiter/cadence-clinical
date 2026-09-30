@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Knowledge;
+using Cadence.Kernel.Application.Protocol;
+using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Time;
 
@@ -185,9 +187,9 @@ public sealed class KernelCommandPipeline(
 public static class KernelApplicationServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers <see cref="IKernelCommandSender"/>. The host must also register <see cref="ICurrentActor"/>,
-    /// <see cref="IAuthorizer"/>, kernel persistence (which provides <see cref="IKernelUnitOfWorkFactory"/>) and
-    /// the command handlers.
+    /// Registers <see cref="IKernelCommandSender"/> and the kernel's command handlers. The host must also register
+    /// <see cref="ICurrentActor"/>, <see cref="IAuthorizer"/> and kernel persistence (which provides
+    /// <see cref="IKernelUnitOfWorkFactory"/> and <see cref="Trust.IAttestationVerifier"/>).
     /// </summary>
     public static IServiceCollection AddKernelCommandPipeline(this IServiceCollection services)
     {
@@ -196,6 +198,8 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddTransient<ICommandHandler<ProvisionTenant, TenantId>, ProvisionTenantHandler>();
         services.AddTransient<ICommandHandler<RegisterOrganization, OrganizationId>, RegisterOrganizationHandler>();
         services.AddKernelKnowledgeHandlers();
+        services.AddKernelProtocolHandlers();
+        services.AddKernelTrustHandlers();
         return services;
     }
 }

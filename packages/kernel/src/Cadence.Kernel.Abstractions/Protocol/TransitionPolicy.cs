@@ -3,7 +3,6 @@ namespace Cadence.Kernel.Protocol;
 /// <summary>
 /// How participants already on the previous protocol version move to an amended one (spec §6.2, §7.5). Applied by
 /// Effectivity and Applicability (#4777). Stored by name.
-/// @req:PRD-SYS-053
 /// </summary>
 public enum TransitionPolicy
 {
