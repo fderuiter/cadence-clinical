@@ -11,6 +11,7 @@ using Cadence.Core.Domain.Audit;
 using Cadence.Testing;
 using Cadence.Testing.GoldenMaster;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 using Cadence.UnitTests.Execution;
 
 using FluentAssertions;
@@ -425,6 +426,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
                 EntityName = "clinical_subjects",
                 EntityId = Guid.NewGuid().ToString(),
                 Action = "ENROLL_SUBJECT",
+                Timestamp = FakeClock.DefaultStart.UtcDateTime,
                 UserId = "tester",
             });
             await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -459,6 +461,7 @@ public sealed class GoldenMasterAssertDbAndAuditTests : IDisposable
                 EntityName = "clinical_subjects",
                 EntityId = Guid.NewGuid().ToString(),
                 Action = "ENROLL_SUBJECT",
+                Timestamp = FakeClock.DefaultStart.UtcDateTime,
                 UserId = "tester",
             });
             await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

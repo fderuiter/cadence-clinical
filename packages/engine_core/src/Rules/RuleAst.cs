@@ -42,7 +42,7 @@ public class RuleDefinition
     [JsonPropertyName("sha256_checksum")] public string? Sha256Checksum { get; set; }
     [JsonPropertyName("is_active")] public bool IsActive { get; set; } = true;
     [JsonPropertyName("is_deleted")] public bool IsDeleted { get; set; } = false;
-    [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [JsonPropertyName("created_at")] public required DateTimeOffset CreatedAt { get; set; }
     [JsonPropertyName("created_by")] public string CreatedBy { get; set; } = string.Empty;
     [JsonPropertyName("reason_for_change")] public string ReasonForChange { get; set; } = "Initial rule authoring";
 
