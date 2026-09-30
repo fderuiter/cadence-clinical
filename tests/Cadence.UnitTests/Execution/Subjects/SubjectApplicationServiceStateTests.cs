@@ -73,8 +73,10 @@ public class SubjectApplicationServiceStateTests
 
         public Func<ClinicalSubject, CancellationToken, Task<bool>>? ScreeningEligibility { get; set; }
 
+        public FakeClock Clock { get; } = new(new DateTimeOffset(2026, 9, 30, 6, 0, 0, TimeSpan.Zero));
+
         public SubjectApplicationService Service =>
-            new(Subjects, Consents, Compliance, Encryption, AuditLog, AuditContext, ScreeningEligibility);
+            new(Subjects, Consents, Compliance, Encryption, AuditLog, AuditContext, ScreeningEligibility, Clock);
     }
 
     private static readonly StudyCode Study = new("STUDY-001");
@@ -107,6 +109,45 @@ public class SubjectApplicationServiceStateTests
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("SUBJECT_NOT_FOUND");
+    }
+
+    // -- AdvanceStateAsync: unblinding (#4951) ----------------------------------------------------
+
+    [Fact]
+    public async Task AdvanceStateAsync_ToUnblinded_RecordsWhoUnblindedWhyAndWhen()
+    {
+        var harness = new Harness { AuditContext = new FakeCurrentAuditContextAccessor { UserId = "unblinder-1" } };
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-UB1", status: SubjectState.Enrolled);
+        subject.TransitionTo(SubjectState.Randomized).IsSuccess.Should().BeTrue();
+
+        var result = await harness.Service.AdvanceStateAsync("SUBJ-UB1",
+            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), "Serious adverse event needs treatment knowledge",
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Status.Should().Be("UNBLINDED");
+        subject.Status.Should().Be(SubjectState.Unblinded);
+        subject.IsUnblinded.Should().BeTrue();
+        subject.UnblindedBy.Should().Be("unblinder-1");
+        subject.UnblindedReason.Should().Be("Serious adverse event needs treatment knowledge");
+        subject.UnblindedAt.Should().Be(harness.Clock.UtcNow);
+        harness.AuditLog.Calls.Should().ContainSingle(c => c.Action == "TRANSITION_UNBLINDED" && c.UserId == "unblinder-1");
+    }
+
+    [Fact]
+    public async Task AdvanceStateAsync_ToUnblindedFromScreening_IsRefused_AndRecordsNothing()
+    {
+        var harness = new Harness();
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-UB2");
+
+        var result = await harness.Service.AdvanceStateAsync("SUBJ-UB2",
+            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), "reason",
+            TestContext.Current.CancellationToken);
+
+        result.Error!.Code.Should().Be("INVALID_STATE_TRANSITION");
+        subject.IsUnblinded.Should().BeFalse();
+        subject.UnblindedBy.Should().BeNull();
+        harness.AuditLog.Calls.Should().BeEmpty();
     }
 
     // -- AdvanceStateAsync: SCN-003 state-machine integration ------------------------------------
