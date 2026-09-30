@@ -71,7 +71,7 @@
 | `packages/tooling_core` | `packages/tooling_core` | 4 | Shared CLI-tooling command handlers | True leaf |
 | `packages/sentinels` | `packages/sentinels` | 4 | Architecture-drift sentinel definitions consumed by `scripts/validate_architecture_drift.py` | True leaf |
 | `packages/core-models` | `packages/core-models` | 1 | (single-file placeholder) | True leaf |
-| `packages/gateway-rewrite` | `packages/gateway-rewrite` | 0 `.py` (TypeScript/NestJS) | Parallel, separate Gateway rewrite track | Out of scope — not Python, not part of this migration's file census |
+| `packages/gateway-rewrite` | `packages/gateway-rewrite` | Decommissioned | Former NestJS Gateway prototype | Removed from workspace (superseded by C# YARP gateway in `apps/gateway`) |
 
 ### 3.1 `packages/security` is not a true leaf — carried forward as MIG-02
 

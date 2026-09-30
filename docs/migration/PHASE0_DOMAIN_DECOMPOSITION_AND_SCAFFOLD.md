@@ -47,7 +47,7 @@ Verified runtime outbound (`→`) and inbound (`←`) HTTP dependencies per cont
 | **Imaging** | `apps/imaging` | fastapi, sqlalchemy, aiosqlite, asyncpg, pydicom, numpy | gateway only | ⬜ not yet scaffolded |
 | *(non-Python edge)* `apps/web` | Vue 3 SPA — clinical portal | Pinia, TailwindCSS, Keycloak OIDC | *(consumer of Gateway)* | out of scope for this pass (JS, not migrated) |
 | *(non-Python edge)* `apps/subject-portal` | Vue 3 SPA — patient eCOA/eConsent | Vite, fake-indexeddb | *(consumer of Gateway)* | out of scope for this pass (JS, not migrated) |
-| *(non-Python edge)* `packages/gateway-rewrite` | NestJS/TS proxy rewrite | Fastify-style middleware | *(parallel Gateway track)* | out of scope for this pass (already TS, separate initiative) |
+| *(non-Python edge)* `packages/gateway-rewrite` | NestJS/TS proxy rewrite | Fastify-style middleware | *(decommissioned)* | removed from workspace (superseded by C# YARP gateway in `apps/gateway`) |
 
 `quality*` — Designer coupling from `quality` was seen only in test fixtures, not runtime `*_URL` references; `quality`'s one verified runtime dependency is `execution`.
 
