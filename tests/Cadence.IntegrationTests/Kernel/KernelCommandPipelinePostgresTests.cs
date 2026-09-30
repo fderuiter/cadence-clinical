@@ -445,6 +445,98 @@ public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fix
         audit.Changes.Should().Contain("before").And.Contain("after").And.Contain("Active");
     }
 
+    /// <summary>
+    /// K-TX-4: a command takes at most one aggregate lock. Asking again for the same aggregate is a no-op; asking for a
+    /// second one throws, so two commands can never wait on each other's locks.
+    /// </summary>
+    [Fact(DisplayName = "Lock_SameAggregateAgain_IsANoOp_ButASecondAggregateThrows")]
+    public async Task LockSameAggregateAgainIsANoOpButASecondAggregateThrows()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var study = StudyId.New();
+
+        await using var transaction = fixture.UnitOfWork.Begin(Execution(tenant));
+        await transaction.Work.LockAsync<Study>(study, ct);
+        await transaction.Work.LockAsync<Study>(study, ct);
+
+        await FluentActions.Awaiting(() => transaction.Work.LockAsync<Study>(StudyId.New(), ct))
+            .Should().ThrowAsync<InvalidOperationException>().WithMessage("K-TX-4:*");
+        await FluentActions.Awaiting(() => transaction.Work.LockAsync<Site>(SiteId.New(), ct))
+            .Should().ThrowAsync<InvalidOperationException>().WithMessage("K-TX-4:*");
+        (await IsLockHeldAsync(tenant, typeof(Study), study, ct)).Should().BeTrue("the refused requests leave the first lock held");
+    }
+
+    /// <summary>
+    /// A second command asking for a locked aggregate waits until the holder is disposed, whether it committed or not;
+    /// the same id in another tenant, or under another aggregate type, is a different lock and does not wait.
+    /// </summary>
+    [Fact(DisplayName = "Lock_WaitsForTheHolder_UntilDisposed_AndIsScopedToTenantAndType")]
+    public async Task LockWaitsForTheHolderUntilDisposedAndIsScopedToTenantAndType()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var id = Guid.CreateVersion7();
+
+        var holder = fixture.UnitOfWork.Begin(Execution(tenant));
+        await holder.Work.LockAsync<Study>(new StudyId(id), ct);
+
+        await using (var otherTenant = fixture.UnitOfWork.Begin(Execution(TenantId.New())))
+        await using (var otherType = fixture.UnitOfWork.Begin(Execution(tenant)))
+        {
+            await otherTenant.Work.LockAsync<Study>(new StudyId(id), ct).WaitAsync(TimeSpan.FromSeconds(10), ct);
+            await otherType.Work.LockAsync<Site>(new SiteId(id), ct).WaitAsync(TimeSpan.FromSeconds(10), ct);
+        }
+
+        var waiter = fixture.UnitOfWork.Begin(Execution(tenant));
+        var waiting = waiter.Work.LockAsync<Study>(new StudyId(id), ct);
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+        waiting.IsCompleted.Should().BeFalse("the holder has not been disposed");
+
+        await holder.DisposeAsync();
+
+        await waiting.WaitAsync(TimeSpan.FromSeconds(10), ct);
+        (await IsLockHeldAsync(tenant, typeof(Study), new StudyId(id), ct)).Should().BeTrue("the waiter now holds it");
+        await waiter.DisposeAsync();
+        (await IsLockHeldAsync(tenant, typeof(Study), new StudyId(id), ct)).Should().BeFalse("disposing releases the lock");
+    }
+
+    /// <summary>The advisory lock key depends on the tenant, the aggregate type and the id, and on nothing else.</summary>
+    [Fact(DisplayName = "AdvisoryLockKey_DiffersByTenantTypeAndId")]
+    public void AdvisoryLockKeyDiffersByTenantTypeAndId()
+    {
+        var tenant = TenantId.New();
+        var id = Guid.CreateVersion7().ToString("D");
+        var key = KernelCommandTransaction.AdvisoryLockKey(tenant, typeof(Study), id);
+
+        KernelCommandTransaction.AdvisoryLockKey(tenant, typeof(Study), id).Should().Be(key);
+        new[]
+        {
+            KernelCommandTransaction.AdvisoryLockKey(TenantId.New(), typeof(Study), id),
+            KernelCommandTransaction.AdvisoryLockKey(tenant, typeof(Site), id),
+            KernelCommandTransaction.AdvisoryLockKey(tenant, typeof(Study), Guid.CreateVersion7().ToString("D")),
+        }.Should().NotContain(key).And.OnlyHaveUniqueItems();
+    }
+
+    /// <summary>Asks, on a separate superuser connection, whether the aggregate's advisory lock is taken.</summary>
+    private async Task<bool> IsLockHeldAsync(TenantId tenant, Type aggregate, IEntityId id, CancellationToken ct)
+    {
+        var key = KernelCommandTransaction.AdvisoryLockKey(tenant, aggregate, id.Value.ToString("D"));
+        await using var connection = new NpgsqlConnection(fixture.AdminConnectionString);
+        await connection.OpenAsync(ct);
+        await using var command = new NpgsqlCommand("SELECT pg_try_advisory_lock($1)", connection) { Parameters = { new() { Value = key } } };
+        var acquired = (bool)(await command.ExecuteScalarAsync(ct))!;
+        if (acquired)
+        {
+            await using var unlock = new NpgsqlCommand("SELECT pg_advisory_unlock($1)", connection) { Parameters = { new() { Value = key } } };
+            await unlock.ExecuteScalarAsync(ct);
+        }
+
+        return !acquired;
+    }
+
     private static ProvisionTenant NewTenant()
     {
         var suffix = Guid.NewGuid().ToString("N")[..10];
