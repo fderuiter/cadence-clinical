@@ -49,7 +49,7 @@ public sealed class CecDossierTests
             SignerId: "chair-user-01",
             SignerRole: "CEC_CHAIR",
             SigningReason: "I confirm this clinical endpoint adjudication determination is final",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc),
             PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             SignerName: "Dr. Adjudication Chair");
 
@@ -59,7 +59,7 @@ public sealed class CecDossierTests
             finalAdjudicatedOnsetDate: "2026-02-10",
             adjudicationRationale: "ECG and troponin rise confirm NSTEMI",
             signatureManifest: manifest,
-            finalizedAt: DateTime.UtcNow);
+            finalizedAt: new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc));
 
         result.IsSuccess.Should().BeTrue();
         dossier.WorkflowStatus.Should().Be("FINALIZED_BY_CHAIR");
@@ -89,7 +89,7 @@ public sealed class CecDossierTests
             SignerId: "chair-user-01",
             SignerRole: "CEC_CHAIR",
             SigningReason: "Sign-off",
-            SignedAt: DateTime.UtcNow,
+            SignedAt: new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc),
             PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
 
         var result = dossier.AdjudicateChair(
@@ -98,7 +98,7 @@ public sealed class CecDossierTests
             finalAdjudicatedOnsetDate: "2026-02-10",
             adjudicationRationale: "Duplicate submission",
             signatureManifest: manifest,
-            finalizedAt: DateTime.UtcNow);
+            finalizedAt: new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc));
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("CEC_DOSSIER_ALREADY_FINALIZED");
