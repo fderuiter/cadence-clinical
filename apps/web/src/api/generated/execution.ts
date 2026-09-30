@@ -422,6 +422,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["ChairAdjudicateDossier"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/cec/dossiers/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetCecDossierById"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -430,6 +462,65 @@ export interface components {
       status: null | string;
       service: null | string;
       engine: null | string;
+    };
+    Execution_CecDossier: {
+      event_id?: string;
+      study_id?: string;
+      subject_id?: string;
+      masked_subject_id?: string;
+      site_id?: null | string;
+      masked_site_id?: null | string;
+      candidate_event_type?: string;
+      reported_term?: string;
+      reported_onset_date?: string;
+      workflow_status?: string;
+      is_discordant?: boolean;
+      discordance_reasons?: string[];
+      final_consensus_classification?: null | string;
+      final_consensus_subtype?: null | string;
+      final_adjudicated_onset_date?: null | string;
+      adjudication_rationale?: null | string;
+      reader1_status?: string;
+      reader2_status?: string;
+      signature_manifest?:
+        null | components["schemas"]["Execution_SignatureManifest"];
+      /** Format: date-time */
+      finalized_at?: null | string;
+      id?: null | string;
+      /** Format: date-time */
+      created_at?: string;
+      created_by?: string;
+      reason_for_change?: string;
+      /** Format: int64 */
+      version_index?: number | string;
+    };
+    Execution_ChairAdjudicateRequest: {
+      final_classification: string;
+      final_subtype: null | string;
+      final_adjudicated_onset_date: string;
+      /** @default CHAIR_CUSTOM_DETERMINATION */
+      binding_reader: null | string;
+      criteria_confirmed?: null | string[];
+      /** @default  */
+      adjudication_rationale: string;
+      signature_token?: null | string;
+      signer_name?: null | string;
+      password?: null | string;
+      signature_meaning?: null | string;
+    };
+    Execution_ChairAdjudicationResponse: {
+      determination_id: string;
+      dossier_id: string;
+      chair_id: string;
+      chair_name: string;
+      final_classification: string;
+      final_subtype: null | string;
+      final_adjudicated_onset_date: string;
+      binding_reader: string;
+      criteria_confirmed: string[];
+      adjudication_rationale: string;
+      electronic_signature: components["schemas"]["Execution_SignatureManifest"];
+      finalized_at: string;
     };
     Execution_ClinicalQueryResponse: {
       id: string;
@@ -1938,6 +2029,99 @@ export interface operations {
         };
         content: {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ChairAdjudicateDossier: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_ChairAdjudicateRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_ChairAdjudicationResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetCecDossierById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CecDossier"];
         };
       };
       /** @description Not Found */
