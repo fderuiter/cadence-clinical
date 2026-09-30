@@ -39,6 +39,17 @@ All services share the `cadence` database, each in its own schema; see [OPERATIO
 | --- | --- | --- | --- |
 | `DemographicsEncryption__KeyBase64` | `apps/execution/src/Program.cs:105` (`DemographicsEncryptionOptions`) | none | yes; Base64 of a 16, 24 or 32 byte AES key (`openssl rand -base64 32`). The service refuses to start without a valid key |
 
+## Field-level protection
+
+Keys for `packages/security/src/FieldProtection` (#4770). Both are base64 encodings of exactly 32 random bytes
+(`openssl rand -base64 32`), are validated when the host starts, and have no default in any environment. Use two
+different keys. See [ADR-2494](adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md).
+
+| Key | Read by | Default | Required |
+| --- | --- | --- | --- |
+| `FIELD_ENCRYPTION_KEY` | `packages/security/src/FieldProtection/FieldProtectionServiceCollectionExtensions.cs` (`AddCadenceFieldEncryption`), called by `apps/payments/src/Program.cs` and `apps/econsent/src/Program.cs` | none | yes (payments, econsent); the service refuses to start without a valid key. Rotating it makes existing ciphertext unreadable |
+| `FIELD_LOOKUP_HASH_KEY` | same file (`AddCadenceLookupHashing`), called by `apps/interop/src/Program.cs` | none | yes (interop); the service refuses to start without a valid key. Rotating it orphans stored device-token hashes |
+
 ## Gateway routing
 
 Read by `apps/gateway/src/Program.cs:105-121`. In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.

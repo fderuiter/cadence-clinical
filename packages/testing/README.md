@@ -6,7 +6,8 @@ Shared test infrastructure for the .NET test projects.
 
 - Project: `packages/testing/src/Cadence.Testing.csproj` (assembly `Cadence.Testing`).
 - `Cadence.Testing`: `GxPRequirementAttribute` (requirement traceability on tests) and `InMemoryRepository<TEntity, TId>` for aggregates derived from `Cadence.Core.Domain.AggregateRoot<TId>`.
-- `Cadence.Testing.Security`: `TestSecurityContext` (test gateway secret, `CreateHmacHeaders`, `CreatePrincipal`, and a `GatewaySigningHandler` that signs `HttpClient` requests like the gateway), `SignedClientExtensions`.
+- `Cadence.Testing.Security`: `TestSecurityContext` (test gateway secret, `CreateHmacHeaders`, `CreatePrincipal`, and a `GatewaySigningHandler` that signs `HttpClient` requests like the gateway), `SignedClientExtensions`. `TestFieldProtection`: test-only `FIELD_ENCRYPTION_KEY` / `FIELD_LOOKUP_HASH_KEY` values, a second encryption key for wrong-key tests, ready-made `IFieldEncryptor` / `ILookupHasher` instances, and `UseTestFieldProtectionKeys()` for `WebApplicationFactory` hosts.
+- `Cadence.Testing.Persistence`: `StoredRowReader` reads table rows as stored (bypassing EF Core value converters), to assert that encrypted or hashed columns never hold plaintext.
 - `Cadence.Testing.Time`: `FakeClock` implementing the kernel `IClock`.
 - `Cadence.Testing.GoldenMaster`: `GoldenMasterScenario`, `GoldenMasterFixtureLoader`, `GoldenMasterAssert`.
 - There are no entity factories (such as `SubjectFactory`) in this package.

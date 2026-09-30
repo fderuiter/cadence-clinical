@@ -32,6 +32,23 @@ Electronic consent scaffold. It holds the consent persistence model (documents, 
 - Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Telemetry`, `Cadence.Contracts`, `Cadence.Database`.
 - Packages: `Microsoft.AspNetCore.OpenApi`, `Scalar.AspNetCore`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore`, `FluentValidation` (versions in `Directory.Packages.props`).
 
+## Configuration and secrets at rest
+
+| Setting | Purpose |
+| --- | --- |
+| `FIELD_ENCRYPTION_KEY` | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts signer e-mail addresses. The service refuses to start without a valid key; there is no default. |
+
+Consent signatures (`consent_signatures`, #4770):
+
+- `SignerEmail` is encrypted at rest (AES-256-GCM, `enc:v1:` format) by an EF Core value converter; it cannot be
+  queried by equality. It moves to the Identity Vault (ADR-2253) once that exists in code.
+- The raw signature capture is not stored. `SignatureBindingSha256` binds it to the signed document digest:
+  `ConsentSignatureBinding.Compute(DigestSha256, signatureData)` computes it and `ConsentSignatureBinding.Matches`
+  verifies a presented capture.
+- Migration `ProtectSignerEmailAndBindSignatureData` computed the binding for existing rows in SQL, then cleared the
+  raw captures and plaintext e-mail addresses. Run `VACUUM FULL consent_signatures` afterwards. See
+  [ADR-2494](../../docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md).
+
 ## Tests
 
 - `tests/Econsent/EconsentScoreDecimalPrecisionTests.cs`: `dotnet test tests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Econsent"`.

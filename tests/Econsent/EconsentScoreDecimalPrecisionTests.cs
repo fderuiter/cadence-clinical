@@ -4,6 +4,7 @@ using System.Linq;
 using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 
 using FluentAssertions;
 
@@ -30,7 +31,7 @@ public class EconsentScoreDecimalPrecisionTests
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        using var dbContext = new EconsentDbContext(options);
+        using var dbContext = new EconsentDbContext(options, TestFieldProtection.CreateEncryptor());
         var model = dbContext.Model;
 
         var entityTypeMeta = model.FindEntityType(typeof(ComprehensionResult));
@@ -78,7 +79,7 @@ public class EconsentScoreDecimalPrecisionTests
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        var dbContext = new EconsentDbContext(options);
+        var dbContext = new EconsentDbContext(options, TestFieldProtection.CreateEncryptor());
 
         var result1 = new ComprehensionResult
         {
@@ -107,7 +108,7 @@ public class EconsentScoreDecimalPrecisionTests
         dbContext.ComprehensionResults.AddRange(result1, result2);
         dbContext.SaveChanges();
 
-        using var readContext = new EconsentDbContext(options);
+        using var readContext = new EconsentDbContext(options, TestFieldProtection.CreateEncryptor());
         var retrieved1 = readContext.ComprehensionResults.First(r => r.Id == result1.Id);
         var retrieved2 = readContext.ComprehensionResults.First(r => r.Id == result2.Id);
 

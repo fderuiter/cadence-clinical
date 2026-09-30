@@ -256,7 +256,10 @@ services:
     container_name: cadence-interop
     ports:
       - "8004:8080"
-    environment: *db-env
+    environment:
+      <<: *db-env
+      # Local-only HMAC key for device-token lookup hashes (#4770); generate a real one with `openssl rand -base64 32`.
+      FIELD_LOOKUP_HASH_KEY: bG9jYWwtZGV2LW9ubHktbG9va3VwLWhhc2gta2V5MDA= # pragma: allowlist secret
     depends_on: *db-depends
 
   quality:
@@ -347,7 +350,10 @@ services:
     container_name: cadence-econsent
     ports:
       - "8011:8080"
-    environment: *db-env
+    environment:
+      <<: *db-env
+      # Local-only AES-256 key for field encryption (#4770); generate a real one with `openssl rand -base64 32`.
+      FIELD_ENCRYPTION_KEY: bG9jYWwtZGV2LW9ubHktZmllbGQtZW5jcnlwdC1rZXk= # pragma: allowlist secret
     depends_on: *db-depends
 
   org:
@@ -412,7 +418,10 @@ services:
     container_name: cadence-payments
     ports:
       - "8016:8080"
-    environment: *db-env
+    environment:
+      <<: *db-env
+      # Local-only AES-256 key for field encryption (#4770); generate a real one with `openssl rand -base64 32`.
+      FIELD_ENCRYPTION_KEY: bG9jYWwtZGV2LW9ubHktZmllbGQtZW5jcnlwdC1rZXk= # pragma: allowlist secret
     depends_on: *db-depends
 
   ai-gateway:

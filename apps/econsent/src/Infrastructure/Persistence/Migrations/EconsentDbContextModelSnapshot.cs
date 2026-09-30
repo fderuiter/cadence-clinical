@@ -330,15 +330,16 @@ namespace Cadence.Apps.Econsent.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("SignatureData")
-                        .HasColumnType("text");
+                    b.Property<string>("SignatureBindingSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime>("SignedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SignerEmail")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasMaxLength(1424)
+                        .HasColumnType("character varying(1424)");
 
                     b.Property<string>("SignerName")
                         .HasMaxLength(255)

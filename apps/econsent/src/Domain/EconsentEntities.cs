@@ -1,4 +1,6 @@
 using System;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Cadence.Apps.Econsent.Domain;
 
@@ -94,11 +96,18 @@ public class ConsentSignature
     public string SubjectPseudonym { get; set; } = string.Empty;
     public string Role { get; set; } = "SUBJECT";
     public string? SignerName { get; set; }
+    /// <summary>Signer contact address. Encrypted at rest (#4770).</summary>
     public string? SignerEmail { get; set; }
     public string? Meaning { get; set; }
-    public string? SignatureData { get; set; }
     public DateTime SignedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>SHA-256 (lowercase hex) of the consent document content that was signed.</summary>
     public string? DigestSha256 { get; set; }
+    /// <summary>
+    /// SHA-256 binding of the captured signature to <see cref="DigestSha256"/>, computed with
+    /// <see cref="ConsentSignatureBinding.Compute"/>. The raw signature capture (drawn image, typed name payload) is
+    /// not stored (#4770); a presented capture is verified with <see cref="ConsentSignatureBinding.Matches"/>.
+    /// </summary>
+    public string? SignatureBindingSha256 { get; set; }
     public string? LarRelationship { get; set; }
     public string? LarAuthorityBasis { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
@@ -230,4 +239,41 @@ public class ConsentWithdrawal
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Binds a captured e-signature to the content it signed (21 CFR 11.70 signature/record linking) without keeping the
+/// raw capture. The binding is SHA-256 over the UTF-8 bytes of
+/// <c>"cadence.econsent.signature-binding.v1\n" + documentDigestSha256 + "\n" + signatureData</c>, lowercase hex.
+/// Migration <c>ProtectSignerEmailAndBindSignatureData</c> computes the same value in SQL for existing rows.
+/// @req:PRD-SYS-053
+/// </summary>
+public static class ConsentSignatureBinding
+{
+    /// <summary>Domain-separation label; change it (and the version suffix) if the input layout ever changes.</summary>
+    public const string Label = "cadence.econsent.signature-binding.v1";
+
+    /// <summary>Returns the lowercase hex SHA-256 binding of <paramref name="signatureData"/> to the document digest.</summary>
+    public static string Compute(string? documentDigestSha256, string signatureData)
+    {
+        ArgumentNullException.ThrowIfNull(signatureData);
+        string input = $"{Label}\n{documentDigestSha256 ?? string.Empty}\n{signatureData}";
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(input)));
+    }
+
+    /// <summary>
+    /// True when <paramref name="signatureData"/> and <paramref name="documentDigestSha256"/> reproduce the stored
+    /// <paramref name="bindingSha256"/>. Compares in constant time.
+    /// </summary>
+    public static bool Matches(string? bindingSha256, string? documentDigestSha256, string signatureData)
+    {
+        if (bindingSha256 is null)
+        {
+            return false;
+        }
+
+        byte[] expected = Encoding.ASCII.GetBytes(Compute(documentDigestSha256, signatureData));
+        byte[] actual = Encoding.ASCII.GetBytes(bindingSha256.ToLowerInvariant());
+        return CryptographicOperations.FixedTimeEquals(expected, actual);
+    }
 }

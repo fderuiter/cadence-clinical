@@ -288,11 +288,21 @@ public class ParticipantWallet
     public string? TaxIdLastFour { get; set; }
     public string CardType { get; set; } = "RELOADABLE_DEBIT";
     public string CardStatus { get; set; } = "ACTIVE";
-    public string? VirtualCardToken { get; set; }
+    /// <summary>
+    /// The card processor's opaque reference for the participant's virtual card (never the card number or a raw
+    /// card token). Encrypted at rest (#4770).
+    /// </summary>
+    public string? VirtualCardProcessorReference { get; set; }
     public string? VirtualCardMask { get; set; }
     public string? VirtualCardExpiry { get; set; }
     public decimal? AntiCoercionCap { get; set; }
-    public string? AchRoutingNumber { get; set; }
+    /// <summary>
+    /// The payment processor's opaque reference for the participant's bank account. Routing and account numbers
+    /// are held by the processor and are not stored here; only their masks are (#4770). Encrypted at rest.
+    /// </summary>
+    public string? AchProcessorReference { get; set; }
+    /// <summary>Masked routing number for display (last four digits only, for example <c>*****6789</c>).</summary>
+    public string? AchRoutingMask { get; set; }
     public string? AchAccountMask { get; set; }
     public string? AchAccountHolder { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

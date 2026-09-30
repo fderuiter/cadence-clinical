@@ -98,10 +98,10 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<string>("DeviceToken")
+                    b.Property<string>("DeviceTokenHash")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("DeviceType")
                         .IsRequired()
@@ -166,7 +166,7 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DeviceToken");
+                    b.HasIndex("DeviceTokenHash");
 
                     b.HasIndex("DeviceType");
 
@@ -701,10 +701,10 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DeviceToken")
+                    b.Property<string>("DeviceTokenHash")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("DeviceType")
                         .IsRequired()
@@ -812,7 +812,7 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DeviceToken");
+                    b.HasIndex("DeviceTokenHash");
 
                     b.HasIndex("DeviceType");
 
@@ -865,10 +865,10 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DeviceToken")
+                    b.Property<string>("DeviceTokenHash")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("DeviceType")
                         .IsRequired()
@@ -922,7 +922,7 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
 
                     b.HasIndex("AlertType");
 
-                    b.HasIndex("DeviceToken");
+                    b.HasIndex("DeviceTokenHash");
 
                     b.HasIndex("DeviceType");
 
@@ -958,10 +958,10 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DeviceToken")
+                    b.Property<string>("DeviceTokenHash")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("DeviceType")
                         .IsRequired()
@@ -1015,7 +1015,7 @@ namespace Cadence.Apps.Interop.Infrastructure.Persistence.Migrations;
 
                     b.HasIndex("BatchId");
 
-                    b.HasIndex("DeviceToken");
+                    b.HasIndex("DeviceTokenHash");
 
                     b.HasIndex("DeviceType");
 

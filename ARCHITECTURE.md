@@ -155,8 +155,17 @@ Decided in [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signe
   health, status and development API-doc endpoints allow anonymous access.
 - Application code takes identity and roles from the verified claims only. A PI signature records the
   authenticated caller as signer.
-- Not yet done: e-signature step-up (`X-Sig-Token` issuance and verification) and replacing the web
-  client's demo mode, tracked in epic [#4759](https://github.com/fderuiter/cadence-clinical/issues/4759).
+- Signing a PI form approval needs a fresh re-authentication: the gateway re-checks the signer's
+  password with Keycloak and issues a 60-second `X-Sig-Token` bound to the user, form and meaning
+  ([ADR-2259](docs/adr/2026-09-29-electronic-signature-step-up-re-authentication.md)).
+- The web app signs in only through Keycloak (authorization code + PKCE) and keeps tokens in memory;
+  only the opt-in demo build uses an offline demo identity
+  ([ADR-2493](docs/adr/2026-09-30-keycloak-only-web-sign-in.md)).
+- Secrets that services must keep are protected at rest: payment processor references and signer
+  e-mail addresses are AES-256-GCM encrypted (`FIELD_ENCRYPTION_KEY`), device tokens are stored only
+  as keyed HMAC-SHA256 lookup hashes (`FIELD_LOOKUP_HASH_KEY`), and consent signature captures only
+  as a SHA-256 binding to the signed content
+  ([ADR-2494](docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md)).
 
 In the target architecture, authority is computed from evidence (training, delegation,
 qualification) by the kernel's policy evaluator (ADR-2251), not from role strings.
@@ -198,7 +207,7 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
 | Telemetry | `packages/telemetry` | OpenTelemetry traces, metrics and logs named after the service (`OTEL_SERVICE_NAME`); OTLP export when `OTEL_EXPORTER_OTLP_ENDPOINT` is set |
 | Time | `Cadence.Kernel.Abstractions` `IClock` | `DateTime.Now/UtcNow` are banned ([`BannedSymbols.txt`](BannedSymbols.txt)); take time from `IClock` (K-TIME-3). Remaining call sites: [clock migration backlog](docs/kernel/CLOCK_MIGRATION_BACKLOG.md) |
 | Architecture tests | `tests/Architecture` | K-XS-1, K-XS-2 and K-MOD-1 with a checked-in baseline that may only shrink (`tests/ArchitectureBaselines/`) |
-| Security | `packages/security` | Gateway authentication scheme, HMAC signing, audit digest |
+| Security | `packages/security` | Gateway authentication scheme, HMAC signing, audit digest, e-signature tokens, field encryption and lookup hashes (`Cadence.Security.FieldProtection`) |
 | Build | `Directory.Build.props`, `Directory.Packages.props` | `net10.0`, nullable enabled, warnings as errors, Central Package Management |
 | Contracts | `packages/contracts` | Typed cross-service DTOs and HTTP clients |
 | DDF compiler | `packages/ddf` | USDM → DDF intermediate representation → CDISC ODM / XForms |

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Database;
+using Cadence.Testing.Security;
 using Cadence.UnitTests.Packages;
 
 using FluentAssertions;
@@ -63,6 +64,8 @@ public sealed class ServiceSchemaPostgresTests(ThrowawayPostgresDatabase databas
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
         builder.Configuration[$"ConnectionStrings:{CadenceDatabaseExtensions.DefaultConnectionName}"] = connectionString;
         builder.Configuration["Database:MigrateOnStartup"] = "true";
+        // Payments and eConsent contexts take the field encryptor (ADR-2494).
+        builder.Services.AddSingleton(TestFieldProtection.CreateEncryptor());
         builder.AddCadencePostgresDbContext<TContext>(schema);
 
         await using var app = builder.Build();

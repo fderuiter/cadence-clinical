@@ -5,6 +5,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
+using Cadence.Security.FieldProtection;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
@@ -240,9 +242,15 @@ public static class KernelBoundaryRules
         var builder = (DbContextOptionsBuilder)Activator.CreateInstance(builderType)!;
         builder.UseInMemoryDatabase($"k-mod-1-{contextType.FullName}");
 
-        return (DbContext)(Activator.CreateInstance(contextType, builder.Options)
+        // Contexts with encrypted columns (#4770) also take an IFieldEncryptor; only the model is read here, so the
+        // design-time encryptor (which never converts values) is enough.
+        object[] arguments = contextType.GetConstructor([builder.Options.GetType(), typeof(IFieldEncryptor)]) is not null
+            ? [builder.Options, DesignTimeFieldEncryptor.Instance]
+            : [builder.Options];
+
+        return (DbContext)(Activator.CreateInstance(contextType, arguments)
             ?? throw new InvalidOperationException(
-                $"K-MOD-1 cannot instantiate {contextType.FullName}; it must expose a (DbContextOptions<T>) constructor."));
+                $"K-MOD-1 cannot instantiate {contextType.FullName}; it must expose a (DbContextOptions<T>) or (DbContextOptions<T>, IFieldEncryptor) constructor."));
     }
 
     // ---------------------------------------------------------------- helpers

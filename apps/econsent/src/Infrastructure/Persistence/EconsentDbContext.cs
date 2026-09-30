@@ -2,17 +2,24 @@ using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Security.FieldProtection;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Cadence.Apps.Econsent.Infrastructure.Persistence;
 
 /// <summary>
-/// EF Core 10 DbContext for eConsent microservice persistence gateway.
+/// EF Core 10 DbContext for eConsent microservice persistence gateway. Signer e-mail addresses are encrypted at rest
+/// with <paramref name="fieldEncryptor"/> (#4770).
 /// @req:PRD-SYS-053
 /// </summary>
-public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> options) : DbContext(options)
+public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> options, IFieldEncryptor fieldEncryptor)
+    : DbContext(options), IFieldEncryptingDbContext
 {
+    /// <inheritdoc />
+    public IFieldEncryptor FieldEncryptor { get; } = fieldEncryptor;
+
     public DbSet<ConsentDocument> ConsentDocuments => Set<ConsentDocument>();
     public DbSet<EtmfArchivalDelivery> EtmfArchivalDeliveries => Set<EtmfArchivalDelivery>();
     public DbSet<SubjectConsent> SubjectConsents => Set<SubjectConsent>();
@@ -29,6 +36,12 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
     public DbSet<ConsentWithdrawal> ConsentWithdrawals => Set<ConsentWithdrawal>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, FieldEncryptionModelCacheKeyFactory>();
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -38,7 +51,7 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
         modelBuilder.ApplyConfiguration(new SubjectConsentConfiguration());
         modelBuilder.ApplyConfiguration(new ComprehensionCheckConfiguration());
         modelBuilder.ApplyConfiguration(new ComprehensionResultConfiguration());
-        modelBuilder.ApplyConfiguration(new ConsentSignatureConfiguration());
+        modelBuilder.ApplyConfiguration(new ConsentSignatureConfiguration(FieldEncryptor));
         modelBuilder.ApplyConfiguration(new ConsentClauseConfiguration());
         modelBuilder.ApplyConfiguration(new ConsentTemplateConfiguration());
         modelBuilder.ApplyConfiguration(new ConsentAuditLogConfiguration());

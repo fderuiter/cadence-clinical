@@ -8,8 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
-{
+namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
     [DbContext(typeof(PaymentsDbContext))]
     partial class PaymentsDbContextModelSnapshot : ModelSnapshot
     {
@@ -459,9 +458,13 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("AchRoutingNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<string>("AchProcessorReference")
+                        .HasMaxLength(1424)
+                        .HasColumnType("character varying(1424)");
+
+                    b.Property<string>("AchRoutingMask")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<decimal?>("AntiCoercionCap")
                         .HasColumnType("numeric(18,4)");
@@ -549,9 +552,9 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("VirtualCardToken")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<string>("VirtualCardProcessorReference")
+                        .HasMaxLength(1424)
+                        .HasColumnType("character varying(1424)");
 
                     b.Property<string>("W9Status")
                         .IsRequired()
@@ -1266,4 +1269,3 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
 #pragma warning restore 612, 618
         }
     }
-}
