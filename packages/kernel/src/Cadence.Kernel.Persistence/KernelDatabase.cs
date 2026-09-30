@@ -35,7 +35,7 @@ public static class KernelDatabase
     /// <summary>
     /// SQL that grants <paramref name="role"/> what the kernel needs and nothing more: read, insert and update on the
     /// kernel tables, insert without update on the insert-only ones, no delete anywhere, nothing on the migration
-    /// history, and the tenant directory. Re-run it after every migration that adds a table. The role must not own
+    /// history, and the tenant directory functions. Re-run it after every migration that adds a table. The role must not own
     /// the schema and must not have <c>BYPASSRLS</c>; the schema test checks both.
     /// </summary>
     /// <param name="role">An existing lower-case role name, for example <c>cadence_app</c>.</param>
@@ -50,6 +50,7 @@ public static class KernelDatabase
             REVOKE UPDATE ON {insertOnly} FROM {r};
             REVOKE ALL ON {s}."{MigrationsHistoryTable}" FROM {r};
             GRANT EXECUTE ON FUNCTION {s}.{TenantIsolationSql.DirectoryFunction}() TO {r};
+            GRANT EXECUTE ON FUNCTION {s}.{TenantIsolationSql.CodeDirectoryFunction}(text) TO {r};
             """;
     }
 

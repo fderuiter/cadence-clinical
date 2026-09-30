@@ -2377,3 +2377,28 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930063002_TenantCodeDirectory') THEN
+    CREATE OR REPLACE FUNCTION "kernel".tenant_id_by_code(tenant_code text) RETURNS uuid
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path = pg_catalog, pg_temp
+    SET cadence.tenant_directory = 'on'
+    AS $fn$
+        SELECT t.id FROM "kernel"."tenants" t WHERE t.code = tenant_code AND t.is_active
+    $fn$;
+    REVOKE ALL ON FUNCTION "kernel".tenant_id_by_code(text) FROM PUBLIC;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930063002_TenantCodeDirectory') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930063002_TenantCodeDirectory', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

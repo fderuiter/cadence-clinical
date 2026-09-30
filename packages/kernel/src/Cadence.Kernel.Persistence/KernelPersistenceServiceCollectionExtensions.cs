@@ -13,9 +13,11 @@ using Cadence.Kernel.Persistence.Execution;
 using Cadence.Kernel.Persistence.Knowledge;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Outbox;
+using Cadence.Kernel.Persistence.Protocol;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Persistence.Trust;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +66,8 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelAuditChainVerifier>();
         services.TryAddSingleton<IAttestationVerifier, KernelAttestationVerifier>();
         services.TryAddSingleton<IEnrollmentDirectory, KernelEnrollmentDirectory>();
+        services.TryAddSingleton<IProtocolVersionReader, KernelProtocolVersionReader>();
+        services.TryAddSingleton<ITenantDirectory, KernelTenantDirectory>();
         services.TryAddSingleton<KernelAuditChainSealer>();
         services.TryAddSingleton<IConceptRegistry, KernelConceptRegistry>();
 
