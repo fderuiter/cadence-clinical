@@ -194,8 +194,7 @@ public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fix
         var ct = TestContext.Current.CancellationToken;
         var a = KernelSchemaPostgresTests.NewGraph();
         var b = KernelSchemaPostgresTests.NewGraph();
-        var person = new Person(
-            PersonId.New(), $"pi-{Guid.NewGuid():N}@site.test", "Jane", "Doe", KernelPostgresFixture.ActorId, Reason);
+        var person = new Person(PersonId.New(), KernelPostgresFixture.ActorId, Reason);
         await fixture.SeedAsync(a.Tenant, b.Tenant, person);
         await fixture.SeedAsync(new TenantMembership(
             TenantMembershipId.New(), a.Tenant.Id, person.Id, KernelPostgresFixture.ActorId, Reason));

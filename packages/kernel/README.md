@@ -49,7 +49,8 @@ PostgreSQL keeps tenants apart, not application code (K-ID-1, K-ID-2):
   opens a connection and clears it on close. Contexts come from `KernelTenantDbContextFactory.Create(tenant)`; the
   pipeline binds each command's context to the command's tenant. A context with no tenant cannot connect.
 - **People (K-ID-4).** `people` is tenant-independent and has no `tenant_id`. A tenant sees a person only through its
-  own `tenant_memberships` row.
+  own `tenant_memberships` row. A person row is pseudonymous: an id and an active flag. Names and contact details
+  live in the IdentityVault, per tenant.
 - **Jobs that visit every tenant** (outbox relay, verify-and-seal) list tenant ids with the
   `kernel.tenant_ids()` directory function, then work through a connection scoped to each tenant in turn.
 - **Resolving the gateway's tenant code** (#4780): `ITenantDirectory.FindActiveByCodeAsync(code)` returns the id of
@@ -469,6 +470,43 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
   that scope, participants and sites through the study sites they reach, and tenant reference data. Everything else
   is masked `NotPermitted`.
 - **Not yet:** qualifications, separation of duties, and StudySite, protocol or blinding conditions (rest of #4781).
+
+## IdentityVault (ADR-2458)
+
+Direct identifiers never enter a kernel table (K-IDN-1). They are sealed in the `identity_vault` schema, per tenant,
+for two layers: `IdentityLayer.Person` (subject: `PersonId`) and `IdentityLayer.SiteLocal` (subject: `ParticipantId`,
+for example a screening log number).
+
+```csharp
+await sender.SendAsync(new RecordPersonIdentity(
+    tenant, person, new IdentityDetails { GivenName = "…", FamilyName = "…", Email = "…" }, idempotencyKey, "Registration"));
+var revealed = await vault.RevealAsync(
+    new RevealPersonIdentity(tenant, person, idempotencyKey, "Contacting the participant about visit 3"), ct);
+```
+
+- **Commands.** Record (`identity.record.<layer>`, Execute), reveal (`identity.reveal.<layer>`, Execute), erase
+  (`identity.erase.<layer>`, Approve), `LinkParticipantToPerson` (`identity.link.cross_study`, Execute) and
+  `RevealPersonLinks` (`identity.reveal.links`, Execute). Reveals are Execute, so automation agents are refused
+  them. Each is authorized and audited, and raises a Trust event that names the layer and subject only. The details are `[JsonIgnore]` and print no values, so they never reach the
+  request hash, the audit entry or an event.
+- **Reveal.** `IIdentityVault.RevealAsync` sends the reveal command and decrypts only after it has committed. A
+  replayed reveal returns `K.IdentityVault.RevealReplayed` and no details; use a new idempotency key for each read.
+- **Sealing.** `IdentitySealer` encrypts each record with its own AES-256-GCM data key, wrapped by the tenant's
+  key-encryption key from an `IVaultKeyProvider`, and binds the tenant, layer and subject as associated data. A
+  blind index (HMAC-SHA256 of the normalized e-mail or screening number) is stored for future lookups.
+- **Erasure.** Erasing clears the key, ciphertext and blind index (crypto-shredding) and keeps the row as the record
+  of the erasure. An erased identity cannot be recorded again, revealed or linked.
+- **Residency.** `ProvisionTenant` takes an optional residency (`EU`, `US`, …). A vault serves tenants with no
+  residency and tenants of its own region; any other returns `K.IdentityVault.ResidencyMismatch`.
+- **Tables and role.** `identity_vault.identity_records` and `identity_vault.participant_links` force row-level
+  security. `KernelDatabase.GrantAppRoleSql` grants the application role `EXECUTE` on the vault functions and no
+  privilege on the tables. Staged writes are applied by the command transaction, inside the command's commit.
+- **Registration.** A host opts in with `AddKernelIdentityVault()` and
+  `AddKernelIdentityVaultPersistence(masterKeyBase64, region)`, where the master key is 32 bytes of base64 from the
+  host's secret store. `LocalVaultKeyProvider` derives each tenant's keys from it with HKDF; production replaces it
+  with a KMS-backed `IVaultKeyProvider`. A host without these registrations has no vault.
+- **Not yet:** lookup by blind index, a person registration command, reveal under a study-site grant, and moving
+  execution's `EncryptedDemographics` into the vault.
 
 ## Work queues (ADR-2486)
 

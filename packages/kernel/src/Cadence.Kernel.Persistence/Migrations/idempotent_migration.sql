@@ -1,4 +1,4 @@
-﻿DO $EF$
+DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -3134,6 +3134,207 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930102009_ResolvedTerminologyBindings') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930102009_ResolvedTerminologyBindings', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
+    DO $guard$
+    BEGIN
+        PERFORM set_config('row_security', 'off', true);
+        IF EXISTS (SELECT 1 FROM kernel.people p
+                   WHERE p.email NOT IN ('', p.id::text) OR p.first_name <> '' OR p.last_name <> '') THEN
+            RAISE EXCEPTION 'kernel.people holds direct identifiers; move them into the IdentityVault before this migration'
+                USING ERRCODE = 'KV003';
+        END IF;
+        PERFORM set_config('row_security', 'on', true);
+    END
+    $guard$;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
+    DROP INDEX kernel."IX_people_email";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
+    ALTER TABLE kernel.people DROP COLUMN email;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
+    ALTER TABLE kernel.people DROP COLUMN first_name;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
+    ALTER TABLE kernel.people DROP COLUMN last_name;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
+    ALTER TABLE kernel.tenants ADD residency character varying(8);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
+    ALTER TABLE kernel.tenants ADD CONSTRAINT ck_tenants_residency CHECK (residency IS NULL OR residency ~ '^[A-Z]{2,8}$');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
+    CREATE SCHEMA identity_vault;
+    REVOKE ALL ON SCHEMA identity_vault FROM PUBLIC;
+
+    CREATE TABLE identity_vault.identity_records (
+        tenant_id uuid NOT NULL REFERENCES kernel.tenants (id) ON DELETE RESTRICT,
+        layer text NOT NULL CHECK (layer IN ('person', 'site_local')),
+        subject_id uuid NOT NULL,
+        key_id text NULL CHECK (char_length(key_id) <= 64),
+        wrapped_data_key bytea NULL,
+        ciphertext bytea NULL,
+        blind_index bytea NULL,
+        recorded_at timestamptz NOT NULL,
+        erased_at timestamptz NULL,
+        PRIMARY KEY (tenant_id, layer, subject_id),
+        CONSTRAINT ck_identity_records_sealed_until_erased CHECK (
+            (erased_at IS NULL AND key_id IS NOT NULL AND wrapped_data_key IS NOT NULL AND ciphertext IS NOT NULL)
+            OR (erased_at IS NOT NULL AND key_id IS NULL AND wrapped_data_key IS NULL AND ciphertext IS NULL AND blind_index IS NULL))
+    );
+    CREATE INDEX ix_identity_records_blind_index ON identity_vault.identity_records (tenant_id, layer, blind_index)
+        WHERE blind_index IS NOT NULL;
+
+    CREATE TABLE identity_vault.participant_links (
+        tenant_id uuid NOT NULL,
+        participant_id uuid NOT NULL,
+        person_id uuid NOT NULL REFERENCES kernel.people (id) ON DELETE RESTRICT,
+        linked_at timestamptz NOT NULL,
+        PRIMARY KEY (tenant_id, participant_id),
+        FOREIGN KEY (tenant_id, participant_id) REFERENCES kernel.participants (tenant_id, id) ON DELETE RESTRICT
+    );
+    CREATE INDEX ix_participant_links_person ON identity_vault.participant_links (tenant_id, person_id);
+
+    ALTER TABLE identity_vault.identity_records ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE identity_vault.identity_records FORCE ROW LEVEL SECURITY;
+    CREATE POLICY tenant_isolation ON identity_vault.identity_records
+        USING (tenant_id = kernel.current_tenant_id()) WITH CHECK (tenant_id = kernel.current_tenant_id());
+    ALTER TABLE identity_vault.participant_links ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE identity_vault.participant_links FORCE ROW LEVEL SECURITY;
+    CREATE POLICY tenant_isolation ON identity_vault.participant_links
+        USING (tenant_id = kernel.current_tenant_id()) WITH CHECK (tenant_id = kernel.current_tenant_id());
+
+    CREATE FUNCTION identity_vault.require_tenant() RETURNS uuid
+    LANGUAGE plpgsql STABLE SET search_path = pg_catalog, pg_temp AS $fn$
+    DECLARE t uuid := kernel.current_tenant_id();
+    BEGIN
+        IF t IS NULL THEN
+            RAISE EXCEPTION 'identity_vault: no tenant is set on this connection' USING ERRCODE = '42501';
+        END IF;
+        RETURN t;
+    END
+    $fn$;
+    REVOKE ALL ON FUNCTION identity_vault.require_tenant() FROM PUBLIC;
+
+    CREATE FUNCTION identity_vault.put_record(
+        p_layer text, p_subject uuid, p_key_id text, p_wrapped_data_key bytea, p_ciphertext bytea, p_blind_index bytea,
+        p_recorded_at timestamptz) RETURNS void
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+    DECLARE t uuid := identity_vault.require_tenant();
+    BEGIN
+        INSERT INTO identity_vault.identity_records AS r
+            (tenant_id, layer, subject_id, key_id, wrapped_data_key, ciphertext, blind_index, recorded_at)
+        VALUES (t, p_layer, p_subject, p_key_id, p_wrapped_data_key, p_ciphertext, p_blind_index, p_recorded_at)
+        ON CONFLICT (tenant_id, layer, subject_id) DO UPDATE
+            SET key_id = excluded.key_id, wrapped_data_key = excluded.wrapped_data_key, ciphertext = excluded.ciphertext,
+                blind_index = excluded.blind_index, recorded_at = excluded.recorded_at
+            WHERE r.erased_at IS NULL;
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'identity_vault: the record was erased' USING ERRCODE = 'KV001';
+        END IF;
+    END
+    $fn$;
+
+    CREATE FUNCTION identity_vault.shred_record(p_layer text, p_subject uuid, p_erased_at timestamptz) RETURNS void
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+    DECLARE t uuid := identity_vault.require_tenant();
+    BEGIN
+        UPDATE identity_vault.identity_records
+            SET key_id = NULL, wrapped_data_key = NULL, ciphertext = NULL, blind_index = NULL, erased_at = p_erased_at
+            WHERE tenant_id = t AND layer = p_layer AND subject_id = p_subject AND erased_at IS NULL;
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'identity_vault: no unerased record to shred' USING ERRCODE = 'KV001';
+        END IF;
+    END
+    $fn$;
+
+    CREATE FUNCTION identity_vault.get_record(p_layer text, p_subject uuid)
+        RETURNS TABLE (key_id text, wrapped_data_key bytea, ciphertext bytea, blind_index bytea, recorded_at timestamptz, erased_at timestamptz)
+    LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+        SELECT r.key_id, r.wrapped_data_key, r.ciphertext, r.blind_index, r.recorded_at, r.erased_at
+        FROM identity_vault.identity_records r
+        WHERE r.tenant_id = identity_vault.require_tenant() AND r.layer = p_layer AND r.subject_id = p_subject
+    $fn$;
+
+    CREATE FUNCTION identity_vault.put_link(p_participant uuid, p_person uuid, p_linked_at timestamptz) RETURNS void
+    LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+    DECLARE t uuid := identity_vault.require_tenant();
+    BEGIN
+        INSERT INTO identity_vault.participant_links (tenant_id, participant_id, person_id, linked_at)
+        VALUES (t, p_participant, p_person, p_linked_at)
+        ON CONFLICT (tenant_id, participant_id) DO NOTHING;
+        IF NOT EXISTS (SELECT 1 FROM identity_vault.participant_links l
+                       WHERE l.tenant_id = t AND l.participant_id = p_participant AND l.person_id = p_person) THEN
+            RAISE EXCEPTION 'identity_vault: the participant is linked to another person' USING ERRCODE = 'KV002';
+        END IF;
+    END
+    $fn$;
+
+    CREATE FUNCTION identity_vault.linked_person(p_participant uuid) RETURNS uuid
+    LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+        SELECT l.person_id FROM identity_vault.participant_links l
+        WHERE l.tenant_id = identity_vault.require_tenant() AND l.participant_id = p_participant
+    $fn$;
+
+    CREATE FUNCTION identity_vault.linked_participants(p_person uuid) RETURNS SETOF uuid
+    LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $fn$
+        SELECT l.participant_id FROM identity_vault.participant_links l
+        WHERE l.tenant_id = identity_vault.require_tenant() AND l.person_id = p_person
+        ORDER BY l.participant_id
+    $fn$;
+
+    REVOKE ALL ON FUNCTION identity_vault.put_record(text, uuid, text, bytea, bytea, bytea, timestamptz) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION identity_vault.shred_record(text, uuid, timestamptz) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION identity_vault.get_record(text, uuid) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION identity_vault.put_link(uuid, uuid, timestamptz) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION identity_vault.linked_person(uuid) FROM PUBLIC;
+    REVOKE ALL ON FUNCTION identity_vault.linked_participants(uuid) FROM PUBLIC;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930110610_IdentityVault', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;

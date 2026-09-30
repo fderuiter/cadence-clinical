@@ -205,7 +205,7 @@ public class KernelIdentifierTests
         // Act
         var tenant = new Tenant(tenantId, "TEN-01", "Acme Health", "usr_admin", "Tenant provisioned");
         var org = new Organization(orgId, tenantId, "ORG-01", "Acme Pharma", OrganizationKind.Sponsor, "usr_admin", "Sponsor configured");
-        var person = new Person(personId, "pi@site.org", "Jane", "Doe", "usr_admin", "Staff registered");
+        var person = new Person(personId, "usr_admin", "Staff registered");
         var study = new Study(studyId, tenantId, orgId, "PROTOCOL-101", "Phase 3 Oncology", "Phase 3", "usr_admin", "Study authored");
         var site = new Site(siteId, tenantId, orgId, "SITE-101", "Memorial Hospital", "US", "usr_admin", "Site qualified");
         var studySite = new StudySite(studySiteId, tenantId, studyId, siteId, "Selected", "usr_admin", "Site selected");

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,12 +18,17 @@ internal sealed class ProvisionTenantHandler : ICommandHandler<ProvisionTenant, 
             return invalid;
         }
 
+        if (command.Residency is { } residency && !IdentityValidation.IsResidency(residency))
+        {
+            return IdentityErrors.ResidencyInvalid;
+        }
+
         if (await context.Work.ExistsAsync<Tenant>(command.TenantId, cancellationToken).ConfigureAwait(false))
         {
             return KernelErrors.AlreadyExists;
         }
 
-        context.Work.Add(new Tenant(command.TenantId, command.Code, command.Name, context.Actor.Id, command.ReasonForChange));
+        context.Work.Add(new Tenant(command.TenantId, command.Code, command.Name, context.Actor.Id, command.ReasonForChange, command.Residency));
         context.Work.Raise(new TenantProvisioned(command.TenantId, command.Code, command.Name));
         return CommandResult<TenantId>.Success(command.TenantId);
     }
@@ -55,8 +61,13 @@ internal sealed class RegisterOrganizationHandler : ICommandHandler<RegisterOrga
     }
 }
 
-internal static class IdentityValidation
+internal static partial class IdentityValidation
 {
+    public static bool IsResidency(string residency) => ResidencyPattern().IsMatch(residency);
+
+    [GeneratedRegex("^[A-Z]{2,8}\\z", RegexOptions.CultureInvariant)]
+    private static partial Regex ResidencyPattern();
+
     public static KernelError? Check(string code, string name)
     {
         if (string.IsNullOrWhiteSpace(code))

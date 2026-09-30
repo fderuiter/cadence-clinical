@@ -750,27 +750,9 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("created_by");
 
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(320)
-                        .HasColumnType("character varying(320)")
-                        .HasColumnName("email");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("first_name");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("last_name");
 
                     b.Property<string>("ReasonForChange")
                         .IsRequired()
@@ -784,9 +766,6 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnName("version_index");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
 
                     b.ToTable("people", "kernel");
                 });
@@ -1180,6 +1159,11 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("reason_for_change");
 
+                    b.Property<string>("Residency")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("residency");
+
                     b.Property<long>("VersionIndex")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint")
@@ -1190,7 +1174,10 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("tenants", "kernel");
+                    b.ToTable("tenants", "kernel", t =>
+                        {
+                            t.HasCheckConstraint("ck_tenants_residency", "residency IS NULL OR residency ~ '^[A-Z]{2,8}$'");
+                        });
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.TenantMembership", b =>

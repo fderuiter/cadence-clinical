@@ -9,11 +9,13 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
+using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Application.Validation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Identity;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence;
@@ -63,6 +65,12 @@ namespace Cadence.IntegrationTests.Kernel;
 public class KernelPostgresFixture : IAsyncLifetime
 {
     public const string ActorId = "kernel-it@cadence.test";
+
+    /// <summary>The residency region the test vault serves.</summary>
+    public const string VaultRegion = "EU";
+
+    /// <summary>A throwaway IdentityVault master key, generated per fixture.</summary>
+    private static readonly string VaultMasterKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
     private const string SkipReason = "Kernel PostgreSQL tests need CADENCE_TEST_POSTGRES=<connection string>.";
 
@@ -140,6 +148,8 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddKernelValidation()
             .AddCadenceRules()
             .AddCadenceStandards()
+            .AddKernelIdentityVault()
+            .AddKernelIdentityVaultPersistence(VaultMasterKey, VaultRegion)
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
     }
 
@@ -154,6 +164,12 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     /// <summary>The unit-of-work factory, whose <c>FaultInjector</c> tests use to fail a commit at a given stage.</summary>
     internal KernelUnitOfWorkFactory UnitOfWork => Scope().GetRequiredService<KernelUnitOfWorkFactory>();
+
+    /// <summary>The IdentityVault port, as a host gets it.</summary>
+    public IIdentityVault IdentityVault => Scope().GetRequiredService<IIdentityVault>();
+
+    /// <summary>The vault store the handlers read through, as the application role.</summary>
+    internal IIdentityVaultStore IdentityVaultStore => Scope().GetRequiredService<IIdentityVaultStore>();
 
     /// <summary>The enrollment read port the execution handlers use.</summary>
     public IEnrollmentDirectory Enrollments => Scope().GetRequiredService<IEnrollmentDirectory>();

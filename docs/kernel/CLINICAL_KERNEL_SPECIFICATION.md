@@ -757,6 +757,12 @@ A participant is not a code. The model separates identity layers, each with its 
 - **K-IDN-2** Linking the same person across studies, or matching an EHR record to a participant, is a vault
   operation with its own capability, evidence and audit.
 - Erasure where law requires it is crypto-shredding of the data key; the pseudonymous kernel record remains.
+- **Implementation (ADR-2458, K029):** the `identity_vault` schema holds sealed identity records for the person and
+  site-local layers and the cross-study participant links. The application role reaches them only through
+  `SECURITY DEFINER` functions under row-level security. Recording, revealing, erasing and linking are kernel
+  commands (`identity.record.<layer>`, `identity.reveal.<layer>`, `identity.erase.<layer>`,
+  `identity.link.cross_study`, `identity.reveal.links`), so each is authorized and audited, and a reveal commits its
+  audit entry before anything is decrypted. `kernel.people` holds no direct identifier.
 
 ### 9.3 Authority computed from evidence (ADR-2251)
 
@@ -1128,7 +1134,8 @@ Applications are compositions of engine concepts. This table fixes ownership, no
   server or WASM. It is introduced when a measured workload needs it, not before.
 - **Data volume**: Observations are the growth table → partition by `(tenant_id, study_id)`, BRIN on recorded
   time, indexes on the current-truth predicate (`upper_inf(recorded_period)`).
-- **Privacy and residency**: direct identifiers only in the IdentityVault; residency is a tenant property.
+- **Privacy and residency**: direct identifiers only in the IdentityVault; residency is a tenant property, set when
+  the tenant is provisioned, and a vault serves only the tenants of its own region (ADR-2458).
 
 ---
 
@@ -1218,6 +1225,7 @@ kernel, is merged into another, or is retired.
 | K026 | Indicators | Pulse metrics, attention rules, KRIs and QTLs as versioned indicators in released `IndicatorSet` library items; counted through `IRuleEvaluator`; results carry the definition version, hashes, contributors and an explanation | ADR-2488 |
 | K027 | Grant-backed visibility | A reader sees what its grants in effect cover and the scope path above them; participants and sites through their study sites; reference data to any grant holder | ADR-2457 |
 | K028 | Mapping specifications | Governed library items pinned to one standard version, CT versions and Concept versions; K-STD-1 checked at protocol submission, gaps accepted as findings; engine behind `IMappingEngine` | ADR-2463 |
+| K029 | IdentityVault | Direct identifiers sealed per record (AES-256-GCM data keys wrapped by a per-tenant key) in the `identity_vault` schema, reached only through its functions; record, reveal, erase and cross-study link are audited kernel commands; residency is a tenant property | ADR-2458 |
 
 ---
 

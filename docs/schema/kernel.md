@@ -33,7 +33,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.organizations`](#kernelorganizations) | `Organization` | 10 |
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
-| [`kernel.people`](#kernelpeople) | `Person` | 9 |
+| [`kernel.people`](#kernelpeople) | `Person` | 6 |
 | [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
 | [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 14 |
 | [`kernel.roles`](#kernelroles) | `Role` | 9 |
@@ -47,7 +47,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.study_sites`](#kernelstudy_sites) | `StudySite` | 10 |
 | [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 11 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
-| [`kernel.tenants`](#kerneltenants) | `Tenant` | 8 |
+| [`kernel.tenants`](#kerneltenants) | `Tenant` | 9 |
 | [`kernel.validation_detections`](#kernelvalidation_detections) | `ValidationDetectionRecord` | 17 |
 | [`kernel.validation_findings`](#kernelvalidation_findings) | `ValidationFinding` | 14 |
 | [`kernel.validation_run_datasets`](#kernelvalidation_run_datasets) | `ValidationRunDataset` | 3 |
@@ -778,16 +778,9 @@ Entity: `Person`
 | `id` | `uuid` | no |  | PK |
 | `created_at` | `timestamp with time zone` | no |  |  |
 | `created_by` | `character varying(255)` | no |  |  |
-| `email` | `character varying(320)` | no |  |  |
-| `first_name` | `character varying(255)` | no |  |  |
 | `is_active` | `boolean` | no |  |  |
-| `last_name` | `character varying(255)` | no |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
 | `version_index` | `bigint` | no |  |  |
-
-Indexes:
-
-- `IX_people_email`: unique (`email`)
 
 ## kernel.protocol_versions
 
@@ -1166,11 +1159,16 @@ Entity: `Tenant`
 | `is_active` | `boolean` | no |  |  |
 | `name` | `character varying(255)` | no |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
+| `residency` | `character varying(8)` | yes |  |  |
 | `version_index` | `bigint` | no |  |  |
 
 Indexes:
 
 - `IX_tenants_code`: unique (`code`)
+
+Check constraints:
+
+- `ck_tenants_residency`: `residency IS NULL OR residency ~ '^[A-Z]{2,8}$'`
 
 ## kernel.validation_detections
 

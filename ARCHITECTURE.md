@@ -11,7 +11,7 @@ When this document and the spec disagree, the spec wins; fix this document.
 | Section | Contents |
 | --- | --- |
 | [1. Target architecture](#1-target-architecture) | Kernel, six engines, applications, invariants |
-| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K028 and the platform decisions, with their ADRs |
+| [2. Key decisions](#2-key-decisions) | Kernel decisions K001–K029 and the platform decisions, with their ADRs |
 | [3. Running services today](#3-running-services-today) | Services, ports, gateway routes, maturity |
 | [4. Request path and security](#4-request-path-and-security) | OIDC at the gateway, signed identity in services |
 | [5. Persistence](#5-persistence) | Databases, connection strings, migrations |
@@ -95,6 +95,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K026 | Pulse metrics, attention rules, KRIs and QTLs are versioned indicators in released, study-pinned indicator sets, counted through the rule evaluator; each value names its definition version, its objects and an explanation | [ADR-2488](docs/adr/2026-09-30-study-pulse-metrics-as-versioned-indicators.md) |
 | K027 | Visibility is computed from the reader's grants in effect: what they cover, the scope path above them, participants and sites through their study sites, and reference data; everything else is masked | [ADR-2457](docs/adr/2026-09-30-grant-backed-node-visibility.md) |
 | K028 | A mapping specification is a governed library item pinned to one standard version, CT versions and Concept versions; a protocol version is submitted only when every collected Concept is mapped or its gap is an accepted finding (K-STD-1); the engine sits behind `IMappingEngine` | [ADR-2463](docs/adr/2026-09-30-mapping-specifications-as-governed-concept-to-variable-maps.md) |
+| K029 | Direct identifiers live only in the IdentityVault: sealed per record under a per-tenant key, reached through its own functions, and recorded, revealed, erased and linked by audited kernel commands; residency is a tenant property | [ADR-2458](docs/adr/2026-09-30-identity-vault.md) |
 | — | One database, a schema per module | [ADR-2447](docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) |
 | — | Fail-closed gateway identity and signed caller authentication | [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
 | — | No default credentials; secrets resolve fail-closed | [ADR-2260](docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md) |
