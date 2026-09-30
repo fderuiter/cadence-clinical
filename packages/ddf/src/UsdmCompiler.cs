@@ -39,6 +39,7 @@ public static class UsdmCompiler
     /// <paramref name="accessibilityValidator"/> (the built-in <see cref="XFormsAccessibilityValidator"/> when none is
     /// given), and a form that fails is never returned.
     /// </remarks>
+    /// <exception cref="UsdmFormatException">The text is not JSON, or a value has the wrong JSON type.</exception>
     /// <exception cref="AccessibilityValidationException">The rendered form failed its accessibility check.</exception>
     public static DDFCompilationResult CompileUsdm(
         string usdmJson,
@@ -83,11 +84,35 @@ public static class UsdmCompiler
     /// <summary>
     /// Parses USDM JSON into DDFStudyIR intermediate representation.
     /// </summary>
+    /// <exception cref="UsdmFormatException">The text is not JSON, or a value has the wrong JSON type.</exception>
     public static (DDFStudyIR StudyIr, List<IReadOnlyDictionary<string, object?>> Warnings) ParseUsdmToIr(
         string usdmJson,
         string? fallbackStudyId = null,
         string? versionTag = null,
         string defaultLanguage = "en")
+    {
+        try
+        {
+            return ParseUsdm(usdmJson, fallbackStudyId, versionTag, defaultLanguage);
+        }
+        catch (JsonException ex)
+        {
+            throw new UsdmFormatException($"The USDM document is not valid JSON: {ex.Message}", ex);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // JsonElement throws this when a value has another JSON type than the one read (a number for a name, an
+            // array for the study): the document is JSON but not the shape a USDM study has (#5040). Nothing else on
+            // the parse path throws it; rule and item problems are DdfCompilationException.
+            throw new UsdmFormatException($"The USDM document does not have the expected shape: {ex.Message}", ex);
+        }
+    }
+
+    private static (DDFStudyIR StudyIr, List<IReadOnlyDictionary<string, object?>> Warnings) ParseUsdm(
+        string usdmJson,
+        string? fallbackStudyId,
+        string? versionTag,
+        string defaultLanguage)
     {
         var warnings = new List<IReadOnlyDictionary<string, object?>>();
         if (string.IsNullOrWhiteSpace(usdmJson) || usdmJson == "{}")

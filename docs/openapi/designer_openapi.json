@@ -83,6 +83,16 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_ProblemDetails"
+                }
+              }
+            }
+          },
           "403": {
             "description": "Forbidden",
             "content": {

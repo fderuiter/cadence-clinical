@@ -36,6 +36,14 @@ protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResul
     {
         return TypedResults.Ok(UsdmCompiler.CompileUsdm(request.UsdmJson, request.StudyId, request.VersionTag));
     }
+    catch (UsdmFormatException ex)
+    {
+        // Text that is not JSON, or JSON that is not shaped like a USDM study, is the caller's error (#5040).
+        return TypedResults.Problem(
+            title: "The USDM document cannot be read.",
+            detail: ex.Message,
+            statusCode: StatusCodes.Status400BadRequest);
+    }
     catch (DdfCompilationException ex)
     {
         // A rule that does not parse, names an unknown item or makes a skip-logic cycle, or a duplicated item.
@@ -61,6 +69,7 @@ protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResul
 })
 .WithName("CompileProtocol")
 .WithSummary("Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas.")
+.ProducesProblem(StatusCodes.Status400BadRequest)
 .ProducesProblem(StatusCodes.Status403Forbidden)
 .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
 // Compiling a protocol is study design work: sponsor designers and system administrators (#4958, ADR-2510).
