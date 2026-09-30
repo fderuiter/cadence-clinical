@@ -17,7 +17,11 @@ vi.mock("vue-router", () => ({
 }));
 
 vi.mock("../src/api/executionApi", () => ({
-  executionApi: { listSubjects: vi.fn() },
+  executionApi: {
+    listSubjects: vi.fn(),
+    createFormSubmission: vi.fn(),
+    completeFormSubmission: vi.fn(),
+  },
 }));
 
 function summary(code, overrides = {}) {
@@ -312,26 +316,52 @@ describe("eCRF subject list from Execution (#4828)", () => {
       );
     });
 
-    it("submits nothing: the form is sample content until form definitions are served (#4727)", async () => {
+    it("submits the form to Execution API and completes submission", async () => {
+      routeQuery.value = { studyId: "CAD-101", subjectId: "CAD-001" };
       const store = createStore();
+      vi.mocked(executionApi.listSubjects).mockResolvedValueOnce(
+        page([summary("CAD-001")])
+      );
+      vi.mocked(executionApi.createFormSubmission).mockResolvedValueOnce({
+        id: "form-sub-001",
+        status: "DRAFT",
+      });
+      vi.mocked(executionApi.completeFormSubmission).mockResolvedValueOnce({
+        id: "form-sub-001",
+        status: "COMPLETED",
+      });
+
       store.ecrfFields = [];
       const wrapper = mountView();
       await flushPromises();
-      // Assert on the push itself: the toast dismisses itself after 8 s, which a slow run can outlast.
-      const push = vi.spyOn(useToastStore(), "push");
 
       wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
       await flushPromises();
 
-      expect(push).toHaveBeenCalledWith(
+      expect(executionApi.createFormSubmission).toHaveBeenCalledWith(
         expect.objectContaining({
-          tone: "error",
-          title: "Submitting the form isn't available yet",
+          studyId: expect.any(String),
+          subjectId: expect.any(String),
+          formId: "VS_DEMO",
         })
       );
-      expect(store.ledgerBlocks.map((b) => b.action)).not.toContain(
+      expect(executionApi.completeFormSubmission).toHaveBeenCalledWith(
+        "form-sub-001"
+      );
+      expect(useToastStore(pinia).toasts).toContainEqual(
+        expect.objectContaining({
+          tone: "success",
+          title: "eCRF Form Submitted",
+        })
+      );
+      expect(store.ledgerBlocks.map((b) => b.action)).toContain(
         "SESSION_SUBMIT"
       );
+      const submitBlock = store.ledgerBlocks.find(
+        (b) => b.action === "SESSION_SUBMIT"
+      );
+      expect(submitBlock.synced).toBe(true);
+      expect(submitBlock.submissionId).toBe("form-sub-001");
     });
 
     it("shows no study bar in a demo build", async () => {
