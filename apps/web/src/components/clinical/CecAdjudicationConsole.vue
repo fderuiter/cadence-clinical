@@ -1956,7 +1956,8 @@ async function submitChairAdjudication() {
     const payload = {
       final_classification: chairForm.value.final_classification,
       final_subtype: chairForm.value.final_subtype,
-      final_adjudicated_onset_date: chairForm.value.final_adjudicated_onset_date,
+      final_adjudicated_onset_date:
+        chairForm.value.final_adjudicated_onset_date,
       binding_reader: chairForm.value.binding_reader,
       criteria_confirmed: chairForm.value.criteria_confirmed,
       adjudication_rationale: chairForm.value.adjudication_rationale,
@@ -1980,7 +1981,8 @@ async function submitChairAdjudication() {
       activeDossier.value.final_consensus_subtype =
         res?.final_subtype || chairForm.value.final_subtype;
       activeDossier.value.final_adjudicated_onset_date =
-        res?.final_adjudicated_onset_date || chairForm.value.final_adjudicated_onset_date;
+        res?.final_adjudicated_onset_date ||
+        chairForm.value.final_adjudicated_onset_date;
       activeDossier.value.adjudication_rationale =
         res?.adjudication_rationale || chairForm.value.adjudication_rationale;
       activeDossier.value.electronic_signature = res?.electronic_signature || {
@@ -1996,9 +1998,14 @@ async function submitChairAdjudication() {
   } catch (err) {
     const errCode = err?.data?.code || err?.response?.data?.code || err?.code;
     if (errCode === "REAUTHENTICATION_REQUIRED" || err?.status === 401) {
-      alert("21 CFR Part 11 re-authentication failed: Invalid password or expired token.");
+      alert(
+        "21 CFR Part 11 re-authentication failed: Invalid password or expired token."
+      );
     } else {
-      alert("Chair adjudication submission failed: " + (err?.message || err?.data?.detail || "Unknown error"));
+      alert(
+        "Chair adjudication submission failed: " +
+          (err?.message || err?.data?.detail || "Unknown error")
+      );
     }
   } finally {
     isSubmitting.value = false;
