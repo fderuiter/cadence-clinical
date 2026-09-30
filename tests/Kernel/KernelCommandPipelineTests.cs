@@ -103,7 +103,7 @@ public sealed partial class KernelCommandPipelineTests
     {
         var value = new DateTimeOffset(2026, 9, 29, 12, 0, 0, TimeSpan.FromHours(2)).AddTicks(1_234_567);
 
-        var truncated = KernelCommandPipeline.TruncateToMicroseconds(value);
+        var truncated = KernelTimestamps.ToStoredPrecision(value);
 
         truncated.Offset.Should().Be(TimeSpan.Zero);
         truncated.UtcTicks.Should().Be(value.UtcTicks - 7);

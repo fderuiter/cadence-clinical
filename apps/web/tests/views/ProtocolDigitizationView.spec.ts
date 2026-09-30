@@ -214,7 +214,9 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     });
 
     wrapper.vm.currentStep = 2;
-    wrapper.vm.triggerEscalation({
+    // Renamed to _triggerEscalation in #4739 (ESLint no-unused-vars: it has no in-view caller and is
+    // the DAG escalation test seam).
+    wrapper.vm._triggerEscalation({
       current_stage: "SOA_EXTRACTION",
       error_message:
         "Validation failed at stage gate 'SOA_EXTRACTION' after 2 automated self-healing attempts.",
@@ -240,7 +242,7 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     });
 
     wrapper.vm.currentStep = 2;
-    wrapper.vm.triggerEscalation({ current_stage: "SOA_EXTRACTION" });
+    wrapper.vm._triggerEscalation({ current_stage: "SOA_EXTRACTION" });
     await wrapper.vm.$nextTick();
 
     // Attempt submission without signature username

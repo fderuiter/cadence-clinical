@@ -40,7 +40,11 @@ const authMiddleware: Middleware = {
       // Pinia store not active or initialized
     }
 
-    const changeReason = (options as Record<string, unknown>)?.changeReason as
+    // openapi-fetch copies custom init keys (like `changeReason`) onto the Request object; the
+    // middleware `options` only holds the client's merged options (baseUrl, fetch, serializers).
+    const changeReason = ((request as unknown as Record<string, unknown>)
+      .changeReason ??
+      (options as unknown as Record<string, unknown>)?.changeReason) as
       string | undefined;
     if (changeReason && !request.headers.has("X-Change-Reason")) {
       request.headers.set("X-Change-Reason", changeReason);

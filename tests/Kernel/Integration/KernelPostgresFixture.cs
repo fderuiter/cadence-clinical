@@ -1,17 +1,23 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Persistence;
+using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Persistence.Outbox;
 using Cadence.Kernel.Time;
 using Cadence.Testing.Time;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Npgsql;
 
@@ -49,6 +55,9 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>The authorizer the pipeline consults; permits everything unless a test sets a policy.</summary>
     public TestAuthorizer Authorizer { get; } = new();
 
+    /// <summary>Records what the outbox relay delivers; a test can make it fail.</summary>
+    public TestEventPublisher Publisher { get; } = new();
+
     public void SkipIfUnavailable() => Assert.SkipWhen(ConnectionString is null, SkipReason);
 
     public async ValueTask InitializeAsync()
@@ -74,6 +83,9 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddSingleton<IClock>(Clock)
             .AddSingleton<ICurrentActor>(CurrentActor)
             .AddSingleton<IAuthorizer>(Authorizer)
+            .AddSingleton<IKernelEventPublisher>(Publisher)
+            .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
+            .AddSingleton<KernelOutboxRelay>()
             .AddKernelPersistence(ConnectionString)
             .AddKernelCommandPipeline()
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
@@ -96,6 +108,10 @@ public class KernelPostgresFixture : IAsyncLifetime
     internal KernelUnitOfWorkFactory UnitOfWork => Scope().GetRequiredService<KernelUnitOfWorkFactory>();
 
     internal KernelAuditChainVerifier AuditChainVerifier => Scope().GetRequiredService<KernelAuditChainVerifier>();
+
+    internal KernelAuditChainSealer AuditChainSealer => Scope().GetRequiredService<KernelAuditChainSealer>();
+
+    internal KernelOutboxRelay OutboxRelay => Scope().GetRequiredService<KernelOutboxRelay>();
 
     /// <summary>Creates a context wired as the kernel host wires it. Reads only: writes go through the pipeline.</summary>
     internal KernelDbContext CreateContext() =>
@@ -156,4 +172,40 @@ public sealed class TestAuthorizer : IAuthorizer
 
     public ValueTask<AuthorizationDecision> AuthorizeAsync(Actor actor, ICommand command, CancellationToken cancellationToken) =>
         ValueTask.FromResult(Policy?.Invoke(actor, command) ?? AuthorizationDecision.Permit());
+}
+
+/// <summary>An <see cref="IKernelEventPublisher"/> that records deliveries in order and fails when <see cref="Fail"/> says so.</summary>
+public sealed class TestEventPublisher : IKernelEventPublisher
+{
+    private readonly ConcurrentQueue<EventEnvelope> _delivered = new();
+
+    /// <summary>Return true to make delivery of that envelope throw.</summary>
+    public Func<EventEnvelope, bool>? Fail { get; set; }
+
+    /// <summary>Delay applied to every delivery, to hold rows locked while a test runs a second relay.</summary>
+    public TimeSpan Delay { get; set; }
+
+    public IReadOnlyList<EventEnvelope> Delivered => [.. _delivered];
+
+    public async Task PublishAsync(EventEnvelope envelope, CancellationToken cancellationToken)
+    {
+        if (Delay > TimeSpan.Zero)
+        {
+            await Task.Delay(Delay, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (Fail?.Invoke(envelope) == true)
+        {
+            throw new InvalidOperationException($"Subscriber rejected {envelope.Type}.");
+        }
+
+        _delivered.Enqueue(envelope);
+    }
+
+    public void Reset()
+    {
+        _delivered.Clear();
+        Fail = null;
+        Delay = TimeSpan.Zero;
+    }
 }

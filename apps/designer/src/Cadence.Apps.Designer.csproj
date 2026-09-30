@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <RootNamespace>Cadence.Apps.Designer</RootNamespace>
-    <Description>Cadence Study Protocol Designer, CDISC USDM metadata authoring, and Neo4j graph repository.</Description>
+    <Description>Cadence Study Protocol Designer, and CDISC USDM metadata authoring.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,7 +15,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Scalar.AspNetCore" />
-    <PackageReference Include="Neo4j.Driver" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />

@@ -1,10 +1,45 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
+// The view reaches the Designer API (amendment diff + branch) through designerService, which is built
+// on openapi-fetch and calls the global fetch with a Request. Stub fetch before any import so no test
+// reaches the real network; the remaining Execution calls still go through the mocked apiClient.
+const { mockFetch } = vi.hoisted(() => {
+  const mockFetch = vi.fn();
+  vi.stubGlobal("fetch", mockFetch);
+  return { mockFetch };
+});
+
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import AmendmentDiffView from "@/views/AmendmentDiffView.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useClinicalStore } from "@/stores/clinical";
 import { apiClient } from "@/api/apiClient";
+import { jsonResponse, recordedRequest } from "../fetch_mock.js";
+
+const amendmentDiffFixture = {
+  baseVersion: "1.0.0",
+  amendedVersion: "2.0.0",
+  requiresReconsent: true,
+  structureDiff: {
+    addedArms: [{ id: "arm_c", name: "Dose Escalation Cohort C" }],
+    modifiedEpochs: [{ id: "epoch_treat", name: "Extended Treatment" }],
+  },
+  soaDiff: {
+    addedVisits: [{ id: "v_week_16", name: "Week 16 Follow-up" }],
+    modifiedProcedures: [{ id: "proc_biomarker", name: "PK Blood Sampling" }],
+  },
+  eligibilityDiff: {
+    addedCriteria: [{ id: "crit_alt_01", text: "ALT/AST <= 2.5x ULN" }],
+  },
+};
+
+/** Every request the fetch stub received, decoded. */
+async function fetchRequests() {
+  return Promise.all(
+    mockFetch.mock.calls.map((_, i) => recordedRequest(mockFetch, i))
+  );
+}
 
 vi.mock("@/api/apiClient", () => {
   return {
@@ -35,30 +70,22 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
 
     vi.mocked(apiClient.get).mockImplementation((url) => {
       if (url.includes("/amendments") || url.includes("/diff")) {
-        return Promise.resolve({
-          baseVersion: "1.0.0",
-          amendedVersion: "2.0.0",
-          requiresReconsent: true,
-          structureDiff: {
-            addedArms: [{ id: "arm_c", name: "Dose Escalation Cohort C" }],
-            modifiedEpochs: [{ id: "epoch_treat", name: "Extended Treatment" }],
-          },
-          soaDiff: {
-            addedVisits: [{ id: "v_week_16", name: "Week 16 Follow-up" }],
-            modifiedProcedures: [
-              { id: "proc_biomarker", name: "PK Blood Sampling" },
-            ],
-          },
-          eligibilityDiff: {
-            addedCriteria: [{ id: "crit_alt_01", text: "ALT/AST <= 2.5x ULN" }],
-          },
-        });
+        return Promise.resolve(amendmentDiffFixture);
       }
       return Promise.resolve([]);
     });
 
     vi.mocked(apiClient.post).mockResolvedValue({ status: "SUCCESS" });
     vi.clearAllMocks();
+
+    mockFetch.mockReset();
+    mockFetch.mockImplementation(async (input: Request) => {
+      const { pathname } = new URL(input.url);
+      if (pathname.endsWith("/amendments/diff")) {
+        return jsonResponse(amendmentDiffFixture);
+      }
+      return jsonResponse({ status: "SUCCESS" });
+    });
   });
 
   afterEach(() => {
@@ -156,15 +183,26 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     await wrapper.find("#btn-publish-amendment").trigger("click");
     await flushPromises();
 
-    expect(apiClient.post).toHaveBeenCalledWith(
-      "/api/v1/designer/amendments/branch",
+    // Designer branching goes through designerService (openapi-fetch -> fetch); the Execution
+    // publish that follows it can land after flushPromises(), so wait for it.
+    await vi.waitFor(() =>
+      expect(apiClient.post).toHaveBeenCalledWith(
+        "/api/v1/execution/amendments/publish",
+        expect.anything()
+      )
+    );
+    const branchRequests = (await fetchRequests()).filter(
+      (r) => new URL(r.url).pathname === "/api/v1/designer/amendments/branch"
+    );
+    expect(branchRequests).toHaveLength(1);
+    expect(branchRequests[0].method).toBe("POST");
+    expect(branchRequests[0].body).toEqual(
       expect.objectContaining({
         study_id: "CADENCE-101",
         base_version_tag: "1.0.0",
         amendment_type: "major",
         requires_reconsent: true,
-      }),
-      {}
+      })
     );
 
     expect(apiClient.post).toHaveBeenCalledWith(
@@ -230,9 +268,12 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
       })
     );
 
-    // Verify subjects cleared
-    expect(wrapper.vm.selectedSubjectIds).toEqual([]);
-    expect(wrapper.vm.showBulkReconsentModal).toBe(false);
+    // Verify subjects cleared. The ledger block is hashed with crypto.subtle, which can outlast
+    // flushPromises(), so wait for the view to finish rather than racing it.
+    await vi.waitFor(() => {
+      expect(wrapper.vm.selectedSubjectIds).toEqual([]);
+      expect(wrapper.vm.showBulkReconsentModal).toBe(false);
+    });
   });
 
   it("renders Amendment Impact Summary and multi-layer diff tabs", async () => {
