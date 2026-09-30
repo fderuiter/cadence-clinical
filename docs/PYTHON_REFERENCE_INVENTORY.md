@@ -11,28 +11,29 @@ A file leaves this list when one of these is true:
 - **Port missing:** a C# implementation lands with tests, or the kernel specification or an ADR records that the
   behaviour is not carried forward.
 - **Port untested:** tests cover the C# port's main behaviour (the note says which paths are missing).
+- **Ported, deletion pending:** the tested C# port exists; the file goes once a maintainer approves the deletion.
 
 Delete the Python file, its row here and, when the folder has no Python left, its `__init__.py` files and
 `pyproject.toml`, in the same PR. Update the package README's "Python reference sources" line too.
 
-| Package | Port missing | Port untested |
-| --- | ---: | ---: |
-| [packages/ddf](#packagesddf) | 10 | 0 |
-| [packages/engine_core](#packagesengine_core) | 21 | 0 |
-| [packages/security](#packagessecurity) | 9 | 0 |
-| [packages/storage](#packagesstorage) | 6 | 0 |
+| Package | Port missing | Port untested | Ported, deletion pending |
+| --- | ---: | ---: | ---: |
+| [packages/ddf](#packagesddf) | 8 | 0 | 2 |
+| [packages/engine_core](#packagesengine_core) | 21 | 0 | 0 |
+| [packages/security](#packagessecurity) | 9 | 0 | 0 |
+| [packages/storage](#packagesstorage) | 6 | 0 | 0 |
 
 ## packages/ddf
 
 | Python file | What it does | C# today | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `compiler.py` | 5-stage orchestrator; requires an accessibility validator port (fail-closed) | `packages/ddf/src/UsdmCompiler.cs` (does not orchestrate these stages) | Port missing |  |
+| `compiler.py` | 5-stage orchestrator; requires an accessibility validator port (fail-closed) | `packages/ddf/src/UsdmCompiler.cs` (runs the accessibility stage fail-closed; has no normalizer, IR builder or rule stages) | Port missing | Goes with `stages/normalizer.py` and `stages/ir_builder.py` |
 | `dataset_json_etl.py` | eCRF observations → SDTM Dataset-JSON | none | Port missing |  |
-| `ports.py` | `AccessibilityValidatorPort` | none (C# has no validator port) | Port missing |  |
+| `ports.py` | `AccessibilityValidatorPort` | `IAccessibilityValidator` (`packages/ddf/src/Accessibility.cs`) | Ported, deletion pending | `DdfCompilerTests` |
 | `rules/ast.py` | DDF rule AST (skip logic, constraint, cross-form), node validation, `detect_circular_dependencies` | none | Port missing |  |
 | `rules/compiler.py` | `sanitize_identifier`, `extract_appearance`, condition → XPath compiler | none (`apps/execution/.../AstEditCheckEngine.cs` is edit checks, not XPath generation) | Port missing |  |
 | `smart_blocks.py` | Catalog of reusable form blocks (vitals, hematology, ConMeds, AE) and instantiation | none | Port missing |  |
-| `stages/accessibility.py` | Runs validator; raises on WCAG or layout violations | none (C# returns fixed `PASS`) | Port missing |  |
+| `stages/accessibility.py` | Runs validator; raises on WCAG or layout violations | `UsdmCompiler.CompileUsdm` throws `AccessibilityValidationException`; `XFormsAccessibilityValidator` is the built-in check | Ported, deletion pending | `DdfCompilerTests`, `XFormsAccessibilityValidatorTests` |
 | `stages/ir_builder.py` | Builds IR: rules → XPath relevant/constraint, multi-language localisations, appearance | none (C# `ParseUsdmToIr` skips all of this) | Port missing |  |
 | `stages/normalizer.py` | USDM validation, fallback id/name synthesis with warnings, duplicate-id detection | none | Port missing |  |
 | `tripartite.py` | Pydantic tripartite form definition (data, UI and logic schemas, migration matrix, UAT report) | none | Port missing | Disposition against spec CollectionSpec |

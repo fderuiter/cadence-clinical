@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -52,6 +53,21 @@ public sealed class DesignerCompileAuthorityTests(DesignerCompileAuthorityTests.
         var response = await client.PostAsJsonAsync(Route, new { usdmJson = Usdm }, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Compile_AFormThatFailsTheAccessibilityCheck_Returns422WithTheProblems()
+    {
+        using var client = factory.CreateSignedClient(TestSecurityContext.Identity("designer-1", "Sponsor Designer"));
+        const string broken = """{"study":{"id":"S-1","name":"Broken"},"items":[{"id":"BP","name":"Systolic (mmHg)","type":"integer"}]}""";
+
+        var response = await client.PostAsJsonAsync(Route, new { usdmJson = broken }, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>(Ct);
+        problem.GetProperty("title").GetString().Should().Be("The compiled form failed its accessibility check.");
+        problem.GetProperty("layoutErrors").EnumerateArray().Should().ContainSingle()
+            .Which.GetString().Should().StartWith("The form is not well-formed XML");
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
