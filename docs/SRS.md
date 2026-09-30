@@ -59,7 +59,7 @@ flowchart TD
     end
 
     subgraph Design & Metadata Layer
-        Designer[Designer MDR - Port 8001 : Neo4j USDM Graph]
+        Designer[Designer MDR - Port 8001 : USDM in PostgreSQL]
         DDFCompiler[DDF Compiler Engine - AST Parser]
         AIGateway[Clinical AI Gateway - Port 8013 : Privacy Air-Gap]
     end
@@ -347,7 +347,7 @@ stateDiagram-v2
 1. **Authoring:** Sponsor Designer logs into Cadence Designer (`/mdr`), selects study, and authors Study Arms, Epochs, and Encounters.
 2. **Concept Mapping:** Designer drags Biomedical Concepts (e.g. Vital Signs, Adverse Events) onto the Schedule of Activities (SoA) matrix and sets visit tolerance windows.
 3. **Validation:** Designer runs the Protocol Quality Sentinel; system validates graph connectivity and USDM compliance.
-4. **Digitization & Export:** DDF Compiler transforms the Neo4j USDM graph into intermediate representation (IR) and compiles eCRF definitions into the PostgreSQL Execution Engine.
+4. **Digitization & Export:** DDF Compiler transforms the USDM study design into intermediate representation (IR) and compiles eCRF definitions into the PostgreSQL Execution Engine.
 5. **Readiness:** Site CRC logs into `/ecrf`; the new study forms are immediately ready for dynamic schema projection without manual database schema creation.
 
 #### Journey 2: Site Startup, 6-Facet Greenlight, and First Subject Ingestion
@@ -437,7 +437,7 @@ stateDiagram-v2
 
 #### SRS-PRD-MDR-001: CDISC USDM Graph Protocol Authoring
 * **Parent PRD:** `PRD-MDR-001`
-* **Statement:** The Designer Service shall persist clinical study protocols as a directed property graph in Neo4j conforming strictly to the CDISC USDM v3.0/v4.0 specification, enforcing topological ordering across Study Arms, Epochs, and Encounters.
+* **Statement:** The Designer Service shall persist clinical study protocols as immutable, content-hashed ProtocolVersion snapshots in PostgreSQL conforming strictly to the CDISC USDM v3.0/v4.0 specification, enforcing topological ordering across Study Arms, Epochs, and Encounters. _(Amended 2026-09-30: the earlier Neo4j property-graph store is retired by [ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md).)_
 * **Regulatory Basis:** CDISC USDM v3.0 Core Specification; ICH M11.
 * **Verification Method & Qualification:** Test (T) [OQ].
 * **Verification Criteria:** Graph validation rejects cyclic epoch paths and validates schema against official USDM JSON Schema.

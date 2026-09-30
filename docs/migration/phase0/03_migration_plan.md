@@ -1,5 +1,8 @@
 # 03. Migration Sequencing Plan & Strangler Fig Design
 
+> [!NOTE]
+> **Historical record (Phase 0 discovery, September 2026).** It describes the system as it was then. Neo4j, listed here as the designer's store, is retired ([ADR-2245](../../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); protocol versions become immutable PostgreSQL snapshots in the kernel. Current system: [ARCHITECTURE.md](../../../ARCHITECTURE.md).
+
 **Document ID:** PHASE0-NET10-03
 **Status:** Builds directly on `01_system_topology.md` and `02_bounded_contexts.md`. Tier assignments below match `docs/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md` where that document is confirmed correct by fresh evidence, and depart from it only where §2 of `02_bounded_contexts.md` documents a specific correction (Cadence.Quality's *label*, not its tier; the Execution↔Designer same-tier cycle; the Org/Execution shared-database blocker; the `packages/security` leaf-node caveat).
 

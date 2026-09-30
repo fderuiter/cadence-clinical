@@ -1389,7 +1389,7 @@ const useClinicalStoreInner = defineStore("clinical", {
         this.currentUsdm.studyId,
         this.activeStudyVersionId
       );
-      // Map fetched Neo4j projection structure back to our local currentUsdm state through the normalization adapter
+      // Map the fetched USDM projection structure back to our local currentUsdm state through the normalization adapter
       this.currentUsdm = normalizeUsdm({
         ...this.currentUsdm,
         epochs: data.epochs,

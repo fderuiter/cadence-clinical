@@ -1,7 +1,7 @@
 # Specification: Domain-Specific MCP Tool Extensions, Graph Introspection & Autonomous Agent Sidecars
 
 > [!NOTE]
-> **Status: design proposal.** Not necessarily implemented. Check the relevant README or ADR before relying on it; kernel concepts in the [kernel specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) take precedence.
+> **Status: design proposal.** Not necessarily implemented. Check the relevant README or ADR before relying on it; kernel concepts in the [kernel specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) take precedence. Neo4j, mentioned below, is retired ([ADR-2245](../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)).
 
 - **Status:** Ready for Implementation
 - **Requirement ID:** PRD-SYS-054

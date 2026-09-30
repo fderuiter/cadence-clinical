@@ -1,5 +1,8 @@
 # 02. Bounded Context Decomposition & Coupling Analysis
 
+> [!NOTE]
+> **Historical record (Phase 0 discovery, September 2026).** It describes the system as it was then. Neo4j, listed here as the designer's store, is retired ([ADR-2245](../../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); protocol versions become immutable PostgreSQL snapshots in the kernel. Current system: [ARCHITECTURE.md](../../../ARCHITECTURE.md).
+
 **Document ID:** PHASE0-NET10-02
 **Status:** Independently re-derived from source (see method note in `01_system_topology.md` §0). Every dependency edge below was found by grepping actual `*_URL`/`*_SERVICE_URL` consumption in each service's code, not inferred from domain knowledge or copied from `docs/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX.md`. Where this document's evidence confirms that matrix, it is noted as confirmed; where it corrects it, the correction and its evidence are called out explicitly.
 

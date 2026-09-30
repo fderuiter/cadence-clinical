@@ -249,7 +249,7 @@
                 margin-bottom: 6px;
               "
             >
-              Neo4j Graph Entities
+              USDM Study Entities
             </div>
             <div
               style="
@@ -1570,7 +1570,7 @@
             "
           >
             Ingest CDISC USDM v3.0 / v4.0 JSON protocols to automatically
-            generate the Neo4j study graph model, synthesize responsive CDASH
+            generate the USDM study design model, synthesize responsive CDASH
             eCRFs with custom widgets (VAS Pain Slider, 74-Zone Body Map),
             compile the Schedule of Activities matrix, and pre-seed DIA TMF
             Expected Document List (EDL) placeholders across Zones 1–11.

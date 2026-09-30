@@ -9,7 +9,7 @@ The global eClinical software market (exceeding $16 Billion annually) is dominat
 
 Despite their market share, every legacy platform suffers from the same foundational pathology: **architectural fragmentation**. They were assembled over two decades through piecemeal acquisitions and point-to-point batch synchronizations. A study build requires separate, disjointed setups in EDC, RTSM, eCOA, Safety, and CTMS. Mid-study protocol amendments trigger catastrophic study downtimes, manual database schema migrations, and multi-week system reconciliations.
 
-**Cadence Clinical** is engineered from the ground up as a **Sovereign, Metadata-Compiled All-in-One eClinical Platform**. Powered by the **CDISC Unified Study Data Model (USDM v3.0/v4.0)**, a **Neo4j Graph Spine**, and an automated **Digital Data Flow (DDF)**, Cadence unifies all 12 core clinical trial pillars into a single reactive execution plane. A protocol authored or digitized in Cadence compiles automatically into eCRFs, visit matrices, edit check rules, supply chains, budget payment triggers, and regulatory TMF binders with **zero ETL, zero synchronization delay, and zero downtime amendments**.
+**Cadence Clinical** is engineered from the ground up as a **Sovereign, Metadata-Compiled All-in-One eClinical Platform**. Powered by the **CDISC Unified Study Data Model (USDM v3.0/v4.0)**, a **versioned USDM study-design spine**, and an automated **Digital Data Flow (DDF)**, Cadence unifies all 12 core clinical trial pillars into a single reactive execution plane. A protocol authored or digitized in Cadence compiles automatically into eCRFs, visit matrices, edit check rules, supply chains, budget payment triggers, and regulatory TMF binders with **zero ETL, zero synchronization delay, and zero downtime amendments**.
 
 ---
 
@@ -17,7 +17,7 @@ Despite their market share, every legacy platform suffers from the same foundati
 
 | Clinical Domain | Legacy Market Leader | Incumbent Limitations | Cadence Sovereign Advantage |
 | :--- | :--- | :--- | :--- |
-| **Protocol Design & MDR** | TransCelerate DDF / Manual Word/PDF | Static text documents; manual translation into EDC taking 8-16 weeks. | **Graph-Native USDM Compiler**: Ingests PDF/Word protocols into Neo4j graph and auto-compiles eCRFs and SoA matrices in minutes. |
+| **Protocol Design & MDR** | TransCelerate DDF / Manual Word/PDF | Static text documents; manual translation into EDC taking 8-16 weeks. | **Graph-Native USDM Compiler**: Ingests PDF/Word protocols into the USDM study design and auto-compiles eCRFs and SoA matrices in minutes. |
 | **EDC & CDMS** | Medidata Rave EDC / Veeva Vault EDC | Rigid casebook architectures; painful mid-study migrations requiring system downtime. | **Dynamic Subject Schema Projection**: Subject eCRF schemas resolve dynamically per subject protocol version; zero downtime amendments. |
 | **Randomization & RTSM** | Medidata Balance / 4G Clinical / Suvoda | Separate IRT build; manual reconciliation with EDC subject state. | **Native Unified RTSM**: Real-time Pocock-Simon minimization, cold chain MKT excursion engine, and Cell/Gene therapy COC/COI. |
 | **eCOA / ePRO & DCT** | Medidata Patient Cloud / Signant Health | Provisioned device dependency; clunky sync and disconnected eConsent. | **Offline-First PWA & Sensor Stream**: Universal BYOD/PWA with IndexedDB sync, biometric IoT ingestion, and tiered eConsent. |
@@ -92,7 +92,7 @@ Despite their market share, every legacy platform suffers from the same foundati
 +---------------------------------------------------------------------------------------+
 |                               CADENCE CLINICAL PLATFORM                               |
 +---------------------------------------------------------------------------------------+
-|  METADATA SPINE: CDISC USDM v3/v4 Graph (Neo4j) + Universal Digital Data Flow (DDF)   |
+|  METADATA SPINE: CDISC USDM v3/v4 Design Model + Universal Digital Data Flow (DDF)    |
 +---------------------------------------------------------------------------------------+
 |  EDC & CDMS       |  RTSM & SUPPLY     |  SITE PAYMENTS   |  IMAGING & ADJUDICATION   |
 |  Dynamic Schemas  |  Cold Chain MKT    |  Trigger-Payable |  DICOM RECIST 1.1 Review  |

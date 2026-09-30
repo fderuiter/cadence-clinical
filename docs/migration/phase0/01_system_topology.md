@@ -1,5 +1,8 @@
 # 01. System Topology & Entry Point Audit
 
+> [!NOTE]
+> **Historical record (Phase 0 discovery, September 2026).** It describes the system as it was then. Neo4j, listed here as the designer's store, is retired ([ADR-2245](../../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); protocol versions become immutable PostgreSQL snapshots in the kernel. Current system: [ARCHITECTURE.md](../../../ARCHITECTURE.md).
+
 **Document ID:** PHASE0-NET10-01 (baseline dated 2026-09-03)
 **Status:** Independently re-derived from source. Supersedes `docs/migration/SYSTEM_TOPOLOGY_AUDIT.md` for the items where the two disagree (see §7 "Reconciliation with prior discovery documents"); does not restate content that document already gets right.
 **Method:** Every claim in this document was produced by direct `grep`/file-read evidence against the working tree on 2026-09-03, not by re-summarizing prior migration documents. File:line citations are given wherever a specific mechanism is described. Where a prior document (`docs/migration/Migration_Phase0_Readiness_Audit.md`, document AUD-NET10-002) had already found a gap, this document re-verifies the citation and states whether it is still accurate, rather than assuming it is.
