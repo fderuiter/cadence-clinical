@@ -5,7 +5,7 @@ namespace Cadence.ToolingCore.Services;
 
 public static class CreateAdrService
 {
-    public static int CreateAdr(string title, string? repoRoot = null)
+    public static int CreateAdr(string title, DateOnly date, string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
         Console.WriteLine($"Scaffolding new Architectural Decision Record (ADR) for '{title}'...");
@@ -15,7 +15,7 @@ public static class CreateAdrService
 
         var existing = Directory.GetFiles(adrDir, "*.md");
         int nextNum = existing.Length + 1;
-        string dateStr = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        string dateStr = date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         string slug = title.ToLowerInvariant().Replace(' ', '-');
         string fileName = $"{dateStr}-{slug}.md";
         string filePath = Path.Combine(adrDir, fileName);

@@ -9,6 +9,7 @@ Generic building blocks for ports-and-adapters code: entity and value-object bas
 - `Ports.cs`: `IRepositoryPort`, `IUseCasePort`, `IEventDispatcherPort`, `IAuditLoggerPort`, `IExternalServiceClientPort`.
 - `DomainExceptions.cs`: `DomainException` and subclasses (`EntityNotFoundException`, `EntityAlreadyExistsException`, `ValidationException`, `ConflictException`, `PreconditionFailedException`, `UnauthorizedActionException`, `DatabaseException`).
 - `ProblemDetails.cs`: `ProblemDetails` record and `DomainErrorMapper`.
+- Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `DomainEvent.OccurredAt` is `required`, and `BaseEntity`/`AggregateRoot` take `createdAt` from the caller.
 
 ## Key dependencies
 

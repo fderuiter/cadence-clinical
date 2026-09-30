@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- K-TIME-3 (#4784): time comes from the caller or Cadence.Kernel.Time.IClock, never DateTime.Now/UtcNow. -->
+    <CadenceBanWallClock>true</CadenceBanWallClock>
     <OutputType>Exe</OutputType>
     <RootNamespace>Cadence.SchemaDocExporter</RootNamespace>
     <Description>Writes docs/schema: the database schema of every module, rendered from its EF Core design-time model.</Description>

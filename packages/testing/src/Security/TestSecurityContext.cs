@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Hosting;
@@ -39,7 +40,7 @@ public static class TestSecurityContext
         GatewayIdentity identity,
         DateTimeOffset? issuedAt = null,
         string secret = GatewaySecret) =>
-        identity.ToSignedHeaders(issuedAt ?? DateTimeOffset.UtcNow, GatewayIdentity.EncodeSecret(secret));
+        identity.ToSignedHeaders(issuedAt ?? SystemClock.Instance.UtcNow, GatewayIdentity.EncodeSecret(secret));
 
     /// <summary>
     /// A fresh e-signature step-up token for <paramref name="userId"/>, bound to <paramref name="action"/> and
@@ -54,7 +55,7 @@ public static class TestSecurityContext
         string secret = GatewaySecret) =>
         SigTokenIssuer.Issue(
             new SigTokenGrant(userId, userId, roles ?? [], action, semanticAction),
-            issuedAt ?? DateTimeOffset.UtcNow,
+            issuedAt ?? SystemClock.Instance.UtcNow,
             GatewayIdentity.EncodeSecret(secret));
 
     /// <summary>An authenticated principal carrying <c>sub</c> and role claims, as the gateway scheme emits.</summary>

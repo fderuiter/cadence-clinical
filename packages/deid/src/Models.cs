@@ -139,8 +139,9 @@ public class DicomDeidCertificate
     [JsonPropertyName("operator_identity")]
     public string OperatorIdentity { get; set; } = "cadence.imaging.pipeline";
 
+    /// <summary>When the image was de-identified (ISO 8601, UTC). Set by <c>DicomDeidentifier.Deidentify</c> from its caller's time.</summary>
     [JsonPropertyName("timestamp")]
-    public string Timestamp { get; set; } = DateTime.UtcNow.ToString("o");
+    public string Timestamp { get; set; } = string.Empty;
 
     [JsonPropertyName("signature")]
     public string? Signature { get; set; }
@@ -198,8 +199,9 @@ public class RedactionManifest
         }
     }
 
+    /// <summary>When the redaction was recorded (ISO 8601, UTC). Set by <c>RedactionManifestBuilder</c> from its caller's time.</summary>
     [JsonPropertyName("timestamp")]
-    public string Timestamp { get; set; } = DateTime.UtcNow.ToString("o");
+    public string Timestamp { get; set; } = string.Empty;
 
     [JsonPropertyName("source_version")]
     public string SourceVersion { get; set; } = string.Empty;

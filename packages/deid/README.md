@@ -10,6 +10,7 @@ De-identification library: PII/PHI detection with compliance profiles, value tra
 - `DicomDeidentifier` (with `DicomDeidResult`, `DicomDeidCertificate`, `PixelMaskBoundingBox`), built on fo-dicom.
 - `RedactionManifestBuilder`, `RedactionManifest`, `RedactionRecordItem`.
 - No Python reference sources remain (#4789). The repository scanner `cli.py` became the `check deid` gate (`packages/tooling_core/src/Services/DeidComplianceService.cs`, [docs/cli.md](../../docs/cli.md#cadence-check)).
+- Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `DicomDeidentifier.Deidentify(..., deidentifiedAt)` and `RedactionManifestBuilder.BuildRedactionManifest(..., recordedAt)` take the instant from the caller.
 
 ## Key dependencies
 

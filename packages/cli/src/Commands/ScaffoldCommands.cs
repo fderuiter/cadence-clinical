@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
 
+using Cadence.Kernel.Time;
+
 using Spectre.Console;
 
 namespace Cadence.Cli.Commands;
@@ -40,7 +42,7 @@ public static class ScaffoldCommands
     {
         AnsiConsole.MarkupLine($"[cyan]Scaffolding new ADR: {Markup.Escape(title)}[/]");
         string repoRoot = Cadence.Cli.Services.QualityGateOrchestrator.FindRepoRoot();
-        string todayStr = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        string todayStr = SystemClock.Instance.UtcNow.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         string slug = Regex.Replace(title.ToLowerInvariant().Trim(), @"[^\w\s-]", "");
         slug = Regex.Replace(slug, @"[\s_-]+", "-").Trim('-');
         string filename = $"{todayStr}-{slug}.md";

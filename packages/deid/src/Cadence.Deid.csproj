@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <!-- K-TIME-3 (#4784): time comes from the caller or Cadence.Kernel.Time.IClock, never DateTime.Now/UtcNow. -->
+    <CadenceBanWallClock>true</CadenceBanWallClock>
     <RootNamespace>Cadence.Deid</RootNamespace>
     <Description>Clinical data de-identification and PII/PHI detection engine supporting HIPAA, GDPR, and EU CTR profiles.</Description>
   </PropertyGroup>
