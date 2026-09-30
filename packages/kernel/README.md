@@ -169,6 +169,10 @@ var outside = fork.Design().ExternalReferences();                   // ConceptRe
 - **USDM import (ADR-2473).** `UsdmDesignImporter.ImportAsync` in `packages/ddf` reads a CDISC USDM 4 study into a
   design, keeping USDM ids as element ids and resolving each Biomedical Concept in the tenant's Concept Registry. It
   fails when a concept is missing and lists everything it leaves out as notes.
+- **Elements as lineage nodes (ADR-2474).** Approving a version writes its elements as `protocol_element` nodes, one
+  per study and element id (`ProtocolElementId.For(study, elementId)`), versioned by the protocol version that last
+  added or changed them. The approved version governs every element; changed elements supersede their previous
+  version; the scientific chain and the concepts that define an element are edges. See [Lineage](#lineage-adr-2471).
 
 ## Participants and enrollment (ADR-2453)
 
@@ -324,7 +328,7 @@ to a `NodeSummary`, computes its zoom path (`tenant → study → country → st
 `tenant → organization → site`) and lists its children with counts. A participant appears in a study as its
 enrollment, titled by its subject code; an enrollment with no responsible study site sits directly under its study
 (`ZoomRules.EnrollmentParent`). Protocol versions, study standards, validation runs and findings sit under their
-study, and an attestation under the object it signs. When a slice maps a new kind, add its case to `KernelScopeGraph` with the kind's zoom parent.
+study, a protocol element under the version that last governed it, and an attestation under the object it signs. When a slice maps a new kind, add its case to `KernelScopeGraph` with the kind's zoom parent.
 
 ## Standards Registry and MDR (ADR-2460)
 
@@ -526,6 +530,9 @@ context.Work.LinkInput(NodeRef.For(command.Concept.ConceptId, command.Concept.Ve
 - Mark an aggregate `[DerivedObject]` when every version must have inputs. The commit then throws `K-LIN-1` if a
   handler declared none.
 - Inputs must be pinned (`@version`).
+- An object made of parts (a protocol version's design elements) declares each with `IncludePart(part, newVersion)`
+  and the edges between them with `LinkPart`. The pipeline writes a node for each new part, `GovernedBy` from the
+  aggregate to every part, and each part edge, which must touch a new part.
 
 **Reading.**
 
@@ -544,7 +551,8 @@ var dossier = await lineage.DossierAsync(tenant, reader, node);
 grouped by kind with counts (Canvas D2). Counts are of objects, not versions. Masked objects are counted like any
 other, so every screen and every reader gets the same number. `IAmendmentImpact.ComputeAsync(tenant, reader,
 amendedVersion)` is K-PROT-2 as one caller of it: the dependents of the parent version, not walking through the fork
-itself. Forking a protocol version links the fork to its parent (`DerivedFrom`).
+itself, and entering only the protocol elements the amendment changes or removes (ADR-2474). `ChangedElements` lists
+those elements from the structural diff. Forking a protocol version links the fork to its parent (`DerivedFrom`).
 
 ## Activity stream (ADR-2485)
 
@@ -578,7 +586,8 @@ compares a protocol version with the version it was forked from and returns a `S
 - `SimulationBoundaryTests` keeps `Cadence.Kernel.Application.Simulation` away from the command sender, the unit of
   work and persistence, and keeps its persistence reads from calling `SaveChanges`.
 - When something changed, `Dependents` lists what depends on the base version at the as-of, from the same
-  dependents read as amendment impact (the stored candidate itself is left out).
+  dependents read as amendment impact (the stored candidate itself is left out, and only changed or removed protocol
+  elements are followed; dependents engine version 2).
 - `ScheduleChanges` lists the timed activities added to, removed from or moved on the expected schedule, with the
   planned visit before and after (K-TIME-7, ADR-2487). It is masked with the diff.
 - Participant-level schedule impact, projection changes, the validation delta and saving a result as a Proposal

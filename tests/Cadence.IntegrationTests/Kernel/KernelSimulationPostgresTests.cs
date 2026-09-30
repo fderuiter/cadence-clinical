@@ -40,8 +40,9 @@ public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture)
     });
 
     /// <summary>
-    /// A draft forked from the approved version and revised to add an arm is reported element by element, and running
-    /// the simulation leaves every kernel table of the tenant exactly as it was.
+    /// A draft forked from the approved version and revised to replace an arm is reported element by element, its
+    /// dependents are those of the removed arm and of the parent as a whole, and running the simulation leaves every
+    /// kernel table of the tenant exactly as it was.
     /// </summary>
     [Fact(DisplayName = "Simulate_ForkedDraftAgainstApprovedParent_WritesNothing")]
     public async Task SimulateForkedDraftAgainstApprovedParentWritesNothing()
@@ -73,7 +74,9 @@ public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture)
         result.Value.EngineVersions.Should().Contain(SimulationEngine.DependentsEngine);
         result.Value.Dependents!.Start.Should().Be(NodeRef.For(parent).ToString());
         result.Value.Dependents.Groups.SelectMany(g => g.Objects).Select(o => o.Ref).Should().BeEquivalentTo(
-            [NodeRef.For(other, 1)], "the other open amendment depends on the parent; the simulated draft itself does not count");
+            [NodeRef.For(other, 1), NodeRef.For(ProtocolElementId.For(study, "arm.B"), 1)],
+            "the other open amendment depends on the parent, and so does the removed arm (ADR-2474); the simulated draft "
+            + "itself and the unchanged arm do not count");
         var impact = await fixture.AmendmentImpact.ComputeAsync(
             tenant, fixture.CurrentActor.Actor!, draft, validAt: result.Value.AsOf.ValidAt, knownAt: result.Value.AsOf.KnownAt, cancellationToken: ct);
         impact!.Dependents.Should().BeEquivalentTo(result.Value.Dependents, "simulation and amendment impact count through the same read (Canvas D2)");

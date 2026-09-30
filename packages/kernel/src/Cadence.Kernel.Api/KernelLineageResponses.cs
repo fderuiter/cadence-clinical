@@ -113,21 +113,34 @@ public sealed record KernelDependentsResponse(
             report.Truncated);
 }
 
-/// <summary>The impact of a protocol amendment (K-PROT-2): what depends on the version it amends.</summary>
+/// <summary>The impact of a protocol amendment (K-PROT-2): the elements it changes and what depends on them.</summary>
 /// <param name="Amended">The NodeRef of the version that carries the amendment.</param>
 /// <param name="Parent">The NodeRef of the approved version it amends.</param>
 /// <param name="ImpactedElements">The protocol elements the amendment declares it changes.</param>
-/// <param name="Dependents">Everything downstream of the parent, counted the same way as Impact.</param>
+/// <param name="Dependents">
+/// Everything downstream of the elements the amendment changes or removes, and of the parent as a whole (ADR-2474),
+/// counted the same way as Impact.
+/// </param>
+/// <param name="ChangedElements">The elements the amended content adds, changes or removes, by the structural diff.</param>
 public sealed record KernelAmendmentImpactResponse(
     string Amended,
     string Parent,
     IReadOnlyList<string> ImpactedElements,
-    KernelDependentsResponse Dependents)
+    KernelDependentsResponse Dependents,
+    IReadOnlyList<KernelElementChangeResponse> ChangedElements)
 {
     internal static KernelAmendmentImpactResponse From(AmendmentImpact impact) =>
         new(
             NodeRef.For(impact.Amended).ToString(),
             NodeRef.For(impact.Parent).ToString(),
             impact.ImpactedElements,
-            KernelDependentsResponse.From(impact.Dependents));
+            KernelDependentsResponse.From(impact.Dependents),
+            [.. impact.ChangedElements.Select(c => new KernelElementChangeResponse(c.ElementId, c.InstanceType, c.Change.ToString(), c.Properties))]);
 }
+
+/// <summary>One element an amendment adds, changes or removes.</summary>
+/// <param name="ElementId">The element's stable id in the design.</param>
+/// <param name="InstanceType">The element's kind, when the document names one.</param>
+/// <param name="Change">Added, Changed or Removed.</param>
+/// <param name="Properties">For a changed element, the JSON Pointers of its changed values.</param>
+public sealed record KernelElementChangeResponse(string ElementId, string? InstanceType, string Change, IReadOnlyList<string> Properties);

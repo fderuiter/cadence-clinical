@@ -19,6 +19,7 @@ using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Tenancy;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -579,8 +580,8 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>
-    /// An amendment's impact names the amended and parent versions and the elements it changes, with the parent's
-    /// dependents counted the Impact way; a first version amends nothing.
+    /// An amendment's impact names the amended and parent versions, the elements it declares and the elements it
+    /// actually changes, with the dependents counted the Impact way; a first version amends nothing.
     /// </summary>
     [Fact]
     public async Task AmendmentImpact_CountsWhatDependsOnTheAmendedVersion()
@@ -595,6 +596,10 @@ public sealed class KernelApiHostTests : IDisposable
         root.GetProperty("parent").GetString().Should().Be(NodeRef.For(FirstVersion.Id).ToString());
         root.GetProperty("impacted_elements").EnumerateArray().Select(e => e.GetString()).Should().Equal("schedule_of_activities");
         root.GetProperty("dependents").GetProperty("total").GetInt32().Should().Be(2);
+        var changed = root.GetProperty("changed_elements").EnumerateArray().Should().ContainSingle().Subject;
+        changed.GetProperty("element_id").GetString().Should().Be("act.week12");
+        changed.GetProperty("change").GetString().Should().Be("Changed");
+        changed.GetProperty("properties").EnumerateArray().Select(p => p.GetString()).Should().Equal("/timing/day");
         _lineage.Impacts.Should().ContainSingle().Which.Should().Be((Tenant, Reader, Amendment.Id));
 
         var first = await client.GetAsync(new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}/impact", UriKind.Relative), ct);
@@ -751,7 +756,12 @@ public sealed class KernelApiHostTests : IDisposable
         {
             Impacts.Add((tenant, reader, amended));
             return Task.FromResult<AmendmentImpact?>(amended == Amendment.Id
-                ? new AmendmentImpact(Amendment.Id, FirstVersion.Id, ["schedule_of_activities"], Report(NodeRef.For(FirstVersion.Id), depth))
+                ? new AmendmentImpact(
+                    Amendment.Id,
+                    FirstVersion.Id,
+                    ["schedule_of_activities"],
+                    Report(NodeRef.For(FirstVersion.Id), depth),
+                    [new ElementChange("act.week12", "PlannedActivity", ElementChangeKind.Changed, ["/timing/day"])])
                 : null);
         }
 

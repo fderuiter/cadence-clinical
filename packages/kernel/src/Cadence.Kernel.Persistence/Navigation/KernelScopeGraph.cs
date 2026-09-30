@@ -5,10 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
+using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Navigation;
+using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
@@ -23,10 +25,11 @@ namespace Cadence.Kernel.Persistence.Navigation;
 /// <summary>
 /// Reads the zoom hierarchy from the kernel tables (ADR-2481 §4.3). Read-only (<c>AsNoTracking</c>), through a context
 /// bound to the caller's tenant by Row-Level Security (K-ID-2), with the tenant also in every predicate. Enrollments sit
-/// under their study site; protocol versions and study standards under their study; an attestation under the object
-/// it signs (ADR-2485). Participants (identity only) and kinds whose tables do not exist yet (visit, observation, …)
-/// resolve to nothing. Current-state objects are returned at their current version, whatever version the reference names;
-/// the returned <see cref="NodeSummary.Ref"/> says which version that is.
+/// under their study site; protocol versions and study standards under their study; a protocol element under the version
+/// that last governed it (ADR-2474); an attestation under the object it signs (ADR-2485). Participants (identity only)
+/// and kinds whose tables do not exist yet (visit, observation, …) resolve to nothing. Current-state objects are returned
+/// at their current version, whatever version the reference names; the returned <see cref="NodeSummary.Ref"/> says which
+/// version that is.
 /// </summary>
 internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : IKernelScopeGraph
 {
@@ -115,6 +118,9 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                             $"v{protocolVersion.Number}",
                             protocolVersion.Status.ToString()),
                         NodeRef.For(protocolVersion.StudyId));
+
+            case NodeKinds.ProtocolElement:
+                return await ProtocolElementAsync(db, tenant, node.Id, cancellationToken).ConfigureAwait(false);
 
             case NodeKinds.StudyStandardsProfile:
                 var profileId = StudyStandardsProfileId.FromGuid(node.Id);
@@ -253,6 +259,39 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             default:
                 return [];
         }
+    }
+
+    /// <summary>
+    /// A protocol element (ADR-2474) sits under the protocol version that last governed it, at its latest lineage version,
+    /// labelled with its element id from that version's content.
+    /// </summary>
+    private static async Task<ScopeNode?> ProtocolElementAsync(KernelDbContext db, TenantId tenant, Guid element, CancellationToken cancellationToken)
+    {
+        if (await ProtocolElementOwner.GoverningVersionAsync(db, tenant, element, cancellationToken).ConfigureAwait(false) is not { } versionId)
+        {
+            return null;
+        }
+
+        var owner = await db.ProtocolVersions.AsNoTracking()
+            .Where(p => p.TenantId == tenant && p.Id == versionId)
+            .Select(p => new { p.StudyId, p.Content })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        var latest = await db.LineageNodes.AsNoTracking()
+            .Where(n => n.TenantId == tenant && n.Kind == NodeKinds.ProtocolElement && n.NodeId == element)
+            .MaxAsync(n => (long?)n.Version, cancellationToken).ConfigureAwait(false);
+        if (owner is null || latest is null)
+        {
+            return null;
+        }
+
+        var id = ProtocolElementId.FromGuid(element);
+        var elements = ProtocolStructuralDiff.Compare(null, owner.Content);
+        var elementId = elements.IsSuccess
+            ? elements.Value!.Select(c => c.ElementId).FirstOrDefault(e => e != ProtocolStructuralDiff.RootId && ProtocolElementId.For(owner.StudyId, e) == id)
+            : null;
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(id, latest.Value), elementId is null ? "Protocol element" : $"Protocol element {elementId}", elementId),
+            NodeRef.For(versionId));
     }
 
     private static IQueryable<StudySiteRow> StudySitesWithSites(KernelDbContext db, TenantId tenant) =>

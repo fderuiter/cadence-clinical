@@ -188,7 +188,8 @@ details:
 - **Dependents.** When the diff is not empty and there is a base, the result carries `Dependents`: the
   `DependentsReport` of the base version at the pinned as-of, from the one dependents read (Canvas D2, #4841). A
   stored candidate is excluded from the walk, as amendment impact excludes the amended fork, so the two report the
-  same objects. Until protocol elements are lineage nodes (#4808) the changed object is the base version as a whole.
+  same objects. The walk follows only the protocol elements the diff changes or removes (ADR-2474), so the dependents
+  engine is `lineage.dependents` version 2.
   Masked objects are counted and masked by the lineage read; a hidden version withholds the section entirely.
 - **Schedule changes (ADR-2487).** A later slice adds `schedule_changes[]` from the expected schedule (K-TIME-7):
   the timed activities added, removed or moved on the study-day axis, with the planned visit before and after. It is

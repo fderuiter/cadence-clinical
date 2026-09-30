@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Lineage;
@@ -42,6 +43,7 @@ internal sealed class KernelSimulationInputs(KernelTenantDbContextFactory contex
         Actor reader,
         ProtocolVersionId baseVersion,
         ProtocolVersionId? candidate,
+        IReadOnlySet<NodeRef> impactedElements,
         SimulationAsOf asOf,
         CancellationToken cancellationToken)
     {
@@ -52,6 +54,7 @@ internal sealed class KernelSimulationInputs(KernelTenantDbContextFactory contex
             reader,
             new DependentsQuery(NodeRef.For(baseVersion), ValidAt: asOf.ValidAt, KnownAt: asOf.KnownAt),
             excluded,
+            ProtocolElementImpact.FollowFromBase(impactedElements),
             cancellationToken);
     }
 }
