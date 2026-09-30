@@ -109,7 +109,7 @@ The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users w
 
 ### NodeRef and zoom path
 
-The public reference to any kernel object: `kind:id@version`, for example `study_site:<uuid>@3` (ADR-2481). It is the one form used in URLs, the command palette, trace links, event envelopes and lineage edges. The kernel computes the object's zoom path from it (portfolio, study, country, study site, participant); a participant with no responsible site sits directly under its study. The zoom path is presentation only and never grants access.
+The public reference to any kernel object: `kind:id@version`, for example `study_site:<uuid>@3` (ADR-2481). It is the one form used in URLs, the command palette, trace links, event envelopes and lineage edges. The kernel computes the object's zoom path from it (portfolio, study, country, study site, enrollment). A participant appears in a study as its enrollment, titled by its subject code; an enrollment with no responsible site sits directly under its study. The zoom path is presentation only and never grants access.
 
 ### Search
 

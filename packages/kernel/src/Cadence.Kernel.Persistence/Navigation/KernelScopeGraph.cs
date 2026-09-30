@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Domain.Standards;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
@@ -19,9 +20,10 @@ namespace Cadence.Kernel.Persistence.Navigation;
 
 /// <summary>
 /// Reads the zoom hierarchy from the kernel tables (ADR-2481 §4.3). Read-only (<c>AsNoTracking</c>), through a context
-/// bound to the caller's tenant by Row-Level Security (K-ID-2), with the tenant also in every predicate. Protocol versions and study standards sit under their study, and an attestation under the object it signs
-/// (ADR-2485). Kinds whose tables do not exist yet (participant, observation, …) resolve to nothing until their slice
-/// maps them. Current-state objects are returned at their current version, whatever version the reference names;
+/// bound to the caller's tenant by Row-Level Security (K-ID-2), with the tenant also in every predicate. Enrollments sit
+/// under their study site; protocol versions and study standards under their study; an attestation under the object
+/// it signs (ADR-2485). Participants (identity only) and kinds whose tables do not exist yet (visit, observation, …)
+/// resolve to nothing. Current-state objects are returned at their current version, whatever version the reference names;
 /// the returned <see cref="NodeSummary.Ref"/> says which version that is.
 /// </summary>
 internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : IKernelScopeGraph
@@ -81,6 +83,20 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                 return studySite is null
                     ? null
                     : new ScopeNode(StudySiteSummary(studySite), NodeRef.For(studySite.StudyId), studySite.Country);
+
+            case NodeKinds.Enrollment:
+                // A participant's place in a study is its enrollment at a study site (ADR-2453). The participant itself is
+                // identity only and belongs to no single study, so the zoom level below a study site is the enrollment.
+                var enrollmentId = EnrollmentId.FromGuid(node.Id);
+                var enrollment = await db.Enrollments.AsNoTracking()
+                    .Where(e => e.TenantId == tenant && e.Id == enrollmentId)
+                    .Select(e => new { e.SubjectCode, e.StudyId, e.StudySiteId, e.Status, e.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return enrollment is null
+                    ? null
+                    : new ScopeNode(
+                        EnrollmentSummary(enrollmentId, enrollment.SubjectCode, enrollment.Status, enrollment.VersionIndex),
+                        ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId));
 
             case NodeKinds.ProtocolVersion:
                 var protocolVersionId = ProtocolVersionId.FromGuid(node.Id);
@@ -171,10 +187,27 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     .OrderBy(x => x.Country).ThenBy(x => x.SiteCode)
                     .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-                // Participants and enrollments are mapped (#4776), but the participant zoom level is not: whether a study
-                // site's children are participants or their enrollments is the navigator's decision (ADR-2481), so the
-                // count stays unknown until that level is added.
-                return [.. studySites.Select(x => new ScopeChild(StudySiteSummary(x), ChildCount: null, x.Country))];
+                var enrollmentCounts = await db.Enrollments.AsNoTracking()
+                    .Where(e => e.TenantId == tenant && e.StudyId == studyId)
+                    .GroupBy(e => e.StudySiteId)
+                    .Select(g => new { StudySiteId = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(x => x.StudySiteId, x => x.Count, cancellationToken).ConfigureAwait(false);
+                return [.. studySites.Select(x => new ScopeChild(StudySiteSummary(x), enrollmentCounts.GetValueOrDefault(x.Id), x.Country))];
+
+            case NodeKinds.StudySite:
+                var parentSiteId = StudySiteId.FromGuid(node.Id);
+                var enrollments = await db.Enrollments.AsNoTracking()
+                    .Where(e => e.TenantId == tenant && e.StudySiteId == parentSiteId)
+                    .Select(e => new { e.Id, e.SubjectCode, e.Status, e.VersionIndex })
+                    .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+                // Visits are not mapped in the kernel yet (#4727), so an enrollment's child count is unknown.
+                return
+                [
+                    .. enrollments
+                        .OrderBy(e => e.SubjectCode.Value, StringComparer.Ordinal)
+                        .Select(e => new ScopeChild(EnrollmentSummary(e.Id, e.SubjectCode, e.Status, e.VersionIndex), ChildCount: null)),
+                ];
 
             case NodeKinds.Organization:
                 var organizationId = OrganizationId.FromGuid(node.Id);
@@ -204,6 +237,9 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             SiteCode = site.SiteCode,
             Country = site.Country,
         };
+
+    private static NodeSummary EnrollmentSummary(EnrollmentId id, SubjectCode code, EnrollmentStatus status, long versionIndex) =>
+        new(NodeRef.For(id, versionIndex), code.Value, code.Value, status.ToString());
 
     private static NodeSummary StudySiteSummary(StudySiteRow row) =>
         new(NodeRef.For(row.Id, row.VersionIndex), row.SiteName, row.SiteCode, row.Status);

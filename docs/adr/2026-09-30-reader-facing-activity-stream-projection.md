@@ -123,8 +123,8 @@ records the gaps:
 
 ### 4.4 Out of scope
 
-- Participant and enrollment events (ADR-2453) are projected with the tenant as their scope until the navigator
-  gains the enrollment zoom level; that follow-up places them under their study site or study.
+- Enrollment events (ADR-2453) are scoped under their study site and study. `ParticipantRegistered` is scoped to
+  the tenant only, because a Participant is identity only and belongs to no single study.
 - A kernel HTTP endpoint and live push (server-sent events) wait for the kernel API host's tenant resolution and
   read authorization (#4780, #4781). Until then applications call `IActivityStream` in-process.
 - A host registers `AddKernelActivityStream()`, `AddKernelActivityProjection()` and an `INodeVisibility`. Exactly

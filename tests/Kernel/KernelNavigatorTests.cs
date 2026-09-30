@@ -39,16 +39,16 @@ public sealed class KernelNavigatorTests
     }
 
     /// <summary>
-    /// A participant at a study site zooms portfolio → study → country → study site → participant, and each object
+    /// A participant's enrollment at a study site zooms portfolio → study → country → study site → enrollment, and each object
     /// level carries its NodeRef.
     /// </summary>
-    [Fact(DisplayName = "ZoomPath_ParticipantAtSite")]
-    public async Task ZoomPathParticipantAtSite()
+    [Fact(DisplayName = "ZoomPath_EnrollmentAtSite")]
+    public async Task ZoomPathEnrollmentAtSite()
     {
-        var participant = NodeRef.For(ParticipantId.New(), version: 4);
-        _graph.Add(new ScopeNode(new NodeSummary(participant, "Participant", "017-004"), ZoomRules.ParticipantParent(Study, StudySite)));
+        var enrollment = NodeRef.For(EnrollmentId.New(), version: 4);
+        _graph.Add(new ScopeNode(new NodeSummary(enrollment, "Enrollment", "017-004"), ZoomRules.EnrollmentParent(Study, StudySite)));
 
-        var path = await new KernelNavigator(_graph).GetZoomPathAsync(Tenant, participant, TestContext.Current.CancellationToken);
+        var path = await new KernelNavigator(_graph).GetZoomPathAsync(Tenant, enrollment, TestContext.Current.CancellationToken);
 
         path.Should().NotBeNull();
         path!.Select(s => (s.Level, s.Label)).Should().Equal(
@@ -56,25 +56,25 @@ public sealed class KernelNavigatorTests
             (NodeKinds.Study, "ABC-301"),
             (ZoomLevels.Country, "DE"),
             (NodeKinds.StudySite, "DE-017"),
-            (NodeKinds.Participant, "017-004"));
-        path.Select(s => s.Ref).Should().Equal(TenantNode, StudyNode, null, StudySiteNode, participant);
+            (NodeKinds.Enrollment, "017-004"));
+        path.Select(s => s.Ref).Should().Equal(TenantNode, StudyNode, null, StudySiteNode, enrollment);
     }
 
     /// <summary>
-    /// A participant with no responsible study site (a decentralised trial) resolves directly under its study,
+    /// An enrollment with no responsible study site (a decentralised trial) resolves directly under its study,
     /// without error and without a country level.
     /// </summary>
-    [Fact(DisplayName = "ZoomPath_SitelessParticipantResolvesUnderStudy")]
-    public async Task ZoomPathSitelessParticipantResolvesUnderStudy()
+    [Fact(DisplayName = "ZoomPath_SitelessEnrollmentResolvesUnderStudy")]
+    public async Task ZoomPathSitelessEnrollmentResolvesUnderStudy()
     {
-        var participant = NodeRef.For(ParticipantId.New());
-        ZoomRules.ParticipantParent(Study, responsibleStudySite: null).Should().Be(StudyNode);
-        ZoomRules.ParticipantParent(Study, StudySiteId.Empty).Should().Be(StudyNode);
-        _graph.Add(new ScopeNode(new NodeSummary(participant, "Participant", "DCT-001"), ZoomRules.ParticipantParent(Study, null)));
+        var enrollment = NodeRef.For(EnrollmentId.New());
+        ZoomRules.EnrollmentParent(Study, responsibleStudySite: null).Should().Be(StudyNode);
+        ZoomRules.EnrollmentParent(Study, StudySiteId.Empty).Should().Be(StudyNode);
+        _graph.Add(new ScopeNode(new NodeSummary(enrollment, "Enrollment", "DCT-001"), ZoomRules.EnrollmentParent(Study, null)));
 
-        var path = await new KernelNavigator(_graph).GetZoomPathAsync(Tenant, participant, TestContext.Current.CancellationToken);
+        var path = await new KernelNavigator(_graph).GetZoomPathAsync(Tenant, enrollment, TestContext.Current.CancellationToken);
 
-        path!.Select(s => s.Level).Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.Participant);
+        path!.Select(s => s.Level).Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.Enrollment);
     }
 
     /// <summary>A missing object has no summary, path or children; the navigator never invents one.</summary>
