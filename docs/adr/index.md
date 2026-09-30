@@ -69,6 +69,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2483: Dry-Run Authorization and the Command Catalogue](2026-09-30-dry-run-authorization-and-command-catalogue.md) (2026-09-30)
 - [ADR-2484: Tenant-Scoped Search over the Source Tables](2026-09-30-tenant-scoped-search-over-source-tables.md) (2026-09-30)
 - [ADR-2485: Reader-Facing Activity Stream Projection](2026-09-30-reader-facing-activity-stream-projection.md) (2026-09-30)
+- [ADR-2540: Kernel API Host and Read Endpoints for the Clinical Canvas](2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) (2026-09-30)
 
 ### 1. Core Platform & Execution Engine
 

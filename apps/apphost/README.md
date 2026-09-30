@@ -24,6 +24,7 @@
   | 8003 | etmf | 8009 | tickets | 8015 | knowledge |
   | 8004 | interop | 8010 | eisf | 8016 | payments |
   | 8005 | quality | 8011 | econsent | 8017 | ai-gateway |
+  |  |  |  |  | 8018 | kernel |
 
 - Every service except the gateway, designer and ai-gateway references the `cadence` database
   (`ConnectionStrings:cadence`), waits for PostgreSQL, and applies its own migrations on start

@@ -54,7 +54,7 @@ var keycloak = builder.AddContainer("keycloak", "quay.io/keycloak/keycloak", "26
     .WithBindMount("../../../docker/cadence-realm.json", "/opt/keycloak/data/import/realm.json", isReadOnly: true)
     .WithArgs("start-dev", "--import-realm");
 
-// Product services. Each one listens on the host port docker compose publishes it on (8001-8017), so the
+// Product services. Each one listens on the host port docker compose publishes it on (8001-8018), so the
 // gateway's Development defaults, the web apps and docs/LOCAL_DEV_ENVIRONMENT.md hold for both. Every service
 // verifies gateway-signed identity with GATEWAY_SECRET and refuses to start without it. Services backed by
 // PostgreSQL get ConnectionStrings__cadence from the database reference, wait for PostgreSQL, and apply their
@@ -99,6 +99,7 @@ var knowledge = Service(builder.AddProject<Projects.Cadence_Apps_Knowledge>("kno
 var payments = Service(builder.AddProject<Projects.Cadence_Apps_Payments>("payments"), 8016)
     .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
 var aiGateway = Service(builder.AddProject<Projects.Cadence_Apps_AiGateway>("ai-gateway"), 8017, database: false);
+var kernel = Service(builder.AddProject<Projects.Cadence_Kernel_Host>("kernel"), 8018);
 
 // The gateway is the API entry point the web apps call (VITE_API_BASE_URL=http://localhost:8000). It is told
 // where every service is rather than relying on its Development localhost defaults.
@@ -116,7 +117,7 @@ foreach (var (variable, service) in new[]
     ("CTMS_SERVICE_URL", ctms), ("SAFETY_SERVICE_URL", safety), ("TICKETS_SERVICE_URL", tickets),
     ("EISF_SERVICE_URL", eisf), ("ECONSENT_SERVICE_URL", econsent), ("ORG_SERVICE_URL", org),
     ("FILESHARE_SERVICE_URL", fileshare), ("IMAGING_SERVICE_URL", imaging), ("KNOWLEDGE_SERVICE_URL", knowledge),
-    ("PAYMENTS_SERVICE_URL", payments), ("AI_GATEWAY_SERVICE_URL", aiGateway),
+    ("PAYMENTS_SERVICE_URL", payments), ("AI_GATEWAY_SERVICE_URL", aiGateway), ("KERNEL_SERVICE_URL", kernel),
 })
 {
     gateway.WithEnvironment(variable, service.GetEndpoint("http"));

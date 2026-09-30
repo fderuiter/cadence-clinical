@@ -53,7 +53,7 @@ different keys. See [ADR-2494](adr/2026-09-30-field-level-encryption-and-keyed-l
 
 ## Gateway routing
 
-Read by `apps/gateway/src/Program.cs:105-121`. In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.
+Read by `apps/gateway/src/Program.cs:105-122`. In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.
 
 | Key | Default port |
 | --- | --- |
@@ -74,6 +74,7 @@ Read by `apps/gateway/src/Program.cs:105-121`. In Development each defaults to `
 | `KNOWLEDGE_SERVICE_URL` | 8015 |
 | `PAYMENTS_SERVICE_URL` | 8016 |
 | `AI_GATEWAY_SERVICE_URL` | 8017 |
+| `KERNEL_SERVICE_URL` | 8018 |
 
 Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClusters.cs` (ADR-2451). Each must be a positive number of seconds; the gateway refuses to start otherwise.
 

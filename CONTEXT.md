@@ -132,6 +132,11 @@ A capability is a `resource.action` token with a verb class (Read, Propose, Exec
 
 The kernel's answer to "why": why an action is permitted or denied, why an object is in its state, why a finding was raised or a metric has its value (ADR-2482). It holds a one-sentence claim, reasoning steps, every condition evaluated (met and unmet) with the evidence behind it as NodeRefs, and what would change the outcome. The component that owns the rule produces it; the UI renders it and never composes one.
 
+### Kernel API host
+
+The one process that serves the kernel over HTTP (`apps/kernel-api`, assembly `Cadence.Kernel.Host`, ADR-2540) and the only one that registers kernel persistence (K-XS-2). The web app reaches it through the gateway at `/api/v1/kernel`: node summaries, zoom paths and children, the command catalogue, CanI and search, each in the tenant and as the person named by the caller's verified claims. Objects the caller may not see come back masked, in place, and are left out of search. Until the kernel can find a caller's kernel tenant it answers every read with 503, and until the authority slice exists every object is masked and every decision is a denial that says so.
+_Avoid_: serving kernel reads from a product service, taking the tenant from the route, query or body
+
 ### Simulation (candidate version)
 
 Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal.

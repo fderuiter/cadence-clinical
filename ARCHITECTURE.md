@@ -128,6 +128,7 @@ Every backend is an ASP.NET Core 10 Minimal API host under `apps/<name>/src`, bu
 | [knowledge](apps/knowledge/README.md) | `Cadence.Apps.Knowledge` | 8015 | `knowledge` | `KnowledgeDbContext` | Scaffold |
 | [payments](apps/payments/README.md) | `Cadence.Apps.Payments` | 8016 | `payments` | `PaymentsDbContext` | Scaffold |
 | [ai_gateway](apps/ai_gateway/README.md) | `Cadence.Apps.AiGateway` | 8017 | `ai` | none | Scaffold |
+| [kernel-api](apps/kernel-api/README.md) | `Cadence.Kernel.Host` | 8018 | `kernel` | `KernelDbContext` (schema `kernel`, Row-Level Security) | Read endpoints for the Canvas ([ADR-2540](docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)); answers 503 until kernel tenants can be resolved |
 
 "Scaffold" means the host, security, health checks and (usually) a `DbContext` with migrations exist,
 but the service maps at most a few endpoints. Their future as kernel applications is decided in

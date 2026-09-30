@@ -3,7 +3,7 @@
 # ==============================================================================
 # Every .NET service is built from docker/Dockerfile.dotnet and listens on 8080
 # inside its container (the aspnet image default). Host ports keep the
-# 8001-8017 map the gateway uses by default; the front proxy on host port 8000
+# 8001-8018 map the gateway uses by default; the front proxy on host port 8000
 # is the entry point the web apps call (VITE_API_BASE_URL=http://localhost:8000).
 # Keycloak is published on host port 8080 (VITE_KEYCLOAK_URL).
 #
@@ -195,6 +195,7 @@ services:
       KNOWLEDGE_SERVICE_URL: http://knowledge:8080
       PAYMENTS_SERVICE_URL: http://payments:8080
       AI_GATEWAY_SERVICE_URL: http://ai-gateway:8080
+      KERNEL_SERVICE_URL: http://kernel:8080
       # Tokens are issued to browsers at localhost:8080, so that is the issuer; discovery
       # and signing keys are fetched from the Keycloak container over the compose network.
       OIDC_AUTHORITY: http://localhost:8080/realms/cadence
@@ -436,6 +437,19 @@ services:
       - "8017:8080"
     environment:
       <<: *dotnet-env
+
+  kernel:
+    <<: *dotnet-service
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dotnet
+      args:
+        APP_NAME: kernel-api
+    container_name: cadence-kernel
+    ports:
+      - "8018:8080"
+    environment: *db-env
+    depends_on: *db-depends
 
   dotnet-dev:
     build:
