@@ -20,6 +20,9 @@ fallback credentials in any environment, Development included (ADR-2260).
 | `CADENCE_ENV` | `packages/cli/src/Services/DatabaseResetService.cs:122` (refuses `db reset` in Production) | `Development` | no |
 | `ENVIRONMENT` | `packages/cli/src/Services/DatabaseResetService.cs:124` | `Development` | no |
 | `CADENCE_TRUSTED_PROXIES` | every service (`packages/telemetry/src/CadenceHttpHardening.cs`, ADR-2491) | none; only loopback is trusted | set it behind a proxy. Comma-separated IP addresses or CIDR ranges of the front proxy and gateway. `X-Forwarded-For` and `X-Forwarded-Proto` from any other sender are ignored, and an entry that is not an address or range fails startup |
+| `AppHost__Profile` | `apps/apphost/src/Program.cs` (Aspire AppHost only) | `full` | no; `full` runs every service, `core` runs the gateway, execution, kernel and web only ([AppHost README](../apps/apphost/README.md#profiles-and-existing-infrastructure)). Any other value stops the AppHost |
+| `AppHost__OidcAuthority` | `apps/apphost/src/Program.cs` (Aspire AppHost only) | none; the AppHost runs a Keycloak container | no; an existing issuer URL ending in `/realms/<realm>` replaces the Keycloak container |
+| `ConnectionStrings__cadence` (AppHost) | `apps/apphost/src/Program.cs` | none; the AppHost runs a PostgreSQL container | no; an existing database replaces the PostgreSQL container and is passed to every service |
 
 ## Database
 
