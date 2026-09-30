@@ -96,6 +96,7 @@ Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClu
 | `GH_TOKEN`, `GITHUB_TOKEN` | `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10` | none |
 | `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:59-60` | off |
 | `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:152` | off |
+| `CADENCE_TEST_POSTGRES`, `CADENCE_TEST_DOCKER` | `tests/Execution/Integration/ExecutionPostgresFixture.cs` (connection string, or `1` for a Testcontainers `postgres:16-alpine`; without either, PostgreSQL tests are skipped) | none |
 
 ## Web apps
 

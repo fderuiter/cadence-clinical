@@ -1,4 +1,6 @@
-# ADR-112: Site-Aware Synchronized Document Deduplication
+# ADR-2411: Site-Aware Synchronized Document Deduplication
+
+Also known as: ADR-112 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-26

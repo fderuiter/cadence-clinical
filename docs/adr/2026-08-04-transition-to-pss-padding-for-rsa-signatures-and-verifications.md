@@ -1,4 +1,6 @@
-# ADR-2157: Transition to PSS Padding for RSA Signatures and Verifications
+# ADR-2339: Transition to PSS Padding for RSA Signatures and Verifications
+
+Also known as: ADR-2157 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-04

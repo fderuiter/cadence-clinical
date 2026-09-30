@@ -1,4 +1,6 @@
-# ADR-117: Add SQLModel Dependency for eISF Structured Section Taxonomy and Versioning
+# ADR-2412: Add SQLModel Dependency for eISF Structured Section Taxonomy and Versioning
+
+Also known as: ADR-117 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-27

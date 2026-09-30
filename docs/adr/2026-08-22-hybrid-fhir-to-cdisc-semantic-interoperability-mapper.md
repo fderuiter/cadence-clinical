@@ -1,4 +1,4 @@
-# ADR 2026-08-22: Hybrid FHIR-to-CDISC Semantic Interoperability Mapper
+# ADR-2390: Hybrid FHIR-to-CDISC Semantic Interoperability Mapper
 
 ## Status
 

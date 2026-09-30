@@ -1,4 +1,6 @@
-# ADR-065: eISF Browse, RBAC, Downloads, and Completeness
+# ADR-2350: eISF Browse, RBAC, Downloads, and Completeness
+
+Also known as: ADR-065 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-09

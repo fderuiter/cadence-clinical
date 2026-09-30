@@ -1,5 +1,8 @@
 # Technical Design Document (TDD) & Architecture Specification
 
+> [!WARNING]
+> **Status: superseded design baseline.** This document describes the per-service design before ADR-2244. The target design is the [kernel specification v0.2](../kernel/CLINICAL_KERNEL_SPECIFICATION.md); the running system is described in [ARCHITECTURE.md](../../ARCHITECTURE.md). Version labels such as "PROD" below do not mean the system is validated or in production.
+
 ## Document Metadata
 
 - **Document ID:** CAD-TDD-002
@@ -1267,13 +1270,19 @@ flowchart LR
 `apps/execution` models multi-echelon supply chains, stochastic Monte Carlo resupply forecasting, Arrhenius Mean Kinetic Temperature (MKT) cold-chain excursion analytics, and adaptive oncology dose-escalation algorithms.
 
 #### 6.8.1 Mean Kinetic Temperature (Arrhenius Model)
-$$	ext{MKT} = rac{rac{\Delta H}{R}}{-\ln \left( rac{1}{n} \sum_{i=1}^n \exp\left( -rac{\Delta H / R}{T_i + 273.15} ight) ight)} - 273.15$$
+$$	ext{MKT} = rac{rac{\Delta H}{R}}{-\ln \left( rac{1}{n} \sum_{i=1}^n \exp\left( -rac{\Delta H / R}{T_i + 273.15} 
+ight) 
+ight)} - 273.15$$
 where $\Delta H / R = 10000	ext{ K}$ is the standard universal activation energy / gas constant ratio, and $T_i$ is the temperature in degrees Celsius at timepoint $i$.
 
 #### 6.8.2 Bayesian Optimal Interval (BOIN) DLT Boundaries
 For target toxicity rate $\phi$ (e.g. 0.25):
-- **Escalation Boundary:** $\lambda_e = rac{\ln\left( rac{1 - \phi_1}{1 - \phi} ight)}{\ln\left( rac{\phi (1 - \phi_1)}{\phi_1 (1 - \phi)} ight)}$
-- **De-escalation Boundary:** $\lambda_d = rac{\ln\left( rac{1 - \phi}{1 - \phi_2} ight)}{\ln\left( rac{\phi_2 (1 - \phi)}{\phi (1 - \phi_2)} ight)}$
+- **Escalation Boundary:** $\lambda_e = rac{\ln\left( rac{1 - \phi_1}{1 - \phi} 
+ight)}{\ln\left( rac{\phi (1 - \phi_1)}{\phi_1 (1 - \phi)} 
+ight)}$
+- **De-escalation Boundary:** $\lambda_d = rac{\ln\left( rac{1 - \phi}{1 - \phi_2} 
+ight)}{\ln\left( rac{\phi_2 (1 - \phi)}{\phi (1 - \phi_2)} 
+ight)}$
 where $\phi_1 = 0.6\phi$ and $\phi_2 = 1.4\phi$. If observed DLT rate $\hat{p}_j \le \lambda_e$, escalate dose; if $\hat{p}_j \ge \lambda_d$, de-escalate dose; otherwise stay at current dose level.
 
 ---
@@ -1283,7 +1292,8 @@ where $\phi_1 = 0.6\phi$ and $\phi_2 = 1.4\phi$. If observed DLT rate $\hat{p}_j
 `apps/quality` executes automated cross-site statistical surveillance under ICH E6(R3) to detect fabricated data, terminal digit rounding biases, and anomalous variance shrinkage.
 
 #### 6.9.1 Benford's Law Chi-Square Test
-Leading digit distribution $P(d) = \log_{10}\left(1 + rac{1}{d}ight)$ for $d \in \{1, \dots, 9\}$.
+Leading digit distribution $P(d) = \log_{10}\left(1 + rac{1}{d}
+ight)$ for $d \in \{1, \dots, 9\}$.
 $$\chi^2 = \sum_{d=1}^9 rac{(O_d - E_d)^2}{E_d}, \quad 	ext{where } E_d = N \cdot P(d)$$
 
 #### 6.9.2 Mahalanobis Distance for Variance Shrinkage

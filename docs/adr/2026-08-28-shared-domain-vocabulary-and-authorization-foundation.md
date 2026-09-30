@@ -1,4 +1,6 @@
-# ADR-120: Shared Domain Vocabulary and Authorization Foundation
+# ADR-2421: Shared Domain Vocabulary and Authorization Foundation
+
+Also known as: ADR-120 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-28

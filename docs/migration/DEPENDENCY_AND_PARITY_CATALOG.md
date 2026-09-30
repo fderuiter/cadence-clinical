@@ -2,7 +2,7 @@
 
 **Project:** Cadence Clinical Research Software Platform
 **Target Runtime:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)
-**Governing ADRs:** [ADR-2233](../adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2234](../adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
+**Governing ADRs:** [ADR-2233](../adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2428](../adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
 **Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2), PRD-SYS-053
 
 ---

@@ -1,4 +1,8 @@
 # Product Specification & Functional Requirements Document (FRD)
+
+> [!WARNING]
+> **Status: pre-kernel baseline, not a validated release.** Reverse-engineered from the Python implementation. Capabilities are being re-specified per application on top of the [kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12). The "GxP Validated" classification below is historical.
+
 ## Cadence Clinical Research Software Platform
 
 **Document Reference:** CAD-SPEC-FRD-001  

@@ -1,4 +1,6 @@
-# ADR-2167: Standardize Hatch build configurations for clean namespace wheels
+# ADR-2363: Standardize Hatch build configurations for clean namespace wheels
+
+Also known as: ADR-2167 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-11

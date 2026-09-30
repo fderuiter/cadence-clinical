@@ -1,4 +1,6 @@
-# ADR-053: USDM v2/v3 Canonical Contract and Mapping Coverage Matrix
+# ADR-2315: USDM v2/v3 Canonical Contract and Mapping Coverage Matrix
+
+Also known as: ADR-053 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-02

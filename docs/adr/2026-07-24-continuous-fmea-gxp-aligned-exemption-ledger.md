@@ -1,4 +1,4 @@
-# ADR-2026-07-24-continuous-fmea-gxp-aligned-exemption-ledger: Continuous FMEA GxP-Aligned Exemption Ledger
+# ADR-2285: Continuous FMEA GxP-Aligned Exemption Ledger
 
 ## Status
 

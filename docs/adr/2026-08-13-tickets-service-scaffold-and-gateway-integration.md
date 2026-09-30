@@ -1,4 +1,6 @@
-# ADR-067: Standalone In-Application Ticketing Service and Platform Integration
+# ADR-2374: Standalone In-Application Ticketing Service and Platform Integration
+
+Also known as: ADR-067 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-13

@@ -1,25 +1,51 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// soaClient is built on openapi-fetch (src/api/client.ts), which calls the global fetch with a single
+// Request object. Stub fetch before any module import so no test can reach the real network.
+const { mockFetch } = vi.hoisted(() => {
+  const mockFetch = vi.fn();
+  vi.stubGlobal("fetch", mockFetch);
+  return { mockFetch };
+});
+
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical";
 import { soaClient } from "../src/api/soaClient.js";
 import { useAuthStore } from "../src/stores/auth.js";
-import { apiClient } from "../src/api/apiClient.js";
 import { mount } from "@vue/test-utils";
 import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
 import { normalizeUsdm } from "../src/stores/normalization";
 import { stateTrackingPlugin } from "../src/stores/plugins.js";
+import { jsonResponse, recordedRequest } from "./fetch_mock.js";
 
-// Mock apiClient
-vi.mock("../src/api/apiClient.js", () => {
-  return {
-    apiClient: {
-      get: vi.fn(),
-      post: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-    },
-  };
-});
+const TRUSTED_IDENTITY_HEADERS = [
+  "X-User-Id",
+  "X-User-Roles",
+  "X-Gateway-Signature",
+  "X-Gateway-Timestamp",
+  "X-Signature-Version",
+];
+
+/** Asserts the client did not forge any gateway-trusted identity or signature headers. */
+function expectNoClientSideTrustedHeaders(headers) {
+  for (const name of TRUSTED_IDENTITY_HEADERS) {
+    expect(headers.get(name)).toBeNull();
+  }
+}
+
+/** Routes mocked fetch calls: SoA projection GETs get `projection`, everything else `mutationBody`. */
+function routeFetch(mutationBody, projection) {
+  mockFetch.mockImplementation(async (input) => {
+    const request = input instanceof Request ? input : new Request(input);
+    if (
+      request.method === "GET" &&
+      new URL(request.url).pathname.endsWith("/soa-projection")
+    ) {
+      return jsonResponse(projection);
+    }
+    return jsonResponse(mutationBody);
+  });
+}
 
 beforeEach(() => {
   const pinia = createPinia();
@@ -93,9 +119,9 @@ describe("SoA Matrix Pure Function Unit Tests", () => {
   });
 });
 
-describe("SoA Request Construction & Serialization Unit Tests (Mocking apiClient)", () => {
-  it("constructs GxP compliant requests using apiClient boundary", async () => {
-    apiClient.post.mockResolvedValueOnce({ status: "success" });
+describe("SoA Request Construction & Serialization Unit Tests (Mocking fetch)", () => {
+  it("constructs GxP compliant requests through the typed API client", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ status: "success" }));
 
     const options = {
       changeReason: "Testing signed headers",
@@ -109,68 +135,69 @@ describe("SoA Request Construction & Serialization Unit Tests (Mocking apiClient
       options
     );
 
-    expect(apiClient.post).toHaveBeenCalledTimes(1);
-    const [path, body, opts] = apiClient.post.mock.calls[0];
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const { url, method, headers, body } = await recordedRequest(mockFetch, 0);
 
-    expect(path).toBe("/api/v1/studies/STUDY-01/versions/v_draft_01/arms");
+    expect(method).toBe("POST");
+    expect(new URL(url).pathname).toBe(
+      "/api/v1/studies/STUDY-01/versions/v_draft_01/arms"
+    );
     expect(body).toEqual({
       id: "ARM-Z",
       properties: { name: "Arm Z" },
     });
-    expect(opts.changeReason).toBe("Testing signed headers");
+    expect(headers.get("X-Change-Reason")).toBe("Testing signed headers");
+    expect(headers.get("Authorization")).toBe("Bearer mock-keycloak-jwt-token");
 
     // Regression check: make sure no client-side trusted identity/signature headers are produced or supplied
-    if (opts.headers) {
-      expect(opts.headers["X-User-Id"]).toBeUndefined();
-      expect(opts.headers["X-User-Roles"]).toBeUndefined();
-      expect(opts.headers["X-Gateway-Signature"]).toBeUndefined();
-      expect(opts.headers["X-Gateway-Timestamp"]).toBeUndefined();
-      expect(opts.headers["X-Signature-Version"]).toBeUndefined();
-    }
+    expectNoClientSideTrustedHeaders(headers);
   });
 
   it("serializes nested mutations correctly for PUT requests", async () => {
-    apiClient.put.mockResolvedValueOnce({ status: "success" });
+    // The generic soaClient.mutateEntity(path-string) helper was replaced by typed per-entity methods
+    // (saveArm/saveEpoch/saveVisit/saveProcedure) when the client moved to openapi-fetch; an update is
+    // now saveArm(..., { method: "PUT" }).
+    mockFetch.mockResolvedValueOnce(jsonResponse({ status: "success" }));
 
     const options = {
       changeReason: "Testing PUT serialization",
       method: "PUT",
     };
 
-    await soaClient.mutateEntity(
+    await soaClient.saveArm(
       "STUDY-01",
       "v_draft_01",
-      "arms",
       "ARM-Z",
       { name: "Arm Z Modified" },
       options
     );
 
-    expect(apiClient.put).toHaveBeenCalledTimes(1);
-    const [path, body, opts] = apiClient.put.mock.calls[0];
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const { url, method, headers, body } = await recordedRequest(mockFetch, 0);
 
-    expect(path).toBe(
+    expect(method).toBe("PUT");
+    expect(new URL(url).pathname).toBe(
       "/api/v1/studies/STUDY-01/versions/v_draft_01/arms/ARM-Z"
     );
     expect(body).toEqual({
       properties: { name: "Arm Z Modified" },
     });
-    expect(opts.changeReason).toBe("Testing PUT serialization");
+    expect(headers.get("X-Change-Reason")).toBe("Testing PUT serialization");
   });
 });
 
 describe("SoA Builder Store Integration", () => {
-  it("successfully passes mutation details with changeReason to apiClient", async () => {
-    // mock first save
-    apiClient.post.mockResolvedValueOnce({ status: "success", id: "ARM-A" });
-    // mock projection fetch
-    apiClient.get.mockResolvedValueOnce({
-      epochs: [{ epoch_id: "EP-1", epoch_name: "Epoch 1" }],
-      encounters: [
-        { encounter_id: "E1", encounter_name: "Visit 1", epoch_id: "EP-1" },
-      ],
-      rows: [{ activity_id: "ACT1", activity_name: "Vitals", cells: [] }],
-    });
+  it("successfully passes mutation details with changeReason to the API", async () => {
+    routeFetch(
+      { status: "success", id: "ARM-A" },
+      {
+        epochs: [{ epoch_id: "EP-1", epoch_name: "Epoch 1" }],
+        encounters: [
+          { encounter_id: "E1", encounter_name: "Visit 1", epoch_id: "EP-1" },
+        ],
+        rows: [{ activity_id: "ACT1", activity_name: "Vitals", cells: [] }],
+      }
+    );
 
     const store = useClinicalStore();
 
@@ -181,34 +208,32 @@ describe("SoA Builder Store Integration", () => {
       "Configure arm"
     );
 
-    expect(apiClient.post).toHaveBeenCalledTimes(1);
-    const [path, , opts] = apiClient.post.mock.calls[0];
+    // One mutation POST followed by the SoA projection refresh GET
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const mutation = await recordedRequest(mockFetch, 0);
 
-    expect(path).toBe(
+    expect(mutation.method).toBe("POST");
+    expect(new URL(mutation.url).pathname).toBe(
       "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/arms"
     );
-    expect(opts.changeReason).toBe("Configure arm");
+    expect(mutation.headers.get("X-Change-Reason")).toBe("Configure arm");
 
-    // Regression: make sure no other client side trusted headers are present in opts
-    if (opts.headers) {
-      expect(opts.headers["X-User-Id"]).toBeUndefined();
-      expect(opts.headers["X-User-Roles"]).toBeUndefined();
-      expect(opts.headers["X-Gateway-Signature"]).toBeUndefined();
-      expect(opts.headers["X-Gateway-Timestamp"]).toBeUndefined();
-      expect(opts.headers["X-Signature-Version"]).toBeUndefined();
-    }
+    // Regression: make sure no other client side trusted headers are present on the mutation
+    expectNoClientSideTrustedHeaders(mutation.headers);
+
+    const projection = await recordedRequest(mockFetch, 1);
+    expect(projection.method).toBe("GET");
+    expect(new URL(projection.url).pathname).toBe(
+      "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/soa-projection"
+    );
+    expect(store.currentUsdm.encounters[0].encounter_id).toBe("E1");
   });
 
   it("handles link creation API calls correctly with changeReason", async () => {
-    apiClient.post.mockResolvedValueOnce({
-      status: "success",
-      message: "Link established",
-    });
-    apiClient.get.mockResolvedValueOnce({
-      epochs: [],
-      encounters: [],
-      rows: [],
-    });
+    routeFetch(
+      { status: "success", message: "Link established" },
+      { epochs: [], encounters: [], rows: [] }
+    );
 
     const store = useClinicalStore();
 
@@ -219,19 +244,25 @@ describe("SoA Builder Store Integration", () => {
     };
     await store.pushSoALink("visit-procedure", payload, "Link VS to Screening");
 
-    expect(apiClient.post).toHaveBeenCalledTimes(1);
-    const [path, body, opts] = apiClient.post.mock.calls[0];
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const { url, method, headers, body } = await recordedRequest(mockFetch, 0);
 
-    expect(path).toBe(
+    expect(method).toBe("POST");
+    expect(new URL(url).pathname).toBe(
       "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/links/visit-procedure"
     );
     expect(body).toEqual(payload);
-    expect(opts.changeReason).toBe("Link VS to Screening");
+    expect(headers.get("X-Change-Reason")).toBe("Link VS to Screening");
   });
 
   it("handles locked version immutability failures gracefully", async () => {
-    apiClient.post.mockRejectedValueOnce(
-      new Error("IMMUTABILITY_VIOLATION: Locked Version cannot be modified")
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse(
+        {
+          detail: "IMMUTABILITY_VIOLATION: Locked Version cannot be modified",
+        },
+        { status: 409 }
+      )
     );
 
     const store = useClinicalStore();
@@ -248,6 +279,8 @@ describe("SoA Builder Store Integration", () => {
     expect(store.soaError).toBe(
       "IMMUTABILITY_VIOLATION: Locked Version cannot be modified"
     );
+    // The failed mutation must not trigger a projection refresh
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });
 

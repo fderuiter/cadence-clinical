@@ -1,4 +1,6 @@
-# ADR-2171: Dedicated Background Processing with PostgreSQL Database-level Coordination
+# ADR-2366: Dedicated Background Processing with PostgreSQL Database-level Coordination
+
+Also known as: ADR-2171 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-12

@@ -1,9 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const { mockFetch } = vi.hoisted(() => {
+  const mockFetch = vi.fn();
+  vi.stubGlobal("fetch", mockFetch);
+  return { mockFetch };
+});
+
 import { createPinia, setActivePinia } from "pinia";
 import { econsentService } from "../src/api/econsent";
+import { jsonResponse, recordedRequest } from "./fetch_mock.js";
 
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
+const lastRequest = () =>
+  recordedRequest(mockFetch, mockFetch.mock.calls.length - 1);
 
 describe("eConsent API Client Unit Tests", () => {
   let pinia;
@@ -15,11 +23,7 @@ describe("eConsent API Client Unit Tests", () => {
   });
 
   it("should list templates and append query string correctly", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => [{ template_id: "tpl-1" }],
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse([{ template_id: "tpl-1" }]));
 
     const res = await econsentService.listTemplates({
       study_id: "study-01",
@@ -28,19 +32,17 @@ describe("eConsent API Client Unit Tests", () => {
     expect(res).toEqual([{ template_id: "tpl-1" }]);
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
       "http://localhost:8000/api/v1/econsent/templates?study_id=study-01&all_versions=true"
     );
-    expect(options.method).toBe("GET");
+    expect(request.method).toBe("GET");
   });
 
   it("should create template with body and custom X-Change-Reason header on mutation", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 201,
-      json: async () => ({ template_id: "tpl-1" }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ template_id: "tpl-1" }, { status: 201 })
+    );
 
     const body = {
       study_id: "study-01",
@@ -52,19 +54,17 @@ describe("eConsent API Client Unit Tests", () => {
     });
     expect(res).toEqual({ template_id: "tpl-1" });
 
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe("http://localhost:8000/api/v1/econsent/templates");
-    expect(options.method).toBe("POST");
-    expect(options.headers["X-Change-Reason"]).toBe("Initial creation");
-    expect(JSON.parse(options.body)).toEqual(body);
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe("http://localhost:8000/api/v1/econsent/templates");
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("X-Change-Reason")).toBe("Initial creation");
+    expect(request.body).toEqual(body);
   });
 
   it("should update template with body and custom X-Change-Reason", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ template_id: "tpl-1", version_index: 2 }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ template_id: "tpl-1", version_index: 2 })
+    );
 
     const body = { study_id: "study-01", template_name: "ICF v2" };
     const res = await econsentService.updateTemplate("tpl-1", body, {
@@ -72,76 +72,68 @@ describe("eConsent API Client Unit Tests", () => {
     });
     expect(res).toEqual({ template_id: "tpl-1", version_index: 2 });
 
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe("http://localhost:8000/api/v1/econsent/templates/tpl-1");
-    expect(options.method).toBe("PUT");
-    expect(options.headers["X-Change-Reason"]).toBe("Minor edit");
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
+      "http://localhost:8000/api/v1/econsent/templates/tpl-1"
+    );
+    expect(request.method).toBe("PUT");
+    expect(request.headers.get("X-Change-Reason")).toBe("Minor edit");
   });
 
   it("should get template with version_index query", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ template_id: "tpl-1", version_index: 1 }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ template_id: "tpl-1", version_index: 1 })
+    );
 
     const res = await econsentService.getTemplate("tpl-1", {
       version_index: 1,
     });
     expect(res).toEqual({ template_id: "tpl-1", version_index: 1 });
 
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
       "http://localhost:8000/api/v1/econsent/templates/tpl-1?version_index=1"
     );
-    expect(options.method).toBe("GET");
+    expect(request.method).toBe("GET");
   });
 
   it("should compose template with version_index query", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ template_id: "tpl-1" }),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({ template_id: "tpl-1" }));
 
     const res = await econsentService.composeTemplate("tpl-1", {
       version_index: 2,
     });
     expect(res).toEqual({ template_id: "tpl-1" });
 
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
       "http://localhost:8000/api/v1/econsent/templates/tpl-1/compose?version_index=2"
     );
-    expect(options.method).toBe("GET");
+    expect(request.method).toBe("GET");
   });
 
   it("should publish template with POST and changeReason", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ template_id: "tpl-1", is_published: true }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ template_id: "tpl-1", is_published: true })
+    );
 
     const res = await econsentService.publishTemplate("tpl-1", {
       changeReason: "Publishing ICF",
     });
     expect(res).toEqual({ template_id: "tpl-1", is_published: true });
 
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
       "http://localhost:8000/api/v1/econsent/templates/tpl-1/publish"
     );
-    expect(options.method).toBe("POST");
-    expect(options.headers["X-Change-Reason"]).toBe("Publishing ICF");
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("X-Change-Reason")).toBe("Publishing ICF");
   });
 
   it("should create clause and pass changeReason", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 201,
-      json: async () => ({ clause_id: "c-1" }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse({ clause_id: "c-1" }, { status: 201 })
+    );
 
     const res = await econsentService.createClause(
       { title: "C1" },
@@ -149,18 +141,14 @@ describe("eConsent API Client Unit Tests", () => {
     );
     expect(res).toEqual({ clause_id: "c-1" });
 
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe("http://localhost:8000/api/v1/econsent/clauses");
-    expect(options.method).toBe("POST");
-    expect(options.headers["X-Change-Reason"]).toBe("Initial clause");
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe("http://localhost:8000/api/v1/econsent/clauses");
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("X-Change-Reason")).toBe("Initial clause");
   });
 
   it("should update clause", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ clause_id: "c-1" }),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({ clause_id: "c-1" }));
 
     const res = await econsentService.updateClause(
       "c-1",
@@ -169,45 +157,35 @@ describe("eConsent API Client Unit Tests", () => {
     );
     expect(res).toEqual({ clause_id: "c-1" });
 
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe("http://localhost:8000/api/v1/econsent/clauses/c-1");
-    expect(options.method).toBe("PUT");
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
+      "http://localhost:8000/api/v1/econsent/clauses/c-1"
+    );
+    expect(request.method).toBe("PUT");
   });
 
   it("should list clauses", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => [],
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse([]));
 
     await econsentService.listClauses({ study_id: "study-01" });
-    const [url] = mockFetch.mock.calls[0];
-    expect(url).toBe(
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
       "http://localhost:8000/api/v1/econsent/clauses?study_id=study-01"
     );
   });
 
   it("should get clause", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({}),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({}));
 
     await econsentService.getClause("c-1", { version_index: 3 });
-    const [url] = mockFetch.mock.calls[0];
-    expect(url).toBe(
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
       "http://localhost:8000/api/v1/econsent/clauses/c-1?version_index=3"
     );
   });
 
   it("should define comprehension check", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 201,
-      json: async () => ({}),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({}, { status: 201 }));
 
     await econsentService.defineComprehensionCheck(
       "tpl-1",
@@ -215,99 +193,91 @@ describe("eConsent API Client Unit Tests", () => {
       { questions: [] },
       { changeReason: "Defining checks" }
     );
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
       "http://localhost:8000/api/v1/econsent/templates/tpl-1/versions/1/comprehension-checks"
     );
-    expect(options.method).toBe("POST");
-    expect(options.headers["X-Change-Reason"]).toBe("Defining checks");
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("X-Change-Reason")).toBe("Defining checks");
   });
 
   it("should get comprehension check", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({}),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({}));
 
     await econsentService.getComprehensionCheck("tpl-1", 1);
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
       "http://localhost:8000/api/v1/econsent/templates/tpl-1/versions/1/comprehension-checks"
     );
-    expect(options.method).toBe("GET");
+    expect(request.method).toBe("GET");
   });
 
   it("should handle translations endpoints", async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({}),
-    });
+    // A Response body can only be read once, so build a fresh one per call.
+    mockFetch.mockImplementation(async () => jsonResponse({}));
 
     await econsentService.createTranslation(
       { source_id: "s-1" },
       { changeReason: "Add trans" }
     );
-    expect(mockFetch).toHaveBeenLastCalledWith(
-      "http://localhost:8000/api/v1/econsent/translations",
-      expect.objectContaining({ method: "POST" })
+    let request = await lastRequest();
+    expect(request.url).toBe(
+      "http://localhost:8000/api/v1/econsent/translations"
     );
+    expect(request.method).toBe("POST");
 
     await econsentService.updateTranslation(
       "t-1",
       { source_id: "s-1" },
       { changeReason: "Edit trans" }
     );
-    expect(mockFetch).toHaveBeenLastCalledWith(
-      "http://localhost:8000/api/v1/econsent/translations/t-1",
-      expect.objectContaining({ method: "PUT" })
+    request = await lastRequest();
+    expect(request.url).toBe(
+      "http://localhost:8000/api/v1/econsent/translations/t-1"
     );
+    expect(request.method).toBe("PUT");
 
     await econsentService.listTranslations({
       source_id: "s-1",
       language_code: "es",
     });
-    expect(mockFetch).toHaveBeenLastCalledWith(
-      "http://localhost:8000/api/v1/econsent/translations?source_id=s-1&language_code=es",
-      expect.objectContaining({ method: "GET" })
+    request = await lastRequest();
+    expect(request.url).toBe(
+      "http://localhost:8000/api/v1/econsent/translations?source_id=s-1&language_code=es"
     );
+    expect(request.method).toBe("GET");
 
     await econsentService.getTranslation("t-1", { version_index: 2 });
-    expect(mockFetch).toHaveBeenLastCalledWith(
-      "http://localhost:8000/api/v1/econsent/translations/t-1?version_index=2",
-      expect.objectContaining({ method: "GET" })
+    request = await lastRequest();
+    expect(request.url).toBe(
+      "http://localhost:8000/api/v1/econsent/translations/t-1?version_index=2"
     );
+    expect(request.method).toBe("GET");
 
     await econsentService.transitionTranslation(
       "t-1",
       { status: "APPROVED" },
       { changeReason: "Approve trans" }
     );
-    expect(mockFetch).toHaveBeenLastCalledWith(
-      "http://localhost:8000/api/v1/econsent/translations/t-1/transition",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ status: "APPROVED" }),
-      })
+    request = await lastRequest();
+    expect(request.url).toBe(
+      "http://localhost:8000/api/v1/econsent/translations/t-1/transition"
     );
+    expect(request.method).toBe("POST");
+    expect(request.body).toEqual({ status: "APPROVED" });
   });
 
   it("should get approved composed content for participant", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({}),
-    });
+    mockFetch.mockResolvedValueOnce(jsonResponse({}));
 
     await econsentService.getApprovedContent("tpl-1", {
       language_code: "nl",
       version_index: 1,
     });
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe(
+    const request = await recordedRequest(mockFetch, 0);
+    expect(request.url).toBe(
       "http://localhost:8000/api/v1/econsent/templates/tpl-1/approved-content?language_code=nl&version_index=1"
     );
-    expect(options.method).toBe("GET");
+    expect(request.method).toBe("GET");
   });
 });

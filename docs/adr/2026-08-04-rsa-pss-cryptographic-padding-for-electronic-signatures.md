@@ -1,4 +1,6 @@
-# ADR-2157: RSA-PSS Cryptographic Padding for Electronic Signatures
+# ADR-2336: RSA-PSS Cryptographic Padding for Electronic Signatures
+
+Also known as: ADR-2157 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-04

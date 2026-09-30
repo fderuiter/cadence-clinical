@@ -1,5 +1,8 @@
 # System Specification: AI-Enhanced CDISC-Native Visual Metadata IDE & Tripartite eCRF Designer
 
+> [!NOTE]
+> **Status: design proposal.** Not necessarily implemented. Check the relevant README or ADR before relying on it; kernel concepts in the [kernel specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) take precedence.
+
 **Document ID:** SPEC-CRF-2026-001  
 **Target Domain:** `apps/designer`, `apps/execution`, `apps/ai_gateway`, `apps/web`, `packages/ddf`, `packages/engine_core`  
 **GxP Compliance Standards:** FDA 21 CFR Part 11, EU Annex 11, ICH GCP E6(R2), GAMP 5 Category 4 (Configured Software)  

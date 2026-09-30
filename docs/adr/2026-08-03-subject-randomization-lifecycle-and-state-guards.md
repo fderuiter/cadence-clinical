@@ -1,4 +1,6 @@
-# ADR-054: Subject Randomization Lifecycle and State Guards
+# ADR-2326: Subject Randomization Lifecycle and State Guards
+
+Also known as: ADR-054 (former number)
 
 - **Status:** Accepted
 - **Date:** 2026-08-03

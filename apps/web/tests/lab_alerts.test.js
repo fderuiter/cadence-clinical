@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const { mockFetch } = vi.hoisted(() => {
+  const mockFetch = vi.fn();
+  vi.stubGlobal("fetch", mockFetch);
+  return { mockFetch };
+});
+
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical";
 import { executionService } from "../src/api/execution";
 import { stateTrackingPlugin } from "../src/stores/plugins.js";
-
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
+import { jsonResponse, recordedRequest } from "./fetch_mock.js";
 
 describe("Lab Alerts - API Client & Pinia Store Unit Tests", () => {
   let pinia;
@@ -19,11 +24,9 @@ describe("Lab Alerts - API Client & Pinia Store Unit Tests", () => {
 
   describe("executionService.listLabAlerts API Client", () => {
     it("should list lab alerts and append query string correctly", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => [{ id: "alert-1", test_code: "VSSBP" }],
-      });
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse([{ id: "alert-1", test_code: "VSSBP" }])
+      );
 
       const res = await executionService.listLabAlerts({
         study_id: "STUDY-01",
@@ -34,25 +37,25 @@ describe("Lab Alerts - API Client & Pinia Store Unit Tests", () => {
       expect(res).toEqual([{ id: "alert-1", test_code: "VSSBP" }]);
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
-      const [url, options] = mockFetch.mock.calls[0];
-      expect(url).toBe(
-        "http://localhost:8000/api/v1/execution/lab-alerts?study_id=STUDY-01&subject_id=SUBJ-001&test_code=VSSBP"
+      // Lab alerts are served by the toxicity review queue; the contract (src/api/types.ts) has no
+      // /lab-alerts route and no test_code filter, so the client does not forward test_code.
+      const request = await recordedRequest(mockFetch, 0);
+      expect(request.url).toBe(
+        "http://localhost:8000/api/v1/execution/labs/toxicity/review-queue?study_id=STUDY-01&subject_id=SUBJ-001"
       );
-      expect(options.method).toBe("GET");
+      expect(request.method).toBe("GET");
     });
 
     it("should list lab alerts with no params when empty", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => [],
-      });
+      mockFetch.mockResolvedValueOnce(jsonResponse([]));
 
       const res = await executionService.listLabAlerts();
 
       expect(res).toEqual([]);
-      const [url] = mockFetch.mock.calls[0];
-      expect(url).toBe("http://localhost:8000/api/v1/execution/lab-alerts");
+      const request = await recordedRequest(mockFetch, 0);
+      expect(request.url).toBe(
+        "http://localhost:8000/api/v1/execution/labs/toxicity/review-queue"
+      );
     });
   });
 
@@ -70,11 +73,7 @@ describe("Lab Alerts - API Client & Pinia Store Unit Tests", () => {
         { id: "alert-2", test_code: "BRTHDT", message: "Age check failed" },
       ];
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => mockAlerts,
-      });
+      mockFetch.mockResolvedValueOnce(jsonResponse(mockAlerts));
 
       const store = useClinicalStore();
       const fetchPromise = store.fetchLabAlerts("STUDY-01", "SUBJ-001");
@@ -98,11 +97,7 @@ describe("Lab Alerts - API Client & Pinia Store Unit Tests", () => {
     });
 
     it("should fallback to {} on success if returned response is not an array", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => null,
-      });
+      mockFetch.mockResolvedValueOnce(jsonResponse(null));
 
       const store = useClinicalStore();
       await store.fetchLabAlerts("STUDY-01", "SUBJ-001");
@@ -113,12 +108,12 @@ describe("Lab Alerts - API Client & Pinia Store Unit Tests", () => {
     });
 
     it("should handle error gracefully, setting error state and console.warn on fetch failure", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: "Internal Server Error",
-        json: async () => ({ detail: "Database connection failed" }),
-      });
+      mockFetch.mockResolvedValueOnce(
+        jsonResponse(
+          { detail: "Database connection failed" },
+          { status: 500, statusText: "Internal Server Error" }
+        )
+      );
 
       const store = useClinicalStore();
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
