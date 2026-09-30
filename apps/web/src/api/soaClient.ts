@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import { openApiClient, unwrapResponse } from "./client";
 import type { paths } from "./types";
 
@@ -21,7 +22,7 @@ export const soaClient = {
               version_id: versionId,
             },
           },
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         }
       )
     );
@@ -49,7 +50,7 @@ export const soaClient = {
             body: {
               properties,
             } as unknown as paths["/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}"]["put"]["requestBody"]["content"]["application/json"],
-            headers: { "X-Change-Reason": changeReason },
+            headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
           }
         )
       );
@@ -63,7 +64,7 @@ export const soaClient = {
             id: armId,
             properties,
           } as unknown as paths["/api/v1/studies/{study_id}/versions/{version_id}/arms"]["post"]["requestBody"]["content"]["application/json"],
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         }
       )
     );
@@ -95,7 +96,7 @@ export const soaClient = {
             body: {
               properties,
             } as unknown as paths["/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}"]["put"]["requestBody"]["content"]["application/json"],
-            headers: { "X-Change-Reason": changeReason },
+            headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
           }
         )
       );
@@ -109,7 +110,7 @@ export const soaClient = {
             id: epochId,
             properties,
           } as unknown as paths["/api/v1/studies/{study_id}/versions/{version_id}/epochs"]["post"]["requestBody"]["content"]["application/json"],
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         }
       )
     );
@@ -141,7 +142,7 @@ export const soaClient = {
             body: {
               properties,
             } as unknown as paths["/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}"]["put"]["requestBody"]["content"]["application/json"],
-            headers: { "X-Change-Reason": changeReason },
+            headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
           }
         )
       );
@@ -155,7 +156,7 @@ export const soaClient = {
             id: visitId,
             properties,
           } as unknown as paths["/api/v1/studies/{study_id}/versions/{version_id}/visits"]["post"]["requestBody"]["content"]["application/json"],
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         }
       )
     );
@@ -187,7 +188,7 @@ export const soaClient = {
             body: {
               properties,
             } as unknown as paths["/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}"]["put"]["requestBody"]["content"]["application/json"],
-            headers: { "X-Change-Reason": changeReason },
+            headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
           }
         )
       );
@@ -201,7 +202,7 @@ export const soaClient = {
             id: procedureId,
             properties,
           } as unknown as paths["/api/v1/studies/{study_id}/versions/{version_id}/procedures"]["post"]["requestBody"]["content"]["application/json"],
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         }
       )
     );
@@ -230,7 +231,7 @@ export const soaClient = {
           {
             params: { path: { study_id: studyId, version_id: versionId } },
             body: payload as paths["/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit"]["post"]["requestBody"]["content"]["application/json"],
-            headers: { "X-Change-Reason": changeReason },
+            headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
           }
         )
       );
@@ -242,7 +243,7 @@ export const soaClient = {
           {
             params: { path: { study_id: studyId, version_id: versionId } },
             body: payload as paths["/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure"]["post"]["requestBody"]["content"]["application/json"],
-            headers: { "X-Change-Reason": changeReason },
+            headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
           }
         )
       );
@@ -254,7 +255,7 @@ export const soaClient = {
           {
             params: { path: { study_id: studyId, version_id: versionId } },
             body: payload as paths["/api/v1/studies/{study_id}/versions/{version_id}/links/timing"]["post"]["requestBody"]["content"]["application/json"],
-            headers: { "X-Change-Reason": changeReason },
+            headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
           }
         )
       );
@@ -265,7 +266,7 @@ export const soaClient = {
         {
           params: { path: { study_id: studyId, version_id: versionId } },
           body: payload as paths["/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability"]["post"]["requestBody"]["content"]["application/json"],
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         }
       )
     );
@@ -316,7 +317,8 @@ export const soaClient = {
   ) {
     const headers: Record<string, string> = {};
     if (sigToken) headers["X-Sig-Token"] = sigToken;
-    if (changeReason) headers["X-Change-Reason"] = changeReason;
+    if (changeReason)
+      headers["X-Change-Reason"] = encodeChangeReason(changeReason);
 
     return unwrapResponse(
       openApiClient.POST("/api/v1/execution/batch-sign-off", {

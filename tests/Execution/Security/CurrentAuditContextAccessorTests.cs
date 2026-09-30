@@ -178,4 +178,12 @@ public class CurrentAuditContextAccessorTests
     {
         FluentActions.Invoking(() => new ServiceAccount(userId, "reason")).Should().Throw<ArgumentException>();
     }
+
+    [Fact]
+    public void ChangeReason_GivenRfc8187Header_ReturnsTheDecodedText()
+    {
+        var accessor = CreateAccessor(changeReasonHeader: "UTF-8''IRB%20approval%20%E2%80%94%20%E6%89%BF%E8%AA%8D");
+
+        accessor.ChangeReason.Should().Be("IRB approval — 承認");
+    }
 }

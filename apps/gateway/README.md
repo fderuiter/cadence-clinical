@@ -11,7 +11,9 @@ caller's identity to backend services as HMAC-signed headers.
    `X-Gateway-Signature`, ...) and the bearer token, then adds its own set built from the token's claims
    (`sub`, Keycloak realm roles, site/sponsor/tenant scope) plus the client's `X-Change-Reason` and
    `X-Sig-Token`. The set is signed with `GATEWAY_SECRET` and timestamped
-   (`apps/gateway/src/GatewayIdentityForwarding.cs`).
+   (`apps/gateway/src/GatewayIdentityForwarding.cs`). The change reason is decoded from its RFC 8187 form,
+   signed as typed and forwarded re-encoded; a malformed encoding gets `400`
+   ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)).
 3. Each backend service (`AddCadenceSecurity`/`UseCadenceSecurity` in `packages/security`) accepts a
    request only with a valid signature inside a two-minute window, and requires an authenticated caller on
    every endpoint except health, status and development API docs. `ArchitectureSentinelTests` fails the

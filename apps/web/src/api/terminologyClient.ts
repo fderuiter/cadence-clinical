@@ -1,3 +1,4 @@
+import { encodeChangeReason } from "./changeReason";
 import { openApiClient, unwrapResponse } from "./client";
 
 export class TerminologyNetworkError extends Error {
@@ -37,7 +38,7 @@ export const terminologyClient = {
       return await unwrapResponse(
         openApiClient.GET("/api/v1/terminology/validate/{code}", {
           params: { path: { code } },
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         })
       );
     } catch (error: unknown) {
@@ -78,7 +79,7 @@ export const terminologyClient = {
               page_size: pageSize,
             },
           },
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         })
       );
     } catch (error: unknown) {
@@ -110,7 +111,7 @@ export const terminologyClient = {
       return await unwrapResponse(
         openApiClient.GET("/api/v1/studies/{study_id}/terminology-validation", {
           params: { path: { study_id: studyId } },
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         })
       );
     } catch (error: unknown) {
@@ -141,7 +142,7 @@ export const terminologyClient = {
       return await unwrapResponse(
         openApiClient.GET("/api/v1/studies/{study_id}/ct-validation", {
           params: { path: { study_id: studyId } },
-          headers: { "X-Change-Reason": changeReason },
+          headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
         })
       );
     } catch (error: unknown) {

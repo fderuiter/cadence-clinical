@@ -737,6 +737,7 @@
 </template>
 
 <script setup>
+import { encodeChangeReason } from "../api/changeReason";
 import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
@@ -1106,7 +1107,9 @@ function handleEditorInput(e) {
  * HMAC-signed, from the validated OIDC token (#4523). A browser must never hold the gateway signing secret.
  */
 function changeReasonHeaders(changeReason = "") {
-  return changeReason ? { "X-Change-Reason": changeReason } : {};
+  return changeReason
+    ? { "X-Change-Reason": encodeChangeReason(changeReason) }
+    : {};
 }
 
 // Fetch active rules from backend REST API
