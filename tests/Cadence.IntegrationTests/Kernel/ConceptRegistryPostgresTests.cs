@@ -202,6 +202,60 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
         (await registry.FindBiomedicalConceptAsync(other, "C49676", ct)).Should().BeNull();
     }
 
+    /// <summary>
+    /// Mapping review through the pipeline follows the review state machine: an unknown mapping is refused, a proposed
+    /// mapping can be confirmed and then rejected, and nothing moves back. Refused reviews leave the stored status alone.
+    /// </summary>
+    [Fact(DisplayName = "ReviewConceptMapping_RefusesUnknownMappingsAndBackwardMoves")]
+    public async Task ReviewConceptMappingRefusesUnknownMappingsAndBackwardMoves()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var seed = await SeedAsync(fixture, ct);
+
+        (await ReviewAsync(seed.Tenant, ConceptMappingId.New(), MappingStatus.Confirmed, ct)).Error.Should().Be(KnowledgeErrors.MappingUnknown);
+        (await ReviewAsync(seed.Tenant, seed.Mapping, MappingStatus.Proposed, ct)).Error!.Code.Should().Be(KnowledgeErrors.MappingTransitionInvalid.Code);
+        (await ReviewAsync(seed.Tenant, seed.Mapping, MappingStatus.Confirmed, ct)).IsSuccess.Should().BeTrue();
+        (await ReviewAsync(seed.Tenant, seed.Mapping, MappingStatus.Proposed, ct)).Error!.Code.Should().Be(KnowledgeErrors.MappingTransitionInvalid.Code);
+        (await ReviewAsync(seed.Tenant, seed.Mapping, MappingStatus.Rejected, ct)).IsSuccess.Should().BeTrue();
+        (await ReviewAsync(seed.Tenant, seed.Mapping, MappingStatus.Confirmed, ct)).Error!.Code.Should().Be(KnowledgeErrors.MappingTransitionInvalid.Code);
+
+        await using var db = fixture.CreateContext(seed.Tenant);
+        (await db.ConceptMappings.AsNoTracking().SingleAsync(m => m.Id == seed.Mapping, ct)).Status.Should().Be(MappingStatus.Rejected);
+        (await db.DomainEvents.AsNoTracking().CountAsync(e => e.TenantId == seed.Tenant && e.Type == "ConceptMappingReviewed", ct))
+            .Should().Be(2, "only the two accepted reviews raise an event");
+    }
+
+    /// <summary>
+    /// Code systems are registered under an absolute URI with a name and publisher, and a version is imported only into
+    /// a code system the tenant has registered.
+    /// </summary>
+    [Fact(DisplayName = "CodeSystemCommands_RefuseRelativeUrisBlankNamesAndUnknownCodeSystems")]
+    public async Task CodeSystemCommandsRefuseRelativeUrisBlankNamesAndUnknownCodeSystems()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = await NewTenantAsync(ct);
+
+        Task<CommandResult<CodeSystemId>> Register(string uri, string name, string publisher) => fixture.Sender.SendAsync(
+            new RegisterCodeSystem(tenant, CodeSystemId.New(), uri, name, publisher, LicenseClass.Open, Key(), Reason), cancellationToken: ct);
+
+        (await Register("dictionaries/visit-reasons", "Visit reasons", "Sponsor")).Error.Should().Be(KnowledgeErrors.CodeSystemUriInvalid);
+        (await Register("https://sponsor.example/visit-reasons", " ", "Sponsor")).Error.Should().Be(IdentityErrors.NameRequired);
+        (await Register("https://sponsor.example/visit-reasons", "Visit reasons", " ")).Error.Should().Be(IdentityErrors.NameRequired);
+
+        var import = await fixture.Sender.SendAsync(
+            new ImportCodeSystemVersion(tenant, CodeSystemVersionId.New(), CodeSystemId.New(), "2024-09-27", new DateOnly(2024, 9, 27),
+                new TerminologyPackage(new string('d', 64), "ct.txt", "https://example.test", 1, "nci-evs-tsv"),
+                [new CodeSystemEntryData("C1", "One")], Key(), Reason),
+            cancellationToken: ct);
+        import.Error.Should().Be(KnowledgeErrors.CodeSystemUnknown);
+
+        await using var db = fixture.CreateContext(tenant);
+        (await db.CodeSystems.AsNoTracking().CountAsync(ct)).Should().Be(0);
+        (await db.CodeSystemVersions.AsNoTracking().CountAsync(ct)).Should().Be(0);
+    }
+
     /// <summary>Loads the CDISC CT fixture into a tenant, for tests (here and in the pipeline tests) that need rows.</summary>
     internal static async Task<KnowledgeSeed> SeedAsync(KernelPostgresFixture fixture, CancellationToken ct)
     {
@@ -251,6 +305,9 @@ public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) 
         fixture.Sender.SendAsync(
             new MapConcept(tenant, ConceptMappingId.New(), concept, target, MappingRelation.Exact, "Reviewed against the CDISC BC coding.", confirmed, Key(), Reason),
             cancellationToken: ct);
+
+    private Task<CommandResult<ConceptMappingId>> ReviewAsync(TenantId tenant, ConceptMappingId mapping, MappingStatus status, CancellationToken ct) =>
+        fixture.Sender.SendAsync(new ReviewConceptMapping(tenant, mapping, status, Key(), Reason), cancellationToken: ct);
 
     private static TerminologyRelease Release(TenantId tenant, CodeSystemId codeSystem, string version, byte[] content) => new(
         tenant, codeSystem, CodeSystemVersionId.New(), version, new DateOnly(2024, 9, 27), "terminology.txt",
