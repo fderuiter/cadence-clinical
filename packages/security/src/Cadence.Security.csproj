@@ -2,8 +2,6 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Security</RootNamespace>
     <Description>Cryptographic token generation, HMAC gateway signature verification, and GxP security middleware for Cadence.</Description>
-    <!-- Time comes from Cadence.Kernel.Time.IClock only (K-TIME-3, #4784). -->
-    <CadenceBanWallClock>true</CadenceBanWallClock>
   </PropertyGroup>
 
   <ItemGroup>

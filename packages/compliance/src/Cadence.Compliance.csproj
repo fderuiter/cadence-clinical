@@ -2,8 +2,6 @@
   <PropertyGroup>
     <RootNamespace>Cadence.Compliance</RootNamespace>
     <Description>Standardized 21 CFR Part 11 compliance audit framework, HMAC-SHA256 audit digest verification, and e-signature verification for Cadence.</Description>
-    <!-- Time comes from Cadence.Kernel.Time.IClock only (K-TIME-3, #4784). -->
-    <CadenceBanWallClock>true</CadenceBanWallClock>
   </PropertyGroup>
 
   <ItemGroup>

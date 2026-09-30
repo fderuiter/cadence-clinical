@@ -126,7 +126,7 @@ each carry the audit interceptor once.
 
 ## Time in tests
 
-Tests follow K-TIME-3 like the kernel does: `tests/Directory.Build.props` enables the banned-API analyzer with
+Tests follow K-TIME-3 like the rest of the solution: root `Directory.Build.props` enables the banned-API analyzer globally with
 [`BannedSymbols.txt`](../BannedSymbols.txt), so `DateTime.Now/UtcNow` and `DateTimeOffset.Now/UtcNow` fail the
 build (RS0030). Pick the replacement by what the test needs:
 

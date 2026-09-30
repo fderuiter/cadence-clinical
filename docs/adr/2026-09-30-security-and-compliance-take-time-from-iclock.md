@@ -40,7 +40,7 @@ A default of "now" on a record also hides a writer that forgot to supply the tim
   - `ReplayCache`, `AuditDigestEngine`, `GxPSigner.SignGxpMarkdown`, `Pkcs7Signer.GenerateSigningCredentials` and
     `RtmGeneratorService.GenerateRtm` take an optional `IClock`. `AddCadenceSecurity` passes the registered clock.
   - `AuditLogRecord.Timestamp` is `required`; `ComplianceAuditLogRecord.Timestamp` has no default.
-  - Both projects reference `Cadence.Kernel.Abstractions` and set `CadenceBanWallClock`.
+  - Both projects reference `Cadence.Kernel.Abstractions` and are covered by global `BannedApiAnalyzers`.
 - **Pros:**
   - ✅ Tests can fix the time with `FakeClock`; hosts use their registered clock.
   - ✅ The analyzer keeps the wall clock out of both packages.
