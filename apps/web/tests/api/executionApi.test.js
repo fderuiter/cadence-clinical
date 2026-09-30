@@ -64,3 +64,57 @@ describe("executionApi.listSubjects (#4828)", () => {
     expect(error.message).toBe("study_id is required.");
   });
 });
+
+describe("executionApi site activation", () => {
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("reads a site's compliance status for the study", async () => {
+    const body = {
+      study_id: "CAD-101",
+      site_id: "SITE 7",
+      milestone: "SITE_ACTIVATION",
+      is_complete: false,
+      missing_documents: ["IRB approval"],
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, body));
+
+    expect(
+      await executionApi.getSiteComplianceStatus("SITE 7", "CAD-101")
+    ).toEqual(body);
+
+    const request = fetchSpy.mock.calls[0][0];
+    const url = new URL(request.url);
+    expect(request.method).toBe("GET");
+    expect(url.pathname).toBe(
+      "/api/v1/execution/sites/SITE%207/compliance-status"
+    );
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      study_id: "CAD-101",
+    });
+  });
+
+  it("activates a site with the study in the body and the reason as X-Change-Reason", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(200, { status: "success", message: "ok" })
+    );
+
+    await executionApi.activateSite("SITE-7", "CAD-101", "IRB approved.");
+
+    const request = fetchSpy.mock.calls[0][0];
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).pathname).toBe(
+      "/api/v1/execution/sites/SITE-7/activate"
+    );
+    expect(request.headers.get("X-Change-Reason")).toBe("IRB approved.");
+    expect(await request.json()).toEqual({ study_id: "CAD-101" });
+  });
+});

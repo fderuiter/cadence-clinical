@@ -5,8 +5,8 @@ using System.IO;
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
-/// Typechecks the web app, which compiles every <c>apps/web/src/api</c> client against the
-/// OpenAPI-generated types in <c>apps/web/src/api/types.ts</c>.
+/// Checks that the types generated from <c>docs/openapi</c> into <c>apps/web/src/api/generated</c> are current,
+/// then typechecks the web app, which compiles every <c>apps/web/src/api</c> client against its OpenAPI types.
 /// </summary>
 public static class ApiClientValidatorService
 {
@@ -22,14 +22,31 @@ public static class ApiClientValidatorService
             return 1;
         }
 
-        var psi = new ProcessStartInfo("pnpm")
+        // A spec change without regenerated web types would leave the typed clients compiling against the old API.
+        if (RunInWebDir(webDir, "node", ["scripts/generate-api-types.js", "--check"], "the generated web API types") != 0)
+        {
+            return 1;
+        }
+
+        if (RunInWebDir(webDir, "pnpm", ["exec", "tsc", "--noEmit"], "the web API clients") != 0)
+        {
+            return 1;
+        }
+
+        Console.WriteLine("✔ Web API clients typecheck against their OpenAPI types.");
+        return 0;
+    }
+
+    private static int RunInWebDir(string webDir, string fileName, string[] arguments, string subject)
+    {
+        var psi = new ProcessStartInfo(fileName)
         {
             WorkingDirectory = webDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
         };
-        foreach (string arg in new[] { "exec", "tsc", "--noEmit" })
+        foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);
         }
@@ -41,13 +58,13 @@ public static class ApiClientValidatorService
         }
         catch (System.ComponentModel.Win32Exception ex)
         {
-            Console.WriteLine($"[ERROR] Could not run pnpm ({ex.Message}). Install Node.js and pnpm, then run 'pnpm install'.");
+            Console.WriteLine($"[ERROR] Could not run {fileName} ({ex.Message}). Install Node.js and pnpm, then run 'pnpm install'.");
             return 1;
         }
 
         if (process == null)
         {
-            Console.WriteLine("[ERROR] Could not start 'pnpm exec tsc'.");
+            Console.WriteLine($"[ERROR] Could not start '{fileName} {string.Join(' ', arguments)}'.");
             return 1;
         }
 
@@ -60,14 +77,13 @@ public static class ApiClientValidatorService
 
             if (process.ExitCode != 0)
             {
-                Console.WriteLine("[ERROR] The web API clients don't typecheck:");
+                Console.WriteLine($"[ERROR] Check failed for {subject}:");
                 Console.WriteLine(stdout);
                 Console.WriteLine(stderr);
                 return 1;
             }
         }
 
-        Console.WriteLine("✔ Web API clients typecheck against their OpenAPI types.");
         return 0;
     }
 

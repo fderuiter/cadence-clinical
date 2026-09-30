@@ -756,7 +756,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       syncInterval: null,
 
       activeStudyId: demo ? "STUDY-USDM-001" : "",
-      activeSiteId: "SITE-001",
+      activeSiteId: demo ? "SITE-001" : "",
       activeSubjectId: "SUBJ-001",
       activeVisitId: "Screening",
 

@@ -16,7 +16,7 @@
 export const AVAILABLE_SCREENS = new Set([
   // Execution: subjects, forms, observations, SDV, queries (#4828).
   "ecrf",
-  // Execution: site activation and compliance status.
+  // Execution: site activation and eTMF compliance status; the other CTMS tabs run only in a demo build.
   "ctms",
   "ssu",
 ]);
