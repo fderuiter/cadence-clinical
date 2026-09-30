@@ -115,11 +115,8 @@ public class DatabaseUnitTests
 
     /// <summary>
     /// Issue #4765: no environment, Development included, falls back to a hardcoded credential.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Theory]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     [InlineData("Development")]
     [InlineData("Staging")]
     [InlineData("Production")]
@@ -136,11 +133,8 @@ public class DatabaseUnitTests
 
     /// <summary>
     /// Issue #4765: AddCadencePostgresDbContext fails startup in Development too when no connection string is set.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void AddCadencePostgresDbContext_InDevelopmentWithoutConnectionString_Throws()
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
@@ -156,11 +150,8 @@ public class DatabaseUnitTests
     /// <summary>
     /// Issue #4765: design-time factories read --connection or POSTGRES_CONNECTION_STRING and never fall back to a credential.
     /// Environment variables are process-wide, so this test reads rather than mutates them.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void ResolveDesignTimeConnectionString_UsesEnvironmentOrThrowsNamingTheVariable()
     {
         string? configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey);

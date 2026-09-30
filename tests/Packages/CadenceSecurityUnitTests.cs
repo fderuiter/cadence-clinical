@@ -238,11 +238,8 @@ public class CadenceSecurityUnitTests
     /// <summary>
     /// Issue #4765: the audit HMAC key has no hardcoded fallback. Environment variables are process-wide, so
     /// this test reads AUDIT_LOG_SECRET_KEY rather than mutating it.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void AuditSecretKey_WithoutExplicitKeyOrEnvironment_FailsClosed()
     {
         string? configured = Environment.GetEnvironmentVariable(AuditSecretKey.EnvironmentVariable);
@@ -266,11 +263,8 @@ public class CadenceSecurityUnitTests
     /// <summary>
     /// Issue #4765: the security and compliance digest calculators share one key source and one canonical
     /// payload, so a chain written by one verifies with the other.
-    /// @req:PRD-SYS-053
     /// </summary>
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-053")]
     public void AuditDigestCalculators_InSecurityAndCompliance_ProduceIdenticalDigests()
     {
         string security = AuditDigestCalculator.ComputeAuditDigest(
