@@ -415,6 +415,33 @@ main {
   width: 100%;
 }
 
+@media (max-width: 640px) {
+  .app-header {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+  }
+  .header-center {
+    max-width: 100%;
+    margin: 4px 0;
+  }
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .app-container {
+    flex-direction: column;
+  }
+  .app-sidebar {
+    width: 100%;
+    padding: 12px 8px;
+    box-sizing: border-box;
+  }
+  main {
+    padding: 12px 8px;
+    box-sizing: border-box;
+  }
+}
+
 .dashboard-section {
   display: none;
   flex-direction: column;

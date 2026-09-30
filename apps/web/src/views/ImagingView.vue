@@ -508,6 +508,41 @@ function handleAdjudicationCompleted(_event) {
   }
 }
 
+@media (max-width: 640px) {
+  .dashboard-section {
+    padding: 12px 6px;
+    gap: 12px;
+  }
+
+  .section-header {
+    gap: 10px;
+  }
+
+  .view-title {
+    font-size: 1.2rem;
+  }
+
+  .header-action-group {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .selector-box,
+  .header-select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .imaging-workspace-grid {
+    gap: 12px;
+    min-height: auto;
+  }
+
+  .trajectory-section {
+    padding: 10px 8px;
+  }
+}
+
 .series-nav-panel {
   background-color: #0f172a;
   border: 1px solid #334155;
