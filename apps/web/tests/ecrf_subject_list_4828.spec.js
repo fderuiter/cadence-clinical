@@ -317,11 +317,13 @@ describe("eCRF subject list from Execution (#4828)", () => {
       store.ecrfFields = [];
       const wrapper = mountView();
       await flushPromises();
+      // Assert on the push itself: the toast dismisses itself after 8 s, which a slow run can outlast.
+      const push = vi.spyOn(useToastStore(), "push");
 
       wrapper.findComponent(CrcFormRenderer).vm.$emit("submit-ecrf");
       await flushPromises();
 
-      expect(useToastStore().toasts).toContainEqual(
+      expect(push).toHaveBeenCalledWith(
         expect.objectContaining({
           tone: "error",
           title: "Submitting the form isn't available yet",
