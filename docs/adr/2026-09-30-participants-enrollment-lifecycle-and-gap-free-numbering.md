@@ -180,6 +180,8 @@ withdrawal is proven, and how the database enforces the lifecycle.
     - concurrent screenings with one subject code, of which exactly one succeeds;
     - a screening back-dated into an earlier enrollment's active period at the same study site;
     - numbers staying gap-free when other participants screen-fail or withdraw in between;
+    - signing an enrollment refusing a superseded state, an unknown enrollment, a missing target and a reused
+      attestation id, with nothing recorded;
     - tenant isolation of reads, changes, screenings, numbering and signatures;
     - the trigger, the append-only status rows and the exclusion constraint refusing forbidden changes for the
       superuser.

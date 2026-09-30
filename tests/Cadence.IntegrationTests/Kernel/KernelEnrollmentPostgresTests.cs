@@ -444,6 +444,41 @@ public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)
         (await directory.FindAsync(tenant, enrollment, ct)).Should().Be(enrolled);
     }
 
+    /// <summary>
+    /// An attestation on an enrollment signs its current state. Signing a superseded state, an enrollment the tenant
+    /// does not have, no target at all, or under an attestation id already used is refused, and nothing is recorded.
+    /// </summary>
+    [Fact(DisplayName = "Attest_OnAnEnrollment_RefusesStaleUnknownAndMissingTargets_AndReusedIds")]
+    public async Task AttestOnAnEnrollmentRefusesStaleUnknownAndMissingTargetsAndReusedIds()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, _, studySite) = await NewStudySiteAsync(ct);
+        var (_, enrollment) = await ScreenAsync(tenant, studySite, "SUBJ-001", Tick(), ct);
+        var enrolled = await ChangeAsync(tenant, enrollment, EnrollmentStatus.Enrolled, Tick(), ct);
+        var active = await ChangeAsync(tenant, enrollment, EnrollmentStatus.Active, Tick(), ct);
+        active.ContentHash.Should().NotBe(enrolled.ContentHash, "every change of status changes what is signed");
+
+        (await _scenario.AttestAsync(tenant, AttestationMeaning.Withdrawn, EnrollmentTarget(enrollment, enrolled.ContentHash), ct))
+            .Error.Should().Be(TrustErrors.TargetContentChanged);
+        (await _scenario.AttestAsync(tenant, AttestationMeaning.Withdrawn, EnrollmentTarget(EnrollmentId.New(), active.ContentHash), ct))
+            .Error.Should().Be(TrustErrors.TargetUnknown);
+        (await fixture.Sender.SendAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Withdrawn, null!), cancellationToken: ct))
+            .Error.Should().Be(TrustErrors.TargetNotSignable);
+
+        var signed = await AttestAsync(tenant, AttestationMeaning.Withdrawn, active, ct);
+        var reused = _scenario.AttestCommand(tenant, AttestationMeaning.Reviewed, EnrollmentTarget(enrollment, active.ContentHash)) with { AttestationId = signed };
+        (await fixture.Sender.SendAsync(reused, cancellationToken: ct)).Error.Should().Be(KernelErrors.AlreadyExists);
+
+        await using var db = fixture.CreateContext(tenant);
+        var stored = await db.Attestations.AsNoTracking().ToListAsync(ct);
+        stored.Should().ContainSingle().Which.Id.Should().Be(signed);
+        stored[0].Meaning.Should().Be(AttestationMeaning.Withdrawn, "the reused id did not overwrite the first signature");
+    }
+
+    private static AttestationTarget EnrollmentTarget(EnrollmentId enrollment, string contentHash) =>
+        new(NodeKinds.Enrollment, enrollment.Value, contentHash);
+
     private DateTimeOffset Tick() => fixture.Clock.Advance(TimeSpan.FromSeconds(1));
 
     private async Task<(TenantId Tenant, StudyId Study, StudySiteId StudySite)> NewStudySiteAsync(CancellationToken ct)
