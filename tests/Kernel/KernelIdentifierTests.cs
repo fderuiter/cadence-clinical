@@ -4,9 +4,11 @@ using System.Text.Json;
 
 using Cadence.Core.Domain;
 using Cadence.Kernel;
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Bitemporal;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Serialization;
+using Cadence.Kernel.Trust;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -208,7 +210,9 @@ public class KernelIdentifierTests
         var studySite = new StudySite(studySiteId, tenantId, studyId, siteId, "Selected", "usr_admin", "Site selected");
         var participant = new Participant(participantId, tenantId, studyId, studySiteId, "SUBJ-001", "Screened", "usr_cra", "Subject screened");
         var observation = new Observation(obsId, tenantId, studyId, participantId, "VITAL_SIGNS", "120/80", period, "usr_crc", "Blood pressure entered");
-        var attestation = new Attestation(attestationId, tenantId, personId, "Approval", now, "HMAC-SHA256:abcd", "usr_pi", "Signature completed");
+        var target = new AttestationTarget(AttestationTarget.ProtocolVersionKind, Guid.CreateVersion7(), ContentHash.Compute("{}"));
+        var attestation = Attestation.Sign(
+            attestationId, tenantId, Actor.Person("usr_pi"), AttestationMeaning.Approved, target, now, "pwd+otp", now, "Signature completed").Value!;
 
         // Assert
         tenant.Should().BeAssignableTo<IGxPAuditable>();

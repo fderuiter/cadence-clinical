@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
@@ -78,6 +79,25 @@ internal sealed class KernelCommandTransaction(
         }
 
         return found is not null;
+    }
+
+    public async Task<TAggregate?> ReadAsync<TAggregate>(object id, CancellationToken cancellationToken)
+        where TAggregate : AggregateRootBase
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        var key = db.Model.FindEntityType(typeof(TAggregate))?.FindPrimaryKey()?.Properties.Single().Name
+            ?? throw new InvalidOperationException($"{typeof(TAggregate).Name} is not a kernel aggregate.");
+        return await db.Set<TAggregate>().AsNoTracking()
+            .SingleOrDefaultAsync(e => EF.Property<object>(e, key) == id, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<TAggregate>> ReadAllAsync<TAggregate>(
+        Expression<Func<TAggregate, bool>> filter, CancellationToken cancellationToken)
+        where TAggregate : AggregateRootBase
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+        return await db.Set<TAggregate>().AsNoTracking().Where(filter).ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public void Add(AggregateRootBase aggregate)

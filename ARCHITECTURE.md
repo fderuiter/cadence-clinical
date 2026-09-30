@@ -72,7 +72,7 @@ The [domain glossary](CONTEXT.md) defines the vocabulary.
 | K004 | Authority computed from evidence by a hand-coded policy evaluator | [ADR-2251](docs/adr/2026-09-29-kernel-authority-computed-from-evidence-policy-engine.md) |
 | K005 | Concept Registry keyed by CDISC Biomedical Concepts | [ADR-2252](docs/adr/2026-09-29-concept-registry-cdisc-biomedical-concepts-as-semantic-key.md) |
 | K006 | Identity vault and layered participant identity | [ADR-2253](docs/adr/2026-09-29-identity-vault-and-layered-participant-identity.md) |
-| K007 | Neo4j dropped; ProtocolVersion snapshots in PostgreSQL | [ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) |
+| K007 | Neo4j dropped; ProtocolVersion snapshots in PostgreSQL with an attested lifecycle | [ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md), [ADR-2452](docs/adr/2026-09-30-protocol-version-lifecycle-content-hash-and-attested-approval.md) |
 | K008 | Rules as versioned data over one AST; public standards only; Rust runtime seam later | [ADR-2254](docs/adr/2026-09-29-rules-as-versioned-data-and-unified-rules-engine.md) |
 | K009 | Lineage graph in the kernel schema, written transactionally | [ADR-2255](docs/adr/2026-09-29-kernel-lineage-graph-and-scientific-traceability.md) |
 | — | Kernel command pipeline: one transactional write set, per-tenant audit chain, outbox | [ADR-2449](docs/adr/2026-09-29-kernel-command-pipeline-transactional-write-set-and-per-tenant-audit-chain.md) |

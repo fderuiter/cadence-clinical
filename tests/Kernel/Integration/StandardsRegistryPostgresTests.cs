@@ -5,12 +5,13 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
-using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Standards;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Trust;
 using Cadence.Standards;
 using Cadence.Testing;
 
@@ -49,7 +50,8 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
         var package = Seed("SDTMIG");
 
         var id = await RegisterAsync(tenant, package, ct);
-        (await SendAsync(new ApproveStandardVersion(tenant, id, AttestationId.New(), Key(), Reason), ct)).IsSuccess.Should().BeTrue();
+        var approval = await SignStandardAsync(tenant, id, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveStandardVersion(tenant, id, approval, Key(), Reason), ct)).IsSuccess.Should().BeTrue();
 
         var summary = await fixture.Standards.FindStandardVersionAsync(tenant, id, ct);
         summary!.Status.Should().Be(GovernanceStatus.Approved);
@@ -69,37 +71,32 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
     }
 
     /// <summary>
-    /// Validates that approval needs an Attestation the verifier accepts, bound to the version's content hash and
-    /// signed by the acting person; a rejected attestation leaves the version a draft and names the reason.
+    /// Validates that approval needs an attestation from the kernel's store in which the acting person signed
+    /// <c>Approved</c> over this version's content hash: an attestation with another meaning or by another person is
+    /// rejected with the reason and leaves the version a draft, and a matching one approves it.
     /// </summary>
-    [Fact(DisplayName = "ApproveStandardVersion_RequiresAnAcceptedAttestation")]
-    public async Task ApproveStandardVersionRequiresAnAcceptedAttestation()
+    [Fact(DisplayName = "ApproveStandardVersion_RequiresTheActorsApprovalAttestation")]
+    public async Task ApproveStandardVersionRequiresTheActorsApprovalAttestation()
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var tenant = await ProvisionTenantAsync(ct);
         var id = await RegisterAsync(tenant, Seed("ADaMIG"), ct);
-        var attestation = AttestationId.New();
-        var summary = await fixture.Standards.FindStandardVersionAsync(tenant, id, ct);
 
-        fixture.Attestations.Policy = r => r.AttestationId == attestation
-            ? AttestationCheck.Reject("The attestation is bound to a different content hash.")
-            : AttestationCheck.Accept();
-        try
-        {
-            var rejected = await SendAsync(new ApproveStandardVersion(tenant, id, attestation, Key(), Reason), ct);
+        var reviewed = await SignStandardAsync(tenant, id, AttestationMeaning.Reviewed, ct);
+        var wrongMeaning = await SendAsync(new ApproveStandardVersion(tenant, id, reviewed, Key(), Reason), ct);
+        wrongMeaning.Error!.Code.Should().Be(StandardsErrors.AttestationRejected.Code);
+        wrongMeaning.Error.Message.Should().Contain("Reviewed");
 
-            rejected.Error!.Code.Should().Be(StandardsErrors.AttestationRejected.Code);
-            rejected.Error.Message.Should().Contain("different content hash");
-            (await fixture.Standards.FindStandardVersionAsync(tenant, id, ct))!.Status.Should().Be(GovernanceStatus.Draft);
-            fixture.Attestations.Requests.Should().ContainEquivalentOf(new AttestationRequirement(
-                tenant, attestation, AttestationMeanings.Approved, "StandardVersion", id.ToString(), summary!.ContentHash,
-                Actor.Person(KernelPostgresFixture.ActorId)));
-        }
-        finally
-        {
-            fixture.Attestations.Policy = null;
-        }
+        var byColleague = await SignStandardAsync(tenant, id, AttestationMeaning.Approved, ct, Actor.Person("00u9colleague"));
+        var otherSigner = await SendAsync(new ApproveStandardVersion(tenant, id, byColleague, Key(), Reason), ct);
+        otherSigner.Error!.Code.Should().Be(StandardsErrors.AttestationRejected.Code);
+        otherSigner.Error.Message.Should().Contain("someone else");
+        (await fixture.Standards.FindStandardVersionAsync(tenant, id, ct))!.Status.Should().Be(GovernanceStatus.Draft);
+
+        var approval = await SignStandardAsync(tenant, id, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveStandardVersion(tenant, id, approval, Key(), Reason), ct)).IsSuccess.Should().BeTrue();
+        (await fixture.Standards.FindStandardVersionAsync(tenant, id, ct))!.Status.Should().Be(GovernanceStatus.Approved);
     }
 
     /// <summary>
@@ -137,7 +134,8 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
         await fixture.SeedAsync(graph.Tenant, graph.Sponsor, graph.Study);
         var tenant = graph.Tenant.Id;
         var sdtmig = await RegisterAsync(tenant, Seed("SDTMIG"), ct);
-        (await SendAsync(new ApproveStandardVersion(tenant, sdtmig, AttestationId.New(), Key(), Reason), ct)).IsSuccess.Should().BeTrue();
+        var standardApproval = await SignStandardAsync(tenant, sdtmig, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveStandardVersion(tenant, sdtmig, standardApproval, Key(), Reason), ct)).IsSuccess.Should().BeTrue();
 
         using var units = JsonDocument.Parse("""{"codelist":"C66770","terms":["mmHg","beats/min"]}""");
         var v1 = await DraftAsync(tenant, units.RootElement, [sdtmig], ct);
@@ -149,12 +147,15 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
         var pinDraft = await DeclareAsync(tenant, graph.Study.Id, StudyStandardsProfileId.New(), sdtmig, v1.Id, ct);
         pinDraft.Error!.Code.Should().Be(StandardsErrors.NotApproved.Code);
 
-        (await SendAsync(new ApproveLibraryItem(tenant, v1.Id, AttestationId.New(), Key(), Reason), ct)).IsSuccess.Should().BeTrue();
+        var itemApproval = await SignLibraryItemAsync(tenant, v1, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveLibraryItem(tenant, v1.Id, itemApproval, Key(), Reason), ct)).IsSuccess.Should().BeTrue();
         var profileId = StudyStandardsProfileId.New();
         (await DeclareAsync(tenant, graph.Study.Id, profileId, sdtmig, v1.Id, ct)).Value.Should().Be(profileId);
 
-        (await SendAsync(new DeprecateLibraryItem(tenant, v1.Id, AttestationId.New(), Key(), Reason), ct)).IsSuccess.Should().BeTrue();
-        (await SendAsync(new DeprecateStandardVersion(tenant, sdtmig, AttestationId.New(), Key(), Reason), ct)).IsSuccess.Should().BeTrue();
+        var itemDeprecation = await SignLibraryItemAsync(tenant, v1, AttestationMeaning.Responsibility, ct);
+        (await SendAsync(new DeprecateLibraryItem(tenant, v1.Id, itemDeprecation, Key(), Reason), ct)).IsSuccess.Should().BeTrue();
+        var standardDeprecation = await SignStandardAsync(tenant, sdtmig, AttestationMeaning.Responsibility, ct);
+        (await SendAsync(new DeprecateStandardVersion(tenant, sdtmig, standardDeprecation, Key(), Reason), ct)).IsSuccess.Should().BeTrue();
 
         var profile = await fixture.Standards.FindStudyStandardsAsync(tenant, graph.Study.Id, ct);
         profile!.Revision.Should().Be(1);
@@ -214,6 +215,34 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
         TenantId tenant, StudyId study, StudyStandardsProfileId profile, StandardVersionId standard, LibraryItemId pin, CancellationToken ct) =>
         SendAsync(new DeclareStudyStandards(
             tenant, study, profile, [standard], [new CodeSystemVersionRef("sdtmct", "2024-09-27")], [pin], Key(), Reason), ct);
+
+    /// <summary>Signs <paramref name="meaning"/> over a standard version's current content hash, as the fixture's person unless another signer is given.</summary>
+    private async Task<AttestationId> SignStandardAsync(
+        TenantId tenant, StandardVersionId id, AttestationMeaning meaning, CancellationToken ct, Actor? signer = null)
+    {
+        var summary = await fixture.Standards.FindStandardVersionAsync(tenant, id, ct);
+        return await SignAsync(tenant, new AttestationTarget(NodeKinds.StandardVersion, id.Value, summary!.ContentHash), meaning, signer, ct);
+    }
+
+    private Task<AttestationId> SignLibraryItemAsync(TenantId tenant, LibraryItemVersion item, AttestationMeaning meaning, CancellationToken ct) =>
+        SignAsync(tenant, new AttestationTarget(NodeKinds.LibraryItem, item.Id.Value, item.ContentHash), meaning, signer: null, ct);
+
+    private async Task<AttestationId> SignAsync(TenantId tenant, AttestationTarget target, AttestationMeaning meaning, Actor? signer, CancellationToken ct)
+    {
+        var acting = fixture.CurrentActor.Actor;
+        fixture.CurrentActor.Actor = signer ?? acting;
+        try
+        {
+            var result = await SendAsync(
+                new Attest(tenant, AttestationId.New(), meaning, target, fixture.Clock.UtcNow.AddMinutes(-1), "pwd+otp", Key(), $"Signing as {meaning}"), ct);
+            result.Error.Should().BeNull();
+            return result.Value;
+        }
+        finally
+        {
+            fixture.CurrentActor.Actor = acting;
+        }
+    }
 
     private Task<CommandResult<T>> SendAsync<T>(ICommand<T> command, CancellationToken ct) =>
         fixture.Sender.SendAsync(command, cancellationToken: ct);

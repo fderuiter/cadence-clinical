@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 
-using Cadence.Core.Domain;
 using Cadence.Kernel;
-using Cadence.Kernel.Domain.Bitemporal;
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Trust;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -12,164 +14,253 @@ using Xunit;
 
 namespace Cadence.UnitTests.Kernel;
 
-public class ProtocolVersionTests
+/// <summary>
+/// The protocol version lifecycle in the domain (spec §6.2, #4775): <c>Draft → InReview → Approved → Superseded |
+/// Withdrawn</c>, frozen content with a content hash from review onwards, and forks that leave the parent approved.
+/// The database repeats these rules; <c>KernelProtocolVersionPostgresTests</c> covers that side.
+/// </summary>
+[Trait("Category", "Unit")]
+public sealed class ProtocolVersionTests
 {
-    /// <summary>
-    /// Validates ProtocolVersion initialization in Draft state with immutable identity and audit fields.
-    /// </summary>
-    [Fact(DisplayName = "ProtocolVersion_Create_InitializesInDraftStatus")]
-    [Trait("Category", "GxP_OQ")]
-    public void ProtocolVersionCreateInitializesInDraftStatus()
+    private const string Content = """{"study":{"name":"CARDIO-1","arms":["A","B"]}}""";
+
+    private static readonly ProtocolAmendment Amendment = new(
+        "Add a cohort",
+        "Enrolment is slower than planned",
+        AmendmentClassification.Substantial,
+        "Adds cohort C and a visit at week 12",
+        ["arm:C", "visit:W12"],
+        TransitionPolicy.RequiresReconsent);
+
+    public static TheoryData<ProtocolVersionStatus, string, bool> Transitions()
     {
-        // Arrange
-        var versionId = ProtocolVersionId.New();
-        var tenantId = TenantId.New();
-        var studyId = StudyId.New();
-        var now = DateTimeOffset.UtcNow;
-        var period = TemporalPeriod.CreateCurrent(now, now);
+        var allowed = new HashSet<(ProtocolVersionStatus, string)>
+        {
+            (ProtocolVersionStatus.Draft, "Revise"),
+            (ProtocolVersionStatus.Draft, "Submit"),
+            (ProtocolVersionStatus.InReview, "ReturnToDraft"),
+            (ProtocolVersionStatus.InReview, "Approve"),
+            (ProtocolVersionStatus.InReview, "Withdraw"),
+            (ProtocolVersionStatus.Approved, "Supersede"),
+            (ProtocolVersionStatus.Approved, "Withdraw"),
+            (ProtocolVersionStatus.Approved, "Fork"),
+        };
+        var data = new TheoryData<ProtocolVersionStatus, string, bool>();
+        foreach (var status in Enum.GetValues<ProtocolVersionStatus>())
+        {
+            foreach (var operation in new[] { "Revise", "Submit", "ReturnToDraft", "Approve", "Withdraw", "Supersede", "Fork" })
+            {
+                data.Add(status, operation, allowed.Contains((status, operation)));
+            }
+        }
 
-        // Act
-        var protocolVersion = new ProtocolVersion(
-            versionId,
-            tenantId,
-            studyId,
-            "v1.0-draft",
-            1,
-            predecessorVersionId: null,
-            "{\"study\": {\"name\": \"Protocol Alpha\"}}",
-            period,
-            "protocol_author_1",
-            "Initial protocol definition");
+        return data;
+    }
 
-        // Assert
-        protocolVersion.Id.Should().Be(versionId);
-        protocolVersion.TenantId.Should().Be(tenantId);
-        protocolVersion.StudyId.Should().Be(studyId);
-        protocolVersion.VersionTag.Should().Be("v1.0-draft");
-        protocolVersion.VersionIndex.Should().Be(1);
-        protocolVersion.PredecessorVersionId.Should().BeNull();
-        protocolVersion.Status.Should().Be(ProtocolApprovalStatus.Draft);
-        protocolVersion.CreatedBy.Should().Be("protocol_author_1");
-        protocolVersion.ReasonForChange.Should().Be("Initial protocol definition");
+    /// <summary>A study's first version starts as draft number 1, with no parent, amendment, hash or attestations.</summary>
+    [Fact(DisplayName = "CreateFirst_StartsAsDraftNumberOne")]
+    public void CreateFirstStartsAsDraftNumberOne()
+    {
+        var id = ProtocolVersionId.New();
+        var tenant = TenantId.New();
+        var study = StudyId.New();
+
+        var version = ProtocolVersion.CreateFirst(id, tenant, study, Content).Value!;
+
+        version.Id.Should().Be(id);
+        version.TenantId.Should().Be(tenant);
+        version.StudyId.Should().Be(study);
+        version.Number.Should().Be(1);
+        version.Status.Should().Be(ProtocolVersionStatus.Draft);
+        version.Content.Should().Be(Content);
+        version.ParentVersionId.Should().BeNull();
+        version.Amendment.Should().BeNull();
+        version.ContentHash.Should().BeNull();
+        version.SignableTarget.Should().BeNull();
+        version.ApprovalAttestationId.Should().BeNull();
+        version.WithdrawalAttestationId.Should().BeNull();
+    }
+
+    /// <summary>Protocol content must be a single JSON object without duplicate keys, so its hash is well defined.</summary>
+    [Theory(DisplayName = "Content_MustBeAJsonObject")]
+    [InlineData("", "K.Protocol.ContentRequired")]
+    [InlineData("   ", "K.Protocol.ContentRequired")]
+    [InlineData("[1,2]", "K.Protocol.ContentInvalid")]
+    [InlineData("\"text\"", "K.Protocol.ContentInvalid")]
+    [InlineData("{\"a\":1", "K.Protocol.ContentInvalid")]
+    [InlineData("{\"a\":1,\"a\":2}", "K.Protocol.ContentInvalid")]
+    public void ContentMustBeAJsonObject(string content, string code)
+    {
+        ProtocolVersion.CreateFirst(ProtocolVersionId.New(), TenantId.New(), StudyId.New(), content).Error!.Code.Should().Be(code);
+
+        var draft = NewDraft();
+        draft.Revise(content, null)!.Code.Should().Be(code);
+        draft.Content.Should().Be(Content);
     }
 
     /// <summary>
-    /// Validates draft payload updates and transition to InReview status.
+    /// Submitting freezes the content under its canonical hash; returning to draft clears it, and resubmitting the
+    /// same content gives the same hash.
     /// </summary>
-    [Fact(DisplayName = "ProtocolVersion_DraftWorkflow_AllowsUpdatesAndSubmission")]
-    [Trait("Category", "GxP_OQ")]
-    public void ProtocolVersionDraftWorkflowAllowsUpdatesAndSubmission()
+    [Fact(DisplayName = "SubmitForReview_SetsTheContentHash_ReturnToDraftClearsIt")]
+    [GxPRequirement("PRD-CRF-012")]
+    public void SubmitForReviewSetsTheContentHashReturnToDraftClearsIt()
     {
-        // Arrange
-        var protocolVersion = CreateTestProtocolVersion();
-        var updatedJson = "{\"study\": {\"name\": \"Protocol Alpha Revised\"}}";
+        var version = NewDraft();
 
-        // Act 1: Update payload while in Draft
-        protocolVersion.UpdateDraftPayload(updatedJson, "author_2", "Added secondary endpoints");
+        version.SubmitForReview().Should().BeNull();
 
-        // Assert 1
-        protocolVersion.UsdmPayloadJson.Should().Be(updatedJson);
-        protocolVersion.CreatedBy.Should().Be("author_2");
-        protocolVersion.ReasonForChange.Should().Be("Added secondary endpoints");
+        version.Status.Should().Be(ProtocolVersionStatus.InReview);
+        version.ContentHash.Should().Be(ContentHash.Compute(Content));
+        version.SignableTarget.Should().Be(new AttestationTarget(AttestationTarget.ProtocolVersionKind, version.Id.Value, version.ContentHash!));
+        version.Revise("""{"changed":true}""", null)!.Code.Should().Be(ProtocolErrors.InvalidTransition.Code);
+        version.Content.Should().Be(Content);
 
-        // Act 2: Submit for review
-        protocolVersion.SubmitForReview("author_2", "Ready for medical monitor review");
+        version.ReturnToDraft().Should().BeNull();
+        version.ContentHash.Should().BeNull();
+        version.Status.Should().Be(ProtocolVersionStatus.Draft);
 
-        // Assert 2
-        protocolVersion.Status.Should().Be(ProtocolApprovalStatus.InReview);
-        protocolVersion.ReasonForChange.Should().Be("Ready for medical monitor review");
-
-        // Assert 3: Submitting again while InReview throws InvalidOperationException
-        var actInvalidSubmit = () => protocolVersion.SubmitForReview("author_2", "Duplicate submission");
-        actInvalidSubmit.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Only Draft protocol versions can be submitted for review*");
+        version.SubmitForReview().Should().BeNull();
+        version.ContentHash.Should().Be(ContentHash.Compute(Content));
     }
 
     /// <summary>
-    /// Validates formal approval and enforces strict 21 CFR Part 11 immutability on approved versions.
+    /// Every status against every operation: only the transitions in spec §6.2 succeed, and a refused one returns
+    /// <c>K.Protocol.InvalidTransition</c> and changes nothing.
     /// </summary>
-    [Fact(DisplayName = "ProtocolVersion_Approval_EnforcesPermanentImmutability")]
-    [Trait("Category", "GxP_OQ")]
-    public void ProtocolVersionApprovalEnforcesPermanentImmutability()
+    [Theory(DisplayName = "Lifecycle_AllowsOnlyTheSpecifiedTransitions")]
+    [MemberData(nameof(Transitions))]
+    [GxPRequirement("PRD-CRF-012")]
+    public void LifecycleAllowsOnlyTheSpecifiedTransitions(ProtocolVersionStatus status, string operation, bool allowed)
     {
-        // Arrange
-        var protocolVersion = CreateTestProtocolVersion();
-        protocolVersion.SubmitForReview("author_1", "Ready for IRB submission");
+        var version = InStatus(status);
+        var hash = version.ContentHash;
 
-        var approvedAt = DateTimeOffset.UtcNow;
+        KernelError? error = operation switch
+        {
+            "Revise" => version.Revise("""{"revised":true}""", null),
+            "Submit" => version.SubmitForReview(),
+            "ReturnToDraft" => version.ReturnToDraft(),
+            "Approve" => version.Approve(AttestationId.New()),
+            "Withdraw" => version.Withdraw(AttestationId.New(), "Safety signal"),
+            "Supersede" => version.Supersede(),
+            "Fork" => ProtocolVersion.Fork(version, ProtocolVersionId.New(), version.Number + 1, Amendment).Error,
+            _ => throw new ArgumentOutOfRangeException(nameof(operation)),
+        };
 
-        // Act: Formally approve
-        protocolVersion.Approve(approvedAt, "medical_monitor_1", "IRB approval granted");
+        if (allowed)
+        {
+            error.Should().BeNull();
+            return;
+        }
 
-        // Assert status
-        protocolVersion.Status.Should().Be(ProtocolApprovalStatus.Approved);
-        protocolVersion.CreatedBy.Should().Be("medical_monitor_1");
-        protocolVersion.ReasonForChange.Should().Be("IRB approval granted");
+        error!.Code.Should().Be(ProtocolErrors.InvalidTransition.Code);
+        version.Status.Should().Be(status);
+        version.ContentHash.Should().Be(hash);
+    }
 
-        // Assert Immutability: Mutating approved version is rejected under 21 CFR Part 11
-        var actMutate = () => protocolVersion.UpdateDraftPayload("{}", "hacker", "Unauthorized edit");
-        actMutate.Should().Throw<InvalidOperationException>()
-            .WithMessage("*permanently immutable under 21 CFR Part 11*");
+    /// <summary>Approval and withdrawal record their attestation; withdrawal also needs a reason.</summary>
+    [Fact(DisplayName = "ApproveAndWithdraw_RecordTheirAttestations")]
+    public void ApproveAndWithdrawRecordTheirAttestations()
+    {
+        var version = InStatus(ProtocolVersionStatus.InReview);
+        var approval = AttestationId.New();
+        var withdrawal = AttestationId.New();
 
-        var actReApprove = () => protocolVersion.Approve(approvedAt.AddMinutes(5), "monitor_2", "Re-approval");
-        actReApprove.Should().Throw<InvalidOperationException>()
-            .WithMessage("*cannot be approved from status: Approved*");
+        version.Approve(approval).Should().BeNull();
+        version.ApprovalAttestationId.Should().Be(approval);
+        version.Withdraw(withdrawal, " ").Should().Be(KernelErrors.ReasonForChangeRequired);
+        version.Status.Should().Be(ProtocolVersionStatus.Approved);
+
+        version.Withdraw(withdrawal, "Sponsor terminated the study").Should().BeNull();
+
+        version.Status.Should().Be(ProtocolVersionStatus.Withdrawn);
+        version.WithdrawalAttestationId.Should().Be(withdrawal);
+        version.WithdrawalReason.Should().Be("Sponsor terminated the study");
     }
 
     /// <summary>
-    /// Validates forking an approved protocol into a new amendment draft version with bitemporal supersession.
+    /// Forking an approved version starts a draft that copies the content and carries the amendment, and the parent
+    /// stays approved (#4775: forking must not supersede the parent).
     /// </summary>
-    [Fact(DisplayName = "ProtocolVersion_ForkAmendment_SupersedesPriorAndCreatesNewDraft")]
-    [Trait("Category", "GxP_OQ")]
-    public void ProtocolVersionForkAmendmentSupersedesPriorAndCreatesNewDraft()
+    [Fact(DisplayName = "Fork_LeavesTheParentApproved_AndStartsAnAmendedDraft")]
+    [GxPRequirement("PRD-CRF-012")]
+    public void ForkLeavesTheParentApprovedAndStartsAnAmendedDraft()
     {
-        // Arrange
-        var protocolVersion = CreateTestProtocolVersion();
-        var approvalTime = DateTimeOffset.UtcNow.AddDays(-10);
-        protocolVersion.Approve(approvalTime, "sponsor_qa", "Initial Protocol Approval");
+        var parent = InStatus(ProtocolVersionStatus.Approved);
+        var id = ProtocolVersionId.New();
 
-        var amendmentTime = DateTimeOffset.UtcNow;
-        var amendmentId = ProtocolVersionId.New();
+        var fork = ProtocolVersion.Fork(parent, id, 2, Amendment).Value!;
 
-        // Act: Fork protocol amendment
-        var amendment = protocolVersion.ForkAmendment(
-            amendmentId,
-            "v2.0-amendment-1",
-            amendmentTime,
-            "pi_lead",
-            "Protocol Amendment 1: Modified inclusion criteria");
-
-        // Assert Prior Version
-        protocolVersion.Status.Should().Be(ProtocolApprovalStatus.Superseded);
-        protocolVersion.Period.RecordedTo.Should().Be(amendmentTime);
-        protocolVersion.Period.IsCurrent(amendmentTime.AddMinutes(1)).Should().BeFalse();
-
-        // Assert Amendment Version
-        amendment.Id.Should().Be(amendmentId);
-        amendment.PredecessorVersionId.Should().Be(protocolVersion.Id);
-        amendment.VersionTag.Should().Be("v2.0-amendment-1");
-        amendment.VersionIndex.Should().Be(protocolVersion.VersionIndex + 1);
-        amendment.Status.Should().Be(ProtocolApprovalStatus.Draft);
-        amendment.Period.RecordedFrom.Should().Be(amendmentTime);
-        amendment.Period.RecordedTo.Should().BeNull();
-        amendment.Period.IsCurrent(amendmentTime).Should().BeTrue();
-        amendment.CreatedBy.Should().Be("pi_lead");
-        amendment.ReasonForChange.Should().Be("Protocol Amendment 1: Modified inclusion criteria");
+        parent.Status.Should().Be(ProtocolVersionStatus.Approved);
+        fork.Id.Should().Be(id);
+        fork.Number.Should().Be(2);
+        fork.ParentVersionId.Should().Be(parent.Id);
+        fork.TenantId.Should().Be(parent.TenantId);
+        fork.StudyId.Should().Be(parent.StudyId);
+        fork.Status.Should().Be(ProtocolVersionStatus.Draft);
+        fork.Content.Should().Be(parent.Content);
+        fork.Amendment.Should().Be(Amendment);
+        fork.ContentHash.Should().BeNull();
     }
 
-    private static ProtocolVersion CreateTestProtocolVersion()
+    /// <summary>An amendment needs its intent, rationale, summary and impacted elements, and only a fork has one.</summary>
+    [Fact(DisplayName = "Amendment_IsValidated_AndBelongsToForksOnly")]
+    public void AmendmentIsValidatedAndBelongsToForksOnly()
     {
-        var now = DateTimeOffset.UtcNow;
-        return new ProtocolVersion(
-            ProtocolVersionId.New(),
-            TenantId.New(),
-            StudyId.New(),
-            "v1.0",
-            1,
-            predecessorVersionId: null,
-            "{\"study\": {\"id\": \"ST-001\", \"name\": \"Phase III Oncology Trial\"}}",
-            TemporalPeriod.CreateCurrent(now, now),
-            "data_manager_1",
-            "Initial setup");
+        var parent = InStatus(ProtocolVersionStatus.Approved);
+
+        foreach (var invalid in new[]
+        {
+            Amendment with { Intent = " " },
+            Amendment with { Rationale = "" },
+            Amendment with { SummaryOfChanges = "" },
+            Amendment with { ImpactedElements = [] },
+            Amendment with { ImpactedElements = ["arm:C", " "] },
+            Amendment with { Classification = (AmendmentClassification)99 },
+            Amendment with { TransitionPolicy = (TransitionPolicy)99 },
+        })
+        {
+            ProtocolVersion.Fork(parent, ProtocolVersionId.New(), 2, invalid).Error.Should().Be(ProtocolErrors.AmendmentInvalid);
+        }
+
+        NewDraft().Revise(Content, Amendment).Should().Be(ProtocolErrors.AmendmentNotAllowed);
+
+        var fork = ProtocolVersion.Fork(parent, ProtocolVersionId.New(), 2, Amendment).Value!;
+        var revised = Amendment with { SummaryOfChanges = "Adds cohort C only" };
+        fork.Revise("""{"study":{"name":"CARDIO-1","arms":["A","B","C"]}}""", revised).Should().BeNull();
+        fork.Amendment.Should().Be(revised);
+        fork.Revise(Content, null).Should().BeNull();
+        fork.Amendment.Should().Be(revised);
+    }
+
+    private static ProtocolVersion NewDraft() =>
+        ProtocolVersion.CreateFirst(ProtocolVersionId.New(), TenantId.New(), StudyId.New(), Content).Value!;
+
+    private static ProtocolVersion InStatus(ProtocolVersionStatus status)
+    {
+        var version = NewDraft();
+        if (status == ProtocolVersionStatus.Draft)
+        {
+            return version;
+        }
+
+        version.SubmitForReview().Should().BeNull();
+        switch (status)
+        {
+            case ProtocolVersionStatus.Approved:
+                version.Approve(AttestationId.New()).Should().BeNull();
+                break;
+            case ProtocolVersionStatus.Superseded:
+                version.Approve(AttestationId.New()).Should().BeNull();
+                version.Supersede().Should().BeNull();
+                break;
+            case ProtocolVersionStatus.Withdrawn:
+                version.Withdraw(AttestationId.New(), "Withdrawn in test").Should().BeNull();
+                break;
+        }
+
+        version.Status.Should().Be(status);
+        return version;
     }
 }

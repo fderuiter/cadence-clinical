@@ -100,18 +100,7 @@ public class DdfCompilerTests
     public void UsdmCompilerCompileFromProtocolVersionSucceeds()
     {
         // Arrange
-        var now = DateTimeOffset.UtcNow;
-        var protocol = new ProtocolVersion(
-            ProtocolVersionId.New(),
-            TenantId.New(),
-            StudyId.New(),
-            "v1.0",
-            1,
-            predecessorVersionId: null,
-            SampleUsdmJson,
-            TemporalPeriod.CreateCurrent(now, now),
-            "study_architect",
-            "Initial compilation test");
+        var protocol = ProtocolVersion.CreateFirst(ProtocolVersionId.New(), TenantId.New(), StudyId.New(), SampleUsdmJson).Value!;
 
         // Act
         var result = UsdmCompiler.Compile(protocol);

@@ -21,8 +21,10 @@ recorded period (K-TIME-1). Code takes time only from `IClock` (K-TIME-3).
 
 ### ProtocolVersion, Amendment and Effectivity
 
-A **ProtocolVersion** is one immutable version of the executable protocol; an **Amendment** produces a
-new one. **Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or
+A **ProtocolVersion** is one version of the executable protocol, numbered within its study. It moves
+`Draft → InReview → Approved → Superseded | Withdrawn`. Submitting it for review freezes its content under a
+**content hash**; approval and withdrawal each need an Attestation on that hash. An **Amendment** is carried
+by the draft forked from an approved version, and the parent stays approved (ADR-2452). **Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or
 StudySite): approval is not effectiveness, and `Effective` requires evidence artifacts such as the
 ethics approval (K-TIME-4, K-TIME-5).
 
@@ -73,8 +75,9 @@ a participant, its collection event, chain of custody, consent scope and derived
 
 ### Attestation
 
-A signed statement by an authenticated actor, including electronic signatures under 21 CFR Part 11.
-Append-only.
+A signed statement by an authenticated person, including electronic signatures under 21 CFR Part 11: a
+meaning (Approved, Reviewed, Withdrawn, …) about one record's exact content, named by its content hash, with
+when and how the signer authenticated. Append-only; commands that need a signature name an Attestation.
 
 ### Authority (Actor, Capability, Delegation, Qualification)
 
