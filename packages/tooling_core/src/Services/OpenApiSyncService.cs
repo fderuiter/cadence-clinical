@@ -61,7 +61,7 @@ public static class OpenApiSyncService
             {
                 Console.WriteLine($"  updated {line}");
             }
-            Console.WriteLine("✔ docs/openapi synchronized. Run 'pnpm cadence generate-api-docs' to refresh docs/api.");
+            Console.WriteLine("✔ docs/openapi synchronized. Run 'pnpm cadence generate-api-docs' to refresh docs/api and 'pnpm --filter web generate:api' to refresh the web client types.");
             return 0;
         }
         finally

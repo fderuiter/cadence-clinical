@@ -6,7 +6,7 @@ Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks 
 
 - `src/main.js`: bootstraps Vue, Pinia and the router, initialises Keycloak (`keycloak-js`), and, in a demo build only, seeds the offline demo identity and the MSW mock worker.
 - `src/api/`: the `apiClient.js` fetch wrapper and per-service clients. `executionApi.ts` is typed from the .NET Execution spec through `src/api/generated/execution.ts`; the others (`designer.ts`, `execution.ts`, `etmf.ts`, `interop.ts`, `econsent.ts`, `fileshare.ts`, and more) are Python-era clients.
-- `scripts/generate-api-types.js`: generates `src/api/generated/<service>.ts` from `docs/openapi/<service>_openapi.json` (`pnpm --filter web generate:api`); `tests/api/generated_types.test.js` fails when they drift.
+- `scripts/generate-api-types.js`: generates `src/api/generated/<service>.ts` from `docs/openapi/<service>_openapi.json` (`pnpm --filter web generate:api`); the `api-clients` quality gate and `tests/api/generated_types.test.js` fail when they drift from the specs.
 - `src/stores/`: Pinia stores; `auth.js` holds the Keycloak session and role normalisation.
 - `src/views/`, `src/components/`, `src/features/`, `src/composables/`, `src/router/`: UI.
 - `src/mocks/`: MSW handlers for offline and demo use.

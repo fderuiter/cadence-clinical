@@ -5,7 +5,9 @@
  *
  * A service is listed here when its first screen moves onto the real API (docs/web/API_MIGRATION.md).
  *
- * Usage: node scripts/generate-api-types.js
+ * Usage: node scripts/generate-api-types.js [--check]
+ *   --check  write nothing; exit 1 and name the stale files when any no longer matches its spec
+ *            (the api-clients quality gate runs this, so a spec change without regenerated types fails pre-commit).
  */
 import fs from "fs";
 import path from "path";
@@ -39,11 +41,25 @@ export function outputPath(service) {
   return path.join(OUTPUT_DIR, `${service}.ts`);
 }
 
-async function main() {
+async function main(check) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  const stale = [];
   for (const service of GENERATED_SERVICES) {
-    fs.writeFileSync(outputPath(service), await renderServiceTypes(service));
-    console.log(`[+] ${path.relative(WEB_DIR, outputPath(service))}`);
+    const file = outputPath(service);
+    const rendered = await renderServiceTypes(service);
+    if (check) {
+      const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
+      if (current !== rendered) stale.push(path.relative(WEB_DIR, file));
+      continue;
+    }
+    fs.writeFileSync(file, rendered);
+    console.log(`[+] ${path.relative(WEB_DIR, file)}`);
+  }
+  if (stale.length > 0) {
+    console.error(
+      `[ERROR] Out of date with docs/openapi: ${stale.join(", ")}. Run 'pnpm --filter web generate:api' and commit the result.`
+    );
+    process.exitCode = 1;
   }
 }
 
@@ -51,5 +67,5 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  await main();
+  await main(process.argv.includes("--check"));
 }
