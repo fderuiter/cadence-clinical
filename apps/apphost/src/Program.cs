@@ -14,7 +14,8 @@ var cadenceDb = postgres.AddDatabase("cadence");
 
 // Credentials are Aspire parameters, never literals: set them with `dotnet user-secrets` on this project
 // (Parameters:minio-root-user, Parameters:minio-root-password, Parameters:keycloak-admin,
-// Parameters:keycloak-admin-password, Parameters:gateway-secret, Parameters:audit-log-secret-key) or as
+// Parameters:keycloak-admin-password, Parameters:gateway-secret, Parameters:audit-log-secret-key,
+// Parameters:demographics-encryption-key) or as
 // Parameters__<name> environment variables. Aspire prompts for any
 // missing value in the dashboard instead of starting the container with a well-known default.
 var minioRootUser = builder.AddParameter("minio-root-user");
@@ -25,6 +26,9 @@ var keycloakAdminPassword = builder.AddParameter("keycloak-admin-password", secr
 // Shared service secrets (Parameters:gateway-secret must be at least 32 characters).
 var gatewaySecret = builder.AddParameter("gateway-secret", secret: true);
 var auditLogSecretKey = builder.AddParameter("audit-log-secret-key", secret: true);
+
+// Execution refuses to start without a base64 AES key of 16, 24 or 32 bytes (`openssl rand -base64 32`).
+var demographicsEncryptionKey = builder.AddParameter("demographics-encryption-key", secret: true);
 
 // Images are pinned to explicit release tags (same MinIO release as docker/docker-compose.yml).
 var minio = builder.AddContainer("minio", "minio/minio", "RELEASE.2024-05-28T17-19-04Z")
@@ -52,6 +56,7 @@ builder.AddProject<Projects.Cadence_Apps_Gateway>("gateway")
 builder.AddProject<Projects.Cadence_Apps_Execution>("execution")
     .WithEnvironment("GATEWAY_SECRET", gatewaySecret)
     .WithEnvironment("AUDIT_LOG_SECRET_KEY", auditLogSecretKey)
+    .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey)
     .WithReference(postgres)
     .WithReference(cadenceDb);
 
