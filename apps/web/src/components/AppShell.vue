@@ -16,112 +16,131 @@
             Automated Digital Data Flow & Regulatory eClinical Platform
           </p>
         </div>
-      </div>
-
-      <div class="header-center">
-        <!-- Quick Command Palette Trigger -->
         <button
-          class="cmd-palette-trigger"
-          title="Search anything (Cmd+K)"
-          @click="isCommandPaletteOpen = true"
+          id="btn-mobile-menu-toggle"
+          class="mobile-menu-btn"
+          type="button"
+          :aria-expanded="isMobileMenuOpen"
+          aria-controls="mobile-nav-menu"
+          aria-label="Toggle navigation menu"
+          @click="isMobileMenuOpen = !isMobileMenuOpen"
         >
-          <span class="search-icon">🔍</span>
-          <span class="search-placeholder">Quick Search...</span>
-          <kbd class="shortcut-badge">⌘K</kbd>
-        </button>
-
-        <!-- The Clinical Canvas: the study-centric workspace the screens below move into (#4833). -->
-        <router-link
-          id="btn-open-study-canvas"
-          :to="studyCanvasPath"
-          class="cmd-palette-trigger"
-          title="Open the study workspace"
-        >
-          <span class="search-placeholder">Studies</span>
-        </router-link>
-
-        <!-- Contextual Help Trigger Button -->
-        <button
-          id="btn-contextual-help-trigger"
-          class="cmd-palette-trigger btn-help-trigger"
-          title="Open In-Page Contextual Guidance & SOPs (F1 or ?)"
-          @click="knowledgeStore.toggleDrawer()"
-        >
-          <span class="search-icon">📖</span>
-          <span class="search-placeholder">Help &amp; SOPs</span>
-          <kbd class="shortcut-badge">?</kbd>
+          <span class="hamburger-icon" aria-hidden="true">{{
+            isMobileMenuOpen ? "✕" : "☰"
+          }}</span>
         </button>
       </div>
 
-      <div class="header-right">
-        <!-- Regulatory Badges -->
-        <div class="header-badges">
-          <span class="badge gxp">21 CFR Part 11</span>
-          <span class="badge">GAMP 5</span>
-          <span class="badge">IEC 62304</span>
+      <div
+        id="mobile-nav-menu"
+        class="header-nav-collapse"
+        :class="{ 'is-open': isMobileMenuOpen }"
+      >
+        <div class="header-center">
+          <!-- Quick Command Palette Trigger -->
+          <button
+            class="cmd-palette-trigger"
+            title="Search anything (Cmd+K)"
+            @click="isCommandPaletteOpen = true"
+          >
+            <span class="search-icon">🔍</span>
+            <span class="search-placeholder">Quick Search...</span>
+            <kbd class="shortcut-badge">⌘K</kbd>
+          </button>
+
+          <!-- The Clinical Canvas: the study-centric workspace the screens below move into (#4833). -->
+          <router-link
+            id="btn-open-study-canvas"
+            :to="studyCanvasPath"
+            class="cmd-palette-trigger"
+            title="Open the study workspace"
+          >
+            <span class="search-placeholder">Studies</span>
+          </router-link>
+
+          <!-- Contextual Help Trigger Button -->
+          <button
+            id="btn-contextual-help-trigger"
+            class="cmd-palette-trigger btn-help-trigger"
+            title="Open In-Page Contextual Guidance & SOPs (F1 or ?)"
+            @click="knowledgeStore.toggleDrawer()"
+          >
+            <span class="search-icon">📖</span>
+            <span class="search-placeholder">Help &amp; SOPs</span>
+            <kbd class="shortcut-badge">?</kbd>
+          </button>
         </div>
 
-        <!-- Workspace view switcher: only personas the token's roles allow;
-             switching never changes the user's roles. -->
-        <div
-          v-if="authStore.availablePersonas.length > 1"
-          class="persona-switcher-box"
-        >
-          <label for="persona-select" class="sr-only"
-            >Switch workspace view</label
+        <div class="header-right">
+          <!-- Regulatory Badges -->
+          <div class="header-badges">
+            <span class="badge gxp">21 CFR Part 11</span>
+            <span class="badge">GAMP 5</span>
+            <span class="badge">IEC 62304</span>
+          </div>
+
+          <!-- Workspace view switcher: only personas the token's roles allow;
+               switching never changes the user's roles. -->
+          <div
+            v-if="authStore.availablePersonas.length > 1"
+            class="persona-switcher-box"
           >
-          <select
-            id="persona-select"
-            v-model="activePersonaKey"
-            class="persona-select"
-            title="Switch workspace view"
-            @change="onPersonaSelect"
-          >
-            <option
-              v-for="p in authStore.availablePersonas"
-              :key="p.key"
-              :value="p.key"
+            <label for="persona-select" class="sr-only"
+              >Switch workspace view</label
             >
-              {{ p.label }}
-            </option>
-          </select>
-        </div>
+            <select
+              id="persona-select"
+              v-model="activePersonaKey"
+              class="persona-select"
+              title="Switch workspace view"
+              @change="onPersonaSelect"
+            >
+              <option
+                v-for="p in authStore.availablePersonas"
+                :key="p.key"
+                :value="p.key"
+              >
+                {{ p.label }}
+              </option>
+            </select>
+          </div>
 
-        <!-- User Identity Card -->
-        <div class="user-status-card">
-          <div class="user-avatar">
-            {{
-              (authStore.identity?.username || "U")
-                .substring(0, 2)
-                .toUpperCase()
-            }}
-          </div>
-          <div class="user-info">
-            <div class="user-name">
-              {{ authStore.identity?.username || "Not signed in" }}
+          <!-- User Identity Card -->
+          <div class="user-status-card">
+            <div class="user-avatar">
+              {{
+                (authStore.identity?.username || "U")
+                  .substring(0, 2)
+                  .toUpperCase()
+              }}
             </div>
-            <div class="user-role-label">
-              {{ activePersonaLabel }}
+            <div class="user-info">
+              <div class="user-name">
+                {{ authStore.identity?.username || "Not signed in" }}
+              </div>
+              <div class="user-role-label">
+                {{ activePersonaLabel }}
+              </div>
             </div>
+            <button
+              v-if="authStore.isAuthenticated"
+              id="btn-logout"
+              class="btn btn-logout-action"
+              title="Log out of session"
+              @click="authStore.logout()"
+            >
+              Logout
+            </button>
+            <button
+              v-else
+              id="btn-login"
+              class="btn btn-login-action"
+              title="Log in to session"
+              @click="authStore.login()"
+            >
+              Login
+            </button>
           </div>
-          <button
-            v-if="authStore.isAuthenticated"
-            id="btn-logout"
-            class="btn btn-logout-action"
-            title="Log out of session"
-            @click="authStore.logout()"
-          >
-            Logout
-          </button>
-          <button
-            v-else
-            id="btn-login"
-            class="btn btn-login-action"
-            title="Log in to session"
-            @click="authStore.login()"
-          >
-            Login
-          </button>
         </div>
       </div>
     </header>
@@ -952,6 +971,7 @@ watch(
 
 const screenReaderAnnouncement = ref("");
 
+const isMobileMenuOpen = ref(false);
 const isCommandPaletteOpen = ref(false);
 const showDiagnosticPanel = ref(false);
 
