@@ -108,9 +108,11 @@ public class SubjectErrorsTests
             SubjectErrors.BlockedActivation("SITE-042").Code,
             SubjectErrors.ReconsentRequired("v2", "SUBJ-001", "VISIT-3").Code,
             SubjectErrors.SignedConsentDateRequired().Code,
+            SubjectErrors.UnauthorizedParticipantRole("cra").Code,
+            SubjectErrors.UnauthorizedUnblindRole("crc").Code,
         };
 
         codes.Should().OnlyHaveUniqueItems();
-        codes.Should().HaveCount(8);
+        codes.Should().HaveCount(10);
     }
 }

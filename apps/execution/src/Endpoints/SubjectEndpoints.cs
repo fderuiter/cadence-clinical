@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,18 +31,9 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// wiring" per its own Target Files entry — this file does not call <see cref="MapSubjectEndpoints"/> from
 /// `Program.cs` itself.
 /// <para>
-/// <b>Cross-cutting gap, flagged rather than silently invented (see <see cref="GetSubjectDetailAsync"/>):</b>
-/// `03_tickets.md`'s own text for this ticket names an "existing platform abstraction",
-/// <c>ICurrentUserAccessor.HasBlindedRole</c>, for resolving <c>GET /{subjectId}</c>'s <c>isBlindedCaller</c>
-/// flag, but instructs implementers to verify it actually exists before assuming the placeholder name is
-/// final. A solution-wide search (every <c>.cs</c> file, not just `apps/execution`) for
-/// <c>ICurrentUserAccessor</c>/<c>HasBlindedRole</c>/<c>BlindedRole</c>/<c>IsBlinded</c> found zero matches:
-/// no such accessor exists anywhere — not in `Cadence.Apps.Gateway`, not in `Cadence.Apps.Designer`, not in
-/// any shared `packages/` project. Per the ticket's own instruction, this is a cross-cutting RBAC gap to
-/// flag back to the technical design, not to silently paper over with a new one-off named interface inside
-/// this slice (unlike `MIG-SUBJ-017`'s <see cref="Cadence.Apps.Execution.Application.Abstractions.ICurrentAuditContextAccessor"/>,
-/// which the design doc did establish as the vetted, cross-cutting standard). See
-/// <see cref="GetSubjectDetailAsync"/>'s own remarks for the minimal, narrowly-scoped stand-in used instead.
+/// Every route that changes a participant's record checks the caller's signed roles against
+/// <see cref="SubjectAuthority"/> and answers <c>403</c> otherwise (#4943). Subject detail is blinded unless the
+/// caller carries the gateway-signed <see cref="CadenceClaimTypes.UnblindedAccess"/> claim.
 /// </para>
 /// Legacy Python source being replaced: `apps/execution/presentation/routers/subjects.py` (all
 /// subject-scoped route handlers, lines 180–773).
@@ -106,12 +98,14 @@ public static partial class SubjectEndpoints
             .WithName("CreateSubject")
             .Produces<SubjectResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .AddEndpointFilter<ValidationFilter<SubjectCreateRequest>>();
 
         group.MapPost("/{subjectId}/consent", RecordSubjectConsentAsync)
             .WithName("RecordSubjectConsent")
             .Produces<SubjectConsentResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>();
 
@@ -138,6 +132,7 @@ public static partial class SubjectEndpoints
             .Produces<SubjectResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
@@ -155,6 +150,7 @@ public static partial class SubjectEndpoints
         group.MapPut("/{subjectId}/demographics", UpdateSubjectDemographicsAsync)
             .WithName("UpdateSubjectDemographics")
             .Produces<SubjectResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
@@ -174,8 +170,13 @@ public static partial class SubjectEndpoints
     /// code (<see cref="SubjectResponse.SubjectId_"/>), per `02_technical_design.md` §3.3.
     /// </summary>
     public static async Task<IResult> CreateSubjectAsync(
-        SubjectCreateRequest request, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+        SubjectCreateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        {
+            return forbidden.ToProblemResult();
+        }
+
         if (logger != null)
         {
             logger.LogCreatingSubject(request.SubjectId, request.StudyId);
@@ -199,8 +200,13 @@ public static partial class SubjectEndpoints
     /// <see cref="MapSubjectEndpoints"/>'s own remarks).
     /// </summary>
     public static async Task<IResult> RecordSubjectConsentAsync(
-        string subjectId, SubjectConsentRequest request, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+        string subjectId, SubjectConsentRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
+        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        {
+            return forbidden.ToProblemResult();
+        }
+
         if (logger != null)
         {
             logger.LogRecordingConsent(subjectId, request.ProtocolVersion?.StudyId, request.ProtocolVersion?.VersionTag);
@@ -217,7 +223,9 @@ public static partial class SubjectEndpoints
     /// is never reached for such a request. The <c>throw</c> below is unreachable in production traffic for
     /// exactly that reason — it exists only to fail loudly (rather than silently miscompute a reason of
     /// <c>""</c>) if this filter is ever removed from the route without updating this delegate, matching
-    /// `02_technical_design.md` §3.3's own reference implementation for this route verbatim.
+    /// `02_technical_design.md` §3.3's own reference implementation for this route verbatim. The caller needs a
+    /// role that may change a participant's record, and an unblinding authority when the target is
+    /// <c>UNBLINDED</c> (<see cref="SubjectAuthority.AuthorizeStateChange"/>).
     /// </summary>
     public static async Task<IResult> AdvanceSubjectStateAsync(
         string subjectId, SubjectStateUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
@@ -225,13 +233,18 @@ public static partial class SubjectEndpoints
         string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
 
+        if (SubjectAuthority.AuthorizeStateChange(http.User.ToAuthenticatedCaller(), request.Target) is { } forbidden)
+        {
+            return forbidden.ToProblemResult();
+        }
+
         if (logger != null)
         {
             logger.LogAdvancingSubjectState(subjectId, request.Target, changeReason);
         }
 
         var result = await svc.AdvanceStateAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
-        return result.Match(Results.Ok, e => e.ToProblemResult());
+        return result.Match(r => Results.Ok(BlindFor(http.User, r)), e => e.ToProblemResult());
     }
 
     /// <summary>
@@ -252,26 +265,14 @@ public static partial class SubjectEndpoints
     }
 
     /// <summary>
-    /// <c>GET /api/v1/execution/subjects/{subjectId}</c>.
-    /// <para>
-    /// <b>Minimal, explicitly-temporary stand-in for the missing RBAC abstraction</b> (see this class's own
-    /// remarks for the solution-wide search confirming no <c>ICurrentUserAccessor</c>-shaped accessor exists
-    /// anywhere today): reads a <c>"Blinded"</c> role claim directly off <c>HttpContext.User</c>, scoped to
-    /// only this one route, purely to satisfy this ticket's AC — proving the wiring from caller role to
-    /// <see cref="ISubjectApplicationService.GetDetailAsync"/>'s <c>isBlindedCaller</c> parameter, not the
-    /// redaction logic itself (already covered by <c>SubjectApplicationServiceDetailTests</c>). Do not copy
-    /// this pattern into another slice or treat it as an established platform convention — replace it with a
-    /// real, vetted, cross-cutting accessor once the technical design settles on one.
-    /// <c>ClaimsPrincipal.IsInRole</c> on the framework's default, unauthenticated
-    /// <see cref="HttpContext.User"/> (no authentication middleware is registered anywhere in this slice yet)
-    /// safely returns <see langword="false"/> rather than throwing, so this remains safe to call
-    /// unconditionally.
-    /// </para>
+    /// <c>GET /api/v1/execution/subjects/{subjectId}</c>. Blinded by default: the treatment group is returned only
+    /// to a caller whose signed identity carries <see cref="CadenceClaimTypes.UnblindedAccess"/>, which the gateway
+    /// sets from the identity provider (#4943).
     /// </summary>
     public static async Task<IResult> GetSubjectDetailAsync(
         string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
     {
-        bool isBlindedCaller = http.User.IsInRole(BlindedRoleClaimStandIn);
+        bool isBlindedCaller = !IsUnblindedCaller(http.User);
 
         if (logger != null)
         {
@@ -294,13 +295,18 @@ public static partial class SubjectEndpoints
     {
         string changeReason = ChangeReasonHeader.Read(http.Request)!;
 
+        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        {
+            return forbidden.ToProblemResult();
+        }
+
         if (logger != null)
         {
             logger.LogUpdatingSubjectDemographics(subjectId, changeReason);
         }
 
         var result = await svc.UpdateDemographicsAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
-        return result.Match(Results.Ok, e => e.ToProblemResult());
+        return result.Match(r => Results.Ok(BlindFor(http.User, r)), e => e.ToProblemResult());
     }
 
     /// <summary>
@@ -314,19 +320,29 @@ public static partial class SubjectEndpoints
     {
         string changeReason = ChangeReasonHeader.Read(http.Request)!;
 
+        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        {
+            return forbidden.ToProblemResult();
+        }
+
         if (logger != null)
         {
             logger.LogDeletingSubjectDemographics(subjectId, changeReason);
         }
 
         var result = await svc.DeleteDemographicsAsync(subjectId, changeReason, ct).ConfigureAwait(false);
-        return result.Match(Results.Ok, e => e.ToProblemResult());
+        return result.Match(r => Results.Ok(BlindFor(http.User, r)), e => e.ToProblemResult());
     }
 
     /// <summary>
-    /// The claim/role name this slice's temporary <see cref="GetSubjectDetailAsync"/> stand-in checks for.
-    /// Named distinctly (not just an inline literal) so the eventual swap to a real RBAC abstraction is a
-    /// one-line diff, and so a reviewer/grep can find every place this stand-in is consulted.
+    /// <paramref name="response"/> without its treatment group unless <paramref name="user"/> is unblinded, so a
+    /// state change or demographics edit cannot reveal the arm that subject detail withholds (#4943).
     /// </summary>
-    private const string BlindedRoleClaimStandIn = "Blinded";
+    private static SubjectResponse BlindFor(ClaimsPrincipal user, SubjectResponse response) =>
+        IsUnblindedCaller(user) ? response : response with { TreatmentGroup = null };
+
+    /// <summary>Whether <paramref name="user"/> carries the gateway-signed unblinded-access claim.</summary>
+    private static bool IsUnblindedCaller(ClaimsPrincipal user) =>
+        user.Identity is { IsAuthenticated: true }
+        && string.Equals(user.FindFirst(CadenceClaimTypes.UnblindedAccess)?.Value, "true", StringComparison.OrdinalIgnoreCase);
 }

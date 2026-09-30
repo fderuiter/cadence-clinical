@@ -14,7 +14,9 @@ using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Core.Domain;
+using Cadence.Security.Authentication;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 
 using FluentAssertions;
 
@@ -48,7 +50,7 @@ namespace Cadence.UnitTests.Execution.Endpoints;
 /// exceptions call <see cref="SubjectEndpoints"/>'s handler methods directly instead (see their own remarks):
 /// the <c>CancellationToken</c> boundary check (AC: "cancelling the request mid-flight, simulated... via a
 /// pre-cancelled token" — a genuine HTTP-level abort race is exactly what that wording tells us to avoid),
-/// and the blinded-role-claim-to-<c>isBlindedCaller</c> wiring check (a caller-principal concern entirely
+/// and the unblinded-access-claim-to-<c>isBlindedCaller</c> wiring check (a caller-principal concern entirely
 /// internal to the handler body, independent of route/filter registration).
 /// </para>
 /// </summary>
@@ -268,9 +270,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         _factory.Service.GetDetailAsyncCalls.Should().Be(1);
-        _factory.Service.LastIsBlindedCaller.Should().BeFalse("no role claim was presented, so the default caller is unblinded");
-        var body = await response.Content.ReadFromJsonAsync<SubjectDetailResponse>(JsonOptions, TestContext.Current.CancellationToken);
-        body!.TreatmentGroup.Should().Be("ARM-A");
+        _factory.Service.LastIsBlindedCaller.Should().BeTrue("the caller carries no unblinded-access claim, so detail is blinded (#4943)");
     }
 
     [Fact]
@@ -284,23 +284,19 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     /// <summary>
-    /// AC: "Given `GET /{subjectId}` for a blinded-role caller... the response body has
-    /// `treatment_group: null`... this ticket only verifies the wiring, not the redaction logic itself."
-    /// Calls <see cref="SubjectEndpoints.GetSubjectDetailAsync"/> directly with a constructed
-    /// <see cref="ClaimsPrincipal"/> carrying the (temporary, cross-cutting-gap-pending)
-    /// <c>"Blinded"</c> role claim <see cref="SubjectEndpoints"/> looks for, then genuinely executes the
-    /// returned <see cref="IResult"/> and inspects the real serialized JSON body — proving the actual wire
-    /// shape, not just the constructed C# response object — without needing a full authentication-handler
-    /// registration in <see cref="SubjectEndpointsTestFactory"/> purely to inject one test principal.
+    /// Subject detail is blinded by default (#4943): a caller without the gateway-signed
+    /// <see cref="CadenceClaimTypes.UnblindedAccess"/> claim gets <c>treatment_group: null</c>, whatever roles it
+    /// holds. Calls <see cref="SubjectEndpoints.GetSubjectDetailAsync"/> directly and executes the returned
+    /// <see cref="IResult"/> to check the serialized body.
     /// </summary>
     [Fact]
-    public async Task GetSubjectDetailAsync_GivenCallerWithBlindedRoleClaim_ResolvesIsBlindedCallerTrue_AndSerializesTreatmentGroupAsNull()
+    public async Task GetSubjectDetailAsync_GivenCallerWithoutUnblindedAccess_ResolvesIsBlindedCallerTrue_AndSerializesTreatmentGroupAsNull()
     {
         var service = new FakeSubjectApplicationService();
         using var responseBody = new MemoryStream();
         var httpContext = new DefaultHttpContext
         {
-            User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, "Blinded") }, "TestAuth")),
+            User = TestSecurityContext.CreatePrincipal("pi-001", "principal_investigator"),
             RequestServices = BuildJsonOptionsServiceProvider(),
         };
         httpContext.Response.Body = responseBody;
@@ -315,15 +311,16 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
-    public async Task GetSubjectDetailAsync_GivenCallerWithoutBlindedRoleClaim_ResolvesIsBlindedCallerFalse_AndDoesNotRedact()
+    public async Task GetSubjectDetailAsync_GivenCallerWithUnblindedAccess_ResolvesIsBlindedCallerFalse_AndDoesNotRedact()
     {
-        // The meaningful half of the matrix above -- proves the wiring actually branches on the claim,
-        // rather than isBlindedCaller trivially always being true or false regardless of the caller.
+        // The other half of the matrix above: proves the wiring branches on the signed claim.
+        var principal = TestSecurityContext.CreatePrincipal("pharmacist-001", "pharmacist");
+        ((ClaimsIdentity)principal.Identity!).AddClaim(new Claim(CadenceClaimTypes.UnblindedAccess, "true"));
         var service = new FakeSubjectApplicationService();
         using var responseBody = new MemoryStream();
         var httpContext = new DefaultHttpContext
         {
-            User = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, "Investigator") }, "TestAuth")),
+            User = principal,
             RequestServices = BuildJsonOptionsServiceProvider(),
         };
         httpContext.Response.Body = responseBody;
@@ -430,7 +427,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        var act = () => SubjectEndpoints.CreateSubjectAsync(request, service, cts.Token);
+        var act = () => SubjectEndpoints.CreateSubjectAsync(request, SiteContext(), service, cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -443,7 +440,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        var act = () => SubjectEndpoints.RecordSubjectConsentAsync("SUBJ-001", request, service, cts.Token);
+        var act = () => SubjectEndpoints.RecordSubjectConsentAsync("SUBJ-001", request, SiteContext(), service, cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -453,7 +450,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     {
         var service = new FakeSubjectApplicationService();
         var request = new SubjectStateUpdateRequest("ENROLLED", null);
-        var httpContext = new DefaultHttpContext();
+        var httpContext = SiteContext();
         httpContext.Request.Headers["X-Change-Reason"] = "Valid reason.";
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
@@ -481,7 +478,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     {
         var service = new FakeSubjectApplicationService();
         var request = new SubjectDemographicsUpdateRequest(null, null);
-        var httpContext = new DefaultHttpContext();
+        var httpContext = SiteContext();
         httpContext.Request.Headers["X-Change-Reason"] = "Valid reason.";
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
@@ -495,7 +492,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     public async Task DeleteSubjectDemographicsAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
     {
         var service = new FakeSubjectApplicationService();
-        var httpContext = new DefaultHttpContext();
+        var httpContext = SiteContext();
         httpContext.Request.Headers["X-Change-Reason"] = "Valid reason.";
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
@@ -696,6 +693,10 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
             new(SubjectConsentId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"), "2.0", 2, true, null, false, false, 1);
     }
 
+    private static ClaimsPrincipal SiteCoordinator() => TestSecurityContext.CreatePrincipal("crc-001", "crc");
+
+    private static DefaultHttpContext SiteContext() => new() { User = SiteCoordinator() };
+
     /// <summary>
     /// A self-contained <see cref="WebApplicationFactory{TEntryPoint}"/> hosting ONLY
     /// <see cref="SubjectEndpoints.MapSubjectEndpoints"/> against <see cref="FakeSubjectApplicationService"/>,
@@ -738,6 +739,14 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
                     })
                     .Configure(app =>
                     {
+                        // Every request runs as an authenticated site coordinator, as the gateway scheme would
+                        // sign it, so the role checks in the handlers (#4943) pass; role coverage lives in
+                        // SubjectRouteAuthorityTests.
+                        app.Use((context, next) =>
+                        {
+                            context.User = SiteCoordinator();
+                            return next(context);
+                        });
                         app.UseRouting();
                         app.UseEndpoints(endpoints =>
                         {
