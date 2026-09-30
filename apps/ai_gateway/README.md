@@ -41,4 +41,4 @@ export GATEWAY_SECRET="<at least 32 characters>"
 dotnet run --project apps/ai_gateway/src/Cadence.Apps.AiGateway.csproj
 ```
 
-This service is not wired into the Aspire AppHost ([apps/apphost](../apphost/README.md)).
+The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this service on port 8017, as docker compose does (no datastore reference).

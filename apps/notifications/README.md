@@ -47,4 +47,4 @@ export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Use
 dotnet run --project apps/notifications/src/Cadence.Apps.Notifications.csproj
 ```
 
-This service is not wired into the Aspire AppHost ([apps/apphost](../apphost/README.md)).
+The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this service on port 8006, as docker compose does, with a reference to its `cadence` PostgreSQL database; it applies its migrations on start.
