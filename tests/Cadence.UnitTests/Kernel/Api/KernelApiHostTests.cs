@@ -417,9 +417,12 @@ public sealed class KernelApiHostTests : IDisposable
         _navigator.ChildReads.Should().Be(0);
     }
 
-    /// <summary>Until visibility is decided from the authority model, the host masks every object it reads.</summary>
+    /// <summary>
+    /// The host decides visibility from the reader's grants (ADR-2457): with no grant in effect every object it reads is
+    /// masked in place, and search leaves every hit out.
+    /// </summary>
     [Fact]
-    public async Task HostVisibility_MasksEverything_UntilAuthorityShips()
+    public async Task HostVisibility_WithoutAGrant_MasksEverything()
     {
         using var client = Client(hostVisibility: true);
         var ct = TestContext.Current.CancellationToken;
@@ -433,6 +436,26 @@ public sealed class KernelApiHostTests : IDisposable
 
         using var hits = await ReadJsonAsync(client, "/api/v1/kernel/search?q=CAD", ct);
         hits.RootElement.GetArrayLength().Should().Be(0);
+        _authority.Readers.Should().OnlyContain(r => r == Reader);
+    }
+
+    /// <summary>A tenant-wide grant in effect lets the reader see the objects the host reads, and find them in search.</summary>
+    [Fact]
+    public async Task HostVisibility_WithATenantWideGrant_ShowsWhatTheGrantCovers()
+    {
+        var capability = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue).Capability.Token;
+        _authority.Grants.Add(Grant.Issue(
+            GrantId.New(), Tenant, Reader, capability, null, AuthorityScope.Tenant(), GrantedFrom, null,
+            withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!);
+        using var client = Client(hostVisibility: true);
+        var ct = TestContext.Current.CancellationToken;
+
+        using var node = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{Study}", ct);
+        node.RootElement.GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+        node.RootElement.GetProperty("title").GetString().Should().NotBeNullOrEmpty();
+
+        using var hits = await ReadJsonAsync(client, "/api/v1/kernel/search?q=CAD", ct);
+        hits.RootElement.GetArrayLength().Should().BePositive();
     }
 
     /// <summary>A caller without a verified subject is no accountable reader, so every object is masked for them.</summary>

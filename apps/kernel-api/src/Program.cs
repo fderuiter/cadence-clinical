@@ -10,7 +10,6 @@ using Cadence.Kernel.Host;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Persistence.Search;
-using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -45,9 +44,9 @@ builder.Services
     .AddKernelAuthorityEvaluator();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 
-// Until visibility is decided from the authority model (#4781) and the IdentityVault (#4782), every object is masked
-// (ADR-2471, ADR-2540).
-builder.Services.AddSingleton<INodeVisibility, UnavailableNodeVisibility>();
+// A reader sees what its grants in effect cover (ADR-2457); everything else is masked in place (ADR-2471). Blinding and
+// the IdentityVault (#4782) are not decided here yet.
+builder.Services.AddKernelGrantVisibility();
 
 // The kernel tenant comes from the tenant code the gateway signs, through the kernel's tenant directory (ADR-2540).
 builder.Services.AddSingleton<IKernelTenantResolver, DirectoryTenantResolver>();

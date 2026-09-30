@@ -2,7 +2,7 @@
 
 The Clinical Kernel's HTTP host ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). It serves the kernel's read endpoints for the Clinical Canvas: navigation, dry-run authorization with explanations, the command catalogue, search and protocol versions. It is the only process that registers kernel persistence (K-XS-2); product services never reference it.
 
-**Status:** the endpoints are mapped, documented and tested, and each read runs in the kernel tenant found from the tenant code the gateway signs. Authorization decisions come from the caller's grants, roles and delegations; until visibility is decided from the authority model (#4781), every object is masked.
+**Status:** the endpoints are mapped, documented and tested, and each read runs in the kernel tenant found from the tenant code the gateway signs. Authorization decisions come from the caller's grants, roles and delegations, and so does what the caller may see (ADR-2457): an object is visible when a grant in effect covers it, and masked in place otherwise, so a caller with no grant sees every object masked. Blinding and the IdentityVault (#4782) are not decided yet.
 
 ## Project
 
@@ -10,7 +10,6 @@ The Clinical Kernel's HTTP host ([ADR-2540](../../docs/adr/2026-09-30-kernel-api
 - `Program.cs`: composition root. Registers kernel persistence, the scope graph and navigation, search and authorization, and maps `MapKernelApi().MapKernelReads()` from `Cadence.Kernel.Api`.
 - `ClaimsCurrentActor`: the acting person, from the verified `sub` claim. A subject the kernel does not accept as an accountable person (`system`, `admin`, a `svc:` or `agent:` id) gives no actor, so dry runs deny with `actor.resolved`.
 - Authorization: the kernel's `AuthorityEvaluator` (`AddKernelAuthorityEvaluator`, ADR-2455), with no platform operators since the host never provisions tenants. Without a grant in effect covering the resource, a decision is a denial whose unmet condition is `grant.active`.
-- `UnavailableNodeVisibility`: the fail-closed `INodeVisibility` until #4781 and #4782. Every object a read returns is masked as `NotPermitted`.
 - `DirectoryTenantResolver`: finds the caller's kernel tenant from the signed `tenant_id` claim through `ITenantDirectory.FindActiveByCodeAsync`. A missing code, or one that names no active kernel tenant, is a 403; there is no fallback tenant and no configured mapping.
 - `KernelDatabaseHealthCheck`: the readiness probe opens a connection to the kernel database.
 - `KernelMigrationHostedService`: applies the kernel migrations on start when `Database:MigrateOnStartup` or `Database:MigrateOnly` is set.
@@ -54,7 +53,7 @@ The gateway forwards `/api/v1/kernel/**` here. Compose publishes host port 8018 
 
 ## Tests
 
-- `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host with fake navigation, search, tenant directory, protocol version reader and authority store: 403 for an unknown or missing tenant code, 401 unsigned, reads in the resolved tenant, masking in place and in search (and the host's mask-everything default), protocol versions listed, masked and refused for a hidden study, 400 and 404 problems, CanI denied without a grant and permitted with one, each explained, no actor for a subject that is no accountable person, the command catalogue, and search.
+- `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs` boots the real host with fake navigation, search, tenant directory, protocol version reader and authority store: 403 for an unknown or missing tenant code, 401 unsigned, reads in the resolved tenant, masking in place and in search (and the host's grant-backed visibility: everything masked without a grant, visible under a tenant-wide one), protocol versions listed, masked and refused for a hidden study, 400 and 404 problems, CanI denied without a grant and permitted with one, each explained, no actor for a subject that is no accountable person, the command catalogue, and search.
 - `tests/Cadence.UnitTests/Gateway/GatewayRouteCoverageTests.cs` checks the gateway route against the endpoints this host maps; `tests/Cadence.UnitTests/AppHost/AppHostModelTests.cs` checks its port.
 - The kernel ports themselves are tested against PostgreSQL in `tests/Cadence.IntegrationTests/Kernel`.
 

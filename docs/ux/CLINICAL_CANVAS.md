@@ -302,8 +302,8 @@ when its roadmap phase starts (§15). Phase numbers refer to the §15 roadmap.
 
 The HTTP reads named above are `GET` endpoints under `/api/v1/kernel` on the kernel API host
 ([apps/kernel-api](../../apps/kernel-api/README.md), ADR-2540), routed by the gateway, in the kernel tenant found from
-the caller's signed tenant code, with dry-run decisions from the caller's grants (ADR-2455). Until visibility is
-decided from the authority model (#4781), every object is masked.
+the caller's signed tenant code, with dry-run decisions from the caller's grants (ADR-2455). The caller sees what its
+grants cover, and everything else is masked in place (ADR-2457).
 
 ### 6.1 Order of delivery
 
