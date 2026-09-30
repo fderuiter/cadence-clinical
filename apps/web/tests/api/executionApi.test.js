@@ -179,6 +179,48 @@ describe("executionApi: participant data, SDV and queries (#4828)", () => {
     });
   });
 
+  it("dispatches POST /api/v1/execution/forms and POST /api/v1/execution/forms/{id}/complete", async () => {
+    const draftSubmission = { id: "sub-123", status: "DRAFT" };
+    const completedSubmission = { id: "sub-123", status: "COMPLETED" };
+    fetchSpy
+      .mockResolvedValueOnce(jsonResponse(201, draftSubmission))
+      .mockResolvedValueOnce(jsonResponse(200, completedSubmission));
+
+    const draftResult = await executionApi.createFormSubmission({
+      studyId: "STUDY-101",
+      subjectId: "SUBJ-001",
+      formId: "VS_DEMO",
+      siteId: "SITE-101",
+      visitId: "Screening",
+      protocolVersion: "1.0.0",
+      payload: '{"SYSBP":120}',
+    });
+
+    const completedResult = await executionApi.completeFormSubmission(
+      draftResult.id
+    );
+
+    expect(draftResult).toEqual(draftSubmission);
+    expect(completedResult).toEqual(completedSubmission);
+
+    const firstReq = await sent(0);
+    expect(firstReq.method).toBe("POST");
+    expect(firstReq.path).toBe("/api/v1/execution/forms");
+    expect(firstReq.body).toEqual({
+      study_id: "STUDY-101",
+      subject_id: "SUBJ-001",
+      form_id: "VS_DEMO",
+      site_id: "SITE-101",
+      visit_id: "Screening",
+      protocol_version: "1.0.0",
+      payload: '{"SYSBP":120}',
+    });
+
+    const secondReq = await sent(1);
+    expect(secondReq.method).toBe("POST");
+    expect(secondReq.path).toBe("/api/v1/execution/forms/sub-123/complete");
+  });
+
   it("verifies without a body and flags with the reason, each with a reason for change", async () => {
     fetchSpy
       .mockResolvedValueOnce(jsonResponse(200, { id: "o1" }))
