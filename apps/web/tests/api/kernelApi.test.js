@@ -172,6 +172,42 @@ describe("kernelApi (ADR-2540)", () => {
     });
   });
 
+  it("reads a scope's activity with its filters, and continues from a cursor", async () => {
+    const page = { entries: [], next: null };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, page));
+
+    await expect(
+      kernelApi.activity({
+        scope: STUDY,
+        families: ["Execution", "Quality"],
+        actor: "crc@site.test",
+        before: "AZ2x_cursor",
+        limit: 20,
+      })
+    ).resolves.toEqual(page);
+
+    const { url } = lastRequest();
+    expect(url.pathname).toBe("/api/v1/kernel/activity");
+    expect(url.searchParams.get("scope")).toBe(STUDY);
+    expect(url.searchParams.getAll("family")).toEqual(["Execution", "Quality"]);
+    expect(url.searchParams.get("actor")).toBe("crc@site.test");
+    expect(url.searchParams.get("before")).toBe("AZ2x_cursor");
+    expect(url.searchParams.get("limit")).toBe("20");
+    expect(url.searchParams.has("from")).toBe(false);
+  });
+
+  it("reads the whole tenant's activity when no scope is named", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(200, { entries: [], next: null })
+    );
+
+    await kernelApi.activity();
+
+    const { url } = lastRequest();
+    expect(url.pathname).toBe("/api/v1/kernel/activity");
+    expect([...url.searchParams.keys()]).toEqual([]);
+  });
+
   it.each([
     [403, "Your sign-in's tenant is not an active kernel tenant."],
     [404, "study:x does not exist in your tenant."],

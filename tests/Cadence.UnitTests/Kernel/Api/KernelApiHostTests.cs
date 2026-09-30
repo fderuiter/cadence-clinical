@@ -9,7 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Activity;
 using Cadence.Kernel.Api;
+using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
@@ -32,6 +34,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
@@ -63,7 +66,7 @@ public sealed class KernelApiHostTests : IDisposable
         $"/api/v1/kernel/nodes/{Study}", $"/api/v1/kernel/nodes/{Study}/path", $"/api/v1/kernel/nodes/{Study}/children",
         $"/api/v1/kernel/nodes/{Study}/commands", $"/api/v1/kernel/authorization/can-i?capability=x.y&resource={Study}",
         "/api/v1/kernel/search?q=CAD", $"/api/v1/kernel/studies/{Study}/protocol-versions",
-        $"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}",
+        $"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}", $"/api/v1/kernel/activity?scope={Study}",
     ];
 
     private readonly FakeNavigator _navigator = new();
@@ -73,6 +76,7 @@ public sealed class KernelApiHostTests : IDisposable
     private readonly FakeProtocolVersions _protocol = new();
     private readonly FakeAuthorityStore _authority = new();
     private readonly FakeLineage _lineage = new();
+    private readonly FakeActivityStore _activity = new();
     private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
 
     public void Dispose()
@@ -107,6 +111,7 @@ public sealed class KernelApiHostTests : IDisposable
         _navigator.Tenants.Should().BeEmpty();
         _search.Requests.Should().BeEmpty();
         _protocol.Tenants.Should().BeEmpty();
+        _activity.Queries.Should().BeEmpty();
         (await client.GetAsync(new Uri("/api/v1/kernel/status", UriKind.Relative), ct)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -197,6 +202,14 @@ public sealed class KernelApiHostTests : IDisposable
     [InlineData("/api/v1/kernel/nodes/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/dependents?edge_kind=3", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/protocol-versions/study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/impact", HttpStatusCode.BadRequest)]
     [InlineData("/api/v1/kernel/protocol-versions/protocol_version:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/impact", HttpStatusCode.NotFound)]
+    [InlineData("/api/v1/kernel/activity?scope=nonsense", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/activity?family=Nope", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/activity?family=2", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/activity?limit=0", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/activity?limit=201", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/activity?before=not-a-cursor", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/activity?before=AAAA", HttpStatusCode.BadRequest)]
+    [InlineData("/api/v1/kernel/activity?scope=site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e", HttpStatusCode.NotFound)]
     public async Task BadRequestsAndMissingObjects_AnswerWithProblems(string path, HttpStatusCode expected)
     {
         using var client = Client();
@@ -415,6 +428,70 @@ public sealed class KernelApiHostTests : IDisposable
         var body = await response.Content.ReadAsStringAsync(ct);
         body.Should().NotContain("Hamburg").And.NotContain(StudySite.Id.ToString());
         _navigator.ChildReads.Should().Be(0);
+    }
+
+    /// <summary>
+    /// The activity stream (ADR-2485) reads the scope with the caller's filters and answers newest first in snake_case:
+    /// an entry about an object the caller may not see keeps its place with its kind and mask reason and no reference,
+    /// and the next cursor, passed back as it came, continues after the page's last entry.
+    /// </summary>
+    [Fact]
+    public async Task Activity_ReadsTheScope_MasksHiddenSubjects_AndPages()
+    {
+        _visibility.Hidden[FakeActivityStore.HiddenSubject] = MaskReason.NotPermitted;
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+        var from = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
+
+        using var page = await ReadJsonAsync(
+            client, $"/api/v1/kernel/activity?scope={Study}&family=execution&family=Knowledge&actor=crc@site.test&from={Uri.EscapeDataString(from.ToString("O"))}&limit=2", ct);
+
+        var query = _activity.Queries.Should().ContainSingle().Subject;
+        query.Tenant.Should().Be(Tenant);
+        query.Query.Scope.Should().Be(Study);
+        query.Query.Families.Should().BeEquivalentTo([EventFamily.Execution, EventFamily.Knowledge]);
+        query.Query.ActorId.Should().Be("crc@site.test");
+        query.Query.From.Should().Be(from);
+        query.Query.Limit.Should().Be(2);
+        query.Take.Should().Be(3, "one extra entry says whether there is a next page");
+
+        var entries = page.RootElement.GetProperty("entries").EnumerateArray().ToList();
+        entries.Select(e => e.GetProperty("type").GetString()).Should().Equal("ParticipantScreened", "EnrollmentStatusChanged");
+        entries[0].GetProperty("subject").GetString().Should().Be(FakeActivityStore.VisibleSubject.ToString());
+        entries[0].GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+        entries[0].GetProperty("family").GetString().Should().Be("Execution");
+        entries[0].GetProperty("actor_id").GetString().Should().Be("crc@site.test");
+        entries[1].GetProperty("subject").ValueKind.Should().Be(JsonValueKind.Null);
+        entries[1].GetProperty("subject_kind").GetString().Should().Be(NodeKinds.Enrollment);
+        entries[1].GetProperty("mask").GetString().Should().Be("NotPermitted");
+        var next = page.RootElement.GetProperty("next").GetString();
+        next.Should().NotBeNullOrEmpty();
+        _visibility.Readers.Should().OnlyContain(r => r == Reader);
+
+        using var last = await ReadJsonAsync(client, $"/api/v1/kernel/activity?scope={Study}&before={next}", ct);
+
+        _activity.Queries[^1].Query.Before.Should().Be(new ActivityCursor(FakeActivityStore.Entries[1].Recorded, FakeActivityStore.Entries[1].EventId));
+        last.RootElement.GetProperty("next").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// The activity of a scope the caller may not see is refused, not listed masked: its entries would describe it.
+    /// Without a scope the gate is the tenant, which a caller with no grant in effect does not see.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Activity_OfAHiddenScope_IsRefused(bool scoped)
+    {
+        _visibility.Hidden[scoped ? Study.AtVersion(3) : NodeRef.For(Tenant)] = MaskReason.NotPermitted;
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        var response = await client.GetAsync(new Uri(scoped ? $"/api/v1/kernel/activity?scope={Study}" : "/api/v1/kernel/activity", UriKind.Relative), ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        _activity.Queries.Should().BeEmpty();
     }
 
     /// <summary>
@@ -675,6 +752,12 @@ public sealed class KernelApiHostTests : IDisposable
                 services.AddSingleton<IKernelLineage>(_lineage);
                 services.RemoveAll<IAmendmentImpact>();
                 services.AddSingleton<IAmendmentImpact>(_lineage);
+                services.RemoveAll<IActivityStore>();
+                services.AddSingleton<IActivityStore>(_activity);
+
+                // The activity projector reads the database the host is configured with, which these tests never open.
+                var projector = services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
+                services.Remove(projector);
 
                 if (!hostVisibility)
                 {
@@ -824,6 +907,31 @@ public sealed class KernelApiHostTests : IDisposable
         {
             Tenants.Add(tenant);
             return Task.FromResult(new[] { Amendment, FirstVersion }.FirstOrDefault(v => v.Id == version));
+        }
+    }
+
+    /// <summary>Three entries newest first: a visible screening, a status change a test may hide, and an older one.</summary>
+    private sealed class FakeActivityStore : IActivityStore
+    {
+        public static readonly NodeRef VisibleSubject = NodeRef.For(EnrollmentId.New(), 1);
+        public static readonly NodeRef HiddenSubject = NodeRef.For(EnrollmentId.New(), 2);
+        private static readonly DateTimeOffset At = new(2026, 9, 30, 12, 0, 0, TimeSpan.Zero);
+
+        public static readonly ActivityEntry[] Entries =
+        [
+            new(Guid.CreateVersion7(), "ParticipantScreened", EventFamily.Execution, At, At, "crc@site.test", NodeKinds.Enrollment, VisibleSubject, null, Guid.CreateVersion7()),
+            new(Guid.CreateVersion7(), "EnrollmentStatusChanged", EventFamily.Execution, At.AddSeconds(-1), null, "crc@site.test", NodeKinds.Enrollment, HiddenSubject, null, Guid.CreateVersion7()),
+            new(Guid.CreateVersion7(), "ProtocolVersionApproved", EventFamily.Knowledge, At.AddSeconds(-2), null, "crc@site.test", NodeKinds.ProtocolVersion, NodeRef.For(FirstVersion.Id, 3), null, Guid.CreateVersion7()),
+        ];
+
+        public List<(TenantId Tenant, ActivityQuery Query, int Take)> Queries { get; } = [];
+
+        public Task<IReadOnlyList<ActivityEntry>> QueryAsync(TenantId tenant, ActivityQuery query, int take, CancellationToken cancellationToken)
+        {
+            Queries.Add((tenant, query, take));
+            var rows = Entries.Where(e => query.Before is not { } before
+                || e.Recorded < before.Recorded || (e.Recorded == before.Recorded && e.EventId.CompareTo(before.EventId) < 0));
+            return Task.FromResult<IReadOnlyList<ActivityEntry>>([.. rows.Take(take)]);
         }
     }
 

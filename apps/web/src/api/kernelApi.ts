@@ -29,6 +29,22 @@ export type KernelDependentGroup =
 export type KernelDependents = Schemas["Kernel_KernelDependentsResponse"];
 export type KernelAmendmentImpact =
   Schemas["Kernel_KernelAmendmentImpactResponse"];
+export type KernelActivityEntry = Schemas["Kernel_KernelActivityEntryResponse"];
+export type KernelActivityPage = Schemas["Kernel_KernelActivityPageResponse"];
+
+/** The event families of the kernel's activity stream (spec §5.2). */
+export type KernelEventFamily =
+  "Knowledge" | "Execution" | "Evidence" | "Trust" | "Quality" | "Intelligence";
+
+/** Which activity to read (ADR-2485). The whole tenant when `scope` is left out; `before` is an earlier page's `next`. */
+export interface KernelActivityQuery {
+  scope?: string;
+  families?: KernelEventFamily[];
+  actor?: string;
+  from?: string;
+  before?: string;
+  limit?: number;
+}
 
 /** How far and along which edges a lineage read goes, and as of when (ADR-2471). The host's defaults apply to anything left out. */
 export interface KernelLineageWindow {
@@ -173,6 +189,34 @@ export const kernelApi = {
     return unwrapResponse(
       client.GET("/api/v1/kernel/nodes/{nodeRef}/dependents", {
         params: { path: { nodeRef }, query: windowQuery(window) },
+      })
+    );
+  },
+
+  /**
+   * What happened in a scope, newest first (ADR-2485). A scope the reader may not see is refused; an entry about an
+   * object the reader may not see keeps its place with its kind and `mask`, and no `subject`.
+   */
+  activity({
+    scope,
+    families,
+    actor,
+    from,
+    before,
+    limit,
+  }: KernelActivityQuery = {}): Promise<KernelActivityPage> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/activity", {
+        params: {
+          query: {
+            scope,
+            family: families && families.length > 0 ? families : undefined,
+            actor,
+            from,
+            before,
+            limit,
+          },
+        },
       })
     );
   },

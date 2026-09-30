@@ -2844,6 +2844,121 @@
         }
       }
     },
+    "/api/v1/kernel/activity": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "What happened in a scope, newest first.",
+        "description": "scope is any NodeRef (the whole tenant when absent); family repeats (Knowledge, Execution, Evidence, Trust, Quality, Intelligence); actor filters by who did it; from is the earliest recorded time; before is the previous page\u0027s next cursor; limit 1 to 200 (default 50). Entries about objects you may not see are masked in place.",
+        "operationId": "KernelActivity",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "family",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelActivityPageResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/knowledge/status": {
       "get": {
         "tags": [
@@ -5074,6 +5189,90 @@
             ]
           },
           "service": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelActivityEntryResponse": {
+        "required": [
+          "event_id",
+          "type",
+          "family",
+          "recorded",
+          "occurred_valid",
+          "actor_id",
+          "subject_kind",
+          "subject",
+          "mask",
+          "correlation_id"
+        ],
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "recorded": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "occurred_valid": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "subject_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mask": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correlation_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Kernel_KernelActivityPageResponse": {
+        "required": [
+          "entries",
+          "next"
+        ],
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelActivityEntryResponse"
+            }
+          },
+          "next": {
             "type": [
               "null",
               "string"

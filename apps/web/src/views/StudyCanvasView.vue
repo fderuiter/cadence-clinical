@@ -162,6 +162,7 @@
 
           <template v-else-if="!stage">
             <StudyPulse @drill="drillToParticipants" />
+            <StudyActivity :key="studyCode" :study-code="studyCode" />
           </template>
 
           <ParticipantsSection
@@ -318,6 +319,7 @@ import CanvasPalette from "../components/canvas/CanvasPalette.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
+import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 
