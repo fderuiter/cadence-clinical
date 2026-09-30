@@ -272,8 +272,8 @@ jobs:
         id: run_secrets
         if: always()
         run: |
-          git add .secrets.baseline
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check clean-secrets
+          git diff --exit-code .secrets.baseline
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check security
 
       - name: Run detect-secrets against the baseline
