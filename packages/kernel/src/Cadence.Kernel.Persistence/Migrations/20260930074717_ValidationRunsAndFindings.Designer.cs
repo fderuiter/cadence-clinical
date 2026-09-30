@@ -14,7 +14,7 @@ using NpgsqlTypes;
 namespace Cadence.Kernel.Persistence.Migrations
 {
     [DbContext(typeof(KernelDbContext))]
-    [Migration("20260930065146_ValidationRunsAndFindings")]
+    [Migration("20260930074717_ValidationRunsAndFindings")]
     partial class ValidationRunsAndFindings
     {
         /// <inheritdoc />
@@ -383,6 +383,137 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.ToTable("enrollment_status_periods", "kernel");
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Grant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Capability")
+                        .HasMaxLength(96)
+                        .HasColumnType("character varying(96)")
+                        .HasColumnName("capability");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("GranteeId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("grantee_id");
+
+                    b.Property<string>("GranteeKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("grantee_kind");
+
+                    b.Property<string>("IssuedBy")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("issued_by");
+
+                    b.Property<Guid?>("ParentGrantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_grant_id");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<Guid?>("RoleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("role_id");
+
+                    b.Property<string>("ScopeCountry")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("scope_country");
+
+                    b.Property<string>("ScopeLevel")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("scope_level");
+
+                    b.Property<Guid?>("ScopeTargetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("scope_target_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.Property<bool>("WithGrantOption")
+                        .HasColumnType("boolean")
+                        .HasColumnName("with_grant_option");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ParentGrantId");
+
+                    b.HasIndex("TenantId", "RoleId");
+
+                    b.HasIndex("TenantId", "GranteeKind", "GranteeId");
+
+                    b.ToTable("grants", "kernel", t =>
+                        {
+                            t.HasCheckConstraint("ck_grants_scope", "(scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL) OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL) OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')");
+
+                            t.HasCheckConstraint("ck_grants_target", "(capability IS NULL) <> (role_id IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.GrantPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("GrantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("grant_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Period", "Cadence.Kernel.Domain.Entities.GrantPeriod.Period#TemporalPeriod", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<NpgsqlRange<DateTimeOffset>>("Recorded")
+                                .HasColumnType("tstzrange")
+                                .HasColumnName("recorded_period");
+
+                            b1.Property<NpgsqlRange<DateTimeOffset>>("Valid")
+                                .HasColumnType("tstzrange")
+                                .HasColumnName("valid_period");
+                        });
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "GrantId");
+
+                    b.ToTable("grant_periods", "kernel");
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Organization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -629,6 +760,65 @@ namespace Cadence.Kernel.Persistence.Migrations
                             t.HasCheckConstraint("ck_protocol_versions_content_hash", "content_hash IS NULL OR content_hash ~ '^sha256:[0-9a-f]{64}$'");
 
                             t.HasCheckConstraint("ck_protocol_versions_number", "number > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.PrimitiveCollection<List<string>>("Capabilities")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("capabilities");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("roles", "kernel", t =>
+                        {
+                            t.HasCheckConstraint("ck_roles_capabilities", "cardinality(capabilities) > 0");
                         });
                 });
 
@@ -2508,6 +2698,10 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("aggregate_type");
 
+                    b.Property<string>("Authorization")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("authorization");
+
                     b.Property<Guid?>("CausationId")
                         .HasColumnType("uuid")
                         .HasColumnName("causation_id");
@@ -2735,6 +2929,37 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Grant", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Grant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ParentGrantId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Role", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RoleId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.GrantPeriod", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Grant", null)
+                        .WithMany("Periods")
+                        .HasForeignKey("TenantId", "GrantId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Organization", b =>
                 {
                     b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
@@ -2785,6 +3010,15 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasForeignKey("TenantId", "WithdrawalAttestationId")
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Role", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Site", b =>
@@ -3148,6 +3382,11 @@ namespace Cadence.Kernel.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Enrollment", b =>
+                {
+                    b.Navigation("Periods");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Grant", b =>
                 {
                     b.Navigation("Periods");
                 });
