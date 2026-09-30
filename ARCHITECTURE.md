@@ -181,6 +181,8 @@ qualification) by the kernel's policy evaluator (ADR-2251), not from role string
     transaction (ADR-2449).
   - Background jobs relay the outbox and verify and seal each tenant's audit chain.
   - A Concept Registry holds pinned terminology (ADR-2470).
+  - A Standards Registry holds standard versions (datasets, variables, value-level definitions) and a governed
+    library of versioned items that studies pin; approval and deprecation need an attestation (ADR-2460).
 - **Still to come:** the lineage store (spec §9.6), and the product services moving from their own `DbContext`
   and schema onto kernel concepts.
 - **Audit:** EF Core `SaveChangesInterceptor` populates `CreatedAt`, `CreatedBy`, `ReasonForChange`
