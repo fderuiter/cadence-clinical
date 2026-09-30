@@ -126,6 +126,9 @@ public record DTPDispatchAuthorization(
     [property: JsonPropertyName("authorized_timestamp")] string AuthorizedTimestamp = ""
 );
 
+[Obsolete("Emergency unblinding is Execution's UNBLINDED subject state change (PRD-SUB-005, #4982); this engine is not carried forward (ADR-2520).")]
+[SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed",
+    Justification = "Removed with supply/models.py once a maintainer approves the deletion (ADR-2520, #4789).")]
 public record EmergencyUnblindingRequest(
     [property: JsonPropertyName("study_id")] string StudyId,
     [property: JsonPropertyName("subject_id")] string SubjectId,
@@ -135,6 +138,9 @@ public record EmergencyUnblindingRequest(
     [property: JsonPropertyName("subject_actual_arm")] string SubjectActualArm
 );
 
+[Obsolete("Emergency unblinding is Execution's UNBLINDED subject state change (PRD-SUB-005, #4982); this engine is not carried forward (ADR-2520).")]
+[SuppressMessage("Info Code Smell", "S1133:Deprecated code should be removed",
+    Justification = "Removed with supply/models.py once a maintainer approves the deletion (ADR-2520, #4789).")]
 public record EmergencyUnblindingResult(
     [property: JsonPropertyName("study_id")] string StudyId,
     [property: JsonPropertyName("subject_id")] string SubjectId,
