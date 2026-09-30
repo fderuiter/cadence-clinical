@@ -59,6 +59,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [UI components](components/index.md) | Current | Shared Vue component catalog (`packages/ui`) |
 | [Moving the web app onto the .NET API](web/API_MIGRATION.md) | Current | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833) |
 | [Migration workflow playbook](MIGRATION_WORKFLOW.md) | Current | How to port the remaining Python reference sources to C# |
+| [Python reference inventory](PYTHON_REFERENCE_INVENTORY.md) | Current | Each remaining Python file, its C# status and what it needs before deletion (#4789) |
 | [Operations and deployment guide](SDLC/07_Operations_Deployment_Guide.md) | Baseline | Deployment topology and runbooks; being revised with the production-readiness work |
 | [Lab reference ranges](OPERATIONAL_LAB_RANGES.md) | Baseline | Range selection, scoring and tie-breaking rules |
 | [eTMF inbound email](OPERATIONAL_INBOUND_EMAIL.md) | Baseline | Inbound-email webhook security and processing |

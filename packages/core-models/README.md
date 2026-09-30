@@ -7,7 +7,6 @@ Protocol RAG models and a citation and faithfulness evaluator used by the compli
 - Project: `packages/core-models/src/Cadence.CoreModels.csproj` (assembly `Cadence.CoreModels`, namespace `Cadence.CoreModels`).
 - `ProtocolRAGModels.cs`: `ProtocolRAGContextChunk`, `ParsedCitation`.
 - `ProtocolRAGEvaluator.cs`: citation regex and marker formatting, confidence threshold, and the grounded-answer system prompt.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `protocol_rag/`, `pyproject.toml`. They are not the implementation.
 
 ## Key dependencies
 

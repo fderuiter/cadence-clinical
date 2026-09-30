@@ -216,4 +216,5 @@ The [kernel roadmap (spec §15)](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15
 Work is tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719). The
 Python-to-.NET port that preceded this is complete; its playbook remains in
 [docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md) for porting the remaining Python reference
-sources ([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)).
+sources listed in [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md)
+([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)).

@@ -70,7 +70,7 @@ Extend `CadenceMcpServer.TOOLS` in `packages/cli/mcp/server.py` with 4 new tool 
 - `synthetic_patient_generate(protocol_id: str = "default", scenario: str = "standard", count: int = 1, dry_run: bool = False)`
 
 ### 2. Tooling Core Domain Handlers
-Implement dedicated handler functions under `packages/tooling_core/handlers.py`:
+Implement dedicated handler functions in `packages/tooling_core/src/ToolingHandlers.cs` (the Python signatures below describe the shapes):
 - `handle_usdm_graph_inspect(req: UsdmGraphInspectRequest) -> CommandEnvelope[UsdmGraphInspectResponse]`
 - `handle_sdtm_pipeline_validate(req: SdtmPipelineValidateRequest) -> CommandEnvelope[SdtmPipelineValidateResponse]`
 - `handle_clinical_event_stream(req: ClinicalEventStreamRequest) -> CommandEnvelope[ClinicalEventStreamResponse]`

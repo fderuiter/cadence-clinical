@@ -11,7 +11,7 @@ Shared domain library (folder `engine_core`): aggregate root base types, the `IG
 - `Cadence.Core.Domain.Randomization`: `BlockRandomizationEngine`, `MinimizationEngine`, `StochasticRandomizationEngine`, `BoinEngine` and their models.
 - `Cadence.Core.Domain.Supply`: `DTPLogisticsEngine`, `PredictiveDemandForecastingEngine` and supply models.
 - `Cadence.Core.Domain.Toxicity`: `LabToxicityGradingEngine` and CTCAE grading models.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `derived/`, `financial/`, `fsm/`, `operations/`, `randomization/`, `rules/`, `sla/`, `supply/`, `timeline/`, `toxicity/`, `tests/`, `pyproject.toml`. They are not the implementation, and several of those modules (for example `financial/`, `fsm/`, `sla/`, `timeline/`) have no C# port yet.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `derived/`, `financial/`, `fsm/`, `operations/`, `randomization/boin.py`, `rules/`, `sla/`, `supply/`, `timeline/`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 

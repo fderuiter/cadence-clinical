@@ -9,7 +9,7 @@ Object storage abstraction with integrity hashes and presigned URLs, plus an in-
 - `BlobStore.cs`: `InMemoryBlobStore`, the only implementation.
 - `DocumentModels.cs`: `DocumentMetadata`, `StorageLocation`.
 - The project references `AWSSDK.S3` and `Google.Apis.Drive.v3`, but no S3, MinIO or Google Drive adapter exists in C# yet.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `blob_store.py`, `s3_store.py`, `local_store.py`, `gdrive.py`, `factory.py`, `document_models.py`, `adapters/`, `ports/`, `tests/`, `pyproject.toml`. They are not the implementation.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `adapters/`, `factory.py`, `gdrive.py`, `local_store.py`, `s3_store.py`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 

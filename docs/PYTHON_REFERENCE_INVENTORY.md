@@ -1,0 +1,149 @@
+# Python Reference Inventory (#4789)
+
+The Python files still in `packages/` are behavioural references for C# ports that do not exist yet or are not
+yet covered by tests ([AGENTS.md](../AGENTS.md) pattern 11, [MIGRATION_WORKFLOW.md](MIGRATION_WORKFLOW.md)). They
+are never built, run or imported by anything. Everything else was deleted once a tested C# port existed, the kernel
+specification superseded it, or it had no behaviour worth keeping ([ADR-2492](adr/2026-09-30-retire-python-reference-sources-once-ports-are-tested.md)). Deleted files stay recoverable from git history
+(for example `git show 354f7ea:packages/database/graph.py`).
+
+A file leaves this list when one of these is true:
+
+- **Port missing:** a C# implementation lands with tests, or the kernel specification or an ADR records that the
+  behaviour is not carried forward.
+- **Port untested:** tests cover the C# port's main behaviour (the note says which paths are missing).
+
+Delete the Python file, its row here and, when the folder has no Python left, its `__init__.py` files and
+`pyproject.toml`, in the same PR. Update the package README's "Python reference sources" line too.
+
+| Package | Port missing | Port untested |
+| --- | ---: | ---: |
+| [packages/compliance](#packagescompliance) | 0 | 1 |
+| [packages/ddf](#packagesddf) | 10 | 0 |
+| [packages/deid](#packagesdeid) | 2 | 2 |
+| [packages/engine_core](#packagesengine_core) | 21 | 3 |
+| [packages/security](#packagessecurity) | 9 | 0 |
+| [packages/sentinels](#packagessentinels) | 0 | 1 |
+| [packages/storage](#packagesstorage) | 6 | 0 |
+
+## packages/compliance
+
+| Python file | What it does | C# today | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `services/esignature_verifier.py` | Verifies PEM+signature documents; mock, duplicate-block, legacy-padding and revocation checks; Markdown hash check; AI-record approval | `packages/compliance/src/ESignatureVerifier.cs`, `Exceptions.cs` | Port untested | See note C1 |
+
+**Note C1.** The C# `VerifySignature` and `VerifyMarkdown` are faithful ports, but:
+- Tests cover the valid-signature, tampered-body and `MOCK_SIGNATURE_DETECTED` paths (#4876; the C# reports a
+  mock only for a signature that already failed, where the Python rejected any text containing "mock").
+- Untested: the revocation check, `VerifyPdf` (which throws `TamperDetectedException`), and the
+  `LEGACY_PADDING_REJECTED` and `DUPLICATE_BLOCKS_REJECTED` paths.
+- Weaker than the Python: revocation-list normalisation (decimal, `0x` and plain-hex serials; colon-separated
+  fingerprints) and the XML-DSig duplicate-block checks (`<X509Certificate>`, `<SignatureValue>`,
+  `<Signature>`) were not ported.
+- `verify_ai_assisted_record_approval` and `assert_ai_record_approved` have no port. Spec §11 (Proposals)
+  supersedes them, so they need no port.
+- To delete: add tests for revocation, legacy padding, duplicates and `VerifyPdf`, or accept
+  the simplified revocation matching.
+
+## packages/ddf
+
+| Python file | What it does | C# today | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `compiler.py` | 5-stage orchestrator; requires an accessibility validator port (fail-closed) | `packages/ddf/src/UsdmCompiler.cs` (does not orchestrate these stages) | Port missing |  |
+| `dataset_json_etl.py` | eCRF observations → SDTM Dataset-JSON | none | Port missing |  |
+| `ports.py` | `AccessibilityValidatorPort` | none (C# has no validator port) | Port missing |  |
+| `rules/ast.py` | DDF rule AST (skip logic, constraint, cross-form), node validation, `detect_circular_dependencies` | none | Port missing |  |
+| `rules/compiler.py` | `sanitize_identifier`, `extract_appearance`, condition → XPath compiler | none (`apps/execution/.../AstEditCheckEngine.cs` is edit checks, not XPath generation) | Port missing |  |
+| `smart_blocks.py` | Catalog of reusable form blocks (vitals, hematology, ConMeds, AE) and instantiation | none | Port missing |  |
+| `stages/accessibility.py` | Runs validator; raises on WCAG or layout violations | none (C# returns fixed `PASS`) | Port missing |  |
+| `stages/ir_builder.py` | Builds IR: rules → XPath relevant/constraint, multi-language localisations, appearance | none (C# `ParseUsdmToIr` skips all of this) | Port missing |  |
+| `stages/normalizer.py` | USDM validation, fallback id/name synthesis with warnings, duplicate-id detection | none | Port missing |  |
+| `tripartite.py` | Pydantic tripartite form definition (data, UI and logic schemas, migration matrix, UAT report) | none | Port missing | Disposition against spec CollectionSpec |
+
+## packages/deid
+
+| Python file | What it does | C# today | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `__main__.py` | `python -m packages.deid` → `cli.main()` | none | Port missing | Goes with `cli.py` |
+| `cli.py` | Repo PHI scanner using the full detector: gitignore handling, `deid-ignore` pragmas, URL/test-value allowlists, path exclusions | `packages/tooling_core/src/Services/DeidComplianceService.cs` (only an SSN regex over `*.cs`, skips `tests/`) | Port missing | The C# gate (CI `check deid`, `.github/workflows/ci.yml:285`) is much weaker |
+| `detector.py` | 14-category HIPAA/GDPR regex detector, overlap resolution, redaction | `packages/deid/src/DeidDetector.cs` (all 14 patterns ported) | Port untested | See note D1 |
+| `models.py` | `DetectorCategory`, `ComplianceProfile` and the profile → category mapping | `packages/deid/src/Models.cs` (`GetCategoriesForProfile`) | Port untested | Delete with `detector.py` |
+
+**Note D1.** No test covers the `zip_geographic`, `urls`, `ip_mac_addresses`, `medical_record_account`,
+`health_plan_beneficiary`, `certificate_license`, `vehicle_identifiers` or `device_serial` patterns, or
+profile-based filtering (GDPR vs HIPAA).
+
+## packages/engine_core
+
+| Python file | What it does | C# today | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `derived/engine.py` | Derived-variable math engine with unit normalisation and plausibility ranges | none | Port missing |  |
+| `derived/models.py` | Formula, plausibility and result models | none | Port missing |  |
+| `financial/contracts.py` | Tiered overhead, payee splits, line-item hash (Decimal) | none (`apps/payments/src/Domain/PaymentEntities.cs` holds entities only; `tests/Payments/PaymentDecimalCalculationTests.cs` computes inline) | Port missing |  |
+| `financial/engine.py` | Event-triggered payable engine | none | Port missing |  |
+| `financial/ledger.py` | Payable ledger with holdback reserve accounting | none | Port missing |  |
+| `financial/models.py` | Fee matrix, grant contract, payable models | entity shapes only in `apps/payments` | Port missing |  |
+| `fsm/engine.py` | Generic DAG state machine with Part 11 envelope | none | Port missing |  |
+| `fsm/models.py` | State and transition models, `Part11AuditEnvelope` | none | Port missing |  |
+| `fsm/validator.py` | Graph validation (reachability, terminal states) | none | Port missing |  |
+| `operations/engine.py` | Site startup greenlight facade | none | Port missing |  |
+| `operations/evaluator.py` | Greenlight rules: IRB, contract, staff qualification, facility, IP depot | none | Port missing | Spec K-TIME-4/5 and K-AUTH-5 are the target |
+| `operations/models.py` | Greenlight models | none | Port missing |  |
+| `randomization/boin.py` | BOIN boundaries, beta_inc, posterior, BOIN engine, 3+3 engine | `packages/engine_core/src/Randomization/BoinEngine.cs` (includes `Evaluate3Plus3Cohort`) | Port untested | 3+3 escalation (`Evaluate3Plus3Cohort`) and `CalculatePosteriorProbToxic` have no test |
+| `rules/ast.py` | Rule AST with `validate_node` shape validation (operand counts, required fields) | `packages/engine_core/src/Rules/RuleAst.cs` (plain classes, no validation) | Port missing | Node validation not ported |
+| `rules/evaluator.py` | Logical, comparison, arithmetic, function and date evaluation; `parse_json_logic` | `packages/engine_core/src/Rules/RuleEvaluator.cs` (full port) | Port untested | Arithmetic, functions, dates, strict variables and `ParseJsonLogic` untested |
+| `rules/sentinels.py` | Field-reference extraction, complexity, unresolved references, cycle detection | none | Port missing |  |
+| `sla/engine.py` | SLA countdown clocks with business hours and escalation tiers | none | Port missing |  |
+| `sla/models.py` | SLA models | none | Port missing |  |
+| `supply/engine.py` | `PredictiveSupplyEngine` facade (forecast, hierarchy, DTP, unblinding) | none | Port missing |  |
+| `supply/forecasting.py` | Visit-driven demand forecast, lot expiry, stockout risk | `packages/engine_core/src/Supply/PredictiveDemandForecastingEngine.cs` | Port untested |  |
+| `supply/hierarchy.py` | Multi-echelon depot/site hierarchy roll-up and validation | models only in `SupplyModels.cs` | Port missing |  |
+| `supply/unblinding.py` | Emergency unblinding authorisation | models only in `SupplyModels.cs` | Port missing | Spec Appendix A.1 (Attestation-bearing event) is the target |
+| `timeline/engine.py` | Visit-window schedule and deviation assessment | none | Port missing | Spec K-TIME-7 is the target |
+| `timeline/models.py` | Timeline models | none | Port missing |  |
+
+## packages/security
+
+| Python file | What it does | C# today | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `auditor_token.py` | Issues and validates time-boxed read-only auditor JWTs signed with `GATEWAY_SECRET` (with a hard-coded fallback) | none (`AuditorWriteGuardMiddleware.cs` only enforces read-only access) | Port missing | Likely a Keycloak concern under ADR-2256, so the owner could decide to drop it |
+| `cert_store.py` | X.509 register, revoke, CRL status, self-signed and trust checks | none | Port missing |  |
+| `crypto_verifier.py` | `verify_electronic_signature`: JSON/PEM/XML signature parsing, XML-DSig stripping, mock-key detection, asymmetric verification or HMAC fallback | only the primitive `packages/security/src/AsymmetricSigner.AsymmetricVerify` | Port missing | The orchestration is not ported |
+| `fail_fast.py` | Refuses to start in non-dev environments on missing or insecure-fallback secrets; brand validation | `GATEWAY_SECRET` (required, at least 32 chars), the execution demographics key and the gateway service URLs ([ADR-2490](adr/2026-09-30-fail-fast-startup-validation-of-required-settings.md)) | Port missing | See note S1 |
+| `gating.py` | Which paths require e-signature step-up | none | Port missing | ADR-2256 §5 says step-up is not wired yet (#4761) |
+| `permissions.py` | Second permission scheme: `PermissionEnum` (`study:read`, `rtsm:randomize`, …), `RoleEnum`, role → permission map | none (C# `PermissionMatrix` uses a different resource → actions scheme; none of the 26 colon permissions exist in C#) | Port missing | Ask the owner whether spec §9.3 capability tokens make it obsolete |
+| `rbac.py` | Role aliases, role → resource → action matrix, `Principal`, site/study scope, payload masking, auditor checks | `packages/security/src/Rbac/RoleNormalization.cs`, `PermissionMatrix.cs`, `SiteAccessEvaluator.cs`, `StudyAccessEvaluator.cs`, `Blinding/FieldMasker.cs`, `Authentication/AuditorWriteGuardMiddleware.cs` | Port missing | See note S2 |
+| `regulated_actions.py` | Semantic regulated-action registry and path detection rules | none | Port missing | Goes with `gating.py` / #4761 |
+| `signing.py` | Gateway HMAC, canonical signature, asymmetric sign, Merkle root and block hash, inbound-email webhook HMAC with replay cache, site greenlight token | `Authentication/HmacSigner.cs`, `CanonicalSigner.cs`, `AsymmetricSigner.cs`, `Audit/AuditDigestEngine.cs` | Port missing | See note S3 |
+
+**Note S1.** `fail_fast.py` refuses to start outside development when any required secret is missing or still
+set to an insecure placeholder, and validates the brand settings. In C#, every service requires `GATEWAY_SECRET`
+(at least 32 characters), execution requires a valid demographics encryption key and the gateway requires every
+service URL outside Development (#4872, ADR-2490). To delete: cover the remaining services' required settings the
+same way, or record that the Python's placeholder and brand checks are dropped.
+
+**Note S2.** The C# `PermissionMatrix` has no entries for the roles `grants_manager`, `sponsor_clinical`,
+`quality_manager`, `qa_lead` or `quality_oversight` (`rbac.py:645-763`). The `system` and `anonymous` entries
+are rightly dropped (K-TX-5). The rest is ported and tested. To delete: port those five role bundles or record
+that they are dropped.
+
+**Note S3.** Not ported:
+- `verify_inbound_email_signature` (eTMF inbound webhook; `INBOUND_EMAIL_HMAC_SECRET`).
+- `generate_greenlight_token` / `verify_greenlight_token`.
+- `compute_merkle_root` / `compute_block_hash`.
+
+## packages/sentinels
+
+| Python file | What it does | C# today | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `engine.py` | Register checks, run concurrently, filter by gate, render a terminal summary | `packages/sentinels/src/SentinelEngine.cs` (no terminal summary; not used by `QualityGateOrchestrator`) | Port untested | One test with a fake check and a gate filter would clear it |
+
+## packages/storage
+
+| Python file | What it does | C# today | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `adapters/minio_adapter.py` | MinIO subclass of the S3 adapter | none | Port missing |  |
+| `adapters/s3_adapter.py` | S3 put/get with SHA-256 check, SSE, presigned get/put URLs, multipart | none (only `InMemoryBlobStore`, whose presigned URLs are mock strings) | Port missing |  |
+| `factory.py` | Picks the local, S3 or MinIO adapter from environment | none | Port missing |  |
+| `gdrive.py` | Google Drive run-manifest upload for GxP recordings | none (`pnpm cadence record setup-gdrive` prints "not implemented yet", `packages/cli/src/Commands/RecordCommands.cs:10`) | Port missing |  |
+| `local_store.py` | Filesystem provider with checksum and path-traversal guard | none | Port missing |  |
+| `s3_store.py` | Older S3 provider | none | Port missing | The owner may treat it as a duplicate of `adapters/s3_adapter.py` |

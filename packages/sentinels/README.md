@@ -7,7 +7,7 @@ Small engine for running registered quality-gate checks concurrently and collect
 - Project: `packages/sentinels/src/Cadence.Sentinels.csproj` (assembly `Cadence.Sentinels`, namespace `Cadence.Sentinels`).
 - `SentinelBase.cs`: `ISentinelCheck` and the `SentinelResult` record.
 - `SentinelEngine.cs`: `Register(ISentinelCheck)` and `ExecuteAllAsync(targetGate, ct)`.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `base.py`, `engine.py`, `__init__.py`, `pyproject.toml`. They are not the implementation.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `engine.py`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 

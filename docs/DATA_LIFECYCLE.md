@@ -551,7 +551,7 @@ To secure electronic records without propagating raw credentials across service 
 
 ### Layer 1: Gateway Signature Token Authorization (Short-Lived Intent)
 
-- **Path**: `apps/gateway/main.py` ➔ `packages/security/middleware.py` (In downstream microservices, verified and consumed via `packages/security/sig_token_verifier.py`)
+- **Path**: `apps/gateway/main.py` ➔ `packages/security/src/Authentication/GatewayAuthenticationHandler.cs` (In downstream services, verified and consumed via `packages/security/src/Authentication/SigTokenVerifier.cs`)
 - **Mechanism**: The user re-enters their password (and optional TOTP) into the reusable Vue 3 component `apps/web/src/components/SignatureCaptureModal.vue`. The API Gateway validates these credentials against Keycloak and issues a short-lived **Signature Token (`X-Sig-Token`)** signed via HS256 with `GATEWAY_SECRET`.
 - **Properties**:
   - **Temporal Limitation**: Hard expired in **60 seconds** (`exp = iat + 60.0`).
@@ -587,7 +587,7 @@ The Part 11 eSignature workflow is fully realized and integrated across the foll
 
 - **Identity & Step-up Gateway Authentication**:
   - `apps/gateway/main.py` (Verify password and issue `X-Sig-Token`)
-  - `packages/security/middleware.py` (Intercept and validate token claims)
+  - `packages/security/src/Authentication/SigTokenVerifier.cs` (Validate token claims and reject replays)
   - `docs/SDLC/Signature_Token_Cryptographic_Contract.md` (Formal JWT specification)
 - **Reusable Frontend Modal**:
   - `apps/web/src/components/SignatureCaptureModal.vue` (Credential capture, auto-clear, and error mapping)

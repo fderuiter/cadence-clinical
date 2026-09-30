@@ -8,7 +8,7 @@ Digital Data Flow compiler. It turns a CDISC USDM study (JSON) or a kernel `Prot
 - `UsdmCompiler`: `Compile(ProtocolVersion, ...)`, `CompileUsdm(usdmJson, studyId, versionTag, ...)`, `ParseUsdmToIr(...)`.
 - `Models.cs`: `DDFStudyIR`, `DDFItemIR`, `DDFCompilationResult`, `CompileOptions`, `CompilerWarning`, `AccessibilityReport`, `ItemLocalization`.
 - `Templates/`: `odm_template.xml.liquid` and `openrosa_template.xml.liquid`, embedded into the assembly.
-- Python reference sources remain in this folder until each C# port is verified (issue #4789): `compiler.py`, `models.py`, `stages/`, `rules/`, `dataset_json_etl.py`, `smart_blocks.py`, `tripartite.py`, `ports.py`, `pyproject.toml`. They are not the implementation.
+- Python reference sources remain for behaviour the C# port lacks or does not test yet: `compiler.py`, `dataset_json_etl.py`, `ports.py`, `smart_blocks.py`, `tripartite.py`, `rules/`, `stages/`, with their `__init__.py` files and `pyproject.toml`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
 
 ## Key dependencies
 

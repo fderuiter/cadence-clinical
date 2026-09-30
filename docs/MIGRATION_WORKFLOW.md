@@ -295,10 +295,10 @@ To ensure an orderly, clean-break transition without accumulating technical debt
   - Remove `apps/<service>/tests/` (once ported to `tests/`)
   - Remove legacy Alembic migration files (`apps/<service>/alembic/`) superseded by EF Core migrations.
 
-### 4. Workspace Member Unlink & CI Pruning
+### 4. Inventory Update & Verification
 
-- Remove the decommissioned service path from `pyproject.toml` under `[tool.uv.workspace] members`.
-- Remove legacy Python test paths from pytest configurations.
+- Remove the file's row from [PYTHON_REFERENCE_INVENTORY.md](PYTHON_REFERENCE_INVENTORY.md); when a package has no
+  Python left, delete its `__init__.py` files and `pyproject.toml` and its README's reference-sources line.
 - Execute `pnpm cadence check` and `pnpm cadence gxp sync` to confirm clean builds and 100% RTM compliance.
 
 ---
