@@ -111,7 +111,10 @@ public class SubjectApplicationServiceStateTests
         result.Error!.Code.Should().Be("SUBJECT_NOT_FOUND");
     }
 
-    // -- AdvanceStateAsync: unblinding (#4951) ----------------------------------------------------
+    // -- AdvanceStateAsync: unblinding (#4951, #4982) ---------------------------------------------
+
+    private const string UnblindingReason =
+        "SAE: anaphylaxis after dose 3; the ER team needs the allocation to choose treatment.";
 
     [Fact]
     public async Task AdvanceStateAsync_ToUnblinded_RecordsWhoUnblindedWhyAndWhen()
@@ -121,7 +124,7 @@ public class SubjectApplicationServiceStateTests
         subject.TransitionTo(SubjectState.Randomized).IsSuccess.Should().BeTrue();
 
         var result = await harness.Service.AdvanceStateAsync("SUBJ-UB1",
-            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), "Serious adverse event needs treatment knowledge",
+            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), UnblindingReason,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
@@ -129,7 +132,7 @@ public class SubjectApplicationServiceStateTests
         subject.Status.Should().Be(SubjectState.Unblinded);
         subject.IsUnblinded.Should().BeTrue();
         subject.UnblindedBy.Should().Be("unblinder-1");
-        subject.UnblindedReason.Should().Be("Serious adverse event needs treatment knowledge");
+        subject.UnblindedReason.Should().Be(UnblindingReason);
         subject.UnblindedAt.Should().Be(harness.Clock.UtcNow);
         harness.AuditLog.Calls.Should().ContainSingle(c => c.Action == "TRANSITION_UNBLINDED" && c.UserId == "unblinder-1");
     }
@@ -141,12 +144,36 @@ public class SubjectApplicationServiceStateTests
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-UB2");
 
         var result = await harness.Service.AdvanceStateAsync("SUBJ-UB2",
-            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), "reason",
+            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), UnblindingReason,
             TestContext.Current.CancellationToken);
 
         result.Error!.Code.Should().Be("INVALID_STATE_TRANSITION");
         subject.IsUnblinded.Should().BeFalse();
         subject.UnblindedBy.Should().BeNull();
+        harness.AuditLog.Calls.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// PRD-SUB-005: an emergency unblinding needs a clinical justification of at least 50 characters, so a
+    /// shorter reason leaves the participant blinded and writes nothing.
+    /// </summary>
+    [Theory]
+    [InlineData("SAE")]
+    [InlineData("Life-threatening event; allocation needed now.")]
+    [InlineData("   Life-threatening event; allocation needed now.      ")]
+    public async Task AdvanceStateAsync_ToUnblinded_WithAReasonUnder50Characters_IsRefused(string reason)
+    {
+        var harness = new Harness();
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-UB3", status: SubjectState.Enrolled);
+        subject.TransitionTo(SubjectState.Randomized).IsSuccess.Should().BeTrue();
+
+        var result = await harness.Service.AdvanceStateAsync("SUBJ-UB3",
+            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), reason,
+            TestContext.Current.CancellationToken);
+
+        result.Error!.Code.Should().Be("UNBLINDING_REASON_TOO_SHORT");
+        subject.Status.Should().Be(SubjectState.Randomized);
+        subject.IsUnblinded.Should().BeFalse();
         harness.AuditLog.Calls.Should().BeEmpty();
     }
 
