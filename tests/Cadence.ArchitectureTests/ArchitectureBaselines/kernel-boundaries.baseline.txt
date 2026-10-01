@@ -134,6 +134,8 @@ K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ReconsentRequirement.S
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ReconsentRequirement.StudyId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.SiteId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.StudyId
+K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Endpoints.CaptureConsentRequest.SiteId
+K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Endpoints.CaptureConsentRequest.StudyId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.SiteId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.StudyId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfAuditLog
