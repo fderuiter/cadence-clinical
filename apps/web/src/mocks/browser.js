@@ -3,7 +3,7 @@ import { gatewayHandlers } from "./handlers.js";
 
 let workerInstance = null;
 try {
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && import.meta.env?.MODE !== "test") {
     workerInstance = setupWorker(...gatewayHandlers);
   }
 } catch {
