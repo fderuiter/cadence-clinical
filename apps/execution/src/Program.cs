@@ -189,6 +189,7 @@ builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceAppl
 builder.Services.AddScoped<IObservationApplicationService, ObservationApplicationService>();
 builder.Services.AddScoped<IFormSubmissionApplicationService, FormSubmissionApplicationService>();
 builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplicationService>();
+builder.Services.AddScoped<IAutoQueryDispatchService, AutoQueryDispatchService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,

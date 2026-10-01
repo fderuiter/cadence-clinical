@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.EditChecks;
+using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Forms.Errors;
 using Cadence.Apps.Execution.Domain.Observations;
@@ -33,7 +35,9 @@ public sealed class FormSubmissionApplicationService(
     IFormSubmissionRepository formSubmissionRepository,
     IObservationRepository observationRepository,
     IUcumNormalizationService ucumService,
-    ICurrentAuditContextAccessor auditContextAccessor) : IFormSubmissionApplicationService
+    ICurrentAuditContextAccessor auditContextAccessor,
+    IEditCheckEngine? editCheckEngine = null,
+    IAutoQueryDispatchService? autoQueryDispatchService = null) : IFormSubmissionApplicationService
 {
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -130,6 +134,35 @@ public sealed class FormSubmissionApplicationService(
             {
                 return persisted.Error!;
             }
+
+            if (editCheckEngine != null && autoQueryDispatchService != null && persisted.Value is not null)
+            {
+                var observations = persisted.Value;
+                var violations = new List<EditCheckViolation>();
+
+                foreach (var obs in observations)
+                {
+                    violations.AddRange(editCheckEngine.EvaluateInlineConstraints(obs));
+                }
+
+                var batchContext = new BatchEvaluationContext(
+                    submission.StudyId.Value,
+                    submission.SubjectId.Value,
+                    observations,
+                    [submission]);
+
+                violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
+
+                await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
+                    submission.StudyId,
+                    submission.SubjectId,
+                    submission.SiteId,
+                    submission.VisitId,
+                    submission.FormId.Value,
+                    observations,
+                    violations,
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
 
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -193,6 +226,35 @@ public sealed class FormSubmissionApplicationService(
             if (persisted.IsFailure)
             {
                 return persisted.Error!;
+            }
+
+            if (editCheckEngine != null && autoQueryDispatchService != null && persisted.Value is not null)
+            {
+                var observations = persisted.Value;
+                var violations = new List<EditCheckViolation>();
+
+                foreach (var obs in observations)
+                {
+                    violations.AddRange(editCheckEngine.EvaluateInlineConstraints(obs));
+                }
+
+                var batchContext = new BatchEvaluationContext(
+                    submission.StudyId.Value,
+                    submission.SubjectId.Value,
+                    observations,
+                    [submission]);
+
+                violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
+
+                await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
+                    submission.StudyId,
+                    submission.SubjectId,
+                    submission.SiteId,
+                    submission.VisitId,
+                    submission.FormId.Value,
+                    observations,
+                    violations,
+                    cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -518,7 +580,7 @@ public sealed class FormSubmissionApplicationService(
         return (DateTime?)parsed.UtcDateTime;
     }
 
-    private async Task<Result<bool>> PersistObservationsAsync(
+    private async Task<Result<List<ClinicalObservation>>> PersistObservationsAsync(
         FormSubmission submission,
         string payloadJson,
         CancellationToken cancellationToken)
@@ -534,7 +596,7 @@ public sealed class FormSubmissionApplicationService(
             await observationRepository.AddAsync(observation, cancellationToken).ConfigureAwait(false);
         }
 
-        return true;
+        return extracted.Value!;
     }
 
     private static FormSubmissionResponse MapToResponse(FormSubmission f) =>

@@ -10,7 +10,9 @@ public sealed record EditCheckViolation(
     string Severity,
     string? TargetField = null,
     string? FormId = null,
-    string? VisitId = null
+    string? VisitId = null,
+    bool IsAutoDispatchEnabled = false,
+    string? StandardTemplate = null
 );
 
 /// <summary>

@@ -275,21 +275,34 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
     {
         var violations = new List<EditCheckViolation>();
 
+        // Check for unit mismatch / invalid unit code
+        if (!string.IsNullOrWhiteSpace(observation.Unit) &&
+            (observation.NormalizedUnit is null || string.Equals(observation.Unit, "INVALID_UNIT", StringComparison.OrdinalIgnoreCase) || string.Equals(observation.Unit, "ERR", StringComparison.OrdinalIgnoreCase)))
+        {
+            violations.Add(new EditCheckViolation(
+                "RULE_UNIT_MISMATCH",
+                $"Unit '{observation.Unit}' is invalid for test {observation.TestCode.Value}.",
+                "WARNING",
+                observation.TestCode.Value,
+                IsAutoDispatchEnabled: true,
+                StandardTemplate: $"Invalid unit code '{observation.Unit}' provided for test {observation.TestCode.Value}. Please select or enter a valid UCUM unit code."));
+        }
+
         double? val = observation.Value;
         if (val.HasValue)
         {
             string testCode = observation.TestCode.Value;
             if (testCode is "SYSBP" or "VSSBP" && (val.Value < 40.0 || val.Value > 300.0))
             {
-                violations.Add(new EditCheckViolation("FATAL_SYSBP_RANGE", $"Systolic blood pressure {val.Value} is clinically implausible.", "FATAL", testCode));
+                violations.Add(new EditCheckViolation("FATAL_SYSBP_RANGE", $"Systolic blood pressure {val.Value} is clinically implausible.", "FATAL", testCode, IsAutoDispatchEnabled: false));
             }
             else if (testCode is "DIABP" or "VSDPB" && (val.Value < 20.0 || val.Value > 200.0))
             {
-                violations.Add(new EditCheckViolation("FATAL_DIABP_RANGE", $"Diastolic blood pressure {val.Value} is clinically implausible.", "FATAL", testCode));
+                violations.Add(new EditCheckViolation("FATAL_DIABP_RANGE", $"Diastolic blood pressure {val.Value} is clinically implausible.", "FATAL", testCode, IsAutoDispatchEnabled: false));
             }
             else if (testCode is "PULSE" or "HR" or "VSHR" && (val.Value < 20.0 || val.Value > 250.0))
             {
-                violations.Add(new EditCheckViolation("FATAL_PULSE_RANGE", $"Pulse rate {val.Value} is clinically implausible.", "FATAL", testCode));
+                violations.Add(new EditCheckViolation("FATAL_PULSE_RANGE", $"Pulse rate {val.Value} is clinically implausible.", "FATAL", testCode, IsAutoDispatchEnabled: false));
             }
             else if (testCode is "TEMP" or "VSTEMP")
             {
@@ -304,7 +317,7 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
 
                 if (tempCel < 25.0 || tempCel > 45.0)
                 {
-                    violations.Add(new EditCheckViolation("FATAL_TEMP_RANGE", $"Body temperature {tempCel:F1} Cel is clinically implausible.", "FATAL", testCode));
+                    violations.Add(new EditCheckViolation("FATAL_TEMP_RANGE", $"Body temperature {tempCel:F1} Cel is clinically implausible.", "FATAL", testCode, IsAutoDispatchEnabled: false));
                 }
             }
 
@@ -317,7 +330,9 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
                         "RULE_RANGE_LOW",
                         $"Value {val.Value} is below reference range low ({observation.AdditionalProperties.ReferenceRangeLow.Value}).",
                         "WARNING",
-                        testCode));
+                        testCode,
+                        IsAutoDispatchEnabled: true,
+                        StandardTemplate: $"Value {val.Value} is below reference range low ({observation.AdditionalProperties.ReferenceRangeLow.Value}). Please verify or correct value."));
                 }
 
                 if (observation.AdditionalProperties.ReferenceRangeHigh.HasValue &&
@@ -327,7 +342,9 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
                         "RULE_RANGE_HIGH",
                         $"Value {val.Value} is above reference range high ({observation.AdditionalProperties.ReferenceRangeHigh.Value}).",
                         "WARNING",
-                        testCode));
+                        testCode,
+                        IsAutoDispatchEnabled: true,
+                        StandardTemplate: $"Value {val.Value} is above reference range high ({observation.AdditionalProperties.ReferenceRangeHigh.Value}). Please verify or correct value."));
                 }
             }
         }
@@ -359,7 +376,8 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
                     $"Systolic BP ({sys.Value.Value}) cannot be lower than Diastolic BP ({dia.Value.Value}) on visit {sys.VisitId}.",
                     "QUERY",
                     TargetField: "SYSBP",
-                    VisitId: sys.VisitId));
+                    VisitId: sys.VisitId,
+                    IsAutoDispatchEnabled: false));
             }
         }
 
