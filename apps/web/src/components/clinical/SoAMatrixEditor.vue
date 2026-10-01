@@ -524,12 +524,6 @@ const handleCellPointerDown = (rIdx, cIdx, event) => {
   }
 };
 
-const handleCellMouseEnter = (rIdx, cIdx) => {
-  if (isDragging.value) {
-    dragCurrentCell.value = { rIdx, cIdx };
-  }
-};
-
 const handleCellPointerMove = (event) => {
   if (isDragging.value) {
     const el = document.elementFromPoint(event.clientX, event.clientY);
