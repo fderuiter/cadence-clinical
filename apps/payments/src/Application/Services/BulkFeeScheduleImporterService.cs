@@ -536,59 +536,69 @@ internal static class SimpleCsvReader
 {
     public static IEnumerable<IReadOnlyList<string>> Read(TextReader reader)
     {
-        var field = new StringBuilder();
-        var row = new List<string>();
-        bool quoted = false;
-        int c;
+        string? line;
+        var rowBuffer = new List<string>();
+        var currentField = new StringBuilder();
+        bool inQuotes = false;
 
-        while ((c = reader.Read()) != -1)
+        while ((line = reader.ReadLine()) != null)
         {
-            char ch = (char)c;
-            if (quoted)
+            int index = 0;
+            while (index < line.Length)
             {
-                if (ch == '"' && reader.Peek() == '"')
+                char ch = line[index];
+                if (inQuotes)
                 {
-                    field.Append('"');
-                    reader.Read();
+                    if (ch == '"')
+                    {
+                        if (index + 1 < line.Length && line[index + 1] == '"')
+                        {
+                            currentField.Append('"');
+                            index += 2;
+                            continue;
+                        }
+
+                        inQuotes = false;
+                    }
+                    else
+                    {
+                        currentField.Append(ch);
+                    }
                 }
                 else if (ch == '"')
                 {
-                    quoted = false;
+                    inQuotes = true;
+                }
+                else if (ch == ',')
+                {
+                    rowBuffer.Add(currentField.ToString());
+                    currentField.Clear();
                 }
                 else
                 {
-                    field.Append(ch);
+                    currentField.Append(ch);
                 }
-                continue;
+
+                index++;
             }
 
-            switch (ch)
+            if (!inQuotes)
             {
-                case '"':
-                    quoted = true;
-                    break;
-                case ',':
-                    row.Add(field.ToString());
-                    field.Clear();
-                    break;
-                case '\r':
-                    break;
-                case '\n':
-                    row.Add(field.ToString());
-                    field.Clear();
-                    yield return row;
-                    row = [];
-                    break;
-                default:
-                    field.Append(ch);
-                    break;
+                rowBuffer.Add(currentField.ToString());
+                currentField.Clear();
+                yield return rowBuffer;
+                rowBuffer = new List<string>();
+            }
+            else
+            {
+                currentField.AppendLine();
             }
         }
 
-        if (field.Length > 0 || row.Count > 0)
+        if (rowBuffer.Count > 0 || currentField.Length > 0)
         {
-            row.Add(field.ToString());
-            yield return row;
+            rowBuffer.Add(currentField.ToString());
+            yield return rowBuffer;
         }
     }
 }
