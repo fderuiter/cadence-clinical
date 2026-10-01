@@ -276,6 +276,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
 
     await wrapper.find("#sig-password").setValue("somepassword"); // pragma: allowlist secret
     await wrapper.find("#sig-reason").setValue("REVIEW");
+    await wrapper.vm.$nextTick();
 
     await wrapper.find("#btn-confirm-sig").trigger("click");
 
@@ -315,6 +316,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
 
     await wrapper.find("#sig-password").setValue("wrongpassword"); // pragma: allowlist secret
     await wrapper.find("#sig-reason").setValue("AUTHOR");
+    await wrapper.vm.$nextTick();
 
     await wrapper.find("#btn-confirm-sig").trigger("click");
 
