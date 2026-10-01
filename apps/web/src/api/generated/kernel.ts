@@ -292,13 +292,222 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/simulation/simulate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Evaluates a candidate USDM protocol version in memory without database changes. */
+    post: operations["KernelSimulateProtocol"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/protocols/generate-proposal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Generates a complete USDM protocol proposal from a trial brief with reasoning lineage. */
+    post: operations["KernelGenerateProtocolProposal"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/protocols/matrix-gap-check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Performs immediate real-time matrix gap check on a candidate protocol design graph. */
+    post: operations["KernelMatrixGapCheck"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    Kernel_ActivityLocation: number;
+    Kernel_ActivityTiming: {
+      /** Format: int32 */
+      day: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      window_before: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      window_after: number | string;
+    };
     Kernel_AnonymousTypeOfstringAndstring: {
       status: null | string;
       service: null | string;
+    };
+    Kernel_Arm: {
+      id: string;
+      name: string;
+      type: components["schemas"]["Kernel_ArmType"];
+      intervention_ids: string[];
+    };
+    Kernel_ArmType: number;
+    Kernel_CandidateKind: number;
+    Kernel_CandidateSummary: {
+      kind: components["schemas"]["Kernel_CandidateKind"];
+      version: null | components["schemas"]["Kernel_NodeRef"];
+      base_version: null | components["schemas"]["Kernel_NodeRef"];
+      content_hash: null | string;
+      base_content_hash: null | string;
+    };
+    Kernel_CodeSystemVersionId: unknown;
+    Kernel_Cohort: {
+      id: string;
+      name: string;
+      arm_ids: string[];
+      description?: null | string;
+    };
+    Kernel_CollectionItem: {
+      id: string;
+      concept: components["schemas"]["Kernel_ConceptRef"];
+      unit?: null | string;
+      terminology?: null | components["schemas"]["Kernel_TerminologyBinding"];
+      /** @default false */
+      required: boolean;
+      purpose?: null | components["schemas"]["Kernel_DataPurpose"];
+    };
+    Kernel_CollectionSpec: {
+      id: string;
+      name: string;
+      items: components["schemas"]["Kernel_CollectionItem"][];
+      purpose?: null | components["schemas"]["Kernel_DataPurpose"];
+    };
+    Kernel_ConceptId: unknown;
+    Kernel_ConceptRef: {
+      concept_id: components["schemas"]["Kernel_ConceptId"];
+      /** Format: int32 */
+      version: number | string;
+    };
+    Kernel_CriterionCategory: number;
+    Kernel_DataPurpose: {
+      endpoint_ids?: string[];
+      estimand_ids?: string[];
+      safety_rule_ids?: string[];
+      operational_need?: null | string;
+    };
+    Kernel_DependentGroup: {
+      kind: string;
+      /** Format: int32 */
+      count: number | string;
+      objects: components["schemas"]["Kernel_LineageNode"][];
+    };
+    Kernel_DependentsReport: {
+      start: string;
+      /** Format: int32 */
+      depth: number | string;
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+      groups: components["schemas"]["Kernel_DependentGroup"][];
+      /** Format: int32 */
+      total: number | string;
+      truncated: boolean;
+    };
+    Kernel_DesignReference: {
+      id: string;
+      title: string;
+      artifact?: unknown;
+    };
+    Kernel_Dose: {
+      /** Format: double */
+      amount: number | string;
+      unit: string;
+    };
+    Kernel_ElementChange: {
+      element_id: string;
+      instance_type: null | string;
+      change: components["schemas"]["Kernel_ElementChangeKind"];
+      properties: string[];
+    };
+    Kernel_ElementChangeKind: number;
+    Kernel_EligibilityCriterion: {
+      id: string;
+      category: components["schemas"]["Kernel_CriterionCategory"];
+      text: string;
+      concepts: components["schemas"]["Kernel_ConceptRef"][];
+      expression?: null | string;
+    };
+    Kernel_Endpoint: {
+      id: string;
+      objective_id: string;
+      level: components["schemas"]["Kernel_ObjectiveLevel"];
+      text: string;
+      concept?: null | components["schemas"]["Kernel_ConceptRef"];
+    };
+    Kernel_EngineVersion: {
+      name: string;
+      version: string;
+    };
+    Kernel_Epoch: {
+      id: string;
+      name: string;
+      /** Format: int32 */
+      order: number | string;
+    };
+    Kernel_Estimand: {
+      id: string;
+      endpoint_id: string;
+      population_id: string;
+      arm_ids: string[];
+      variable: string;
+      intercurrent_events: components["schemas"]["Kernel_IntercurrentEvent"][];
+      summary_measure: string;
+      intervention_ids?: null | string[];
+    };
+    Kernel_GenerateProtocolProposalRequest: {
+      trial_brief: string;
+    };
+    Kernel_GenerativeProtocolProposal: {
+      design: components["schemas"]["Kernel_ProtocolDesign"];
+      design_json: string;
+      reasoning_chain: components["schemas"]["Kernel_ProtocolReasoningStep"][];
+      initial_gap_check: components["schemas"]["Kernel_MatrixGapFinding"][];
+    };
+    Kernel_IntercurrentEvent: {
+      description: string;
+      strategy: components["schemas"]["Kernel_IntercurrentEventStrategy"];
+      strategy_text?: null | string;
+    };
+    Kernel_IntercurrentEventStrategy: number;
+    Kernel_Intervention: {
+      id: string;
+      name: string;
+      product?: null | components["schemas"]["Kernel_ConceptRef"];
+      dose?: null | components["schemas"]["Kernel_Dose"];
+      route?: null | string;
+      regimen?: null | string;
     };
     Kernel_KernelActivityEntryResponse: {
       /** Format: uuid */
@@ -545,6 +754,68 @@ export interface components {
       ref: null | string;
       mask: null | string;
     };
+    Kernel_LineageNode: {
+      handle: string;
+      kind: string;
+      ref: null | components["schemas"]["Kernel_NodeRef"];
+      mask: null | components["schemas"]["Kernel_MaskReason"];
+      /** Format: int32 */
+      distance: number | string;
+      is_masked?: boolean;
+    };
+    Kernel_MaskedPart: {
+      part: string;
+      reason: components["schemas"]["Kernel_MaskReason"];
+    };
+    Kernel_MaskReason: number;
+    Kernel_MatrixGapCheckRequest: {
+      protocol_content: string;
+    };
+    Kernel_MatrixGapFinding: {
+      element_id: string;
+      kind: components["schemas"]["Kernel_MatrixGapKind"];
+      severity: components["schemas"]["Kernel_MatrixGapSeverity"];
+      json_pointer_path: string;
+      description: string;
+      recommendation?: null | string;
+    };
+    Kernel_MatrixGapKind: number;
+    Kernel_MatrixGapSeverity: number;
+    Kernel_NodeRef: unknown;
+    Kernel_Objective: {
+      id: string;
+      level: components["schemas"]["Kernel_ObjectiveLevel"];
+      text: string;
+    };
+    Kernel_ObjectiveLevel: number;
+    Kernel_PlannedActivity: {
+      id: string;
+      name: string;
+      epoch_id: string;
+      locations: components["schemas"]["Kernel_ActivityLocation"][];
+      collection_spec_ids: string[];
+      timing?: null | components["schemas"]["Kernel_ActivityTiming"];
+      purpose?: null | components["schemas"]["Kernel_DataPurpose"];
+    };
+    Kernel_PlannedVisit: {
+      activity_id: string;
+      name: string;
+      epoch_id: string;
+      /** Format: int32 */
+      epoch_order: number | string;
+      /** Format: int32 */
+      study_day: number | string;
+      /** Format: int32 */
+      window_before: number | string;
+      /** Format: int32 */
+      window_after: number | string;
+    };
+    Kernel_Population: {
+      id: string;
+      name: string;
+      criterion_ids: string[];
+      description?: null | string;
+    };
     Kernel_ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -552,6 +823,81 @@ export interface components {
       status?: null | number | string;
       detail?: null | string;
       instance?: null | string;
+    };
+    Kernel_ProtocolDesign: {
+      /** Format: int32 */
+      schema_version?: number | string;
+      title?: string;
+      objectives?: components["schemas"]["Kernel_Objective"][];
+      endpoints?: components["schemas"]["Kernel_Endpoint"][];
+      estimands?: components["schemas"]["Kernel_Estimand"][];
+      populations?: components["schemas"]["Kernel_Population"][];
+      eligibility_criteria?: components["schemas"]["Kernel_EligibilityCriterion"][];
+      arms?: components["schemas"]["Kernel_Arm"][];
+      epochs?: components["schemas"]["Kernel_Epoch"][];
+      cohorts?: components["schemas"]["Kernel_Cohort"][];
+      interventions?: components["schemas"]["Kernel_Intervention"][];
+      planned_activities?: components["schemas"]["Kernel_PlannedActivity"][];
+      collection_specs?: components["schemas"]["Kernel_CollectionSpec"][];
+      safety_rules?: components["schemas"]["Kernel_ProtocolRule"][];
+      discontinuation_rules?: components["schemas"]["Kernel_ProtocolRule"][];
+      randomization_scheme?:
+        null | components["schemas"]["Kernel_DesignReference"];
+      statistical_design?:
+        null | components["schemas"]["Kernel_DesignReference"];
+    };
+    Kernel_ProtocolReasoningStep: {
+      /** Format: int32 */
+      step_number: number | string;
+      step_type: string;
+      summary: string;
+      rationale: string;
+      citations: string[];
+    };
+    Kernel_ProtocolRule: {
+      id: string;
+      text: string;
+      concepts: components["schemas"]["Kernel_ConceptRef"][];
+      expression?: null | string;
+    };
+    Kernel_ScheduleChange: {
+      activity_id: string;
+      change: components["schemas"]["Kernel_ElementChangeKind"];
+      before: null | components["schemas"]["Kernel_PlannedVisit"];
+      after: null | components["schemas"]["Kernel_PlannedVisit"];
+    };
+    Kernel_SimulateProtocolRequest: {
+      base_version_ref: null | string;
+      stored_version_ref: null | string;
+      candidate_content: null | string;
+      /** Format: date-time */
+      valid_at?: null | string;
+      /** Format: date-time */
+      known_at?: null | string;
+    };
+    Kernel_SimulationAsOf: {
+      /** Format: date-time */
+      valid_at: string;
+      /** Format: date-time */
+      known_at: string;
+    };
+    Kernel_SimulationResult: {
+      scope: components["schemas"]["Kernel_NodeRef"];
+      as_of: components["schemas"]["Kernel_SimulationAsOf"];
+      candidate: components["schemas"]["Kernel_CandidateSummary"];
+      engine_versions: components["schemas"]["Kernel_EngineVersion"][];
+      input_hash: string;
+      result_hash: string;
+      structural_diff: components["schemas"]["Kernel_ElementChange"][];
+      schedule_changes: components["schemas"]["Kernel_ScheduleChange"][];
+      masked: components["schemas"]["Kernel_MaskedPart"][];
+      dependents?: null | components["schemas"]["Kernel_DependentsReport"];
+      matrix_gaps?: null | components["schemas"]["Kernel_MatrixGapFinding"][];
+      is_empty?: boolean;
+    };
+    Kernel_TerminologyBinding: {
+      code_system_version_id: components["schemas"]["Kernel_CodeSystemVersionId"];
+      codelist?: null | string;
     };
   };
   responses: never;
@@ -1325,6 +1671,123 @@ export interface operations {
       };
       /** @description Service Unavailable */
       503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelSimulateProtocol: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_SimulateProtocolRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_SimulationResult"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGenerateProtocolProposal: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_GenerateProtocolProposalRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_GenerativeProtocolProposal"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelMatrixGapCheck: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_MatrixGapCheckRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_MatrixGapFinding"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
         headers: {
           [name: string]: unknown;
         };

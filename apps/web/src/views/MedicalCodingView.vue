@@ -1,5 +1,8 @@
 <template>
-  <div id="section-medical-coding" class="dashboard-section active">
+  <div
+    id="section-medical-coding"
+    class="dashboard-section active"
+  >
     <!-- View Header -->
     <div class="section-header">
       <div class="header-text-group">
@@ -11,6 +14,28 @@
         </p>
       </div>
       <div class="header-action-buttons">
+        <div
+          class="view-mode-toggle"
+          role="group"
+          aria-label="Queue view mode"
+        >
+          <button
+            type="button"
+            class="btn btn-sm"
+            :class="codingStore.viewMode === 'INDIVIDUAL' ? 'btn-primary' : 'btn-secondary'"
+            @click="codingStore.setViewMode('INDIVIDUAL')"
+          >
+            📋 Individual Items
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm"
+            :class="codingStore.viewMode === 'CLUSTERS' ? 'btn-primary' : 'btn-secondary'"
+            @click="codingStore.setViewMode('CLUSTERS')"
+          >
+            🧩 Verbatim Clusters
+          </button>
+        </div>
         <button
           type="button"
           class="btn btn-secondary"
@@ -30,7 +55,10 @@
     </div>
 
     <!-- 21 CFR Part 11 Role Gating Notice if unauthorized -->
-    <div v-if="!hasAccess" class="card gating-banner">
+    <div
+      v-if="!hasAccess"
+      class="card gating-banner"
+    >
       <div class="gating-content">
         <span class="gating-icon">🚫</span>
         <div>
@@ -45,23 +73,39 @@
     </div>
 
     <!-- Authorized Coding Workspace -->
-    <div v-else class="coding-workspace-container">
-      <!-- 5 Summary Stat Metric Cards -->
-      <div class="stats-overview-grid">
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <div
-          class="stat-card"
-          :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
-          @click="setStatusFilter('ALL')"
-        >
+    <div
+      v-else
+      class="coding-workspace-container"
+    >
+      <!-- Summary Stat Metric Cards -->
+      <div
+        v-if="codingStore.viewMode === 'CLUSTERS'"
+        class="stats-overview-grid cluster-stats-grid"
+      >
+        <div class="stat-card stat-cluster-total">
           <div class="stat-number">
-            {{ codingStore.totalCount }}
+            {{ codingStore.totalClusterCount }}
           </div>
-          <div class="stat-title">Total Verbatims</div>
+          <div class="stat-title">
+            Verbatim Clusters
+          </div>
         </div>
-
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div class="stat-card stat-instance-total">
+          <div class="stat-number">
+            {{ codingStore.totalInstanceCount }}
+          </div>
+          <div class="stat-title">
+            Subject Instances
+          </div>
+        </div>
+        <div class="stat-card stat-progress">
+          <div class="stat-number">
+            {{ codingStore.batchAutoCodingProgress }}%
+          </div>
+          <div class="stat-title">
+            Auto-Coded Progress
+          </div>
+        </div>
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-uncoded"
@@ -71,10 +115,10 @@
           <div class="stat-number">
             {{ codingStore.uncodedCount }}
           </div>
-          <div class="stat-title">Uncoded</div>
+          <div class="stat-title">
+            Uncoded Instances
+          </div>
         </div>
-
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-suggested"
@@ -84,10 +128,58 @@
           <div class="stat-number">
             {{ codingStore.suggestedCount }}
           </div>
-          <div class="stat-title">Suggested Matches</div>
+          <div class="stat-title">
+            Suggested Instances
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-else
+        class="stats-overview-grid"
+      >
+        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="stat-card"
+          :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
+          @click="setStatusFilter('ALL')"
+        >
+          <div class="stat-number">
+            {{ codingStore.totalCount }}
+          </div>
+          <div class="stat-title">
+            Total Verbatims
+          </div>
         </div>
 
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="stat-card stat-uncoded"
+          :class="{ 'stat-active': codingStore.filters.status === 'UNCODED' }"
+          @click="setStatusFilter('UNCODED')"
+        >
+          <div class="stat-number">
+            {{ codingStore.uncodedCount }}
+          </div>
+          <div class="stat-title">
+            Uncoded
+          </div>
+        </div>
+
+        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="stat-card stat-suggested"
+          :class="{ 'stat-active': codingStore.filters.status === 'SUGGESTED' }"
+          @click="setStatusFilter('SUGGESTED')"
+        >
+          <div class="stat-number">
+            {{ codingStore.suggestedCount }}
+          </div>
+          <div class="stat-title">
+            Suggested Matches
+          </div>
+        </div>
+
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-coded"
@@ -97,10 +189,11 @@
           <div class="stat-number">
             {{ codingStore.codedCount }}
           </div>
-          <div class="stat-title">Coded</div>
+          <div class="stat-title">
+            Coded
+          </div>
         </div>
 
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-query"
@@ -112,7 +205,9 @@
           <div class="stat-number">
             {{ codingStore.queryPendingCount }}
           </div>
-          <div class="stat-title">Query Pending</div>
+          <div class="stat-title">
+            Query Pending
+          </div>
         </div>
       </div>
 
@@ -165,6 +260,29 @@
             </button>
           </div>
 
+          <!-- Confidence Threshold Filter -->
+          <div class="confidence-select-box">
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <select
+              v-model="codingStore.filters.confidenceThreshold"
+              class="form-control-sm confidence-select"
+              title="Filter by match confidence threshold"
+            >
+              <option value="ALL">
+                All Confidence Levels
+              </option>
+              <option value="HIGH">
+                ≥ 90% High Confidence
+              </option>
+              <option value="MEDIUM">
+                70 - 89% Medium Confidence
+              </option>
+              <option value="LOW">
+                &lt; 70% Low Confidence
+              </option>
+            </select>
+          </div>
+
           <!-- Dictionary Filter -->
           <div class="dict-select-box">
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -173,9 +291,15 @@
               class="form-control-sm"
               title="Filter by dictionary system"
             >
-              <option value="ALL">All Dictionaries</option>
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
+              <option value="ALL">
+                All Dictionaries
+              </option>
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
             </select>
           </div>
         </div>
@@ -188,7 +312,7 @@
             type="text"
             class="form-control-sm search-input"
             placeholder="Search verbatim, code, or field..."
-          />
+          >
         </div>
       </div>
 
@@ -407,12 +531,26 @@ onMounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.dict-select-box select {
+.dict-select-box select,
+.confidence-select-box select {
   font-size: 0.82rem;
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background-color: white;
+}
+
+.view-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: #e2e8f0;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.view-mode-toggle .btn {
+  font-size: 0.82rem;
+  padding: 4px 10px;
 }
 
 .search-box {

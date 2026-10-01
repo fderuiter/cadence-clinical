@@ -115,6 +115,7 @@ public static class KernelReadEndpoints
 
         KernelLineageEndpoints.Map(reads);
         KernelActivityEndpoints.Map(reads);
+        KernelSimulationEndpoints.MapSimulationEndpoints(reads);
         return kernel;
     }
 

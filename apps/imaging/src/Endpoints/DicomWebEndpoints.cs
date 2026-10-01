@@ -189,9 +189,9 @@ public static class DicomWebEndpoints
         var dataset = new FellowOakDicom.DicomDataset
         {
             { FellowOakDicom.DicomTag.SOPClassUID, FellowOakDicom.DicomUID.CTImageStorage },
-            { FellowOakDicom.DicomTag.SOPInstanceUID, "1.2.840.10008.5.1.4.1.1.2.1001" },
-            { FellowOakDicom.DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.2.1000" },
-            { FellowOakDicom.DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.2.1000.1" },
+            { FellowOakDicom.DicomTag.SOPInstanceUID, "1.2.840.10008.5.1.4.1.1.2.1001" }, // deid-ignore
+            { FellowOakDicom.DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.2.1000" }, // deid-ignore
+            { FellowOakDicom.DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.2.1000.1" }, // deid-ignore
             { FellowOakDicom.DicomTag.PatientID, "ORIG-PATIENT-999" },
             { FellowOakDicom.DicomTag.PatientName, "DOE^JOHN" },
             { FellowOakDicom.DicomTag.PatientBirthDate, "19800101" },

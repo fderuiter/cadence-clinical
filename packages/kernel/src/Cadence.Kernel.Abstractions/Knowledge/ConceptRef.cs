@@ -33,6 +33,17 @@ public readonly record struct ConceptRef
 
     public int Version { get; }
 
+    public static ConceptRef New() => new(ConceptId.New(), 1);
+
+    public static ConceptRef Parse(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return New();
+        var parts = text.Split('@');
+        return parts.Length == 2 && int.TryParse(parts[1], out var v)
+            ? new ConceptRef(ConceptId.Parse(parts[0]), v)
+            : New();
+    }
+
     public override string ToString() => $"{ConceptId}@{Version}";
 }
 

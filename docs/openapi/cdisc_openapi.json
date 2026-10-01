@@ -3468,6 +3468,152 @@
         }
       }
     },
+    "/api/v1/kernel/simulation/simulate": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Evaluates a candidate USDM protocol version in memory without database changes.",
+        "operationId": "KernelSimulateProtocol",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_SimulateProtocolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_SimulationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/protocols/generate-proposal": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Generates a complete USDM protocol proposal from a trial brief with reasoning lineage.",
+        "operationId": "KernelGenerateProtocolProposal",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_GenerateProtocolProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_GenerativeProtocolProposal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/protocols/matrix-gap-check": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Performs immediate real-time matrix gap check on a candidate protocol design graph.",
+        "operationId": "KernelMatrixGapCheck",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_MatrixGapCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/knowledge/status": {
       "get": {
         "tags": [
@@ -3609,6 +3755,101 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Direct disburse ePRO stipend to participant wallet with strict idempotency and audit trail.",
+        "operationId": "DisburseStipendDirect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseStipendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Disburse stipend to participant wallet.",
+        "operationId": "DisburseStipendWallet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseStipendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/subject/{subjectId}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve participant wallet balance and details.",
+        "operationId": "GetSubjectWallet",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/audit-logs": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve payment audit ledger records.",
+        "operationId": "GetPaymentAuditLogs",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -6999,6 +7240,43 @@
           }
         }
       },
+      "Kernel_ActivityLocation": {
+        "type": "integer"
+      },
+      "Kernel_ActivityTiming": {
+        "required": [
+          "day"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          }
+        }
+      },
       "Kernel_AnonymousTypeOfstringAndstring": {
         "required": [
           "status",
@@ -7013,6 +7291,654 @@
             ]
           },
           "service": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_Arm": {
+        "required": [
+          "id",
+          "name",
+          "type",
+          "intervention_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/Kernel_ArmType"
+          },
+          "intervention_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_ArmType": {
+        "type": "integer"
+      },
+      "Kernel_CandidateKind": {
+        "type": "integer"
+      },
+      "Kernel_CandidateSummary": {
+        "required": [
+          "kind",
+          "version",
+          "base_version",
+          "content_hash",
+          "base_content_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/Kernel_CandidateKind"
+          },
+          "version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_NodeRef"
+              }
+            ]
+          },
+          "base_version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_NodeRef"
+              }
+            ]
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "base_content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_CodeSystemVersionId": {},
+      "Kernel_Cohort": {
+        "required": [
+          "id",
+          "name",
+          "arm_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "arm_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_CollectionItem": {
+        "required": [
+          "id",
+          "concept"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "concept": {
+            "$ref": "#/components/schemas/Kernel_ConceptRef"
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "terminology": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_TerminologyBinding"
+              }
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "default": false
+          },
+          "purpose": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DataPurpose"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_CollectionSpec": {
+        "required": [
+          "id",
+          "name",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_CollectionItem"
+            }
+          },
+          "purpose": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DataPurpose"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_ConceptId": {},
+      "Kernel_ConceptRef": {
+        "required": [
+          "concept_id",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "concept_id": {
+            "$ref": "#/components/schemas/Kernel_ConceptId"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Kernel_CriterionCategory": {
+        "type": "integer"
+      },
+      "Kernel_DataPurpose": {
+        "type": "object",
+        "properties": {
+          "endpoint_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "estimand_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "safety_rule_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "operational_need": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_DependentGroup": {
+        "required": [
+          "kind",
+          "count",
+          "objects"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "objects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_LineageNode"
+            }
+          }
+        }
+      },
+      "Kernel_DependentsReport": {
+        "required": [
+          "start",
+          "depth",
+          "valid_at",
+          "known_at",
+          "groups",
+          "total",
+          "truncated"
+        ],
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string"
+          },
+          "depth": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valid_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_DependentGroup"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_DesignReference": {
+        "required": [
+          "id",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artifact": {}
+        }
+      },
+      "Kernel_Dose": {
+        "required": [
+          "amount",
+          "unit"
+        ],
+        "type": "object",
+        "properties": {
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_ElementChange": {
+        "required": [
+          "element_id",
+          "instance_type",
+          "change",
+          "properties"
+        ],
+        "type": "object",
+        "properties": {
+          "element_id": {
+            "type": "string"
+          },
+          "instance_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "change": {
+            "$ref": "#/components/schemas/Kernel_ElementChangeKind"
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_ElementChangeKind": {
+        "type": "integer"
+      },
+      "Kernel_EligibilityCriterion": {
+        "required": [
+          "id",
+          "category",
+          "text",
+          "concepts"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Kernel_CriterionCategory"
+          },
+          "text": {
+            "type": "string"
+          },
+          "concepts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ConceptRef"
+            }
+          },
+          "expression": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_Endpoint": {
+        "required": [
+          "id",
+          "objective_id",
+          "level",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "objective_id": {
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/Kernel_ObjectiveLevel"
+          },
+          "text": {
+            "type": "string"
+          },
+          "concept": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ConceptRef"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_EngineVersion": {
+        "required": [
+          "name",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_Epoch": {
+        "required": [
+          "id",
+          "name",
+          "order"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Kernel_Estimand": {
+        "required": [
+          "id",
+          "endpoint_id",
+          "population_id",
+          "arm_ids",
+          "variable",
+          "intercurrent_events",
+          "summary_measure"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string"
+          },
+          "population_id": {
+            "type": "string"
+          },
+          "arm_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "variable": {
+            "type": "string"
+          },
+          "intercurrent_events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_IntercurrentEvent"
+            }
+          },
+          "summary_measure": {
+            "type": "string"
+          },
+          "intervention_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_GenerateProtocolProposalRequest": {
+        "required": [
+          "trial_brief"
+        ],
+        "type": "object",
+        "properties": {
+          "trial_brief": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_GenerativeProtocolProposal": {
+        "required": [
+          "design",
+          "design_json",
+          "reasoning_chain",
+          "initial_gap_check"
+        ],
+        "type": "object",
+        "properties": {
+          "design": {
+            "$ref": "#/components/schemas/Kernel_ProtocolDesign"
+          },
+          "design_json": {
+            "type": "string"
+          },
+          "reasoning_chain": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ProtocolReasoningStep"
+            }
+          },
+          "initial_gap_check": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
+            }
+          }
+        }
+      },
+      "Kernel_IntercurrentEvent": {
+        "required": [
+          "description",
+          "strategy"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/Kernel_IntercurrentEventStrategy"
+          },
+          "strategy_text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_IntercurrentEventStrategy": {
+        "type": "integer"
+      },
+      "Kernel_Intervention": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "product": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ConceptRef"
+              }
+            ]
+          },
+          "dose": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_Dose"
+              }
+            ]
+          },
+          "route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "regimen": {
             "type": [
               "null",
               "string"
@@ -8205,6 +9131,282 @@
           }
         }
       },
+      "Kernel_LineageNode": {
+        "required": [
+          "handle",
+          "kind",
+          "ref",
+          "mask",
+          "distance"
+        ],
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "ref": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_NodeRef"
+              }
+            ]
+          },
+          "mask": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_MaskReason"
+              }
+            ]
+          },
+          "distance": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_masked": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_MaskedPart": {
+        "required": [
+          "part",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "part": {
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/Kernel_MaskReason"
+          }
+        }
+      },
+      "Kernel_MaskReason": {
+        "type": "integer"
+      },
+      "Kernel_MatrixGapCheckRequest": {
+        "required": [
+          "protocol_content"
+        ],
+        "type": "object",
+        "properties": {
+          "protocol_content": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_MatrixGapFinding": {
+        "required": [
+          "element_id",
+          "kind",
+          "severity",
+          "json_pointer_path",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "element_id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kernel_MatrixGapKind"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Kernel_MatrixGapSeverity"
+          },
+          "json_pointer_path": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_MatrixGapKind": {
+        "type": "integer"
+      },
+      "Kernel_MatrixGapSeverity": {
+        "type": "integer"
+      },
+      "Kernel_NodeRef": {},
+      "Kernel_Objective": {
+        "required": [
+          "id",
+          "level",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/Kernel_ObjectiveLevel"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_ObjectiveLevel": {
+        "type": "integer"
+      },
+      "Kernel_PlannedActivity": {
+        "required": [
+          "id",
+          "name",
+          "epoch_id",
+          "locations",
+          "collection_spec_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "epoch_id": {
+            "type": "string"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ActivityLocation"
+            }
+          },
+          "collection_spec_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ActivityTiming"
+              }
+            ]
+          },
+          "purpose": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DataPurpose"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_PlannedVisit": {
+        "required": [
+          "activity_id",
+          "name",
+          "epoch_id",
+          "epoch_order",
+          "study_day",
+          "window_before",
+          "window_after"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "epoch_id": {
+            "type": "string"
+          },
+          "epoch_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "study_day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Kernel_Population": {
+        "required": [
+          "id",
+          "name",
+          "criterion_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "criterion_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -8236,6 +9438,373 @@
             ]
           },
           "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_ProtocolDesign": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "objectives": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Objective"
+            }
+          },
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Endpoint"
+            }
+          },
+          "estimands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Estimand"
+            }
+          },
+          "populations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Population"
+            }
+          },
+          "eligibility_criteria": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_EligibilityCriterion"
+            }
+          },
+          "arms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Arm"
+            }
+          },
+          "epochs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Epoch"
+            }
+          },
+          "cohorts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Cohort"
+            }
+          },
+          "interventions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Intervention"
+            }
+          },
+          "planned_activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_PlannedActivity"
+            }
+          },
+          "collection_specs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_CollectionSpec"
+            }
+          },
+          "safety_rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ProtocolRule"
+            }
+          },
+          "discontinuation_rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ProtocolRule"
+            }
+          },
+          "randomization_scheme": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DesignReference"
+              }
+            ]
+          },
+          "statistical_design": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DesignReference"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_ProtocolReasoningStep": {
+        "required": [
+          "step_number",
+          "step_type",
+          "summary",
+          "rationale",
+          "citations"
+        ],
+        "type": "object",
+        "properties": {
+          "step_number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "step_type": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_ProtocolRule": {
+        "required": [
+          "id",
+          "text",
+          "concepts"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "concepts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ConceptRef"
+            }
+          },
+          "expression": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_ScheduleChange": {
+        "required": [
+          "activity_id",
+          "change",
+          "before",
+          "after"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "change": {
+            "$ref": "#/components/schemas/Kernel_ElementChangeKind"
+          },
+          "before": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_PlannedVisit"
+              }
+            ]
+          },
+          "after": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_PlannedVisit"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_SimulateProtocolRequest": {
+        "required": [
+          "base_version_ref",
+          "stored_version_ref",
+          "candidate_content"
+        ],
+        "type": "object",
+        "properties": {
+          "base_version_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stored_version_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidate_content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "valid_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_SimulationAsOf": {
+        "required": [
+          "valid_at",
+          "known_at"
+        ],
+        "type": "object",
+        "properties": {
+          "valid_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_SimulationResult": {
+        "required": [
+          "scope",
+          "as_of",
+          "candidate",
+          "engine_versions",
+          "input_hash",
+          "result_hash",
+          "structural_diff",
+          "schedule_changes",
+          "masked"
+        ],
+        "type": "object",
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/Kernel_NodeRef"
+          },
+          "as_of": {
+            "$ref": "#/components/schemas/Kernel_SimulationAsOf"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Kernel_CandidateSummary"
+          },
+          "engine_versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_EngineVersion"
+            }
+          },
+          "input_hash": {
+            "type": "string"
+          },
+          "result_hash": {
+            "type": "string"
+          },
+          "structural_diff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ElementChange"
+            }
+          },
+          "schedule_changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ScheduleChange"
+            }
+          },
+          "masked": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_MaskedPart"
+            }
+          },
+          "dependents": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DependentsReport"
+              }
+            ]
+          },
+          "matrix_gaps": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
+            }
+          },
+          "is_empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_TerminologyBinding": {
+        "required": [
+          "code_system_version_id"
+        ],
+        "type": "object",
+        "properties": {
+          "code_system_version_id": {
+            "$ref": "#/components/schemas/Kernel_CodeSystemVersionId"
+          },
+          "codelist": {
             "type": [
               "null",
               "string"
@@ -8485,6 +10054,79 @@
             ]
           },
           "service": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_DisburseStipendRequest": {
+        "required": [
+          "subjectId",
+          "studyId",
+          "siteId",
+          "sequenceNumber",
+          "assignmentId",
+          "diaryId",
+          "amount",
+          "idempotencyKey",
+          "disbursementType"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sequenceNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "assignmentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "diaryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "disbursementType": {
             "type": [
               "null",
               "string"

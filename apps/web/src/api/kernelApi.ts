@@ -233,4 +233,52 @@ export const kernelApi = {
       })
     );
   },
+
+  /** Runs evaluate-only in-memory simulation over candidate protocol version. */
+  simulate(request: {
+    baseVersionRef?: string;
+    storedVersionRef?: string;
+    candidateContent?: string;
+    validAt?: string;
+    knownAt?: string;
+  }): Promise<any> {
+    return fetch("/api/v1/kernel/simulation/simulate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        base_version_ref: request.baseVersionRef,
+        stored_version_ref: request.storedVersionRef,
+        candidate_content: request.candidateContent,
+        valid_at: request.validAt,
+        known_at: request.knownAt,
+      }),
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Simulation failed: ${res.statusText}`);
+      return res.json();
+    });
+  },
+
+  /** Generates a candidate USDM protocol proposal from a trial brief prompt. */
+  generateProposal(trialBrief: string): Promise<any> {
+    return fetch("/api/v1/kernel/protocols/generate-proposal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trial_brief: trialBrief }),
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Proposal generation failed: ${res.statusText}`);
+      return res.json();
+    });
+  },
+
+  /** Performs real-time schedule matrix gap check over a protocol design document. */
+  checkMatrixGaps(protocolContent: string): Promise<any[]> {
+    return fetch("/api/v1/kernel/protocols/matrix-gap-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ protocol_content: protocolContent }),
+    }).then((res) => {
+      if (!res.ok) throw new Error(`Matrix gap check failed: ${res.statusText}`);
+      return res.json();
+    });
+  },
 };

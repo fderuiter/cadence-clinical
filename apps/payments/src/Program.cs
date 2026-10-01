@@ -1,3 +1,4 @@
+using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Security.DependencyInjection;
@@ -22,6 +23,8 @@ app.MapCadenceHealthAndStatusEndpoints(
     "payments",
     "Site and participant payments health probe.",
     "Returns Payments operational status.");
+
+app.MapPaymentEndpoints();
 
 await app.RunAsync();
 

@@ -7,11 +7,14 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Search;
+using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Host;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Activity;
 using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Persistence.Search;
+using Cadence.Kernel.Persistence.Simulation;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -48,7 +51,11 @@ builder.Services
     // The activity stream (ADR-2485). This is the one host with kernel persistence, so it also runs the projector
     // that copies committed events into the stream (ADR-2540 §4.7).
     .AddKernelActivityProjection()
-    .AddKernelActivityStream();
+    .AddKernelActivityStream()
+
+    // Simulation engine and persistence inputs (ADR-2480)
+    .AddKernelSimulationInputs()
+    .AddKernelSimulation();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 
 // A reader sees what its grants in effect cover (ADR-2457); everything else is masked in place (ADR-2471). Blinding and
