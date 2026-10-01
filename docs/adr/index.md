@@ -318,6 +318,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2220: Site Greenlight Governance Regulatory Binders and DOA Signing](2026-08-28-site-greenlight-governance-regulatory-binders-and-doa-signing.md) (2026-08-28)
 - [ADR-2221: Discrepancy Event Outbox Clinical Issue Hub and Multi Channel Notifications](2026-08-28-discrepancy-event-outbox-clinical-issue-hub-and-multi-channel-notifications.md) (2026-08-28)
 - [ADR-2222: Real Time Payable Ledger Holdbacks and Patient Compensation Wallet](2026-08-28-real-time-payable-ledger-holdbacks-and-patient-compensation-wallet.md) (2026-08-28)
+- [ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet](2026-10-01-automated-stipend-disbursement-threshold-rules.md) (2026-10-01)
 - [ADR-2232: Financial and Site Operations Engines Standard](2026-08-29-financial-and-site-operations-engines-standard.md) (2026-08-29)
 - [ADR-2425: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md) (2026-08-31)
 

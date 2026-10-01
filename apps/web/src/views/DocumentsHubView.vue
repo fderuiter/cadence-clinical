@@ -21,7 +21,25 @@
           </p>
         </div>
 
-        <div class="header-right-col">
+        <div
+          class="header-right-col"
+          style="display: flex; align-items: center; gap: 8px"
+        >
+          <button
+            class="btn btn-primary btn-batch-upload"
+            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
+            @click="isBatchDrawerOpen = true"
+          >
+            📤 Batch Ingestion
+          </button>
+          <button
+            class="btn btn-outline-secondary btn-qc-queue"
+            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
+            @click="showQcQueue = !showQcQueue"
+          >
+            🛡️ CRA QC Queue
+          </button>
+
           <!-- Search Bar -->
           <div class="search-input-wrapper">
             <span class="search-icon-prefix">🔍</span>
@@ -44,6 +62,9 @@
           </div>
         </div>
       </div>
+
+      <!-- CRA Quality Control Review Queue Panel -->
+      <CraQcQueue v-if="showQcQueue" style="margin-bottom: 20px" />
 
       <!-- Active Filters & Bulk Actions Ribbon -->
       <div class="hub-filter-ribbon">
@@ -404,6 +425,14 @@
       @close="previewingFile = null"
       @download="handleFileDownload"
     />
+
+    <!-- Batch Ingestion Drawer -->
+    <BatchUploadDrawer
+      :is-open="isBatchDrawerOpen"
+      :study-id="fileshareStore.activeFilters.studyId || 'STUDY-USDM-001'"
+      :site-id="fileshareStore.activeFilters.siteId || null"
+      @close="isBatchDrawerOpen = false"
+    />
   </div>
 </template>
 
@@ -414,6 +443,8 @@ import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue
 import ShareDrawer from "../components/fileshare/ShareDrawer.vue";
 import ActivityFeed from "../components/fileshare/ActivityFeed.vue";
 import MediaPreviewModal from "../components/fileshare/MediaPreviewModal.vue";
+import BatchUploadDrawer from "../components/etmf/BatchUploadDrawer.vue";
+import CraQcQueue from "../components/etmf/CraQcQueue.vue";
 
 const props = defineProps({
   initialStudyId: {
@@ -423,6 +454,10 @@ const props = defineProps({
 });
 
 const fileshareStore = useFileshareStore();
+
+// Batch Ingestion and CRA QC state
+const isBatchDrawerOpen = ref(false);
+const showQcQueue = ref(false);
 
 // Search & Sorting state
 const searchInput = ref("");

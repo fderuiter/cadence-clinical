@@ -49,8 +49,15 @@ repos:
         files: \.(cs|csproj|sln)$
         pass_filenames: false
 
+      - id: validate-markdown
+        name: Native Markdown Link & Path Sentinel
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check validate-markdown
+        language: system
+        files: \.md$
+        pass_filenames: true
+
       - id: cadence-check
         name: Cadence Quality Sentinels & Policy Gates
-        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check
+        entry: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check --pre-commit
         language: system
         pass_filenames: false

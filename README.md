@@ -86,10 +86,16 @@ Every non-health request must come through the gateway with a Keycloak token, so
 has to sign in; its token-less demo mode can no longer reach the API.
 
 The compose stack sets local values for both and boots PostgreSQL, Keycloak, the gateway and every
-service. Each service applies its own migrations on start:
+service unprofiled by default. Each service applies its own migrations on start:
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
+```
+
+Optional storage services (MinIO and ClamAV) require `--profile storage`:
+
+```bash
+docker compose -f docker/docker-compose.yml --profile storage up -d --build
 ```
 
 Each service exposes `/healthz/live` (process up) and `/healthz/ready` (database reachable).

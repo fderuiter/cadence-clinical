@@ -16,6 +16,15 @@ public static class QualityGateOrchestrator
     {
         AnsiConsole.MarkupLine("[bold cyan]Executing Cadence Quality Sentinels & Policy Gates...[/]\n");
 
+        if (preCommit && (targetFiles == null || targetFiles.Length == 0))
+        {
+            var staged = PreCommitOpenApiService.GetStagedFiles(FindRepoRoot());
+            if (staged.Count > 0)
+            {
+                targetFiles = staged.ToArray();
+            }
+        }
+
         if (!string.IsNullOrEmpty(gateName))
         {
             return RunSingleGate(gateName, targetFiles, preCommit);
@@ -146,7 +155,7 @@ public static class QualityGateOrchestrator
 
         // 15. Auto-stage OpenAPI
         AnsiConsole.MarkupLine("\n15/21 Staging & Validating OpenAPI Schemas...");
-        if (PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit) != 0)
+        if (PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit, targetFiles: targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 15 (auto-stage-openapi) failed![/]");
             allPassed = false;
@@ -239,7 +248,7 @@ public static class QualityGateOrchestrator
             "validate-imports" or "imports" => ImportValidatorService.ValidateImports() == 0,
             "audit-security" or "security" => SecurityAuditorService.AuditSecurity(targetFiles) == 0,
             "deid-compliance-scan" or "deid" => Cadence.ToolingCore.Services.DeidComplianceService.ScanDeidCompliance(targetFiles) == 0,
-            "auto-stage-openapi" or "openapi" => PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit) == 0,
+            "auto-stage-openapi" or "openapi" => PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit, targetFiles: targetFiles) == 0,
             "validate-api-clients" or "api-clients" => ApiClientValidatorService.ValidateApiClients() == 0,
             "auto-stage-schema-doc" or "schema-doc" => SchemaDocGeneratorService.GenerateSchemaDocumentation(validate: true) == 0,
             "validate-path-patterns" or "path-patterns" => PathPatternValidatorService.ValidatePathPatterns(targetFiles) == 0,

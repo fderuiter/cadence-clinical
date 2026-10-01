@@ -172,7 +172,7 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.events).toEqual([]); // Falls back to empty array on parse error
     });
 
-    it("persists global dismissal and disabled preference keys and prevents tour popover on unvisited personas", () => {
+    it("persists persona dismissal and disabled preference keys and isolates tour popover across personas", () => {
       const store = useOnboardingStore();
       const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
 
@@ -182,16 +182,15 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       // Dismiss tour in super_admin
       store.dismissTour();
       expect(store.isActive).toBe(false);
-      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe(
-        "true"
-      );
+      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBeNull();
+      expect(window.localStorage.getItem("onboarding_super_admin_is_active")).toBe("false");
 
       // Switch to unvisited persona site_crc
       authStore.switchPersona("site_crc");
       store.loadPersonaState("site_crc");
 
       expect(store.currentPersona).toBe("site_crc");
-      expect(store.isActive).toBe(false); // Kept hidden due to global dismissal flag
+      expect(store.isActive).toBe(true); // Isolated active state for unvisited persona
       expect(store.currentStep).toBe(1); // Step position initialized for persona
 
       // Advance step in site_crc
@@ -208,41 +207,36 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.isActive).toBe(false);
     });
 
-    it("prevents future prompts across all personas when completely disabled", () => {
+    it("prevents future prompts for a persona when disabled for that persona", () => {
       const store = useOnboardingStore();
       const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
 
       store.disableTour();
       expect(store.disabled).toBe(true);
       expect(store.isActive).toBe(false);
-      expect(window.localStorage.getItem("onboarding_global_disabled")).toBe(
-        "true"
-      );
+      expect(window.localStorage.getItem("onboarding_global_disabled")).toBeNull();
+      expect(window.localStorage.getItem("onboarding_super_admin_disabled")).toBe("true");
 
       // Switch to unvisited persona site_crc
       authStore.switchPersona("site_crc");
       store.loadPersonaState("site_crc");
 
-      expect(store.disabled).toBe(true);
-      expect(store.isActive).toBe(false);
+      expect(store.disabled).toBe(false);
+      expect(store.isActive).toBe(true);
     });
 
-    it("clears global dismissal and disabled flags when tour is reset or restarted", () => {
+    it("clears dismissal and disabled flags when tour is reset or restarted", () => {
       const store = useOnboardingStore();
       store.dismissTour();
-      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe(
-        "true"
-      );
+      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBeNull();
+      expect(window.localStorage.getItem("onboarding_super_admin_is_active")).toBe("false");
 
       store.resetTour();
       expect(store.isActive).toBe(true);
       expect(store.disabled).toBe(false);
-      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe(
-        "false"
-      );
-      expect(window.localStorage.getItem("onboarding_global_disabled")).toBe(
-        "false"
-      );
+      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBeNull();
+      expect(window.localStorage.getItem("onboarding_global_disabled")).toBeNull();
+      expect(window.localStorage.getItem("onboarding_super_admin_is_active")).toBe("true");
     });
   });
 
@@ -363,8 +357,8 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       await wrapper.vm.$nextTick();
 
       expect(store.currentPersona).toBe("site_crc");
-      expect(store.isActive).toBe(false);
-      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(false);
+      expect(store.isActive).toBe(true);
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
     });
   });
 

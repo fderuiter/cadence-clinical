@@ -905,7 +905,7 @@ public static class EsourceEndpoints
                 }),
                 Status = "PENDING_REVIEW",
                 CreatedAt = now
-            }
+            },
         ];
     }
 }

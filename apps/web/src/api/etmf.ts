@@ -171,6 +171,78 @@ export const etmfService = {
     );
   },
 
+  classifyIntelligence(
+    body: {
+      filename: string;
+      content?: string;
+      mime_type?: string;
+      content_hint?: string;
+      taxonomy_version?: string;
+    },
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/etmf/intelligence/classify", {
+        body: body as never,
+        ...options,
+      })
+    );
+  },
+
+  stageQcDocument(
+    body: {
+      content: string;
+      filename: string;
+      study_id: string;
+      site_id?: string | null;
+      mime_type?: string;
+      artifact_hint?: string | null;
+      taxonomy_version?: string | null;
+      reason_for_change: string;
+      assigned_cra?: string | null;
+    },
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/etmf/intelligence/stage-qc", {
+        body: body as never,
+        ...options,
+      })
+    );
+  },
+
+  getQcQueue(studyId?: string, options: Record<string, unknown> = {}) {
+    return unwrapResponse(
+      openApiClient.GET("/api/v1/etmf/intelligence/qc-queue", {
+        params: {
+          query: {
+            study_id: studyId || null,
+          },
+        },
+        ...options,
+      })
+    );
+  },
+
+  submitQcReview(
+    docId: string,
+    body: {
+      decision: string;
+      reason_for_change: string;
+      override_artifact_code?: string | null;
+      discrepancy_comment?: string | null;
+    },
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/etmf/intelligence/qc-review/{doc_id}", {
+        params: { path: { doc_id: docId } },
+        body: body as never,
+        ...options,
+      })
+    );
+  },
+
   getTaxonomy(version?: string, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.GET("/api/v1/etmf/taxonomy", {

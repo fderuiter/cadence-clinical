@@ -2,6 +2,8 @@ import { defineStore } from "pinia";
 import { getKeycloakClient } from "../auth/keycloak.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
+import { useClinicalStore } from "./clinical.ts";
+import { useOnboardingStore } from "./onboarding.js";
 
 /**
  * Seeding Gap Documentation Resolved:
@@ -147,6 +149,55 @@ function purgeLegacyAuthStorage() {
 }
 
 /**
+ * Purges legacy unscoped local storage keys on sign-in/bootstrap to prevent state contamination.
+ * Valid persona-scoped keys (e.g., clinical_${persona}_*, onboarding_${persona}_*) are preserved.
+ */
+export function purgeLegacyUnscopedKeys() {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  const legacyKeys = [
+    "subjects",
+    "formValues",
+    "formQueries",
+    "ledgerBlocks",
+    "currentUsdm",
+    "cadence_clinical_subjects",
+    "onboarding_current_step",
+    "onboarding_is_active",
+    "onboarding_disabled",
+    "onboarding_events",
+    "onboarding_global_disabled",
+    "onboarding_global_dismissed",
+  ];
+  try {
+    for (const key of legacyKeys) {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Storage can be unavailable
+  }
+}
+
+function rehydrateStoresForPersona(personaKey) {
+  if (!personaKey) return;
+  try {
+    const clinicalStore = useClinicalStore();
+    if (typeof clinicalStore.loadPersonaState === "function") {
+      clinicalStore.loadPersonaState(personaKey);
+    }
+  } catch {
+    // Pinia or store not ready
+  }
+  try {
+    const onboardingStore = useOnboardingStore();
+    if (typeof onboardingStore.loadPersonaState === "function") {
+      onboardingStore.loadPersonaState(personaKey);
+    }
+  } catch {
+    // Pinia or store not ready
+  }
+}
+
+/**
  * True when one of the user's realm roles is, or implies (via ROLE_ALIASES),
  * one of the normalized `targets`. Implication runs one way only: a Sponsor
  * Admin holds `crc`, but a CRC does not hold `sponsor_admin`.
@@ -252,6 +303,10 @@ export const useAuthStore = defineStore("auth", {
       if (!entitled.some((p) => p.key === this.currentPersona)) {
         this.currentPersona = entitled[0]?.key || null;
       }
+      purgeLegacyUnscopedKeys();
+      if (this.currentPersona) {
+        rehydrateStoresForPersona(this.currentPersona);
+      }
     },
     clearAuth() {
       const authError = this.authError;
@@ -271,6 +326,10 @@ export const useAuthStore = defineStore("auth", {
       this.user = { ...DEMO_IDENTITY };
       this.rawRoles = [...DEMO_ROLES];
       this.currentPersona = personasForRoles(this.rawRoles)[0]?.key || null;
+      purgeLegacyUnscopedKeys();
+      if (this.currentPersona) {
+        rehydrateStoresForPersona(this.currentPersona);
+      }
     },
     /** Starts the Keycloak authorization code + PKCE sign-in redirect. */
     async login(options = {}) {
@@ -339,6 +398,7 @@ export const useAuthStore = defineStore("auth", {
         return false;
       }
       this.currentPersona = personaKey;
+      rehydrateStoresForPersona(personaKey);
       try {
         useNotificationsStore().fetchNotifications();
       } catch {
