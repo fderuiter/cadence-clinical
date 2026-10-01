@@ -547,8 +547,8 @@ const verbs = computed<Verb[]>(() => [
   {
     id: "simulate",
     label: "Simulate",
-    live: Boolean(kernelRef.value),
-    note: `Simulate runs in-memory evaluation and matrix gap analysis over the kernel API (ADR-2480), but ${NO_KERNEL_REF}`,
+    live: false,
+    note: "Simulate needs in-memory evaluation over the API (#4842), which the kernel host doesn't serve yet.",
   },
   {
     id: "act",

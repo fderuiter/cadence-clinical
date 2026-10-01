@@ -120,6 +120,7 @@ describe("Participant eConsent Step-Up Signature Verification", () => {
 
   it("useConsentGating handles step-up signature re-authentication token for re-consent", async () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");
+    import.meta.env.VITE_DEMO_MODE = "true";
     const activeSubject = ref("SUBJ-002");
     const { handleCompleteReconsent, isReconsentGated } = useConsentGating(activeSubject);
 

@@ -34,18 +34,12 @@ export function useConsentGating(selectedSubjectId) {
     reconsentSubmitting.value = true;
     try {
       const sigToken = typeof payload === "string" ? payload : payload?.sigToken || null;
-      if (store && typeof store.clearReconsentGate === "function") {
-        await store.clearReconsentGate(
-          selectedSubjectId.value,
-          method,
-          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`,
-          sigToken
-        );
-      } else if (
-        storeInstance &&
-        typeof storeInstance.clearReconsentGate === "function"
-      ) {
-        await storeInstance.clearReconsentGate(
+      const targetStore =
+        storeInstance && typeof storeInstance.clearReconsentGate === "function"
+          ? storeInstance
+          : store;
+      if (targetStore && typeof targetStore.clearReconsentGate === "function") {
+        await targetStore.clearReconsentGate(
           selectedSubjectId.value,
           method,
           `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`,

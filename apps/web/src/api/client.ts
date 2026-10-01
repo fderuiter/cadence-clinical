@@ -1,14 +1,13 @@
 import { encodeChangeReason } from "./changeReason";
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
-import { getBearerToken } from "./authorization.js";
 
-export const getBaseUrl = (): string => {
+export function getBaseUrl(): string {
   return (
     (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env
       ?.VITE_API_BASE_URL || "http://localhost:8000"
   );
-};
+}
 
 export class ApiError extends Error {
   status: number | null;
@@ -32,6 +31,7 @@ export class ApiError extends Error {
 const authMiddleware: Middleware = {
   async onRequest({ request, options }) {
     if (!request.headers.has("Authorization")) {
+      const { getBearerToken } = await import("./authorization.js");
       const token = await getBearerToken();
       if (token) {
         request.headers.set("Authorization", `Bearer ${token}`);
