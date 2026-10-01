@@ -653,4 +653,6 @@ fails the build.
 | [`tickets` database schema](schema/tickets.md) | Generated | Database schema definition for `tickets` database schema |
 
 | [Documentation Index](DOCUMENTATION_INDEX.md) | Current | Documentation Index |
-| [Project License](LICENSE.md) | Current | Project License |
+| [Project License](../LICENSE) | Current | Project License |
+
+| [ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet](adr/2026-10-01-automated-stipend-disbursement-threshold-rules.md) | Current | Architectural decision record: ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet |

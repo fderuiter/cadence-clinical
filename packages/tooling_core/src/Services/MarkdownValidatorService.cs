@@ -43,6 +43,7 @@ public static class MarkdownValidatorService
         }
 
         int issuesCount = 0;
+        string docsDir = Path.Combine(repoRoot, "docs");
 
         // Rule 1: Workspace Link Validation via MarkdownParser
         var linkIssues = MarkdownParser.ValidateWorkspaceLinks(repoRoot, mdFiles);
