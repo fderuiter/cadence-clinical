@@ -1,6 +1,13 @@
 <!-- apps/web/src/components/etmf/BatchUploadDrawer.vue -->
 <template>
-  <div v-if="isOpen" class="batch-drawer-overlay" @click.self="handleClose">
+  <div
+    v-if="isOpen"
+    class="batch-drawer-overlay"
+    role="button"
+    tabindex="0"
+    @click.self="handleClose"
+    @keydown.self="handleClose"
+  >
     <div class="batch-drawer">
       <div class="drawer-header">
         <div style="display: flex; align-items: center; gap: 10px">
@@ -45,16 +52,21 @@
         <div
           class="dropzone"
           :class="{ 'is-dragging': isDragging }"
+          role="button"
+          tabindex="0"
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="handleDrop"
           @click="triggerFileInput"
+          @keydown.enter="triggerFileInput"
+          @keydown.space.prevent="triggerFileInput"
         >
           <input
             ref="fileInputRef"
             type="file"
             multiple
             accept=".pdf,.doc,.docx,.txt"
+            aria-label="Select files to upload"
             style="display: none"
             @change="handleFileSelect"
           />
@@ -269,7 +281,10 @@
     <div
       v-if="inspectedItem"
       class="item-inspection-overlay"
+      role="button"
+      tabindex="0"
       @click.self="inspectedItem = null"
+      @keydown.self="inspectedItem = null"
     >
       <div class="item-inspection-card">
         <div
@@ -450,9 +465,6 @@ function addFilesToQueue(files) {
     }
 
     currentBatchSize += file.size;
-
-    // Run quick local prediction preview
-    const report = etmfStore.classifyIntelligence ? null : null;
 
     queue.value.push({
       file,

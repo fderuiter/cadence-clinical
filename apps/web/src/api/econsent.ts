@@ -374,7 +374,11 @@ export const econsentService = {
     body: unknown,
     options: Record<string, unknown> = {}
   ) {
-    const { sigToken, headers: customHeaders, ...restOptions } = options as {
+    const {
+      sigToken,
+      headers: customHeaders,
+      ...restOptions
+    } = options as {
       sigToken?: string;
       headers?: Record<string, string>;
       [key: string]: unknown;

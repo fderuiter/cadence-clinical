@@ -5,13 +5,20 @@
     aria-labelledby="protocol-versions-title"
     :aria-busy="loading"
   >
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-      <h2 id="protocol-versions-title" style="margin: 0;">Protocol versions</h2>
+    <div
+      style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      "
+    >
+      <h2 id="protocol-versions-title" style="margin: 0">Protocol versions</h2>
       <button
         id="btn-generate-protocol-proposal"
         type="button"
         class="btn btn-primary"
-        style="padding: 4px 10px; font-size: 0.85rem;"
+        style="padding: 4px 10px; font-size: 0.85rem"
         @click="showProposalModal = true"
       >
         ⚡ Generate Protocol Proposal
@@ -65,96 +72,253 @@
     <div
       v-if="showProposalModal"
       class="proposal-modal-overlay"
-      style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;"
+      role="button"
+      tabindex="0"
+      style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      "
       @click.self="showProposalModal = false"
+      @keydown.self="showProposalModal = false"
     >
       <div
         class="proposal-modal-card"
-        style="background: white; border-radius: 8px; width: 90%; max-width: 650px; max-height: 85vh; padding: 20px; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.2);"
+        style="
+          background: white;
+          border-radius: 8px;
+          width: 90%;
+          max-width: 650px;
+          max-height: 85vh;
+          padding: 20px;
+          overflow-y: auto;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        "
       >
-        <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 12px;">
-          <h3 style="margin: 0; font-size: 1.1rem; color: #111;">Generate In-Memory Protocol Proposal</h3>
-          <button type="button" class="btn" style="border: none; background: transparent; font-size: 1.2rem; cursor: pointer;" @click="showProposalModal = false">×</button>
+        <header
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+          "
+        >
+          <h3 style="margin: 0; font-size: 1.1rem; color: #111">
+            Generate In-Memory Protocol Proposal
+          </h3>
+          <button
+            type="button"
+            class="btn"
+            style="
+              border: none;
+              background: transparent;
+              font-size: 1.2rem;
+              cursor: pointer;
+            "
+            @click="showProposalModal = false"
+          >
+            ×
+          </button>
         </header>
 
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <label for="trial-brief-input" style="font-weight: 600; font-size: 0.85rem;">Trial Brief Prompt:</label>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <label
+            for="trial-brief-input"
+            style="font-weight: 600; font-size: 0.85rem"
+            >Trial Brief Prompt:</label
+          >
           <textarea
             id="trial-brief-input"
             v-model="trialBrief"
             rows="3"
-            style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit;"
+            style="
+              width: 100%;
+              padding: 8px;
+              border: 1px solid #ccc;
+              border-radius: 4px;
+              font-family: inherit;
+            "
             placeholder="Enter clinical trial brief details..."
           />
           <button
             type="button"
             class="btn btn-primary"
-            style="align-self: flex-end; padding: 6px 16px;"
+            style="align-self: flex-end; padding: 6px 16px"
             :disabled="generating || !trialBrief.trim()"
             @click="handleGenerateProposal"
           >
-            {{ generating ? 'Synthesizing Protocol Graph...' : 'Draft USDM Proposal' }}
+            {{
+              generating
+                ? "Synthesizing Protocol Graph..."
+                : "Draft USDM Proposal"
+            }}
           </button>
         </div>
 
-        <div v-if="proposalError" style="margin-top: 12px; color: var(--danger, #dc3545); font-size: 0.85rem;">
+        <div
+          v-if="proposalError"
+          style="
+            margin-top: 12px;
+            color: var(--danger, #dc3545);
+            font-size: 0.85rem;
+          "
+        >
           {{ proposalError }}
         </div>
 
-        <div v-if="proposalResult" style="margin-top: 16px; border-top: 1px solid #eee; padding-top: 12px;">
-          <h4 style="margin: 0 0 6px 0; font-size: 0.95rem;">Candidate USDM Protocol Proposal</h4>
-          <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #555;">Title: <strong>{{ proposalResult.design?.title }}</strong></p>
+        <div
+          v-if="proposalResult"
+          style="
+            margin-top: 16px;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+          "
+        >
+          <h4 style="margin: 0 0 6px 0; font-size: 0.95rem">
+            Candidate USDM Protocol Proposal
+          </h4>
+          <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #555">
+            Title: <strong>{{ proposalResult.design?.title }}</strong>
+          </p>
 
-          <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 10px; font-size: 0.8rem; margin-bottom: 12px;">
-            <div><strong>Objectives:</strong> {{ proposalResult.design?.objectives?.length ?? 0 }}</div>
-            <div><strong>Endpoints:</strong> {{ proposalResult.design?.endpoints?.length ?? 0 }}</div>
-            <div><strong>Arms:</strong> {{ proposalResult.design?.arms?.length ?? 0 }}</div>
-            <div><strong>Epochs:</strong> {{ proposalResult.design?.epochs?.length ?? 0 }}</div>
-            <div><strong>Planned Activities:</strong> {{ proposalResult.design?.planned_activities?.length ?? 0 }}</div>
+          <div
+            style="
+              background: #f8f9fa;
+              border: 1px solid #e9ecef;
+              border-radius: 4px;
+              padding: 10px;
+              font-size: 0.8rem;
+              margin-bottom: 12px;
+            "
+          >
+            <div>
+              <strong>Objectives:</strong>
+              {{ proposalResult.design?.objectives?.length ?? 0 }}
+            </div>
+            <div>
+              <strong>Endpoints:</strong>
+              {{ proposalResult.design?.endpoints?.length ?? 0 }}
+            </div>
+            <div>
+              <strong>Arms:</strong>
+              {{ proposalResult.design?.arms?.length ?? 0 }}
+            </div>
+            <div>
+              <strong>Epochs:</strong>
+              {{ proposalResult.design?.epochs?.length ?? 0 }}
+            </div>
+            <div>
+              <strong>Planned Activities:</strong>
+              {{ proposalResult.design?.planned_activities?.length ?? 0 }}
+            </div>
           </div>
 
-          <h5 style="margin: 8px 0 4px 0; font-size: 0.85rem;">Initial Matrix Gap Analysis</h5>
-          <div v-if="proposalResult.initial_gap_check && proposalResult.initial_gap_check.length">
+          <h5 style="margin: 8px 0 4px 0; font-size: 0.85rem">
+            Initial Matrix Gap Analysis
+          </h5>
+          <div
+            v-if="
+              proposalResult.initial_gap_check &&
+              proposalResult.initial_gap_check.length
+            "
+          >
             <div
               v-for="(gap, idx) in proposalResult.initial_gap_check"
               :key="idx"
-              style="font-size: 0.8rem; padding: 4px 6px; background: #fff3cd; border-left: 3px solid #ffc107; margin-bottom: 4px;"
+              style="
+                font-size: 0.8rem;
+                padding: 4px 6px;
+                background: #fff3cd;
+                border-left: 3px solid #ffc107;
+                margin-bottom: 4px;
+              "
             >
-              [{{ gap.severity }}] {{ gap.kind }} - {{ gap.description }} (<code>{{ gap.json_pointer_path }}</code>)
+              [{{ gap.severity }}] {{ gap.kind }} -
+              {{ gap.description }} (<code>{{ gap.json_pointer_path }}</code
+              >)
             </div>
           </div>
-          <p v-else style="font-size: 0.8rem; color: #28a745; margin-bottom: 12px;">✓ Zero matrix gaps detected in candidate graph.</p>
+          <p
+            v-else
+            style="font-size: 0.8rem; color: #28a745; margin-bottom: 12px"
+          >
+            ✓ Zero matrix gaps detected in candidate graph.
+          </p>
 
-          <div style="margin-bottom: 12px;">
-            <a href="#" style="font-size: 0.85rem; color: var(--primary, #0056b3); text-decoration: underline;" @click.prevent="showReasoning = !showReasoning">
-              {{ showReasoning ? 'Hide reasoning' : 'Inspect reasoning &amp; lineage provenance' }}
+          <div style="margin-bottom: 12px">
+            <a
+              href="#"
+              style="
+                font-size: 0.85rem;
+                color: var(--primary, #0056b3);
+                text-decoration: underline;
+              "
+              @click.prevent="showReasoning = !showReasoning"
+            >
+              {{
+                showReasoning
+                  ? "Hide reasoning"
+                  : "Inspect reasoning &amp; lineage provenance"
+              }}
             </a>
-            <div v-if="showReasoning" style="margin-top: 8px; font-size: 0.8rem; background: #f1f3f5; padding: 8px; border-radius: 4px;">
-              <div v-for="step in proposalResult.reasoning_chain" :key="step.step_number" style="margin-bottom: 6px;">
-                <strong>Step {{ step.step_number }}: {{ step.step_type }}</strong> - {{ step.summary }}
-                <div style="color: #666; font-size: 0.75rem;">Rationale: {{ step.rationale }}</div>
+            <div
+              v-if="showReasoning"
+              style="
+                margin-top: 8px;
+                font-size: 0.8rem;
+                background: #f1f3f5;
+                padding: 8px;
+                border-radius: 4px;
+              "
+            >
+              <div
+                v-for="step in proposalResult.reasoning_chain"
+                :key="step.step_number"
+                style="margin-bottom: 6px"
+              >
+                <strong
+                  >Step {{ step.step_number }}: {{ step.step_type }}</strong
+                >
+                - {{ step.summary }}
+                <div style="color: #666; font-size: 0.75rem">
+                  Rationale: {{ step.rationale }}
+                </div>
               </div>
             </div>
           </div>
 
-          <div style="display: flex; gap: 10px; margin-top: 16px;">
+          <div style="display: flex; gap: 10px; margin-top: 16px">
             <button
               type="button"
               class="btn btn-primary"
-              style="flex: 1; padding: 8px;"
+              style="flex: 1; padding: 8px"
               :disabled="proposalApproved"
-              @click="proposalApproved = true; proposalRejected = false"
+              @click="
+                proposalApproved = true;
+                proposalRejected = false;
+              "
             >
-              {{ proposalApproved ? '✓ Proposal Approved' : 'Approve Proposal' }}
+              {{
+                proposalApproved ? "✓ Proposal Approved" : "Approve Proposal"
+              }}
             </button>
             <button
               type="button"
               class="btn btn-secondary"
-              style="flex: 1; padding: 8px;"
+              style="flex: 1; padding: 8px"
               :disabled="proposalRejected"
-              @click="proposalRejected = true; proposalApproved = false"
+              @click="
+                proposalRejected = true;
+                proposalApproved = false;
+              "
             >
-              {{ proposalRejected ? '✗ Proposal Rejected' : 'Reject Proposal' }}
+              {{ proposalRejected ? "✗ Proposal Rejected" : "Reject Proposal" }}
             </button>
           </div>
         </div>
@@ -251,7 +415,9 @@ async function load(code: string) {
 }
 
 const showProposalModal = ref(false);
-const trialBrief = ref("Phase II Double-Blind Randomized Cardiovascular Study evaluating 100mg investigational drug vs placebo over 12 weeks with 4-week follow-up.");
+const trialBrief = ref(
+  "Phase II Double-Blind Randomized Cardiovascular Study evaluating 100mg investigational drug vs placebo over 12 weeks with 4-week follow-up."
+);
 const generating = ref(false);
 const proposalResult = ref<any>(null);
 const proposalError = ref("");

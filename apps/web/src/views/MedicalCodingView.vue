@@ -5,7 +5,9 @@
       <div class="header-text-group">
         <h2>Interactive Medical Coding Workbench</h2>
         <p>
-          Standardized MedDRA and WHODrug terminology coding with verbatim cluster grouping, AI match confidence filtering, and 21 CFR Part 11 dual-attribution audit logs.
+          Standardized MedDRA and WHODrug terminology coding with verbatim
+          cluster grouping, AI match confidence filtering, and 21 CFR Part 11
+          dual-attribution audit logs.
         </p>
       </div>
       <div class="header-action-buttons">
@@ -56,7 +58,13 @@
     >
       <div class="alert-content">
         <span class="alert-icon">
-          {{ codingStore.batchAlert.type === 'success' ? '✅' : codingStore.batchAlert.type === 'warning' ? '⚠️' : 'ℹ️' }}
+          {{
+            codingStore.batchAlert.type === "success"
+              ? "✅"
+              : codingStore.batchAlert.type === "warning"
+                ? "⚠️"
+                : "ℹ️"
+          }}
         </span>
         <span>{{ codingStore.batchAlert.message }}</span>
       </div>
@@ -88,11 +96,18 @@
     <!-- Authorized Coding Workspace -->
     <div v-else class="coding-workspace-container">
       <!-- Summary Metric Cards (Adapted for View Mode) -->
-      <div v-if="codingStore.viewMode === 'CLUSTERS'" class="stats-overview-grid cluster-stats-grid">
+      <div
+        v-if="codingStore.viewMode === 'CLUSTERS'"
+        class="stats-overview-grid cluster-stats-grid"
+      >
         <div
           class="stat-card"
           :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('ALL')"
+          @keydown.enter="setStatusFilter('ALL')"
+          @keydown.space.prevent="setStatusFilter('ALL')"
         >
           <div class="stat-number">
             {{ codingStore.totalClustersCount }}
@@ -110,7 +125,11 @@
         <div
           class="stat-card stat-suggested"
           :class="{ 'stat-active': codingStore.confidenceThreshold === 'HIGH' }"
+          role="button"
+          tabindex="0"
           @click="setConfidenceFilter('HIGH')"
+          @keydown.enter="setConfidenceFilter('HIGH')"
+          @keydown.space.prevent="setConfidenceFilter('HIGH')"
         >
           <div class="stat-number">
             {{ codingStore.highConfidenceClustersCount }}
@@ -121,7 +140,11 @@
         <div
           class="stat-card stat-coded"
           :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('CODED_ALL')"
+          @keydown.enter="setStatusFilter('CODED_ALL')"
+          @keydown.space.prevent="setStatusFilter('CODED_ALL')"
         >
           <div class="stat-number">
             {{ codingStore.autoCodingProgressPct }}%
@@ -134,7 +157,11 @@
           :class="{
             'stat-active': codingStore.filters.status === 'QUERY_PENDING',
           }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('QUERY_PENDING')"
+          @keydown.enter="setStatusFilter('QUERY_PENDING')"
+          @keydown.space.prevent="setStatusFilter('QUERY_PENDING')"
         >
           <div class="stat-number">
             {{ codingStore.queryPendingCount }}
@@ -148,7 +175,11 @@
         <div
           class="stat-card"
           :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('ALL')"
+          @keydown.enter="setStatusFilter('ALL')"
+          @keydown.space.prevent="setStatusFilter('ALL')"
         >
           <div class="stat-number">
             {{ codingStore.totalCount }}
@@ -159,7 +190,11 @@
         <div
           class="stat-card stat-uncoded"
           :class="{ 'stat-active': codingStore.filters.status === 'UNCODED' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('UNCODED')"
+          @keydown.enter="setStatusFilter('UNCODED')"
+          @keydown.space.prevent="setStatusFilter('UNCODED')"
         >
           <div class="stat-number">
             {{ codingStore.uncodedCount }}
@@ -170,7 +205,11 @@
         <div
           class="stat-card stat-suggested"
           :class="{ 'stat-active': codingStore.filters.status === 'SUGGESTED' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('SUGGESTED')"
+          @keydown.enter="setStatusFilter('SUGGESTED')"
+          @keydown.space.prevent="setStatusFilter('SUGGESTED')"
         >
           <div class="stat-number">
             {{ codingStore.suggestedCount }}
@@ -181,7 +220,11 @@
         <div
           class="stat-card stat-coded"
           :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('CODED_ALL')"
+          @keydown.enter="setStatusFilter('CODED_ALL')"
+          @keydown.space.prevent="setStatusFilter('CODED_ALL')"
         >
           <div class="stat-number">
             {{ codingStore.codedCount }}
@@ -194,7 +237,11 @@
           :class="{
             'stat-active': codingStore.filters.status === 'QUERY_PENDING',
           }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('QUERY_PENDING')"
+          @keydown.enter="setStatusFilter('QUERY_PENDING')"
+          @keydown.space.prevent="setStatusFilter('QUERY_PENDING')"
         >
           <div class="stat-number">
             {{ codingStore.queryPendingCount }}
