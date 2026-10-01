@@ -588,6 +588,7 @@ export interface components {
     Execution_FormSubmissionApproveRequest: {
       signing_reason: string;
       signature_manifest: components["schemas"]["Execution_SignatureManifest"];
+      sig_token?: null | string;
     };
     Execution_FormSubmissionCreateRequest: {
       study_id: string;

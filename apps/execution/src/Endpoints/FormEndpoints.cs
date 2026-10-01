@@ -73,7 +73,7 @@ public static class FormEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/{id}/unlock", UnlockFormSubmissionAsync)
             .WithName("UnlockFormSubmission")
@@ -91,8 +91,7 @@ public static class FormEndpoints
         legacyGroup.MapGet("/{id}", GetFormSubmissionByIdAsync);
         legacyGroup.MapPut("/{id}", UpdateFormPayloadAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
         legacyGroup.MapPost("/{id}/complete", CompleteFormSubmissionAsync);
-        legacyGroup.MapPost("/{id}/approve", ApproveFormSubmissionAsync)
-            .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
+        legacyGroup.MapPost("/{id}/approve", ApproveFormSubmissionAsync);
         legacyGroup.MapPost("/{id}/unlock", UnlockFormSubmissionAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
@@ -154,12 +153,19 @@ public static class FormEndpoints
         IFormSubmissionApplicationService svc,
         CancellationToken ct)
     {
+        var sigToken = request.SigToken;
+        if (string.IsNullOrWhiteSpace(sigToken))
+        {
+            sigToken = httpContext.Request.Headers[GatewayHeaders.SigToken].ToString();
+            if (!string.IsNullOrWhiteSpace(sigToken))
+            {
+                request = request with { SigToken = sigToken };
+            }
+        }
+
         var result = await svc.ApproveAsync(id, request, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
-
-    private static string ApproveActionFor(HttpContext httpContext) =>
-        ApproveAction(httpContext.Request.RouteValues["id"]?.ToString() ?? string.Empty);
 
     public static async Task<IResult> UnlockFormSubmissionAsync(
         string id,

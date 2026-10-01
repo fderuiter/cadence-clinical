@@ -7260,6 +7260,12 @@
           },
           "signature_manifest": {
             "$ref": "#/components/schemas/Execution_SignatureManifest"
+          },
+          "sig_token": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

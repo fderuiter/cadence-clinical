@@ -319,12 +319,14 @@ public sealed class ObservationAndFormEndpointsTests
         form.Complete();
         await formRepo.AddAsync(form, CancellationToken.None);
 
+        var token = TestSecurityContext.CreateSigToken("pi-user-01", FormEndpoints.ApproveAction(form.Id.ToString()), FormEndpoints.ApproveSemanticAction);
         var request = FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: JsonCanonicalization.Sha256Hex(payload));
+            PayloadHash: JsonCanonicalization.Sha256Hex(payload),
+            SigToken: token);
 
         var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("pi-user-01", "Principal Investigator") };
         var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
@@ -359,12 +361,14 @@ public sealed class ObservationAndFormEndpointsTests
         form.Complete();
         await formRepo.AddAsync(form, CancellationToken.None);
 
+        var token = TestSecurityContext.CreateSigToken("user-01", FormEndpoints.ApproveAction(form.Id.ToString()), FormEndpoints.ApproveSemanticAction);
         var request = FormSubmissionApproveRequest.Create(
             SignerId: "user-01",
             SignerRole: "unauthorized_role",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: JsonCanonicalization.Sha256Hex(payload));
+            PayloadHash: JsonCanonicalization.Sha256Hex(payload),
+            SigToken: token);
 
         var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("user-01", "unauthorized_role") };
         var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);

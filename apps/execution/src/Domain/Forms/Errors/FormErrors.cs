@@ -44,6 +44,9 @@ public static class FormErrors
     public static DomainError SignerIdentityMismatch(string claimedSignerId) =>
         DomainError.Forbidden("SIGNER_IDENTITY_MISMATCH", $"Signature manifest names signer '{claimedSignerId}', who is not the authenticated caller.");
 
+    public static DomainError ReauthenticationRequired(string? message = null) =>
+        DomainError.Unauthorized("REAUTHENTICATION_REQUIRED", message ?? "21 CFR Part 11 mandate: Re-authentication is required.");
+
     public static DomainError UnlockReasonRequired() =>
         DomainError.Validation("UNLOCK_REASON_REQUIRED", "A documented GxP ReasonForChange is strictly required to unlock an approved form.");
 

@@ -19,6 +19,7 @@ using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Trust;
+using Cadence.Security.Authentication;
 
 namespace Cadence.Apps.Execution.Application.Forms;
 
@@ -38,8 +39,10 @@ public sealed class FormSubmissionApplicationService(
     ICurrentAuditContextAccessor auditContextAccessor,
     ISubjectRepository? subjectRepository = null,
     IEditCheckEngine? editCheckEngine = null,
-    IAutoQueryDispatchService? autoQueryDispatchService = null) : IFormSubmissionApplicationService
+    IAutoQueryDispatchService? autoQueryDispatchService = null,
+    SigTokenVerifier? sigTokenVerifier = null) : IFormSubmissionApplicationService
 {
+    private readonly SigTokenVerifier _sigTokenVerifier = sigTokenVerifier ?? new SigTokenVerifier();
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
     {
         ["vssbp"] = ("VS", "VSSBP", "Systolic Blood Pressure", "mmHg"),
@@ -364,6 +367,21 @@ public sealed class FormSubmissionApplicationService(
         if (signerRole is null)
         {
             return FormErrors.UnauthorizedSignerRole(string.Join(",", signer.Roles));
+        }
+
+        // Validate 60-second step-up re-authentication token at application service boundary
+        try
+        {
+            var action = $"/api/v1/execution/forms/{submission.Id.Value}/approve";
+            var binding = new SigTokenBinding(action, "execution.form.approve");
+            _sigTokenVerifier.VerifyAndConsumeSigToken(
+                request.SigToken,
+                signer.UserId,
+                binding);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return FormErrors.ReauthenticationRequired(ex.Message);
         }
 
         // The signer's hash covers the form content, not the text the database returns: both sides hash the

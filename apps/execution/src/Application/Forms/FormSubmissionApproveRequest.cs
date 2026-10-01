@@ -12,7 +12,8 @@ namespace Cadence.Apps.Execution.Application.Forms;
 /// </summary>
 public sealed record FormSubmissionApproveRequest(
     [property: JsonPropertyName("signing_reason")] string SigningReason,
-    [property: JsonPropertyName("signature_manifest")] SignatureManifest SignatureManifest)
+    [property: JsonPropertyName("signature_manifest")] SignatureManifest SignatureManifest,
+    [property: JsonPropertyName("sig_token")] string? SigToken = null)
 {
     /// <summary>
     /// Convenience factory building the manifest from flat fields. A factory rather than a second public
@@ -24,6 +25,7 @@ public sealed record FormSubmissionApproveRequest(
         string SigningReason,
         DateTime SignedAt,
         string PayloadHash,
-        string? SignerName = null) =>
-        new(SigningReason, SignatureManifest.Create(SignerId, SignerRole, SigningReason, SignedAt, PayloadHash, SignerName));
+        string? SignerName = null,
+        string? SigToken = null) =>
+        new(SigningReason, SignatureManifest.Create(SignerId, SignerRole, SigningReason, SignedAt, PayloadHash, SignerName), SigToken);
 }

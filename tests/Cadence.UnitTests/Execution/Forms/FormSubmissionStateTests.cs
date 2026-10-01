@@ -6,9 +6,13 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
+using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Security.Authentication;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
 using Cadence.UnitTests.Fixtures.Execution;
@@ -194,12 +198,14 @@ public sealed class FormSubmissionStateTests
         await service.CompleteAsync(formId, CancellationToken.None);
 
         // Attempt approve with mismatched hash
+        var token1 = TestSecurityContext.CreateSigToken("pi-user-01", FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction);
         var badApproveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: "0000000000000000000000000000000000000000000000000000000000000000"),
+            PayloadHash: "0000000000000000000000000000000000000000000000000000000000000000",
+            SigToken: token1),
             PrincipalInvestigator,
             CancellationToken.None);
 
@@ -208,12 +214,14 @@ public sealed class FormSubmissionStateTests
 
         // Attempt approve with correct hash
         var validHash = ComputeHash(payload);
+        var token2 = TestSecurityContext.CreateSigToken("pi-user-01", FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction);
         var goodApproveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: validHash),
+            PayloadHash: validHash,
+            SigToken: token2),
             PrincipalInvestigator,
             CancellationToken.None);
 
@@ -278,12 +286,14 @@ public sealed class FormSubmissionStateTests
         await service.CompleteAsync(formId, CancellationToken.None);
 
         // Attempt approve with unauthorized role (e.g., patient, data_entry_clerk)
+        var token = TestSecurityContext.CreateSigToken("clerk-01", FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction);
         var unauthorizedResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "clerk-01",
             SignerRole: "data_entry_clerk",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: ComputeHash(payload)),
+            PayloadHash: ComputeHash(payload),
+            SigToken: token),
             new AuthenticatedCaller("clerk-01", ["data_entry_clerk"]),
             CancellationToken.None);
 
@@ -295,5 +305,203 @@ public sealed class FormSubmissionStateTests
         var nullManifestResult = await service.ApproveAsync(formId, nullManifestRequest, PrincipalInvestigator, CancellationToken.None);
         nullManifestResult.IsFailure.Should().BeTrue();
         nullManifestResult.Error!.Code.Should().Be("SIGNATURE_MANIFEST_REQUIRED");
+    }
+
+    /// <summary>
+    /// Validates that approving an eCRF submission without a step-up token is rejected with REAUTHENTICATION_REQUIRED.
+    /// @req:PRD-SYS-053
+    /// @req:SRS-EDC-003
+    /// </summary>
+    [Fact]
+    public async Task FormApplicationService_Approve_WithoutStepUpToken_ReturnsReauthenticationRequired()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi-user-01", "PI approval");
+
+        var service = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: payload), CancellationToken.None);
+
+        var formId = createResult.Value!.Id;
+        await service.CompleteAsync(formId, CancellationToken.None);
+
+        var noTokenRequest = FormSubmissionApproveRequest.Create(
+            SignerId: "pi-user-01",
+            SignerRole: "PRINCIPAL_INVESTIGATOR",
+            SigningReason: "I attest that I have reviewed and approved these clinical data.",
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
+            PayloadHash: ComputeHash(payload),
+            SigToken: null);
+
+        var result = await service.ApproveAsync(formId, noTokenRequest, PrincipalInvestigator, CancellationToken.None);
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("REAUTHENTICATION_REQUIRED");
+    }
+
+    /// <summary>
+    /// Validates that approving an eCRF submission with an expired step-up token is rejected with REAUTHENTICATION_REQUIRED.
+    /// @req:PRD-SYS-053
+    /// @req:SRS-EDC-003
+    /// </summary>
+    [Fact]
+    public async Task FormApplicationService_Approve_WithExpiredStepUpToken_ReturnsReauthenticationRequired()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi-user-01", "PI approval");
+
+        var service = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: payload), CancellationToken.None);
+
+        var formId = createResult.Value!.Id;
+        await service.CompleteAsync(formId, CancellationToken.None);
+
+        var expiredTime = SystemClock.Instance.UtcNow.AddSeconds(-120);
+        var expiredToken = TestSecurityContext.CreateSigToken(
+            "pi-user-01",
+            FormEndpoints.ApproveAction(formId),
+            FormEndpoints.ApproveSemanticAction,
+            issuedAt: expiredTime);
+
+        var request = FormSubmissionApproveRequest.Create(
+            SignerId: "pi-user-01",
+            SignerRole: "PRINCIPAL_INVESTIGATOR",
+            SigningReason: "I attest that I have reviewed and approved these clinical data.",
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
+            PayloadHash: ComputeHash(payload),
+            SigToken: expiredToken);
+
+        var result = await service.ApproveAsync(formId, request, PrincipalInvestigator, CancellationToken.None);
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("REAUTHENTICATION_REQUIRED");
+    }
+
+    /// <summary>
+    /// Validates that replaying a used step-up token is rejected with REAUTHENTICATION_REQUIRED.
+    /// @req:PRD-SYS-053
+    /// @req:SRS-EDC-003
+    /// </summary>
+    [Fact]
+    public async Task FormApplicationService_Approve_WithReplayedStepUpToken_ReturnsReauthenticationRequired()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi-user-01", "PI approval");
+
+        var verifier = new SigTokenVerifier();
+        var service = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit, sigTokenVerifier: verifier);
+
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: payload), CancellationToken.None);
+
+        var formId = createResult.Value!.Id;
+        await service.CompleteAsync(formId, CancellationToken.None);
+
+        var token = TestSecurityContext.CreateSigToken(
+            "pi-user-01",
+            FormEndpoints.ApproveAction(formId),
+            FormEndpoints.ApproveSemanticAction);
+
+        var request = FormSubmissionApproveRequest.Create(
+            SignerId: "pi-user-01",
+            SignerRole: "PRINCIPAL_INVESTIGATOR",
+            SigningReason: "I attest that I have reviewed and approved these clinical data.",
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
+            PayloadHash: ComputeHash(payload),
+            SigToken: token);
+
+        // First approval succeeds
+        var firstResult = await service.ApproveAsync(formId, request, PrincipalInvestigator, CancellationToken.None);
+        firstResult.IsSuccess.Should().BeTrue();
+
+        // Unlock the form to attempt second approval with same token
+        await service.UnlockAsync(formId, "Correction needed", CancellationToken.None);
+        await service.CompleteAsync(formId, CancellationToken.None);
+
+        // Replay attempt fails closed
+        var replayResult = await service.ApproveAsync(formId, request, PrincipalInvestigator, CancellationToken.None);
+        replayResult.IsFailure.Should().BeTrue();
+        replayResult.Error!.Code.Should().Be("REAUTHENTICATION_REQUIRED");
+    }
+
+    /// <summary>
+    /// Validates that a step-up token bound to a different action or user is rejected with REAUTHENTICATION_REQUIRED.
+    /// @req:PRD-SYS-053
+    /// @req:SRS-EDC-003
+    /// </summary>
+    [Fact]
+    public async Task FormApplicationService_Approve_WithMismatchedActionOrUser_ReturnsReauthenticationRequired()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi-user-01", "PI approval");
+
+        var service = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: payload), CancellationToken.None);
+
+        var formId = createResult.Value!.Id;
+        await service.CompleteAsync(formId, CancellationToken.None);
+
+        // Token bound to different action
+        var badActionToken = TestSecurityContext.CreateSigToken(
+            "pi-user-01",
+            "/api/v1/execution/forms/WRONG_FORM/approve",
+            FormEndpoints.ApproveSemanticAction);
+
+        var badActionRequest = FormSubmissionApproveRequest.Create(
+            SignerId: "pi-user-01",
+            SignerRole: "PRINCIPAL_INVESTIGATOR",
+            SigningReason: "I attest that I have reviewed and approved these clinical data.",
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
+            PayloadHash: ComputeHash(payload),
+            SigToken: badActionToken);
+
+        var badActionResult = await service.ApproveAsync(formId, badActionRequest, PrincipalInvestigator, CancellationToken.None);
+        badActionResult.IsFailure.Should().BeTrue();
+        badActionResult.Error!.Code.Should().Be("REAUTHENTICATION_REQUIRED");
+
+        // Token bound to different user ID
+        var badUserToken = TestSecurityContext.CreateSigToken(
+            "different-user-02",
+            FormEndpoints.ApproveAction(formId),
+            FormEndpoints.ApproveSemanticAction);
+
+        var badUserRequest = FormSubmissionApproveRequest.Create(
+            SignerId: "pi-user-01",
+            SignerRole: "PRINCIPAL_INVESTIGATOR",
+            SigningReason: "I attest that I have reviewed and approved these clinical data.",
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
+            PayloadHash: ComputeHash(payload),
+            SigToken: badUserToken);
+
+        var badUserResult = await service.ApproveAsync(formId, badUserRequest, PrincipalInvestigator, CancellationToken.None);
+        badUserResult.IsFailure.Should().BeTrue();
+        badUserResult.Error!.Code.Should().Be("REAUTHENTICATION_REQUIRED");
     }
 }
