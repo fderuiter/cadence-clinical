@@ -369,12 +369,13 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(wrapper.find("#record-queries-note").exists()).toBe(true);
 
       await wrapper.find(`#btn-respond-${QUERY_ID}`).trigger("click");
-      const confirm = wrapper.find(`#btn-confirm-respond-${QUERY_ID}`);
-      expect(confirm.attributes()).toHaveProperty("disabled");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(`#btn-confirm-respond-${QUERY_ID}`).attributes()).toHaveProperty("disabled");
       await wrapper
         .find(`#query-text-${QUERY_ID}`)
         .setValue(" Corrected per source ");
-      await confirm.trigger("click");
+      await wrapper.vm.$nextTick();
+      await wrapper.find(`#btn-confirm-respond-${QUERY_ID}`).trigger("click");
       await flushPromises();
 
       expect(executionApi.respondQuery).toHaveBeenCalledWith(

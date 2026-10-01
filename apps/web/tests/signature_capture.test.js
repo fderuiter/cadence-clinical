@@ -232,6 +232,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
         plugins: [pinia],
       },
     });
+    await wrapper.vm.$nextTick();
 
     await wrapper.find("#sig-password").setValue("admin123"); // pragma: allowlist secret
     await wrapper.find("#sig-reason").setValue("CLINICAL_QC");
@@ -276,6 +277,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
         plugins: [pinia],
       },
     });
+    await wrapper.vm.$nextTick();
 
     await wrapper.find("#sig-password").setValue("somepassword"); // pragma: allowlist secret
     await wrapper.find("#sig-reason").setValue("REVIEW");
@@ -316,6 +318,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
         plugins: [pinia],
       },
     });
+    await wrapper.vm.$nextTick();
 
     await wrapper.find("#sig-password").setValue("wrongpassword"); // pragma: allowlist secret
     await wrapper.find("#sig-reason").setValue("AUTHOR");

@@ -150,6 +150,7 @@ describe("ConsentAuthoringView.vue Component and RBAC Router Tests", () => {
     it("verifies the staged reason modal capture flow", async () => {
       const wrapper = mount(ConsentAuthoringView);
       await wrapper.find("#btn-create-template").trigger("click");
+      await wrapper.vm.$nextTick();
 
       await wrapper.find("#input-study-id").setValue("study-abc");
       await wrapper.find("#input-template-name").setValue("Form-1");
