@@ -46,7 +46,10 @@ export function getAuthMiddleware(): Middleware {
         (options as unknown as Record<string, unknown>)?.changeReason) as
         string | undefined;
       if (changeReason && !request.headers.has("X-Change-Reason")) {
-        request.headers.set("X-Change-Reason", encodeChangeReason(changeReason));
+        request.headers.set(
+          "X-Change-Reason",
+          encodeChangeReason(changeReason)
+        );
       }
 
       return request;
