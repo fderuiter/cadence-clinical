@@ -104,6 +104,14 @@ export function isWhitelistedSubjectRoute(
     return true;
   }
 
+  // Payments endpoints
+  if (
+    pathLower.startsWith("payments") ||
+    pathLower.startsWith("api/v1/payments")
+  ) {
+    return true;
+  }
+
   // Normalize interop prefix
   const normalizedPath = pathLower.startsWith("interop/")
     ? pathLower.slice("interop/".length)
