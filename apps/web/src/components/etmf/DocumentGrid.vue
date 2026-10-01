@@ -11,18 +11,27 @@
           Please select an artifact from the binder tree to view documents.
         </p>
       </div>
-      <button
-        class="btn btn-primary upload-trigger-btn"
-        :disabled="!selectedArtifactCode"
-        :aria-label="
-          selectedArtifactCode
-            ? 'Upload Regulated Document for artifact ' + selectedArtifactCode
-            : 'Upload Regulated Document'
-        "
-        @click="openUploadModal"
-      >
-        <span>📤</span> Upload Regulated Document
-      </button>
+      <div style="display: flex; gap: 8px">
+        <button
+          class="btn btn-secondary batch-upload-trigger-btn"
+          aria-label="Batch Ingestion multi-file upload"
+          @click="isBatchDrawerOpen = true"
+        >
+          <span>📤</span> Batch Ingestion
+        </button>
+        <button
+          class="btn btn-primary upload-trigger-btn"
+          :disabled="!selectedArtifactCode"
+          :aria-label="
+            selectedArtifactCode
+              ? 'Upload Regulated Document for artifact ' + selectedArtifactCode
+              : 'Upload Regulated Document'
+          "
+          @click="openUploadModal"
+        >
+          <span>📄</span> Upload Single Document
+        </button>
+      </div>
     </div>
 
     <!-- Documents Data Table -->
@@ -433,6 +442,13 @@
         </div>
       </div>
     </div>
+
+    <!-- Batch Ingestion Drawer -->
+    <BatchUploadDrawer
+      :is-open="isBatchDrawerOpen"
+      :study-id="etmfStore.currentStudyId"
+      @close="isBatchDrawerOpen = false"
+    />
   </div>
 </template>
 
@@ -442,6 +458,9 @@ import { useEtmfStore } from "../../stores/etmf";
 import { etmfService } from "../../api/etmf";
 import { use2DGrid } from "../../composables/use2DGrid";
 import { useToastStore } from "../../stores/toasts.js";
+import BatchUploadDrawer from "./BatchUploadDrawer.vue";
+
+const isBatchDrawerOpen = ref(false);
 
 const props = defineProps({
   documents: {
