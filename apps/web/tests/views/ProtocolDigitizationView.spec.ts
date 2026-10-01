@@ -263,4 +263,72 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     expect(wrapper.vm.isPendingReview).toBe(false);
     expect(wrapper.vm.dagJobStatus).toBe("COMPLETED");
   });
+
+  it("opens USDM Concept Staging Drawer when unmapped concept codes are detected", async () => {
+    const wrapper = mount(ProtocolDigitizationView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          "router-link": true,
+        },
+      },
+    });
+
+    wrapper.vm.currentStep = 2;
+    wrapper.vm.triggerConceptStaging([
+      {
+        code: "C99999",
+        name: "Unmapped Biomarker Concept",
+        sourceNodeId: "Activity_1.BiomedicalConcept_9",
+      },
+    ]);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.isConceptStagingOpen).toBe(true);
+    expect(wrapper.text()).toContain("USDM Concept Staging Required");
+    expect(wrapper.text()).toContain("Biomedical Concept Staging & Mapping Drawer");
+    expect(wrapper.text()).toContain("C99999");
+  });
+
+  it("binds NCIt/CDISC concepts and hydrates protocol design lineage nodes upon confirmation", async () => {
+    const wrapper = mount(ProtocolDigitizationView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          "router-link": true,
+        },
+      },
+    });
+
+    wrapper.vm.rawExtractionData = mockExtractionData;
+    wrapper.vm.triggerConceptStaging([
+      {
+        code: "C25298",
+        name: "Systolic Blood Pressure",
+        sourceNodeId: "Activity_1.BiomedicalConcept_1",
+      },
+    ]);
+    await wrapper.vm.$nextTick();
+
+    wrapper.vm.handleConceptMappingsConfirmed({
+      resolvedMappings: [
+        {
+          sourceNodeId: "Activity_1.BiomedicalConcept_1",
+          originalCode: "C25298",
+          resolvedCode: "C25298",
+          resolvedName: "Systolic Blood Pressure",
+          resolutionType: "BOUND",
+        },
+      ],
+      auditEntry: {
+        signerUsername: "designer_lead",
+        changeReason: "Bound to standard NCIt concept",
+      },
+    });
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.isConceptStagingOpen).toBe(false);
+    expect(wrapper.vm.unmappedConceptTokens.length).toBe(0);
+    expect(wrapper.vm.resolvedConceptMappings.length).toBe(1);
+  });
 });
