@@ -1,14 +1,31 @@
 <template>
-  <div v-if="isOpen" class="drawer-backdrop" @click.self="closeDrawer">
-    <div class="usdm-concept-staging-drawer card" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+  <div
+    v-if="isOpen"
+    class="drawer-backdrop"
+    role="button"
+    tabindex="0"
+    @click.self="closeDrawer"
+    @keydown.escape="closeDrawer"
+  >
+    <div
+      class="usdm-concept-staging-drawer card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawer-title"
+    >
       <!-- Drawer Header -->
       <div class="drawer-header">
         <div class="header-text">
-          <h3 id="drawer-title" class="drawer-title">
+          <h3
+            id="drawer-title"
+            class="drawer-title"
+          >
             📥 USDM Biomedical Concept Staging &amp; Mapping Drawer
           </h3>
           <p class="drawer-subtitle">
-            Interactive concept resolution for USDM v4.0 protocol onboarding. Resolve unmapped tokens via NCIt/CDISC binding, tenant alias creation, or GxP design finding exemptions.
+            Interactive concept resolution for USDM v4.0 protocol onboarding.
+            Resolve unmapped tokens via NCIt/CDISC binding, tenant alias
+            creation, or GxP design finding exemptions.
           </p>
         </div>
         <button
@@ -25,7 +42,8 @@
       <div class="progress-section">
         <div class="progress-info">
           <span class="progress-label">
-            Concept Resolution: <strong>{{ resolvedCount }} / {{ items.length }}</strong> Resolved
+            Concept Resolution:
+            <strong>{{ resolvedCount }} / {{ items.length }}</strong> Resolved
           </span>
           <span class="progress-percent">{{ resolutionPercentage }}%</span>
         </div>
@@ -36,11 +54,20 @@
             :class="{ complete: resolvedCount === items.length }"
           />
         </div>
-        <div v-if="resolvedCount < items.length" class="alert alert-warning-inline">
-          ⚠️ Guardrail Active: All USDM lineage nodes require valid concept bindings or explicit design finding exemptions prior to protocol version commit.
+        <div
+          v-if="resolvedCount < items.length"
+          class="alert alert-warning-inline"
+        >
+          ⚠️ Guardrail Active: All USDM lineage nodes require valid concept
+          bindings or explicit design finding exemptions prior to protocol
+          version commit.
         </div>
-        <div v-else class="alert alert-success-inline">
-          ✅ All unmapped USDM concept tokens resolved. Ready to hydrate protocol design lineage nodes.
+        <div
+          v-else
+          class="alert alert-success-inline"
+        >
+          ✅ All unmapped USDM concept tokens resolved. Ready to hydrate
+          protocol design lineage nodes.
         </div>
       </div>
 
@@ -50,8 +77,9 @@
           v-model="searchQuery"
           type="text"
           class="form-control input-search"
+          aria-label="Filter unmapped concept tokens"
           placeholder="🔍 Filter unmapped concept tokens by code, name, or node ID..."
-        />
+        >
       </div>
 
       <!-- Unmapped Tokens List -->
@@ -65,15 +93,23 @@
           <!-- Token Header -->
           <div class="token-header">
             <div class="token-title-box">
-              <span class="badge badge-node">{{ item.sourceNodeId || item.source_node_id || "USDM Node" }}</span>
+              <span class="badge badge-node">{{
+                item.sourceNodeId || item.source_node_id || "USDM Node"
+              }}</span>
               <strong class="token-code">{{ item.code }}</strong>
               <span class="token-name">{{ item.name || item.code }}</span>
             </div>
             <div class="token-status">
-              <span v-if="isItemResolved(item)" class="badge badge-success">
+              <span
+                v-if="isItemResolved(item)"
+                class="badge badge-success"
+              >
                 {{ getResolutionBadge(item) }}
               </span>
-              <span v-else class="badge badge-danger">UNMAPPED</span>
+              <span
+                v-else
+                class="badge badge-danger"
+              >UNMAPPED</span>
             </div>
           </div>
 
@@ -107,8 +143,14 @@
             </div>
 
             <!-- Tab 1: Concept Binding -->
-            <div v-if="item.action === 'bind'" class="action-panel">
-              <label class="form-label" :for="`concept-select-${idx}`">
+            <div
+              v-if="item.action === 'bind'"
+              class="action-panel"
+            >
+              <label
+                class="form-label"
+                :for="`concept-select-${idx}`"
+              >
                 Select NCIt / CDISC Concept from Concept Registry:
               </label>
               <div class="binding-input-row">
@@ -118,7 +160,9 @@
                   class="form-control select-concept"
                   @change="onConceptSelect(item)"
                 >
-                  <option value="">-- Choose Candidate Match --</option>
+                  <option value="">
+                    -- Choose Candidate Match --
+                  </option>
                   <option
                     v-for="cand in candidateConcepts"
                     :key="cand.code"
@@ -139,27 +183,36 @@
             </div>
 
             <!-- Tab 2: Tenant Alias Creation -->
-            <div v-if="item.action === 'alias'" class="action-panel">
+            <div
+              v-if="item.action === 'alias'"
+              class="action-panel"
+            >
               <div class="alias-grid">
                 <div class="form-group">
-                  <label class="form-label" :for="`alias-code-${idx}`">Tenant Alias Code *</label>
+                  <label
+                    class="form-label"
+                    :for="`alias-code-${idx}`"
+                  >Tenant Alias Code *</label>
                   <input
                     :id="`alias-code-${idx}`"
                     v-model="item.aliasCode"
                     type="text"
                     class="form-control input-alias-code"
                     placeholder="e.g. ALIAS-SPONSOR-01"
-                  />
+                  >
                 </div>
                 <div class="form-group">
-                  <label class="form-label" :for="`alias-name-${idx}`">Custom Concept Name *</label>
+                  <label
+                    class="form-label"
+                    :for="`alias-name-${idx}`"
+                  >Custom Concept Name *</label>
                   <input
                     :id="`alias-name-${idx}`"
                     v-model="item.aliasName"
                     type="text"
                     class="form-control input-alias-name"
                     placeholder="Custom Variable Name"
-                  />
+                  >
                 </div>
               </div>
               <button
@@ -173,8 +226,14 @@
             </div>
 
             <!-- Tab 3: Design Finding Exemption -->
-            <div v-if="item.action === 'finding'" class="action-panel">
-              <label class="form-label" :for="`finding-note-${idx}`">
+            <div
+              v-if="item.action === 'finding'"
+              class="action-panel"
+            >
+              <label
+                class="form-label"
+                :for="`finding-note-${idx}`"
+              >
                 GxP Design Finding Exemption Justification *:
               </label>
               <textarea
@@ -187,7 +246,10 @@
               <button
                 type="button"
                 class="btn btn-sm btn-warning btn-accept-finding"
-                :disabled="!item.findingJustification || !item.findingJustification.trim()"
+                :disabled="
+                  !item.findingJustification ||
+                    !item.findingJustification.trim()
+                "
                 @click="acceptFinding(item)"
               >
                 Accept Design Finding
@@ -199,34 +261,46 @@
 
       <!-- Part 11 Audit Trail Verification -->
       <div class="audit-section">
-        <h5 class="audit-title">✍️ 21 CFR Part 11 Electronic Signature &amp; Audit Trail</h5>
+        <h5 class="audit-title">
+          ✍️ 21 CFR Part 11 Electronic Signature &amp; Audit Trail
+        </h5>
         <div class="audit-grid">
           <div class="form-group">
-            <label class="form-label" for="signer-username">Signer Username / ID *</label>
+            <label
+              class="form-label"
+              for="signer-username"
+            >Signer Username / ID *</label>
             <input
               id="signer-username"
               v-model="signerUsername"
               type="text"
               class="form-control input-signer-id"
               placeholder="e.g. designer_lead_01"
-            />
+            >
           </div>
           <div class="form-group">
-            <label class="form-label" for="change-reason">GxP Change Justification Reason *</label>
+            <label
+              class="form-label"
+              for="change-reason"
+            >GxP Change Justification Reason *</label>
             <input
               id="change-reason"
               v-model="changeReason"
               type="text"
               class="form-control input-change-reason"
               placeholder="e.g. USDM Concept Staging & Mapping Resolution for Protocol Import"
-            />
+            >
           </div>
         </div>
       </div>
 
       <!-- Drawer Footer Actions -->
       <div class="drawer-footer">
-        <button type="button" class="btn btn-secondary btn-cancel" @click="closeDrawer">
+        <button
+          type="button"
+          class="btn btn-secondary btn-cancel"
+          @click="closeDrawer"
+        >
           Cancel
         </button>
         <button
@@ -284,7 +358,8 @@ watch(
       items.value = newTokens.map((t) => ({
         code: t.code || t.Code || "C00000",
         name: t.name || t.Name || t.code || "Unmapped Concept",
-        sourceNodeId: t.sourceNodeId || t.SourceNodeId || t.source_node_id || "Node",
+        sourceNodeId:
+          t.sourceNodeId || t.SourceNodeId || t.source_node_id || "Node",
         action: "bind",
         selectedConceptCode: t.code || "",
         aliasCode: "",
@@ -332,14 +407,17 @@ const canConfirm = computed(() => {
 });
 
 const getResolutionBadge = (item) => {
-  if (item.resolutionType === "BOUND") return `BOUND: ${item.resolvedConceptCode}`;
+  if (item.resolutionType === "BOUND")
+    return `BOUND: ${item.resolvedConceptCode}`;
   if (item.resolutionType === "ALIAS") return `ALIAS: ${item.aliasCode}`;
   if (item.resolutionType === "EXEMPTION") return "EXEMPTION ACCEPTED";
   return "RESOLVED";
 };
 
 const onConceptSelect = (item) => {
-  const match = props.candidateConcepts.find((c) => c.code === item.selectedConceptCode);
+  const match = props.candidateConcepts.find(
+    (c) => c.code === item.selectedConceptCode
+  );
   if (match) {
     item.resolvedConceptCode = match.code;
     item.resolvedConceptName = match.decode || match.name;
@@ -348,9 +426,13 @@ const onConceptSelect = (item) => {
 
 const bindConcept = (item) => {
   if (!item.selectedConceptCode) return;
-  const match = props.candidateConcepts.find((c) => c.code === item.selectedConceptCode);
+  const match = props.candidateConcepts.find(
+    (c) => c.code === item.selectedConceptCode
+  );
   item.resolvedConceptCode = item.selectedConceptCode;
-  item.resolvedConceptName = match ? match.decode || match.name : item.selectedConceptCode;
+  item.resolvedConceptName = match
+    ? match.decode || match.name
+    : item.selectedConceptCode;
   item.resolutionType = "BOUND";
   item.isResolved = true;
 };

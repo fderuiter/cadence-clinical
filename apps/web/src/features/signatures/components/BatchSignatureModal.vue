@@ -62,7 +62,10 @@
         </button>
       </header>
 
-      <div class="modal-body" style="padding: 16px; font-size: 14px">
+      <div
+        class="modal-body"
+        style="padding: 16px; font-size: 14px"
+      >
         <!-- Success Confirmation Banner (Step 5) -->
         <div
           v-if="lastSignatureResult"
@@ -139,8 +142,7 @@
             style="color: #475569; margin-bottom: 16px; line-height: 1.4"
           >
             You are signing <strong>{{ selectedForms.length }}</strong> eCRF
-            forms for Subject <strong>{{ subjectId }}</strong
-            >.
+            forms for Subject <strong>{{ subjectId }}</strong>.
           </p>
 
           <!-- Form Summary Table (Step 1) -->
@@ -179,8 +181,12 @@
                   "
                 >
                   <tr>
-                    <th style="padding: 8px">eCRF ID</th>
-                    <th style="padding: 8px">SHA-256 Preview Hash</th>
+                    <th style="padding: 8px">
+                      eCRF ID
+                    </th>
+                    <th style="padding: 8px">
+                      SHA-256 Preview Hash
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -209,7 +215,10 @@
 
           <!-- Re-Authentication Form & Controls (Step 2 & 3) -->
           <form @submit.prevent="handleExecuteSign">
-            <div class="form-group" style="margin-bottom: 12px">
+            <div
+              class="form-group"
+              style="margin-bottom: 12px"
+            >
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label
                 style="
@@ -239,7 +248,9 @@
                 <option value="APPROVED">
                   Principal Investigator Approval
                 </option>
-                <option value="REVIEWED">CRA Monitor Review</option>
+                <option value="REVIEWED">
+                  CRA Monitor Review
+                </option>
                 <option value="VERIFIED_SDV">
                   Source Data Verification (SDV) Confirmed
                 </option>
@@ -271,7 +282,8 @@
                 border: '1px solid #cbd5e1',
                 borderRadius: '4px',
                 fontSize: '13px',
-              }"/><!-- pragma: allowlist secret -->
+              }"
+            /><!-- pragma: allowlist secret -->
 
             <!-- Error Notification Banner -->
             <div

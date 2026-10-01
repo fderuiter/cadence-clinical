@@ -4,11 +4,20 @@
     class="queries"
     aria-labelledby="record-queries-title"
   >
-    <h3 id="record-queries-title">Queries</h3>
-    <p v-if="!queries.length" id="record-queries-empty" class="status-line">
+    <h3 id="record-queries-title">
+      Queries
+    </h3>
+    <p
+      v-if="!queries.length"
+      id="record-queries-empty"
+      class="status-line"
+    >
       No queries on {{ subjectCode }}.
     </p>
-    <ul v-else class="query-list">
+    <ul
+      v-else
+      class="query-list"
+    >
       <li
         v-for="query in queries"
         :id="`query-${query.id}`"
@@ -16,16 +25,27 @@
         class="query"
       >
         <div class="query-head">
-          <span class="query-status" :data-status="query.status">{{
+          <span
+            class="query-status"
+            :data-status="query.status"
+          >{{
             queryStatusLabel(query.status)
           }}</span>
           <span class="query-target">{{ targetLabel(query) }}</span>
         </div>
-        <p class="query-text">{{ query.explanation }}</p>
-        <p v-if="query.response" class="query-response">
+        <p class="query-text">
+          {{ query.explanation }}
+        </p>
+        <p
+          v-if="query.response"
+          class="query-response"
+        >
           Answer: {{ query.response }}
         </p>
-        <p v-if="query.cancellation_reason" class="query-response">
+        <p
+          v-if="query.cancellation_reason"
+          class="query-response"
+        >
           Cancelled: {{ query.cancellation_reason }}
         </p>
 
@@ -53,12 +73,19 @@
             >
               {{ ACTION_TEXT[openAction.action].button }}
             </button>
-            <button type="button" class="btn btn-secondary" @click="dismiss">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="dismiss"
+            >
               Back
             </button>
           </div>
         </div>
-        <div v-else class="query-buttons">
+        <div
+          v-else
+          class="query-buttons"
+        >
           <button
             v-for="action in actionsFor(query)"
             :id="`btn-${action}-${query.id}`"
@@ -72,7 +99,11 @@
         </div>
       </li>
     </ul>
-    <p v-if="!canManage" id="record-queries-note" class="status-line">
+    <p
+      v-if="!canManage"
+      id="record-queries-note"
+      class="status-line"
+    >
       A CRA or data manager closes, reopens and cancels queries.
     </p>
   </section>

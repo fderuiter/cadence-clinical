@@ -1,10 +1,26 @@
 <template>
-  <section id="kernel-act" class="act" aria-labelledby="kernel-act-title">
-    <h3 id="kernel-act-title">Commands</h3>
-    <p v-if="loading" id="kernel-act-status" class="act-note" role="status">
+  <section
+    id="kernel-act"
+    class="act"
+    aria-labelledby="kernel-act-title"
+  >
+    <h3 id="kernel-act-title">
+      Commands
+    </h3>
+    <p
+      v-if="loading"
+      id="kernel-act-status"
+      class="act-note"
+      role="status"
+    >
       Asking the kernel what you may do here…
     </p>
-    <p v-else-if="error" id="kernel-act-status" class="act-note" role="alert">
+    <p
+      v-else-if="error"
+      id="kernel-act-status"
+      class="act-note"
+      role="alert"
+    >
       The kernel couldn't answer: {{ error }}
     </p>
     <p
@@ -16,7 +32,10 @@
       No kernel command applies to this object.
     </p>
     <template v-else>
-      <ul id="kernel-act-list" class="act-list">
+      <ul
+        id="kernel-act-list"
+        class="act-list"
+      >
         <li
           v-for="command in commands"
           :key="command.command"
@@ -32,7 +51,10 @@
               {{ command.decision.permitted ? "Permitted" : "Not permitted" }}
             </span>
           </div>
-          <p v-if="command.decision.reason" class="act-reason">
+          <p
+            v-if="command.decision.reason"
+            class="act-reason"
+          >
             {{ command.decision.reason }}
           </p>
           <button
@@ -44,7 +66,10 @@
           </button>
         </li>
       </ul>
-      <p id="kernel-act-footnote" class="act-note">
+      <p
+        id="kernel-act-footnote"
+        class="act-note"
+      >
         This is what the kernel would decide if you sent each command now. The
         commands themselves are sent from the screens that own them.
       </p>

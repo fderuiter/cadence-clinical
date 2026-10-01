@@ -1,5 +1,8 @@
 <template>
-  <div class="headless-form-renderer" :class="[`viewport-${currentViewport}`]">
+  <div
+    class="headless-form-renderer"
+    :class="[`viewport-${currentViewport}`]"
+  >
     <!-- Omni-Channel Viewport Controls -->
     <div class="viewport-toolbar">
       <div class="form-title-badge">
@@ -37,14 +40,19 @@
 
     <!-- Active Form Viewport Frame -->
     <div class="form-canvas-frame">
-      <form @submit.prevent="handleSubmit" class="rendered-form">
+      <form
+        class="rendered-form"
+        @submit.prevent="handleSubmit"
+      >
         <!-- Render UI Schema Sections -->
         <div
           v-for="section in formDefinition.ui_schema.sections"
           :key="section.id"
           class="form-section-card"
         >
-          <h4 class="section-title">{{ section.title }}</h4>
+          <h4 class="section-title">
+            {{ section.title }}
+          </h4>
 
           <div
             class="section-grid"
@@ -64,25 +72,27 @@
               }"
             >
               <!-- Field Label & Constraints -->
-              <label class="field-label" :for="'widget-' + widget.variable_id">
+              <label
+                class="field-label"
+                :for="'widget-' + widget.variable_id"
+              >
                 {{ getVariable(widget.variable_id)?.name }}
                 <span
                   v-if="getVariable(widget.variable_id)?.constraints?.required"
                   class="required-star"
-                  >*</span
-                >
+                >*</span>
               </label>
 
               <!-- Widget Rendering -->
               <template v-if="widget.widget === 'number_input'">
                 <input
                   :id="'widget-' + widget.variable_id"
+                  v-model.number="formData[widget.variable_id]"
                   type="number"
                   class="form-input"
-                  v-model.number="formData[widget.variable_id]"
                   :placeholder="widget.placeholder || ''"
                   @input="evaluateRules"
-                />
+                >
               </template>
 
               <template v-else-if="widget.widget === 'medical_autocode'">
@@ -110,12 +120,12 @@
               <template v-else>
                 <input
                   :id="'widget-' + widget.variable_id"
+                  v-model="formData[widget.variable_id]"
                   type="text"
                   class="form-input"
-                  v-model="formData[widget.variable_id]"
                   :placeholder="widget.placeholder || ''"
                   @input="evaluateRules"
-                />
+                >
               </template>
 
               <!-- Inline AST Validation Queries / Errors -->
@@ -131,7 +141,11 @@
 
         <!-- Form Submission Actions -->
         <div class="form-actions-bar">
-          <button type="submit" class="btn-submit" :disabled="hasHardErrors">
+          <button
+            type="submit"
+            class="btn-submit"
+            :disabled="hasHardErrors"
+          >
             Save & Submit eCRF
           </button>
         </div>

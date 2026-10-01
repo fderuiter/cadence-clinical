@@ -1,6 +1,13 @@
 <!-- apps/web/src/components/etmf/BatchUploadDrawer.vue -->
 <template>
-  <div v-if="isOpen" class="batch-drawer-overlay" @click.self="handleClose">
+  <div
+    v-if="isOpen"
+    class="batch-drawer-overlay"
+    role="button"
+    tabindex="0"
+    @click.self="handleClose"
+    @keydown.escape="handleClose"
+  >
     <div class="batch-drawer">
       <div class="drawer-header">
         <div style="display: flex; align-items: center; gap: 10px">
@@ -45,10 +52,13 @@
         <div
           class="dropzone"
           :class="{ 'is-dragging': isDragging }"
+          role="button"
+          tabindex="0"
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="handleDrop"
           @click="triggerFileInput"
+          @keydown.enter="triggerFileInput"
         >
           <input
             ref="fileInputRef"
@@ -56,8 +66,9 @@
             multiple
             accept=".pdf,.doc,.docx,.txt"
             style="display: none"
+            aria-label="Upload files"
             @change="handleFileSelect"
-          />
+          >
           <div class="dropzone-content">
             <span class="dropzone-icon">📁</span>
             <p class="dropzone-title">
@@ -87,11 +98,14 @@
             class="form-control"
             placeholder="e.g. Site 101 regulatory documents initial filing for CRA review"
             style="font-size: 12px"
-          />
+          >
         </div>
 
         <!-- Progress Tracker Bar -->
-        <div v-if="isProcessing || completedCount > 0" class="progress-section">
+        <div
+          v-if="isProcessing || completedCount > 0"
+          class="progress-section"
+        >
           <div
             style="
               display: flex;
@@ -102,22 +116,23 @@
             "
           >
             <span>Batch Ingestion Progress</span>
-            <span
-              >{{ completedCount }} / {{ queue.length }} Files Staged ({{
-                overallProgress
-              }}%)</span
-            >
+            <span>{{ completedCount }} / {{ queue.length }} Files Staged ({{
+              overallProgress
+            }}%)</span>
           </div>
           <div class="progress-bar-track">
             <div
               class="progress-bar-fill"
               :style="{ width: overallProgress + '%' }"
-            ></div>
+            />
           </div>
         </div>
 
         <!-- Batch Upload Items Queue Table -->
-        <div v-if="queue.length > 0" class="queue-section">
+        <div
+          v-if="queue.length > 0"
+          class="queue-section"
+        >
           <div
             style="
               display: flex;
@@ -159,7 +174,10 @@
                   :key="index"
                   class="queue-row"
                 >
-                  <td class="filename-cell font-mono" :title="item.file.name">
+                  <td
+                    class="filename-cell font-mono"
+                    :title="item.file.name"
+                  >
                     {{ item.file.name }}
                   </td>
                   <td class="size-cell">
@@ -174,17 +192,22 @@
                     </span>
                   </td>
                   <td>
-                    <div v-if="item.report" class="classification-preview">
+                    <div
+                      v-if="item.report"
+                      class="classification-preview"
+                    >
                       <span class="font-mono text-bold">{{
                         item.report.primary_classification.artifact_code
                       }}</span>
                       <span class="text-muted">
                         ({{
                           item.report.primary_classification.artifact_type
-                        }})</span
-                      >
+                        }})</span>
                     </div>
-                    <span v-else class="text-muted">—</span>
+                    <span
+                      v-else
+                      class="text-muted"
+                    >—</span>
                   </td>
                   <td>
                     <span
@@ -200,7 +223,10 @@
                         )
                       }}% {{ item.report.confidence_tier }}
                     </span>
-                    <span v-else class="text-muted">—</span>
+                    <span
+                      v-else
+                      class="text-muted"
+                    >—</span>
                   </td>
                   <td>
                     <button
@@ -255,8 +281,8 @@
           style="padding: 8px 16px; font-size: 13px; margin-left: 8px"
           :disabled="
             queue.length === 0 ||
-            !reasonForChange ||
-            reasonForChange.length < 10
+              !reasonForChange ||
+              reasonForChange.length < 10
           "
           @click="startBatchUpload"
         >
@@ -269,7 +295,10 @@
     <div
       v-if="inspectedItem"
       class="item-inspection-overlay"
+      role="button"
+      tabindex="0"
       @click.self="inspectedItem = null"
+      @keydown.escape="inspectedItem = null"
     >
       <div class="item-inspection-card">
         <div
@@ -290,7 +319,10 @@
             ✕
           </button>
         </div>
-        <div v-if="inspectedItem.report" class="inspection-details">
+        <div
+          v-if="inspectedItem.report"
+          class="inspection-details"
+        >
           <p>
             <strong>Predicted Artifact Code:</strong>
             <code class="font-mono">{{
@@ -452,7 +484,7 @@ function addFilesToQueue(files) {
     currentBatchSize += file.size;
 
     // Run quick local prediction preview
-    const report = etmfStore.classifyIntelligence ? null : null;
+    const _report = etmfStore.classifyIntelligence ? null : null;
 
     queue.value.push({
       file,

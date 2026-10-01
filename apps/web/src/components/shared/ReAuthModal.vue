@@ -11,10 +11,16 @@
     :aria-labelledby="'reauth-modal-title'"
     @click.self="handleCancel"
   >
-    <div class="modal-card reauth-modal-card" @contextmenu.prevent>
+    <div
+      class="modal-card reauth-modal-card"
+      @contextmenu.prevent
+    >
       <div class="modal-header">
         <h3 id="reauth-modal-title">
-          <span class="lock-icon" aria-hidden="true">🔐</span>
+          <span
+            class="lock-icon"
+            aria-hidden="true"
+          >🔐</span>
           {{ title }}
         </h3>
         <button
@@ -34,7 +40,10 @@
           your credential (PIN or password) and confirm your signing reason.
         </p>
 
-        <div v-if="filename" class="document-context-card">
+        <div
+          v-if="filename"
+          class="document-context-card"
+        >
           <span class="context-label">Target Document:</span>
           <span class="context-value font-mono">{{ filename }}</span>
         </div>
@@ -48,7 +57,7 @@
             :value="username || 'Current User'"
             disabled
             readonly
-          />
+          >
         </div>
 
         <div class="form-group">
@@ -65,7 +74,7 @@
             autocomplete="current-password"
             :disabled="busy"
             @keyup.enter="handleConfirm"
-          />
+          >
         </div>
 
         <div class="form-group">
@@ -78,13 +87,21 @@
             class="form-control"
             :disabled="busy"
           >
-            <option v-for="r in availableReasons" :key="r" :value="r">
+            <option
+              v-for="r in availableReasons"
+              :key="r"
+              :value="r"
+            >
               {{ r }}
             </option>
           </select>
         </div>
 
-        <div v-if="effectiveError" class="alert-box error-box" role="alert">
+        <div
+          v-if="effectiveError"
+          class="alert-box error-box"
+          role="alert"
+        >
           <span class="error-icon">⚠️</span>
           <span>{{ effectiveError }}</span>
         </div>

@@ -2,7 +2,11 @@
   <div class="repeating-log-grid-container">
     <div class="grid-header">
       <span class="widget-label">{{ label }}</span>
-      <button type="button" class="btn-add-row" @click="addRow">
+      <button
+        type="button"
+        class="btn-add-row"
+        @click="addRow"
+      >
         + Add Row
       </button>
     </div>
@@ -11,20 +15,40 @@
       <table class="log-table">
         <thead>
           <tr>
-            <th style="width: 40px">#</th>
-            <th v-for="col in columns" :key="col.id">{{ col.label }}</th>
-            <th style="width: 50px">Action</th>
+            <th style="width: 40px">
+              #
+            </th>
+            <th
+              v-for="col in columns"
+              :key="col.id"
+            >
+              {{ col.label }}
+            </th>
+            <th style="width: 50px">
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="rows.length === 0">
-            <td :colspan="columns.length + 2" class="empty-cell">
+            <td
+              :colspan="columns.length + 2"
+              class="empty-cell"
+            >
               No log records captured. Click "+ Add Row" to begin.
             </td>
           </tr>
-          <tr v-for="(row, rIdx) in rows" :key="rIdx">
-            <td class="row-num">{{ rIdx + 1 }}</td>
-            <td v-for="col in columns" :key="col.id">
+          <tr
+            v-for="(row, rIdx) in rows"
+            :key="rIdx"
+          >
+            <td class="row-num">
+              {{ rIdx + 1 }}
+            </td>
+            <td
+              v-for="col in columns"
+              :key="col.id"
+            >
               <input
                 v-if="col.type === 'number'"
                 type="number"
@@ -32,7 +56,7 @@
                 :aria-label="col.label"
                 :value="row[col.id]"
                 @input="updateCell(rIdx, col.id, $event.target.value)"
-              />
+              >
               <input
                 v-else
                 type="text"
@@ -40,14 +64,14 @@
                 :aria-label="col.label"
                 :value="row[col.id]"
                 @input="updateCell(rIdx, col.id, $event.target.value)"
-              />
+              >
             </td>
             <td class="action-cell">
               <button
                 type="button"
                 class="btn-delete-row"
-                @click="deleteRow(rIdx)"
                 title="Delete Row"
+                @click="deleteRow(rIdx)"
               >
                 ×
               </button>
@@ -58,13 +82,21 @@
           v-if="columns.some((c) => c.aggregate === 'sum') && rows.length > 0"
         >
           <tr class="summary-row">
-            <td colspan="1">Total:</td>
-            <td v-for="col in columns" :key="col.id">
-              <span v-if="col.aggregate === 'sum'" class="aggregate-value">
+            <td colspan="1">
+              Total:
+            </td>
+            <td
+              v-for="col in columns"
+              :key="col.id"
+            >
+              <span
+                v-if="col.aggregate === 'sum'"
+                class="aggregate-value"
+              >
                 {{ calculateSum(col.id) }}
               </span>
             </td>
-            <td></td>
+            <td />
           </tr>
         </tfoot>
       </table>

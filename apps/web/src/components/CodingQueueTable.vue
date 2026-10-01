@@ -4,7 +4,9 @@
     <!-- CLUSTERS VIEW BATCH TOOLBAR -->
     <!-- ==================================================================== -->
     <div
-      v-if="codingStore.viewMode === 'CLUSTERS' && codingStore.selectedCount > 0"
+      v-if="
+        codingStore.viewMode === 'CLUSTERS' && codingStore.selectedCount > 0
+      "
       class="batch-action-bar cluster-batch-bar"
     >
       <div class="batch-summary">
@@ -40,7 +42,9 @@
     <!-- INDIVIDUAL VIEW BATCH TOOLBAR -->
     <!-- ==================================================================== -->
     <div
-      v-else-if="codingStore.viewMode === 'INDIVIDUAL' && codingStore.selectedCount > 0"
+      v-else-if="
+        codingStore.viewMode === 'INDIVIDUAL' && codingStore.selectedCount > 0
+      "
       class="batch-action-bar"
     >
       <div class="batch-summary">
@@ -73,7 +77,10 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="codingStore.isLoading" class="table-loading-state">
+    <div
+      v-if="codingStore.isLoading"
+      class="table-loading-state"
+    >
       <div class="spinner" />
       <p>Loading medical coding queue...</p>
     </div>
@@ -87,10 +94,13 @@
       "
       class="table-empty-state"
     >
-      <div class="empty-icon">🩺</div>
+      <div class="empty-icon">
+        🩺
+      </div>
       <h3>No Coding Assignments Found</h3>
       <p>
-        No adverse events or concomitant medications match the active filters or confidence score threshold.
+        No adverse events or concomitant medications match the active filters or
+        confidence score threshold.
       </p>
     </div>
 
@@ -111,7 +121,10 @@
       >
         <thead>
           <tr>
-            <th scope="col" class="col-checkbox">
+            <th
+              scope="col"
+              class="col-checkbox"
+            >
               <input
                 type="checkbox"
                 :checked="isAllClustersSelected"
@@ -119,30 +132,51 @@
                 title="Select all filtered clusters"
                 aria-label="Select all filtered clusters"
                 @change="toggleSelectAllClusters"
-              />
+              >
             </th>
-            <th scope="col">Cluster Status</th>
-            <th scope="col">Normalized Verbatim Term</th>
-            <th scope="col">Dictionary</th>
-            <th scope="col">Suggested Code &amp; Preferred Term</th>
-            <th scope="col">AI Confidence Score</th>
-            <th scope="col" class="col-actions">Batch Actions</th>
+            <th scope="col">
+              Cluster Status
+            </th>
+            <th scope="col">
+              Normalized Verbatim Term
+            </th>
+            <th scope="col">
+              Dictionary
+            </th>
+            <th scope="col">
+              Suggested Code &amp; Preferred Term
+            </th>
+            <th scope="col">
+              AI Confidence Score
+            </th>
+            <th
+              scope="col"
+              class="col-actions"
+            >
+              Batch Actions
+            </th>
           </tr>
         </thead>
         <tbody>
-          <template v-for="(cluster, cIndex) in codingStore.filteredClusters" :key="cluster.id">
+          <template
+            v-for="cluster in codingStore.filteredClusters"
+            :key="cluster.id"
+          >
             <tr
               class="coding-row cluster-row"
               :class="{ 'row-selected': isClusterSelected(cluster.id) }"
             >
               <!-- Checkbox -->
-              <td role="gridcell" class="col-checkbox">
+              <td
+                role="gridcell"
+                class="col-checkbox"
+              >
                 <input
                   type="checkbox"
                   :checked="isClusterSelected(cluster.id)"
                   aria-label="Select verbatim cluster"
                   @change="codingStore.toggleClusterSelect(cluster.id)"
-                />
+                >
               </td>
 
               <!-- Status Badge -->
@@ -159,9 +193,14 @@
                 </div>
                 <div class="verbatim-meta">
                   <span class="badge badge-neutral instance-count-badge">
-                    👥 {{ cluster.instance_count }} subject instance{{ cluster.instance_count === 1 ? '' : 's' }}
+                    👥 {{ cluster.instance_count }} subject instance{{
+                      cluster.instance_count === 1 ? "" : "s"
+                    }}
                   </span>
-                  <span v-if="cluster.blocked_count > 0" class="badge badge-warning blocked-count-badge">
+                  <span
+                    v-if="cluster.blocked_count > 0"
+                    class="badge badge-warning blocked-count-badge"
+                  >
                     ⚠️ {{ cluster.blocked_count }} query / lock blocked
                   </span>
                 </div>
@@ -169,8 +208,12 @@
 
               <!-- Dictionary System -->
               <td role="gridcell">
-                <div class="dict-label">{{ cluster.dictionary_type }}</div>
-                <div class="dict-version">v{{ cluster.dictionary_version }}</div>
+                <div class="dict-label">
+                  {{ cluster.dictionary_type }}
+                </div>
+                <div class="dict-version">
+                  v{{ cluster.dictionary_version }}
+                </div>
               </td>
 
               <!-- Coded / Suggested Term & Code -->
@@ -189,13 +232,17 @@
               <td role="gridcell">
                 <div class="confidence-badge-wrapper">
                   <span :class="getConfidenceBadgeClass(cluster.score)">
-                    {{ Math.round((cluster.score || 0.95) * 100) }}% {{ getConfidenceLabel(cluster.score) }}
+                    {{ Math.round((cluster.score || 0.95) * 100) }}%
+                    {{ getConfidenceLabel(cluster.score) }}
                   </span>
                 </div>
               </td>
 
               <!-- Actions -->
-              <td role="gridcell" class="col-actions">
+              <td
+                role="gridcell"
+                class="col-actions"
+              >
                 <div class="action-buttons-group">
                   <button
                     type="button"
@@ -216,25 +263,42 @@
                   <button
                     type="button"
                     class="btn btn-sm btn-text-outline"
-                    :title="expandedClusterId === cluster.id ? 'Hide Subject Instances' : 'View Subject Instances'"
+                    :title="
+                      expandedClusterId === cluster.id
+                        ? 'Hide Subject Instances'
+                        : 'View Subject Instances'
+                    "
                     @click="toggleClusterExpansion(cluster.id)"
                   >
-                    {{ expandedClusterId === cluster.id ? '▲ Hide' : '👁️ Instances (' + cluster.instance_count + ')' }}
+                    {{
+                      expandedClusterId === cluster.id
+                        ? "▲ Hide"
+                        : "👁️ Instances (" + cluster.instance_count + ")"
+                    }}
                   </button>
                 </div>
               </td>
             </tr>
 
             <!-- Expanded Instances Drawer Row -->
-            <tr v-if="expandedClusterId === cluster.id" :key="cluster.id + '-expanded'" class="cluster-instances-drawer-row">
-              <td colspan="7" class="drawer-cell">
+            <tr
+              v-if="expandedClusterId === cluster.id"
+              :key="cluster.id + '-expanded'"
+              class="cluster-instances-drawer-row"
+            >
+              <td
+                colspan="7"
+                class="drawer-cell"
+              >
                 <div class="instances-drawer-container">
                   <div class="drawer-header">
                     <h4>
-                      Underlying Subject Instances for Cluster: <code>{{ cluster.verbatim_text }}</code>
+                      Underlying Subject Instances for Cluster:
+                      <code>{{ cluster.verbatim_text }}</code>
                     </h4>
                     <span class="text-muted">
-                      Showing {{ cluster.instances.length }} instance(s) across study sites
+                      Showing {{ cluster.instances.length }} instance(s) across
+                      study sites
                     </span>
                   </div>
                   <table class="data-table instances-subtable">
@@ -249,20 +313,37 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="inst in cluster.instances" :key="inst.id" class="subtable-row">
-                        <td><code>{{ inst.subject_id || inst.id.substring(0, 10) }}</code></td>
+                      <tr
+                        v-for="inst in cluster.instances"
+                        :key="inst.id"
+                        class="subtable-row"
+                      >
+                        <td>
+                          <code>{{
+                            inst.subject_id || inst.id.substring(0, 10)
+                          }}</code>
+                        </td>
                         <td>{{ inst.source_field || "AETERM" }}</td>
                         <td>
                           <span :class="getStatusBadgeClass(inst.status)">
                             {{ formatStatus(inst.status) }}
                           </span>
                         </td>
-                        <td><code>{{ (inst.observation_id || inst.id).substring(0, 12) }}...</code></td>
+                        <td>
+                          <code>{{
+                            (inst.observation_id || inst.id).substring(0, 12)
+                          }}...</code>
+                        </td>
                         <td>
                           <span v-if="inst.coded_code">
-                            {{ inst.coded_term }} (<code>{{ inst.coded_code }}</code>)
+                            {{ inst.coded_term }} (<code>{{
+                              inst.coded_code
+                            }}</code>)
                           </span>
-                          <span v-else class="text-muted">— Uncoded —</span>
+                          <span
+                            v-else
+                            class="text-muted"
+                          >— Uncoded —</span>
                         </td>
                         <td>
                           <div class="subtable-actions">
@@ -296,7 +377,11 @@
     <!-- ==================================================================== -->
     <!-- INDIVIDUAL ASSIGNMENTS TABLE -->
     <!-- ==================================================================== -->
-    <div v-else ref="containerRef" class="table-responsive">
+    <div
+      v-else
+      ref="containerRef"
+      class="table-responsive"
+    >
       <table
         class="data-table coding-table"
         role="grid"
@@ -306,7 +391,10 @@
       >
         <thead>
           <tr>
-            <th scope="col" class="col-checkbox">
+            <th
+              scope="col"
+              class="col-checkbox"
+            >
               <input
                 type="checkbox"
                 :checked="isAllSelected"
@@ -314,14 +402,29 @@
                 title="Select all filtered items"
                 aria-label="Select all filtered items"
                 @change="toggleSelectAll"
-              />
+              >
             </th>
-            <th scope="col">Status</th>
-            <th scope="col">Verbatim Term &amp; Source</th>
-            <th scope="col">Dictionary</th>
-            <th scope="col">Coded Code &amp; Term</th>
-            <th scope="col">Match / Suggestions</th>
-            <th scope="col" class="col-actions">Actions</th>
+            <th scope="col">
+              Status
+            </th>
+            <th scope="col">
+              Verbatim Term &amp; Source
+            </th>
+            <th scope="col">
+              Dictionary
+            </th>
+            <th scope="col">
+              Coded Code &amp; Term
+            </th>
+            <th scope="col">
+              Match / Suggestions
+            </th>
+            <th
+              scope="col"
+              class="col-actions"
+            >
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -348,7 +451,7 @@
                 aria-label="Select assignment"
                 tabindex="-1"
                 @change="codingStore.toggleSelect(item.id)"
-              />
+              >
             </td>
 
             <!-- Status Badge -->
@@ -380,15 +483,22 @@
                 {{ item.verbatim_text }}
               </div>
               <div class="verbatim-meta">
-                <span v-if="item.source_field" class="meta-tag">{{
+                <span
+                  v-if="item.source_field"
+                  class="meta-tag"
+                >{{
                   item.source_field
                 }}</span>
-                <span v-if="item.domain" class="meta-tag domain-tag">{{
+                <span
+                  v-if="item.domain"
+                  class="meta-tag domain-tag"
+                >{{
                   item.domain
                 }}</span>
-                <span v-if="item.observation_id" class="meta-obs"
-                  >Obs: {{ item.observation_id.substring(0, 8) }}...</span
-                >
+                <span
+                  v-if="item.observation_id"
+                  class="meta-obs"
+                >Obs: {{ item.observation_id.substring(0, 8) }}...</span>
               </div>
             </td>
 
@@ -405,7 +515,9 @@
               <div class="dict-label">
                 {{ item.dictionary_type }}
               </div>
-              <div class="dict-version">v{{ item.dictionary_version }}</div>
+              <div class="dict-version">
+                v{{ item.dictionary_version }}
+              </div>
             </td>
 
             <!-- Coded Term & Code -->
@@ -418,20 +530,29 @@
               @click="selectCell(rIndex, 4)"
               @keydown="handleCellKeyDown($event, rIndex, 4, item)"
             >
-              <div v-if="item.coded_code" class="coded-result-box">
+              <div
+                v-if="item.coded_code"
+                class="coded-result-box"
+              >
                 <div class="coded-term">
                   {{ item.coded_term }}
                 </div>
                 <div class="coded-code-badge">
                   <code>{{ item.coded_code }}</code>
                 </div>
-                <div v-if="hasHierarchy(item)" class="hierarchy-preview">
+                <div
+                  v-if="hasHierarchy(item)"
+                  class="hierarchy-preview"
+                >
                   <span class="hierarchy-breadcrumb">{{
                     getHierarchySummary(item)
                   }}</span>
                 </div>
               </div>
-              <span v-else class="uncoded-placeholder">— Uncoded —</span>
+              <span
+                v-else
+                class="uncoded-placeholder"
+              >— Uncoded —</span>
             </td>
 
             <!-- Match / Suggestions -->
@@ -448,8 +569,8 @@
               <div
                 v-if="
                   item.suggestions &&
-                  Array.isArray(item.suggestions) &&
-                  item.suggestions.length > 0
+                    Array.isArray(item.suggestions) &&
+                    item.suggestions.length > 0
                 "
                 class="suggestions-container"
               >
@@ -483,10 +604,16 @@
                   </div>
                 </div>
               </div>
-              <div v-else-if="item.score" class="score-display">
+              <div
+                v-else-if="item.score"
+                class="score-display"
+              >
                 Score: {{ Math.round(item.score * 100) }}%
               </div>
-              <div v-else class="no-suggestions-text">
+              <div
+                v-else
+                class="no-suggestions-text"
+              >
                 No auto-suggestions
               </div>
             </td>
@@ -534,7 +661,10 @@
     <div
       v-if="isApproveClusterModalOpen"
       class="modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="isApproveClusterModalOpen = false"
+      @keydown.escape="isApproveClusterModalOpen = false"
     >
       <div class="modal batch-dialog-card">
         <div class="modal-header">
@@ -550,13 +680,23 @@
         <div class="modal-body">
           <p>
             Executing 1-step batch approval across
-            <strong>{{ targetClusterIdsForApprove.length }}</strong> verbatim cluster(s) containing
-            <strong>{{ targetClustersSummary.totalInstances }}</strong> total subject instance(s).
+            <strong>{{ targetClusterIdsForApprove.length }}</strong> verbatim
+            cluster(s) containing
+            <strong>{{ targetClustersSummary.totalInstances }}</strong> total
+            subject instance(s).
           </p>
 
-          <div v-if="targetClustersSummary.blockedInstances > 0" class="alert-banner alert-warning">
+          <div
+            v-if="targetClustersSummary.blockedInstances > 0"
+            class="alert-banner alert-warning"
+          >
             <span>
-              ⚠️ <strong>{{ targetClustersSummary.blockedInstances }}</strong> instance(s) have active discrepancy queries or lock conflicts and will be excluded. <strong>{{ targetClustersSummary.unblockedInstances }}</strong> unblocked instance(s) will be auto-coded.
+              ⚠️
+              <strong>{{ targetClustersSummary.blockedInstances }}</strong>
+              instance(s) have active discrepancy queries or lock conflicts and
+              will be excluded.
+              <strong>{{ targetClustersSummary.unblockedInstances }}</strong>
+              unblocked instance(s) will be auto-coded.
             </span>
           </div>
 
@@ -568,7 +708,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Batch approve verbatim cluster high-confidence match"
-            />
+            >
           </div>
         </div>
         <div class="modal-footer">
@@ -582,10 +722,16 @@
           <button
             type="button"
             class="btn btn-primary"
-            :disabled="!clusterApproveReason.trim() || isSubmittingClusterApprove"
+            :disabled="
+              !clusterApproveReason.trim() || isSubmittingClusterApprove
+            "
             @click="submitBatchApproveClusters"
           >
-            {{ isSubmittingClusterApprove ? "Approving Cluster..." : "Batch Approve Cluster(s)" }}
+            {{
+              isSubmittingClusterApprove
+                ? "Approving Cluster..."
+                : "Batch Approve Cluster(s)"
+            }}
           </button>
         </div>
       </div>
@@ -597,7 +743,10 @@
     <div
       v-if="isBatchClusterModalOpen"
       class="modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="isBatchClusterModalOpen = false"
+      @keydown.escape="isBatchClusterModalOpen = false"
     >
       <div class="modal batch-dialog-card">
         <div class="modal-header">
@@ -613,13 +762,22 @@
         <div class="modal-body">
           <p>
             Applying target dictionary code and preferred term across
-            <strong>{{ targetClusterIdsForCode.length }}</strong> selected cluster(s).
+            <strong>{{ targetClusterIdsForCode.length }}</strong> selected
+            cluster(s).
           </p>
           <div class="form-group">
             <label for="batch-cluster-dict">Dictionary Type</label>
-            <select id="batch-cluster-dict" v-model="batchClusterDictType" class="form-control">
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
+            <select
+              id="batch-cluster-dict"
+              v-model="batchClusterDictType"
+              class="form-control"
+            >
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
             </select>
           </div>
           <div class="form-group">
@@ -630,7 +788,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. 10019211"
-            />
+            >
           </div>
           <div class="form-group">
             <label for="batch-cluster-term">Target Preferred Term / Drug Name *</label>
@@ -640,7 +798,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Headache"
-            />
+            >
           </div>
           <div class="form-group">
             <label for="batch-cluster-reason">GxP Reason for Change *</label>
@@ -650,7 +808,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Multi-cluster medical coding review and synonym propagation"
-            />
+            >
           </div>
         </div>
         <div class="modal-footer">
@@ -664,10 +822,19 @@
           <button
             type="button"
             class="btn btn-primary"
-            :disabled="!batchClusterCode.trim() || !batchClusterTerm.trim() || !batchClusterReason.trim() || isSubmittingClusterCode"
+            :disabled="
+              !batchClusterCode.trim() ||
+                !batchClusterTerm.trim() ||
+                !batchClusterReason.trim() ||
+                isSubmittingClusterCode
+            "
             @click="submitBatchCodeClusters"
           >
-            {{ isSubmittingClusterCode ? "Applying Batch Code..." : "Batch Code Clusters" }}
+            {{
+              isSubmittingClusterCode
+                ? "Applying Batch Code..."
+                : "Batch Code Clusters"
+            }}
           </button>
         </div>
       </div>
@@ -679,7 +846,10 @@
     <div
       v-if="isQueryModalOpen"
       class="modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="isQueryModalOpen = false"
+      @keydown.escape="isQueryModalOpen = false"
     >
       <div class="modal query-dialog-card">
         <div class="modal-header">
@@ -717,7 +887,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Uncodable verbatim clarification request"
-            />
+            >
           </div>
         </div>
         <div class="modal-footer">
@@ -748,7 +918,10 @@
     <div
       v-if="isBatchModalOpen"
       class="modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="isBatchModalOpen = false"
+      @keydown.escape="isBatchModalOpen = false"
     >
       <div class="modal batch-dialog-card">
         <div class="modal-header">
@@ -773,8 +946,12 @@
               v-model="batchDictType"
               class="form-control"
             >
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
             </select>
           </div>
           <div class="form-group">
@@ -785,7 +962,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. 10019211"
-            />
+            >
           </div>
           <div class="form-group">
             <label for="batch-term">Preferred Term / Drug Name</label>
@@ -795,7 +972,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Headache"
-            />
+            >
           </div>
           <div class="form-group">
             <label for="batch-reason">GxP Reason for Change *</label>
@@ -805,7 +982,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Batch coding consensus review"
-            />
+            >
           </div>
         </div>
         <div class="modal-footer">
@@ -851,8 +1028,10 @@ const grid = use2DGrid(
     containerRef,
     initialRow: 0,
     initialCol: 0,
-    onCopyCell: (rIndex, cIndex, item) => copyCodingCellValue(rIndex, cIndex, item),
-    onCellAction: (rIndex, cIndex, item, event) => handleCodingCellAction(rIndex, cIndex, item, event),
+    onCopyCell: (rIndex, cIndex, item) =>
+      copyCodingCellValue(rIndex, cIndex, item),
+    onCellAction: (rIndex, cIndex, item, event) =>
+      handleCodingCellAction(rIndex, cIndex, item, event),
   }
 );
 
@@ -862,18 +1041,23 @@ const { isCellActive, getCellTabindex, selectCell, handleCellKeyDown } = grid;
 const expandedClusterId = ref(null);
 
 function toggleClusterExpansion(clusterId) {
-  expandedClusterId.value = expandedClusterId.value === clusterId ? null : clusterId;
+  expandedClusterId.value =
+    expandedClusterId.value === clusterId ? null : clusterId;
 }
 
 // Batch Approve Clusters Modal State
 const isApproveClusterModalOpen = ref(false);
 const targetClusterIdsForApprove = ref([]);
-const clusterApproveReason = ref("Batch approve verbatim cluster high-confidence match");
+const clusterApproveReason = ref(
+  "Batch approve verbatim cluster high-confidence match"
+);
 const isSubmittingClusterApprove = ref(false);
 
 const targetClustersSummary = computed(() => {
-  const clusters = codingStore.verbatimClusters.filter((c) =>
-    targetClusterIdsForApprove.value.includes(c.id) || targetClusterIdsForApprove.value.includes(c.cluster_id)
+  const clusters = codingStore.verbatimClusters.filter(
+    (c) =>
+      targetClusterIdsForApprove.value.includes(c.id) ||
+      targetClusterIdsForApprove.value.includes(c.cluster_id)
   );
   let totalInstances = 0;
   let blockedInstances = 0;
@@ -889,9 +1073,11 @@ const targetClustersSummary = computed(() => {
 });
 
 function openBatchApproveClustersModal(clusterIds) {
-  targetClusterIdsForApprove.value =
-    clusterIds || [...codingStore.selectedClusterIds];
-  clusterApproveReason.value = "Batch approve verbatim cluster high-confidence match";
+  targetClusterIdsForApprove.value = clusterIds || [
+    ...codingStore.selectedClusterIds,
+  ];
+  clusterApproveReason.value =
+    "Batch approve verbatim cluster high-confidence match";
   isApproveClusterModalOpen.value = true;
 }
 
@@ -916,15 +1102,20 @@ const targetClusterIdsForCode = ref([]);
 const batchClusterDictType = ref("MEDDRA");
 const batchClusterCode = ref("");
 const batchClusterTerm = ref("");
-const batchClusterReason = ref("Multi-cluster medical coding review and synonym propagation");
+const batchClusterReason = ref(
+  "Multi-cluster medical coding review and synonym propagation"
+);
 const isSubmittingClusterCode = ref(false);
 
 function openBatchCodeClustersModal(clusterIds) {
-  targetClusterIdsForCode.value = clusterIds || [...codingStore.selectedClusterIds];
+  targetClusterIdsForCode.value = clusterIds || [
+    ...codingStore.selectedClusterIds,
+  ];
   batchClusterDictType.value = "MEDDRA";
   batchClusterCode.value = "";
   batchClusterTerm.value = "";
-  batchClusterReason.value = "Multi-cluster medical coding review and synonym propagation";
+  batchClusterReason.value =
+    "Multi-cluster medical coding review and synonym propagation";
   isBatchClusterModalOpen.value = true;
 }
 

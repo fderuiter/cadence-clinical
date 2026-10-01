@@ -10,14 +10,15 @@
           <span
             v-if="cocData?.status === 'BEDSIDE_VERIFIED'"
             class="badge badge-unlocked"
-            >Infusion Unlocked</span
-          >
+          >Infusion Unlocked</span>
           <span
             v-else-if="cocData?.status === 'QUARANTINED'"
             class="badge badge-quarantine"
-            >Cryo Quarantined</span
-          >
-          <span v-else class="badge badge-stage">{{
+          >Cryo Quarantined</span>
+          <span
+            v-else
+            class="badge badge-stage"
+          >{{
             cocData?.current_stage || "Awaiting Harvest"
           }}</span>
         </div>
@@ -59,7 +60,7 @@
           type="text"
           placeholder="e.g. STUDY-CGT-801"
           @change="fetchTraceability"
-        />
+        >
       </div>
       <div class="filter-group">
         <label for="input-subject">Subject ID / UUID</label>
@@ -69,7 +70,7 @@
           type="text"
           placeholder="e.g. SUBJ-101-0042"
           @change="fetchTraceability"
-        />
+        >
       </div>
       <div class="filter-group action-btn-group">
         <button
@@ -84,15 +85,16 @@
     </section>
 
     <!-- Main COC/COI Overview -->
-    <main v-if="cocData" class="console-body">
+    <main
+      v-if="cocData"
+      class="console-body"
+    >
       <!-- Top Metrics / Cards -->
       <section class="overview-grid">
         <div class="card metric-card">
           <span class="metric-label">Donation ID (ISBT 128 DIN)</span>
           <span class="metric-value code-font">{{ cocData.din }}</span>
-          <span class="metric-sub"
-            >Facility: {{ cocData.collection_site_id || "N/A" }}</span
-          >
+          <span class="metric-sub">Facility: {{ cocData.collection_site_id || "N/A" }}</span>
         </div>
 
         <div class="card metric-card">
@@ -106,9 +108,7 @@
           <span class="metric-value highlight">{{
             cocData.batch_id || "Pending Synthesis"
           }}</span>
-          <span class="metric-sub"
-            >CMO: {{ cocData.manufacturing_facility_id || "In Queue" }}</span
-          >
+          <span class="metric-sub">CMO: {{ cocData.manufacturing_facility_id || "In Queue" }}</span>
         </div>
 
         <div
@@ -142,7 +142,9 @@
 
       <!-- Stage Visualizer Ribbon -->
       <section class="card lifecycle-ribbon">
-        <h3 class="section-title">Vein-to-Vein Continuum Lifecycle</h3>
+        <h3 class="section-title">
+          Vein-to-Vein Continuum Lifecycle
+        </h3>
         <div class="stages-track">
           <div
             v-for="(st, idx) in stagesList"
@@ -194,7 +196,7 @@
             class="btn btn-stepup"
             :disabled="
               cocData.status === 'BEDSIDE_VERIFIED' ||
-              cocData.status === 'INFUSED'
+                cocData.status === 'INFUSED'
             "
             @click="openBedsideModal"
           >
@@ -223,7 +225,9 @@
       <!-- Cryptographic Barcode Verification Box -->
       <section class="card barcode-verification-card">
         <div class="barcode-info-col">
-          <h3 class="section-title">Tamper-Evident Cryptographic Barcode</h3>
+          <h3 class="section-title">
+            Tamper-Evident Cryptographic Barcode
+          </h3>
           <p class="barcode-meta">
             HMAC-SHA256 signed 2D DataMatrix payload dynamically binding Subject
             UUID, ISBT 128 DIN, and Manufacturing Batch.
@@ -246,14 +250,16 @@
           </div>
         </div>
         <div class="barcode-scan-simulator">
-          <h4 class="scan-title">Direct Scanner Verification</h4>
+          <h4 class="scan-title">
+            Direct Scanner Verification
+          </h4>
           <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
             v-model="scanTestInput"
             type="text"
             placeholder="Scan / paste barcode payload here..."
             class="scan-input"
-          />
+          >
           <button
             type="button"
             class="btn btn-secondary btn-block"
@@ -272,7 +278,7 @@
             }}</span>
             <span class="result-detail">{{
               scanResult.failure_reason ||
-              "Cryptographic seal and identity bindings match."
+                "Cryptographic seal and identity bindings match."
             }}</span>
           </div>
         </div>
@@ -299,7 +305,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="m in milestones" :key="m.id">
+              <tr
+                v-for="m in milestones"
+                :key="m.id"
+              >
                 <td class="code-font">
                   {{ formatDateTime(m.timestamp) }}
                 </td>
@@ -341,11 +350,17 @@
                   >
                     Verified
                   </span>
-                  <span v-else class="text-muted">-</span>
+                  <span
+                    v-else
+                    class="text-muted"
+                  >-</span>
                 </td>
               </tr>
               <tr v-if="milestones.length === 0">
-                <td colspan="8" class="text-center text-muted">
+                <td
+                  colspan="8"
+                  class="text-center text-muted"
+                >
                   No milestone logs recorded yet.
                 </td>
               </tr>
@@ -356,7 +371,10 @@
     </main>
 
     <!-- Empty State -->
-    <div v-else class="card empty-state">
+    <div
+      v-else
+      class="card empty-state"
+    >
       <p class="empty-text">
         Enter a valid Study Protocol and Subject UUID above to load the
         Vein-to-Vein Chain of Custody ledger.
@@ -366,7 +384,10 @@
     <!-- Modals -->
 
     <!-- 1. Apheresis Modal -->
-    <div v-if="showApheresisModal" class="modal-overlay">
+    <div
+      v-if="showApheresisModal"
+      class="modal-overlay"
+    >
       <div class="modal-card">
         <header class="modal-header">
           <h3>Register Apheresis Cellular Harvest</h3>
@@ -384,19 +405,31 @@
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="apheresisForm.study_id" type="text" required />
+              <input
+                v-model="apheresisForm.study_id"
+                type="text"
+                required
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Site ID</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="apheresisForm.site_id" type="text" required />
+              <input
+                v-model="apheresisForm.site_id"
+                type="text"
+                required
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Subject UUID</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="apheresisForm.subject_id" type="text" required />
+              <input
+                v-model="apheresisForm.subject_id"
+                type="text"
+                required
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -406,7 +439,7 @@
                 v-model="apheresisForm.din"
                 type="text"
                 placeholder="Auto-generated if empty"
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -416,7 +449,7 @@
                 v-model="apheresisForm.collector_id"
                 type="text"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -426,7 +459,7 @@
                 v-model="apheresisForm.collector_name"
                 type="text"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -437,7 +470,7 @@
                 type="number"
                 step="0.1"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -447,7 +480,7 @@
                 v-model="apheresisForm.dry_shipper_id"
                 type="text"
                 placeholder="e.g. MVE-LN2-9901"
-              />
+              >
             </div>
           </div>
           <footer class="modal-footer">
@@ -458,7 +491,10 @@
             >
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary">
+            <button
+              type="submit"
+              class="btn btn-primary"
+            >
               Initialize Chain of Custody
             </button>
           </footer>
@@ -467,7 +503,10 @@
     </div>
 
     <!-- 2. Bedside Dual Verification Modal -->
-    <div v-if="showBedsideModal" class="modal-overlay">
+    <div
+      v-if="showBedsideModal"
+      class="modal-overlay"
+    >
       <div class="modal-card modal-lg">
         <header class="modal-header">
           <h3>Bedside Two-Person Electronic Verification (Infusion Gating)</h3>
@@ -496,7 +535,7 @@
                 type="text"
                 required
                 placeholder="Scan patient wristband barcode..."
-              />
+              >
             </div>
             <div class="form-group col-full">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -512,7 +551,9 @@
 
             <!-- Primary Verifier (Nurse) -->
             <div class="verifier-panel col-half">
-              <h4 class="verifier-title">Primary Verifier (Bedside Nurse)</h4>
+              <h4 class="verifier-title">
+                Primary Verifier (Bedside Nurse)
+              </h4>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>User ID</label>
@@ -521,7 +562,7 @@
                   v-model="bedsideForm.primary_verifier_id"
                   type="text"
                   required
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -531,7 +572,7 @@
                   v-model="bedsideForm.primary_verifier_name"
                   type="text"
                   required
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -541,7 +582,7 @@
                   v-model="bedsideForm.primary_signature_token"
                   type="password"
                   required
-                />
+                >
               </div>
             </div>
 
@@ -558,7 +599,7 @@
                   v-model="bedsideForm.secondary_verifier_id"
                   type="text"
                   required
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -568,7 +609,7 @@
                   v-model="bedsideForm.secondary_verifier_name"
                   type="text"
                   required
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -578,7 +619,7 @@
                   v-model="bedsideForm.secondary_signature_token"
                   type="password"
                   required
-                />
+                >
               </div>
             </div>
           </div>
@@ -591,7 +632,10 @@
             >
               Cancel
             </button>
-            <button type="submit" class="btn btn-stepup">
+            <button
+              type="submit"
+              class="btn btn-stepup"
+            >
               Execute Dual Electronic Signature
             </button>
           </footer>
@@ -600,7 +644,10 @@
     </div>
 
     <!-- 3. Certificate of Destruction Modal -->
-    <div v-if="showDestructionModal" class="modal-overlay">
+    <div
+      v-if="showDestructionModal"
+      class="modal-overlay"
+    >
       <div class="modal-card modal-lg">
         <header class="modal-header">
           <h3>Generate Formal Certificate of Destruction</h3>
@@ -618,13 +665,21 @@
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="destructionForm.study_id" type="text" required />
+              <input
+                v-model="destructionForm.study_id"
+                type="text"
+                required
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Site ID</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="destructionForm.site_id" type="text" required />
+              <input
+                v-model="destructionForm.site_id"
+                type="text"
+                required
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -634,7 +689,7 @@
                 v-model="destructionForm.lot_number"
                 type="text"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -645,7 +700,7 @@
                 type="text"
                 required
                 placeholder="KIT-001, KIT-002"
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -656,13 +711,16 @@
                 type="text"
                 required
                 placeholder="VIAL-A1, VIAL-A2"
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Destruction Method</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="destructionForm.destruction_method" required>
+              <select
+                v-model="destructionForm.destruction_method"
+                required
+              >
                 <option value="HIGH_TEMPERATURE_INCINERATION">
                   High Temperature Incineration
                 </option>
@@ -686,7 +744,7 @@
                 type="text"
                 required
                 placeholder="e.g. Bio-Hazard Waste Center Alpha"
-              />
+              >
             </div>
             <div class="form-group col-full">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -697,12 +755,14 @@
                 type="text"
                 required
                 placeholder="e.g. Residual post-infusion cellular product destruction per protocol."
-              />
+              >
             </div>
 
             <!-- Witness 1 -->
             <div class="verifier-panel col-half">
-              <h4 class="verifier-title">Witness 1 (Site Pharmacist / CRC)</h4>
+              <h4 class="verifier-title">
+                Witness 1 (Site Pharmacist / CRC)
+              </h4>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>User ID</label>
@@ -711,7 +771,7 @@
                   v-model="destructionForm.witness_1_id"
                   type="text"
                   required
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -721,7 +781,7 @@
                   v-model="destructionForm.witness_1_name"
                   type="text"
                   required
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -731,7 +791,7 @@
                   v-model="destructionForm.witness_1_signature_token"
                   type="password"
                   required
-                />
+                >
               </div>
             </div>
 
@@ -748,7 +808,7 @@
                   v-model="destructionForm.witness_2_id"
                   type="text"
                   required
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -758,7 +818,7 @@
                   v-model="destructionForm.witness_2_name"
                   type="text"
                   required
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -768,7 +828,7 @@
                   v-model="destructionForm.witness_2_signature_token"
                   type="password"
                   required
-                />
+                >
               </div>
             </div>
           </div>
@@ -781,7 +841,10 @@
             >
               Cancel
             </button>
-            <button type="submit" class="btn btn-danger">
+            <button
+              type="submit"
+              class="btn btn-danger"
+            >
               Issue Dual-Witness Certificate
             </button>
           </footer>

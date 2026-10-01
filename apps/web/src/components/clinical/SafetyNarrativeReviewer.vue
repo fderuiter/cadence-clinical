@@ -14,24 +14,20 @@
           </h2>
         </div>
         <div class="header-metadata">
-          <span class="meta-item"
-            ><strong>Subject:</strong> {{ narrative.subject_id }}</span
-          >
-          <span class="meta-item"
-            ><strong>Study:</strong> {{ narrative.study_id }}</span
-          >
-          <span class="meta-item"
-            ><strong>SAE Key:</strong> {{ narrative.sae_event_key }}</span
-          >
-          <span class="meta-item"
-            ><strong>Status:</strong>
+          <span class="meta-item"><strong>Subject:</strong> {{ narrative.subject_id }}</span>
+          <span class="meta-item"><strong>Study:</strong> {{ narrative.study_id }}</span>
+          <span class="meta-item"><strong>SAE Key:</strong> {{ narrative.sae_event_key }}</span>
+          <span class="meta-item"><strong>Status:</strong>
             <span
               :class="['status-pill', narrative.review_status.toLowerCase()]"
             >
               {{ narrative.review_status }}
             </span>
           </span>
-          <span v-if="narrative.confidence_score" class="confidence-tag">
+          <span
+            v-if="narrative.confidence_score"
+            class="confidence-tag"
+          >
             Confidence: {{ Math.round(narrative.confidence_score * 100) }}%
           </span>
         </div>
@@ -60,12 +56,15 @@
     <!-- Main Side-by-Side Review Grid -->
     <main class="review-grid">
       <!-- Left Column: Chronological Event Stream Timeline -->
-      <section class="timeline-pane" aria-labelledby="timeline-pane-heading">
+      <section
+        class="timeline-pane"
+        aria-labelledby="timeline-pane-heading"
+      >
         <div class="pane-header">
-          <h3 id="timeline-pane-heading">Clinical Event Timeline</h3>
-          <span class="event-count"
-            >{{ narrative.timeline_events?.length || 0 }} Grounded Events</span
-          >
+          <h3 id="timeline-pane-heading">
+            Clinical Event Timeline
+          </h3>
+          <span class="event-count">{{ narrative.timeline_events?.length || 0 }} Grounded Events</span>
         </div>
         <div class="timeline-scroll-area">
           <div
@@ -94,21 +93,25 @@
             </p>
             <div class="card-footer">
               <span class="event-id-tag">{{ event.event_id }}</span>
-              <span v-if="event.domain" class="domain-tag"
-                >Domain: {{ event.domain }}</span
-              >
+              <span
+                v-if="event.domain"
+                class="domain-tag"
+              >Domain: {{ event.domain }}</span>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Right Column: Narrative Sections & Grounded Claims -->
-      <section class="narrative-pane" aria-labelledby="narrative-pane-heading">
+      <section
+        class="narrative-pane"
+        aria-labelledby="narrative-pane-heading"
+      >
         <div class="pane-header">
-          <h3 id="narrative-pane-heading">Regulatory Narrative Course</h3>
-          <span class="model-info"
-            >Model: {{ narrative.model_identifier }}</span
-          >
+          <h3 id="narrative-pane-heading">
+            Regulatory Narrative Course
+          </h3>
+          <span class="model-info">Model: {{ narrative.model_identifier }}</span>
         </div>
 
         <div class="narrative-sections-area">
@@ -135,7 +138,9 @@
               v-if="section.grounded_claims?.length"
               class="grounded-claims-block"
             >
-              <h5 class="claims-heading">Grounded eCRF Claim References</h5>
+              <h5 class="claims-heading">
+                Grounded eCRF Claim References
+              </h5>
               <ul class="claims-list">
                 <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                 <li
@@ -192,7 +197,11 @@
       <div class="modal-dialog">
         <header class="modal-header">
           <h3>21 CFR Part 11 Electronic Signature</h3>
-          <button type="button" class="btn-close" @click="closeSignatureModal">
+          <button
+            type="button"
+            class="btn-close"
+            @click="closeSignatureModal"
+          >
             ✕
           </button>
         </header>
@@ -212,7 +221,7 @@
               class="form-control"
               placeholder="e.g. Safety Physician Medical Review & Approval"
               required
-            />
+            >
           </div>
           <div class="form-group">
             <label for="sig-secret">Security Credential / Passcode</label>
@@ -222,9 +231,12 @@
               type="password"
               class="form-control"
               placeholder="Enter signer passcode"
-            />
+            >
           </div>
-          <p v-if="signError" class="error-msg">
+          <p
+            v-if="signError"
+            class="error-msg"
+          >
             {{ signError }}
           </p>
         </div>

@@ -24,7 +24,10 @@
           ⋮⋮
         </span>
         <!-- Field Reorder Controls -->
-        <div class="field-reorder-controls" @click.stop>
+        <div
+          class="field-reorder-controls"
+          @click.stop
+        >
           <button
             class="btn-move-up btn-field-move-up"
             :disabled="isFirst"
@@ -46,12 +49,18 @@
         </div>
         <span class="field-label-text">
           {{ field.label || "Untitled Field" }}
-          <span v-if="field.required" class="field-required-star">*</span>
+          <span
+            v-if="field.required"
+            class="field-required-star"
+          >*</span>
         </span>
       </div>
 
       <!-- SDTM Tag Badge -->
-      <span v-if="field.cdash || field.sdtm" class="sdtm-tag-badge">
+      <span
+        v-if="field.cdash || field.sdtm"
+        class="sdtm-tag-badge"
+      >
         [{{ field.cdash || field.sdtm }}]
       </span>
     </div>
@@ -68,7 +77,7 @@
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
           placeholder="Text input preview..."
-        />
+        >
       </template>
 
       <template v-else-if="field.type === 'numeric'">
@@ -81,7 +90,7 @@
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
           placeholder="0.00"
-        />
+        >
       </template>
 
       <template v-else-if="field.type === 'date'">
@@ -93,7 +102,7 @@
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
-        />
+        >
       </template>
 
       <template v-else-if="field.type === 'select'">
@@ -105,7 +114,13 @@
             'touch-target-interactive': designerStore.viewport !== 'desktop',
           }"
         >
-          <option value="" disabled selected>-- Select Option --</option>
+          <option
+            value=""
+            disabled
+            selected
+          >
+            -- Select Option --
+          </option>
           <option
             v-for="opt in field.options || []"
             :key="opt.value"
@@ -144,7 +159,7 @@
                 'touch-target-interactive':
                   designerStore.viewport !== 'desktop',
               }"
-            />
+            >
             <span>{{ opt.label }}</span>
           </label>
         </div>
@@ -173,7 +188,9 @@
                 >
                   Column 1
                 </th>
-                <th style="padding: 4px 8px; text-align: left">Column 2</th>
+                <th style="padding: 4px 8px; text-align: left">
+                  Column 2
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -187,7 +204,9 @@
                 >
                   Data item A
                 </td>
-                <td style="padding: 4px 8px; color: #94a3b8">Data item B</td>
+                <td style="padding: 4px 8px; color: #94a3b8">
+                  Data item B
+                </td>
               </tr>
             </tbody>
           </table>

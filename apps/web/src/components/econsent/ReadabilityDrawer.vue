@@ -90,12 +90,16 @@
       <section class="suggestions-section">
         <div class="section-title-row">
           <h4>Medical Jargon Simplification Diffs</h4>
-          <span v-if="substitutions.length" class="count-badge"
-            >{{ substitutions.length }} Terms</span
-          >
+          <span
+            v-if="substitutions.length"
+            class="count-badge"
+          >{{ substitutions.length }} Terms</span>
         </div>
 
-        <div v-if="substitutions.length === 0" class="empty-state">
+        <div
+          v-if="substitutions.length === 0"
+          class="empty-state"
+        >
           <p v-if="!loading">
             No complex medical jargon detected. Run Harmonize with AI to scan
             for patient-friendly term substitutions.
@@ -106,7 +110,10 @@
           </p>
         </div>
 
-        <div v-else class="substitutions-list">
+        <div
+          v-else
+          class="substitutions-list"
+        >
           <div
             v-for="(sub, idx) in substitutions"
             :key="idx"
@@ -114,10 +121,8 @@
           >
             <div class="sub-header">
               <span class="category-tag">{{ sub.category }}</span>
-              <span class="confidence-tag"
-                >Confidence:
-                {{ Math.round((sub.confidence_score || 0.95) * 100) }}%</span
-              >
+              <span class="confidence-tag">Confidence:
+                {{ Math.round((sub.confidence_score || 0.95) * 100) }}%</span>
             </div>
 
             <div class="diff-view">
@@ -170,12 +175,10 @@
             type="text"
             class="form-control"
             placeholder="e.g. Protocol Amendment v2.0"
-          />
+          >
         </div>
         <div class="form-group">
-          <label for="change-reason-input"
-            >Change Justification / Audit Reason:</label
-          >
+          <label for="change-reason-input">Change Justification / Audit Reason:</label>
           <textarea
             id="change-reason-input"
             v-model="changeReason"

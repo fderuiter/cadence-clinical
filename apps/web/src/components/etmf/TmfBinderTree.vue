@@ -8,12 +8,21 @@
         type="text"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
-      />
+      >
       <div class="filter-controls">
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="selectedZoneFilter" class="zone-filter-select">
-          <option value="">All Zones</option>
-          <option v-for="node in tree" :key="node.id" :value="node.code">
+        <select
+          v-model="selectedZoneFilter"
+          class="zone-filter-select"
+        >
+          <option value="">
+            All Zones
+          </option>
+          <option
+            v-for="node in tree"
+            :key="node.id"
+            :value="node.code"
+          >
             Zone {{ node.code }}: {{ node.name }}
           </option>
         </select>
@@ -27,7 +36,10 @@
       aria-label="TMF Binder Folder Tree"
       @keydown="handleTreeKeyDown"
     >
-      <div v-if="filteredTree.length === 0" class="empty-tree-message">
+      <div
+        v-if="filteredTree.length === 0"
+        class="empty-tree-message"
+      >
         No matching TMF items found.
       </div>
       <div

@@ -6,10 +6,18 @@
     :aria-busy="canvas.participantsLoading"
   >
     <header class="participants-header">
-      <h2 id="participants-title">Participants</h2>
+      <h2 id="participants-title">
+        Participants
+      </h2>
       <label for="participants-status">State</label>
-      <select id="participants-status" :value="status" @change="onStatusChange">
-        <option value="">Any state</option>
+      <select
+        id="participants-status"
+        :value="status"
+        @change="onStatusChange"
+      >
+        <option value="">
+          Any state
+        </option>
         <option
           v-for="state in PARTICIPANT_STATES"
           :key="state.code"
@@ -18,7 +26,11 @@
           {{ state.label }}
         </option>
       </select>
-      <span v-if="siteId" id="participants-site-filter" class="filter-chip">
+      <span
+        v-if="siteId"
+        id="participants-site-filter"
+        class="filter-chip"
+      >
         Site {{ siteId }}
         <button
           id="btn-clear-site-filter"
@@ -47,17 +59,35 @@
       @close="adding = false"
     />
 
-    <p id="participants-status-line" class="status-line" role="status">
+    <p
+      id="participants-status-line"
+      class="status-line"
+      role="status"
+    >
       {{ statusLine }}
     </p>
 
-    <table v-if="canvas.participants.length" class="participants-table">
+    <table
+      v-if="canvas.participants.length"
+      class="participants-table"
+    >
       <thead>
         <tr>
-          <th scope="col">Participant</th>
-          <th scope="col">State</th>
-          <th scope="col">Site</th>
-          <th scope="col" class="numeric">Enrollment</th>
+          <th scope="col">
+            Participant
+          </th>
+          <th scope="col">
+            State
+          </th>
+          <th scope="col">
+            Site
+          </th>
+          <th
+            scope="col"
+            class="numeric"
+          >
+            Enrollment
+          </th>
         </tr>
       </thead>
       <tbody>
@@ -79,7 +109,9 @@
           </th>
           <td>{{ participantStateLabel(participant.status) }}</td>
           <td>{{ participant.site_id || "Not assigned" }}</td>
-          <td class="numeric">{{ participant.enrollment_index }}</td>
+          <td class="numeric">
+            {{ participant.enrollment_index }}
+          </td>
         </tr>
       </tbody>
     </table>

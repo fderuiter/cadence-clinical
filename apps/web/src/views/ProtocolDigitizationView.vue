@@ -413,18 +413,33 @@
         <div
           v-if="unmappedConceptTokens.length > 0"
           class="card alert alert-warning concept-staging-alert"
-          style="margin-bottom: 20px; padding: 16px; background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;"
+          style="
+            margin-bottom: 20px;
+            padding: 16px;
+            background-color: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+          "
         >
           <div class="alert-content">
-            <h4 style="margin: 0 0 6px 0; color: #92400e;">📥 USDM Concept Staging Required</h4>
-            <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: #78350f;">
-              Detected {{ unmappedConceptTokens.length }} unmapped Biomedical Concept code(s). Open the concept staging drawer to map NCIt/CDISC codes, create tenant aliases, or accept design finding exemptions.
+            <h4 style="margin: 0 0 6px 0; color: #92400e">
+              📥 USDM Concept Staging Required
+            </h4>
+            <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: #78350f">
+              Detected {{ unmappedConceptTokens.length }} unmapped Biomedical
+              Concept code(s). Open the concept staging drawer to map NCIt/CDISC
+              codes, create tenant aliases, or accept design finding exemptions.
             </p>
           </div>
           <button
             type="button"
             class="btn btn-warning btn-open-staging-drawer"
-            style="background-color: #d97706; border-color: #d97706; color: #ffffff; font-weight: 600;"
+            style="
+              background-color: #d97706;
+              border-color: #d97706;
+              color: #ffffff;
+              font-weight: 600;
+            "
             @click="isConceptStagingOpen = true"
           >
             📥 Open Concept Staging Drawer
@@ -1030,7 +1045,7 @@ const startExtraction = () => {
   }, 400);
 };
 
-const triggerConceptStaging = (tokens = []) => {
+const _triggerConceptStaging = (tokens = []) => {
   if (tokens && tokens.length > 0) {
     unmappedConceptTokens.value = tokens;
   } else {
@@ -1050,7 +1065,10 @@ const triggerConceptStaging = (tokens = []) => {
   isConceptStagingOpen.value = true;
 };
 
-const handleConceptMappingsConfirmed = ({ resolvedMappings, auditEntry }) => {
+const handleConceptMappingsConfirmed = ({
+  resolvedMappings,
+  auditEntry: _auditEntry,
+}) => {
   resolvedConceptMappings.value = resolvedMappings;
   if (rawExtractionData.value && rawExtractionData.value.activities) {
     for (const mapping of resolvedMappings) {

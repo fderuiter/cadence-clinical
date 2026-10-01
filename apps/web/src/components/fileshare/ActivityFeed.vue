@@ -1,7 +1,11 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div v-if="isOpen" class="activity-feed-overlay" @click.self="$emit('close')">
+  <div
+    v-if="isOpen"
+    class="activity-feed-overlay"
+    @click.self="$emit('close')"
+  >
     <div
       ref="drawerRef"
       class="activity-feed-drawer"
@@ -14,10 +18,18 @@
         <div class="header-info">
           <span class="activity-header-icon">📜</span>
           <div>
-            <h3 class="drawer-title">Document Activity Feed</h3>
-            <p class="drawer-subtitle" :title="file?.filename || 'Document'">
+            <h3 class="drawer-title">
+              Document Activity Feed
+            </h3>
+            <p
+              class="drawer-subtitle"
+              :title="file?.filename || 'Document'"
+            >
               {{ file?.filename || "Document" }}
-              <span v-if="file?.version_index" class="version-tag">
+              <span
+                v-if="file?.version_index"
+                class="version-tag"
+              >
                 v{{ file.version_index }}
               </span>
             </p>
@@ -35,7 +47,10 @@
       <!-- Filter Ribbon -->
       <div class="filter-ribbon">
         <div class="filter-group">
-          <label for="filter-event-type" class="filter-label">
+          <label
+            for="filter-event-type"
+            class="filter-label"
+          >
             Event Type:
           </label>
           <select
@@ -44,7 +59,9 @@
             class="filter-select"
             @change="applyFilters"
           >
-            <option value="">All Event Types ({{ total }})</option>
+            <option value="">
+              All Event Types ({{ total }})
+            </option>
             <option
               v-for="opt in eventTypeOptions"
               :key="opt.value"
@@ -56,25 +73,31 @@
         </div>
 
         <div class="filter-group">
-          <label for="filter-from-date" class="filter-label"> From: </label>
+          <label
+            for="filter-from-date"
+            class="filter-label"
+          > From: </label>
           <input
             id="filter-from-date"
             v-model="fromDate"
             type="date"
             class="filter-date"
             @change="applyFilters"
-          />
+          >
         </div>
 
         <div class="filter-group">
-          <label for="filter-to-date" class="filter-label"> To: </label>
+          <label
+            for="filter-to-date"
+            class="filter-label"
+          > To: </label>
           <input
             id="filter-to-date"
             v-model="toDate"
             type="date"
             class="filter-date"
             @change="applyFilters"
-          />
+          >
         </div>
 
         <button
@@ -99,30 +122,49 @@
       <!-- Drawer Body: Timeline -->
       <div class="drawer-body">
         <!-- Loading State -->
-        <div v-if="loading && entries.length === 0" class="loading-state">
+        <div
+          v-if="loading && entries.length === 0"
+          class="loading-state"
+        >
           <div class="spinner" />
           <p>Retrieving immutable audit events...</p>
         </div>
 
         <!-- Error State -->
-        <div v-else-if="error" class="error-state">
+        <div
+          v-else-if="error"
+          class="error-state"
+        >
           <span class="error-icon">⚠️</span>
           <p>{{ error }}</p>
-          <button class="retry-btn" @click="loadFeed(1)">Retry</button>
+          <button
+            class="retry-btn"
+            @click="loadFeed(1)"
+          >
+            Retry
+          </button>
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="entries.length === 0" class="empty-state">
+        <div
+          v-else-if="entries.length === 0"
+          class="empty-state"
+        >
           <span class="empty-icon">📭</span>
           <h4>No Activity Events Found</h4>
           <p v-if="hasActiveFilters">
             Try adjusting your filters to see historical events.
           </p>
-          <p v-else>No audit log records exist for this document yet.</p>
+          <p v-else>
+            No audit log records exist for this document yet.
+          </p>
         </div>
 
         <!-- Timeline List -->
-        <div v-else class="timeline-container">
+        <div
+          v-else
+          class="timeline-container"
+        >
           <div
             v-for="(entry, index) in entries"
             :key="`${entry.event_type}-${entry.timestamp}-${index}`"
@@ -131,7 +173,10 @@
           >
             <!-- Timeline Track Icon -->
             <div class="timeline-marker">
-              <span class="marker-icon" :title="entry.event_type">
+              <span
+                class="marker-icon"
+                :title="entry.event_type"
+              >
                 {{ getEventIcon(entry.event_type) }}
               </span>
               <div
@@ -167,7 +212,10 @@
               </div>
 
               <!-- Detail preview or toggle -->
-              <div v-if="hasDetail(entry.detail)" class="card-detail-section">
+              <div
+                v-if="hasDetail(entry.detail)"
+                class="card-detail-section"
+              >
                 <button
                   class="detail-toggle-btn"
                   :aria-expanded="isExpanded(index)"
@@ -178,16 +226,25 @@
                   }}</span>
                 </button>
 
-                <div v-if="isExpanded(index)" class="detail-content">
+                <div
+                  v-if="isExpanded(index)"
+                  class="detail-content"
+                >
                   <!-- Formatted detail fields -->
-                  <div v-if="entry.detail.hold_reason" class="detail-row">
+                  <div
+                    v-if="entry.detail.hold_reason"
+                    class="detail-row"
+                  >
                     <span class="detail-label">Hold Reason:</span>
                     <span class="detail-value text-danger">{{
                       entry.detail.hold_reason
                     }}</span>
                   </div>
 
-                  <div v-if="entry.detail.permission_level" class="detail-row">
+                  <div
+                    v-if="entry.detail.permission_level"
+                    class="detail-row"
+                  >
                     <span class="detail-label">Permission:</span>
                     <span class="detail-value">{{
                       entry.detail.permission_level
@@ -204,25 +261,32 @@
                     }}</span>
                   </div>
 
-                  <div v-if="entry.detail.scope" class="detail-row">
+                  <div
+                    v-if="entry.detail.scope"
+                    class="detail-row"
+                  >
                     <span class="detail-label">Scope:</span>
                     <span class="detail-value">{{ entry.detail.scope }}</span>
                   </div>
 
-                  <div v-if="entry.detail.expires_at" class="detail-row">
+                  <div
+                    v-if="entry.detail.expires_at"
+                    class="detail-row"
+                  >
                     <span class="detail-label">Expires:</span>
                     <span class="detail-value">{{
                       formatFullDate(entry.detail.expires_at)
                     }}</span>
                   </div>
 
-                  <div v-if="entry.detail.scan_engine" class="detail-row">
+                  <div
+                    v-if="entry.detail.scan_engine"
+                    class="detail-row"
+                  >
                     <span class="detail-label">Engine:</span>
-                    <span class="detail-value"
-                      >{{ entry.detail.scan_engine }} ({{
-                        entry.detail.status || "CLEAN"
-                      }})</span
-                    >
+                    <span class="detail-value">{{ entry.detail.scan_engine }} ({{
+                      entry.detail.status || "CLEAN"
+                    }})</span>
                   </div>
 
                   <div
@@ -245,14 +309,14 @@
                         Signer:
                         {{
                           entry.detail.signature_manifestation.printed_name ||
-                          entry.detail.user_id
+                            entry.detail.user_id
                         }}
                       </div>
                       <div>
                         Reason:
                         {{
                           entry.detail.signature_manifestation.meaning ||
-                          "Approval"
+                            "Approval"
                         }}
                       </div>
                       <div class="font-mono text-xs">
@@ -291,13 +355,19 @@
           </div>
 
           <!-- Pagination / Load More -->
-          <div v-if="hasMore" class="load-more-section">
+          <div
+            v-if="hasMore"
+            class="load-more-section"
+          >
             <button
               class="load-more-btn"
               :disabled="loadingMore"
               @click="loadMore"
             >
-              <span v-if="loadingMore" class="btn-spinner" />
+              <span
+                v-if="loadingMore"
+                class="btn-spinner"
+              />
               {{
                 loadingMore
                   ? "Loading..."

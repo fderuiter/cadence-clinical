@@ -23,7 +23,13 @@
             <span v-if="targetSourceField"> ({{ targetSourceField }})</span>
           </span>
         </div>
-        <button type="button" class="btn-close" @click="close">✕</button>
+        <button
+          type="button"
+          class="btn-close"
+          @click="close"
+        >
+          ✕
+        </button>
       </div>
 
       <!-- Modal Body -->
@@ -40,7 +46,7 @@
                 class="form-control"
                 placeholder="Type verbatim or code..."
                 @keyup.enter="performSearch"
-              />
+              >
               <button
                 type="button"
                 class="btn btn-primary"
@@ -60,8 +66,12 @@
               class="form-control"
               @change="onDictionaryTypeChange"
             >
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
             </select>
           </div>
 
@@ -74,18 +84,31 @@
               @change="performSearch"
             >
               <template v-if="selectedDictType === 'MEDDRA'">
-                <option value="26.0">v26.0 (Active)</option>
-                <option value="26.1">v26.1</option>
-                <option value="27.0">v27.0 (Target)</option>
+                <option value="26.0">
+                  v26.0 (Active)
+                </option>
+                <option value="26.1">
+                  v26.1
+                </option>
+                <option value="27.0">
+                  v27.0 (Target)
+                </option>
               </template>
               <template v-else>
-                <option value="2024-03">v2024-03 (Active)</option>
-                <option value="2024-09">v2024-09 (Target)</option>
+                <option value="2024-03">
+                  v2024-03 (Active)
+                </option>
+                <option value="2024-09">
+                  v2024-09 (Target)
+                </option>
               </template>
             </select>
           </div>
 
-          <div v-if="selectedDictType === 'MEDDRA'" class="form-group">
+          <div
+            v-if="selectedDictType === 'MEDDRA'"
+            class="form-group"
+          >
             <label for="dict-level-select">Target Level</label>
             <select
               id="dict-level-select"
@@ -93,11 +116,21 @@
               class="form-control"
               @change="performSearch"
             >
-              <option value="LLT">LLT (Lowest Level Term)</option>
-              <option value="PT">PT (Preferred Term)</option>
-              <option value="HLT">HLT (High Level Term)</option>
-              <option value="HLGT">HLGT (High Level Group Term)</option>
-              <option value="SOC">SOC (System Organ Class)</option>
+              <option value="LLT">
+                LLT (Lowest Level Term)
+              </option>
+              <option value="PT">
+                PT (Preferred Term)
+              </option>
+              <option value="HLT">
+                HLT (High Level Term)
+              </option>
+              <option value="HLGT">
+                HLGT (High Level Group Term)
+              </option>
+              <option value="SOC">
+                SOC (System Organ Class)
+              </option>
             </select>
           </div>
         </div>
@@ -124,7 +157,10 @@
             </div>
 
             <!-- Loading Spinner -->
-            <div v-if="codingStore.isSearching" class="results-loading">
+            <div
+              v-if="codingStore.isSearching"
+              class="results-loading"
+            >
               <div class="spinner" />
               <span>Searching terminology index...</span>
             </div>
@@ -135,14 +171,18 @@
               class="results-empty"
             >
               <p v-if="searchTerm">
-                No matching terms found for "<strong>{{ searchTerm }}</strong
-                >".
+                No matching terms found for "<strong>{{ searchTerm }}</strong>".
               </p>
-              <p v-else>Enter a term or code above to search dictionary.</p>
+              <p v-else>
+                Enter a term or code above to search dictionary.
+              </p>
             </div>
 
             <!-- Results List -->
-            <div v-else class="results-list">
+            <div
+              v-else
+              class="results-list"
+            >
               <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
               <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
               <div
@@ -181,11 +221,17 @@
               <h4>Hierarchy &amp; Context Details</h4>
             </div>
 
-            <div v-if="!activeMatch" class="hierarchy-empty-state">
+            <div
+              v-if="!activeMatch"
+              class="hierarchy-empty-state"
+            >
               <p>Select a match on the left to inspect its full hierarchy.</p>
             </div>
 
-            <div v-else class="hierarchy-content">
+            <div
+              v-else
+              class="hierarchy-content"
+            >
               <!-- Selected Concept Summary Banner -->
               <div class="concept-summary-banner">
                 <div class="concept-title">
@@ -204,7 +250,9 @@
                 <h5>MedDRA 5-Level Structural Path</h5>
                 <div class="tree-nodes-list">
                   <div class="tree-node node-soc">
-                    <div class="node-tag">SOC</div>
+                    <div class="node-tag">
+                      SOC
+                    </div>
                     <div class="node-info">
                       <div class="node-name">
                         {{ activeMatch.soc_name || "—" }}
@@ -215,10 +263,14 @@
                     </div>
                   </div>
 
-                  <div class="tree-connector">↓</div>
+                  <div class="tree-connector">
+                    ↓
+                  </div>
 
                   <div class="tree-node node-hlgt">
-                    <div class="node-tag">HLGT</div>
+                    <div class="node-tag">
+                      HLGT
+                    </div>
                     <div class="node-info">
                       <div class="node-name">
                         {{ activeMatch.hlgt_name || "—" }}
@@ -229,10 +281,14 @@
                     </div>
                   </div>
 
-                  <div class="tree-connector">↓</div>
+                  <div class="tree-connector">
+                    ↓
+                  </div>
 
                   <div class="tree-node node-hlt">
-                    <div class="node-tag">HLT</div>
+                    <div class="node-tag">
+                      HLT
+                    </div>
                     <div class="node-info">
                       <div class="node-name">
                         {{ activeMatch.hlt_name || "—" }}
@@ -243,10 +299,14 @@
                     </div>
                   </div>
 
-                  <div class="tree-connector">↓</div>
+                  <div class="tree-connector">
+                    ↓
+                  </div>
 
                   <div class="tree-node node-pt">
-                    <div class="node-tag">PT</div>
+                    <div class="node-tag">
+                      PT
+                    </div>
                     <div class="node-info">
                       <div class="node-name">
                         {{ activeMatch.pt_name || "—" }}
@@ -257,10 +317,14 @@
                     </div>
                   </div>
 
-                  <div class="tree-connector">↓</div>
+                  <div class="tree-connector">
+                    ↓
+                  </div>
 
                   <div class="tree-node node-llt active-target-node">
-                    <div class="node-tag">LLT</div>
+                    <div class="node-tag">
+                      LLT
+                    </div>
                     <div class="node-info">
                       <div class="node-name">
                         {{ activeMatch.llt_name || "—" }}
@@ -274,12 +338,15 @@
               </div>
 
               <!-- WHODrug ATC Tree & Ingredients -->
-              <div v-else class="whodrug-details-view">
+              <div
+                v-else
+                class="whodrug-details-view"
+              >
                 <h5>Anatomical Therapeutic Chemical (ATC) Context</h5>
                 <div
                   v-if="
                     activeMatch.atc_context &&
-                    activeMatch.atc_context.length > 0
+                      activeMatch.atc_context.length > 0
                   "
                   class="atc-list"
                 >
@@ -296,15 +363,20 @@
                     </div>
                   </div>
                 </div>
-                <div v-else class="text-muted-notice">
+                <div
+                  v-else
+                  class="text-muted-notice"
+                >
                   No ATC classifications attached to this drug record.
                 </div>
 
-                <h5 style="margin-top: 16px">Active Ingredients</h5>
+                <h5 style="margin-top: 16px">
+                  Active Ingredients
+                </h5>
                 <div
                   v-if="
                     activeMatch.ingredients &&
-                    activeMatch.ingredients.length > 0
+                      activeMatch.ingredients.length > 0
                   "
                   class="ingredient-chips"
                 >
@@ -316,7 +388,10 @@
                     🧪 {{ ing.ingredient_name }} ({{ ing.ingredient_code }})
                   </span>
                 </div>
-                <div v-else class="text-muted-notice">
+                <div
+                  v-else
+                  class="text-muted-notice"
+                >
                   No specific single active ingredients indexed.
                 </div>
               </div>
@@ -324,16 +399,14 @@
               <!-- Part 11 Reason for Change GxP Input -->
               <div class="gxp-confirmation-box">
                 <div class="form-group">
-                  <label for="override-reason"
-                    >21 CFR Part 11 Reason for Coding Assignment *</label
-                  >
+                  <label for="override-reason">21 CFR Part 11 Reason for Coding Assignment *</label>
                   <input
                     id="override-reason"
                     v-model="gxpReason"
                     type="text"
                     class="form-control"
                     placeholder="e.g. Coder manual classification after dictionary verification"
-                  />
+                  >
                 </div>
               </div>
             </div>
@@ -343,7 +416,11 @@
 
       <!-- Modal Footer -->
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" @click="close">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="close"
+        >
           Cancel
         </button>
         <button

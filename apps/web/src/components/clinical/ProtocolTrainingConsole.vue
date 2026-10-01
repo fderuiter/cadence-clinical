@@ -42,21 +42,27 @@
     <!-- Active Protocol / Assignment Selector -->
     <div class="assignment-selector-panel">
       <div class="form-group">
-        <label for="assignment-select"
-          >Active Training Assignment / Curriculum:</label
-        >
+        <label for="assignment-select">Active Training Assignment / Curriculum:</label>
         <select
           id="assignment-select"
           v-model="selectedAssignmentId"
           class="select-input"
           @change="onAssignmentChange"
         >
-          <option v-for="asn in assignments" :key="asn.id" :value="asn.id">
+          <option
+            v-for="asn in assignments"
+            :key="asn.id"
+            :value="asn.id"
+          >
             [{{ asn.status }}]
             {{ asn.curriculum?.title || asn.study_id + " Protocol Training" }} —
             Site {{ asn.site_id }}
           </option>
-          <option v-if="assignments.length === 0" value="" disabled>
+          <option
+            v-if="assignments.length === 0"
+            value=""
+            disabled
+          >
             No active training assignments found for current user
           </option>
         </select>
@@ -106,7 +112,7 @@
           <span class="banner-message">
             {{
               syncErrorMessage ||
-              "Failed to record training progress heartbeat. Time tracking has been paused."
+                "Failed to record training progress heartbeat. Time tracking has been paused."
             }}
           </span>
         </div>
@@ -122,7 +128,10 @@
     </div>
 
     <!-- Main Learning & Assessment Workspace -->
-    <div v-if="activeCurriculum" class="training-workspace">
+    <div
+      v-if="activeCurriculum"
+      class="training-workspace"
+    >
       <!-- Navigation Tabs: Modules | Quiz | Certificate -->
       <div class="tab-bar">
         <button
@@ -150,9 +159,14 @@
       </div>
 
       <!-- TAB 1: MODULES -->
-      <div v-if="activeTab === 'modules'" class="tab-content modules-layout">
+      <div
+        v-if="activeTab === 'modules'"
+        class="tab-content modules-layout"
+      >
         <div class="module-sidebar">
-          <h4 class="sidebar-heading">Curriculum Sections</h4>
+          <h4 class="sidebar-heading">
+            Curriculum Sections
+          </h4>
           <ul class="module-list">
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -180,7 +194,10 @@
         </div>
 
         <div class="module-reader">
-          <div v-if="currentModule" class="reader-content">
+          <div
+            v-if="currentModule"
+            class="reader-content"
+          >
             <div class="reader-header">
               <div class="reader-title-group">
                 <span class="badge badge-delta">{{
@@ -195,17 +212,17 @@
                 <span
                   v-if="
                     moduleTimer >=
-                    (currentModule.min_reading_time_seconds || 30)
+                      (currentModule.min_reading_time_seconds || 30)
                   "
                   class="text-success"
-                  >✅ Min Read Time Met</span
-                >
-                <span v-else class="text-muted"
-                  >({{
-                    (currentModule.min_reading_time_seconds || 30) -
+                >✅ Min Read Time Met</span>
+                <span
+                  v-else
+                  class="text-muted"
+                >({{
+                  (currentModule.min_reading_time_seconds || 30) -
                     moduleTimer
-                  }}s remaining)</span
-                >
+                }}s remaining)</span>
               </div>
             </div>
 
@@ -241,7 +258,10 @@
       </div>
 
       <!-- TAB 2: COMPREHENSION QUIZ -->
-      <div v-if="activeTab === 'quiz'" class="tab-content quiz-layout">
+      <div
+        v-if="activeTab === 'quiz'"
+        class="tab-content quiz-layout"
+      >
         <div class="quiz-header-card">
           <div class="quiz-info">
             <h3>Protocol Comprehension Assessment</h3>
@@ -300,12 +320,15 @@
                   :name="'question_' + q.id"
                   :value="optIdx"
                   :disabled="activeAssignment?.status === 'COMPLETED'"
-                />
+                >
                 <span class="option-text">{{ opt }}</span>
               </label>
             </div>
 
-            <div v-if="quizResult && q.rationale" class="rationale-box">
+            <div
+              v-if="quizResult && q.rationale"
+              class="rationale-box"
+            >
               💡 <strong>GxP Rationale:</strong> {{ q.rationale }}
             </div>
           </div>
@@ -317,7 +340,7 @@
             class="btn btn-primary btn-submit-quiz"
             :disabled="
               submittingQuiz ||
-              Object.keys(userAnswers).length < aggregatedQuestions.length
+                Object.keys(userAnswers).length < aggregatedQuestions.length
             "
             @click="handleSubmitQuiz"
           >
@@ -344,8 +367,12 @@
       >
         <div class="certificate-paper">
           <div class="cert-header">
-            <div class="cert-brand">CADENCE CLINICAL RESEARCH PLATFORM</div>
-            <h2 class="cert-title">CERTIFICATE OF PROTOCOL QUALIFICATION</h2>
+            <div class="cert-brand">
+              CADENCE CLINICAL RESEARCH PLATFORM
+            </div>
+            <h2 class="cert-title">
+              CERTIFICATE OF PROTOCOL QUALIFICATION
+            </h2>
             <div class="cert-subtitle">
               Compliant with ICH GCP E6(R2)/(R3) &amp; 21 CFR Part 11 Electronic
               Signatures
@@ -356,10 +383,8 @@
             <p class="cert-lead">
               This certifies that
               <strong>{{ activeAssignment?.user_name }}</strong> (ID:
-              <code>{{ activeAssignment?.user_id }}</code
-              >), acting in the capacity of
-              <strong>{{ activeAssignment?.user_role }}</strong
-              >, has successfully fulfilled all mandatory protocol curriculum
+              <code>{{ activeAssignment?.user_id }}</code>), acting in the capacity of
+              <strong>{{ activeAssignment?.user_role }}</strong>, has successfully fulfilled all mandatory protocol curriculum
               requirements and demonstrated mastery under:
             </p>
 
@@ -375,8 +400,7 @@
                   <td>Study &amp; Site:</td>
                   <td>
                     Study <code>{{ activeAssignment?.study_id }}</code> (Site:
-                    <code>{{ activeAssignment?.site_id }}</code
-                    >)
+                    <code>{{ activeAssignment?.site_id }}</code>)
                   </td>
                 </tr>
                 <tr>
@@ -386,11 +410,9 @@
                 <tr>
                   <td>Comprehension Score:</td>
                   <td>
-                    <strong
-                      >{{
-                        Math.round((activeAssignment?.quiz_score || 1.0) * 100)
-                      }}%</strong
-                    >
+                    <strong>{{
+                      Math.round((activeAssignment?.quiz_score || 1.0) * 100)
+                    }}%</strong>
                     (Threshold: &ge;80%)
                   </td>
                 </tr>
@@ -408,7 +430,10 @@
               </tbody>
             </table>
 
-            <div v-if="activeCertificate" class="cert-signature-manifest">
+            <div
+              v-if="activeCertificate"
+              class="cert-signature-manifest"
+            >
               <div class="manifest-header">
                 🔒 21 CFR Part 11 Cryptographic Signature Manifestation
               </div>
@@ -447,11 +472,17 @@
     </div>
 
     <!-- 21 CFR Part 11 Electronic Signature Modal -->
-    <div v-if="showSignModal" class="modal-backdrop">
+    <div
+      v-if="showSignModal"
+      class="modal-backdrop"
+    >
       <div class="modal-card">
         <div class="modal-header">
           <h3>21 CFR Part 11 Electronic Signature Sign-Off</h3>
-          <button class="modal-close-btn" @click="showSignModal = false">
+          <button
+            class="modal-close-btn"
+            @click="showSignModal = false"
+          >
             ✕
           </button>
         </div>
@@ -471,7 +502,7 @@
               type="text"
               class="text-input"
               placeholder="e.g. Dr. Eleanor Vance, MD"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -482,7 +513,7 @@
               type="text"
               class="text-input"
               placeholder="e.g. Principal Investigator"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -498,7 +529,10 @@
         </div>
 
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showSignModal = false">
+          <button
+            class="btn btn-secondary"
+            @click="showSignModal = false"
+          >
             Cancel
           </button>
           <button

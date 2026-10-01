@@ -8,21 +8,15 @@
     <header class="console-header">
       <div class="header-main">
         <div class="title-group">
-          <span class="badge badge-regulatory"
-            >ICH E2F (DSUR) / ICH E2C(R2) (PBRER) / 21 CFR Part 11</span
-          >
+          <span class="badge badge-regulatory">ICH E2F (DSUR) / ICH E2C(R2) (PBRER) / 21 CFR Part 11</span>
           <h2 class="console-title">
             Automated Aggregate Safety Compiler &amp; Exposure Calculator
           </h2>
         </div>
         <div class="header-meta-pills">
           <span class="meta-pill"><strong>Study:</strong> {{ studyId }}</span>
-          <span class="meta-pill"
-            ><strong>Compound:</strong> {{ compoundName }}</span
-          >
-          <span class="meta-pill"
-            ><strong>DIBD Anniversary:</strong> {{ dibdAnniversary }}</span
-          >
+          <span class="meta-pill"><strong>Compound:</strong> {{ compoundName }}</span>
+          <span class="meta-pill"><strong>DIBD Anniversary:</strong> {{ dibdAnniversary }}</span>
           <span class="meta-pill">
             <strong>Status:</strong>
             <span :class="['status-badge', reportStatus.toLowerCase()]">{{
@@ -108,7 +102,7 @@
           v-model="studyId"
           type="text"
           class="text-control"
-        />
+        >
       </div>
 
       <div class="param-field">
@@ -118,7 +112,7 @@
           v-model="compoundName"
           type="text"
           class="text-control"
-        />
+        >
       </div>
 
       <div class="param-field">
@@ -128,7 +122,7 @@
           v-model="periodStart"
           type="date"
           class="text-control"
-        />
+        >
       </div>
 
       <div class="param-field">
@@ -138,7 +132,7 @@
           v-model="periodEnd"
           type="date"
           class="text-control"
-        />
+        >
       </div>
 
       <div class="param-field">
@@ -148,22 +142,21 @@
           v-model="dibdAnniversary"
           type="date"
           class="text-control"
-        />
+        >
       </div>
     </div>
 
     <!-- Snapshot Notification Bar -->
-    <div v-if="snapshotHash" class="snapshot-banner">
+    <div
+      v-if="snapshotHash"
+      class="snapshot-banner"
+    >
       <div class="snapshot-info">
         <span class="snapshot-icon">🔒</span>
-        <span class="snapshot-title"
-          ><strong>Immutable Point-in-Time Regulatory Snapshot:</strong></span
-        >
+        <span class="snapshot-title"><strong>Immutable Point-in-Time Regulatory Snapshot:</strong></span>
         <code class="hash-code">{{ snapshotHash }}</code>
-        <span class="snapshot-meta"
-          >({{ frozenCasesCount }} cases, {{ frozenSubjectsCount }} subjects
-          sealed)</span
-        >
+        <span class="snapshot-meta">({{ frozenCasesCount }} cases, {{ frozenSubjectsCount }} subjects
+          sealed)</span>
       </div>
       <button
         class="btn btn-sm btn-verify"
@@ -175,7 +168,11 @@
     </div>
 
     <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist" aria-label="Aggregate Report Views">
+    <nav
+      class="nav-tabs"
+      role="tablist"
+      aria-label="Aggregate Report Views"
+    >
       <button
         role="tab"
         :aria-selected="activeTab === 'exposure'"
@@ -236,32 +233,48 @@
       >
         <div class="metrics-grid">
           <div class="metric-card">
-            <div class="metric-label">Cumulative Enrolled Subjects</div>
+            <div class="metric-label">
+              Cumulative Enrolled Subjects
+            </div>
             <div class="metric-value">
               {{ totalCumulativeSubjects }}
             </div>
-            <div class="metric-sub">Across all active trial cohorts</div>
+            <div class="metric-sub">
+              Across all active trial cohorts
+            </div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Interval Exposed Subjects</div>
+            <div class="metric-label">
+              Interval Exposed Subjects
+            </div>
             <div class="metric-value">
               {{ totalIntervalSubjects }}
             </div>
-            <div class="metric-sub">{{ periodStart }} to {{ periodEnd }}</div>
+            <div class="metric-sub">
+              {{ periodStart }} to {{ periodEnd }}
+            </div>
           </div>
           <div class="metric-card highlight">
-            <div class="metric-label">Cumulative Patient-Years (PYE)</div>
+            <div class="metric-label">
+              Cumulative Patient-Years (PYE)
+            </div>
             <div class="metric-value">
               {{ totalExposurePYE }}
             </div>
-            <div class="metric-sub">Sum of all dosing duration / 365.25</div>
+            <div class="metric-sub">
+              Sum of all dosing duration / 365.25
+            </div>
           </div>
           <div class="metric-card highlight">
-            <div class="metric-label">Interval Patient-Years (PYE)</div>
+            <div class="metric-label">
+              Interval Patient-Years (PYE)
+            </div>
             <div class="metric-value">
               {{ totalIntervalPYE }}
             </div>
-            <div class="metric-sub">Dosing duration within interval</div>
+            <div class="metric-sub">
+              Dosing duration within interval
+            </div>
           </div>
         </div>
 
@@ -282,7 +295,10 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="arm in exposureByArm" :key="arm.group_name">
+                <tr
+                  v-for="arm in exposureByArm"
+                  :key="arm.group_name"
+                >
                   <td>
                     <strong>{{ arm.group_name }}</strong>
                   </td>
@@ -293,7 +309,10 @@
                   <td>{{ arm.median_duration_days }} days</td>
                 </tr>
                 <tr v-if="exposureByArm.length === 0">
-                  <td colspan="6" class="empty-cell">
+                  <td
+                    colspan="6"
+                    class="empty-cell"
+                  >
                     Click "Compute Exposure" to calculate patient-years.
                   </td>
                 </tr>
@@ -304,7 +323,9 @@
 
         <div class="stratification-split">
           <div class="section-card">
-            <h3 class="section-title">Demographic Subgroup: Age</h3>
+            <h3 class="section-title">
+              Demographic Subgroup: Age
+            </h3>
             <table class="data-table">
               <thead>
                 <tr>
@@ -315,7 +336,10 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="age in exposureByAge" :key="age.group_name">
+                <tr
+                  v-for="age in exposureByAge"
+                  :key="age.group_name"
+                >
                   <td>
                     <strong>{{ age.group_name }}</strong>
                   </td>
@@ -328,7 +352,9 @@
           </div>
 
           <div class="section-card">
-            <h3 class="section-title">Demographic Subgroup: Sex</h3>
+            <h3 class="section-title">
+              Demographic Subgroup: Sex
+            </h3>
             <table class="data-table">
               <thead>
                 <tr>
@@ -339,7 +365,10 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="sex in exposureBySex" :key="sex.group_name">
+                <tr
+                  v-for="sex in exposureBySex"
+                  :key="sex.group_name"
+                >
                   <td>
                     <strong>{{ sex.group_name }}</strong>
                   </td>
@@ -367,19 +396,28 @@
               type="text"
               placeholder="Search MedDRA PT or SOC..."
               class="text-control"
-            />
+            >
           </div>
           <div class="toggle-pills">
             <label class="toggle-label">
-              <input v-model="filterOnlyRsiBreach" type="checkbox" />
+              <input
+                v-model="filterOnlyRsiBreach"
+                type="checkbox"
+              >
               RSI Breaches Only
             </label>
             <label class="toggle-label">
-              <input v-model="filterOnlySusar" type="checkbox" />
+              <input
+                v-model="filterOnlySusar"
+                type="checkbox"
+              >
               SUSARs Only
             </label>
             <label class="toggle-label">
-              <input v-model="filterOnlyAesi" type="checkbox" />
+              <input
+                v-model="filterOnlyAesi"
+                type="checkbox"
+              >
               AESI Only
             </label>
           </div>
@@ -415,15 +453,18 @@
                 </td>
                 <td>
                   <strong>{{ row.meddra_pt }}</strong>
-                  <span v-if="row.is_fatal" class="badge badge-critical"
-                    >FATAL</span
-                  >
-                  <span v-if="row.is_susar" class="badge badge-critical"
-                    >SUSAR</span
-                  >
-                  <span v-if="row.is_aesi" class="badge badge-warning"
-                    >AESI</span
-                  >
+                  <span
+                    v-if="row.is_fatal"
+                    class="badge badge-critical"
+                  >FATAL</span>
+                  <span
+                    v-if="row.is_susar"
+                    class="badge badge-critical"
+                  >SUSAR</span>
+                  <span
+                    v-if="row.is_aesi"
+                    class="badge badge-warning"
+                  >AESI</span>
                 </td>
                 <td>
                   {{ row.active_arm_count }} ({{ row.active_arm_subjects }})
@@ -437,21 +478,25 @@
                   {{ row.placebo_arm_count }} ({{ row.placebo_arm_subjects }})
                 </td>
                 <td>
-                  <strong
-                    >{{ row.total_event_count }} ({{
-                      row.total_subjects_count
-                    }})</strong
-                  >
+                  <strong>{{ row.total_event_count }} ({{
+                    row.total_subjects_count
+                  }})</strong>
                 </td>
                 <td>{{ row.observed_rate_pct.toFixed(2) }}%</td>
                 <td>{{ row.observed_incidence_rate_pyr.toFixed(2) }}</td>
                 <td>
-                  <span v-if="row.rsi_listed" class="rsi-tag listed">
+                  <span
+                    v-if="row.rsi_listed"
+                    class="rsi-tag listed"
+                  >
                     Listed ({{
                       ((row.rsi_expected_rate || 0) * 100).toFixed(1)
                     }}%)
                   </span>
-                  <span v-else class="rsi-tag unlisted">Unlisted</span>
+                  <span
+                    v-else
+                    class="rsi-tag unlisted"
+                  >Unlisted</span>
                 </td>
                 <td>
                   <span
@@ -460,11 +505,17 @@
                   >
                     ⚠️ BREACH (RR: {{ row.rsi_rate_ratio || "N/A" }})
                   </span>
-                  <span v-else class="status-pill ok">OK</span>
+                  <span
+                    v-else
+                    class="status-pill ok"
+                  >OK</span>
                 </td>
               </tr>
               <tr v-if="filteredSummaryRows.length === 0">
-                <td colspan="10" class="empty-cell">
+                <td
+                  colspan="10"
+                  class="empty-cell"
+                >
                   No tabulation rows matched the active filters.
                 </td>
               </tr>
@@ -498,7 +549,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in lineListings" :key="item.case_id">
+              <tr
+                v-for="item in lineListings"
+                :key="item.case_id"
+              >
                 <td>
                   <code>{{ item.case_id }}</code>
                 </td>
@@ -513,26 +567,38 @@
                 <td>
                   <span
                     :class="['outcome-badge', item.outcome.toLowerCase()]"
-                    >{{ item.outcome }}</span
-                  >
+                  >{{ item.outcome }}</span>
                 </td>
                 <td>
-                  <span v-if="item.susar" class="badge badge-critical"
-                    >YES</span
-                  >
-                  <span v-else class="badge badge-secondary">NO</span>
+                  <span
+                    v-if="item.susar"
+                    class="badge badge-critical"
+                  >YES</span>
+                  <span
+                    v-else
+                    class="badge badge-secondary"
+                  >NO</span>
                 </td>
                 <td>
-                  <span v-if="item.is_aesi" class="badge badge-warning">{{
+                  <span
+                    v-if="item.is_aesi"
+                    class="badge badge-warning"
+                  >{{
                     item.aesi_category || "YES"
                   }}</span>
-                  <span v-else class="badge badge-secondary">NO</span>
+                  <span
+                    v-else
+                    class="badge badge-secondary"
+                  >NO</span>
                 </td>
                 <td>{{ item.causality }}</td>
                 <td>{{ item.action_taken }}</td>
               </tr>
               <tr v-if="lineListings.length === 0">
-                <td colspan="12" class="empty-cell">
+                <td
+                  colspan="12"
+                  class="empty-cell"
+                >
                   No serious adverse events reported in this interval.
                 </td>
               </tr>
@@ -564,7 +630,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="sig in signalFindings" :key="sig.meddra_pt">
+              <tr
+                v-for="sig in signalFindings"
+                :key="sig.meddra_pt"
+              >
                 <td>
                   <strong>{{ sig.meddra_pt }}</strong>
                 </td>
@@ -580,7 +649,10 @@
                 </td>
               </tr>
               <tr v-if="signalFindings.length === 0">
-                <td colspan="7" class="empty-cell">
+                <td
+                  colspan="7"
+                  class="empty-cell"
+                >
                   No candidate statistical safety signals detected.
                 </td>
               </tr>
@@ -617,42 +689,37 @@
           <ul class="checklist">
             <li class="check-item checked">
               <span class="check-icon">✓</span>
-              <span
-                ><strong>Immutable Point-in-Time Regulatory Snapshot:</strong>
-                Cryptographically locked dataset (SHA-256 seal)</span
-              >
+              <span><strong>Immutable Point-in-Time Regulatory Snapshot:</strong>
+                Cryptographically locked dataset (SHA-256 seal)</span>
             </li>
             <li class="check-item checked">
               <span class="check-icon">✓</span>
-              <span
-                ><strong>Subject Exposure Calculator:</strong> Cumulative ({{
-                  totalExposurePYE
-                }}
-                PYE) and Interval ({{ totalIntervalPYE }} PYE) calculated</span
-              >
+              <span><strong>Subject Exposure Calculator:</strong> Cumulative ({{
+                totalExposurePYE
+              }}
+                PYE) and Interval ({{ totalIntervalPYE }} PYE) calculated</span>
             </li>
             <li class="check-item checked">
               <span class="check-icon">✓</span>
-              <span
-                ><strong>Summary Tabulations &amp; RSI Comparison:</strong>
-                MedDRA SOC/PT matrix generated with RSI listed rate check</span
-              >
+              <span><strong>Summary Tabulations &amp; RSI Comparison:</strong>
+                MedDRA SOC/PT matrix generated with RSI listed rate check</span>
             </li>
             <li class="check-item checked">
               <span class="check-icon">✓</span>
-              <span
-                ><strong>Statistical Signal Surveillance:</strong>
+              <span><strong>Statistical Signal Surveillance:</strong>
                 Disproportionality scan evaluated ({{
                   signalFindings.length
                 }}
-                candidate signals)</span
-              >
+                candidate signals)</span>
             </li>
           </ul>
         </div>
 
         <!-- QPPV Electronic Signature Seal Display -->
-        <div v-if="qppvManifest" class="qppv-manifest-card">
+        <div
+          v-if="qppvManifest"
+          class="qppv-manifest-card"
+        >
           <div class="manifest-header">
             <span class="seal-icon">🛡️</span>
             <div>
@@ -695,13 +762,19 @@
           </div>
         </div>
 
-        <div v-else class="qppv-action-box">
+        <div
+          v-else
+          class="qppv-action-box"
+        >
           <p>
             This periodic safety report package is in
             <strong>{{ reportStatus }}</strong> status and awaits Qualified
             Person for Pharmacovigilance (QPPV) executive electronic signature.
           </p>
-          <button class="btn btn-qppv btn-lg" @click="isQppvModalOpen = true">
+          <button
+            class="btn btn-qppv btn-lg"
+            @click="isQppvModalOpen = true"
+          >
             ✍️ Open Executive QPPV Sign-Off Dialog
           </button>
         </div>
@@ -747,38 +820,54 @@
       >
         <div class="metrics-grid">
           <div class="metric-card">
-            <div class="metric-label">Active Expedited Cases</div>
+            <div class="metric-label">
+              Active Expedited Cases
+            </div>
             <div class="metric-value">
               {{ activeExpeditedCases.length }}
             </div>
-            <div class="metric-sub">ICSR regulatory countdowns active</div>
+            <div class="metric-sub">
+              ICSR regulatory countdowns active
+            </div>
           </div>
           <div class="metric-card highlight">
-            <div class="metric-label">7-Day Fatal/Life-Threatening</div>
+            <div class="metric-label">
+              7-Day Fatal/Life-Threatening
+            </div>
             <div class="metric-value">
               {{ fatalCasesCount }}
             </div>
-            <div class="metric-sub">FDA / EMA / PMDA / MHRA / HC</div>
+            <div class="metric-sub">
+              FDA / EMA / PMDA / MHRA / HC
+            </div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">15-Day Serious Unexpected</div>
+            <div class="metric-label">
+              15-Day Serious Unexpected
+            </div>
             <div class="metric-value">
               {{ seriousCasesCount }}
             </div>
-            <div class="metric-sub">SUSAR expedited notifications</div>
+            <div class="metric-sub">
+              SUSAR expedited notifications
+            </div>
           </div>
           <div
             class="metric-card"
             :class="{ 'card-critical': criticalAlertsCount > 0 }"
           >
-            <div class="metric-label">Threshold Alerts (≥75%)</div>
+            <div class="metric-label">
+              Threshold Alerts (≥75%)
+            </div>
             <div
               class="metric-value"
               :class="{ 'text-critical': criticalAlertsCount > 0 }"
             >
               {{ criticalAlertsCount }}
             </div>
-            <div class="metric-sub">Warning, Critical or Overdue</div>
+            <div class="metric-sub">
+              Warning, Critical or Overdue
+            </div>
           </div>
         </div>
 
@@ -808,8 +897,7 @@
                 </div>
                 <span
                   :class="['status-badge', clk.alert_level.toLowerCase()]"
-                  >{{ clk.alert_level }}</span
-                >
+                >{{ clk.alert_level }}</span>
               </div>
 
               <div class="clock-body">
@@ -831,12 +919,8 @@
                     />
                   </div>
                   <div class="clock-progress-labels">
-                    <span
-                      >{{ clk.elapsed_percentage.toFixed(1) }}% elapsed</span
-                    >
-                    <span class="time-remaining"
-                      >{{ clk.remaining_hours.toFixed(1) }}h remaining</span
-                    >
+                    <span>{{ clk.elapsed_percentage.toFixed(1) }}% elapsed</span>
+                    <span class="time-remaining">{{ clk.remaining_hours.toFixed(1) }}h remaining</span>
                   </div>
                 </div>
 
@@ -899,7 +983,7 @@
                   v-model="simCaseId"
                   type="text"
                   class="text-control"
-                />
+                >
               </div>
               <div class="form-group">
                 <label for="sim-subject-id">USUBJID / Subject ID:</label>
@@ -908,30 +992,30 @@
                   v-model="simSubjectId"
                   type="text"
                   class="text-control"
-                />
+                >
               </div>
               <div class="form-group">
-                <label for="sim-receipt-date"
-                  >Day 0 Initial Receipt Date:</label
-                >
+                <label for="sim-receipt-date">Day 0 Initial Receipt Date:</label>
                 <input
                   id="sim-receipt-date"
                   v-model="simReceiptDate"
                   type="datetime-local"
                   class="text-control"
-                />
+                >
               </div>
               <div class="form-group">
-                <label for="sim-causality"
-                  >Medical Causality / Relatedness:</label
-                >
+                <label for="sim-causality">Medical Causality / Relatedness:</label>
                 <select
                   id="sim-causality"
                   v-model="simCausality"
                   class="select-control"
                 >
-                  <option value="RELATED">RELATED (Causal)</option>
-                  <option value="SUSPECTED">SUSPECTED (Causal)</option>
+                  <option value="RELATED">
+                    RELATED (Causal)
+                  </option>
+                  <option value="SUSPECTED">
+                    SUSPECTED (Causal)
+                  </option>
                   <option value="POSSIBLY_RELATED">
                     POSSIBLY_RELATED (Causal)
                   </option>
@@ -941,14 +1025,16 @@
                   <option value="DEFINITELY_RELATED">
                     DEFINITELY_RELATED (Causal)
                   </option>
-                  <option value="NOT_RELATED">NOT_RELATED (Non-Causal)</option>
-                  <option value="UNLIKELY">UNLIKELY (Non-Causal)</option>
+                  <option value="NOT_RELATED">
+                    NOT_RELATED (Non-Causal)
+                  </option>
+                  <option value="UNLIKELY">
+                    UNLIKELY (Non-Causal)
+                  </option>
                 </select>
               </div>
               <div class="form-group">
-                <label for="sim-expectedness"
-                  >Expectedness (Reference Safety Information - RSI):</label
-                >
+                <label for="sim-expectedness">Expectedness (Reference Safety Information - RSI):</label>
                 <select
                   id="sim-expectedness"
                   v-model="simExpectedness"
@@ -957,45 +1043,57 @@
                   <option value="UNEXPECTED">
                     UNEXPECTED (Not in IB/SmPC)
                   </option>
-                  <option value="EXPECTED">EXPECTED (Listed in RSI)</option>
+                  <option value="EXPECTED">
+                    EXPECTED (Listed in RSI)
+                  </option>
                 </select>
               </div>
             </div>
 
             <div class="sim-column">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label-header"
-                >Seriousness Criteria (ICH E2A § II.B):</label
-              >
+              <label class="form-label-header">Seriousness Criteria (ICH E2A § II.B):</label>
               <div class="checkbox-group-grid">
                 <label class="checkbox-label">
-                  <input v-model="simSeriousnessDeath" type="checkbox" />
+                  <input
+                    v-model="simSeriousnessDeath"
+                    type="checkbox"
+                  >
                   <strong>Results in Death (7-Day Fatal)</strong>
                 </label>
                 <label class="checkbox-label">
                   <input
                     v-model="simSeriousnessLifeThreatening"
                     type="checkbox"
-                  />
+                  >
                   <strong>Life-Threatening (7-Day LT)</strong>
                 </label>
                 <label class="checkbox-label">
                   <input
                     v-model="simSeriousnessHospitalization"
                     type="checkbox"
-                  />
+                  >
                   Hospitalization / Prolonged
                 </label>
                 <label class="checkbox-label">
-                  <input v-model="simSeriousnessDisability" type="checkbox" />
+                  <input
+                    v-model="simSeriousnessDisability"
+                    type="checkbox"
+                  >
                   Persistent / Significant Disability
                 </label>
                 <label class="checkbox-label">
-                  <input v-model="simSeriousnessCongenital" type="checkbox" />
+                  <input
+                    v-model="simSeriousnessCongenital"
+                    type="checkbox"
+                  >
                   Congenital Anomaly / Birth Defect
                 </label>
                 <label class="checkbox-label">
-                  <input v-model="simSeriousnessOther" type="checkbox" />
+                  <input
+                    v-model="simSeriousnessOther"
+                    type="checkbox"
+                  >
                   Other Medically Important Event
                 </label>
               </div>
@@ -1018,7 +1116,10 @@
           </div>
 
           <!-- Simulation Results Display -->
-          <div v-if="simulationResult" class="sim-results-card">
+          <div
+            v-if="simulationResult"
+            class="sim-results-card"
+          >
             <div class="sim-results-header">
               <h4>
                 Triage Outcome:
@@ -1042,9 +1143,7 @@
                 class="shortest-badge"
               >
                 Shortest Statutory Mandate:
-                <strong
-                  >{{ simulationResult.shortest_timeframe_days }} Days</strong
-                >
+                <strong>{{ simulationResult.shortest_timeframe_days }} Days</strong>
               </span>
             </div>
 
@@ -1107,7 +1206,10 @@
                           res.countdown.remaining_hours.toFixed(1)
                         }}h left)
                       </span>
-                      <span v-else class="text-muted">N/A (Periodic)</span>
+                      <span
+                        v-else
+                        class="text-muted"
+                      >N/A (Periodic)</span>
                     </td>
                     <td>{{ res.due_date || "Annual Report" }}</td>
                   </tr>
@@ -1129,7 +1231,10 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <h3>Executive QPPV 21 CFR Part 11 Electronic Signature</h3>
-          <button class="close-btn" @click="isQppvModalOpen = false">
+          <button
+            class="close-btn"
+            @click="isQppvModalOpen = false"
+          >
             &times;
           </button>
         </div>
@@ -1150,12 +1255,16 @@
               v-model="qppvUserId"
               type="text"
               class="text-control"
-            />
+            >
           </div>
 
           <div class="form-group">
             <label for="qppv-role">Signer Role:</label>
-            <select id="qppv-role" v-model="qppvRole" class="select-control">
+            <select
+              id="qppv-role"
+              v-model="qppvRole"
+              class="select-control"
+            >
               <option value="Qualified Person for Pharmacovigilance (QPPV)">
                 Qualified Person for Pharmacovigilance (QPPV)
               </option>
@@ -1176,20 +1285,18 @@
               type="text"
               class="text-control"
               readonly
-            />
+            >
           </div>
 
           <div class="form-group">
-            <label for="qppv-secret"
-              >Re-Authentication Security Credential / PIN:</label
-            >
+            <label for="qppv-secret">Re-Authentication Security Credential / PIN:</label>
             <input
               id="qppv-secret"
               v-model="qppvSecret"
               type="password"
               class="text-control"
               placeholder="Enter signing secret / password..."
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -1205,7 +1312,10 @@
         </div>
 
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="isQppvModalOpen = false">
+          <button
+            class="btn btn-secondary"
+            @click="isQppvModalOpen = false"
+          >
             Cancel
           </button>
           <button
@@ -1233,7 +1343,10 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <h3>Safety Physician 21 CFR Part 11 Electronic Signature</h3>
-          <button class="close-btn" @click="isPhysicianSignModalOpen = false">
+          <button
+            class="close-btn"
+            @click="isPhysicianSignModalOpen = false"
+          >
             &times;
           </button>
         </div>
@@ -1243,8 +1356,7 @@
               Applying formal 21 CFR Part 11 Safety Physician medical approval
               for Case
               <strong>{{ selectedClockForSign?.case_id }}</strong> (Authority:
-              <strong>{{ selectedClockForSign?.authority_name }}</strong
-              >, Timeframe:
+              <strong>{{ selectedClockForSign?.authority_name }}</strong>, Timeframe:
               <strong>{{ selectedClockForSign?.timeframe_days }}d</strong>).
             </p>
           </div>
@@ -1256,7 +1368,7 @@
               v-model="physicianUserId"
               type="text"
               class="text-control"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -1266,7 +1378,9 @@
               v-model="physicianRole"
               class="select-control"
             >
-              <option value="safety_physician">Safety Physician</option>
+              <option value="safety_physician">
+                Safety Physician
+              </option>
               <option value="sponsor_safety_physician">
                 Sponsor Safety Physician
               </option>
@@ -1277,35 +1391,29 @@
           </div>
 
           <div class="form-group">
-            <label for="physician-meaning"
-              >Meaning of Electronic Signature:</label
-            >
+            <label for="physician-meaning">Meaning of Electronic Signature:</label>
             <input
               id="physician-meaning"
               type="text"
               class="text-control"
               value="Approval of Expedited ICSR Regulatory Submission and Causality Assessment"
               readonly
-            />
+            >
           </div>
 
           <div class="form-group">
-            <label for="physician-secret"
-              >Re-Authentication Security PIN / Secret:</label
-            >
+            <label for="physician-secret">Re-Authentication Security PIN / Secret:</label>
             <input
               id="physician-secret"
               v-model="physicianSecret"
               type="password"
               class="text-control"
               placeholder="Enter re-authentication PIN..."
-            />
+            >
           </div>
 
           <div class="form-group">
-            <label for="physician-reason"
-              >Mandatory Reason for Change (21 CFR § 11.10(e)):</label
-            >
+            <label for="physician-reason">Mandatory Reason for Change (21 CFR § 11.10(e)):</label>
             <textarea
               id="physician-reason"
               v-model="physicianReason"

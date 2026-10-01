@@ -1,5 +1,8 @@
 <template>
-  <div class="card" style="margin-top: 24px; padding: 20px">
+  <div
+    class="card"
+    style="margin-top: 24px; padding: 20px"
+  >
     <div
       style="
         display: flex;
@@ -48,7 +51,10 @@
             markerHeight="6"
             orient="auto-start-reverse"
           >
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#ec4899" />
+            <path
+              d="M 0 1 L 10 5 L 0 9 z"
+              fill="#ec4899"
+            />
           </marker>
         </defs>
 
@@ -68,7 +74,10 @@
 
         <g v-else>
           <!-- Epoch Column Transition Delineator Boundaries & Headers -->
-          <g v-for="(seq, index) in sortedEpochSeqs" :key="`header-${seq}`">
+          <g
+            v-for="(seq, index) in sortedEpochSeqs"
+            :key="`header-${seq}`"
+          >
             <!-- Header Label -->
             <text
               :x="getColumnCenter(seq)"
@@ -95,7 +104,10 @@
           </g>
 
           <!-- Study Arm Tracks (Lanes) -->
-          <g v-for="(arm, armIdx) in lanes" :key="arm.arm_id">
+          <g
+            v-for="(arm, armIdx) in lanes"
+            :key="arm.arm_id"
+          >
             <!-- Horizontal lane pathway background track -->
             <line
               :x1="laneXOffset"
@@ -125,7 +137,10 @@
               font-size="11px"
               fill="#1e293b"
             >
-              <tspan x="20" dy="0">{{ truncate(arm.arm_name, 22) }}</tspan>
+              <tspan
+                x="20"
+                dy="0"
+              >{{ truncate(arm.arm_name, 22) }}</tspan>
             </text>
 
             <!-- Epoch Blocks and Encounter Nodes in each lane -->
@@ -279,7 +294,10 @@
                     style="pointer-events: none"
                   >
                     Day {{ getPlannedDay(visit) }}
-                    <tspan fill="#64748b" font-weight="normal">
+                    <tspan
+                      fill="#64748b"
+                      font-weight="normal"
+                    >
                       ({{ getOffsetString(visit) }})
                     </tspan>
                   </text>
@@ -296,7 +314,7 @@
             <g
               v-if="
                 nodePositions[cross.from_visit_id] &&
-                nodePositions[cross.to_visit_id]
+                  nodePositions[cross.to_visit_id]
               "
             >
               <path
@@ -441,7 +459,7 @@
                 font-size: 0.9rem;
               "
               placeholder="e.g. 14"
-            />
+            >
           </div>
 
           <!-- Min/Max Offsets -->
@@ -472,7 +490,7 @@
                   font-size: 0.9rem;
                 "
                 placeholder="e.g. 1"
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -500,7 +518,7 @@
                   font-size: 0.9rem;
                 "
                 placeholder="e.g. 3"
-              />
+              >
             </div>
           </div>
 
@@ -530,7 +548,7 @@
                 font-size: 0.9rem;
               "
               placeholder="e.g. Screening, Day 1, baseline_visit"
-            />
+            >
           </div>
 
           <!-- Required Justification (21 CFR Part 11) -->

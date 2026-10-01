@@ -12,7 +12,7 @@
       type="text"
       autocomplete="off"
       placeholder="Study code, e.g. CAD-101"
-    />
+    >
     <button
       id="btn-load-study-subjects"
       type="submit"
@@ -21,7 +21,11 @@
     >
       Show subjects
     </button>
-    <span id="study-subjects-status" class="status" role="status">
+    <span
+      id="study-subjects-status"
+      class="status"
+      role="status"
+    >
       {{ statusText }}
     </span>
   </form>

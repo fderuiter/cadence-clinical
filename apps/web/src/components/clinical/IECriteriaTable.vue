@@ -2,12 +2,8 @@
   <div class="ie-criteria-table-container">
     <div class="table-toolbar">
       <div class="toolbar-stats">
-        <span class="stat-pill inc"
-          ><strong>{{ inclusionCount }}</strong> Inclusion Criteria</span
-        >
-        <span class="stat-pill exc"
-          ><strong>{{ exclusionCount }}</strong> Exclusion Criteria</span
-        >
+        <span class="stat-pill inc"><strong>{{ inclusionCount }}</strong> Inclusion Criteria</span>
+        <span class="stat-pill exc"><strong>{{ exclusionCount }}</strong> Exclusion Criteria</span>
       </div>
       <button
         type="button"
@@ -19,12 +15,23 @@
     </div>
 
     <!-- Inline Add Form -->
-    <div v-if="showAddModal" class="crit-add-panel">
+    <div
+      v-if="showAddModal"
+      class="crit-add-panel"
+    >
       <div class="crit-field">
         <label for="new-crit-type">Type</label>
-        <select id="new-crit-type" v-model="newCritType" class="crit-select">
-          <option value="INCLUSION">Inclusion</option>
-          <option value="EXCLUSION">Exclusion</option>
+        <select
+          id="new-crit-type"
+          v-model="newCritType"
+          class="crit-select"
+        >
+          <option value="INCLUSION">
+            Inclusion
+          </option>
+          <option value="EXCLUSION">
+            Exclusion
+          </option>
         </select>
       </div>
       <div class="crit-field">
@@ -35,25 +42,31 @@
           placeholder="e.g. INC-04"
           class="crit-input"
           style="width: 100px"
-        />
+        >
       </div>
-      <div class="crit-field" style="flex: 2">
+      <div
+        class="crit-field"
+        style="flex: 2"
+      >
         <label for="new-crit-text">Protocol Requirement Text</label>
         <input
           id="new-crit-text"
           v-model="newCritText"
           placeholder="e.g. Subject must have normal ECG at baseline."
           class="crit-input"
-        />
+        >
       </div>
-      <div class="crit-field" style="flex: 1">
+      <div
+        class="crit-field"
+        style="flex: 1"
+      >
         <label for="new-crit-expr">Logical CDASH Expression</label>
         <input
           id="new-crit-expr"
           v-model="newCritExpr"
           placeholder="e.g. EG.EGORRES == 'NORMAL'"
           class="crit-input"
-        />
+        >
       </div>
       <button
         type="button"
@@ -76,13 +89,36 @@
       <table class="criteria-table">
         <thead>
           <tr>
-            <th class="col-type" scope="col">Type</th>
-            <th class="col-id" scope="col">ID</th>
-            <th class="col-text" scope="col">Protocol Text Requirement</th>
-            <th class="col-expr" scope="col">
+            <th
+              class="col-type"
+              scope="col"
+            >
+              Type
+            </th>
+            <th
+              class="col-id"
+              scope="col"
+            >
+              ID
+            </th>
+            <th
+              class="col-text"
+              scope="col"
+            >
+              Protocol Text Requirement
+            </th>
+            <th
+              class="col-expr"
+              scope="col"
+            >
               Compiled Logical CDASH Expression
             </th>
-            <th class="col-syntax" scope="col">AST Check</th>
+            <th
+              class="col-syntax"
+              scope="col"
+            >
+              AST Check
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -106,18 +142,28 @@
               {{ item.text_expression }}
             </td>
             <td class="cell-expr">
-              <code v-if="item.logical_expression" class="logic-code">
+              <code
+                v-if="item.logical_expression"
+                class="logic-code"
+              >
                 {{ item.logical_expression }}
               </code>
-              <span v-else class="text-muted"
-                >Unmapped narrative requirement</span
-              >
+              <span
+                v-else
+                class="text-muted"
+              >Unmapped narrative requirement</span>
             </td>
             <td class="cell-syntax">
-              <span v-if="item.logical_expression" class="syntax-badge valid">
+              <span
+                v-if="item.logical_expression"
+                class="syntax-badge valid"
+              >
                 ✓ Valid CDASH AST
               </span>
-              <span v-else class="syntax-badge narrative">
+              <span
+                v-else
+                class="syntax-badge narrative"
+              >
                 Narrative Text
               </span>
             </td>

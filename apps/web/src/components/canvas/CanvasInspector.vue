@@ -5,35 +5,66 @@
     aria-labelledby="canvas-inspector-title"
   >
     <template v-if="observation || participant || protocolVersion">
-      <header v-if="observation" class="inspector-header">
+      <header
+        v-if="observation"
+        class="inspector-header"
+      >
         <span class="inspector-kind">Observation</span>
-        <h2 id="canvas-inspector-title" class="inspector-title">
+        <h2
+          id="canvas-inspector-title"
+          class="inspector-title"
+        >
           {{ observation.test_name }}
         </h2>
-        <span id="canvas-inspector-ref" class="inspector-ref">
+        <span
+          id="canvas-inspector-ref"
+          class="inspector-ref"
+        >
           Execution id {{ observation.id }} (no kernel reference yet)
         </span>
       </header>
-      <header v-else-if="participant" class="inspector-header">
+      <header
+        v-else-if="participant"
+        class="inspector-header"
+      >
         <span class="inspector-kind">Participant</span>
-        <h2 id="canvas-inspector-title" class="inspector-title">
+        <h2
+          id="canvas-inspector-title"
+          class="inspector-title"
+        >
           {{ participant.subject_id }}
         </h2>
-        <code id="canvas-inspector-ref" class="inspector-ref">{{
+        <code
+          id="canvas-inspector-ref"
+          class="inspector-ref"
+        >{{
           nodeRef
         }}</code>
       </header>
-      <header v-else-if="protocolVersion" class="inspector-header">
+      <header
+        v-else-if="protocolVersion"
+        class="inspector-header"
+      >
         <span class="inspector-kind">Protocol version</span>
-        <h2 id="canvas-inspector-title" class="inspector-title">
+        <h2
+          id="canvas-inspector-title"
+          class="inspector-title"
+        >
           Version {{ protocolVersion.number }}
         </h2>
-        <code id="canvas-inspector-ref" class="inspector-ref">{{
+        <code
+          id="canvas-inspector-ref"
+          class="inspector-ref"
+        >{{
           protocolVersion.ref
         }}</code>
       </header>
 
-      <div class="verbs" role="toolbar" aria-label="Verbs">
+      <div
+        class="verbs"
+        role="toolbar"
+        aria-label="Verbs"
+      >
         <button
           id="verb-details"
           type="button"
@@ -44,7 +75,10 @@
         >
           Details
         </button>
-        <template v-for="verb in verbs" :key="verb.id">
+        <template
+          v-for="verb in verbs"
+          :key="verb.id"
+        >
           <button
             v-if="verb.live"
             :id="`verb-${verb.id}`"
@@ -69,7 +103,12 @@
           </button>
         </template>
       </div>
-      <p v-if="shownVerbNote" id="verb-note" class="verb-note" role="status">
+      <p
+        v-if="shownVerbNote"
+        id="verb-note"
+        class="verb-note"
+        role="status"
+      >
         {{ shownVerbNote }}
       </p>
 
@@ -100,7 +139,11 @@
           v-if="explained"
           :explanation="explained.decision.explanation"
         />
-        <p v-else id="kernel-explain-empty" class="inspector-empty">
+        <p
+          v-else
+          id="kernel-explain-empty"
+          class="inspector-empty"
+        >
           Choose Explain beside a command under Act to see the kernel's reasons
           for its decision.
         </p>
@@ -112,59 +155,139 @@
         class="sdv"
         aria-labelledby="kernel-simulate-title"
       >
-        <h3 id="kernel-simulate-title">Simulation & Matrix Gap Analysis</h3>
-        <p v-if="simulationLoading" class="inspector-empty">Running pure in-memory evaluation and matrix gap analysis...</p>
-        <p v-else-if="simulationError" class="inspector-empty" style="color: var(--danger, #dc3545);">
+        <h3 id="kernel-simulate-title">
+          Simulation & Matrix Gap Analysis
+        </h3>
+        <p
+          v-if="simulationLoading"
+          class="inspector-empty"
+        >
+          Running pure in-memory evaluation and matrix gap analysis...
+        </p>
+        <p
+          v-else-if="simulationError"
+          class="inspector-empty"
+          style="color: var(--danger, #dc3545)"
+        >
           {{ simulationError }}
         </p>
-        <div v-else-if="simulationResult" class="simulation-details">
-          <div class="seal-container" style="background: var(--neutral-light, #f8f9fa); padding: 8px; border-radius: 4px; font-size: 0.8rem; font-family: monospace;">
-            <div><strong>Input Hash Seal:</strong> {{ simulationResult.input_hash }}</div>
-            <div><strong>Result Hash Seal:</strong> {{ simulationResult.result_hash }}</div>
+        <div
+          v-else-if="simulationResult"
+          class="simulation-details"
+        >
+          <div
+            class="seal-container"
+            style="
+              background: var(--neutral-light, #f8f9fa);
+              padding: 8px;
+              border-radius: 4px;
+              font-size: 0.8rem;
+              font-family: monospace;
+            "
+          >
+            <div>
+              <strong>Input Hash Seal:</strong>
+              {{ simulationResult.input_hash }}
+            </div>
+            <div>
+              <strong>Result Hash Seal:</strong>
+              {{ simulationResult.result_hash }}
+            </div>
           </div>
 
-          <h4 style="margin-top: 12px; margin-bottom: 6px;">Schedule Matrix Gap Findings</h4>
-          <div v-if="simulationResult.matrix_gaps && simulationResult.matrix_gaps.length" class="gaps-list">
+          <h4 style="margin-top: 12px; margin-bottom: 6px">
+            Schedule Matrix Gap Findings
+          </h4>
+          <div
+            v-if="
+              simulationResult.matrix_gaps &&
+                simulationResult.matrix_gaps.length
+            "
+            class="gaps-list"
+          >
             <div
               v-for="(gap, idx) in simulationResult.matrix_gaps"
               :key="idx"
               class="gap-card"
-              style="border-left: 3px solid var(--warning, #ffc107); padding: 6px 8px; margin-bottom: 8px; background: #fff8e1;"
+              style="
+                border-left: 3px solid var(--warning, #ffc107);
+                padding: 6px 8px;
+                margin-bottom: 8px;
+                background: #fff8e1;
+              "
             >
-              <div style="font-weight: 600; font-size: 0.85rem;">
-                <span class="gap-badge">{{ gap.severity }}</span> {{ gap.kind }} (<code>{{ gap.json_pointer_path }}</code>)
+              <div style="font-weight: 600; font-size: 0.85rem">
+                <span class="gap-badge">{{ gap.severity }}</span>
+                {{ gap.kind }} (<code>{{ gap.json_pointer_path }}</code>)
               </div>
-              <div style="font-size: 0.8rem; margin-top: 2px;">{{ gap.description }}</div>
-              <div v-if="gap.recommendation" style="font-size: 0.75rem; color: #555; margin-top: 2px;">
+              <div style="font-size: 0.8rem; margin-top: 2px">
+                {{ gap.description }}
+              </div>
+              <div
+                v-if="gap.recommendation"
+                style="font-size: 0.75rem; color: #555; margin-top: 2px"
+              >
                 <em>Rec: {{ gap.recommendation }}</em>
               </div>
             </div>
           </div>
-          <p v-else style="font-size: 0.85rem; color: #28a745;">✓ No schedule matrix gaps detected.</p>
+          <p
+            v-else
+            style="font-size: 0.85rem; color: #28a745"
+          >
+            ✓ No schedule matrix gaps detected.
+          </p>
 
-          <div class="proposal-actions" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
-            <a href="#" class="inspect-reasoning-link" style="color: var(--primary, #0056b3); font-size: 0.85rem; text-decoration: underline;" @click.prevent="showReasoningModal = true">
+          <div
+            class="proposal-actions"
+            style="
+              margin-top: 16px;
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            "
+          >
+            <a
+              href="#"
+              class="inspect-reasoning-link"
+              style="
+                color: var(--primary, #0056b3);
+                font-size: 0.85rem;
+                text-decoration: underline;
+              "
+              @click.prevent="showReasoningModal = true"
+            >
               Inspect reasoning &amp; lineage provenance
             </a>
 
-            <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <div style="display: flex; gap: 8px; margin-top: 4px">
               <button
                 type="button"
                 class="btn btn-primary"
-                style="flex: 1; padding: 6px 12px; font-size: 0.85rem;"
+                style="flex: 1; padding: 6px 12px; font-size: 0.85rem"
                 :disabled="proposalApproved"
-                @click="proposalApproved = true; proposalRejected = false"
+                @click="
+                  proposalApproved = true;
+                  proposalRejected = false;
+                "
               >
-                {{ proposalApproved ? '✓ Proposal Approved' : 'Approve Proposal' }}
+                {{
+                  proposalApproved ? "✓ Proposal Approved" : "Approve Proposal"
+                }}
               </button>
               <button
                 type="button"
                 class="btn btn-secondary"
-                style="flex: 1; padding: 6px 12px; font-size: 0.85rem;"
+                style="flex: 1; padding: 6px 12px; font-size: 0.85rem"
                 :disabled="proposalRejected"
-                @click="proposalRejected = true; proposalApproved = false"
+                @click="
+                  proposalRejected = true;
+                  proposalApproved = false;
+                "
               >
-                {{ proposalRejected ? '✗ Proposal Rejected' : 'Reject Proposal' }}
+                {{
+                  proposalRejected ? "✗ Proposal Rejected" : "Reject Proposal"
+                }}
               </button>
             </div>
           </div>
@@ -174,7 +297,10 @@
       <template v-else-if="observation">
         <dl class="details">
           <dt>Result</dt>
-          <dd id="inspector-result" class="numeric">
+          <dd
+            id="inspector-result"
+            class="numeric"
+          >
             {{ observationValue(observation) }}
           </dd>
           <template v-if="observation.normalized_value != null">
@@ -193,7 +319,7 @@
           <template
             v-if="
               observation.reference_range_low != null ||
-              observation.reference_range_high != null
+                observation.reference_range_high != null
             "
           >
             <dt>Reference range</dt>
@@ -219,8 +345,13 @@
           class="sdv"
           aria-labelledby="inspector-sdv-title"
         >
-          <h3 id="inspector-sdv-title">Source data verification</h3>
-          <p id="inspector-sdv-status" class="sdv-status">
+          <h3 id="inspector-sdv-title">
+            Source data verification
+          </h3>
+          <p
+            id="inspector-sdv-status"
+            class="sdv-status"
+          >
             {{
               observation.is_sdv_verified
                 ? `Verified by ${observation.sdv_verified_by || "an unrecorded user"}${observation.sdv_verified_at ? ` on ${observation.sdv_verified_at}` : ""}.`
@@ -255,7 +386,11 @@
               Flag for re-verification
             </button>
           </template>
-          <p v-else id="inspector-sdv-note" class="inspector-empty">
+          <p
+            v-else
+            id="inspector-sdv-note"
+            class="inspector-empty"
+          >
             Source data is verified by a monitor or data manager.
           </p>
         </section>
@@ -265,8 +400,13 @@
           class="sdv"
           aria-labelledby="inspector-queries-title"
         >
-          <h3 id="inspector-queries-title">Queries</h3>
-          <p id="inspector-queries-status" class="sdv-status">
+          <h3 id="inspector-queries-title">
+            Queries
+          </h3>
+          <p
+            id="inspector-queries-status"
+            class="sdv-status"
+          >
             {{ queriesSummary }}
           </p>
           <template v-if="canManage">
@@ -290,9 +430,15 @@
         </section>
       </template>
 
-      <dl v-else-if="protocolVersion" id="inspector-version" class="details">
+      <dl
+        v-else-if="protocolVersion"
+        id="inspector-version"
+        class="details"
+      >
         <dt>Status</dt>
-        <dd id="inspector-version-status">{{ protocolVersion.status }}</dd>
+        <dd id="inspector-version-status">
+          {{ protocolVersion.status }}
+        </dd>
         <dt>Amends</dt>
         <dd>
           {{
@@ -334,7 +480,9 @@
           <dt>Protocol version</dt>
           <dd>{{ participant.active_protocol_version || "Not recorded" }}</dd>
           <dt>Enrollment number</dt>
-          <dd class="numeric">{{ participant.enrollment_index }}</dd>
+          <dd class="numeric">
+            {{ participant.enrollment_index }}
+          </dd>
         </dl>
 
         <ParticipantStateChange
@@ -367,16 +515,26 @@
     </template>
 
     <template v-else-if="protocolVersionError">
-      <h2 id="canvas-inspector-title" class="inspector-title">
+      <h2
+        id="canvas-inspector-title"
+        class="inspector-title"
+      >
         Protocol version
       </h2>
-      <p id="inspector-version-error" class="inspector-empty" role="alert">
+      <p
+        id="inspector-version-error"
+        class="inspector-empty"
+        role="alert"
+      >
         The kernel couldn't answer: {{ protocolVersionError }}
       </p>
     </template>
 
     <template v-else-if="missing">
-      <h2 id="canvas-inspector-title" class="inspector-title">
+      <h2
+        id="canvas-inspector-title"
+        class="inspector-title"
+      >
         Participant not loaded
       </h2>
       <p class="inspector-empty">
@@ -386,7 +544,12 @@
     </template>
 
     <template v-else>
-      <h2 id="canvas-inspector-title" class="inspector-title">Inspector</h2>
+      <h2
+        id="canvas-inspector-title"
+        class="inspector-title"
+      >
+        Inspector
+      </h2>
       <p class="inspector-empty">
         Select a participant or an observation to see its details here.
       </p>
@@ -396,46 +559,142 @@
     <div
       v-if="showReasoningModal"
       class="reasoning-modal-overlay"
-      style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;"
+      role="button"
+      tabindex="0"
+      style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      "
       @click.self="showReasoningModal = false"
+      @keydown.escape="showReasoningModal = false"
     >
       <div
         class="reasoning-modal-card"
-        style="background: white; border-radius: 8px; width: 90%; max-width: 600px; max-height: 85vh; padding: 20px; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.2);"
+        style="
+          background: white;
+          border-radius: 8px;
+          width: 90%;
+          max-width: 600px;
+          max-height: 85vh;
+          padding: 20px;
+          overflow-y: auto;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        "
       >
-        <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 12px;">
-          <h3 style="margin: 0; font-size: 1.1rem; color: #111;">AI Proposal Reasoning &amp; Provenance Chain</h3>
-          <button type="button" class="btn" style="border: none; background: transparent; font-size: 1.2rem; cursor: pointer;" @click="showReasoningModal = false">×</button>
+        <header
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+          "
+        >
+          <h3 style="margin: 0; font-size: 1.1rem; color: #111">
+            AI Proposal Reasoning &amp; Provenance Chain
+          </h3>
+          <button
+            type="button"
+            class="btn"
+            style="
+              border: none;
+              background: transparent;
+              font-size: 1.2rem;
+              cursor: pointer;
+            "
+            @click="showReasoningModal = false"
+          >
+            ×
+          </button>
         </header>
 
-        <div class="reasoning-steps" style="display: flex; flex-direction: column; gap: 12px;">
-          <div class="reasoning-step" style="border-left: 3px solid #0056b3; padding-left: 10px;">
-            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3;">Step 1: Structure Synthesis</div>
-            <p style="margin: 4px 0; font-size: 0.85rem;">Synthesized core study objectives and endpoints from trial brief in memory.</p>
-            <div style="font-size: 0.75rem; color: #666;"><strong>Citations:</strong> ICH M11 §3.1 Primary Objectives, CDISC USDM v3.0 Core Specification</div>
+        <div
+          class="reasoning-steps"
+          style="display: flex; flex-direction: column; gap: 12px"
+        >
+          <div
+            class="reasoning-step"
+            style="border-left: 3px solid #0056b3; padding-left: 10px"
+          >
+            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3">
+              Step 1: Structure Synthesis
+            </div>
+            <p style="margin: 4px 0; font-size: 0.85rem">
+              Synthesized core study objectives and endpoints from trial brief
+              in memory.
+            </p>
+            <div style="font-size: 0.75rem; color: #666">
+              <strong>Citations:</strong> ICH M11 §3.1 Primary Objectives, CDISC
+              USDM v3.0 Core Specification
+            </div>
           </div>
 
-          <div class="reasoning-step" style="border-left: 3px solid #0056b3; padding-left: 10px;">
-            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3;">Step 2: Epoch &amp; Arm Mapping</div>
-            <p style="margin: 4px 0; font-size: 0.85rem;">Structured Screening (14d), Treatment (12wk), and Follow-up (4wk) epochs with Experimental and Active Comparator arms.</p>
-            <div style="font-size: 0.75rem; color: #666;"><strong>Citations:</strong> ICH M11 §4.1 Study Design, CDISC USDM Arm/Epoch Taxonomy</div>
+          <div
+            class="reasoning-step"
+            style="border-left: 3px solid #0056b3; padding-left: 10px"
+          >
+            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3">
+              Step 2: Epoch &amp; Arm Mapping
+            </div>
+            <p style="margin: 4px 0; font-size: 0.85rem">
+              Structured Screening (14d), Treatment (12wk), and Follow-up (4wk)
+              epochs with Experimental and Active Comparator arms.
+            </p>
+            <div style="font-size: 0.75rem; color: #666">
+              <strong>Citations:</strong> ICH M11 §4.1 Study Design, CDISC USDM
+              Arm/Epoch Taxonomy
+            </div>
           </div>
 
-          <div class="reasoning-step" style="border-left: 3px solid #0056b3; padding-left: 10px;">
-            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3;">Step 3: Schedule of Activities Grid</div>
-            <p style="margin: 4px 0; font-size: 0.85rem;">Mapped vital signs, lab panels, ECGs, and adverse event monitoring across planned visits with explicit UCUM units.</p>
-            <div style="font-size: 0.75rem; color: #666;"><strong>Citations:</strong> ICH M11 §5.0 Schedule of Activities, UCUM Unified Code for Units of Measure</div>
+          <div
+            class="reasoning-step"
+            style="border-left: 3px solid #0056b3; padding-left: 10px"
+          >
+            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3">
+              Step 3: Schedule of Activities Grid
+            </div>
+            <p style="margin: 4px 0; font-size: 0.85rem">
+              Mapped vital signs, lab panels, ECGs, and adverse event monitoring
+              across planned visits with explicit UCUM units.
+            </p>
+            <div style="font-size: 0.75rem; color: #666">
+              <strong>Citations:</strong> ICH M11 §5.0 Schedule of Activities,
+              UCUM Unified Code for Units of Measure
+            </div>
           </div>
 
-          <div class="reasoning-step" style="border-left: 3px solid #0056b3; padding-left: 10px;">
-            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3;">Step 4: Matrix Gap Verification</div>
-            <p style="margin: 4px 0; font-size: 0.85rem;">Verified all planned activities link to endpoints and safety rules without orphan encounters or cyclic epoch transitions.</p>
-            <div style="font-size: 0.75rem; color: #666;"><strong>Citations:</strong> K-PROT-3 Data Purpose Mapping, FDA Technical Conformance Guide</div>
+          <div
+            class="reasoning-step"
+            style="border-left: 3px solid #0056b3; padding-left: 10px"
+          >
+            <div style="font-weight: 600; font-size: 0.9rem; color: #0056b3">
+              Step 4: Matrix Gap Verification
+            </div>
+            <p style="margin: 4px 0; font-size: 0.85rem">
+              Verified all planned activities link to endpoints and safety rules
+              without orphan encounters or cyclic epoch transitions.
+            </p>
+            <div style="font-size: 0.75rem; color: #666">
+              <strong>Citations:</strong> K-PROT-3 Data Purpose Mapping, FDA
+              Technical Conformance Guide
+            </div>
           </div>
         </div>
 
-        <div style="margin-top: 16px; text-align: right;">
-          <button type="button" class="btn btn-secondary" @click="showReasoningModal = false">Close</button>
+        <div style="margin-top: 16px; text-align: right">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showReasoningModal = false"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -575,7 +834,9 @@ async function runSimulation() {
   simulationLoading.value = true;
   simulationError.value = "";
   try {
-    simulationResult.value = await kernelApi.simulate({ storedVersionRef: kernelRef.value });
+    simulationResult.value = await kernelApi.simulate({
+      storedVersionRef: kernelRef.value,
+    });
   } catch (e: any) {
     simulationError.value = e.message || String(e);
   } finally {
@@ -584,7 +845,11 @@ async function runSimulation() {
 }
 
 watch(currentVerb, (verb) => {
-  if (verb === "simulate" && !simulationResult.value && !simulationLoading.value) {
+  if (
+    verb === "simulate" &&
+    !simulationResult.value &&
+    !simulationLoading.value
+  ) {
     runSimulation();
   }
 });

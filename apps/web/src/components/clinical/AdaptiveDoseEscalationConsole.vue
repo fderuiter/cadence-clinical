@@ -10,10 +10,14 @@
           >
             {{ designTypeLabel }}
           </span>
-          <span v-if="isActive" class="badge-status status-active"
-            >ACTIVE PROTOCOL</span
-          >
-          <span v-else class="badge-status status-inactive">INACTIVE</span>
+          <span
+            v-if="isActive"
+            class="badge-status status-active"
+          >ACTIVE PROTOCOL</span>
+          <span
+            v-else
+            class="badge-status status-inactive"
+          >INACTIVE</span>
         </div>
         <h3 class="title">
           Adaptive Oncology Dose Escalation &amp; Randomization Console
@@ -27,24 +31,19 @@
       <div class="header-metrics">
         <div class="metric-box">
           <span class="metric-label">Target Toxicity (&phi;)</span>
-          <span class="metric-val"
-            >{{ (targetToxicityRate * 100).toFixed(1) }}%</span
-          >
+          <span class="metric-val">{{ (targetToxicityRate * 100).toFixed(1) }}%</span>
         </div>
-        <div v-if="designType === 'BOIN'" class="metric-box">
+        <div
+          v-if="designType === 'BOIN'"
+          class="metric-box"
+        >
           <span class="metric-label">BOIN Boundaries</span>
-          <span class="metric-val"
-            >&lambda;<sub>e</sub> {{ lambdaE.toFixed(3) }} | &lambda;<sub
-              >d</sub
-            >
-            {{ lambdaD.toFixed(3) }}</span
-          >
+          <span class="metric-val">&lambda;<sub>e</sub> {{ lambdaE.toFixed(3) }} | &lambda;<sub>d</sub>
+            {{ lambdaD.toFixed(3) }}</span>
         </div>
         <div class="metric-box">
           <span class="metric-label">Current Cohort</span>
-          <span class="metric-val highlight"
-            >Cohort #{{ activeCohortNumber }}</span
-          >
+          <span class="metric-val highlight">Cohort #{{ activeCohortNumber }}</span>
         </div>
       </div>
     </div>
@@ -61,9 +60,10 @@
         <div class="action-row">
           <span class="action-tag">RECOMMENDED ACTION:</span>
           <span class="action-name">{{ recommendationAction }}</span>
-          <span v-if="recommendedDoseName" class="rec-dose-pill"
-            >Target: {{ recommendedDoseName }}</span
-          >
+          <span
+            v-if="recommendedDoseName"
+            class="rec-dose-pill"
+          >Target: {{ recommendedDoseName }}</span>
         </div>
         <p class="banner-rationale">
           {{ rationale || "Awaiting cohort evaluation." }}
@@ -132,27 +132,28 @@
                     }"
                     :class="rateColorClass(dose.observed_dlt_rate)"
                   />
-                  <span class="rate-text"
-                    >{{ (dose.observed_dlt_rate * 100).toFixed(1) }}%</span
-                  >
+                  <span class="rate-text">{{ (dose.observed_dlt_rate * 100).toFixed(1) }}%</span>
                 </div>
               </td>
               <td>
                 <span
                   v-if="
                     dose.posterior_dlt_rate !== null &&
-                    dose.posterior_dlt_rate !== undefined
+                      dose.posterior_dlt_rate !== undefined
                   "
                 >
                   {{ (dose.posterior_dlt_rate * 100).toFixed(1) }}%
                 </span>
-                <span v-else class="text-muted">-</span>
+                <span
+                  v-else
+                  class="text-muted"
+                >-</span>
               </td>
               <td>
                 <span
                   v-if="
                     dose.overdose_probability !== null &&
-                    dose.overdose_probability !== undefined
+                      dose.overdose_probability !== undefined
                   "
                   :class="{
                     'overdose-warning': dose.overdose_probability > 0.8,
@@ -160,30 +161,36 @@
                 >
                   {{ (dose.overdose_probability * 100).toFixed(1) }}%
                 </span>
-                <span v-else class="text-muted">-</span>
+                <span
+                  v-else
+                  class="text-muted"
+                >-</span>
               </td>
               <td>
                 <span
                   v-if="dose.is_eliminated_for_safety"
                   class="pill-eliminated"
-                  >ELIMINATED</span
-                >
-                <span v-else class="pill-safe">TOLERABLE</span>
+                >ELIMINATED</span>
+                <span
+                  v-else
+                  class="pill-safe"
+                >TOLERABLE</span>
               </td>
               <td>
                 <span
                   v-if="dose.dose_level_index === currentDoseLevelIndex"
                   class="pill-current"
-                  >ACTIVE DOSE</span
-                >
+                >ACTIVE DOSE</span>
                 <span
                   v-else-if="
                     dose.dose_level_index === recommendedDoseLevelIndex
                   "
                   class="pill-target"
-                  >NEXT TARGET</span
-                >
-                <span v-else class="text-muted">STANDBY</span>
+                >NEXT TARGET</span>
+                <span
+                  v-else
+                  class="text-muted"
+                >STANDBY</span>
               </td>
             </tr>
           </tbody>
@@ -192,7 +199,10 @@
     </div>
 
     <!-- Response-Adaptive Randomization (RAR) Multi-Arm Allocator (if RAR active) -->
-    <div v-if="designType === 'RAR' || rarArms.length > 0" class="rar-section">
+    <div
+      v-if="designType === 'RAR' || rarArms.length > 0"
+      class="rar-section"
+    >
       <div class="rar-header">
         <h4 class="section-title">
           Response-Adaptive Randomization (RAR) Allocation Weights
@@ -208,7 +218,10 @@
         >
           <div class="arm-card-header">
             <span class="arm-name">{{ arm.arm_name }}</span>
-            <span v-if="arm.is_control" class="control-badge">CONTROL</span>
+            <span
+              v-if="arm.is_control"
+              class="control-badge"
+            >CONTROL</span>
             <span class="status-pill">{{ arm.status }}</span>
           </div>
           <div class="arm-metrics">
@@ -222,17 +235,13 @@
             </div>
             <div class="arm-metric-item">
               <span class="metric-lbl">Posterior &theta;</span>
-              <span class="metric-num"
-                >{{ (arm.posterior_mean * 100).toFixed(1) }}%</span
-              >
+              <span class="metric-num">{{ (arm.posterior_mean * 100).toFixed(1) }}%</span>
             </div>
           </div>
           <div class="arm-prob-section">
             <div class="prob-label-row">
               <span class="prob-title">Dynamic Allocation Weight:</span>
-              <span class="prob-val"
-                >{{ (arm.allocation_probability * 100).toFixed(1) }}%</span
-              >
+              <span class="prob-val">{{ (arm.allocation_probability * 100).toFixed(1) }}%</span>
             </div>
             <div class="prob-track">
               <div
@@ -246,11 +255,20 @@
     </div>
 
     <!-- 21 CFR Part 11 Cohort Transition Sign-off Modal -->
-    <div v-if="showTransitionModal" class="modal-backdrop">
+    <div
+      v-if="showTransitionModal"
+      class="modal-backdrop"
+    >
       <div class="modal-card">
         <div class="modal-header">
-          <h4 class="modal-title">21 CFR Part 11 Cohort Transition Sign-off</h4>
-          <button type="button" class="btn-close" @click="closeTransitionModal">
+          <h4 class="modal-title">
+            21 CFR Part 11 Cohort Transition Sign-off
+          </h4>
+          <button
+            type="button"
+            class="btn-close"
+            @click="closeTransitionModal"
+          >
             &times;
           </button>
         </div>
@@ -266,17 +284,16 @@
             </div>
             <div class="decision-row">
               <span class="lbl">Target Dose Level:</span>
-              <span class="val"
-                >{{ selectedTargetDoseName }} (Level
-                {{ selectedTargetDoseIndex }})</span
-              >
+              <span class="val">{{ selectedTargetDoseName }} (Level
+                {{ selectedTargetDoseIndex }})</span>
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="decision-action-select"
-              >Confirmed Action:</label
-            >
+            <label
+              class="form-label"
+              for="decision-action-select"
+            >Confirmed Action:</label>
             <select
               id="decision-action-select"
               v-model="selectedAction"
@@ -288,7 +305,9 @@
               <option value="DE_ESCALATE">
                 DE_ESCALATE (Reduce to Lower Dose)
               </option>
-              <option value="STAY">STAY (Continue Current Dose Level)</option>
+              <option value="STAY">
+                STAY (Continue Current Dose Level)
+              </option>
               <option value="EXPAND_COHORT">
                 EXPAND_COHORT (Enroll 3 Additional Subjects)
               </option>
@@ -302,9 +321,10 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="target-dose-select"
-              >Target Dose Level Index:</label
-            >
+            <label
+              class="form-label"
+              for="target-dose-select"
+            >Target Dose Level Index:</label>
             <select
               id="target-dose-select"
               v-model.number="selectedTargetDoseIndex"
@@ -324,8 +344,14 @@
             </select>
           </div>
 
-          <div v-if="isOverride" class="form-group alert-group">
-            <label class="form-label required" for="override-reason-input">
+          <div
+            v-if="isOverride"
+            class="form-group alert-group"
+          >
+            <label
+              class="form-label required"
+              for="override-reason-input"
+            >
               Safety Committee Override Justification (21 CFR Part 11):
             </label>
             <textarea
@@ -339,7 +365,10 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label required" for="esignature-input">
+            <label
+              class="form-label required"
+              for="esignature-input"
+            >
               Electronic Signature (PIN or Full Name):
             </label>
             <input
@@ -349,7 +378,7 @@
               class="form-input"
               placeholder="e.g. Dr. Jane Smith, MD"
               required
-            />
+            >
           </div>
         </div>
 

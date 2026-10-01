@@ -47,7 +47,9 @@
     >
       <!-- Blinding Enclosure Notice -->
       <div class="blinding-alert-box">
-        <div class="alert-icon">🔒</div>
+        <div class="alert-icon">
+          🔒
+        </div>
         <div class="alert-content">
           <div class="alert-title">
             Blinded Independent Review Protocol Active
@@ -58,8 +60,7 @@
               activePersona === "READER_1"
                 ? "Reader 1 (Dr. Sarah Miller)"
                 : "Reader 2 (Dr. James Wilson)"
-            }}</strong
-            >. Subject treatment arm, clinical trial site, and peer reader
+            }}</strong>. Subject treatment arm, clinical trial site, and peer reader
             observations are completely blinded per Charter section 3.1.
           </div>
         </div>
@@ -90,9 +91,7 @@
           </div>
           <div class="metric-card">
             <span class="metric-card-label">Sum of Diameters (SLD)</span>
-            <span class="metric-card-val font-mono"
-              >{{ currentReaderSLD }} mm</span
-            >
+            <span class="metric-card-val font-mono">{{ currentReaderSLD }} mm</span>
           </div>
           <div class="metric-card">
             <span class="metric-card-label">Peer Read Status</span>
@@ -113,19 +112,27 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="l in currentReaderLesions" :key="l.lesion_id">
+              <tr
+                v-for="l in currentReaderLesions"
+                :key="l.lesion_id"
+              >
                 <td class="font-bold">
                   {{ l.lesion_id }}
                 </td>
                 <td>{{ l.organ_site }}</td>
-                <td class="font-mono">{{ l.longest_diameter_mm }} mm</td>
+                <td class="font-mono">
+                  {{ l.longest_diameter_mm }} mm
+                </td>
                 <td class="font-mono">
                   {{ l.short_axis_mm ? l.short_axis_mm + " mm" : "-" }}
                 </td>
                 <td><span class="badge badge-target">TARGET</span></td>
               </tr>
               <tr v-if="currentReaderLesions.length === 0">
-                <td colspan="5" class="empty-row">
+                <td
+                  colspan="5"
+                  class="empty-row"
+                >
                   No lesions added. Use the MPR Caliper tools to place
                   measurements.
                 </td>
@@ -137,26 +144,36 @@
         <!-- Qualitative Non-Target & Response Classification -->
         <div class="qualitative-assessment-grid">
           <div class="form-group">
-            <label for="non-target-select" class="form-label"
-              >Non-Target Lesion Status:</label
-            >
+            <label
+              for="non-target-select"
+              class="form-label"
+            >Non-Target Lesion Status:</label>
             <select
               id="non-target-select"
               v-model="currentAssessment.non_target_status"
               class="form-select"
               :disabled="currentReaderStatus === 'COMPLETED'"
             >
-              <option value="CR">Complete Response (CR)</option>
-              <option value="NON_CR_NON_PD">Non-CR / Non-PD (Stable)</option>
-              <option value="PD">Unequivocal Progression (PD)</option>
-              <option value="NE">Not Evaluable (NE)</option>
+              <option value="CR">
+                Complete Response (CR)
+              </option>
+              <option value="NON_CR_NON_PD">
+                Non-CR / Non-PD (Stable)
+              </option>
+              <option value="PD">
+                Unequivocal Progression (PD)
+              </option>
+              <option value="NE">
+                Not Evaluable (NE)
+              </option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="new-lesions-toggle" class="form-label"
-              >New Malignant Lesions Present?</label
-            >
+            <label
+              for="new-lesions-toggle"
+              class="form-label"
+            >New Malignant Lesions Present?</label>
             <div class="toggle-group">
               <button
                 type="button"
@@ -180,27 +197,39 @@
           </div>
 
           <div class="form-group full-width">
-            <label for="overall-response-select" class="form-label"
-              >Overall Categorical Response:</label
-            >
+            <label
+              for="overall-response-select"
+              class="form-label"
+            >Overall Categorical Response:</label>
             <select
               id="overall-response-select"
               v-model="currentAssessment.overall_response"
               class="form-select response-highlight-select"
               :disabled="currentReaderStatus === 'COMPLETED'"
             >
-              <option value="CR">Complete Response (CR)</option>
-              <option value="PR">Partial Response (PR)</option>
-              <option value="SD">Stable Disease (SD)</option>
-              <option value="PD">Progressive Disease (PD)</option>
-              <option value="NE">Not Evaluable (NE)</option>
+              <option value="CR">
+                Complete Response (CR)
+              </option>
+              <option value="PR">
+                Partial Response (PR)
+              </option>
+              <option value="SD">
+                Stable Disease (SD)
+              </option>
+              <option value="PD">
+                Progressive Disease (PD)
+              </option>
+              <option value="NE">
+                Not Evaluable (NE)
+              </option>
             </select>
           </div>
 
           <div class="form-group full-width">
-            <label for="reader-notes-input" class="form-label"
-              >Radiologist Interpretation Notes:</label
-            >
+            <label
+              for="reader-notes-input"
+              class="form-label"
+            >Radiologist Interpretation Notes:</label>
             <textarea
               id="reader-notes-input"
               v-model="currentAssessment.assessment_notes"
@@ -239,7 +268,10 @@
     <!-- ========================================================================= -->
     <!-- VIEW B: Adjudication Committee Chair Tie-Breaker Console                   -->
     <!-- ========================================================================= -->
-    <div v-else class="chair-adjudication-view">
+    <div
+      v-else
+      class="chair-adjudication-view"
+    >
       <!-- Discordance Evaluation Banner -->
       <div
         class="discordance-banner"
@@ -269,9 +301,10 @@
           <div class="banner-subtext">
             SLD Difference Delta:
             <strong>{{ (sldDelta * 100).toFixed(1) }}%</strong>
-            <span v-if="sldDelta > 0.2" class="threshold-tag"
-              >(Exceeds 20.0% Threshold)</span
-            >
+            <span
+              v-if="sldDelta > 0.2"
+              class="threshold-tag"
+            >(Exceeds 20.0% Threshold)</span>
             &bull; Workflow Status: <strong>{{ workflowStatus }}</strong>
           </div>
         </div>
@@ -290,7 +323,7 @@
               class="response-badge"
               :class="
                 'resp-' +
-                (reader1Assessment.overall_response || 'pr').toLowerCase()
+                  (reader1Assessment.overall_response || 'pr').toLowerCase()
               "
             >
               {{ reader1Assessment.overall_response }}
@@ -299,9 +332,7 @@
           <div class="compare-body">
             <div class="compare-metric">
               <span class="lbl">Sum of Diameters (SLD):</span>
-              <span class="val font-mono"
-                >{{ reader1Assessment.sum_longest_diameters_mm }} mm</span
-              >
+              <span class="val font-mono">{{ reader1Assessment.sum_longest_diameters_mm }} mm</span>
             </div>
             <div class="compare-metric">
               <span class="lbl">Non-Target Status:</span>
@@ -335,7 +366,7 @@
               class="response-badge"
               :class="
                 'resp-' +
-                (reader2Assessment.overall_response || 'pd').toLowerCase()
+                  (reader2Assessment.overall_response || 'pd').toLowerCase()
               "
             >
               {{ reader2Assessment.overall_response }}
@@ -344,9 +375,7 @@
           <div class="compare-body">
             <div class="compare-metric">
               <span class="lbl">Sum of Diameters (SLD):</span>
-              <span class="val font-mono"
-                >{{ reader2Assessment.sum_longest_diameters_mm }} mm</span
-              >
+              <span class="val font-mono">{{ reader2Assessment.sum_longest_diameters_mm }} mm</span>
             </div>
             <div class="compare-metric">
               <span class="lbl">Non-Target Status:</span>
@@ -381,16 +410,18 @@
       <div class="chair-decision-card">
         <div class="card-header-row">
           <span class="card-subtitle">Committee Chair Determination</span>
-          <span v-if="workflowStatus === 'ADJUDICATED'" class="badge badge-gxp"
-            >Locked &amp; Signed</span
-          >
+          <span
+            v-if="workflowStatus === 'ADJUDICATED'"
+            class="badge badge-gxp"
+          >Locked &amp; Signed</span>
         </div>
 
         <div class="form-row">
           <div class="form-group full-width">
-            <label for="binding-reader-select" class="form-label"
-              >Binding Final Assessment Source:</label
-            >
+            <label
+              for="binding-reader-select"
+              class="form-label"
+            >Binding Final Assessment Source:</label>
             <select
               id="binding-reader-select"
               v-model="selectedBindingReader"
@@ -412,7 +443,10 @@
 
         <div class="form-row">
           <div class="form-group full-width">
-            <label for="adjudication-rationale-input" class="form-label">
+            <label
+              for="adjudication-rationale-input"
+              class="form-label"
+            >
               Mandatory Clinical Adjudication Rationale (21 CFR Part 11):
             </label>
             <textarea
@@ -439,7 +473,10 @@
             Sign-Off
           </button>
 
-          <div v-else class="post-adjudication-actions">
+          <div
+            v-else
+            class="post-adjudication-actions"
+          >
             <button
               type="button"
               class="btn-export-edc"
@@ -497,7 +534,7 @@
               class="form-input"
               value="Dr. Arthur Smith (Adjudication Committee Chair)"
               disabled
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -509,20 +546,21 @@
               class="form-input"
               value="BLINDED_IRC_ADJUDICATION_SIGN_OFF"
               disabled
-            />
+            >
           </div>
 
           <div class="form-group">
-            <label for="chair-password-input" class="form-label"
-              >Re-authentication Password / PIN:</label
-            >
+            <label
+              for="chair-password-input"
+              class="form-label"
+            >Re-authentication Password / PIN:</label>
             <input
               id="chair-password-input"
               v-model="chairPassword"
               type="password"
               class="form-input"
               placeholder="Enter Part 11 credential..."
-            />
+            >
           </div>
         </div>
         <div class="modal-footer">
@@ -597,7 +635,9 @@
     >
       <div class="modal-card modal-large">
         <div class="modal-header">
-          <h4 class="modal-title">CDISC SDTM Dataset Package (TU, TR, RS)</h4>
+          <h4 class="modal-title">
+            CDISC SDTM Dataset Package (TU, TR, RS)
+          </h4>
           <button
             type="button"
             class="btn-close"

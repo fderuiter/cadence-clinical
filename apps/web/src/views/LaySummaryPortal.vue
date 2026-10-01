@@ -1,5 +1,8 @@
 <template>
-  <div id="section-lay-summaries" class="dashboard-section active">
+  <div
+    id="section-lay-summaries"
+    class="dashboard-section active"
+  >
     <!-- Header -->
     <div class="section-header">
       <div class="header-content-group">
@@ -32,37 +35,55 @@
     <!-- Quick Stats Cards Grid -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon summary-icon">📜</div>
+        <div class="stat-icon summary-icon">
+          📜
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ publishedSummariesCount }}
           </div>
-          <div class="stat-label">Published Lay Summaries</div>
+          <div class="stat-label">
+            Published Lay Summaries
+          </div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon score-icon">⭐</div>
+        <div class="stat-icon score-icon">
+          ⭐
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ avgComprehensionScore.toFixed(1) }} / 5.0
           </div>
-          <div class="stat-label">Avg Comprehension Rating</div>
+          <div class="stat-label">
+            Avg Comprehension Rating
+          </div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon receipt-icon">🔏</div>
+        <div class="stat-icon receipt-icon">
+          🔏
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ totalReceiptsCount }}
           </div>
-          <div class="stat-label">Confirmed Receipts (SHA-256)</div>
+          <div class="stat-label">
+            Confirmed Receipts (SHA-256)
+          </div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon compliance-icon">🇪🇺</div>
+        <div class="stat-icon compliance-icon">
+          🇪🇺
+        </div>
         <div class="stat-details">
-          <div class="stat-value">100%</div>
-          <div class="stat-label">EU CTR Art 37 Compliance</div>
+          <div class="stat-value">
+            100%
+          </div>
+          <div class="stat-label">
+            EU CTR Art 37 Compliance
+          </div>
         </div>
       </div>
     </div>
@@ -100,12 +121,17 @@
     </div>
 
     <!-- TAB 1: Lay Summary Reader & Library -->
-    <div v-if="activeTab === 'reader'" class="tab-content">
+    <div
+      v-if="activeTab === 'reader'"
+      class="tab-content"
+    >
       <div class="reader-layout-grid">
         <!-- Sidebar summary selector -->
         <div class="panel-box summary-selector-panel">
           <div class="panel-header">
-            <h3 class="panel-title">Available Trial Results</h3>
+            <h3 class="panel-title">
+              Available Trial Results
+            </h3>
           </div>
           <div class="panel-body compact-body">
             <div class="summary-list">
@@ -140,16 +166,15 @@
         </div>
 
         <!-- Full Plain Language Interactive Reader -->
-        <div v-if="selectedSummary" class="panel-box summary-reader-panel">
+        <div
+          v-if="selectedSummary"
+          class="panel-box summary-reader-panel"
+        >
           <div class="panel-header">
             <div>
               <div class="header-badge-row">
-                <span class="badge badge-gxp"
-                  >IRB Approved: {{ selectedSummary.irb_approval_number }}</span
-                >
-                <span class="badge badge-standard"
-                  >Date: {{ selectedSummary.irb_approval_date }}</span
-                >
+                <span class="badge badge-gxp">IRB Approved: {{ selectedSummary.irb_approval_number }}</span>
+                <span class="badge badge-standard">Date: {{ selectedSummary.irb_approval_date }}</span>
               </div>
               <h3 class="panel-title">
                 {{ selectedSummary.title }}
@@ -165,7 +190,9 @@
           <div class="panel-body">
             <!-- Narrative Overview -->
             <div class="lay-overview-box">
-              <h4 class="section-heading">Overview for Trial Participants</h4>
+              <h4 class="section-heading">
+                Overview for Trial Participants
+              </h4>
               <p class="overview-text">
                 {{ selectedSummary.summary_text }}
               </p>
@@ -174,78 +201,90 @@
             <!-- Structured Plain Language Sections per EU CTR Guidelines -->
             <div class="plain-sections-grid">
               <div class="section-card">
-                <div class="card-icon">🎯</div>
+                <div class="card-icon">
+                  🎯
+                </div>
                 <div class="card-content">
                   <h5>1. What was the goal of this study?</h5>
                   <p>
                     {{
                       selectedSummary.plain_language_sections?.objective ||
-                      "To evaluate whether the study medicine improves clinical outcomes compared to standard care."
+                        "To evaluate whether the study medicine improves clinical outcomes compared to standard care."
                     }}
                   </p>
                 </div>
               </div>
 
               <div class="section-card">
-                <div class="card-icon">👥</div>
+                <div class="card-icon">
+                  👥
+                </div>
                 <div class="card-content">
                   <h5>2. Who participated in this trial?</h5>
                   <p>
                     {{
                       selectedSummary.plain_language_sections?.participants ||
-                      "Adult patients with confirmed diagnosis who met protocol criteria and voluntarily gave informed consent."
+                        "Adult patients with confirmed diagnosis who met protocol criteria and voluntarily gave informed consent."
                     }}
                   </p>
                 </div>
               </div>
 
               <div class="section-card">
-                <div class="card-icon">💊</div>
+                <div class="card-icon">
+                  💊
+                </div>
                 <div class="card-content">
                   <h5>3. What treatments were studied?</h5>
                   <p>
                     {{
                       selectedSummary.plain_language_sections?.treatments ||
-                      "Investigational therapy administered in combination with standard of care vs. placebo control."
+                        "Investigational therapy administered in combination with standard of care vs. placebo control."
                     }}
                   </p>
                 </div>
               </div>
 
               <div class="section-card">
-                <div class="card-icon">📊</div>
+                <div class="card-icon">
+                  📊
+                </div>
                 <div class="card-content">
                   <h5>4. What were the key results?</h5>
                   <p>
                     {{
                       selectedSummary.plain_language_sections?.results ||
-                      "The primary efficacy endpoint was achieved with statistically significant benefits and improved quality of life."
+                        "The primary efficacy endpoint was achieved with statistically significant benefits and improved quality of life."
                     }}
                   </p>
                 </div>
               </div>
 
               <div class="section-card">
-                <div class="card-icon">🛡️</div>
+                <div class="card-icon">
+                  🛡️
+                </div>
                 <div class="card-content">
                   <h5>5. What side effects were observed?</h5>
                   <p>
                     {{
                       selectedSummary.plain_language_sections?.side_effects ||
-                      "Adverse events were generally mild-to-moderate, manageable, and resolved without treatment discontinuation."
+                        "Adverse events were generally mild-to-moderate, manageable, and resolved without treatment discontinuation."
                     }}
                   </p>
                 </div>
               </div>
 
               <div class="section-card">
-                <div class="card-icon">🚀</div>
+                <div class="card-icon">
+                  🚀
+                </div>
                 <div class="card-content">
                   <h5>6. What are the next steps?</h5>
                   <p>
                     {{
                       selectedSummary.plain_language_sections?.future_plans ||
-                      "Long-term extension monitoring is continuing, and regulatory submission dossiers have been submitted."
+                        "Long-term extension monitoring is continuing, and regulatory submission dossiers have been submitted."
                     }}
                   </p>
                 </div>
@@ -257,7 +296,10 @@
     </div>
 
     <!-- TAB 2: Patient Comprehension & Confirmation Acknowledgment -->
-    <div v-if="activeTab === 'confirm'" class="tab-content">
+    <div
+      v-if="activeTab === 'confirm'"
+      class="tab-content"
+    >
       <div class="grid-2-col">
         <!-- Comprehension Rating & Signature Form -->
         <div class="panel-box">
@@ -277,7 +319,11 @@
                 class="form-select"
                 @change="onConfirmSummarySelect"
               >
-                <option v-for="s in summaries" :key="s.id" :value="s.id">
+                <option
+                  v-for="s in summaries"
+                  :key="s.id"
+                  :value="s.id"
+                >
                   {{ s.study_id }}: {{ s.title }}
                 </option>
               </select>
@@ -285,12 +331,18 @@
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Participant Subject ID / MRN:</label>
-              <input v-model="confirmForm.subject_id" class="form-input" />
+              <input
+                v-model="confirmForm.subject_id"
+                class="form-input"
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol ID:</label>
-              <input v-model="confirmForm.study_id" class="form-input" />
+              <input
+                v-model="confirmForm.study_id"
+                class="form-input"
+              >
             </div>
 
             <!-- 5-Star Comprehension Assessment -->
@@ -311,9 +363,7 @@
                 >
                   ★
                 </button>
-                <span class="score-display"
-                  >Rating: {{ confirmForm.comprehension_score }} / 5 Stars</span
-                >
+                <span class="score-display">Rating: {{ confirmForm.comprehension_score }} / 5 Stars</span>
               </div>
             </div>
 
@@ -330,7 +380,11 @@
             </div>
 
             <div class="formal-acknowledgment-box">
-              <input id="chk-ack" v-model="confirmForm.agree" type="checkbox" />
+              <input
+                id="chk-ack"
+                v-model="confirmForm.agree"
+                type="checkbox"
+              >
               <label for="chk-ack">
                 {{ confirmForm.statement }}
               </label>
@@ -356,10 +410,17 @@
             <span class="badge badge-gxp">21 CFR Part 11 Sealed</span>
           </div>
           <div class="panel-body">
-            <div v-if="lastReceipt" class="certificate-card">
+            <div
+              v-if="lastReceipt"
+              class="certificate-card"
+            >
               <div class="cert-header">
-                <div class="cert-seal">EU CTR CERTIFIED</div>
-                <div class="cert-id">Receipt ID: {{ lastReceipt.id }}</div>
+                <div class="cert-seal">
+                  EU CTR CERTIFIED
+                </div>
+                <div class="cert-id">
+                  Receipt ID: {{ lastReceipt.id }}
+                </div>
               </div>
               <h4 class="cert-title">
                 Confirmation of Plain Language Trial Results Delivery
@@ -369,8 +430,7 @@
                   This certifies that participant
                   <strong>{{ lastReceipt.subject_id }}</strong> has accessed,
                   reviewed, and confirmed comprehension of the clinical trial
-                  summary for study <strong>{{ lastReceipt.study_id }}</strong
-                  >.
+                  summary for study <strong>{{ lastReceipt.study_id }}</strong>.
                 </p>
                 <div class="cert-meta-row">
                   <div>
@@ -388,8 +448,13 @@
                 </div>
               </div>
             </div>
-            <div v-else class="empty-cert-box">
-              <div class="empty-cert-icon">🔏</div>
+            <div
+              v-else
+              class="empty-cert-box"
+            >
+              <div class="empty-cert-icon">
+                🔏
+              </div>
               <p>
                 Complete the comprehension assessment and click generate to
                 create a sealed certificate.
@@ -401,22 +466,26 @@
     </div>
 
     <!-- TAB 3: Sponsor & IRB Publishing Studio -->
-    <div v-if="activeTab === 'studio'" class="tab-content">
+    <div
+      v-if="activeTab === 'studio'"
+      class="tab-content"
+    >
       <div class="panel-box">
         <div class="panel-header">
           <h3 class="panel-title">
             EU CTR 536/2014 Article 37 Plain Language Summary Authoring Studio
           </h3>
-          <span class="badge badge-regulatory"
-            >Sponsor &amp; IRB Governance</span
-          >
+          <span class="badge badge-regulatory">Sponsor &amp; IRB Governance</span>
         </div>
         <div class="panel-body">
           <div class="form-row-2">
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol ID:</label>
-              <input v-model="studioForm.study_id" class="form-input" />
+              <input
+                v-model="studioForm.study_id"
+                class="form-input"
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -426,13 +495,24 @@
                   v-model="studioForm.protocol_id"
                   class="form-input"
                   placeholder="e.g. PROTOCOL-CAD-001"
-                />
+                >
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select v-model="studioForm.trial_phase" class="form-select">
-                  <option value="Phase I">Phase I</option>
-                  <option value="Phase II">Phase II</option>
-                  <option value="Phase III">Phase III</option>
-                  <option value="Phase IV">Phase IV</option>
+                <select
+                  v-model="studioForm.trial_phase"
+                  class="form-select"
+                >
+                  <option value="Phase I">
+                    Phase I
+                  </option>
+                  <option value="Phase II">
+                    Phase II
+                  </option>
+                  <option value="Phase III">
+                    Phase III
+                  </option>
+                  <option value="Phase IV">
+                    Phase IV
+                  </option>
                 </select>
               </div>
             </div>
@@ -442,19 +522,28 @@
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Therapeutic Area / Indication:</label>
-              <input v-model="studioForm.therapeutic_area" class="form-input" />
+              <input
+                v-model="studioForm.therapeutic_area"
+                class="form-input"
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Sponsor Organization:</label>
-              <input v-model="studioForm.sponsor_name" class="form-input" />
+              <input
+                v-model="studioForm.sponsor_name"
+                class="form-input"
+              >
             </div>
           </div>
 
           <div class="form-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label>Plain-Language Lay Summary Title:</label>
-            <input v-model="studioForm.title" class="form-input" />
+            <input
+              v-model="studioForm.title"
+              class="form-input"
+            >
           </div>
 
           <div class="form-row-2">
@@ -464,7 +553,7 @@
               <input
                 v-model="studioForm.irb_approval_number"
                 class="form-input"
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -474,7 +563,7 @@
                 v-model="studioForm.irb_approval_date"
                 type="date"
                 class="form-input"
-              />
+              >
             </div>
           </div>
 
@@ -489,7 +578,9 @@
             />
           </div>
 
-          <h4 class="studio-subheading">Plain Language Section Content</h4>
+          <h4 class="studio-subheading">
+            Plain Language Section Content
+          </h4>
           <div class="form-row-2">
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -566,7 +657,10 @@
           >
             🚀 Publish IRB-Approved Lay Summary Live to Participants
           </button>
-          <div v-if="publishSuccess" class="alert-success-box">
+          <div
+            v-if="publishSuccess"
+            class="alert-success-box"
+          >
             {{ publishSuccess }}
           </div>
         </div>
@@ -574,16 +668,17 @@
     </div>
 
     <!-- TAB 4: Regulatory Confirmation Audit Ledger -->
-    <div v-if="activeTab === 'audit'" class="tab-content">
+    <div
+      v-if="activeTab === 'audit'"
+      class="tab-content"
+    >
       <div class="panel-box">
         <div class="panel-header">
           <h3 class="panel-title">
             EU CTR 536/2014 Article 37 Participant Delivery &amp; Comprehension
             Ledger
           </h3>
-          <span class="badge badge-gxp"
-            >{{ auditReceipts.length }} Immutable Receipts</span
-          >
+          <span class="badge badge-gxp">{{ auditReceipts.length }} Immutable Receipts</span>
         </div>
         <div class="panel-body">
           <div class="table-container">
@@ -600,29 +695,31 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="r in auditReceipts" :key="r.id">
+                <tr
+                  v-for="r in auditReceipts"
+                  :key="r.id"
+                >
                   <td>{{ formatDate(r.confirmed_at) }}</td>
                   <td>
                     <strong>{{ r.subject_id }}</strong>
                   </td>
                   <td>{{ r.study_id }}</td>
                   <td>
-                    <span class="star-pill"
-                      >★ {{ r.comprehension_score }}/5</span
-                    >
+                    <span class="star-pill">★ {{ r.comprehension_score }}/5</span>
                   </td>
                   <td>{{ r.comprehension_feedback || "-" }}</td>
                   <td>
                     <code>{{ r.signer_identity }}</code>
                   </td>
                   <td>
-                    <code class="hash-code"
-                      >{{ r.receipt_hash.substring(0, 16) }}...</code
-                    >
+                    <code class="hash-code">{{ r.receipt_hash.substring(0, 16) }}...</code>
                   </td>
                 </tr>
                 <tr v-if="auditReceipts.length === 0">
-                  <td colspan="7" class="empty-cell">
+                  <td
+                    colspan="7"
+                    class="empty-cell"
+                  >
                     No participant confirmation receipts recorded yet.
                   </td>
                 </tr>

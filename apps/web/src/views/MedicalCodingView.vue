@@ -1,11 +1,16 @@
 <template>
-  <div id="section-medical-coding" class="dashboard-section active">
+  <div
+    id="section-medical-coding"
+    class="dashboard-section active"
+  >
     <!-- View Header -->
     <div class="section-header">
       <div class="header-text-group">
         <h2>Interactive Medical Coding Workbench</h2>
         <p>
-          Standardized MedDRA and WHODrug terminology coding with verbatim cluster grouping, AI match confidence filtering, and 21 CFR Part 11 dual-attribution audit logs.
+          Standardized MedDRA and WHODrug terminology coding with verbatim
+          cluster grouping, AI match confidence filtering, and 21 CFR Part 11
+          dual-attribution audit logs.
         </p>
       </div>
       <div class="header-action-buttons">
@@ -56,7 +61,13 @@
     >
       <div class="alert-content">
         <span class="alert-icon">
-          {{ codingStore.batchAlert.type === 'success' ? '✅' : codingStore.batchAlert.type === 'warning' ? '⚠️' : 'ℹ️' }}
+          {{
+            codingStore.batchAlert.type === "success"
+              ? "✅"
+              : codingStore.batchAlert.type === "warning"
+                ? "⚠️"
+                : "ℹ️"
+          }}
         </span>
         <span>{{ codingStore.batchAlert.message }}</span>
       </div>
@@ -71,7 +82,10 @@
     </div>
 
     <!-- 21 CFR Part 11 Role Gating Notice if unauthorized -->
-    <div v-if="!hasAccess" class="card gating-banner">
+    <div
+      v-if="!hasAccess"
+      class="card gating-banner"
+    >
       <div class="gating-content">
         <span class="gating-icon">🚫</span>
         <div>
@@ -86,47 +100,70 @@
     </div>
 
     <!-- Authorized Coding Workspace -->
-    <div v-else class="coding-workspace-container">
+    <div
+      v-else
+      class="coding-workspace-container"
+    >
       <!-- Summary Metric Cards (Adapted for View Mode) -->
-      <div v-if="codingStore.viewMode === 'CLUSTERS'" class="stats-overview-grid cluster-stats-grid">
+      <div
+        v-if="codingStore.viewMode === 'CLUSTERS'"
+        class="stats-overview-grid cluster-stats-grid"
+      >
         <div
           class="stat-card"
           :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('ALL')"
+          @keydown.enter="setStatusFilter('ALL')"
         >
           <div class="stat-number">
             {{ codingStore.totalClustersCount }}
           </div>
-          <div class="stat-title">Verbatim Clusters</div>
+          <div class="stat-title">
+            Verbatim Clusters
+          </div>
         </div>
 
         <div class="stat-card stat-instances">
           <div class="stat-number">
             {{ codingStore.totalClusterInstancesCount }}
           </div>
-          <div class="stat-title">Subject Instances</div>
+          <div class="stat-title">
+            Subject Instances
+          </div>
         </div>
 
         <div
           class="stat-card stat-suggested"
           :class="{ 'stat-active': codingStore.confidenceThreshold === 'HIGH' }"
+          role="button"
+          tabindex="0"
           @click="setConfidenceFilter('HIGH')"
+          @keydown.enter="setConfidenceFilter('HIGH')"
         >
           <div class="stat-number">
             {{ codingStore.highConfidenceClustersCount }}
           </div>
-          <div class="stat-title">High Conf. Clusters (≥90%)</div>
+          <div class="stat-title">
+            High Conf. Clusters (≥90%)
+          </div>
         </div>
 
         <div
           class="stat-card stat-coded"
           :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('CODED_ALL')"
+          @keydown.enter="setStatusFilter('CODED_ALL')"
         >
           <div class="stat-number">
             {{ codingStore.autoCodingProgressPct }}%
           </div>
-          <div class="stat-title">Auto-Coded Progress</div>
+          <div class="stat-title">
+            Auto-Coded Progress
+          </div>
         </div>
 
         <div
@@ -134,59 +171,87 @@
           :class="{
             'stat-active': codingStore.filters.status === 'QUERY_PENDING',
           }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('QUERY_PENDING')"
+          @keydown.enter="setStatusFilter('QUERY_PENDING')"
         >
           <div class="stat-number">
             {{ codingStore.queryPendingCount }}
           </div>
-          <div class="stat-title">Query Pending</div>
+          <div class="stat-title">
+            Query Pending
+          </div>
         </div>
       </div>
 
       <!-- Individual View Summary Cards -->
-      <div v-else class="stats-overview-grid">
+      <div
+        v-else
+        class="stats-overview-grid"
+      >
         <div
           class="stat-card"
           :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('ALL')"
+          @keydown.enter="setStatusFilter('ALL')"
         >
           <div class="stat-number">
             {{ codingStore.totalCount }}
           </div>
-          <div class="stat-title">Total Verbatims</div>
+          <div class="stat-title">
+            Total Verbatims
+          </div>
         </div>
 
         <div
           class="stat-card stat-uncoded"
           :class="{ 'stat-active': codingStore.filters.status === 'UNCODED' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('UNCODED')"
+          @keydown.enter="setStatusFilter('UNCODED')"
         >
           <div class="stat-number">
             {{ codingStore.uncodedCount }}
           </div>
-          <div class="stat-title">Uncoded</div>
+          <div class="stat-title">
+            Uncoded
+          </div>
         </div>
 
         <div
           class="stat-card stat-suggested"
           :class="{ 'stat-active': codingStore.filters.status === 'SUGGESTED' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('SUGGESTED')"
+          @keydown.enter="setStatusFilter('SUGGESTED')"
         >
           <div class="stat-number">
             {{ codingStore.suggestedCount }}
           </div>
-          <div class="stat-title">Suggested Matches</div>
+          <div class="stat-title">
+            Suggested Matches
+          </div>
         </div>
 
         <div
           class="stat-card stat-coded"
           :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('CODED_ALL')"
+          @keydown.enter="setStatusFilter('CODED_ALL')"
         >
           <div class="stat-number">
             {{ codingStore.codedCount }}
           </div>
-          <div class="stat-title">Coded</div>
+          <div class="stat-title">
+            Coded
+          </div>
         </div>
 
         <div
@@ -194,12 +259,17 @@
           :class="{
             'stat-active': codingStore.filters.status === 'QUERY_PENDING',
           }"
+          role="button"
+          tabindex="0"
           @click="setStatusFilter('QUERY_PENDING')"
+          @keydown.enter="setStatusFilter('QUERY_PENDING')"
         >
           <div class="stat-number">
             {{ codingStore.queryPendingCount }}
           </div>
-          <div class="stat-title">Query Pending</div>
+          <div class="stat-title">
+            Query Pending
+          </div>
         </div>
       </div>
 
@@ -260,9 +330,15 @@
               class="form-control-sm"
               title="Filter by dictionary system"
             >
-              <option value="ALL">All Dictionaries</option>
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
+              <option value="ALL">
+                All Dictionaries
+              </option>
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
             </select>
           </div>
 
@@ -274,10 +350,18 @@
               class="form-control-sm confidence-select"
               title="Filter by match confidence threshold"
             >
-              <option value="ALL">All Confidence Scores</option>
-              <option value="HIGH">≥ 90% High Confidence</option>
-              <option value="MEDIUM">70–89% Medium Confidence</option>
-              <option value="LOW">&lt; 70% Low Confidence</option>
+              <option value="ALL">
+                All Confidence Scores
+              </option>
+              <option value="HIGH">
+                ≥ 90% High Confidence
+              </option>
+              <option value="MEDIUM">
+                70–89% Medium Confidence
+              </option>
+              <option value="LOW">
+                &lt; 70% Low Confidence
+              </option>
             </select>
           </div>
         </div>
@@ -290,7 +374,7 @@
             type="text"
             class="form-control-sm search-input"
             placeholder="Search verbatim, code, or term..."
-          />
+          >
         </div>
       </div>
 
