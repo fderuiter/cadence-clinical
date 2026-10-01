@@ -187,7 +187,7 @@ function buildLocalIntelligenceReport(
     filename,
     mime_type: mimeType,
     sha256_hash:
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
     modality: mimeType.includes("pdf") ? "PDF_BINARY" : "TEXT",
     primary_classification: primary,
     alternative_candidates: [],
@@ -195,7 +195,7 @@ function buildLocalIntelligenceReport(
     qc_recommendation: tier === "HIGH" ? "AUTO_CLASSIFY" : "CRA_QC_REQUIRED",
     ai_generation_manifest: {
       model: "Cadence-eTMF-Classifier-v3.2",
-      prompt_hash: "a1b2c3d4e5f6",
+      prompt_hash: "a1b2c3d4e5f6", // pragma: allowlist secret
       confidence: primary.confidence,
       confidence_tier: tier,
       timestamp: new Date().toISOString(),

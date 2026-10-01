@@ -300,7 +300,7 @@ function getDocSha256(doc) {
   if (doc.sha256) return doc.sha256;
   if (doc.cryptographic_seal) return doc.cryptographic_seal;
   if (doc.merkle_hash) return doc.merkle_hash;
-  return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+  return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // pragma: allowlist secret
 }
 
 function getIntelligenceReport(doc) {

@@ -124,7 +124,7 @@ public static class EconsentEndpoints
         string signerName = request.SignerName ?? request.SubjectPseudonym ?? "Participant Signer";
         string signerRole = request.SignerRole ?? "Subject";
         string meaning = request.Meaning ?? request.SigningReason ?? "I agree to participate";
-        string digestHash = request.DigestSha256 ?? "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289";
+        string digestHash = request.DigestSha256 ?? "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289"; // pragma: allowlist secret
 
         var signatureData = request.SignatureData ?? $"DATA_BINDING_V1_{subjectPseudonym}_{now.ToUnixTimeMilliseconds()}";
         var bindingSha256 = ConsentSignatureBinding.Compute(digestHash, signatureData);
