@@ -140,6 +140,101 @@
         }
       }
     },
+    "/api/v1/ctms/letters/compile": {
+      "post": {
+        "tags": [
+          "LetterTemplateEndpoints"
+        ],
+        "summary": "Compiles a GxP-compliant PDF visit letter with Part 11 electronic signature, eTMF filing, and automated email dispatch.",
+        "operationId": "CompileSiteVisitLetterPdf",
+        "parameters": [
+          {
+            "name": "templateName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteVisitLetterModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_VisitLetterCompilationResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/letters/{letterId}/pdf": {
+      "get": {
+        "tags": [
+          "LetterTemplateEndpoints"
+        ],
+        "summary": "Downloads or views the compiled GxP PDF visit letter.",
+        "operationId": "GetSiteVisitLetterPdf",
+        "parameters": [
+          {
+            "name": "letterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies": {
       "get": {
         "tags": [
@@ -417,6 +512,201 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/classify": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_ClassifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/stage-qc": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_StageDocumentQCRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/qc-queue": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/qc-review/{doc_id}": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_CraqcReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "zone",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/ingest": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_IngestDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/taxonomy": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -5630,6 +5920,102 @@
             "items": {
               "$ref": "#/components/schemas/Ctms_SiteVisitFindingModel"
             }
+          },
+          "visitId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "finalize": {
+            "type": "boolean",
+            "default": false
+          },
+          "signerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signingPurpose": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "investigatorEmail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_VisitLetterCompilationResultDto": {
+        "required": [
+          "letterId",
+          "visitId",
+          "letterType",
+          "pdfSha256Hash",
+          "pdfObjectKey",
+          "isSigned",
+          "status",
+          "signatureManifestation",
+          "etmfDocumentId",
+          "dispatchedAt",
+          "pdfAccessUrl",
+          "pdfBase64"
+        ],
+        "type": "object",
+        "properties": {
+          "letterId": {
+            "type": "string"
+          },
+          "visitId": {
+            "type": "string"
+          },
+          "letterType": {
+            "type": "string"
+          },
+          "pdfSha256Hash": {
+            "type": "string"
+          },
+          "pdfObjectKey": {
+            "type": "string"
+          },
+          "isSigned": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "signatureManifestation": {
+            "type": "string"
+          },
+          "etmfDocumentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dispatchedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "pdfAccessUrl": {
+            "type": "string"
+          },
+          "pdfBase64": {
+            "type": "string"
           }
         }
       },
@@ -6076,6 +6462,208 @@
             ]
           },
           "service": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_ClassifyRequest": {
+        "required": [
+          "filename"
+        ],
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mimeType": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "application/pdf"
+          },
+          "contentHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxonomyVersion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "v3.2.0-complete"
+          }
+        }
+      },
+      "Etmf_CraqcReviewRequest": {
+        "required": [
+          "decision",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "reasonForChange": {
+            "type": "string"
+          },
+          "overrideArtifactCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "discrepancyComment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_IngestDocumentRequest": {
+        "required": [
+          "filename",
+          "content",
+          "studyId",
+          "siteId",
+          "mimeType",
+          "zone",
+          "section",
+          "artifactCode",
+          "artifactType",
+          "taxonomyVersion",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mimeType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "zone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "section": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxonomyVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_StageDocumentQCRequest": {
+        "required": [
+          "content",
+          "filename",
+          "studyId"
+        ],
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mimeType": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "application/pdf"
+          },
+          "artifactHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxonomyVersion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "v3.2.0-complete"
+          },
+          "reasonForChange": {
+            "type": "string",
+            "default": "Batch upload AI auto-classification staging for CRA QC"
+          },
+          "assignedCra": {
             "type": [
               "null",
               "string"

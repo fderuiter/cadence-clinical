@@ -24,7 +24,8 @@ namespace Cadence.Apps.Execution.Application.Queries;
 /// </summary>
 public sealed class AutoQueryDispatchService(
     IClinicalQueryRepository queryRepository,
-    IClock clock) : IAutoQueryDispatchService
+    IClock clock,
+    ICurrentAuditContextAccessor auditContextAccessor) : IAutoQueryDispatchService
 {
     public async Task<IReadOnlyList<ClinicalQuery>> ProcessViolationsAndAutoResolutionAsync(
         StudyCode studyId,
@@ -36,6 +37,16 @@ public sealed class AutoQueryDispatchService(
         IReadOnlyList<EditCheckViolation> violations,
         CancellationToken cancellationToken)
     {
+        string actingUserId;
+        try
+        {
+            actingUserId = auditContextAccessor.UserId;
+        }
+        catch (AuditActorUnresolvedException)
+        {
+            actingUserId = ServiceAccounts.AutoQueryEngine.UserId;
+        }
+
         var processedQueries = new List<ClinicalQuery>();
 
         // 1. Fetch existing queries for this subject
@@ -124,8 +135,8 @@ public sealed class AutoQueryDispatchService(
                 if (raiseResult.IsSuccess && raiseResult.Value is not null)
                 {
                     var query = raiseResult.Value;
-                    query.CreatedBy = ServiceAccounts.AutoQueryEngine.UserId;
-                    query.ReasonForChange = ServiceAccounts.AutoQueryEngine.ChangeReason;
+                    query.CreatedBy = actingUserId;
+                    query.ReasonForChange = $"Automated query dispatch triggered by {actingUserId}";
 
                     await queryRepository.AddAsync(query, cancellationToken).ConfigureAwait(false);
                     processedQueries.Add(query);
@@ -160,10 +171,10 @@ public sealed class AutoQueryDispatchService(
                 if (!stillViolated)
                 {
                     // Discrepancy has been corrected by site submission!
-                    var closeResult = query.Close(ServiceAccounts.AutoQueryEngine.UserId, clock.UtcNow);
+                    var closeResult = query.Close(actingUserId, clock.UtcNow);
                     if (closeResult.IsSuccess)
                     {
-                        query.ReasonForChange = "Automated query auto-resolution upon site data correction";
+                        query.ReasonForChange = $"Automated query auto-resolution upon site data correction by {actingUserId}";
                         processedQueries.Add(query);
                     }
                 }

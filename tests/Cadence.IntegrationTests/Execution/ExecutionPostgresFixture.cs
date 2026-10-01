@@ -119,7 +119,7 @@ public sealed class ExecutionPostgresFixture : IAsyncLifetime
     public static ExecutionDbContext CreateDbContext(string connectionString)
     {
         var optionsBuilder = new DbContextOptionsBuilder<ExecutionDbContext>();
-        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, "execution"));
         optionsBuilder.AddInterceptors(new GxPAuditInterceptor(() => "svc:integration-test", SystemClock.Instance));
         return new ExecutionDbContext(optionsBuilder.Options);
     }

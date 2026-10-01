@@ -41,8 +41,10 @@ export function useConsentGating(selectedSubjectId) {
           `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`,
           sigToken
         );
-      } else if (
+      }
+      if (
         storeInstance &&
+        storeInstance !== store &&
         typeof storeInstance.clearReconsentGate === "function"
       ) {
         await storeInstance.clearReconsentGate(

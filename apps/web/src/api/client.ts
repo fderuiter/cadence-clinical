@@ -3,12 +3,12 @@ import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
 import { getBearerToken } from "./authorization.js";
 
-export const getBaseUrl = (): string => {
+export function getBaseUrl(): string {
   return (
     (import.meta as unknown as { env?: { VITE_API_BASE_URL?: string } }).env
       ?.VITE_API_BASE_URL || "http://localhost:8000"
   );
-};
+}
 
 export class ApiError extends Error {
   status: number | null;
@@ -29,35 +29,37 @@ export class ApiError extends Error {
   }
 }
 
-const authMiddleware: Middleware = {
-  async onRequest({ request, options }) {
-    if (!request.headers.has("Authorization")) {
-      const token = await getBearerToken();
-      if (token) {
-        request.headers.set("Authorization", `Bearer ${token}`);
+export function getAuthMiddleware(): Middleware {
+  return {
+    async onRequest({ request, options }) {
+      if (!request.headers.has("Authorization")) {
+        const token = await getBearerToken();
+        if (token) {
+          request.headers.set("Authorization", `Bearer ${token}`);
+        }
       }
-    }
 
-    // openapi-fetch copies custom init keys (like `changeReason`) onto the Request object; the
-    // middleware `options` only holds the client's merged options (baseUrl, fetch, serializers).
-    const changeReason = ((request as unknown as Record<string, unknown>)
-      .changeReason ??
-      (options as unknown as Record<string, unknown>)?.changeReason) as
-      string | undefined;
-    if (changeReason && !request.headers.has("X-Change-Reason")) {
-      request.headers.set("X-Change-Reason", encodeChangeReason(changeReason));
-    }
+      // openapi-fetch copies custom init keys (like `changeReason`) onto the Request object; the
+      // middleware `options` only holds the client's merged options (baseUrl, fetch, serializers).
+      const changeReason = ((request as unknown as Record<string, unknown>)
+        .changeReason ??
+        (options as unknown as Record<string, unknown>)?.changeReason) as
+        string | undefined;
+      if (changeReason && !request.headers.has("X-Change-Reason")) {
+        request.headers.set("X-Change-Reason", encodeChangeReason(changeReason));
+      }
 
-    return request;
-  },
-};
+      return request;
+    },
+  };
+}
 
 export const openApiClient = createClient<paths>({
   baseUrl: getBaseUrl(),
   fetch: (...args) => globalThis.fetch(...args),
 });
 
-openApiClient.use(authMiddleware);
+openApiClient.use(getAuthMiddleware());
 
 export function createOpenApiClient<T extends {} = paths>(
   baseUrl: string = getBaseUrl()
@@ -67,7 +69,7 @@ export function createOpenApiClient<T extends {} = paths>(
     baseUrl,
     fetch: (...args) => globalThis.fetch(...args),
   });
-  client.use(authMiddleware);
+  client.use(getAuthMiddleware());
   return client;
 }
 

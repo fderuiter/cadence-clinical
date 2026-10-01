@@ -502,23 +502,62 @@ function readPersonaStorage(personaKey?: string) {
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
-      const storedSubjects = readStorageItem("subjects", persona);
+      let storedSubjects = readStorageItem("subjects", persona);
+      if (!storedSubjects && isDemoBuild()) {
+        const legacy = window.localStorage.getItem("subjects");
+        if (legacy) {
+          storedSubjects = legacy;
+          window.localStorage.setItem(`clinical_${persona}_subjects`, legacy);
+        }
+      }
       if (storedSubjects && isDemoBuild()) {
         savedSubjects = JSON.parse(storedSubjects);
       }
-      const storedFormValues = readStorageItem("formValues", persona);
+
+      let storedFormValues = readStorageItem("formValues", persona);
+      if (!storedFormValues) {
+        const legacy = window.localStorage.getItem("formValues");
+        if (legacy) {
+          storedFormValues = legacy;
+          window.localStorage.setItem(`clinical_${persona}_formValues`, legacy);
+        }
+      }
       if (storedFormValues) {
         savedFormValues = JSON.parse(storedFormValues);
       }
-      const storedFormQueries = readStorageItem("formQueries", persona);
+
+      let storedFormQueries = readStorageItem("formQueries", persona);
+      if (!storedFormQueries) {
+        const legacy = window.localStorage.getItem("formQueries");
+        if (legacy) {
+          storedFormQueries = legacy;
+          window.localStorage.setItem(`clinical_${persona}_formQueries`, legacy);
+        }
+      }
       if (storedFormQueries) {
         savedFormQueries = JSON.parse(storedFormQueries);
       }
-      const storedLedgerBlocks = readStorageItem("ledgerBlocks", persona);
+
+      let storedLedgerBlocks = readStorageItem("ledgerBlocks", persona);
+      if (!storedLedgerBlocks) {
+        const legacy = window.localStorage.getItem("ledgerBlocks");
+        if (legacy) {
+          storedLedgerBlocks = legacy;
+          window.localStorage.setItem(`clinical_${persona}_ledgerBlocks`, legacy);
+        }
+      }
       if (storedLedgerBlocks) {
         savedLedgerBlocks = JSON.parse(storedLedgerBlocks);
       }
-      const storedUsdm = readStorageItem("currentUsdm", persona);
+
+      let storedUsdm = readStorageItem("currentUsdm", persona);
+      if (!storedUsdm) {
+        const legacy = window.localStorage.getItem("currentUsdm");
+        if (legacy) {
+          storedUsdm = legacy;
+          window.localStorage.setItem(`clinical_${persona}_currentUsdm`, legacy);
+        }
+      }
       if (storedUsdm) {
         savedUsdm = JSON.parse(storedUsdm);
       }
