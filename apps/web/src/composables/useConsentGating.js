@@ -34,30 +34,31 @@ export function useConsentGating(selectedSubjectId) {
     reconsentSubmitting.value = true;
     try {
       const sigToken = typeof payload === "string" ? payload : payload?.sigToken || null;
-      if (store && typeof store.clearReconsentGate === "function") {
-        await store.clearReconsentGate(
-          selectedSubjectId.value,
-          method,
-          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`,
-          sigToken
-        );
-      } else if (
-        storeInstance &&
-        typeof storeInstance.clearReconsentGate === "function"
-      ) {
-        await storeInstance.clearReconsentGate(
+      const clearGateFn =
+        storeInstance && typeof storeInstance.clearReconsentGate === "function"
+          ? storeInstance.clearReconsentGate.bind(storeInstance)
+          : store && typeof store.clearReconsentGate === "function"
+          ? store.clearReconsentGate.bind(store)
+          : null;
+
+      if (clearGateFn) {
+        await clearGateFn(
           selectedSubjectId.value,
           method,
           `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`,
           sigToken
         );
       }
-      if (
-        storeInstance &&
-        storeInstance !== store &&
-        typeof storeInstance.addLedgerBlock === "function"
-      ) {
-        await storeInstance.addLedgerBlock(
+
+      const addLedgerFn =
+        storeInstance && typeof storeInstance.addLedgerBlock === "function"
+          ? storeInstance.addLedgerBlock.bind(storeInstance)
+          : store && typeof store.addLedgerBlock === "function"
+          ? store.addLedgerBlock.bind(store)
+          : null;
+
+      if (addLedgerFn) {
+        await addLedgerFn(
           "RECONSENT_COMPLETED",
           {
             subject_id: selectedSubjectId.value,
