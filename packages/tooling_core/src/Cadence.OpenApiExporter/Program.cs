@@ -53,6 +53,23 @@ public static class Program
             outputDir = Path.Combine(repoRoot, "docs", "openapi");
         }
 
+        var targetServices = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < args.Length; i++)
+        {
+            bool isServiceFlag = string.Equals(args[i], "--service", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(args[i], "--services", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(args[i], "-s", StringComparison.OrdinalIgnoreCase);
+
+            if (isServiceFlag && i + 1 < args.Length)
+            {
+                var parts = args[i + 1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                foreach (var p in parts)
+                {
+                    targetServices.Add(p);
+                }
+            }
+        }
+
         Directory.CreateDirectory(outputDir);
         Console.WriteLine($"[INFO] Target output directory: {outputDir}");
 
@@ -78,6 +95,20 @@ public static class Program
             new("kernel", "Kernel_", typeof(kernel::Cadence.Kernel.Host.Program), Path.Combine(repoRoot, "apps", "kernel-api", "src")),
             // The gateway is a YARP reverse proxy with no endpoints of its own and does not map an OpenAPI document.
         };
+
+        if (targetServices.Count > 0)
+        {
+            var selectedServices = services.Where(s => targetServices.Contains(s.Name)).ToList();
+            if (selectedServices.Count > 0)
+            {
+                Console.WriteLine($"[INFO] Target service filter applied: {string.Join(", ", selectedServices.Select(s => s.Name))}");
+                services = selectedServices;
+            }
+            else
+            {
+                Console.WriteLine($"[WARNING] No registered services matched target filter: {string.Join(", ", targetServices)}");
+            }
+        }
 
         var exportedSchemas = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
 
@@ -118,7 +149,7 @@ public static class Program
         Console.WriteLine("\n[INFO] Building aggregated gateway specification 'cdisc_openapi.json'...");
         try
         {
-            var aggregatedSpec = AggregateOpenApiSpecs(outputDir, exportedSchemas);
+            var aggregatedSpec = AggregateOpenApiSpecs(outputDir, repoRoot, exportedSchemas);
             string aggregatedFilePath = Path.Combine(outputDir, "cdisc_openapi.json");
             await WriteJsonToFileAsync(aggregatedSpec, aggregatedFilePath);
             Console.WriteLine($"[SUCCESS] Exported aggregated gateway specification -> {aggregatedFilePath}");
@@ -241,20 +272,39 @@ public static class Program
 
     private static JsonObject AggregateOpenApiSpecs(
         string outputDir,
+        string repoRoot,
         Dictionary<string, JsonObject> newlyExported)
     {
         var aggregatedPaths = new JsonObject();
         var aggregatedSchemas = new JsonObject();
 
-        // Include all JSON spec files in outputDir
-        var specFiles = Directory.GetFiles(outputDir, "*_openapi.json")
-            .Where(f => !Path.GetFileName(f).Equals("cdisc_openapi.json", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(f => f)
+        string fallbackDir = Path.Combine(repoRoot, "docs", "openapi");
+
+        // Collect all file names ending in _openapi.json from outputDir and fallbackDir
+        var specFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (Directory.Exists(outputDir))
+        {
+            foreach (var f in Directory.GetFiles(outputDir, "*_openapi.json"))
+            {
+                specFiles.Add(Path.GetFileName(f));
+            }
+        }
+        if (Directory.Exists(fallbackDir))
+        {
+            foreach (var f in Directory.GetFiles(fallbackDir, "*_openapi.json"))
+            {
+                specFiles.Add(Path.GetFileName(f));
+            }
+        }
+
+        var orderedFiles = specFiles
+            .Where(f => !f.Equals("cdisc_openapi.json", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(f => f, StringComparer.Ordinal)
             .ToList();
 
-        foreach (var file in specFiles)
+        foreach (var fileName in orderedFiles)
         {
-            string serviceName = Path.GetFileName(file).Replace("_openapi.json", "", StringComparison.OrdinalIgnoreCase);
+            string serviceName = fileName.Replace("_openapi.json", "", StringComparison.OrdinalIgnoreCase);
             JsonObject? doc = null;
 
             if (newlyExported.TryGetValue(serviceName, out var exportedDoc))
@@ -263,14 +313,29 @@ public static class Program
             }
             else
             {
-                try
+                string outputFilePath = Path.Combine(outputDir, fileName);
+                string fallbackFilePath = Path.Combine(fallbackDir, fileName);
+                string? targetReadPath = null;
+                if (File.Exists(outputFilePath))
                 {
-                    string text = File.ReadAllText(file);
-                    doc = JsonNode.Parse(text) as JsonObject;
+                    targetReadPath = outputFilePath;
                 }
-                catch
+                else if (File.Exists(fallbackFilePath))
                 {
-                    // Ignore unparseable fallback files
+                    targetReadPath = fallbackFilePath;
+                }
+
+                if (targetReadPath != null)
+                {
+                    try
+                    {
+                        string text = File.ReadAllText(targetReadPath);
+                        doc = JsonNode.Parse(text) as JsonObject;
+                    }
+                    catch
+                    {
+                        // Ignore unparseable fallback files
+                    }
                 }
             }
 
