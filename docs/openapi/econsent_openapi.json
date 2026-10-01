@@ -51,6 +51,139 @@
           }
         }
       }
+    },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "CaptureConsentVersioned",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Econsent_CaptureConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_CaptureConsentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/capture-consent": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "CaptureConsentLegacy",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Econsent_CaptureConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_CaptureConsentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -75,12 +208,198 @@
             ]
           }
         }
+      },
+      "Econsent_CaptureConsentRequest": {
+        "required": [
+          "subject_pseudonym",
+          "study_id",
+          "site_id",
+          "signer_name",
+          "signer_email",
+          "signer_role",
+          "meaning",
+          "signing_reason",
+          "protocol_version",
+          "digest_sha256",
+          "signature_data",
+          "device_timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_pseudonym": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signing_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocol_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "digest_sha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_data": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Econsent_CaptureConsentResponse": {
+        "required": [
+          "id",
+          "template_id",
+          "version_index",
+          "subject_pseudonym",
+          "signer_name",
+          "signer_role",
+          "meaning",
+          "server_timestamp",
+          "status",
+          "sha256_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "subject_pseudonym": {
+            "type": "string"
+          },
+          "signer_name": {
+            "type": "string"
+          },
+          "signer_role": {
+            "type": "string"
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "server_timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "sha256_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "Econsent_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Cadence.Apps.Econsent"
+    },
+    {
+      "name": "eConsent"
     }
   ]
 }

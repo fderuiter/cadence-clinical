@@ -27,17 +27,19 @@ export function useConsentGating(selectedSubjectId) {
     showPaperIcfModal.value = true;
   }
 
-  async function handleCompleteReconsent(method, storeInstance) {
+  async function handleCompleteReconsent(method, storeInstance, payload = null) {
     // #4827: nothing sends this re-consent to a service yet, so outside demo builds the gate stays locked
     // and nothing is logged.
     if (!allowUnbackedAction("Recording re-consent")) return;
     reconsentSubmitting.value = true;
     try {
+      const sigToken = typeof payload === "string" ? payload : payload?.sigToken || null;
       if (store && typeof store.clearReconsentGate === "function") {
         await store.clearReconsentGate(
           selectedSubjectId.value,
           method,
-          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
+          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`,
+          sigToken
         );
       } else if (
         storeInstance &&
@@ -46,7 +48,8 @@ export function useConsentGating(selectedSubjectId) {
         await storeInstance.clearReconsentGate(
           selectedSubjectId.value,
           method,
-          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
+          `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`,
+          sigToken
         );
       }
       if (
@@ -60,6 +63,7 @@ export function useConsentGating(selectedSubjectId) {
             subject_id: selectedSubjectId.value,
             protocol_version: "2.0.0",
             method: method,
+            sig_token: sigToken,
           },
           `Subject ${selectedSubjectId.value} re-consent recorded via ${method}. Gating unlocked.`
         );

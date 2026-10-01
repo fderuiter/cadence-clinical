@@ -38,6 +38,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  semanticAction: {
+    type: String,
+    default: "",
+  },
   onSign: {
     type: Function,
     default: null,

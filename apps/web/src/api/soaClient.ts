@@ -277,23 +277,39 @@ export const soaClient = {
     password,
     totp = null,
     action,
+    semanticAction,
     batchId = null,
   }: {
     username: string;
     password?: string;
     totp?: string | null;
     action: string;
+    semanticAction?: string;
     batchId?: string | null;
   }) {
+    let semantic = semanticAction;
+    if (!semantic) {
+      if (action.includes("capture-consent")) {
+        semantic = "econsent.consent.capture";
+      } else if (action.includes("sign-off")) {
+        semantic = "etmf.document.sign_off";
+      } else if (action.includes("chair-adjudicate")) {
+        semantic = "execution.cec.chair_adjudicate";
+      } else {
+        semantic = "execution.signature.verify";
+      }
+    }
+
     return unwrapResponse(
-      openApiClient.POST("/api/v1/execution/signatures/verify", {
+      (openApiClient as any).POST("/api/v1/auth/signature-verification", {
         body: {
           username,
           password: password || "",
           totp: totp ?? undefined,
           action,
+          semantic_action: semantic,
           batch_id: batchId ?? undefined,
-        } as never,
+        },
       })
     );
   },
