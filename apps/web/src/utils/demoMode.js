@@ -6,5 +6,9 @@
  * network or authorization error is never mistaken for clinical data.
  */
 export function isDemoBuild(env = import.meta.env) {
-  return env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true";
+  return (
+    env?.MODE === "demo" ||
+    env?.VITE_DEMO_MODE === "true" ||
+    (typeof process !== "undefined" && process.env?.VITE_DEMO_MODE === "true")
+  );
 }
