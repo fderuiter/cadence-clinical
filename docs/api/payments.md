@@ -6,6 +6,10 @@ Generated from `docs/openapi/payments_openapi.json` by `pnpm cadence generate-ap
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/payments/audit-logs` | GetPaymentAuditLogs | Retrieve payment audit ledger records. |
 | `POST` | `/api/v1/payments/disburse` | DisburseStipendDirect | Direct disburse ePRO stipend to participant wallet with strict idempotency and audit trail. |
+| `GET` | `/api/v1/payments/fee-schedules` | ListFeeSchedules | List active site fee schedule rate entries. |
+| `POST` | `/api/v1/payments/fee-schedules/bulk-commit` | CommitBulkFeeScheduleCsv | Commit validated site fee schedule rows in a single batch transaction. |
+| `POST` | `/api/v1/payments/fee-schedules/bulk-preview` | PreviewBulkFeeScheduleCsv | Parse and validate site fee schedule CSV upload with calculation preview. |
+| `GET` | `/api/v1/payments/fee-schedules/template` | DownloadFeeScheduleCsvTemplate | Download standardized CSV site fee schedule template with study/site pre-population. |
 | `GET` | `/api/v1/payments/participant/disbursements` | ListDisbursements | List digital disbursement dispatches. |
 | `POST` | `/api/v1/payments/participant/events/visit-verified` | IngestVisitVerifiedEvent | Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules. |
 | `GET` | `/api/v1/payments/participant/expenses` | ListExpenseClaims | List travel and meal expense reimbursement claims. |

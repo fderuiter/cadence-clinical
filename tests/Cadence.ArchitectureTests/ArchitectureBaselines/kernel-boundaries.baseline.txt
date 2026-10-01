@@ -236,6 +236,10 @@ K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.SiteId
 K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.StudyId
 K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.SiteId
 K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Application.Services.FeeScheduleImportRow.SiteId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Application.Services.FeeScheduleImportRow.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Application.Services.FeeScheduleImportRowInput.SiteId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Application.Services.FeeScheduleImportRowInput.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.SiteId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.HoldbackReserve.SiteId

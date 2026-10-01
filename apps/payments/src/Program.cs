@@ -1,6 +1,8 @@
+using Cadence.Apps.Payments.Application.Services;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
@@ -15,6 +17,9 @@ builder.Services.AddCadenceSecurity();
 builder.Services.AddCadenceFieldEncryption();
 builder.AddCadencePostgresDbContext<PaymentsDbContext>();
 
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+builder.Services.AddScoped<IBulkFeeScheduleImporterService, BulkFeeScheduleImporterService>();
+
 var app = builder.Build();
 app.UseCadenceWebDefaults();
 app.UseCadenceSecurity();
@@ -25,6 +30,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Returns Payments operational status.");
 
 app.MapPaymentEndpoints();
+app.MapFeeScheduleEndpoints();
 
 await app.RunAsync();
 

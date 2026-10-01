@@ -216,6 +216,13 @@
       >
         💸 Digital Disbursements &amp; Ledger
       </button>
+      <button
+        class="tab-btn"
+        :class="{ active: activeTab === 'fee-schedules' }"
+        @click="activeTab = 'fee-schedules'"
+      >
+        📊 Bulk Fee Schedule Importer
+      </button>
     </div>
 
     <!-- TAB 1: Participant Wallets Directory -->
@@ -936,6 +943,11 @@
       </div>
     </div>
 
+    <!-- TAB 6: Bulk Site Fee Schedule Importer -->
+    <div v-if="activeTab === 'fee-schedules'" class="tab-content">
+      <SiteFeeScheduleBulkUploader @imported="loadAllData" />
+    </div>
+
     <!-- Modal: Form W-9 Taxpayer Certification -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -1016,6 +1028,7 @@ import { ref, computed, onMounted } from "vue";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+import SiteFeeScheduleBulkUploader from "../components/payments/SiteFeeScheduleBulkUploader.vue";
 
 const activeTab = ref("wallets");
 const isLoading = ref(false);
