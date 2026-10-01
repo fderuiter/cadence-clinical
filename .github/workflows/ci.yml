@@ -320,7 +320,8 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref || 'main' }}
         run: | # pragma: allowlist secret
-          pip install --quiet detect-secrets==1.5.0
+          python3 -m pip install --quiet detect-secrets==1.5.0 || true
+          export PATH="$HOME/.local/bin:$PATH"
           git fetch --no-tags origin "$BASE_REF" || true
           git diff --name-only --diff-filter=ACMR -z "origin/$BASE_REF...HEAD" \
             | xargs -0 --no-run-if-empty detect-secrets-hook --baseline .secrets.baseline
@@ -338,8 +339,10 @@ jobs:
           fi
           if [ -n "$CHANGED_FILES" ]; then
             echo "Scanning changed files: $CHANGED_FILES"
-            mapfile -t DEID_FILES_ARRAY <<< "$CHANGED_FILES"
-            dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check deid "${DEID_FILES_ARRAY[@]}"
+            mapfile -t DEID_FILES_ARRAY < <(printf '%s\n' "$CHANGED_FILES" | grep -v '^$')
+            if [ ${#DEID_FILES_ARRAY[@]} -gt 0 ] && [ -n "${DEID_FILES_ARRAY[0]}" ]; then
+              dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check deid "${DEID_FILES_ARRAY[@]}"
+            fi
           else
             echo "No changed files to scan."
           fi
