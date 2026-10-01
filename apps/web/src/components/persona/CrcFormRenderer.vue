@@ -28,6 +28,26 @@
             Protocol Schema v{{ activeSubjectVersion }}
           </span>
           <button
+            id="btn-keyboard-shortcuts"
+            type="button"
+            class="btn btn-secondary"
+            style="
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+              padding: 6px 12px;
+              font-size: 0.85rem;
+              font-weight: 600;
+              border: 1px solid var(--border);
+              border-radius: 4px;
+              cursor: pointer;
+            "
+            title="Keyboard Shortcuts (?) or Ctrl+/"
+            @click="toggleHotkeyOverlay"
+          >
+            <span>⌨️</span> Hotkeys
+          </button>
+          <button
             id="btn-enroll-subject"
             type="button"
             class="btn btn-secondary"
@@ -859,6 +879,12 @@
         </div>
       </div>
     </div>
+
+    <!-- Keyboard Shortcuts Cheat Sheet Modal Overlay -->
+    <EcrfHotkeyOverlay
+      v-if="showHotkeyOverlay"
+      @close="closeHotkeyOverlay"
+    />
   </div>
 </template>
 
@@ -867,6 +893,8 @@ import { computed, reactive, ref } from "vue";
 import { ClinicalFormField } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+import { useEcrfKeyboardShortcuts } from "../../composables/useEcrfKeyboardShortcuts";
+import EcrfHotkeyOverlay from "../EcrfHotkeyOverlay.vue";
 
 const clinicalStore = useClinicalStore();
 
@@ -1095,4 +1123,17 @@ function toggleBatchField(fieldId, checked) {
   }
   emit("update:selectedBatchFields", updated);
 }
+
+// eCRF Keyboard Shortcuts & Auto-Advance Engine
+const { showHotkeyOverlay, toggleHotkeyOverlay, closeHotkeyOverlay } =
+  useEcrfKeyboardShortcuts({
+    onSubmit: handleSubmitClick,
+    isCraUser: () => props.isCraUser,
+    isModalActive: () =>
+      props.isReconsentGated ||
+      props.showEconsentModal ||
+      props.showPaperIcfModal ||
+      showEnrollModal.value ||
+      showReconsentGateModal.value,
+  });
 </script>

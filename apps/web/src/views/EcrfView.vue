@@ -61,6 +61,26 @@
             border-radius: 4px;
             border: 1px solid var(--border);
           "
+          title="Keyboard Shortcuts (?) or Ctrl+/"
+          @click="toggleHotkeyOverlay"
+        >
+          ⌨️ Hotkeys (?)
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-secondary"
+          style="
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+          "
           @click="showEhrReconciliationDrawer = true"
         >
           🏥 EHR Source Reconciliation
@@ -326,6 +346,12 @@
       :subject-id="selectedSubjectId"
       @close="showEhrReconciliationDrawer = false"
     />
+
+    <!-- Keyboard Shortcuts Cheat Sheet Modal Overlay -->
+    <EcrfHotkeyOverlay
+      v-if="showHotkeyOverlay"
+      @close="closeHotkeyOverlay"
+    />
   </div>
 </template>
 
@@ -342,6 +368,7 @@ import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
 import ReasonModal from "../components/ReasonModal.vue";
 import ConflictResolutionModal from "../components/ConflictResolutionModal.vue";
+import EcrfHotkeyOverlay from "../components/EcrfHotkeyOverlay.vue";
 import { useSyncStore } from "../stores/sync";
 import { ClientSyncEngine } from "../utils/syncEngine";
 
@@ -359,6 +386,7 @@ import { useConsentGating } from "../composables/useConsentGating";
 import { useVerification } from "../composables/useVerification";
 import { usePiSignoff } from "../composables/usePiSignoff";
 import { useSchemaIngestion } from "../composables/useSchemaIngestion";
+import { useEcrfKeyboardShortcuts } from "../composables/useEcrfKeyboardShortcuts";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -524,6 +552,21 @@ const {
   confirmRejectItem,
   promoteCandidate,
 } = useSchemaIngestion(store);
+
+// Domain Composable 5: eCRF Keyboard Shortcuts & Auto-Advance Engine
+const { showHotkeyOverlay, toggleHotkeyOverlay, closeHotkeyOverlay } =
+  useEcrfKeyboardShortcuts({
+    onSubmit: submitEcrf,
+    isCraUser: () => isCraUser.value,
+    activeUserRole: () => activeUserRole.value,
+    isModalActive: () =>
+      showReauthModal.value ||
+      showReasonModal.value ||
+      showEconsentModal.value ||
+      showPaperIcfModal.value ||
+      showConflictModal.value ||
+      showEhrReconciliationDrawer.value,
+  });
 
 // Reason for Change Modal States
 const ecrfReasonOptions = [
