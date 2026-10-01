@@ -6559,15 +6559,23 @@
             ]
           },
           "studyId": {
-            "type": [
-              "null",
-              "string"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Etmf_StudyId"
+              }
             ]
           },
           "siteId": {
-            "type": [
-              "null",
-              "string"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Etmf_SiteId"
+              }
             ]
           },
           "mimeType": {
@@ -6616,6 +6624,7 @@
           }
         }
       },
+      "Etmf_SiteId": {},
       "Etmf_StageDocumentQCRequest": {
         "required": [
           "content",
@@ -6631,14 +6640,9 @@
             "type": "string"
           },
           "studyId": {
-            "type": "string"
+            "$ref": "#/components/schemas/Etmf_StudyId"
           },
-          "siteId": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
+          "siteId": {},
           "mimeType": {
             "type": [
               "null",
@@ -6671,6 +6675,7 @@
           }
         }
       },
+      "Etmf_StudyId": {},
       "Execution_AnonymousTypeOfstringAndstringAndstring": {
         "required": [
           "status",
