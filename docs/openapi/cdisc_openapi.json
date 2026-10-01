@@ -1864,6 +1864,126 @@
         }
       }
     },
+    "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
+      "post": {
+        "tags": [
+          "CecEndpoints"
+        ],
+        "operationId": "ChairAdjudicateDossier",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ChairAdjudicateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ChairAdjudicationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/{id}": {
+      "get": {
+        "tags": [
+          "CecEndpoints"
+        ],
+        "operationId": "GetCecDossierById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CecDossier"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fileshare/status": {
       "get": {
         "tags": [
@@ -1899,6 +2019,323 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Imaging_AnonymousTypeOfstringAndstring"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/studies": {
+      "post": {
+        "tags": [
+          "DICOMweb Integration"
+        ],
+        "operationId": "StowRsStoreInstances",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_IngestionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/studies/{studyUid}": {
+      "get": {
+        "tags": [
+          "DICOMweb Integration"
+        ],
+        "operationId": "WadoRsGetStudy",
+        "parameters": [
+          {
+            "name": "studyUid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ImagingStudyEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/studies/{studyUid}/series/{seriesUid}/instances/{instanceUid}/frames/{frameList}": {
+      "get": {
+        "tags": [
+          "DICOMweb Integration"
+        ],
+        "operationId": "WadoRsGetInstanceFrames",
+        "parameters": [
+          {
+            "name": "studyUid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "seriesUid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "instanceUid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "frameList",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/certificates/{certificateId}": {
+      "get": {
+        "tags": [
+          "DICOMweb Integration"
+        ],
+        "operationId": "GetDeidCertificate",
+        "parameters": [
+          {
+            "name": "certificateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_CertificateResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudications": {
+      "post": {
+        "tags": [
+          "Imaging Adjudication"
+        ],
+        "operationId": "SubmitOrEvaluateAdjudicationSession",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Imaging_SubmitAdjudicationSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_AdjudicationSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudications/{sessionId}": {
+      "get": {
+        "tags": [
+          "Imaging Adjudication"
+        ],
+        "operationId": "GetImagingAdjudicationSession",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ImagingAdjudicationSession"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/imaging/adjudications/{sessionId}/chair-adjudicate": {
+      "post": {
+        "tags": [
+          "Imaging Adjudication"
+        ],
+        "operationId": "ChairAdjudicateImagingSession",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Imaging_ChairAdjudicateImagingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_AdjudicationSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
                 }
               }
             }
@@ -4115,6 +4552,254 @@
           }
         }
       },
+      "Execution_CecDossier": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "masked_subject_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "masked_site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidate_event_type": {
+            "type": "string"
+          },
+          "reported_term": {
+            "type": "string"
+          },
+          "reported_onset_date": {
+            "type": "string"
+          },
+          "workflow_status": {
+            "type": "string"
+          },
+          "is_discordant": {
+            "type": "boolean"
+          },
+          "discordance_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "final_consensus_classification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "final_consensus_subtype": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "final_adjudicated_onset_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjudication_rationale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reader1_status": {
+            "type": "string"
+          },
+          "reader2_status": {
+            "type": "string"
+          },
+          "signature_manifest": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_SignatureManifest"
+              }
+            ]
+          },
+          "finalized_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Execution_ChairAdjudicateRequest": {
+        "required": [
+          "final_classification",
+          "final_subtype",
+          "final_adjudicated_onset_date"
+        ],
+        "type": "object",
+        "properties": {
+          "final_classification": {
+            "type": "string"
+          },
+          "final_subtype": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "final_adjudicated_onset_date": {
+            "type": "string"
+          },
+          "binding_reader": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "CHAIR_CUSTOM_DETERMINATION"
+          },
+          "criteria_confirmed": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "adjudication_rationale": {
+            "type": "string",
+            "default": ""
+          },
+          "signature_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_ChairAdjudicationResponse": {
+        "required": [
+          "determination_id",
+          "dossier_id",
+          "chair_id",
+          "chair_name",
+          "final_classification",
+          "final_subtype",
+          "final_adjudicated_onset_date",
+          "binding_reader",
+          "criteria_confirmed",
+          "adjudication_rationale",
+          "electronic_signature",
+          "finalized_at"
+        ],
+        "type": "object",
+        "properties": {
+          "determination_id": {
+            "type": "string"
+          },
+          "dossier_id": {
+            "type": "string"
+          },
+          "chair_id": {
+            "type": "string"
+          },
+          "chair_name": {
+            "type": "string"
+          },
+          "final_classification": {
+            "type": "string"
+          },
+          "final_subtype": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "final_adjudicated_onset_date": {
+            "type": "string"
+          },
+          "binding_reader": {
+            "type": "string"
+          },
+          "criteria_confirmed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "adjudication_rationale": {
+            "type": "string"
+          },
+          "electronic_signature": {
+            "$ref": "#/components/schemas/Execution_SignatureManifest"
+          },
+          "finalized_at": {
+            "type": "string"
+          }
+        }
+      },
       "Execution_ClinicalQueryResponse": {
         "required": [
           "id",
@@ -5605,6 +6290,88 @@
           }
         }
       },
+      "Imaging_AdjudicationSessionResponse": {
+        "required": [
+          "sessionId",
+          "studyId",
+          "subjectId",
+          "timepointName",
+          "workflowStatus",
+          "isResponseDiscordant",
+          "sldDiscordanceDelta",
+          "discordanceReasons",
+          "finalConsensusResponse",
+          "finalConsensusSldMm",
+          "bindingReader",
+          "adjudicationRationale",
+          "sessionDigest"
+        ],
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "timepointName": {
+            "type": "string"
+          },
+          "workflowStatus": {
+            "type": "string"
+          },
+          "isResponseDiscordant": {
+            "type": "boolean"
+          },
+          "sldDiscordanceDelta": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "discordanceReasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "finalConsensusResponse": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "finalConsensusSldMm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "bindingReader": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjudicationRationale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sessionDigest": {
+            "type": "string"
+          }
+        }
+      },
       "Imaging_AnonymousTypeOfstringAndstring": {
         "required": [
           "status",
@@ -5623,6 +6390,591 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Imaging_CertificateResponse": {
+        "required": [
+          "certificate",
+          "isSignatureValid"
+        ],
+        "type": "object",
+        "properties": {
+          "certificate": {
+            "$ref": "#/components/schemas/Imaging_DeidentificationCertificate"
+          },
+          "isSignatureValid": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Imaging_ChairAdjudicateImagingRequest": {
+        "required": [
+          "finalConsensusResponse",
+          "finalConsensusSldMm",
+          "bindingReader",
+          "adjudicationRationale",
+          "signerId",
+          "signerName",
+          "signatureMeaning"
+        ],
+        "type": "object",
+        "properties": {
+          "finalConsensusResponse": {
+            "type": "string"
+          },
+          "finalConsensusSldMm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "bindingReader": {
+            "type": "string"
+          },
+          "adjudicationRationale": {
+            "type": "string"
+          },
+          "signerId": {
+            "type": "string"
+          },
+          "signerName": {
+            "type": "string"
+          },
+          "signatureMeaning": {
+            "type": "string"
+          }
+        }
+      },
+      "Imaging_DeidentificationCertificate": {
+        "required": [
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyEnvelopeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sourceSha256": {
+            "type": "string"
+          },
+          "targetSha256": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "originalStudyInstanceUidHash": {
+            "type": "string"
+          },
+          "originalSopInstanceUidHash": {
+            "type": "string"
+          },
+          "anonymizedStudyInstanceUid": {
+            "type": "string"
+          },
+          "anonymizedSopInstanceUid": {
+            "type": "string"
+          },
+          "scrubbedTagsCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "scrubbedTagsJson": {
+            "type": "string"
+          },
+          "pixelMaskApplied": {
+            "type": "boolean"
+          },
+          "pixelMasksJson": {
+            "type": "string"
+          },
+          "operatorIdentity": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Imaging_ImagingAdjudicationSession": {
+        "required": [
+          "createdAt",
+          "createdBy",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyEnvelopeId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "timepointName": {
+            "type": "string"
+          },
+          "assessmentCriteria": {
+            "type": "string"
+          },
+          "reader1Id": {
+            "type": "string"
+          },
+          "reader1Name": {
+            "type": "string"
+          },
+          "reader1Status": {
+            "type": "string"
+          },
+          "reader1AssessmentJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reader2Id": {
+            "type": "string"
+          },
+          "reader2Name": {
+            "type": "string"
+          },
+          "reader2Status": {
+            "type": "string"
+          },
+          "reader2AssessmentJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjudicatorId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjudicatorName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjudicatorAssessmentJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sldDiscordanceDelta": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isResponseDiscordant": {
+            "type": "boolean"
+          },
+          "discordanceReasonsJson": {
+            "type": "string"
+          },
+          "workflowStatus": {
+            "type": "string"
+          },
+          "finalConsensusResponse": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "finalConsensusSldMm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "bindingReader": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjudicationRationale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "electronicSignatureJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lockedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lockedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sessionDigest": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Imaging_ImagingStudyEnvelope": {
+        "required": [
+          "createdAt",
+          "createdBy",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyInstanceUid": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "modalitiesJson": {
+            "type": "string"
+          },
+          "studyDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyDescription": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "seriesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "instanceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "storagePrefix": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "adjudicationStatus": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Imaging_IngestionResult": {
+        "required": [
+          "studyEnvelopeId",
+          "certificateId",
+          "anonymizedStudyUid",
+          "anonymizedSeriesUid",
+          "anonymizedSopUid",
+          "modality",
+          "rows",
+          "columns",
+          "bitsAllocated",
+          "pixelMaskApplied",
+          "signature"
+        ],
+        "type": "object",
+        "properties": {
+          "studyEnvelopeId": {
+            "type": "string"
+          },
+          "certificateId": {
+            "type": "string"
+          },
+          "anonymizedStudyUid": {
+            "type": "string"
+          },
+          "anonymizedSeriesUid": {
+            "type": "string"
+          },
+          "anonymizedSopUid": {
+            "type": "string"
+          },
+          "modality": {
+            "type": "string"
+          },
+          "rows": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "columns": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bitsAllocated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pixelMaskApplied": {
+            "type": "boolean"
+          },
+          "signature": {
+            "type": "string"
+          }
+        }
+      },
+      "Imaging_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Imaging_ReaderAssessmentDto": {
+        "required": [
+          "readerId",
+          "readerName",
+          "sumLongestDiametersMm",
+          "targetResponse",
+          "overallResponse",
+          "newLesionsPresent"
+        ],
+        "type": "object",
+        "properties": {
+          "readerId": {
+            "type": "string"
+          },
+          "readerName": {
+            "type": "string"
+          },
+          "sumLongestDiametersMm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "targetResponse": {
+            "type": "string"
+          },
+          "overallResponse": {
+            "type": "string"
+          },
+          "newLesionsPresent": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Imaging_SubmitAdjudicationSessionRequest": {
+        "required": [
+          "studyId",
+          "siteId",
+          "subjectId",
+          "timepointName",
+          "reader1Assessment",
+          "reader2Assessment"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "timepointName": {
+            "type": "string"
+          },
+          "reader1Assessment": {
+            "$ref": "#/components/schemas/Imaging_ReaderAssessmentDto"
+          },
+          "reader2Assessment": {
+            "$ref": "#/components/schemas/Imaging_ReaderAssessmentDto"
+          },
+          "assessmentCriteria": {
+            "type": "string",
+            "default": "RECIST_1_1"
           }
         }
       },

@@ -10,6 +10,8 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.InboxState`](#edcinboxstate) | `InboxState` | 11 |
 | [`edc.OutboxMessage`](#edcoutboxmessage) | `OutboxMessage` | 21 |
 | [`edc.OutboxState`](#edcoutboxstate) | `OutboxState` | 6 |
+| [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 17 |
+| [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 26 |
 | [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 38 |
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
@@ -114,6 +116,72 @@ Entity: `OutboxState`
 Indexes:
 
 - `IX_OutboxState_Created`: (`Created`)
+
+## edc.cec_chair_adjudications
+
+Entity: `CecChairAdjudication`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(255)` | no |  | PK |
+| `AdjudicationRationale` | `text` | no |  |  |
+| `BindingReader` | `character varying(100)` | no |  |  |
+| `ChairId` | `character varying(255)` | no |  |  |
+| `ChairName` | `character varying(255)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `DossierId` | `character varying(255)` | no |  |  |
+| `FinalAdjudicatedOnsetDate` | `character varying(50)` | no |  |  |
+| `FinalClassification` | `character varying(255)` | no |  |  |
+| `FinalSubtype` | `character varying(255)` | yes |  |  |
+| `FinalizedAt` | `timestamp with time zone` | no |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `criteria_confirmed` | `jsonb` | no |  |  |
+| `signature_manifest` | `jsonb` | no |  |  |
+
+Indexes:
+
+- `ix_cec_chair_adjudications_dossier_id`: (`DossierId`)
+
+## edc.cec_dossiers
+
+Entity: `CecDossier`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(255)` | no |  | PK |
+| `AdjudicationRationale` | `text` | yes |  |  |
+| `CandidateEventType` | `character varying(100)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `EventId` | `character varying(255)` | no |  |  |
+| `FinalAdjudicatedOnsetDate` | `text` | yes |  |  |
+| `FinalConsensusClassification` | `text` | yes |  |  |
+| `FinalConsensusSubtype` | `text` | yes |  |  |
+| `FinalizedAt` | `timestamp with time zone` | yes |  |  |
+| `IsDiscordant` | `boolean` | no |  |  |
+| `MaskedSiteId` | `character varying(255)` | yes |  |  |
+| `MaskedSubjectId` | `character varying(255)` | no |  |  |
+| `Reader1Status` | `text` | no |  |  |
+| `Reader2Status` | `text` | no |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `ReportedOnsetDate` | `character varying(50)` | no |  |  |
+| `ReportedTerm` | `character varying(500)` | no |  |  |
+| `SiteId` | `character varying(255)` | yes |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+| `WorkflowStatus` | `character varying(100)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `discordance_reasons` | `jsonb` | no |  |  |
+| `signature_manifest` | `jsonb` | yes |  |  |
+
+Indexes:
+
+- `ix_cec_dossiers_study_id`: (`StudyId`)
+- `ix_cec_dossiers_workflow_status`: (`WorkflowStatus`)
 
 ## edc.clinical_observations
 
@@ -243,6 +311,8 @@ Entity: `ClinicalSubject`
 Indexes:
 
 - `IX_clinical_subjects_StudyCode_EnrollmentIndex`: unique (`StudyCode`, `EnrollmentIndex`)
+- `IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex`: (`StudyCode`, `SiteCode`, `Status`, `EnrollmentIndex`)
+- `IX_clinical_subjects_StudyCode_Status_EnrollmentIndex`: (`StudyCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_SubjectCode`: unique (`SubjectCode`)
 
 ## edc.form_submissions
