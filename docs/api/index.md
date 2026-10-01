@@ -9,13 +9,13 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [ai_gateway](ai_gateway.md) | 2 |
 | [ctms](ctms.md) | 3 |
 | [designer](designer.md) | 3 |
-| [econsent](econsent.md) | 2 |
+| [econsent](econsent.md) | 4 |
 | [eisf](eisf.md) | 2 |
 | [etmf](etmf.md) | 2 |
 | [execution](execution.md) | 32 |
 | [fileshare](fileshare.md) | 2 |
 | [imaging](imaging.md) | 9 |
-| [interop](interop.md) | 2 |
+| [interop](interop.md) | 14 |
 | [kernel](kernel.md) | 18 |
 | [knowledge](knowledge.md) | 2 |
 | [notifications](notifications.md) | 3 |
