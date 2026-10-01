@@ -1,5 +1,3 @@
-import { useAuthStore } from "../stores/auth";
-
 /**
  * Bearer-token attachment for calls to the Cadence API gateway.
  *
@@ -17,14 +15,10 @@ export const TOKEN_MIN_VALIDITY_SECONDS = 30;
 export const getApiBaseUrl = () =>
   import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000";
 
-/**
- * Returns a fresh access token for the signed-in user, or null when no one is
- * signed in (the gateway then answers 401 and the router sends the user to
- * sign in).
- */
 export async function getBearerToken() {
   let authStore;
   try {
+    const { useAuthStore } = await import("../stores/auth");
     authStore = useAuthStore();
   } catch {
     return null; // Pinia not active (e.g. module used outside the app)

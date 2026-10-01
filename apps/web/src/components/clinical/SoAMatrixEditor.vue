@@ -297,8 +297,11 @@
               :data-r-idx="rIdx"
               :data-c-idx="cIdx"
               @pointerdown.prevent="handleCellPointerDown(rIdx, cIdx, $event)"
+              @mousedown.prevent="handleCellPointerDown(rIdx, cIdx, $event)"
               @pointermove="handleCellPointerMove($event)"
+              @mouseenter="handleCellMouseEnter(rIdx, cIdx)"
               @pointerup="handleCellPointerUp(rIdx, cIdx, $event)"
+              @mouseup="handleCellPointerUp(rIdx, cIdx, $event)"
               @pointercancel="handleCellPointerCancel($event)"
               @mousedown="handleCellPointerDown(rIdx, cIdx, $event)"
               @mouseenter="handleCellMouseEnter(rIdx, cIdx)"
@@ -521,6 +524,12 @@ const handleCellPointerDown = (rIdx, cIdx, event) => {
     }
     window.addEventListener("pointerup", handleGlobalPointerUpOnce);
     window.addEventListener("pointercancel", handleGlobalPointerCancelOnce);
+  }
+};
+
+const handleCellMouseEnter = (rIdx, cIdx) => {
+  if (isDragging.value) {
+    dragCurrentCell.value = { rIdx, cIdx };
   }
 };
 

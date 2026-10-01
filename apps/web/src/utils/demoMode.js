@@ -9,6 +9,6 @@ export function isDemoBuild(env = import.meta.env) {
   return (
     env?.MODE === "demo" ||
     env?.VITE_DEMO_MODE === "true" ||
-    (typeof process !== "undefined" && process.env?.VITE_DEMO_MODE === "true")
+    (typeof process !== "undefined" && process?.env?.VITE_DEMO_MODE === "true")
   );
 }
