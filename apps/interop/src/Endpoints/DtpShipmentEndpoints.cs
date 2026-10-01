@@ -90,7 +90,7 @@ public static class DtpShipmentEndpoints
         [FromBody] DtpShipmentCreateRequest request)
     {
         var now = clock.UtcNow;
-        var trackingNumber = $"TRK-{Random.Shared.Next(1000000, 9999999)}";
+        var trackingNumber = $"TRK-{Random.Shared.Next(1000000, 9999999)}"; // deid-ignore
         var kitSerials = request.KitSerials ?? new List<string> { $"KIT-{Random.Shared.Next(100, 999)}" };
         var kitNumber = kitSerials.FirstOrDefault() ?? "KIT-100";
 
