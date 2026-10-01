@@ -64,3 +64,35 @@ public record DDFCompilationResult(
     AccessibilityReport? AccessibilityReport = null,
     string Status = "COMPLETED"
 );
+
+public record SoACellMutation(
+    string ActivityId,
+    string EncounterId,
+    bool IsApplicable,
+    string? Details = null,
+    string? Footnotes = null,
+    string? Window = null,
+    string? CollectionCondition = null,
+    string? BiomedicalConceptCode = null
+);
+
+public record BatchCellMutationRequest(
+    string StudyId,
+    string VersionId,
+    IReadOnlyList<SoACellMutation> Mutations,
+    string? ChangeReason = null,
+    IReadOnlyDictionary<string, string>? ActiveStandardsProfileConcepts = null
+);
+
+public record BatchCellMutationResult(
+    string StudyId,
+    string VersionId,
+    int AppliedCount,
+    int UnchangedCount,
+    int ValidationErrorsCount,
+    IReadOnlyList<string> UpdatedNodeIds,
+    IReadOnlyList<string> LineageNodeIds,
+    IReadOnlyList<string> ValidationErrors,
+    string Status = "COMPLETED"
+);
+

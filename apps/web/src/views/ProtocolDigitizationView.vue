@@ -1,5 +1,8 @@
 <template>
-  <div id="section-protocol-digitization" class="dashboard-section active">
+  <div
+    id="section-protocol-digitization"
+    class="dashboard-section active"
+  >
     <!-- Header -->
     <div class="section-header">
       <div class="header-content">
@@ -27,10 +30,17 @@
         :class="{ active: currentStep === 1, completed: currentStep > 1 }"
         @click="goToStep(1)"
       >
-        <div class="step-circle">1</div>
-        <div class="step-label">Document Ingestion</div>
+        <div class="step-circle">
+          1
+        </div>
+        <div class="step-label">
+          Document Ingestion
+        </div>
       </div>
-      <div class="step-divider" :class="{ completed: currentStep > 1 }" />
+      <div
+        class="step-divider"
+        :class="{ completed: currentStep > 1 }"
+      />
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
@@ -38,10 +48,17 @@
         :class="{ active: currentStep === 2, completed: currentStep > 2 }"
         @click="goToStep(2)"
       >
-        <div class="step-circle">2</div>
-        <div class="step-label">AI Extraction Pipeline</div>
+        <div class="step-circle">
+          2
+        </div>
+        <div class="step-label">
+          AI Extraction Pipeline
+        </div>
       </div>
-      <div class="step-divider" :class="{ completed: currentStep > 2 }" />
+      <div
+        class="step-divider"
+        :class="{ completed: currentStep > 2 }"
+      />
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
@@ -49,10 +66,17 @@
         :class="{ active: currentStep === 3, completed: currentStep > 3 }"
         @click="goToStep(3)"
       >
-        <div class="step-circle">3</div>
-        <div class="step-label">Interactive SoA &amp; Verification</div>
+        <div class="step-circle">
+          3
+        </div>
+        <div class="step-label">
+          Interactive SoA &amp; Verification
+        </div>
       </div>
-      <div class="step-divider" :class="{ completed: currentStep > 3 }" />
+      <div
+        class="step-divider"
+        :class="{ completed: currentStep > 3 }"
+      />
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
@@ -60,13 +84,20 @@
         :class="{ active: currentStep === 4, completed: committed }"
         @click="goToStep(4)"
       >
-        <div class="step-circle">4</div>
-        <div class="step-label">eCRF Synthesis &amp; Activation</div>
+        <div class="step-circle">
+          4
+        </div>
+        <div class="step-label">
+          eCRF Synthesis &amp; Activation
+        </div>
       </div>
     </div>
 
     <!-- STEP 1: DOCUMENT INGESTION -->
-    <div v-if="currentStep === 1" class="wizard-pane">
+    <div
+      v-if="currentStep === 1"
+      class="wizard-pane"
+    >
       <div class="card upload-card">
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -85,8 +116,10 @@
             accept=".pdf,.docx,.txt"
             style="display: none"
             @change="handleFileSelect"
-          />
-          <div class="dropzone-icon">📄</div>
+          >
+          <div class="dropzone-icon">
+            📄
+          </div>
           <h4 class="dropzone-title">
             Drag &amp; Drop Protocol Document (PDF, DOCX)
           </h4>
@@ -102,7 +135,10 @@
         </div>
 
         <!-- Selected File Metadata Card -->
-        <div v-if="selectedFile" class="file-meta-box">
+        <div
+          v-if="selectedFile"
+          class="file-meta-box"
+        >
           <div class="file-meta-header">
             <div class="file-name">
               <strong>{{ selectedFile.name }}</strong> ({{
@@ -117,7 +153,10 @@
               Remove
             </button>
           </div>
-          <div v-if="fileHash" class="file-hash-row">
+          <div
+            v-if="fileHash"
+            class="file-hash-row"
+          >
             <span class="hash-label">SHA-256 Checksum:</span>
             <code class="hash-code">{{ fileHash }}</code>
           </div>
@@ -145,7 +184,10 @@
     </div>
 
     <!-- STEP 2: REAL-TIME EXTRACTION PIPELINE -->
-    <div v-if="currentStep === 2" class="wizard-pane">
+    <div
+      v-if="currentStep === 2"
+      class="wizard-pane"
+    >
       <div class="card extraction-progress-card">
         <div class="extraction-header">
           <h3>🧠 Clinical LLM &amp; USDM v4.0 Graph Compiler</h3>
@@ -179,9 +221,10 @@
           >
             <div class="stage-status-icon">
               <span v-if="currentStageIndex > idx">✅</span>
-              <span v-else-if="currentStageIndex === idx" class="spinner-inline"
-                >⏳</span
-              >
+              <span
+                v-else-if="currentStageIndex === idx"
+                class="spinner-inline"
+              >⏳</span>
               <span v-else>⚪</span>
             </div>
             <div class="stage-info">
@@ -216,62 +259,79 @@
           >
             <strong>Validation Diagnostic Errors:</strong>
             <ul>
-              <li v-for="(err, i) in gateErrors" :key="i">{{ err }}</li>
+              <li
+                v-for="(err, i) in gateErrors"
+                :key="i"
+              >
+                {{ err }}
+              </li>
             </ul>
           </div>
 
           <!-- Editable Schema Fields -->
           <div class="correction-fields-grid">
             <div class="form-group">
-              <label class="form-label" for="corr-proto-id"
-                >Protocol Identifier</label
-              >
+              <label
+                class="form-label"
+                for="corr-proto-id"
+              >Protocol Identifier</label>
               <input
                 id="corr-proto-id"
                 v-model="correctionProtocolId"
                 type="text"
                 class="form-control input-protocol-id"
                 placeholder="e.g. CDNC-2026-001"
-              />
+              >
             </div>
             <div class="form-group">
-              <label class="form-label" for="corr-study-title"
-                >Study Title</label
-              >
+              <label
+                class="form-label"
+                for="corr-study-title"
+              >Study Title</label>
               <input
                 id="corr-study-title"
                 v-model="correctionTitle"
                 type="text"
                 class="form-control input-study-title"
                 placeholder="Study Title"
-              />
+              >
             </div>
             <div class="form-group">
-              <label class="form-label" for="corr-dev-phase"
-                >Development Phase</label
-              >
+              <label
+                class="form-label"
+                for="corr-dev-phase"
+              >Development Phase</label>
               <select
                 id="corr-dev-phase"
                 v-model="correctionPhase"
                 class="form-control select-phase"
               >
-                <option value="PHASE_I">Phase I</option>
-                <option value="PHASE_II">Phase II</option>
-                <option value="PHASE_III">Phase III</option>
-                <option value="PHASE_IV">Phase IV</option>
+                <option value="PHASE_I">
+                  Phase I
+                </option>
+                <option value="PHASE_II">
+                  Phase II
+                </option>
+                <option value="PHASE_III">
+                  Phase III
+                </option>
+                <option value="PHASE_IV">
+                  Phase IV
+                </option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" for="corr-ther-area"
-                >Therapeutic Area</label
-              >
+              <label
+                class="form-label"
+                for="corr-ther-area"
+              >Therapeutic Area</label>
               <input
                 id="corr-ther-area"
                 v-model="correctionTherapeuticArea"
                 type="text"
                 class="form-control input-therapeutic-area"
                 placeholder="e.g. Oncology"
-              />
+              >
             </div>
           </div>
 
@@ -280,28 +340,30 @@
             <h5>✍️ 21 CFR Part 11 Electronic Signature Verification</h5>
             <div class="esignature-grid">
               <div class="form-group">
-                <label class="form-label" for="corr-signer-id"
-                  >Signer Username / ID *</label
-                >
+                <label
+                  class="form-label"
+                  for="corr-signer-id"
+                >Signer Username / ID *</label>
                 <input
                   id="corr-signer-id"
                   v-model="signatureUsername"
                   type="text"
                   class="form-control input-signer-id"
                   placeholder="User ID / Signer ID"
-                />
+                >
               </div>
               <div class="form-group">
-                <label class="form-label" for="corr-change-reason"
-                  >Change Justification Reason *</label
-                >
+                <label
+                  class="form-label"
+                  for="corr-change-reason"
+                >Change Justification Reason *</label>
                 <input
                   id="corr-change-reason"
                   v-model="signatureReason"
                   type="text"
                   class="form-control input-change-reason"
                   placeholder="GxP Reason for manual correction"
-                />
+                >
               </div>
             </div>
             <div
@@ -317,9 +379,7 @@
                 :disabled="isSubmittingCorrection"
                 @click="submitCorrectionAndResume"
               >
-                <span v-if="isSubmittingCorrection"
-                  >Verifying Signature &amp; Resuming...</span
-                >
+                <span v-if="isSubmittingCorrection">Verifying Signature &amp; Resuming...</span>
                 <span v-else>🔐 Submit Correction &amp; Resume Pipeline ➜</span>
               </button>
             </div>
@@ -327,8 +387,13 @@
         </div>
 
         <!-- Confidence Gauge Banner -->
-        <div v-if="rawExtractionData" class="confidence-banner">
-          <div class="confidence-title">Extraction Confidence Metric:</div>
+        <div
+          v-if="rawExtractionData"
+          class="confidence-banner"
+        >
+          <div class="confidence-title">
+            Extraction Confidence Metric:
+          </div>
           <div class="confidence-meter">
             <div
               class="confidence-meter-fill"
@@ -358,7 +423,10 @@
     </div>
 
     <!-- STEP 3: INTERACTIVE VERIFICATION WORKSPACE -->
-    <div v-if="currentStep === 3" class="wizard-pane">
+    <div
+      v-if="currentStep === 3"
+      class="wizard-pane"
+    >
       <!-- Study Summary Bar -->
       <div class="card study-summary-card">
         <div class="study-meta-grid">
@@ -425,7 +493,7 @@
 
       <!-- Review Tab 1: SoA Matrix Editor -->
       <div v-if="reviewTab === 'soa'">
-        <SoAMatrixEditor
+        <SoaMatrixGrid
           v-model:activities="rawExtractionData.activities"
           :visits="rawExtractionData.visits"
           @add-visit="handleAddVisit"
@@ -446,25 +514,42 @@
       </div>
 
       <!-- Review Tab 4: Raw USDM JSON -->
-      <div v-if="reviewTab === 'json'" class="card json-viewer-card">
+      <div
+        v-if="reviewTab === 'json'"
+        class="card json-viewer-card"
+      >
         <pre class="json-code-block">{{
           JSON.stringify(rawExtractionData, null, 2)
         }}</pre>
       </div>
 
       <!-- Next Action Bar -->
-      <div class="step-action-bar" style="margin-top: 24px">
-        <button type="button" class="btn btn-secondary" @click="goToStep(1)">
+      <div
+        class="step-action-bar"
+        style="margin-top: 24px"
+      >
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="goToStep(1)"
+        >
           ⮌ Ingest Another Protocol
         </button>
-        <button type="button" class="btn btn-primary" @click="goToStep(4)">
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click="goToStep(4)"
+        >
           Proceed to eCRF Synthesis &amp; Commit ➜
         </button>
       </div>
     </div>
 
     <!-- STEP 4: eCRF SYNTHESIS & COMMIT WORKSPACE -->
-    <div v-if="currentStep === 4" class="wizard-pane">
+    <div
+      v-if="currentStep === 4"
+      class="wizard-pane"
+    >
       <div class="card commit-wizard-card">
         <div class="synthesis-header">
           <h3>🚀 Automated CDASH eCRF Synthesis &amp; EDC Activation</h3>
@@ -489,9 +574,7 @@
               >
                 {{ form.cdash_domain }}
               </span>
-              <span class="field-count"
-                >{{ form.items?.length || 0 }} CDASH Fields</span
-              >
+              <span class="field-count">{{ form.items?.length || 0 }} CDASH Fields</span>
             </div>
             <h5 class="form-title">
               {{ form.form_name }}
@@ -509,10 +592,16 @@
             </ul>
 
             <!-- Special Widget Indicators -->
-            <div v-if="form.cdash_domain === 'QS'" class="widget-pill vas">
+            <div
+              v-if="form.cdash_domain === 'QS'"
+              class="widget-pill vas"
+            >
               📏 VAS Pain Slider (0 - 100 mm)
             </div>
-            <div v-if="form.cdash_domain === 'PE'" class="widget-pill bodymap">
+            <div
+              v-if="form.cdash_domain === 'PE'"
+              class="widget-pill bodymap"
+            >
               🗺️ 74-Zone SNOMED CT Anatomical Map
             </div>
           </div>
@@ -520,7 +609,10 @@
 
         <!-- GxP Change Justification Input -->
         <div class="gxp-commit-box">
-          <label for="change-reason-input" class="gxp-label">
+          <label
+            for="change-reason-input"
+            class="gxp-label"
+          >
             <strong>21 CFR Part 11 Change Justification Reason</strong>
             (Mandatory)
           </label>
@@ -529,12 +621,16 @@
             v-model="changeReason"
             placeholder="e.g. Automated Protocol Ingestion and USDM Graph Synthesis from Protocol CDNC-2026-001"
             class="input-text-gxp"
-          />
+          >
         </div>
 
         <!-- Commit Actions -->
         <div class="step-action-bar">
-          <button type="button" class="btn btn-secondary" @click="goToStep(3)">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="goToStep(3)"
+          >
             ⮌ Back to Review
           </button>
           <button
@@ -543,14 +639,22 @@
             :disabled="isCommitting || !changeReason.trim()"
             @click="commitAndActivateEDC"
           >
-            <span v-if="isCommitting" class="spinner-inline">⏳</span>
+            <span
+              v-if="isCommitting"
+              class="spinner-inline"
+            >⏳</span>
             <span v-else>⚡ Commit USDM Graph &amp; Activate EDC</span>
           </button>
         </div>
 
         <!-- Post-Commit Success Banner -->
-        <div v-if="commitResult" class="commit-success-banner">
-          <div class="success-icon">🎉</div>
+        <div
+          v-if="commitResult"
+          class="commit-success-banner"
+        >
+          <div class="success-icon">
+            🎉
+          </div>
           <div class="success-body">
             <h4 class="success-title">
               Study Protocol Digitization &amp; eCRF Synthesis Complete!
@@ -563,10 +667,16 @@
               created active eCRF schemas.
             </p>
             <div class="success-actions">
-              <router-link to="/ecrf" class="btn btn-primary">
+              <router-link
+                to="/ecrf"
+                class="btn btn-primary"
+              >
                 🩺 Open eCRF Data Capture Workspace
               </router-link>
-              <router-link to="/mdr" class="btn btn-secondary">
+              <router-link
+                to="/mdr"
+                class="btn btn-secondary"
+              >
                 📋 Inspect in MDR Protocol Designer
               </router-link>
             </div>
@@ -583,7 +693,7 @@ import { apiClient } from "../api/apiClient";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import ArmVisualizer from "../components/clinical/ArmVisualizer.vue";
 import IECriteriaTable from "../components/clinical/IECriteriaTable.vue";
-import SoAMatrixEditor from "../components/clinical/SoAMatrixEditor.vue";
+import SoaMatrixGrid from "../components/clinical/SoaMatrixGrid.vue";
 
 const currentStep = ref(1);
 const isDragging = ref(false);
