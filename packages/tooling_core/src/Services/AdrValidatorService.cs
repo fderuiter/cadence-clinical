@@ -361,7 +361,9 @@ public static class AdrValidatorService
     {
         string repoRoot = FindRepoRoot();
         var changedFiles = GetChangedFiles();
-        var architecturalChanges = changedFiles.Where(IsArchitecturalFile).ToList();
+        var architecturalChanges = changedFiles
+            .Where(f => (File.Exists(f) || File.Exists(Path.Combine(repoRoot, f))) && IsArchitecturalFile(f))
+            .ToList();
         if (architecturalChanges.Count == 0) return true;
 
         bool newAdrAdded = changedFiles.Any(f => f.StartsWith("docs/adr/") && FilenamePattern.IsMatch(Path.GetFileName(f)) && (File.Exists(f) || File.Exists(Path.Combine(repoRoot, f))));

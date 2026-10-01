@@ -656,3 +656,5 @@ fails the build.
 | [Project License](../LICENSE) | Current | Project License |
 
 | [ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet](adr/2026-10-01-automated-stipend-disbursement-threshold-rules.md) | Current | Architectural decision record: ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet |
+
+| [Project License](LICENSE.md) | Current | Project License |
