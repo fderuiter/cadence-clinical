@@ -2,6 +2,10 @@ packages:
   - "apps/*"
   - "packages/*"
 
+overrides:
+  js-yaml: "^4.1.0"
+  undici: ">=8.11.2"
+
 allowBuilds:
   esbuild: true
   msw: true

@@ -8,14 +8,6 @@ apps/execution/src/Infrastructure/Persistence/Migrations/20260905174215_AddExecu
 apps/execution/src/Infrastructure/Security/AesGcmDemographicsEncryptionService.cs|device_serial|6027352f25ff3b89
 apps/gateway/src/Program.cs|urls|f1c2971dc8dd9c29
 apps/gateway/src/Signatures/KeycloakCredentialVerifier.cs|ip_mac_addresses|38b82aeb958c832d
-apps/imaging/src/Endpoints/DicomWebEndpoints.cs|ip_mac_addresses|3dfc4e9cab7fd776
-apps/imaging/src/Endpoints/DicomWebEndpoints.cs|ip_mac_addresses|a21e01ef6b7d1920
-apps/imaging/src/Endpoints/DicomWebEndpoints.cs|ip_mac_addresses|dadd4e0b1c27bad4
-apps/imaging/src/Endpoints/DicomWebEndpoints.cs|zip_geographic|3dfc4e9cab7fd776
-apps/imaging/src/Endpoints/DicomWebEndpoints.cs|zip_geographic|a21e01ef6b7d1920
-apps/imaging/src/Endpoints/DicomWebEndpoints.cs|zip_geographic|dadd4e0b1c27bad4
-apps/imaging/src/Services/DicomIngestionService.cs|ip_mac_addresses|b06f8431de8326d8
-apps/imaging/src/Services/DicomIngestionService.cs|zip_geographic|b06f8431de8326d8
 apps/web/src/api/types.ts|ip_mac_addresses|62a36757ae909c73
 apps/web/src/api/types.ts|medical_record_account|0d9cf6da6e682195
 apps/web/src/auth/keycloak.js|dates|43f696c4a6c12766
