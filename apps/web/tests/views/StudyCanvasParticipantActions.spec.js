@@ -62,6 +62,7 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
   let wrapper;
 
   beforeEach(() => {
+    localStorage.clear();
     pinia = createPinia();
     setActivePinia(pinia);
     router = createRouter({
@@ -117,7 +118,9 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
       await wrapper.find("#add-participant-site").setValue(site);
     }
     await wrapper.find("#add-participant-reason").setValue(reason);
+    await flushPromises();
     await wrapper.find("#add-participant-form").trigger("submit");
+    await router.isReady();
     await flushPromises();
   }
 

@@ -1,9 +1,29 @@
-import { vi, expect } from "vitest";
+import { vi, expect, afterEach } from "vitest";
 import { toBeAccessible } from "ui";
 
 expect.extend({
   toBeAccessible,
 });
+
+// Guard console logging during environment teardown to prevent vitest RPC closing errors
+let isTeardown = false;
+afterEach(() => {
+  isTeardown = true;
+});
+
+const wrapConsole = (method) => {
+  const orig = console[method];
+  console[method] = (...args) => {
+    if (isTeardown) return;
+    try {
+      orig.apply(console, args);
+    } catch {
+      // Suppress logging failures when RPC is closing
+    }
+  };
+};
+
+["log", "warn", "error", "info"].forEach(wrapConsole);
 
 // In-memory Storage mock for jsdom environment
 class LocalStorageMock {

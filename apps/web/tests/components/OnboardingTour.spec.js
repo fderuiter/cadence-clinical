@@ -310,7 +310,7 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.isActive).toBe(false);
 
       // Re-enable for testing disable
-      store.isActive = true;
+      store.resumeTour();
       await wrapper.vm.$nextTick();
       await wrapper.find(".btn-tour-disable").trigger("click");
       expect(store.disabled).toBe(true);

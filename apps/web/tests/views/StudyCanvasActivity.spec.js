@@ -63,6 +63,7 @@ describe("Clinical Canvas study activity (PX-11, ADR-2485)", () => {
   let wrapper;
 
   beforeEach(() => {
+    localStorage.clear();
     pinia = createPinia();
     setActivePinia(pinia);
     router = createRouter({

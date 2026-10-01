@@ -117,24 +117,30 @@ jobs:
           if ! command -v hadolint >/dev/null 2>&1; then
             echo "Installing hadolint..."
             for i in {1..5}; do
-              sudo curl --connect-timeout 15 --retry 5 --retry-delay 5 -sSfL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-Linux-x86_64 && break || {
+              if sudo curl --connect-timeout 15 --retry 5 --retry-delay 5 -sSfL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-Linux-x86_64; then
+                break
+              else
                 if [ "$i" -eq 5 ]; then
                   echo "::error::Failed to install hadolint after 5 attempts."
                   exit 1
                 fi
                 echo "Download failed, retrying in 5 seconds... (Attempt $i/5)"
                 sleep 5
-              }
+              fi
             done
             if [ -f /usr/local/bin/hadolint ]; then
               sudo chmod +x /usr/local/bin/hadolint || true
             fi
           fi
           if command -v hadolint >/dev/null 2>&1; then
-            DOCKERFILES=$(find . -type f -name Dockerfile)
-            echo "Linting Dockerfiles:"
-            echo "$DOCKERFILES"
-            hadolint --failure-threshold error $DOCKERFILES
+            mapfile -t DOCKERFILES < <(find . -type f -name Dockerfile)
+            if [ ${#DOCKERFILES[@]} -gt 0 ] && [ -n "${DOCKERFILES[0]}" ]; then
+              echo "Linting Dockerfiles:"
+              printf '%s\n' "${DOCKERFILES[@]}"
+              hadolint --failure-threshold error "${DOCKERFILES[@]}"
+            else
+              echo "No Dockerfiles found to lint."
+            fi
           else
             echo "::error::Hadolint is not installed or unavailable."
             exit 1
@@ -144,15 +150,20 @@ jobs:
         run: |
           if ! command -v shellcheck >/dev/null 2>&1; then
             echo "Installing shellcheck..."
-            sudo apt-get update && sudo apt-get install -y shellcheck || {
+            if ! (sudo apt-get update && sudo apt-get install -y shellcheck); then
               echo "::error::Failed to install shellcheck."
               exit 1
-            }
+            fi
           fi
           if command -v shellcheck >/dev/null 2>&1; then
-            SHELL_SCRIPTS=$(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/node_modules/*")
-            echo "Linting shell scripts: $SHELL_SCRIPTS"
-            shellcheck $SHELL_SCRIPTS
+            mapfile -t SHELL_SCRIPTS < <(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/node_modules/*")
+            if [ ${#SHELL_SCRIPTS[@]} -gt 0 ] && [ -n "${SHELL_SCRIPTS[0]}" ]; then
+              echo "Linting shell scripts:"
+              printf '%s\n' "${SHELL_SCRIPTS[@]}"
+              shellcheck "${SHELL_SCRIPTS[@]}"
+            else
+              echo "No shell scripts found to lint."
+            fi
           else
             echo "::error::ShellCheck is not installed or unavailable."
             exit 1
@@ -205,12 +216,14 @@ jobs:
             CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|vue|css|cs)$' || true)
           fi
           if [ -n "$CHANGED_FILES" ]; then
-            dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check duplication $CHANGED_FILES
+            mapfile -t FILES_ARRAY <<< "$CHANGED_FILES"
+            dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check duplication "${FILES_ARRAY[@]}"
           else
             # Fallback to scanning git status (staged/unstaged files)
             CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | grep -E '\.(py|js|vue|css|cs)$' || true)
             if [ -n "$CHANGED_FILES" ]; then
-              dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check duplication $CHANGED_FILES
+              mapfile -t FILES_ARRAY <<< "$CHANGED_FILES"
+              dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check duplication "${FILES_ARRAY[@]}"
             else
               echo "No relevant files changed."
             fi
@@ -290,7 +303,7 @@ jobs:
         id: run_audit
         if: always()
         run: |
-          python3 -m pip install --quiet pip-audit==2.10.1 || true
+          python3 -m pip install --quiet --upgrade pip pip-audit==2.10.1 || true
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check vulnerabilities
 
       - name: Run secret detection
@@ -307,10 +320,11 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref || 'main' }}
         run: | # pragma: allowlist secret
-          pip install --quiet detect-secrets==1.5.0
-          git fetch --no-tags origin "$BASE_REF"
+          python3 -m pip install --quiet detect-secrets==1.5.0 || true
+          export PATH="$HOME/.local/bin:$PATH"
+          git fetch --no-tags origin "$BASE_REF" || true
           git diff --name-only --diff-filter=ACMR -z "origin/$BASE_REF...HEAD" \
-            | xargs -0 --no-run-if-empty detect-secrets-hook --baseline .secrets.baseline
+            | xargs -0 --no-run-if-empty detect-secrets-hook --baseline .secrets.baseline --exclude-files '(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)'
 
       - name: Run DEID compliance scan
         id: run_deid_scan
@@ -325,7 +339,10 @@ jobs:
           fi
           if [ -n "$CHANGED_FILES" ]; then
             echo "Scanning changed files: $CHANGED_FILES"
-            dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check deid $CHANGED_FILES
+            mapfile -t DEID_FILES_ARRAY < <(printf '%s\n' "$CHANGED_FILES" | grep -v '^$')
+            if [ ${#DEID_FILES_ARRAY[@]} -gt 0 ] && [ -n "${DEID_FILES_ARRAY[0]}" ]; then
+              dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check deid "${DEID_FILES_ARRAY[@]}"
+            fi
           else
             echo "No changed files to scan."
           fi
@@ -473,10 +490,12 @@ jobs:
           else
             echo "Playwright cache miss. Performing full browser installation..."
             for i in {1..3}; do
-              pnpm exec playwright install chromium --with-deps && break || {
+              if pnpm exec playwright install chromium --with-deps; then
+                break
+              else
                 echo "Playwright install failed on attempt $i, retrying in 10s..."
                 sleep 10
-              }
+              fi
             done
           fi
 
@@ -556,7 +575,7 @@ jobs:
 
           if [ ! -s changed_files.txt ]; then
             echo "No files changed."
-            echo "is_safe=false" >> $GITHUB_OUTPUT
+            echo "is_safe=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -575,7 +594,7 @@ jobs:
             fi
           done < changed_files.txt
 
-          echo "is_safe=$SAFE" >> $GITHUB_OUTPUT
+          echo "is_safe=$SAFE" >> "$GITHUB_OUTPUT"
 
       - name: Apply label
         if: steps.classify.outputs.is_safe == 'true'

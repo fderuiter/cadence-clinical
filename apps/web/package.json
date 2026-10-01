@@ -39,7 +39,7 @@
     "generate:api": "node scripts/generate-api-types.js",
     "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
     "prebuild": "pnpm --filter ui build && node src/types/generate-types.js",
-    "pretest": "pnpm --filter ui build && node src/types/generate-types.js",
+    "pretest": "node src/types/generate-types.js",
     "pretypecheck": "node src/types/generate-types.js",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
