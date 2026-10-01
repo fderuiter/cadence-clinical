@@ -37,6 +37,13 @@ public sealed class AutoQueryDispatchTests
     private readonly AstEditCheckEngine _editCheckEngine = new();
     private readonly InMemoryClinicalQueryRepository _queryRepo = new();
     private readonly FakeClock _clock = new();
+    private readonly FakeCurrentAuditContextAccessor _auditContext = new("usr:crc-001", "CRC submission");
+
+    private sealed class ThrowingCurrentAuditContextAccessor : ICurrentAuditContextAccessor
+    {
+        public string UserId => throw new AuditActorUnresolvedException();
+        public string ChangeReason => throw new AuditActorUnresolvedException();
+    }
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
@@ -107,9 +114,9 @@ public sealed class AutoQueryDispatchTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    public async Task Requirement2_AutoDispatch_CreatesOpenQueryWithStandardTextAndSystemMetadata()
+    public async Task Requirement2_AutoDispatch_CreatesOpenQueryWithStandardTextAndUserMetadata()
     {
-        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock);
+        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock, _auditContext);
 
         var lowObs = ClinicalObservation.Create(
             studyId: new StudyCode("STUDY-001"),
@@ -142,7 +149,8 @@ public sealed class AutoQueryDispatchTests
 
         query.Status.Should().Be(QueryStatus.Open);
         query.Origin.Should().Be("AUTO_DISPATCH");
-        query.CreatedBy.Should().Be("svc:auto-query-engine");
+        query.CreatedBy.Should().Be("usr:crc-001");
+        query.ReasonForChange.Should().Contain("usr:crc-001");
         query.Explanation.Should().Contain("below reference range low");
         query.RuleId.Should().Be("RULE_RANGE_LOW");
         query.FieldId.Should().Be("K");
@@ -156,7 +164,7 @@ public sealed class AutoQueryDispatchTests
     [Trait("Category", "GxP_OQ")]
     public async Task Requirement3_FormReEvaluation_AutoClosesQueryWhenDataCorrected()
     {
-        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock);
+        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock, _auditContext);
 
         // 1. Initial Submission with out-of-range low value (K = 2.8) -> Triggers Auto-Query
         var lowObs = ClinicalObservation.Create(
@@ -190,6 +198,7 @@ public sealed class AutoQueryDispatchTests
         var openQuery = activeList.First(q => q.Status == QueryStatus.Open);
 
         // 2. Form Correction Submission: Site updates Potassium value to normal (K = 4.2)
+        _auditContext.UserId = "usr:crc-002";
         var correctedObs = ClinicalObservation.Create(
             studyId: new StudyCode("STUDY-001"),
             subjectId: new SubjectCode("SUBJ-001"),
@@ -218,18 +227,18 @@ public sealed class AutoQueryDispatchTests
             violations: correctedViolations,
             cancellationToken: CancellationToken.None);
 
-        // 3. Verify open query was automatically transitioned to Closed
+        // 3. Verify open query was automatically transitioned to Closed with correcting user attribution
         openQuery.Status.Should().Be(QueryStatus.Closed);
-        openQuery.Resolver.Should().Be("svc:auto-query-engine");
+        openQuery.Resolver.Should().Be("usr:crc-002");
         openQuery.ResolvedAt.Should().Be(_clock.UtcNow);
-        openQuery.ReasonForChange.Should().Contain("auto-resolution upon site data correction");
+        openQuery.ReasonForChange.Should().Contain("auto-resolution upon site data correction by usr:crc-002");
     }
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
     public async Task Requirement4_ComplexDiscrepancy_RoutesToCdmCandidateQueue()
     {
-        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock);
+        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock, _auditContext);
 
         // Batch physiology check: Systolic 70 < Diastolic 90
         var sysObs = ClinicalObservation.Create(
@@ -271,15 +280,15 @@ public sealed class AutoQueryDispatchTests
         // Should NOT be auto-dispatched to Open, but stay as Candidate in CDM manual queue
         query.Status.Should().Be(QueryStatus.Candidate);
         query.Origin.Should().Be("RULE_ENGINE");
-        query.CreatedBy.Should().Be("svc:auto-query-engine");
+        query.CreatedBy.Should().Be("usr:crc-001");
         query.RuleId.Should().Be("RULE_BP_PHYSIOLOGY");
     }
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
-    public async Task Requirement5_AuditTrail_LogsSystemActorForCreationAndResolution()
+    public async Task Requirement5_AuditTrail_LogsInitiatingUserForCreationAndResolution()
     {
-        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock);
+        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock, _auditContext);
 
         // 1. Initial violation creation
         var lowObs = ClinicalObservation.Create(
@@ -307,11 +316,11 @@ public sealed class AutoQueryDispatchTests
         var query = dispatchResult[0];
 
         // Audit metadata check for creation
-        query.CreatedBy.Should().StartWith("svc:");
-        query.CreatedBy.Should().Be(ServiceAccounts.AutoQueryEngine.UserId);
-        query.ReasonForChange.Should().Be(ServiceAccounts.AutoQueryEngine.ChangeReason);
+        query.CreatedBy.Should().Be("usr:crc-001");
+        query.ReasonForChange.Should().Be("Automated query dispatch triggered by usr:crc-001");
 
-        // 2. Data Correction & Auto-Resolution
+        // 2. Data Correction & Auto-Resolution by another user
+        _auditContext.UserId = "usr:crc-002";
         var correctedObs = ClinicalObservation.Create(
             studyId: new StudyCode("STUDY-001"),
             subjectId: new SubjectCode("SUBJ-001"),
@@ -336,7 +345,67 @@ public sealed class AutoQueryDispatchTests
 
         // Audit metadata check for resolution
         query.Status.Should().Be(QueryStatus.Closed);
+        query.Resolver.Should().Be("usr:crc-002");
+        query.ReasonForChange.Should().Be("Automated query auto-resolution upon site data correction by usr:crc-002");
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task Requirement6_UnresolvedAuditContext_FallsBackToAutoQueryEngineServiceAccount()
+    {
+        var throwingContext = new ThrowingCurrentAuditContextAccessor();
+        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock, throwingContext);
+
+        var lowObs = ClinicalObservation.Create(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-002"),
+            domain: new DomainCode("LB"),
+            testCode: new TestCode("K"),
+            testName: "Potassium",
+            observationDate: new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc),
+            value: 2.8,
+            additionalProperties: new ObservationAdditionalProperties { ReferenceRangeLow = 3.5, ReferenceRangeHigh = 5.0 }).Value!;
+
+        var initialViolations = _editCheckEngine.EvaluateInlineConstraints(lowObs);
+
+        var dispatchResult = await dispatchService.ProcessViolationsAndAutoResolutionAsync(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-002"),
+            siteId: new SiteCode("SITE-01"),
+            visitId: "VISIT-01",
+            formId: "FORM-LABS",
+            observations: [lowObs],
+            violations: initialViolations,
+            cancellationToken: CancellationToken.None);
+
+        var query = dispatchResult[0];
+        query.CreatedBy.Should().Be(ServiceAccounts.AutoQueryEngine.UserId);
+        query.ReasonForChange.Should().Be($"Automated query dispatch triggered by {ServiceAccounts.AutoQueryEngine.UserId}");
+
+        var correctedObs = ClinicalObservation.Create(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-002"),
+            domain: new DomainCode("LB"),
+            testCode: new TestCode("K"),
+            testName: "Potassium",
+            observationDate: new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc),
+            value: 4.0,
+            additionalProperties: new ObservationAdditionalProperties { ReferenceRangeLow = 3.5, ReferenceRangeHigh = 5.0 }).Value!;
+
+        var correctedViolations = _editCheckEngine.EvaluateInlineConstraints(correctedObs);
+
+        await dispatchService.ProcessViolationsAndAutoResolutionAsync(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-002"),
+            siteId: new SiteCode("SITE-01"),
+            visitId: "VISIT-01",
+            formId: "FORM-LABS",
+            observations: [correctedObs],
+            violations: correctedViolations,
+            cancellationToken: CancellationToken.None);
+
+        query.Status.Should().Be(QueryStatus.Closed);
         query.Resolver.Should().Be(ServiceAccounts.AutoQueryEngine.UserId);
-        query.ReasonForChange.Should().Contain("auto-resolution upon site data correction");
+        query.ReasonForChange.Should().Be($"Automated query auto-resolution upon site data correction by {ServiceAccounts.AutoQueryEngine.UserId}");
     }
 }
