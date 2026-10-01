@@ -296,18 +296,15 @@
                           </span>
                         </td>
                         <td>
-                          <code
-                            >{{
-                              (inst.observation_id || inst.id).substring(0, 12)
-                            }}...</code
-                          >
+                          <code>{{
+                            (inst.observation_id || inst.id).substring(0, 12)
+                          }}...</code>
                         </td>
                         <td>
                           <span v-if="inst.coded_code">
                             {{ inst.coded_term }} (<code>{{
                               inst.coded_code
-                            }}</code
-                            >)
+                            }}</code>)
                           </span>
                           <span v-else class="text-muted">— Uncoded —</span>
                         </td>

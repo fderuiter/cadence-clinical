@@ -18,13 +18,7 @@ const mockAssignments = [
     score: 0.95,
     model_id: "cadence-meddra-ai-v2.1",
     suggestions: [
-      {
-        code: "10019211",
-        term: "Headache",
-        pt_name: "Headache",
-        llt_name: "Severe headache",
-        score: 0.95,
-      },
+      { code: "10019211", term: "Headache", pt_name: "Headache", llt_name: "Severe headache", score: 0.95 },
     ],
   },
   {
@@ -39,13 +33,7 @@ const mockAssignments = [
     score: 0.95,
     model_id: "cadence-meddra-ai-v2.1",
     suggestions: [
-      {
-        code: "10019211",
-        term: "Headache",
-        pt_name: "Headache",
-        llt_name: "Severe headache",
-        score: 0.95,
-      },
+      { code: "10019211", term: "Headache", pt_name: "Headache", llt_name: "Severe headache", score: 0.95 },
     ],
   },
   {
@@ -61,13 +49,7 @@ const mockAssignments = [
     score: 0.95,
     model_id: "cadence-meddra-ai-v2.1",
     suggestions: [
-      {
-        code: "10019211",
-        term: "Headache",
-        pt_name: "Headache",
-        llt_name: "Severe headache",
-        score: 0.95,
-      },
+      { code: "10019211", term: "Headache", pt_name: "Headache", llt_name: "Severe headache", score: 0.95 },
     ],
   },
   {
@@ -82,13 +64,7 @@ const mockAssignments = [
     score: 0.82,
     model_id: "cadence-meddra-ai-v2.1",
     suggestions: [
-      {
-        code: "10028813",
-        term: "Nausea",
-        pt_name: "Nausea",
-        llt_name: "Mild nausea",
-        score: 0.82,
-      },
+      { code: "10028813", term: "Nausea", pt_name: "Nausea", llt_name: "Mild nausea", score: 0.82 },
     ],
   },
   {
@@ -103,12 +79,7 @@ const mockAssignments = [
     score: 0.65,
     model_id: "cadence-whodrug-ai-v1.0",
     suggestions: [
-      {
-        code: "00000101",
-        term: "Acetylsalicylic acid",
-        drug_name: "Aspirin",
-        score: 0.65,
-      },
+      { code: "00000101", term: "Acetylsalicylic acid", drug_name: "Aspirin", score: 0.65 },
     ],
   },
 ];
@@ -125,17 +96,11 @@ describe("Verbatim Cluster Batch Auto-Coding & Confidence Workbench", () => {
     authStore = useAuthStore(pinia);
 
     // Mock fetchAssignments so component mount doesn't overwrite state
-    vi.spyOn(codingStore, "fetchAssignments").mockImplementation(
-      async () => {}
-    );
+    vi.spyOn(codingStore, "fetchAssignments").mockImplementation(async () => {});
 
     // Grant Data Manager role
     authStore.rawRoles = ["Data Manager"];
-    authStore.user = {
-      id: "usr-dm1",
-      email: "datamanager@cadence.clinical",
-      name: "Lead Data Manager",
-    };
+    authStore.user = { id: "usr-dm1", email: "datamanager@cadence.clinical", name: "Lead Data Manager" };
 
     // Set initial mock assignments
     codingStore.assignments = JSON.parse(JSON.stringify(mockAssignments));
@@ -145,9 +110,7 @@ describe("Verbatim Cluster Batch Auto-Coding & Confidence Workbench", () => {
     const clusters = codingStore.verbatimClusters;
     expect(clusters.length).toBe(3); // SEVERE HEADACHE (MEDDRA), MILD NAUSEA (MEDDRA), ASPIRIN 81MG (WHODRUG)
 
-    const headacheCluster = clusters.find(
-      (c) => c.verbatim_text === "SEVERE HEADACHE"
-    );
+    const headacheCluster = clusters.find((c) => c.verbatim_text === "SEVERE HEADACHE");
     expect(headacheCluster).toBeDefined();
     expect(headacheCluster.instance_count).toBe(3); // 3 instances
     expect(headacheCluster.dictionary_type).toBe("MEDDRA");
@@ -167,9 +130,7 @@ describe("Verbatim Cluster Batch Auto-Coding & Confidence Workbench", () => {
 
     // Click Verbatim Clusters view button
     const modeBtns = wrapper.findAll(".mode-btn");
-    const clusterBtn = modeBtns.find((b) =>
-      b.text().includes("Verbatim Clusters")
-    );
+    const clusterBtn = modeBtns.find((b) => b.text().includes("Verbatim Clusters"));
     expect(clusterBtn).toBeDefined();
     await clusterBtn.trigger("click");
 
@@ -186,9 +147,7 @@ describe("Verbatim Cluster Batch Auto-Coding & Confidence Workbench", () => {
     // High Confidence (>= 90%)
     codingStore.setConfidenceThreshold("HIGH");
     expect(codingStore.filteredClusters.length).toBe(1);
-    expect(codingStore.filteredClusters[0].verbatim_text).toBe(
-      "SEVERE HEADACHE"
-    );
+    expect(codingStore.filteredClusters[0].verbatim_text).toBe("SEVERE HEADACHE");
     expect(codingStore.filteredAssignments.length).toBe(3);
 
     // Medium Confidence (70-89%)
@@ -205,9 +164,7 @@ describe("Verbatim Cluster Batch Auto-Coding & Confidence Workbench", () => {
   });
 
   it("executes 1-step Batch Approve Cluster with GxP change reason and active query exclusion", async () => {
-    const headacheCluster = codingStore.verbatimClusters.find(
-      (c) => c.verbatim_text === "SEVERE HEADACHE"
-    );
+    const headacheCluster = codingStore.verbatimClusters.find((c) => c.verbatim_text === "SEVERE HEADACHE");
     expect(headacheCluster).toBeDefined();
 
     await codingStore.batchApproveCluster({
@@ -232,15 +189,11 @@ describe("Verbatim Cluster Batch Auto-Coding & Confidence Workbench", () => {
 
     // Alert message generated
     expect(codingStore.batchAlert).not.toBeNull();
-    expect(codingStore.batchAlert.message).toContain(
-      "1 instance(s) excluded due to active queries or lock conflicts"
-    );
+    expect(codingStore.batchAlert.message).toContain("1 instance(s) excluded due to active queries or lock conflicts");
   });
 
   it("writes 21 CFR Part 11 dual-attribution ledger logs with reviewer and AI model identity", async () => {
-    const nauseaCluster = codingStore.verbatimClusters.find(
-      (c) => c.verbatim_text === "MILD NAUSEA"
-    );
+    const nauseaCluster = codingStore.verbatimClusters.find((c) => c.verbatim_text === "MILD NAUSEA");
 
     await codingStore.batchApproveCluster({
       clusterId: nauseaCluster.id,
@@ -249,24 +202,18 @@ describe("Verbatim Cluster Batch Auto-Coding & Confidence Workbench", () => {
     });
 
     expect(codingStore.auditLedger.length).toBeGreaterThan(0);
-    const auditEntry = codingStore.auditLedger.find(
-      (e) => e.assignment_id === "assign-4"
-    );
+    const auditEntry = codingStore.auditLedger.find((e) => e.assignment_id === "assign-4");
 
     expect(auditEntry).toBeDefined();
     expect(auditEntry.reviewer_identity).toBe("Dr. Jane Compliance");
     expect(auditEntry.ai_model_identity).toBe("cadence-meddra-ai-v2.1");
-    expect(auditEntry.compliance_standard).toBe(
-      "21 CFR Part 11 Dual-Attribution"
-    );
+    expect(auditEntry.compliance_standard).toBe("21 CFR Part 11 Dual-Attribution");
     expect(auditEntry.reason_for_change).toBe("Batch approve nausea cluster");
     expect(auditEntry.coded_code).toBe("10028813");
   });
 
   it("supports multi-cluster coding review and synonym propagation", async () => {
-    const aspirinCluster = codingStore.verbatimClusters.find(
-      (c) => c.verbatim_text === "ASPIRIN 81MG"
-    );
+    const aspirinCluster = codingStore.verbatimClusters.find((c) => c.verbatim_text === "ASPIRIN 81MG");
 
     await codingStore.batchCodeClusters({
       clusterIds: [aspirinCluster.id],
