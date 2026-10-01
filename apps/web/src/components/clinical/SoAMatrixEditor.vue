@@ -303,7 +303,6 @@
               @mousedown="handleCellPointerDown(rIdx, cIdx, $event)"
               @mouseenter="handleCellMouseEnter(rIdx, cIdx)"
               @mouseup="handleCellPointerUp(rIdx, cIdx, $event)"
-
               @click="
                 handleCellClick(act, visit.visit_name, rIdx, cIdx, $event)
               "

@@ -190,7 +190,9 @@ describe("Visual Analog Scale Sliders and Auto-Disbursement Engine", () => {
       expect.stringContaining("payments/disburse"),
       expect.objectContaining({
         method: "POST",
-        body: expect.stringContaining(`"idempotency_key":"seq_${seqNum}_${mockUserId}"`),
+        body: expect.stringContaining(
+          `"idempotency_key":"seq_${seqNum}_${mockUserId}"`
+        ),
       })
     );
 
