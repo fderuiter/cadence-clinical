@@ -2,12 +2,12 @@ import { setupWorker } from "msw/browser";
 import { gatewayHandlers } from "./handlers.js";
 
 let workerInstance = null;
-try {
-  if (typeof window !== "undefined" && import.meta.env?.MODE !== "test") {
+if (typeof window !== "undefined" && import.meta.env?.MODE !== "test") {
+  try {
     workerInstance = setupWorker(...gatewayHandlers);
+  } catch {
+    // Ignored in jsdom/node test environment
   }
-} catch {
-  // Ignored in jsdom/node test environment
 }
 
 export const worker = workerInstance;
@@ -17,16 +17,14 @@ export async function startMswWorker() {
   try {
     await worker.start({
       onUnhandledRequest: "bypass",
-      serviceWorker: {
-        url: "/mockServiceWorker.js",
-      },
+      serviceWorker: { url: "/mockServiceWorker.js" },
     });
     console.log(
-      "[MSW] Mock Service Worker started for API Gateway simulation."
+      "[MSW] Mock Service Worker started for Subject Portal API Gateway simulation."
     );
   } catch (err) {
     if (import.meta.env?.MODE !== "test") {
-      console.warn("[MSW] Service Worker startup warning:", err);
+      console.warn("[MSW] Subject portal service worker startup warning:", err);
     }
   }
 }

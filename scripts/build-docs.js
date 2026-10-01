@@ -400,7 +400,17 @@ try {
   process.exit(1);
 } finally {
   console.log("--- Cleanup Temporary Docs ---");
+  const tempGeneratedDocs = new Set([
+    path.join(repoRoot, "docs", "index.md"),
+    path.join(repoRoot, "docs", "ARCHITECTURE.md"),
+    path.join(repoRoot, "docs", "AGENTS.md"),
+    path.join(repoRoot, "docs", "LICENSE.md"),
+  ]);
+
   for (const [fullPath, originalContent] of originalFilesMap.entries()) {
+    if (tempGeneratedDocs.has(fullPath)) {
+      continue;
+    }
     try {
       fs.writeFileSync(fullPath, originalContent, "utf8");
       console.log(
@@ -410,17 +420,8 @@ try {
       console.warn(`Could not restore ${fullPath}:`, err);
     }
   }
-  // Derive temporary docs files relative to repoRoot for cleanup
-  for (const file of [
-    "index.md",
-    "ARCHITECTURE.md",
-    "AGENTS.md",
-    "LICENSE.md",
-  ]) {
-    const filePath = path.join(repoRoot, "docs", file);
-    if (originalFilesMap.has(filePath)) {
-      continue;
-    }
+  // Clean up temporary staged docs files relative to repoRoot
+  for (const filePath of tempGeneratedDocs) {
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
