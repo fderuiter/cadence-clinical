@@ -146,7 +146,7 @@ export const useCodingStore = defineStore("coding", {
       });
     },
 
-    verbatimClusters(state) {
+    verbatimClusters() {
       const clusterMap = new Map();
 
       for (const item of this.filteredAssignments) {
@@ -587,7 +587,7 @@ export const useCodingStore = defineStore("coding", {
         }
 
         return updated;
-      } catch (err) {
+      } catch {
         // Fallback local update if mocked
         const idx = this.assignments.findIndex((a) => a.id === assignmentId);
         if (idx !== -1) {
@@ -918,7 +918,7 @@ export const useCodingStore = defineStore("coding", {
         }
 
         return res;
-      } catch (err) {
+      } catch {
         const item = this.assignments.find((a) => a.id === assignmentId);
         if (item) {
           item.status = "QUERY_PENDING";

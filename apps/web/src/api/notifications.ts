@@ -100,7 +100,7 @@ export const notificationsService = {
   ) {
     const { changeReason, headers, ...rest } = options;
     return unwrapResponse(
-      openApiClient.POST("/api/v1/notifications/bulk-acknowledge", {
+      (openApiClient as any).POST("/api/v1/notifications/bulk-acknowledge", {
         body: { ids },
         headers: {
           ...(changeReason
@@ -123,7 +123,7 @@ export const notificationsService = {
   ) {
     const { changeReason, headers, ...rest } = options;
     return unwrapResponse(
-      openApiClient.POST("/api/v1/notifications/bulk-resolve", {
+      (openApiClient as any).POST("/api/v1/notifications/bulk-resolve", {
         body: { ids },
         headers: {
           ...(changeReason

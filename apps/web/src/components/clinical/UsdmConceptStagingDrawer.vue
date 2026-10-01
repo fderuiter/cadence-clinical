@@ -1,5 +1,12 @@
 <template>
-  <div v-if="isOpen" class="drawer-backdrop" @click.self="closeDrawer">
+  <div
+    v-if="isOpen"
+    class="drawer-backdrop"
+    role="button"
+    tabindex="0"
+    @click.self="closeDrawer"
+    @keydown.self="closeDrawer"
+  >
     <div
       class="usdm-concept-staging-drawer card"
       role="dialog"
@@ -64,6 +71,7 @@
           v-model="searchQuery"
           type="text"
           class="form-control input-search"
+          aria-label="Filter unmapped concept tokens"
           placeholder="🔍 Filter unmapped concept tokens by code, name, or node ID..."
         />
       </div>

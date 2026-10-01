@@ -72,6 +72,8 @@
     <div
       v-if="showProposalModal"
       class="proposal-modal-overlay"
+      role="button"
+      tabindex="0"
       style="
         position: fixed;
         inset: 0;
@@ -82,6 +84,7 @@
         z-index: 9999;
       "
       @click.self="showProposalModal = false"
+      @keydown.self="showProposalModal = false"
     >
       <div
         class="proposal-modal-card"

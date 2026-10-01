@@ -136,7 +136,7 @@
         </thead>
         <tbody>
           <template
-            v-for="(cluster, cIndex) in codingStore.filteredClusters"
+            v-for="cluster in codingStore.filteredClusters"
             :key="cluster.id"
           >
             <tr
@@ -581,7 +581,10 @@
     <div
       v-if="isApproveClusterModalOpen"
       class="modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="isApproveClusterModalOpen = false"
+      @keydown.self="isApproveClusterModalOpen = false"
     >
       <div class="modal batch-dialog-card">
         <div class="modal-header">
@@ -662,7 +665,10 @@
     <div
       v-if="isBatchClusterModalOpen"
       class="modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="isBatchClusterModalOpen = false"
+      @keydown.self="isBatchClusterModalOpen = false"
     >
       <div class="modal batch-dialog-card">
         <div class="modal-header">
@@ -760,7 +766,10 @@
     <div
       v-if="isQueryModalOpen"
       class="modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="isQueryModalOpen = false"
+      @keydown.self="isQueryModalOpen = false"
     >
       <div class="modal query-dialog-card">
         <div class="modal-header">
@@ -829,7 +838,10 @@
     <div
       v-if="isBatchModalOpen"
       class="modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="isBatchModalOpen = false"
+      @keydown.self="isBatchModalOpen = false"
     >
       <div class="modal batch-dialog-card">
         <div class="modal-header">

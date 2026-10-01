@@ -470,6 +470,8 @@
     <div
       v-if="showReasoningModal"
       class="reasoning-modal-overlay"
+      role="button"
+      tabindex="0"
       style="
         position: fixed;
         inset: 0;
@@ -480,6 +482,7 @@
         z-index: 9999;
       "
       @click.self="showReasoningModal = false"
+      @keydown.self="showReasoningModal = false"
     >
       <div
         class="reasoning-modal-card"

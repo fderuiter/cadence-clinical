@@ -957,7 +957,11 @@ const triggerConceptStaging = (tokens = []) => {
   isConceptStagingOpen.value = true;
 };
 
-const handleConceptMappingsConfirmed = ({ resolvedMappings, auditEntry }) => {
+defineExpose({
+  triggerConceptStaging,
+});
+
+const handleConceptMappingsConfirmed = ({ resolvedMappings, _auditEntry }) => {
   resolvedConceptMappings.value = resolvedMappings;
   if (rawExtractionData.value && rawExtractionData.value.activities) {
     for (const mapping of resolvedMappings) {
