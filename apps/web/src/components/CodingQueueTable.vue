@@ -1,7 +1,44 @@
 <template>
   <div class="coding-queue-wrapper">
-    <!-- Batch Action Bar (Appears when items are selected) -->
-    <div v-if="codingStore.selectedCount > 0" class="batch-action-bar">
+    <!-- Batch Action Bar for Cluster View -->
+    <div
+      v-if="codingStore.viewMode === 'CLUSTERS' && codingStore.selectedClusterCount > 0"
+      class="batch-action-bar cluster-batch-bar"
+    >
+      <div class="batch-summary">
+        <span class="badge badge-accent">{{ codingStore.selectedClusterCount }}</span>
+        <span>clusters selected ({{ selectedClusterInstancesCount }} subject instances)</span>
+      </div>
+      <div class="batch-buttons">
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          @click="openBatchApproveClusterModal"
+        >
+          ✓ Batch Approve Cluster(s)
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          @click="openBatchCodeClusterModal"
+        >
+          🏷️ Batch Code Cluster(s)
+        </button>
+        <button
+          type="button"
+          class="btn btn-text btn-sm"
+          @click="codingStore.clearClusterSelection()"
+        >
+          Clear Selection
+        </button>
+      </div>
+    </div>
+
+    <!-- Batch Action Bar for Individual View (Appears when items are selected) -->
+    <div
+      v-else-if="codingStore.viewMode === 'INDIVIDUAL' && codingStore.selectedCount > 0"
+      class="batch-action-bar"
+    >
       <div class="batch-summary">
         <span class="badge badge-accent">{{ codingStore.selectedCount }}</span>
         <span>items selected for batch action</span>
@@ -32,25 +69,216 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="codingStore.isLoading" class="table-loading-state">
+    <div
+      v-if="codingStore.isLoading"
+      class="table-loading-state"
+    >
       <div class="spinner" />
       <p>Loading medical coding queue...</p>
     </div>
 
-    <!-- Empty State -->
+    <!-- Empty State for Clusters View -->
     <div
-      v-else-if="codingStore.filteredAssignments.length === 0"
+      v-else-if="codingStore.viewMode === 'CLUSTERS' && codingStore.verbatimClusters.length === 0"
       class="table-empty-state"
     >
-      <div class="empty-icon">🩺</div>
+      <div class="empty-icon">
+        🧩
+      </div>
+      <h3>No Verbatim Clusters Found</h3>
+      <p>
+        No verbatim clusters match the selected confidence threshold or active filters.
+      </p>
+    </div>
+
+    <!-- Empty State for Individual View -->
+    <div
+      v-else-if="codingStore.viewMode === 'INDIVIDUAL' && codingStore.filteredAssignments.length === 0"
+      class="table-empty-state"
+    >
+      <div class="empty-icon">
+        🩺
+      </div>
       <h3>No Coding Assignments Found</h3>
       <p>
         No adverse events or concomitant medications match the active filters.
       </p>
     </div>
 
+    <!-- Verbatim Clusters Table View -->
+    <div
+      v-else-if="codingStore.viewMode === 'CLUSTERS'"
+      ref="clusterContainerRef"
+      class="table-responsive"
+    >
+      <table
+        class="data-table coding-table cluster-table"
+        role="grid"
+        aria-label="Verbatim Clusters Queue Table"
+        :aria-rowcount="codingStore.verbatimClusters.length"
+        aria-colcount="6"
+      >
+        <thead>
+          <tr>
+            <th
+              scope="col"
+              class="col-checkbox"
+            >
+              <input
+                type="checkbox"
+                :checked="isAllClustersSelected"
+                :indeterminate="isClusterIndeterminate"
+                title="Select all filtered clusters"
+                aria-label="Select all filtered clusters"
+                @change="toggleSelectAllClusters"
+              >
+            </th>
+            <th scope="col">
+              Status / Confidence
+            </th>
+            <th scope="col">
+              Verbatim Cluster &amp; Instances
+            </th>
+            <th scope="col">
+              Dictionary
+            </th>
+            <th scope="col">
+              Top Suggested Term &amp; Score
+            </th>
+            <th
+              scope="col"
+              class="col-actions"
+            >
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="cluster in codingStore.verbatimClusters"
+            :key="cluster.clusterKey"
+            class="coding-row cluster-row"
+            :class="{ 'row-selected': isClusterSelected(cluster.clusterKey) }"
+          >
+            <!-- Checkbox -->
+            <td
+              role="gridcell"
+              class="col-checkbox"
+            >
+              <input
+                type="checkbox"
+                :checked="isClusterSelected(cluster.clusterKey)"
+                aria-label="Select verbatim cluster"
+                @change="codingStore.toggleSelectCluster(cluster.clusterKey)"
+              >
+            </td>
+
+            <!-- Status & Match Confidence Badge -->
+            <td role="gridcell">
+              <div class="cluster-status-cell">
+                <span :class="getStatusBadgeClass(cluster.status)">
+                  {{ formatStatus(cluster.status) }}
+                </span>
+                <span
+                  class="badge confidence-pill"
+                  :class="getConfidenceBadgeClass(cluster.confidence_category)"
+                  style="margin-top: 4px; font-size: 10px;"
+                >
+                  {{ Math.round((cluster.max_score || 0) * 100) }}% {{ cluster.confidence_category }}
+                </span>
+              </div>
+            </td>
+
+            <!-- Verbatim Cluster & Instances -->
+            <td role="gridcell">
+              <div class="verbatim-title cluster-title">
+                {{ cluster.verbatim_text }}
+              </div>
+              <div class="cluster-instances-meta">
+                <span class="badge badge-accent instance-count-badge">
+                  👥 {{ cluster.instance_count }} subject {{ cluster.instance_count === 1 ? 'instance' : 'instances' }}
+                </span>
+                <span
+                  v-if="cluster.has_blocked_items"
+                  class="badge badge-warning blocked-alert-pill"
+                  title="Contains active query or locked items"
+                >
+                  ⚠️ {{ cluster.blocked_items.length }} blocked
+                </span>
+              </div>
+            </td>
+
+            <!-- Dictionary -->
+            <td role="gridcell">
+              <div class="dict-label">
+                {{ cluster.dictionary_type }}
+              </div>
+              <div class="dict-version">
+                v{{ cluster.dictionary_version }}
+              </div>
+            </td>
+
+            <!-- Top Suggestion -->
+            <td role="gridcell">
+              <div
+                v-if="cluster.top_suggestion"
+                class="coded-result-box"
+              >
+                <div class="coded-term">
+                  {{ cluster.top_suggestion.term }}
+                </div>
+                <div class="coded-code-badge">
+                  <code>{{ cluster.top_suggestion.code }}</code>
+                </div>
+                <div
+                  v-if="cluster.top_suggestion.llt_name"
+                  class="llt-preview"
+                  style="font-size: 11px; color: var(--text-muted)"
+                >
+                  LLT: {{ cluster.top_suggestion.llt_name }}
+                </div>
+              </div>
+              <span
+                v-else
+                class="uncoded-placeholder"
+              >— Uncoded —</span>
+            </td>
+
+            <!-- Actions -->
+            <td
+              role="gridcell"
+              class="col-actions"
+            >
+              <div class="action-buttons-group">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-primary"
+                  title="Approve auto-coding suggestion across cluster"
+                  @click="promptBatchApproveSingleCluster(cluster)"
+                >
+                  ✓ Approve Cluster
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-secondary-outline"
+                  title="Apply manual code override across cluster"
+                  @click="promptBatchCodeSingleCluster(cluster)"
+                >
+                  🏷️ Batch Code
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <!-- Queue Table -->
-    <div v-else ref="containerRef" class="table-responsive">
+    <div
+      v-else
+      ref="containerRef"
+      class="table-responsive"
+    >
       <table
         class="data-table coding-table"
         role="grid"
@@ -60,7 +288,10 @@
       >
         <thead>
           <tr>
-            <th scope="col" class="col-checkbox">
+            <th
+              scope="col"
+              class="col-checkbox"
+            >
               <input
                 type="checkbox"
                 :checked="isAllSelected"
@@ -68,14 +299,29 @@
                 title="Select all filtered items"
                 aria-label="Select all filtered items"
                 @change="toggleSelectAll"
-              />
+              >
             </th>
-            <th scope="col">Status</th>
-            <th scope="col">Verbatim Term &amp; Source</th>
-            <th scope="col">Dictionary</th>
-            <th scope="col">Coded Code &amp; Term</th>
-            <th scope="col">Match / Suggestions</th>
-            <th scope="col" class="col-actions">Actions</th>
+            <th scope="col">
+              Status
+            </th>
+            <th scope="col">
+              Verbatim Term &amp; Source
+            </th>
+            <th scope="col">
+              Dictionary
+            </th>
+            <th scope="col">
+              Coded Code &amp; Term
+            </th>
+            <th scope="col">
+              Match / Suggestions
+            </th>
+            <th
+              scope="col"
+              class="col-actions"
+            >
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -102,7 +348,7 @@
                 aria-label="Select assignment"
                 tabindex="-1"
                 @change="codingStore.toggleSelect(item.id)"
-              />
+              >
             </td>
 
             <!-- Status Badge -->
@@ -134,15 +380,22 @@
                 {{ item.verbatim_text }}
               </div>
               <div class="verbatim-meta">
-                <span v-if="item.source_field" class="meta-tag">{{
+                <span
+                  v-if="item.source_field"
+                  class="meta-tag"
+                >{{
                   item.source_field
                 }}</span>
-                <span v-if="item.domain" class="meta-tag domain-tag">{{
+                <span
+                  v-if="item.domain"
+                  class="meta-tag domain-tag"
+                >{{
                   item.domain
                 }}</span>
-                <span v-if="item.observation_id" class="meta-obs"
-                  >Obs: {{ item.observation_id.substring(0, 8) }}...</span
-                >
+                <span
+                  v-if="item.observation_id"
+                  class="meta-obs"
+                >Obs: {{ item.observation_id.substring(0, 8) }}...</span>
               </div>
             </td>
 
@@ -159,7 +412,9 @@
               <div class="dict-label">
                 {{ item.dictionary_type }}
               </div>
-              <div class="dict-version">v{{ item.dictionary_version }}</div>
+              <div class="dict-version">
+                v{{ item.dictionary_version }}
+              </div>
             </td>
 
             <!-- Coded Term & Code -->
@@ -172,7 +427,10 @@
               @click="selectCell(rIndex, 4)"
               @keydown="handleCellKeyDown($event, rIndex, 4, item)"
             >
-              <div v-if="item.coded_code" class="coded-result-box">
+              <div
+                v-if="item.coded_code"
+                class="coded-result-box"
+              >
                 <div class="coded-term">
                   {{ item.coded_term }}
                 </div>
@@ -180,13 +438,19 @@
                   <code>{{ item.coded_code }}</code>
                 </div>
                 <!-- Hierarchy Tooltip / Hierarchy Preview -->
-                <div v-if="hasHierarchy(item)" class="hierarchy-preview">
+                <div
+                  v-if="hasHierarchy(item)"
+                  class="hierarchy-preview"
+                >
                   <span class="hierarchy-breadcrumb">{{
                     getHierarchySummary(item)
                   }}</span>
                 </div>
               </div>
-              <span v-else class="uncoded-placeholder">— Uncoded —</span>
+              <span
+                v-else
+                class="uncoded-placeholder"
+              >— Uncoded —</span>
             </td>
 
             <!-- Match / Suggestions -->
@@ -203,8 +467,8 @@
               <div
                 v-if="
                   item.suggestions &&
-                  Array.isArray(item.suggestions) &&
-                  item.suggestions.length > 0
+                    Array.isArray(item.suggestions) &&
+                    item.suggestions.length > 0
                 "
                 class="suggestions-container"
               >
@@ -286,7 +550,10 @@
                   +{{ item.suggestions.length - 2 }} more suggestions
                 </div>
               </div>
-              <div v-else-if="item.score" class="score-display">
+              <div
+                v-else-if="item.score"
+                class="score-display"
+              >
                 Score: {{ Math.round(item.score * 100) }}%
               </div>
               <div
@@ -379,7 +646,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Uncodable verbatim clarification request"
-            />
+            >
           </div>
         </div>
         <div class="modal-footer">
@@ -435,8 +702,12 @@
               v-model="batchDictType"
               class="form-control"
             >
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
             </select>
           </div>
           <div class="form-group">
@@ -447,7 +718,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. 10019211"
-            />
+            >
           </div>
           <div class="form-group">
             <label for="batch-term">Preferred Term / Drug Name</label>
@@ -457,7 +728,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Headache"
-            />
+            >
           </div>
           <div class="form-group">
             <label for="batch-reason">GxP Reason for Change *</label>
@@ -467,7 +738,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Batch coding consensus review"
-            />
+            >
           </div>
         </div>
         <div class="modal-footer">
@@ -491,6 +762,168 @@
         </div>
       </div>
     </div>
+
+    <!-- Cluster Batch Approve Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="isClusterApproveModalOpen"
+      class="modal-overlay"
+      @click.self="isClusterApproveModalOpen = false"
+    >
+      <div class="modal batch-dialog-card">
+        <div class="modal-header">
+          <h3>Batch Approve Verbatim Cluster(s)</h3>
+          <button
+            type="button"
+            class="btn-close"
+            @click="isClusterApproveModalOpen = false"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>
+            You are approving top suggested coding matches across
+            <strong>{{ selectedClustersList.length }}</strong> verbatim cluster(s) covering
+            <strong>{{ selectedClusterInstancesCount }}</strong> total subject instance(s).
+          </p>
+
+          <div
+            v-if="selectedClusterBlockedCount > 0"
+            class="alert alert-warning"
+            style="margin-bottom: 16px; padding: 10px; border-radius: 6px; font-size: 0.85rem;"
+          >
+            ⚠️ Notice: <strong>{{ selectedClusterBlockedCount }}</strong> subject instance(s) have active queries or lock conflicts and will be excluded from this batch update.
+          </div>
+
+          <div class="form-group">
+            <label for="cluster-approve-reason">GxP 21 CFR Part 11 Reason for Change *</label>
+            <input
+              id="cluster-approve-reason"
+              v-model="clusterBatchReason"
+              type="text"
+              class="form-control"
+              placeholder="e.g. High-confidence verbatim cluster batch auto-coding approval"
+            >
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="isClusterApproveModalOpen = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="!clusterBatchReason.trim() || isSubmittingClusterBatch || selectedClusterUnblockedCount === 0"
+            @click="submitBatchApproveClusters"
+          >
+            {{ isSubmittingClusterBatch ? "Approving Clusters..." : "Batch Approve Cluster(s)" }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cluster Batch Code Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="isClusterCodeModalOpen"
+      class="modal-overlay"
+      @click.self="isClusterCodeModalOpen = false"
+    >
+      <div class="modal batch-dialog-card">
+        <div class="modal-header">
+          <h3>Batch Code Verbatim Cluster(s)</h3>
+          <button
+            type="button"
+            class="btn-close"
+            @click="isClusterCodeModalOpen = false"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>
+            You are assigning a target code across
+            <strong>{{ selectedClustersList.length }}</strong> verbatim cluster(s) (<strong>{{ selectedClusterInstancesCount }}</strong> subject instances).
+          </p>
+
+          <div
+            v-if="selectedClusterBlockedCount > 0"
+            class="alert alert-warning"
+            style="margin-bottom: 16px; padding: 10px; border-radius: 6px; font-size: 0.85rem;"
+          >
+            ⚠️ Notice: <strong>{{ selectedClusterBlockedCount }}</strong> subject instance(s) have active queries or lock conflicts and will be excluded from this batch update.
+          </div>
+
+          <div class="form-group">
+            <label for="cluster-batch-dict">Dictionary System</label>
+            <select
+              id="cluster-batch-dict"
+              v-model="clusterBatchDictType"
+              class="form-control"
+            >
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="cluster-batch-code">Concept / Drug Code *</label>
+            <input
+              id="cluster-batch-code"
+              v-model="clusterBatchCode"
+              type="text"
+              class="form-control"
+              placeholder="e.g. 10019211"
+            >
+          </div>
+          <div class="form-group">
+            <label for="cluster-batch-term">Preferred Term / Drug Name</label>
+            <input
+              id="cluster-batch-term"
+              v-model="clusterBatchTerm"
+              type="text"
+              class="form-control"
+              placeholder="e.g. Headache"
+            >
+          </div>
+          <div class="form-group">
+            <label for="cluster-batch-code-reason">GxP 21 CFR Part 11 Reason for Change *</label>
+            <input
+              id="cluster-batch-code-reason"
+              v-model="clusterBatchReason"
+              type="text"
+              class="form-control"
+              placeholder="e.g. Verbatim cluster batch code override"
+            >
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="isClusterCodeModalOpen = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="!clusterBatchCode.trim() || !clusterBatchReason.trim() || isSubmittingClusterBatch || selectedClusterUnblockedCount === 0"
+            @click="submitBatchCodeClusters"
+          >
+            {{ isSubmittingClusterBatch ? "Applying Code..." : "Apply Cluster Code" }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -501,6 +934,160 @@ import { use2DGrid } from "../composables/use2DGrid";
 
 const codingStore = useCodingStore();
 const containerRef = ref(null);
+const clusterContainerRef = ref(null);
+
+// Cluster View State & Selection
+const filteredClusterKeys = computed(() => {
+  return codingStore.verbatimClusters.map((c) => c.clusterKey);
+});
+
+const isAllClustersSelected = computed(() => {
+  if (filteredClusterKeys.value.length === 0) return false;
+  return filteredClusterKeys.value.every((key) =>
+    codingStore.selectedClusterKeys.includes(key)
+  );
+});
+
+const isClusterIndeterminate = computed(() => {
+  const selectedCount = codingStore.selectedClusterKeys.filter((key) =>
+    filteredClusterKeys.value.includes(key)
+  ).length;
+  return selectedCount > 0 && selectedCount < filteredClusterKeys.value.length;
+});
+
+function isClusterSelected(key) {
+  return codingStore.selectedClusterKeys.includes(key);
+}
+
+function toggleSelectAllClusters() {
+  codingStore.selectAllClusters(filteredClusterKeys.value);
+}
+
+// Cluster Batch Action Modals State
+const isClusterApproveModalOpen = ref(false);
+const isClusterCodeModalOpen = ref(false);
+const clusterBatchReason = ref("");
+const clusterBatchCode = ref("");
+const clusterBatchTerm = ref("");
+const clusterBatchDictType = ref("MEDDRA");
+const isSubmittingClusterBatch = ref(false);
+const activeSingleCluster = ref(null);
+
+const selectedClustersList = computed(() => {
+  if (activeSingleCluster.value) {
+    return [activeSingleCluster.value];
+  }
+  return codingStore.verbatimClusters.filter((c) =>
+    codingStore.selectedClusterKeys.includes(c.clusterKey)
+  );
+});
+
+const selectedClusterInstancesCount = computed(() => {
+  return selectedClustersList.value.reduce(
+    (sum, c) => sum + c.instance_count,
+    0
+  );
+});
+
+const selectedClusterUnblockedCount = computed(() => {
+  return selectedClustersList.value.reduce(
+    (sum, c) => sum + c.unblocked_items.length,
+    0
+  );
+});
+
+const selectedClusterBlockedCount = computed(() => {
+  return selectedClustersList.value.reduce(
+    (sum, c) => sum + c.blocked_items.length,
+    0
+  );
+});
+
+function openBatchApproveClusterModal() {
+  activeSingleCluster.value = null;
+  clusterBatchReason.value =
+    "High-confidence verbatim cluster batch auto-coding approval";
+  isClusterApproveModalOpen.value = true;
+}
+
+function promptBatchApproveSingleCluster(cluster) {
+  activeSingleCluster.value = cluster;
+  clusterBatchReason.value = `Verbatim cluster auto-coding approval for '${cluster.verbatim_text}'`;
+  isClusterApproveModalOpen.value = true;
+}
+
+async function submitBatchApproveClusters() {
+  isSubmittingClusterBatch.value = true;
+  try {
+    const keys = activeSingleCluster.value
+      ? [activeSingleCluster.value.clusterKey]
+      : codingStore.selectedClusterKeys;
+    await codingStore.batchApproveClusters({
+      clusterKeys: keys,
+      reason: clusterBatchReason.value,
+    });
+    isClusterApproveModalOpen.value = false;
+    activeSingleCluster.value = null;
+  } catch (err) {
+    console.error("Batch cluster approve error:", err);
+  } finally {
+    isSubmittingClusterBatch.value = false;
+  }
+}
+
+function openBatchCodeClusterModal() {
+  activeSingleCluster.value = null;
+  const firstCluster = selectedClustersList.value[0];
+  clusterBatchDictType.value = firstCluster?.dictionary_type || "MEDDRA";
+  clusterBatchCode.value = firstCluster?.top_suggestion?.code || "";
+  clusterBatchTerm.value = firstCluster?.top_suggestion?.term || "";
+  clusterBatchReason.value = "Batch verbatim cluster code override";
+  isClusterCodeModalOpen.value = true;
+}
+
+function promptBatchCodeSingleCluster(cluster) {
+  activeSingleCluster.value = cluster;
+  clusterBatchDictType.value = cluster.dictionary_type || "MEDDRA";
+  clusterBatchCode.value = cluster.top_suggestion?.code || "";
+  clusterBatchTerm.value = cluster.top_suggestion?.term || "";
+  clusterBatchReason.value = `Verbatim cluster code override for '${cluster.verbatim_text}'`;
+  isClusterCodeModalOpen.value = true;
+}
+
+async function submitBatchCodeClusters() {
+  isSubmittingClusterBatch.value = true;
+  try {
+    const keys = activeSingleCluster.value
+      ? [activeSingleCluster.value.clusterKey]
+      : codingStore.selectedClusterKeys;
+    await codingStore.batchCodeClusters({
+      clusterKeys: keys,
+      code: clusterBatchCode.value,
+      term: clusterBatchTerm.value,
+      dictionaryType: clusterBatchDictType.value,
+      reason: clusterBatchReason.value,
+    });
+    isClusterCodeModalOpen.value = false;
+    activeSingleCluster.value = null;
+  } catch (err) {
+    console.error("Batch cluster code error:", err);
+  } finally {
+    isSubmittingClusterBatch.value = false;
+  }
+}
+
+function getConfidenceBadgeClass(category) {
+  switch (category) {
+    case "HIGH":
+      return "badge-success";
+    case "MEDIUM":
+      return "badge-info";
+    case "LOW":
+      return "badge-warning";
+    default:
+      return "";
+  }
+}
 
 const grid = use2DGrid(() => codingStore.filteredAssignments.length, 7, {
   containerRef,
