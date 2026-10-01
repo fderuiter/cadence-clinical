@@ -296,8 +296,11 @@
               }"
               :data-r-idx="rIdx"
               :data-c-idx="cIdx"
+              @mousedown.prevent="handleCellPointerDown(rIdx, cIdx, $event)"
               @pointerdown.prevent="handleCellPointerDown(rIdx, cIdx, $event)"
-              @pointermove="handleCellPointerMove($event)"
+              @mouseenter="handleCellPointerMove($event, rIdx, cIdx)"
+              @pointermove="handleCellPointerMove($event, rIdx, cIdx)"
+              @mouseup="handleCellPointerUp(rIdx, cIdx, $event)"
               @pointerup="handleCellPointerUp(rIdx, cIdx, $event)"
               @pointercancel="handleCellPointerCancel($event)"
               @mousedown="handleCellPointerDown(rIdx, cIdx, $event)"
@@ -524,8 +527,12 @@ const handleCellPointerDown = (rIdx, cIdx, event) => {
   }
 };
 
-const handleCellPointerMove = (event) => {
+const handleCellPointerMove = (event, rIdx, cIdx) => {
   if (isDragging.value) {
+    if (rIdx !== undefined && cIdx !== undefined) {
+      dragCurrentCell.value = { rIdx, cIdx };
+      return;
+    }
     const el = document.elementFromPoint(event.clientX, event.clientY);
     const cellEl = el?.closest(".cell-toggle");
     if (

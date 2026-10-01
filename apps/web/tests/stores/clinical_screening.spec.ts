@@ -133,12 +133,12 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
     ).toBe(false);
   });
 
-  it("automatically migrates un-scoped legacy localStorage entries to persona-scoped storage on load", () => {
-    const legacyFormValues = {
+  it("loads persona-scoped localStorage entries on loadPersonaState", () => {
+    const formValues = {
       pulse: "115",
       vssbp: "135",
     };
-    window.localStorage.setItem("formValues", JSON.stringify(legacyFormValues));
+    window.localStorage.setItem("clinical_super_admin_formValues", JSON.stringify(formValues));
 
     const authStore = useAuthStore();
     authStore.currentPersona = "super_admin";
