@@ -308,8 +308,8 @@ public sealed class UsdmDesignImporterTests
             cancellationToken: TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeFalse();
-        result.Design.Should().BeNull();
-        result.Problems.Should().Equal("BiomedicalConcept_6 (Systolic Blood Pressure (6), CDISC C25298) is not in the tenant's Concept Registry.");
+        result.RequiresStaging.Should().BeTrue();
+        result.UnmappedConcepts.Should().ContainSingle().Which.Code.Should().Be("C25298");
         asked.Should().OnlyHaveUniqueItems().And.BeEquivalentTo(UsdmSamples.CdiscExampleConceptCodes);
     }
 
@@ -326,8 +326,9 @@ public sealed class UsdmDesignImporterTests
         var result = await UsdmDesignImporter.ImportAsync(Mini, registry, tenant, cancellationToken: ct);
 
         result.Design!.CollectionSpecs[0].Items[0].Concept.Should().Be(concept);
-        (await UsdmDesignImporter.ImportAsync(Mini, registry, TenantId.New(), cancellationToken: ct)).Problems
-            .Should().Equal("BC_1 (Systolic Blood Pressure, CDISC C25298) is not in the tenant's Concept Registry.");
+        var unmappedResult = await UsdmDesignImporter.ImportAsync(Mini, registry, TenantId.New(), cancellationToken: ct);
+        unmappedResult.RequiresStaging.Should().BeTrue();
+        unmappedResult.UnmappedConcepts.Should().ContainSingle().Which.Code.Should().Be("C25298");
     }
 
     /// <summary>A document that is not JSON, not USDM 4, or has no study is refused before anything is mapped.</summary>
