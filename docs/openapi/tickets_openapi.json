@@ -51,6 +51,255 @@
           }
         }
       }
+    },
+    "/api/v1/tickets/batch": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "BatchUpdateTickets",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_BatchUpdateTicketsCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_BatchUpdateTicketsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/batch-update": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "BatchUpdateTicketsAlias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_BatchUpdateTicketsCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_BatchUpdateTicketsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "ListTickets",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tickets_Ticket"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "CreateTicket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_Ticket"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_Ticket"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "GetTicketById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_Ticket"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "UpdateTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_Ticket"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_Ticket"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -75,12 +324,430 @@
             ]
           }
         }
+      },
+      "Tickets_BatchTicketResultItem": {
+        "required": [
+          "ticket_id",
+          "success",
+          "error_message",
+          "status",
+          "reference"
+        ],
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "error_message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reference": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Tickets_BatchUpdateTicketsCommand": {
+        "required": [
+          "ticket_ids",
+          "ticketIds",
+          "action",
+          "rationale",
+          "resolution_rationale",
+          "root_cause_category",
+          "root_cause_summary",
+          "resolution_code",
+          "signature_token",
+          "sig_token",
+          "signature_meaning"
+        ],
+        "type": "object",
+        "properties": {
+          "ticket_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "ticketIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "action": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rationale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolution_rationale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "root_cause_category": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "root_cause_summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolution_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sig_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Tickets_BatchUpdateTicketsResult": {
+        "required": [
+          "success_count",
+          "failure_count",
+          "results"
+        ],
+        "type": "object",
+        "properties": {
+          "success_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "failure_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tickets_BatchTicketResultItem"
+            }
+          }
+        }
+      },
+      "Tickets_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Tickets_Ticket": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reporter": {
+            "type": "string"
+          },
+          "assigneeUser": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assigneeRole": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "orgId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relatedEntityType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relatedEntityId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contextPayload": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "gxpSeverity": {
+            "type": "string"
+          },
+          "rootCauseCategory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rootCauseSummary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolutionCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "slaTargetAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "slaPausedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "slaTotalPausedSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "slaBreached": {
+            "type": "boolean"
+          },
+          "slaAmberWarned": {
+            "type": "boolean"
+          },
+          "lastEscalatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastEscalationNotifiedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "escalationCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "workflowType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actionType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signatureAction": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signatureToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signatureMeaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signatureTimestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "signatureUser": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isDeleted": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "reasonForChange": {
+            "type": "string"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Cadence.Apps.Tickets"
+    },
+    {
+      "name": "Tickets"
     }
   ]
 }

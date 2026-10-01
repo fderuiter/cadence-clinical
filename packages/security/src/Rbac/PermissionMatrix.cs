@@ -60,7 +60,8 @@ public static class PermissionMatrix
             ["lab_range"] = ["create", "read", "update", "delete", "alert"],
             ["ecoa_schedule"] = ["create", "read"],
             ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["ecoa_submission"] = ["create", "read"],
+            ["ticket"] = ["batch_resolve", "create", "read", "update", "delete"]
         };
 
         // sponsor_designer
@@ -137,7 +138,8 @@ public static class PermissionMatrix
             ["lab_range"] = ["create", "read", "update", "delete", "alert"],
             ["ecoa_schedule"] = ["create", "read"],
             ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["ecoa_submission"] = ["create", "read"],
+            ["ticket"] = ["batch_resolve", "create", "read", "update", "delete"]
         };
 
         // sponsor_mm
@@ -399,11 +401,12 @@ public static class PermissionMatrix
     {
         if (principal == null || string.IsNullOrWhiteSpace(permission)) return false;
 
-        int colonIndex = permission.IndexOf(':');
-        if (colonIndex <= 0 || colonIndex >= permission.Length - 1) return false;
+        int separatorIndex = permission.IndexOf(':');
+        if (separatorIndex <= 0) separatorIndex = permission.IndexOf('.');
+        if (separatorIndex <= 0 || separatorIndex >= permission.Length - 1) return false;
 
-        string resource = permission[..colonIndex].Trim();
-        string action = permission[(colonIndex + 1)..].Trim();
+        string resource = permission[..separatorIndex].Trim();
+        string action = permission[(separatorIndex + 1)..].Trim();
 
         var rolesToCheck = new List<string>(principal.Roles);
         foreach (string r in principal.RawRoles)

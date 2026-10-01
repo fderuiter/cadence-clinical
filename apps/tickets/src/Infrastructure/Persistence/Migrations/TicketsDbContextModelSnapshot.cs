@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(TicketsDbContext))]
     partial class TicketsDbContextModelSnapshot : ModelSnapshot
     {
@@ -59,7 +60,7 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("DueDate")
+                    b.Property<DateTimeOffset?>("DueDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("EscalationCount")
@@ -73,10 +74,10 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("LastEscalatedAt")
+                    b.Property<DateTimeOffset?>("LastEscalatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("LastEscalationNotifiedAt")
+                    b.Property<DateTimeOffset?>("LastEscalationNotifiedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("OrgId")
@@ -131,7 +132,7 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime?>("SignatureTimestamp")
+                    b.Property<DateTimeOffset?>("SignatureTimestamp")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SignatureToken")
@@ -152,10 +153,10 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
                     b.Property<bool>("SlaBreached")
                         .HasColumnType("boolean");
 
-                    b.Property<DateTime?>("SlaPausedAt")
+                    b.Property<DateTimeOffset?>("SlaPausedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("SlaTargetAt")
+                    b.Property<DateTimeOffset?>("SlaTargetAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("SlaTotalPausedSeconds")
@@ -175,8 +176,8 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<int>("VersionIndex")
-                        .HasColumnType("integer");
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("WorkflowType")
                         .HasMaxLength(100)
@@ -238,7 +239,7 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("UploadedAt")
+                    b.Property<DateTimeOffset>("UploadedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("UploadedBy")
@@ -267,7 +268,7 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -316,7 +317,7 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -408,3 +409,4 @@ namespace Cadence.Apps.Tickets.Infrastructure.Persistence.Migrations;
 #pragma warning restore 612, 618
         }
     }
+}

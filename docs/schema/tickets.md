@@ -143,7 +143,7 @@ Entity: `Ticket`
 | `Status` | `character varying(50)` | no |  |  |
 | `StudyId` | `character varying(255)` | yes |  |  |
 | `Title` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
 | `WorkflowType` | `character varying(100)` | yes |  |  |
 
 Indexes:

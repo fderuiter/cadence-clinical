@@ -1,8 +1,10 @@
 using System;
 
+using Cadence.Core.Domain;
+
 namespace Cadence.Apps.Tickets.Domain;
 
-public class Ticket
+public class Ticket : AggregateRootBase
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Reference { get; set; } = string.Empty;
@@ -41,10 +43,6 @@ public class Ticket
     public DateTimeOffset? SignatureTimestamp { get; set; }
     public string? SignatureUser { get; set; }
     public bool IsDeleted { get; set; }
-    public required DateTimeOffset CreatedAt { get; set; }
-    public string CreatedBy { get; set; } = string.Empty;
-    public string ReasonForChange { get; set; } = string.Empty;
-    public int VersionIndex { get; set; } = 1;
 }
 
 public class TicketComment
