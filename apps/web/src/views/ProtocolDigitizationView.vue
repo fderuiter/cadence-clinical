@@ -937,7 +937,7 @@ const startExtraction = () => {
   }, 400);
 };
 
-const triggerConceptStaging = (tokens = []) => {
+const _triggerConceptStaging = (tokens = []) => {
   if (tokens && tokens.length > 0) {
     unmappedConceptTokens.value = tokens;
   } else {
