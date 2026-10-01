@@ -409,6 +409,28 @@
           </div>
         </div>
 
+        <!-- Staging Alert Banner if unmapped concept tokens present -->
+        <div
+          v-if="unmappedConceptTokens.length > 0"
+          class="card alert alert-warning concept-staging-alert"
+          style="margin-bottom: 20px; padding: 16px; background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;"
+        >
+          <div class="alert-content">
+            <h4 style="margin: 0 0 6px 0; color: #92400e;">📥 USDM Concept Staging Required</h4>
+            <p style="margin: 0 0 12px 0; font-size: 0.85rem; color: #78350f;">
+              Detected {{ unmappedConceptTokens.length }} unmapped Biomedical Concept code(s). Open the concept staging drawer to map NCIt/CDISC codes, create tenant aliases, or accept design finding exemptions.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-warning btn-open-staging-drawer"
+            style="background-color: #d97706; border-color: #d97706; color: #ffffff; font-weight: 600;"
+            @click="isConceptStagingOpen = true"
+          >
+            📥 Open Concept Staging Drawer
+          </button>
+        </div>
+
         <div class="step-action-bar">
           <button
             type="button"
@@ -684,6 +706,13 @@
         </div>
       </div>
     </div>
+
+    <!-- USDM Concept Staging & Mapping Drawer -->
+    <UsdmConceptStagingDrawer
+      v-model:is-open="isConceptStagingOpen"
+      :unmapped-tokens="unmappedConceptTokens"
+      @confirm-mappings="handleConceptMappingsConfirmed"
+    />
   </div>
 </template>
 
@@ -694,6 +723,7 @@ import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import ArmVisualizer from "../components/clinical/ArmVisualizer.vue";
 import IECriteriaTable from "../components/clinical/IECriteriaTable.vue";
 import SoaMatrixGrid from "../components/clinical/SoaMatrixGrid.vue";
+import UsdmConceptStagingDrawer from "../components/clinical/UsdmConceptStagingDrawer.vue";
 
 const currentStep = ref(1);
 const isDragging = ref(false);
@@ -708,6 +738,11 @@ const changeReason = ref("Automated Protocol Ingestion & USDM Graph Synthesis");
 const isCommitting = ref(false);
 const commitResult = ref(null);
 const committed = ref(false);
+
+// USDM Concept Staging Drawer State
+const isConceptStagingOpen = ref(false);
+const unmappedConceptTokens = ref([]);
+const resolvedConceptMappings = ref([]);
 
 // DAG Job & Escalation State
 const dagJobId = ref(null);
@@ -988,8 +1023,50 @@ const startExtraction = () => {
       if (!rawExtractionData.value) {
         loadSampleProtocol();
       }
+      if (unmappedConceptTokens.value.length > 0) {
+        isConceptStagingOpen.value = true;
+      }
     }
   }, 400);
+};
+
+const triggerConceptStaging = (tokens = []) => {
+  if (tokens && tokens.length > 0) {
+    unmappedConceptTokens.value = tokens;
+  } else {
+    unmappedConceptTokens.value = [
+      {
+        code: "C99999",
+        name: "Unmapped Biomarker Concept",
+        sourceNodeId: "Activity_1.BiomedicalConcept_9",
+      },
+      {
+        code: "C88888",
+        name: "Unmapped Custom Assessment",
+        sourceNodeId: "Activity_3.BiomedicalConcept_8",
+      },
+    ];
+  }
+  isConceptStagingOpen.value = true;
+};
+
+const handleConceptMappingsConfirmed = ({ resolvedMappings, auditEntry }) => {
+  resolvedConceptMappings.value = resolvedMappings;
+  if (rawExtractionData.value && rawExtractionData.value.activities) {
+    for (const mapping of resolvedMappings) {
+      const act = rawExtractionData.value.activities.find(
+        (a) => a.biomedical_concept_code === mapping.originalCode
+      );
+      if (act) {
+        act.biomedical_concept_code = mapping.resolvedCode;
+        if (mapping.resolvedName) {
+          act.activity_name = `${act.activity_name} [Mapped: ${mapping.resolvedName}]`;
+        }
+      }
+    }
+  }
+  unmappedConceptTokens.value = [];
+  isConceptStagingOpen.value = false;
 };
 
 const _triggerEscalation = (jobData = {}) => {
