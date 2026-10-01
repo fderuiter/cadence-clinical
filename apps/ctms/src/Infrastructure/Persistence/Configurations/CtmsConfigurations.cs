@@ -123,6 +123,13 @@ public sealed class CtmsGeneratedLetterConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.VisitId).HasMaxLength(36).IsRequired();
         builder.Property(x => x.LetterType).HasMaxLength(50).IsRequired();
         builder.Property(x => x.RenderedContent).HasMaxLength(100000).IsRequired();
+        builder.Property(x => x.PdfObjectKey).HasMaxLength(1000);
+        builder.Property(x => x.PdfSha256Hash).HasMaxLength(64);
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.IsSigned).IsRequired();
+        builder.Property(x => x.SignatureManifestation).HasColumnType("jsonb");
+        builder.Property(x => x.EtmfDocumentId).HasMaxLength(100);
+        builder.Property(x => x.RecipientEmail).HasMaxLength(255);
         builder.Property(x => x.CreatedAt).IsRequired();
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
