@@ -951,6 +951,8 @@ function onPersonaSelect() {
     activePersonaKey.value = authStore.currentPersona;
     return;
   }
+  onboardingStore.loadPersonaState(activePersonaKey.value);
+  clinicalStore.loadPersonaState(activePersonaKey.value);
   refreshNotifications();
   screenReaderAnnouncement.value = `Switched workspace view to ${activePersonaLabel.value}.`;
 }
