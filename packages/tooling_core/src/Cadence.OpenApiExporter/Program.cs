@@ -410,15 +410,25 @@ public static class Program
 
     private static string FindRepoRoot()
     {
-        string current = Directory.GetCurrentDirectory();
-        while (!File.Exists(Path.Combine(current, "Cadence.sln")))
+        string current = AppContext.BaseDirectory;
+        while (!string.IsNullOrEmpty(current))
         {
-            var parent = Directory.GetParent(current);
-            if (parent == null) return Directory.GetCurrentDirectory();
-            current = parent.FullName;
+            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
+            string? parent = Directory.GetParent(current)?.FullName;
+            if (parent == current) break;
+            current = parent ?? "";
         }
 
-        return current;
+        current = Directory.GetCurrentDirectory();
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
+            string? parent = Directory.GetParent(current)?.FullName;
+            if (parent == current) break;
+            current = parent ?? "";
+        }
+
+        return Directory.GetCurrentDirectory();
     }
 
     private sealed record DotnetServiceRegistration(string Name, string Prefix, Type ProgramType, string ContentRoot);
