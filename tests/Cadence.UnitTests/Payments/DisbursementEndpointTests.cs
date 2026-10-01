@@ -3,8 +3,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Domain;
+using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Testing.Security;
 

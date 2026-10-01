@@ -5,12 +5,30 @@
       <div class="header-text-group">
         <h2>Interactive Medical Coding Workbench</h2>
         <p>
-          Standardized MedDRA and WHODrug terminology coding for Adverse Events
-          (<code>AETERM</code>) and Concomitant Medications (<code>CMTRT</code>)
-          with 21 CFR Part 11 compliance trails.
+          Standardized MedDRA and WHODrug terminology coding with verbatim cluster grouping, AI match confidence filtering, and 21 CFR Part 11 dual-attribution audit logs.
         </p>
       </div>
       <div class="header-action-buttons">
+        <!-- View Mode Switcher Toggle -->
+        <div class="view-mode-toggle-group">
+          <button
+            type="button"
+            class="btn btn-sm mode-btn"
+            :class="{ active: codingStore.viewMode === 'INDIVIDUAL' }"
+            @click="codingStore.setViewMode('INDIVIDUAL')"
+          >
+            📋 Individual Items
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm mode-btn"
+            :class="{ active: codingStore.viewMode === 'CLUSTERS' }"
+            @click="codingStore.setViewMode('CLUSTERS')"
+          >
+            🧩 Verbatim Clusters
+          </button>
+        </div>
+
         <button
           type="button"
           class="btn btn-secondary"
@@ -27,6 +45,29 @@
           🔄 Refresh Queue
         </button>
       </div>
+    </div>
+
+    <!-- Batch Alert Banner -->
+    <div
+      v-if="codingStore.batchAlert"
+      class="alert-banner"
+      :class="'alert-' + (codingStore.batchAlert.type || 'info')"
+      role="alert"
+    >
+      <div class="alert-content">
+        <span class="alert-icon">
+          {{ codingStore.batchAlert.type === 'success' ? '✅' : codingStore.batchAlert.type === 'warning' ? '⚠️' : 'ℹ️' }}
+        </span>
+        <span>{{ codingStore.batchAlert.message }}</span>
+      </div>
+      <button
+        type="button"
+        class="alert-close-btn"
+        aria-label="Dismiss alert"
+        @click="codingStore.dismissBatchAlert()"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- 21 CFR Part 11 Role Gating Notice if unauthorized -->
@@ -46,10 +87,64 @@
 
     <!-- Authorized Coding Workspace -->
     <div v-else class="coding-workspace-container">
-      <!-- 5 Summary Stat Metric Cards -->
-      <div class="stats-overview-grid">
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- Summary Metric Cards (Adapted for View Mode) -->
+      <div v-if="codingStore.viewMode === 'CLUSTERS'" class="stats-overview-grid">
+        <div
+          class="stat-card"
+          :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
+          @click="setStatusFilter('ALL')"
+        >
+          <div class="stat-number">
+            {{ codingStore.totalClustersCount }}
+          </div>
+          <div class="stat-title">Verbatim Clusters</div>
+        </div>
+
+        <div class="stat-card stat-instances">
+          <div class="stat-number">
+            {{ codingStore.totalClusterInstancesCount }}
+          </div>
+          <div class="stat-title">Subject Instances</div>
+        </div>
+
+        <div
+          class="stat-card stat-suggested"
+          :class="{ 'stat-active': codingStore.confidenceThreshold === 'HIGH' }"
+          @click="setConfidenceFilter('HIGH')"
+        >
+          <div class="stat-number">
+            {{ codingStore.highConfidenceClustersCount }}
+          </div>
+          <div class="stat-title">High Conf. Clusters (≥90%)</div>
+        </div>
+
+        <div
+          class="stat-card stat-coded"
+          :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
+          @click="setStatusFilter('CODED_ALL')"
+        >
+          <div class="stat-number">
+            {{ codingStore.autoCodingProgressPct }}%
+          </div>
+          <div class="stat-title">Batch Progress</div>
+        </div>
+
+        <div
+          class="stat-card stat-query"
+          :class="{
+            'stat-active': codingStore.filters.status === 'QUERY_PENDING',
+          }"
+          @click="setStatusFilter('QUERY_PENDING')"
+        >
+          <div class="stat-number">
+            {{ codingStore.queryPendingCount }}
+          </div>
+          <div class="stat-title">Query Pending</div>
+        </div>
+      </div>
+
+      <!-- Individual View Summary Cards -->
+      <div v-else class="stats-overview-grid">
         <div
           class="stat-card"
           :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
@@ -61,8 +156,6 @@
           <div class="stat-title">Total Verbatims</div>
         </div>
 
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-uncoded"
           :class="{ 'stat-active': codingStore.filters.status === 'UNCODED' }"
@@ -74,8 +167,6 @@
           <div class="stat-title">Uncoded</div>
         </div>
 
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-suggested"
           :class="{ 'stat-active': codingStore.filters.status === 'SUGGESTED' }"
@@ -87,8 +178,6 @@
           <div class="stat-title">Suggested Matches</div>
         </div>
 
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-coded"
           :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
@@ -100,8 +189,6 @@
           <div class="stat-title">Coded</div>
         </div>
 
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-query"
           :class="{
@@ -127,7 +214,7 @@
               :class="{ active: codingStore.filters.status === 'ALL' }"
               @click="setStatusFilter('ALL')"
             >
-              All Items
+              All
             </button>
             <button
               type="button"
@@ -178,6 +265,21 @@
               <option value="WHODRUG">WHODrug</option>
             </select>
           </div>
+
+          <!-- Confidence Threshold Filter -->
+          <div class="confidence-select-box">
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <select
+              v-model="codingStore.confidenceThreshold"
+              class="form-control-sm confidence-select"
+              title="Filter by match confidence threshold"
+            >
+              <option value="ALL">All Confidence Scores</option>
+              <option value="HIGH">≥ 90% High Confidence</option>
+              <option value="MEDIUM">70–89% Medium Confidence</option>
+              <option value="LOW">&lt; 70% Low Confidence</option>
+            </select>
+          </div>
         </div>
 
         <!-- Search Input -->
@@ -187,7 +289,7 @@
             v-model="codingStore.filters.search"
             type="text"
             class="form-control-sm search-input"
-            placeholder="Search verbatim, code, or field..."
+            placeholder="Search verbatim, code, or term..."
           />
         </div>
       </div>
@@ -225,6 +327,14 @@ const hasAccess = computed(() => {
 
 function setStatusFilter(status) {
   codingStore.filters.status = status;
+}
+
+function setConfidenceFilter(threshold) {
+  if (codingStore.confidenceThreshold === threshold) {
+    codingStore.setConfidenceThreshold("ALL");
+  } else {
+    codingStore.setConfidenceThreshold(threshold);
+  }
 }
 
 async function refreshQueue() {
@@ -267,7 +377,82 @@ onMounted(() => {
 
 .header-action-buttons {
   display: flex;
+  align-items: center;
   gap: 10px;
+}
+
+.view-mode-toggle-group {
+  display: flex;
+  background-color: #e2e8f0;
+  border-radius: 6px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.mode-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-btn.active {
+  background-color: white;
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.alert-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+}
+
+.alert-success {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.alert-warning {
+  background-color: #fffbeb;
+  border: 1px solid #fef08a;
+  color: #854d0e;
+}
+
+.alert-info {
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #075985;
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.alert-close-btn:hover {
+  opacity: 1;
 }
 
 .gating-banner {
@@ -358,6 +543,10 @@ onMounted(() => {
   color: var(--warning);
 }
 
+.stat-instances .stat-number {
+  color: #4f46e5;
+}
+
 .toolbar-card {
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
@@ -407,12 +596,20 @@ onMounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.dict-select-box select {
+.dict-select-box select,
+.confidence-select-box select {
   font-size: 0.82rem;
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background-color: white;
+}
+
+.confidence-select {
+  font-weight: 600;
+  color: #0369a1;
+  border-color: #7dd3fc;
+  background-color: #f0f9ff;
 }
 
 .search-box {

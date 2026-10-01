@@ -51,6 +51,101 @@
           }
         }
       }
+    },
+    "/api/v1/payments/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Direct disburse ePRO stipend to participant wallet with strict idempotency and audit trail.",
+        "operationId": "DisburseStipendDirect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseStipendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Disburse stipend to participant wallet.",
+        "operationId": "DisburseStipendWallet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseStipendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/subject/{subjectId}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve participant wallet balance and details.",
+        "operationId": "GetSubjectWallet",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/audit-logs": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve payment audit ledger records.",
+        "operationId": "GetPaymentAuditLogs",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -75,12 +170,88 @@
             ]
           }
         }
+      },
+      "Payments_DisburseStipendRequest": {
+        "required": [
+          "subjectId",
+          "studyId",
+          "siteId",
+          "sequenceNumber",
+          "assignmentId",
+          "diaryId",
+          "amount",
+          "idempotencyKey",
+          "disbursementType"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sequenceNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "assignmentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "diaryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "disbursementType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Cadence.Apps.Payments"
+    },
+    {
+      "name": "Payments"
     }
   ]
 }
