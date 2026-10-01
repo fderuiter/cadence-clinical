@@ -2344,7 +2344,7 @@ async function initializeApp() {
         try {
           mountedApp.unmount();
         } catch {
-          /* ignore */
+          // Ignore unmount errors during teardown
         }
         mountedApp = null;
       }
@@ -3320,7 +3320,7 @@ export function unmountApp() {
     try {
       mountedApp.unmount();
     } catch {
-      /* ignore */
+      // Ignore unmount errors during teardown
     }
     mountedApp = null;
   }

@@ -72,6 +72,9 @@ importers:
 
   apps/subject-portal:
     dependencies:
+      keycloak-js:
+        specifier: ^26.2.4
+        version: 26.2.4
       ui:
         specifier: workspace:*
         version: link:../../packages/ui
@@ -100,9 +103,6 @@ importers:
       jsdom:
         specifier: ^30.0.1
         version: 30.0.1
-      keycloak-js:
-        specifier: ^26.2.4
-        version: 26.2.4
       msw:
         specifier: ^2.15.0
         version: 2.15.0(@types/node@26.6.3)(typescript@6.0.3)
