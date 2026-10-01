@@ -370,7 +370,9 @@ describe("Clinical Canvas: a participant's data", () => {
 
       await wrapper.find(`#btn-respond-${QUERY_ID}`).trigger("click");
       await wrapper.vm.$nextTick();
-      expect(wrapper.find(`#btn-confirm-respond-${QUERY_ID}`).attributes()).toHaveProperty("disabled");
+      expect(
+        wrapper.find(`#btn-confirm-respond-${QUERY_ID}`).attributes()
+      ).toHaveProperty("disabled");
       await wrapper
         .find(`#query-text-${QUERY_ID}`)
         .setValue(" Corrected per source ");

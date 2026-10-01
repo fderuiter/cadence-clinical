@@ -146,6 +146,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     [Fact]
     public async Task Unblinding_WithAReasonUnder50Characters_Returns400_AndTheParticipantStaysBlinded()
     {
+        factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
         using var client = factory.CreateSignedClient(Caller("unblinder-short", "Principal Investigator") with { ChangeReason = "SAE" });
 
