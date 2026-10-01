@@ -713,7 +713,7 @@ const verbs = computed<Verb[]>(() => [
   {
     id: "simulate",
     label: "Simulate",
-    live: false,
+    live: Boolean(kernelRef.value),
     note: "Simulate waits on engine simulation endpoints (#4888).",
   },
   {

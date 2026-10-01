@@ -303,9 +303,6 @@
               @mouseup="handleCellPointerUp(rIdx, cIdx, $event)"
               @pointerup="handleCellPointerUp(rIdx, cIdx, $event)"
               @pointercancel="handleCellPointerCancel($event)"
-              @mousedown="handleCellPointerDown(rIdx, cIdx, $event)"
-              @mouseenter="handleCellMouseEnter(rIdx, cIdx)"
-              @mouseup="handleCellPointerUp(rIdx, cIdx, $event)"
               @click="
                 handleCellClick(act, visit.visit_name, rIdx, cIdx, $event)
               "
@@ -546,12 +543,6 @@ const handleCellPointerMove = (event, rIdx, cIdx) => {
         dragCurrentCell.value = { rIdx: r, cIdx: c };
       }
     }
-  }
-};
-
-const handleCellMouseEnter = (rIdx, cIdx) => {
-  if (isDragging.value) {
-    dragCurrentCell.value = { rIdx, cIdx };
   }
 };
 
