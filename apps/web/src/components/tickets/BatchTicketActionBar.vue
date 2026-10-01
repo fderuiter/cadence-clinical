@@ -108,13 +108,13 @@ defineEmits(["resolve", "escalate", "pause-sla", "clear"]);
   font-weight: 700;
   font-size: 0.85rem;
   padding: 2px 10px;
-  border-radius: 9999px;
+  border-radius: 9999px; /* deid-ignore */
 }
 
 .selection-text {
   font-size: 0.9rem;
   font-weight: 500;
-  color: #f1f5f9;
+  color: #f1f5f9; /* deid-ignore */
 }
 
 .action-buttons {
