@@ -24,6 +24,7 @@ export interface SignatureVerificationPayload {
   password?: string;
   totp?: string | null;
   action: string;
+  semanticAction?: string;
 }
 
 export interface DocumentSignOffPayload {
@@ -90,17 +91,31 @@ export const etmfService = {
   },
 
   verifySignature(
-    { username, password, totp = null, action }: SignatureVerificationPayload,
+    { username, password, totp = null, action, semanticAction }: SignatureVerificationPayload,
     options: Record<string, unknown> = {}
   ) {
+    let semantic = semanticAction;
+    if (!semantic) {
+      if (action.includes("capture-consent")) {
+        semantic = "econsent.consent.capture";
+      } else if (action.includes("sign-off")) {
+        semantic = "etmf.document.sign_off";
+      } else if (action.includes("chair-adjudicate")) {
+        semantic = "execution.cec.chair_adjudicate";
+      } else {
+        semantic = "execution.signature.verify";
+      }
+    }
+
     return unwrapResponse(
-      openApiClient.POST("/api/v1/execution/signatures/verify", {
+      (openApiClient as any).POST("/api/v1/auth/signature-verification", {
         body: {
           username,
           password: password || "",
           totp: totp ?? undefined,
           action,
-        } as never,
+          semantic_action: semantic,
+        },
         ...options,
       })
     );

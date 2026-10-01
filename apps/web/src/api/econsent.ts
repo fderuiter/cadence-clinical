@@ -374,6 +374,15 @@ export const econsentService = {
     body: unknown,
     options: Record<string, unknown> = {}
   ) {
+    const { sigToken, headers: customHeaders, ...restOptions } = options as {
+      sigToken?: string;
+      headers?: Record<string, string>;
+      [key: string]: unknown;
+    };
+    const headers: Record<string, string> = { ...(customHeaders || {}) };
+    if (sigToken) {
+      headers["X-Sig-Token"] = sigToken;
+    }
     return unwrapResponse(
       openApiClient.POST(
         "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent",
@@ -385,9 +394,43 @@ export const econsentService = {
             },
           },
           body: body as never,
-          ...options,
+          headers,
+          ...restOptions,
         }
       )
+    );
+  },
+
+  verifySignature(
+    payload: {
+      username: string;
+      password?: string;
+      totp?: string | null;
+      action: string;
+      semanticAction?: string;
+    },
+    options: Record<string, unknown> = {}
+  ) {
+    const { username, password, totp = null, action, semanticAction } = payload;
+    let semantic = semanticAction;
+    if (!semantic) {
+      if (action.includes("capture-consent")) {
+        semantic = "econsent.consent.capture";
+      } else {
+        semantic = "econsent.consent.capture";
+      }
+    }
+    return unwrapResponse(
+      (openApiClient as any).POST("/api/v1/auth/signature-verification", {
+        body: {
+          username,
+          password: password || "",
+          totp: totp ?? undefined,
+          action,
+          semantic_action: semantic,
+        },
+        ...options,
+      })
     );
   },
 

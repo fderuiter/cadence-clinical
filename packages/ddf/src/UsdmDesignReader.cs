@@ -18,12 +18,13 @@ internal sealed class UsdmDesignReader(UsdmImportOptions options)
 {
     private readonly List<string> _problems = [];
     private readonly List<UsdmImportNote> _notes = [];
+    private readonly List<UsdmUnmappedConceptToken> _unmappedConcepts = [];
     private readonly Dictionary<string, JsonElement> _biomedicalConcepts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, JsonElement> _criterionItems = new(StringComparer.Ordinal);
     private readonly Dictionary<string, JsonElement> _encounters = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _armInterventions = new(StringComparer.Ordinal);
 
-    public async Task<UsdmImportResult> ReadAsync(JsonElement root, BiomedicalConceptResolver resolve, CancellationToken cancellationToken)
+    public async Task<UsdmStagingResult> ReadAsync(JsonElement root, BiomedicalConceptResolver resolve, CancellationToken cancellationToken)
     {
         if (!Select(root, out var study, out var version, out var design))
         {
@@ -61,7 +62,7 @@ internal sealed class UsdmDesignReader(UsdmImportOptions options)
         return Result(check.Design);
     }
 
-    private UsdmImportResult Result(ProtocolDesign? design) => new(_problems.Count == 0 ? design : null, [.. _problems], [.. _notes]);
+    private UsdmStagingResult Result(ProtocolDesign? design) => new(_problems.Count == 0 ? design : null, [.. _problems], [.. _notes], [.. _unmappedConcepts]);
 
     private bool Select(JsonElement root, out JsonElement study, out JsonElement version, out JsonElement design)
     {
@@ -533,7 +534,7 @@ internal sealed class UsdmDesignReader(UsdmImportOptions options)
 
         if (concept is not { } found)
         {
-            _problems.Add($"{bcId} ({Usdm.Str(bc, "name")}, CDISC {code}) is not in the tenant's Concept Registry.");
+            _unmappedConcepts.Add(new UsdmUnmappedConceptToken(code, Usdm.Str(bc, "name") ?? code, $"{activityId}.{bcId}"));
             return null;
         }
 

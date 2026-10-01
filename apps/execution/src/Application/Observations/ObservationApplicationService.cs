@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.EditChecks;
+using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
@@ -30,7 +31,8 @@ public sealed class ObservationApplicationService(
     ILabRangeService labRangeService,
     IEditCheckEngine editCheckEngine,
     IClock clock,
-    ICurrentAuditContextAccessor auditContextAccessor) : IObservationApplicationService
+    ICurrentAuditContextAccessor auditContextAccessor,
+    IAutoQueryDispatchService? autoQueryDispatchService = null) : IObservationApplicationService
 {
     public async Task<Result<ObservationResponse>> CreateAsync(
         ObservationCreateRequest request,
@@ -174,6 +176,19 @@ public sealed class ObservationApplicationService(
 
         await observationRepository.AddAsync(observation, cancellationToken).ConfigureAwait(false);
         await observationRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (autoQueryDispatchService != null)
+        {
+            await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
+                studyId: studyCode,
+                subjectId: subjectCode,
+                siteId: siteCode,
+                visitId: request.VisitId,
+                formId: request.PageId,
+                observations: [observation],
+                violations: inlineViolations,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
 
         return MapToResponse(observation);
     }

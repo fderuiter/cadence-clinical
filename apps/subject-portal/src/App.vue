@@ -208,6 +208,12 @@
             <span class="info-lbl">Status:</span>
             <span class="info-val text-success">Active</span>
           </div>
+          <div class="info-row">
+            <span class="info-lbl">Stipend Wallet:</span>
+            <span id="session-wallet-balance" class="info-val text-success" style="font-weight: bold; color: #10b981;">
+              ${{ state.walletBalance !== undefined && state.walletBalance !== null ? Number(state.walletBalance).toFixed(2) : "0.00" }}
+            </span>
+          </div>
           <div class="info-row" style="margin-top: 12px">
             <button
               id="btn-logout"

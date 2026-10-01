@@ -5,6 +5,8 @@ export const useCodingStore = defineStore("coding", {
   state: () => ({
     assignments: [],
     selectedAssignmentIds: [],
+    selectedClusterKeys: [],
+    viewMode: "INDIVIDUAL", // "INDIVIDUAL" | "CLUSTERS"
     activeAssignment: null,
     dictionarySearchResults: [],
     searchStatus: null,
@@ -14,6 +16,7 @@ export const useCodingStore = defineStore("coding", {
     filters: {
       status: "ALL",
       dictionaryType: "ALL",
+      confidenceThreshold: "ALL", // "ALL" | "HIGH" (>=90%) | "MEDIUM" (70-89%) | "LOW" (<70%)
       search: "",
     },
     impactAnalysis: {
@@ -35,6 +38,15 @@ export const useCodingStore = defineStore("coding", {
   }),
 
   getters: {
+    getItemConfidenceScore: () => (item) => {
+      if (item.suggestions && Array.isArray(item.suggestions) && item.suggestions.length > 0) {
+        const score = item.suggestions[0].score ?? item.score ?? 0;
+        return score > 1 ? score / 100 : score;
+      }
+      const score = item.score ?? 0;
+      return score > 1 ? score / 100 : score;
+    },
+
     filteredAssignments: (state) => {
       return state.assignments.filter((item) => {
         // Filter by Status
@@ -58,6 +70,27 @@ export const useCodingStore = defineStore("coding", {
           }
         }
 
+        // Filter by Confidence Threshold
+        if (
+          state.filters.confidenceThreshold &&
+          state.filters.confidenceThreshold !== "ALL"
+        ) {
+          const score = state.getItemConfidenceScore(item);
+
+          if (state.filters.confidenceThreshold === "HIGH" && score < 0.90) {
+            return false;
+          }
+          if (
+            state.filters.confidenceThreshold === "MEDIUM" &&
+            (score < 0.70 || score >= 0.90)
+          ) {
+            return false;
+          }
+          if (state.filters.confidenceThreshold === "LOW" && score >= 0.70) {
+            return false;
+          }
+        }
+
         // Filter by search query
         if (state.filters.search && state.filters.search.trim()) {
           const q = state.filters.search.toLowerCase().trim();
@@ -72,12 +105,18 @@ export const useCodingStore = defineStore("coding", {
           const matchObs = (item.observation_id || "")
             .toLowerCase()
             .includes(q);
+          const matchSug = item.suggestions && item.suggestions.some(
+            (s) =>
+              (s.term || s.pt_name || s.preferred_name || "").toLowerCase().includes(q) ||
+              (s.code || "").toLowerCase().includes(q)
+          );
           if (
             !matchVerbatim &&
             !matchCode &&
             !matchTerm &&
             !matchField &&
-            !matchObs
+            !matchObs &&
+            !matchSug
           ) {
             return false;
           }
@@ -86,6 +125,198 @@ export const useCodingStore = defineStore("coding", {
         return true;
       });
     },
+
+    verbatimClusters: (state) => {
+      const items = state.assignments.filter((item) => {
+        // Filter by Status
+        if (state.filters.status !== "ALL") {
+          if (state.filters.status === "CODED_ALL") {
+            if (item.status !== "CODED" && item.status !== "AUTO_CODED") {
+              return false;
+            }
+          } else if (item.status !== state.filters.status) {
+            return false;
+          }
+        }
+
+        // Filter by Dictionary Type
+        if (state.filters.dictionaryType !== "ALL") {
+          if (
+            (item.dictionary_type || "").toUpperCase() !==
+            state.filters.dictionaryType.toUpperCase()
+          ) {
+            return false;
+          }
+        }
+
+        // Filter by Confidence Threshold
+        if (
+          state.filters.confidenceThreshold &&
+          state.filters.confidenceThreshold !== "ALL"
+        ) {
+          const score = state.getItemConfidenceScore(item);
+
+          if (state.filters.confidenceThreshold === "HIGH" && score < 0.90) {
+            return false;
+          }
+          if (
+            state.filters.confidenceThreshold === "MEDIUM" &&
+            (score < 0.70 || score >= 0.90)
+          ) {
+            return false;
+          }
+          if (state.filters.confidenceThreshold === "LOW" && score >= 0.70) {
+            return false;
+          }
+        }
+
+        // Filter by search query
+        if (state.filters.search && state.filters.search.trim()) {
+          const q = state.filters.search.toLowerCase().trim();
+          const matchVerbatim = (item.verbatim_text || "")
+            .toLowerCase()
+            .includes(q);
+          const matchCode = (item.coded_code || "").toLowerCase().includes(q);
+          const matchTerm = (item.coded_term || "").toLowerCase().includes(q);
+          const matchField = (item.source_field || "")
+            .toLowerCase()
+            .includes(q);
+          const matchObs = (item.observation_id || "")
+            .toLowerCase()
+            .includes(q);
+          const matchSug = item.suggestions && item.suggestions.some(
+            (s) =>
+              (s.term || s.pt_name || s.preferred_name || "").toLowerCase().includes(q) ||
+              (s.code || "").toLowerCase().includes(q)
+          );
+          if (
+            !matchVerbatim &&
+            !matchCode &&
+            !matchTerm &&
+            !matchField &&
+            !matchObs &&
+            !matchSug
+          ) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      const clusterMap = new Map();
+
+      for (const item of items) {
+        const normText = (item.verbatim_text || "").trim().toLowerCase();
+        const dictType = (item.dictionary_type || "MEDDRA").toUpperCase();
+
+        let topSug = null;
+        let sugCode = "";
+        let sugTerm = "";
+        if (item.suggestions && Array.isArray(item.suggestions) && item.suggestions.length > 0) {
+          topSug = item.suggestions[0];
+          sugCode = topSug.code || topSug.drug_code || topSug.pt_code || "10019211";
+          sugTerm = topSug.pt_name || topSug.preferred_name || topSug.term || topSug.drug_name || "Headache";
+        } else if (item.coded_code) {
+          sugCode = item.coded_code;
+          sugTerm = item.coded_term || "";
+        }
+
+        const sugKey = sugCode ? `${sugCode}:${sugTerm.toLowerCase()}` : "uncoded";
+        const key = `${dictType}:${normText}:${sugKey}`;
+
+        let itemScore = 0;
+        if (topSug) {
+          const raw = topSug.score ?? item.score ?? 0.95;
+          itemScore = raw > 1 ? raw / 100 : raw;
+        } else if (item.score) {
+          itemScore = item.score > 1 ? item.score / 100 : item.score;
+        }
+
+        if (!clusterMap.has(key)) {
+          clusterMap.set(key, {
+            clusterKey: key,
+            verbatim_text: item.verbatim_text || "",
+            dictionary_type: item.dictionary_type || "MEDDRA",
+            dictionary_version: item.dictionary_version || "26.0",
+            items: [],
+            top_suggestion: (topSug || item.coded_code)
+              ? {
+                  code: sugCode || "10019211",
+                  term: sugTerm || "Headache",
+                  llt_name: topSug?.llt_name || topSug?.llt || topSug?.lowest_level_term || "",
+                  score: itemScore,
+                }
+              : null,
+            max_score: itemScore,
+          });
+        }
+
+        const cluster = clusterMap.get(key);
+        cluster.items.push(item);
+        if (itemScore > cluster.max_score) {
+          cluster.max_score = itemScore;
+          if (cluster.top_suggestion) {
+            cluster.top_suggestion.score = itemScore;
+          }
+        }
+      }
+
+      const result = [];
+      for (const cluster of clusterMap.values()) {
+        const instance_count = cluster.items.length;
+        const blocked_items = cluster.items.filter(
+          (a) => a.status === "QUERY_PENDING" || a.is_locked || a.is_blocked
+        );
+        const unblocked_items = cluster.items.filter(
+          (a) => a.status !== "QUERY_PENDING" && !a.is_locked && !a.is_blocked
+        );
+
+        let confidence_category = "LOW";
+        if (cluster.max_score >= 0.90) {
+          confidence_category = "HIGH";
+        } else if (cluster.max_score >= 0.70) {
+          confidence_category = "MEDIUM";
+        }
+
+        let status = "UNCODED";
+        if (cluster.items.every((a) => a.status === "CODED" || a.status === "AUTO_CODED")) {
+          status = "CODED";
+        } else if (cluster.items.some((a) => a.status === "QUERY_PENDING")) {
+          status = "QUERY_PENDING";
+        } else if (cluster.items.some((a) => a.status === "SUGGESTED")) {
+          status = "SUGGESTED";
+        }
+
+        result.push({
+          ...cluster,
+          instance_count,
+          unblocked_items,
+          blocked_items,
+          has_blocked_items: blocked_items.length > 0,
+          unblocked_ids: unblocked_items.map((i) => i.id),
+          confidence_category,
+          status,
+        });
+      }
+
+      return result;
+    },
+
+    totalClusterCount: (state) => state.verbatimClusters.length,
+
+    totalInstanceCount: (state) =>
+      state.verbatimClusters.reduce((sum, c) => sum + c.instance_count, 0),
+
+    batchAutoCodingProgress: (state) => {
+      if (state.assignments.length === 0) return 0;
+      const codedCount = state.assignments.filter(
+        (a) => a.status === "CODED" || a.status === "AUTO_CODED"
+      ).length;
+      return Math.round((codedCount / state.assignments.length) * 100);
+    },
+
+    selectedClusterCount: (state) => state.selectedClusterKeys.length,
 
     uncodedCount: (state) => {
       return state.assignments.filter((a) => a.status === "UNCODED").length;
@@ -356,6 +587,84 @@ export const useCodingStore = defineStore("coding", {
 
     clearSelection() {
       this.selectedAssignmentIds = [];
+    },
+
+    setViewMode(mode) {
+      this.viewMode = mode;
+    },
+
+    toggleSelectCluster(clusterKey) {
+      const idx = this.selectedClusterKeys.indexOf(clusterKey);
+      if (idx === -1) {
+        this.selectedClusterKeys.push(clusterKey);
+      } else {
+        this.selectedClusterKeys.splice(idx, 1);
+      }
+    },
+
+    selectAllClusters(keys) {
+      if (this.selectedClusterKeys.length === keys.length) {
+        this.selectedClusterKeys = [];
+      } else {
+        this.selectedClusterKeys = [...keys];
+      }
+    },
+
+    clearClusterSelection() {
+      this.selectedClusterKeys = [];
+    },
+
+    async batchApproveClusters({ clusterKeys, reason } = {}) {
+      const keysToProcess = clusterKeys || this.selectedClusterKeys;
+      const targetClusters = this.verbatimClusters.filter((c) =>
+        keysToProcess.includes(c.clusterKey)
+      );
+
+      const unblockedIds = [];
+      for (const cluster of targetClusters) {
+        unblockedIds.push(...cluster.unblocked_ids);
+      }
+
+      if (unblockedIds.length === 0) {
+        throw new Error("No unblocked items found in selected clusters to approve.");
+      }
+
+      const res = await this.batchAssign({
+        assignmentIds: unblockedIds,
+        action: "ACCEPT",
+        reason: reason || "Batch verbatim cluster approval",
+      });
+
+      this.selectedClusterKeys = [];
+      return res;
+    },
+
+    async batchCodeClusters({ clusterKeys, code, term, dictionaryType, reason } = {}) {
+      const keysToProcess = clusterKeys || this.selectedClusterKeys;
+      const targetClusters = this.verbatimClusters.filter((c) =>
+        keysToProcess.includes(c.clusterKey)
+      );
+
+      const unblockedIds = [];
+      for (const cluster of targetClusters) {
+        unblockedIds.push(...cluster.unblocked_ids);
+      }
+
+      if (unblockedIds.length === 0) {
+        throw new Error("No unblocked items found in selected clusters to code.");
+      }
+
+      const res = await this.batchAssign({
+        assignmentIds: unblockedIds,
+        code,
+        term,
+        dictionaryType: dictionaryType || targetClusters[0]?.dictionary_type || "MEDDRA",
+        action: "OVERRIDE",
+        reason: reason || "Batch verbatim cluster code override",
+      });
+
+      this.selectedClusterKeys = [];
+      return res;
     },
 
     openBrowser(assignment) {

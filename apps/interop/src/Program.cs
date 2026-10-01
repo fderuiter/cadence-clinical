@@ -1,6 +1,8 @@
+using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
@@ -15,6 +17,7 @@ builder.Services.AddCadenceSecurity();
 builder.Services.AddCadenceLookupHashing();
 builder.Services.AddSingleton<DeviceTokenHasher>();
 builder.AddCadencePostgresDbContext<InteropDbContext>();
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
@@ -24,6 +27,8 @@ app.MapCadenceHealthAndStatusEndpoints(
     "interop",
     "Interoperability FHIR & CDISC connector health probe.",
     "Returns Interoperability operational status.");
+
+app.MapEsourceEndpoints();
 
 await app.RunAsync();
 
