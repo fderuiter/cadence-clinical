@@ -1,3 +1,4 @@
+using Cadence.Apps.Econsent.Endpoints;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Security.DependencyInjection;
@@ -22,6 +23,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "econsent",
     "eConsent service health probe.",
     "Returns eConsent operational status.");
+app.MapEconsentEndpoints();
 
 await app.RunAsync();
 
