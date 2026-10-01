@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
@@ -79,8 +80,8 @@ public static class EtmfIntelligenceEndpoints
 
         var doc = new TmfDocument(docId)
         {
-            StudyId = request.StudyId,
-            SiteId = request.SiteId,
+            StudyId = request.StudyId.ToString(),
+            SiteId = request.SiteId?.ToString(),
             Filename = request.Filename,
             Content = request.Content,
             MimeType = request.MimeType ?? "application/pdf",
@@ -176,8 +177,8 @@ public static class EtmfIntelligenceEndpoints
 
             return new CraqcStagingItem(
                 DocumentId: doc.Id,
-                StudyId: doc.StudyId,
-                SiteId: doc.SiteId,
+                StudyId: StudyId.TryParse(doc.StudyId, out var parsedStudy) ? parsedStudy : StudyId.Empty,
+                SiteId: SiteId.TryParse(doc.SiteId, out var parsedSite) ? parsedSite : null,
                 Filename: doc.Filename,
                 Status: doc.Status,
                 IntelligenceReport: report,
@@ -320,8 +321,8 @@ public static class EtmfIntelligenceEndpoints
 
         var doc = new TmfDocument(docId)
         {
-            StudyId = request.StudyId ?? "STUDY-USDM-001",
-            SiteId = request.SiteId,
+            StudyId = request.StudyId?.ToString() ?? "STUDY-USDM-001",
+            SiteId = request.SiteId?.ToString(),
             Filename = request.Filename,
             Content = request.Content ?? string.Empty,
             MimeType = request.MimeType ?? "application/pdf",
@@ -499,8 +500,8 @@ public record ClassifyRequest(
 public record StageDocumentQCRequest(
     string Content,
     string Filename,
-    string StudyId,
-    string? SiteId = null,
+    StudyId StudyId,
+    SiteId? SiteId = null,
     string? MimeType = "application/pdf",
     string? ArtifactHint = null,
     string? TaxonomyVersion = "v3.2.0-complete",
@@ -518,8 +519,8 @@ public record CraqcReviewRequest(
 public record IngestDocumentRequest(
     string Filename,
     string? Content,
-    string? StudyId,
-    string? SiteId,
+    StudyId? StudyId,
+    SiteId? SiteId,
     string? MimeType,
     int Zone,
     string? Section,
@@ -552,8 +553,8 @@ public record TaxonomyMatchCandidate(
 
 public record CraqcStagingItem(
     string DocumentId,
-    string StudyId,
-    string? SiteId,
+    StudyId StudyId,
+    SiteId? SiteId,
     string Filename,
     string Status,
     DocumentIntelligenceReport IntelligenceReport,
