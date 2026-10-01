@@ -78,8 +78,9 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     vi.clearAllMocks();
 
     mockFetch.mockReset();
-    mockFetch.mockImplementation(async (input: Request) => {
-      const { pathname } = new URL(input.url);
+    mockFetch.mockImplementation(async (input: Request | string) => {
+      const urlStr = typeof input === "string" ? input : input?.url ?? String(input);
+      const { pathname } = new URL(urlStr, "http://localhost");
       if (pathname.endsWith("/amendments/diff")) {
         return jsonResponse(amendmentDiffFixture);
       }
