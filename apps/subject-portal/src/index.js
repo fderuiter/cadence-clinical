@@ -691,14 +691,7 @@ async function startQuestionnaire(assignmentId) {
       field.type === "range";
 
     if (isSlider) {
-      formHtml += createClinicalSlider(
-        id,
-        field.label,
-        "",
-        null,
-        12,
-        field
-      );
+      formHtml += createClinicalSlider(id, field.label, "", null, 12, field);
     } else if (field.type === "choice_single") {
       formHtml += createClinicalRadioGrid(
         id,
@@ -2291,7 +2284,10 @@ async function syncOfflineQueue(isManual = false, options = {}) {
 
             if (disburseRes && typeof disburseRes.new_balance === "number") {
               state.walletBalance = disburseRes.new_balance;
-            } else if (disburseRes && typeof disburseRes.NewBalance === "number") {
+            } else if (
+              disburseRes &&
+              typeof disburseRes.NewBalance === "number"
+            ) {
               state.walletBalance = disburseRes.NewBalance;
             }
 
@@ -2300,13 +2296,17 @@ async function syncOfflineQueue(isManual = false, options = {}) {
               {
                 subject_id: targetSubjectId,
                 sequence_number: sub.sequence_number,
-                stipend_amount: disburseRes?.amount ?? disburseRes?.Amount ?? 25.0,
+                stipend_amount:
+                  disburseRes?.amount ?? disburseRes?.Amount ?? 25.0,
                 new_balance: state.walletBalance,
               },
               "Instant ePRO survey auto-disbursement"
             );
           } catch (disburseErr) {
-            console.warn("Auto-disbursement payment call warning:", disburseErr);
+            console.warn(
+              "Auto-disbursement payment call warning:",
+              disburseErr
+            );
           }
         }
       }

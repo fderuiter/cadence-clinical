@@ -72,7 +72,10 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
 
   it("initializes Pinia store from persistent state in localStorage", () => {
     // Write fake persistent state to localStorage using persona-scoped keys
-    window.localStorage.setItem(getStorageKey("formValues"), JSON.stringify({ pulse: "95" }));
+    window.localStorage.setItem(
+      getStorageKey("formValues"),
+      JSON.stringify({ pulse: "95" })
+    );
     window.localStorage.setItem(
       getStorageKey("formQueries"),
       JSON.stringify({

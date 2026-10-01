@@ -138,7 +138,10 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
       pulse: "115",
       vssbp: "135",
     };
-    window.localStorage.setItem("clinical_super_admin_formValues", JSON.stringify(formValues));
+    window.localStorage.setItem(
+      "clinical_super_admin_formValues",
+      JSON.stringify(formValues)
+    );
 
     const authStore = useAuthStore();
     authStore.currentPersona = "super_admin";

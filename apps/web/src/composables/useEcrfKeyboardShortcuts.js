@@ -57,8 +57,8 @@ export function useEcrfKeyboardShortcuts(options = {}) {
     const root = (formContainerRef && formContainerRef.value) || document;
     const selectors = [
       'input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([disabled])',
-      'select:not([disabled])',
-      'textarea:not([disabled])',
+      "select:not([disabled])",
+      "textarea:not([disabled])",
       '[tabindex="0"]:not([disabled])',
     ].join(", ");
 
@@ -71,8 +71,10 @@ export function useEcrfKeyboardShortcuts(options = {}) {
     return elements.filter((el) => {
       // Must be visible in viewport
       const style = window.getComputedStyle(el);
-      if (style.display === "none" || style.visibility === "hidden") return false;
-      if (!isJsDom && el.offsetParent === null && style.position !== "fixed") return false;
+      if (style.display === "none" || style.visibility === "hidden")
+        return false;
+      if (!isJsDom && el.offsetParent === null && style.position !== "fixed")
+        return false;
       return true;
     });
   }
@@ -112,7 +114,9 @@ export function useEcrfKeyboardShortcuts(options = {}) {
       ".clinical-form-field-wrapper, .clinical-input, .form-group"
     );
     if (wrapper) {
-      const input = wrapper.querySelector("input[id], select[id], textarea[id]");
+      const input = wrapper.querySelector(
+        "input[id], select[id], textarea[id]"
+      );
       if (input && input.id) return input.id;
     }
 
@@ -387,4 +391,3 @@ export function useEcrfKeyboardShortcuts(options = {}) {
     handleKeyDown,
   };
 }
-

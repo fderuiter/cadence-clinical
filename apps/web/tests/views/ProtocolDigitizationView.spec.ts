@@ -286,7 +286,9 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
 
     expect(wrapper.vm.isConceptStagingOpen).toBe(true);
     expect(wrapper.text()).toContain("USDM Concept Staging Required");
-    expect(wrapper.text()).toContain("Biomedical Concept Staging & Mapping Drawer");
+    expect(wrapper.text()).toContain(
+      "Biomedical Concept Staging & Mapping Drawer"
+    );
     expect(wrapper.text()).toContain("C99999");
   });
 

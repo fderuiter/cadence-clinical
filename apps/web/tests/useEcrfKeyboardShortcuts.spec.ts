@@ -99,14 +99,19 @@ describe("useEcrfKeyboardShortcuts Composable", () => {
     expect(document.activeElement).toBe(input1);
 
     // Press Enter in input1 -> Should advance to input2
-    const enterEvent = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
+    const enterEvent = new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+    });
     window.dispatchEvent(enterEvent);
     expect(document.activeElement).toBe(input2);
 
     // Press Enter in textarea -> Should NOT advance (preserve text multiline behavior)
     textarea.focus();
     expect(document.activeElement).toBe(textarea);
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+    );
     expect(document.activeElement).toBe(textarea);
   });
 
@@ -118,7 +123,9 @@ describe("useEcrfKeyboardShortcuts Composable", () => {
       </div>
     `;
 
-    const queryFlag = document.getElementById("query-flag-vssbp") as HTMLButtonElement;
+    const queryFlag = document.getElementById(
+      "query-flag-vssbp"
+    ) as HTMLButtonElement;
     const clickSpy = vi.spyOn(queryFlag, "click");
 
     const TestComponent = defineComponent({
@@ -196,7 +203,9 @@ describe("useEcrfKeyboardShortcuts Composable", () => {
       </div>
     `;
 
-    const sdvCheckbox = document.getElementById("sdv-vssbp") as HTMLInputElement;
+    const sdvCheckbox = document.getElementById(
+      "sdv-vssbp"
+    ) as HTMLInputElement;
     const clickSpy = vi.spyOn(sdvCheckbox, "click");
 
     const isCra = ref(false);

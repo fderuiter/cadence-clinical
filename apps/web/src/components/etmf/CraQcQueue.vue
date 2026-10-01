@@ -75,6 +75,7 @@
           v-model="searchQuery"
           type="text"
           class="form-control"
+          aria-label="Filter documents by filename or code"
           placeholder="Filter by filename or code..."
           style="font-size: 12px; width: 220px; padding: 4px 8px"
         />
@@ -120,6 +121,7 @@
                 type="checkbox"
                 :value="item.document_id"
                 v-model="selectedItemIds"
+                :aria-label="`Select ${item.filename}`"
               />
             </td>
             <td>
@@ -214,7 +216,10 @@
     <div
       v-if="showBatchModal"
       class="qc-modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="showBatchModal = false"
+      @keydown.self.enter="showBatchModal = false"
     >
       <div class="qc-modal">
         <h4 style="margin: 0 0 8px 0; font-size: 16px">
@@ -267,7 +272,10 @@
     <div
       v-if="inspectedItem"
       class="qc-modal-overlay"
+      role="button"
+      tabindex="0"
       @click.self="inspectedItem = null"
+      @keydown.self.enter="inspectedItem = null"
     >
       <div class="qc-modal qc-modal-lg">
         <div
@@ -349,12 +357,17 @@
             >
               Override Taxonomy Tag
             </h5>
-            <label class="form-label" style="font-size: 11px"
+            <label
+              for="override-artifact-code-select"
+              class="form-label"
+              style="font-size: 11px"
               >Artifact Code Override</label
             >
             <select
+              id="override-artifact-code-select"
               v-model="overrideArtifactCode"
               class="form-control"
+              aria-label="Artifact Code Override"
               style="font-size: 12px; margin-bottom: 8px"
             >
               <option value="">

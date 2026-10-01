@@ -348,10 +348,7 @@
     />
 
     <!-- Keyboard Shortcuts Cheat Sheet Modal Overlay -->
-    <EcrfHotkeyOverlay
-      v-if="showHotkeyOverlay"
-      @close="closeHotkeyOverlay"
-    />
+    <EcrfHotkeyOverlay v-if="showHotkeyOverlay" @close="closeHotkeyOverlay" />
   </div>
 </template>
 
