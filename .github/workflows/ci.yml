@@ -308,7 +308,7 @@ jobs:
           BASE_REF: ${{ github.base_ref || 'main' }}
         run: | # pragma: allowlist secret
           pip install --quiet detect-secrets==1.5.0
-          git fetch --no-tags origin "$BASE_REF"
+          git fetch --no-tags origin "$BASE_REF" || true
           git diff --name-only --diff-filter=ACMR -z "origin/$BASE_REF...HEAD" \
             | xargs -0 --no-run-if-empty detect-secrets-hook --baseline .secrets.baseline
 
