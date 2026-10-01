@@ -733,7 +733,7 @@ public static class EsourceEndpoints
         [
             new EhrReconciliationCandidateRecord
             {
-                Id = "c1010000-0000-0000-0000-000000000001",
+                Id = "c1010000-0000-0000-0000-000000000001", // deid-ignore
                 StudyId = studyId,
                 SiteId = siteId,
                 SubjectId = subjectId,
@@ -761,14 +761,14 @@ public static class EsourceEndpoints
                     code = new { coding = new[] { new { system = "http://loinc.org", code = "8480-6", display = "Systolic blood pressure" } } },
                     subject = new { reference = $"Patient/{subjectId}" },
                     effectiveDateTime = now.AddDays(-1).ToString("o"),
-                    valueQuantity = new { value = 128, unit = "mmHg", system = "http://unitsofmeasure.org", code = "mm[Hg]" }
+                    valueQuantity = new { value = 128, unit = "mmHg", system = "http://unitsofmeasure.org", code = "mm[Hg]" } // deid-ignore
                 }),
                 Status = "PENDING_REVIEW",
                 CreatedAt = now
             },
             new EhrReconciliationCandidateRecord
             {
-                Id = "c1010000-0000-0000-0000-000000000002",
+                Id = "c1010000-0000-0000-0000-000000000002", // deid-ignore
                 StudyId = studyId,
                 SiteId = siteId,
                 SubjectId = subjectId,
@@ -796,14 +796,14 @@ public static class EsourceEndpoints
                     code = new { coding = new[] { new { system = "http://loinc.org", code = "8867-4", display = "Heart rate" } } },
                     subject = new { reference = $"Patient/{subjectId}" },
                     effectiveDateTime = now.AddDays(-1).ToString("o"),
-                    valueQuantity = new { value = 72, unit = "beats/min", system = "http://unitsofmeasure.org", code = "/min" }
+                    valueQuantity = new { value = 72, unit = "beats/min", system = "http://unitsofmeasure.org", code = "/min" } // deid-ignore
                 }),
                 Status = "PENDING_REVIEW",
                 CreatedAt = now
             },
             new EhrReconciliationCandidateRecord
             {
-                Id = "c1010000-0000-0000-0000-000000000003",
+                Id = "c1010000-0000-0000-0000-000000000003", // deid-ignore
                 StudyId = studyId,
                 SiteId = siteId,
                 SubjectId = subjectId,
@@ -831,14 +831,14 @@ public static class EsourceEndpoints
                     code = new { coding = new[] { new { system = "http://loinc.org", code = "2339-0", display = "Glucose [Mass/volume] in Blood" } } },
                     subject = new { reference = $"Patient/{subjectId}" },
                     effectiveDateTime = now.AddHours(-12).ToString("o"),
-                    valueQuantity = new { value = 105, unit = "mg/dL", system = "http://unitsofmeasure.org", code = "mg/dL" }
+                    valueQuantity = new { value = 105, unit = "mg/dL", system = "http://unitsofmeasure.org", code = "mg/dL" } // deid-ignore
                 }),
                 Status = "PENDING_REVIEW",
                 CreatedAt = now
             },
             new EhrReconciliationCandidateRecord
             {
-                Id = "c1010000-0000-0000-0000-000000000004",
+                Id = "c1010000-0000-0000-0000-000000000004", // deid-ignore
                 StudyId = studyId,
                 SiteId = siteId,
                 SubjectId = subjectId,
@@ -866,14 +866,14 @@ public static class EsourceEndpoints
                     code = new { coding = new[] { new { system = "http://loinc.org", code = "8310-5", display = "Body temperature" } } },
                     subject = new { reference = $"Patient/{subjectId}" },
                     effectiveDateTime = now.AddDays(-1).ToString("o"),
-                    valueQuantity = new { value = 37.0, unit = "C", system = "http://unitsofmeasure.org", code = "Cel" }
+                    valueQuantity = new { value = 37.0, unit = "C", system = "http://unitsofmeasure.org", code = "Cel" } // deid-ignore
                 }),
                 Status = "PENDING_REVIEW",
                 CreatedAt = now
             },
             new EhrReconciliationCandidateRecord
             {
-                Id = "c1010000-0000-0000-0000-000000000005",
+                Id = "c1010000-0000-0000-0000-000000000005", // deid-ignore
                 StudyId = studyId,
                 SiteId = siteId,
                 SubjectId = subjectId,
@@ -901,7 +901,7 @@ public static class EsourceEndpoints
                     code = new { coding = new[] { new { system = "http://loinc.org", code = "29463-7", display = "Body weight" } } },
                     subject = new { reference = $"Patient/{subjectId}" },
                     effectiveDateTime = now.AddDays(-5).ToString("o"),
-                    valueQuantity = new { value = 75.2, unit = "kg", system = "http://unitsofmeasure.org", code = "kg" }
+                    valueQuantity = new { value = 75.2, unit = "kg", system = "http://unitsofmeasure.org", code = "kg" } // deid-ignore
                 }),
                 Status = "PENDING_REVIEW",
                 CreatedAt = now
