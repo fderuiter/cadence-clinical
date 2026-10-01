@@ -329,6 +329,7 @@ describe("Clinical Canvas: a participant's data", () => {
 
     await wrapper.find("#btn-retry-record").trigger("click");
     await flushPromises();
+    await wrapper.vm.$nextTick();
     expect(wrapper.find("#record-error").exists()).toBe(false);
     expect(wrapper.findAll("#participant-record tbody tr").length).toBe(3);
   });
