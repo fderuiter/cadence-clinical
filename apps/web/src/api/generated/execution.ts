@@ -697,6 +697,9 @@ export interface components {
       protocol_version_tag?: null | string;
       /** Format: int32 */
       protocol_version_index?: null | number | string;
+      /** @default true */
+      is_active: boolean;
+      form_submission_id?: null | string;
     };
     Execution_OperationEnvelopeResponse: {
       status: string;

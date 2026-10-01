@@ -1,5 +1,6 @@
 using System;
 
+using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
@@ -38,6 +39,8 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
     public string? SdvFlagReason { get; private set; }
     public string? ProtocolVersionTag { get; private set; }
     public int? ProtocolVersionIndex { get; private set; }
+    public bool IsActive { get; private set; } = true;
+    public FormSubmissionId? FormSubmissionId { get; private set; }
 
     /// <summary>
     /// ADR-2332 dynamic property bag mapped to PostgreSQL jsonb.
@@ -118,7 +121,8 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
         int? protocolVersionIndex = null,
         double? normalizedValue = null,
         string? normalizedUnit = null,
-        ObservationAdditionalProperties? additionalProperties = null)
+        ObservationAdditionalProperties? additionalProperties = null,
+        FormSubmissionId? formSubmissionId = null)
     {
         if (value is null && string.IsNullOrWhiteSpace(valueString))
         {
@@ -165,10 +169,21 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
             IsOutlier = false,
             IsSdvVerified = false,
             IsSdvFlagged = false,
+            IsActive = true,
+            FormSubmissionId = formSubmissionId,
             AdditionalProperties = additionalProperties?.Clone() ?? new()
         };
 
         return observation;
+    }
+
+    public void Inactivate(string? reason = null)
+    {
+        IsActive = false;
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            ReasonForChange = reason.Trim();
+        }
     }
 
     public Result<bool> VerifySdv(string verifierUserId, DateTimeOffset verifiedAt)

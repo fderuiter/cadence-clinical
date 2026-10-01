@@ -328,6 +328,8 @@ public sealed class ObservationApplicationService(
             ReferenceRangeLow: o.ReferenceRangeLow,
             ReferenceRangeHigh: o.ReferenceRangeHigh,
             ProtocolVersionTag: o.ProtocolVersionTag,
-            ProtocolVersionIndex: o.ProtocolVersionIndex
+            ProtocolVersionIndex: o.ProtocolVersionIndex,
+            IsActive: o.IsActive,
+            FormSubmissionId: o.FormSubmissionId?.ToString()
         );
 }

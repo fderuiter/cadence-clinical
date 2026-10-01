@@ -296,4 +296,63 @@ public sealed class FormSubmissionStateTests
         nullManifestResult.IsFailure.Should().BeTrue();
         nullManifestResult.Error!.Code.Should().Be("SIGNATURE_MANIFEST_REQUIRED");
     }
+
+    /// <summary>
+    /// Validates that updating a form submission payload soft-inactivates previous active observations
+    /// and does not increase active observation count.
+    /// @req:PRD-QRY-003
+    /// </summary>
+    [Fact]
+    public async Task UpdatePayloadAsync_SoftInactivatesPreviousObservations_AndMaintainsActiveCount()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("data_clerk_01", "Initial entry");
+
+        var service = new FormSubmissionApplicationService(
+            formRepo,
+            obsRepo,
+            ucum,
+            audit);
+
+        var studyId = new StudyCode("STUDY-001");
+        var subjectId = new SubjectCode("SUBJ-001");
+
+        // 1. Create initial form submission with 2 observations
+        var initialPayload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120, \"vsdpb\": 80}";
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: studyId.Value,
+            SubjectId: subjectId.Value,
+            FormId: "FORM-VS",
+            Payload: initialPayload), CancellationToken.None);
+
+        createResult.IsSuccess.Should().BeTrue();
+        var formId = createResult.Value!.Id;
+
+        var initialActiveObs = await obsRepo.ListBySubjectAsync(studyId, subjectId, includeInactive: false, CancellationToken.None);
+        initialActiveObs.Should().HaveCount(2);
+
+        // 2. Update form submission payload twice
+        var secondPayload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 125, \"vsdpb\": 82}";
+        var update1Result = await service.UpdatePayloadAsync(formId, secondPayload, CancellationToken.None);
+        update1Result.IsSuccess.Should().BeTrue();
+
+        var thirdPayload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 130, \"vsdpb\": 85}";
+        var update2Result = await service.UpdatePayloadAsync(formId, thirdPayload, CancellationToken.None);
+        update2Result.IsSuccess.Should().BeTrue();
+
+        // 3. Verify active observations count remains 2 (from the latest payload)
+        var activeObs = await obsRepo.ListBySubjectAsync(studyId, subjectId, includeInactive: false, CancellationToken.None);
+        activeObs.Should().HaveCount(2);
+        activeObs.Select(o => o.Value).Should().BeEquivalentTo(new double[] { 130, 85 });
+
+        // 4. Verify total observations (including inactive) is 6 (2 initial + 2 second + 2 third)
+        var allObs = await obsRepo.ListBySubjectAsync(studyId, subjectId, includeInactive: true, CancellationToken.None);
+        allObs.Should().HaveCount(6);
+
+        var inactiveObs = allObs.Where(o => !o.IsActive).ToList();
+        inactiveObs.Should().HaveCount(4);
+        inactiveObs.All(o => o.FormSubmissionId.HasValue && o.FormSubmissionId.Value.Value.ToString() == formId).Should().BeTrue();
+    }
 }

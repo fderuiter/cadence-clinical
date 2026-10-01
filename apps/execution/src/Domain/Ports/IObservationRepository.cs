@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
 
@@ -22,7 +23,16 @@ public interface IObservationRepository
     /// </summary>
     Task<ClinicalObservation?> GetForUpdateAsync(ObservationId id, CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<ClinicalObservation>> ListBySubjectAsync(StudyCode studyId, SubjectCode subjectId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ClinicalObservation>> ListBySubjectAsync(
+        StudyCode studyId,
+        SubjectCode subjectId,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ClinicalObservation>> ListBySubjectAsync(
+        StudyCode studyId,
+        SubjectCode subjectId,
+        bool includeInactive,
+        CancellationToken cancellationToken);
 
     Task<IReadOnlyList<ClinicalObservation>> ListByCoordinatesAsync(
         StudyCode studyId,
@@ -31,6 +41,20 @@ public interface IObservationRepository
         DomainCode? domain,
         TestCode? testCode,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ClinicalObservation>> ListByCoordinatesAsync(
+        StudyCode studyId,
+        SubjectCode subjectId,
+        string? visitId,
+        DomainCode? domain,
+        TestCode? testCode,
+        bool includeInactive,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ClinicalObservation>> ListByFormSubmissionIdAsync(
+        FormSubmissionId formSubmissionId,
+        bool includeInactive = false,
+        CancellationToken cancellationToken = default);
 
     Task AddAsync(ClinicalObservation observation, CancellationToken cancellationToken);
 

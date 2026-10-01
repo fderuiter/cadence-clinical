@@ -12,7 +12,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.OutboxState`](#edcoutboxstate) | `OutboxState` | 6 |
 | [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 17 |
 | [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 26 |
-| [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 38 |
+| [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 40 |
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
 | [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
@@ -227,11 +227,14 @@ Entity: `ClinicalObservation`
 | `VisitId` | `character varying(255)` | yes |  |  |
 | `_version` | `bigint` | no | `0` |  |
 | `additional_properties` | `jsonb` | no |  |  |
+| `form_submission_id` | `uuid` | yes |  |  |
+| `is_active` | `boolean` | no | `True` |  |
 
 Indexes:
 
 - `idx_observation_coords`: (`StudyId`, `SubjectId`, `VisitId`, `Domain`, `TestCode`)
 - `idx_observation_subject_date`: (`SubjectId`, `ObservationDate`)
+- `ix_clinical_observations_form_submission_id`: (`form_submission_id`)
 - `ix_clinical_observations_site_id`: (`SiteId`)
 
 ## edc.clinical_queries

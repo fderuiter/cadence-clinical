@@ -246,6 +246,16 @@ public sealed class FormSubmissionApplicationService(
             return updateResult.Error!;
         }
 
+        var existingObservations = await observationRepository.ListByFormSubmissionIdAsync(
+            submission.Id,
+            includeInactive: false,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+        foreach (var existingObs in existingObservations)
+        {
+            existingObs.Inactivate(auditContextAccessor.ChangeReason);
+        }
+
         if (!string.IsNullOrWhiteSpace(newPayload))
         {
             var persisted = await PersistObservationsAsync(submission, newPayload, cancellationToken).ConfigureAwait(false);
@@ -580,7 +590,8 @@ public sealed class FormSubmissionApplicationService(
             protocolVersionTag: submission.ProtocolVersion,
             protocolVersionIndex: 1,
             normalizedValue: normVal,
-            normalizedUnit: normUnit);
+            normalizedUnit: normUnit,
+            formSubmissionId: submission.Id);
 
         if (obsResult.IsSuccess && obsResult.Value is not null)
         {

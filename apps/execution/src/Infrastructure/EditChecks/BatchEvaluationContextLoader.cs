@@ -29,7 +29,7 @@ public sealed class BatchEvaluationContextLoader(ExecutionDbContext context) : I
 
         var observationsTask = context.ClinicalObservations
             .AsNoTracking()
-            .Where(o => o.StudyId == studyId && o.SubjectId == subjectId)
+            .Where(o => o.StudyId == studyId && o.SubjectId == subjectId && o.IsActive)
             .OrderByDescending(o => o.ObservationDate)
             .ToListAsync(cancellationToken);
 

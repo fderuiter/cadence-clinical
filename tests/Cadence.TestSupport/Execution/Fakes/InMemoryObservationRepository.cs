@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -29,10 +30,24 @@ public sealed class InMemoryObservationRepository : IObservationRepository
     public Task<IReadOnlyList<ClinicalObservation>> ListBySubjectAsync(
         StudyCode studyId,
         SubjectCode subjectId,
+        CancellationToken cancellationToken) =>
+        ListBySubjectAsync(studyId, subjectId, includeInactive: false, cancellationToken);
+
+    public Task<IReadOnlyList<ClinicalObservation>> ListBySubjectAsync(
+        StudyCode studyId,
+        SubjectCode subjectId,
+        bool includeInactive,
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<ClinicalObservation> list = _store.Values
-            .Where(o => o.StudyId == studyId && o.SubjectId == subjectId)
+        var query = _store.Values
+            .Where(o => o.StudyId == studyId && o.SubjectId == subjectId);
+
+        if (!includeInactive)
+        {
+            query = query.Where(o => o.IsActive);
+        }
+
+        IReadOnlyList<ClinicalObservation> list = query
             .OrderByDescending(o => o.ObservationDate)
             .ToList();
 
@@ -45,10 +60,25 @@ public sealed class InMemoryObservationRepository : IObservationRepository
         string? visitId,
         DomainCode? domain,
         TestCode? testCode,
+        CancellationToken cancellationToken) =>
+        ListByCoordinatesAsync(studyId, subjectId, visitId, domain, testCode, includeInactive: false, cancellationToken);
+
+    public Task<IReadOnlyList<ClinicalObservation>> ListByCoordinatesAsync(
+        StudyCode studyId,
+        SubjectCode subjectId,
+        string? visitId,
+        DomainCode? domain,
+        TestCode? testCode,
+        bool includeInactive,
         CancellationToken cancellationToken)
     {
         var query = _store.Values
             .Where(o => o.StudyId == studyId && o.SubjectId == subjectId);
+
+        if (!includeInactive)
+        {
+            query = query.Where(o => o.IsActive);
+        }
 
         if (visitId != null)
         {
@@ -63,6 +93,26 @@ public sealed class InMemoryObservationRepository : IObservationRepository
         if (testCode.HasValue)
         {
             query = query.Where(o => o.TestCode == testCode.Value);
+        }
+
+        IReadOnlyList<ClinicalObservation> list = query
+            .OrderByDescending(o => o.ObservationDate)
+            .ToList();
+
+        return Task.FromResult(list);
+    }
+
+    public Task<IReadOnlyList<ClinicalObservation>> ListByFormSubmissionIdAsync(
+        FormSubmissionId formSubmissionId,
+        bool includeInactive = false,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _store.Values
+            .Where(o => o.FormSubmissionId == formSubmissionId);
+
+        if (!includeInactive)
+        {
+            query = query.Where(o => o.IsActive);
         }
 
         IReadOnlyList<ClinicalObservation> list = query
