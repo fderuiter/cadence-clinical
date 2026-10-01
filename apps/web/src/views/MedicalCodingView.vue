@@ -1,34 +1,41 @@
 <template>
-  <div id="section-medical-coding" class="dashboard-section active">
+  <div
+    id="section-medical-coding"
+    class="dashboard-section active"
+  >
     <!-- View Header -->
     <div class="section-header">
       <div class="header-text-group">
         <h2>Interactive Medical Coding Workbench</h2>
         <p>
-          Standardized MedDRA and WHODrug terminology coding with verbatim cluster grouping, AI match confidence filtering, and 21 CFR Part 11 dual-attribution audit logs.
+          Standardized MedDRA and WHODrug terminology coding for Adverse Events
+          (<code>AETERM</code>) and Concomitant Medications (<code>CMTRT</code>)
+          with 21 CFR Part 11 compliance trails.
         </p>
       </div>
       <div class="header-action-buttons">
-        <!-- View Mode Switcher Toggle -->
-        <div class="view-mode-toggle-group">
+        <div
+          class="view-mode-toggle"
+          role="group"
+          aria-label="Queue view mode"
+        >
           <button
             type="button"
-            class="btn btn-sm mode-btn"
-            :class="{ active: codingStore.viewMode === 'INDIVIDUAL' }"
+            class="btn btn-sm"
+            :class="codingStore.viewMode === 'INDIVIDUAL' ? 'btn-primary' : 'btn-secondary'"
             @click="codingStore.setViewMode('INDIVIDUAL')"
           >
             📋 Individual Items
           </button>
           <button
             type="button"
-            class="btn btn-sm mode-btn"
-            :class="{ active: codingStore.viewMode === 'CLUSTERS' }"
+            class="btn btn-sm"
+            :class="codingStore.viewMode === 'CLUSTERS' ? 'btn-primary' : 'btn-secondary'"
             @click="codingStore.setViewMode('CLUSTERS')"
           >
             🧩 Verbatim Clusters
           </button>
         </div>
-
         <button
           type="button"
           class="btn btn-secondary"
@@ -47,31 +54,11 @@
       </div>
     </div>
 
-    <!-- Batch Alert Banner -->
-    <div
-      v-if="codingStore.batchAlert"
-      class="alert-banner"
-      :class="'alert-' + (codingStore.batchAlert.type || 'info')"
-      role="alert"
-    >
-      <div class="alert-content">
-        <span class="alert-icon">
-          {{ codingStore.batchAlert.type === 'success' ? '✅' : codingStore.batchAlert.type === 'warning' ? '⚠️' : 'ℹ️' }}
-        </span>
-        <span>{{ codingStore.batchAlert.message }}</span>
-      </div>
-      <button
-        type="button"
-        class="alert-close-btn"
-        aria-label="Dismiss alert"
-        @click="codingStore.dismissBatchAlert()"
-      >
-        ✕
-      </button>
-    </div>
-
     <!-- 21 CFR Part 11 Role Gating Notice if unauthorized -->
-    <div v-if="!hasAccess" class="card gating-banner">
+    <div
+      v-if="!hasAccess"
+      class="card gating-banner"
+    >
       <div class="gating-content">
         <span class="gating-icon">🚫</span>
         <div>
@@ -86,76 +73,40 @@
     </div>
 
     <!-- Authorized Coding Workspace -->
-    <div v-else class="coding-workspace-container">
-      <!-- Summary Metric Cards (Adapted for View Mode) -->
-      <div v-if="codingStore.viewMode === 'CLUSTERS'" class="stats-overview-grid">
-        <div
-          class="stat-card"
-          :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
-          @click="setStatusFilter('ALL')"
-        >
+    <div
+      v-else
+      class="coding-workspace-container"
+    >
+      <!-- Summary Stat Metric Cards -->
+      <div
+        v-if="codingStore.viewMode === 'CLUSTERS'"
+        class="stats-overview-grid cluster-stats-grid"
+      >
+        <div class="stat-card stat-cluster-total">
           <div class="stat-number">
-            {{ codingStore.totalClustersCount }}
+            {{ codingStore.totalClusterCount }}
           </div>
-          <div class="stat-title">Verbatim Clusters</div>
+          <div class="stat-title">
+            Verbatim Clusters
+          </div>
         </div>
-
-        <div class="stat-card stat-instances">
+        <div class="stat-card stat-instance-total">
           <div class="stat-number">
-            {{ codingStore.totalClusterInstancesCount }}
+            {{ codingStore.totalInstanceCount }}
           </div>
-          <div class="stat-title">Subject Instances</div>
+          <div class="stat-title">
+            Subject Instances
+          </div>
         </div>
-
-        <div
-          class="stat-card stat-suggested"
-          :class="{ 'stat-active': codingStore.confidenceThreshold === 'HIGH' }"
-          @click="setConfidenceFilter('HIGH')"
-        >
+        <div class="stat-card stat-progress">
           <div class="stat-number">
-            {{ codingStore.highConfidenceClustersCount }}
+            {{ codingStore.batchAutoCodingProgress }}%
           </div>
-          <div class="stat-title">High Conf. Clusters (≥90%)</div>
-        </div>
-
-        <div
-          class="stat-card stat-coded"
-          :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
-          @click="setStatusFilter('CODED_ALL')"
-        >
-          <div class="stat-number">
-            {{ codingStore.autoCodingProgressPct }}%
+          <div class="stat-title">
+            Auto-Coded Progress
           </div>
-          <div class="stat-title">Batch Progress</div>
         </div>
-
-        <div
-          class="stat-card stat-query"
-          :class="{
-            'stat-active': codingStore.filters.status === 'QUERY_PENDING',
-          }"
-          @click="setStatusFilter('QUERY_PENDING')"
-        >
-          <div class="stat-number">
-            {{ codingStore.queryPendingCount }}
-          </div>
-          <div class="stat-title">Query Pending</div>
-        </div>
-      </div>
-
-      <!-- Individual View Summary Cards -->
-      <div v-else class="stats-overview-grid">
-        <div
-          class="stat-card"
-          :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
-          @click="setStatusFilter('ALL')"
-        >
-          <div class="stat-number">
-            {{ codingStore.totalCount }}
-          </div>
-          <div class="stat-title">Total Verbatims</div>
-        </div>
-
+        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-uncoded"
           :class="{ 'stat-active': codingStore.filters.status === 'UNCODED' }"
@@ -164,9 +115,11 @@
           <div class="stat-number">
             {{ codingStore.uncodedCount }}
           </div>
-          <div class="stat-title">Uncoded</div>
+          <div class="stat-title">
+            Uncoded Instances
+          </div>
         </div>
-
+        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-suggested"
           :class="{ 'stat-active': codingStore.filters.status === 'SUGGESTED' }"
@@ -175,9 +128,59 @@
           <div class="stat-number">
             {{ codingStore.suggestedCount }}
           </div>
-          <div class="stat-title">Suggested Matches</div>
+          <div class="stat-title">
+            Suggested Instances
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-else
+        class="stats-overview-grid"
+      >
+        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="stat-card"
+          :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
+          @click="setStatusFilter('ALL')"
+        >
+          <div class="stat-number">
+            {{ codingStore.totalCount }}
+          </div>
+          <div class="stat-title">
+            Total Verbatims
+          </div>
         </div>
 
+        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="stat-card stat-uncoded"
+          :class="{ 'stat-active': codingStore.filters.status === 'UNCODED' }"
+          @click="setStatusFilter('UNCODED')"
+        >
+          <div class="stat-number">
+            {{ codingStore.uncodedCount }}
+          </div>
+          <div class="stat-title">
+            Uncoded
+          </div>
+        </div>
+
+        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+        <div
+          class="stat-card stat-suggested"
+          :class="{ 'stat-active': codingStore.filters.status === 'SUGGESTED' }"
+          @click="setStatusFilter('SUGGESTED')"
+        >
+          <div class="stat-number">
+            {{ codingStore.suggestedCount }}
+          </div>
+          <div class="stat-title">
+            Suggested Matches
+          </div>
+        </div>
+
+        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-coded"
           :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
@@ -186,9 +189,12 @@
           <div class="stat-number">
             {{ codingStore.codedCount }}
           </div>
-          <div class="stat-title">Coded</div>
+          <div class="stat-title">
+            Coded
+          </div>
         </div>
 
+        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
           class="stat-card stat-query"
           :class="{
@@ -199,7 +205,9 @@
           <div class="stat-number">
             {{ codingStore.queryPendingCount }}
           </div>
-          <div class="stat-title">Query Pending</div>
+          <div class="stat-title">
+            Query Pending
+          </div>
         </div>
       </div>
 
@@ -214,7 +222,7 @@
               :class="{ active: codingStore.filters.status === 'ALL' }"
               @click="setStatusFilter('ALL')"
             >
-              All
+              All Items
             </button>
             <button
               type="button"
@@ -252,6 +260,29 @@
             </button>
           </div>
 
+          <!-- Confidence Threshold Filter -->
+          <div class="confidence-select-box">
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <select
+              v-model="codingStore.filters.confidenceThreshold"
+              class="form-control-sm confidence-select"
+              title="Filter by match confidence threshold"
+            >
+              <option value="ALL">
+                All Confidence Levels
+              </option>
+              <option value="HIGH">
+                ≥ 90% High Confidence
+              </option>
+              <option value="MEDIUM">
+                70 - 89% Medium Confidence
+              </option>
+              <option value="LOW">
+                &lt; 70% Low Confidence
+              </option>
+            </select>
+          </div>
+
           <!-- Dictionary Filter -->
           <div class="dict-select-box">
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -260,24 +291,15 @@
               class="form-control-sm"
               title="Filter by dictionary system"
             >
-              <option value="ALL">All Dictionaries</option>
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
-            </select>
-          </div>
-
-          <!-- Confidence Threshold Filter -->
-          <div class="confidence-select-box">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select
-              v-model="codingStore.confidenceThreshold"
-              class="form-control-sm confidence-select"
-              title="Filter by match confidence threshold"
-            >
-              <option value="ALL">All Confidence Scores</option>
-              <option value="HIGH">≥ 90% High Confidence</option>
-              <option value="MEDIUM">70–89% Medium Confidence</option>
-              <option value="LOW">&lt; 70% Low Confidence</option>
+              <option value="ALL">
+                All Dictionaries
+              </option>
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
             </select>
           </div>
         </div>
@@ -289,8 +311,8 @@
             v-model="codingStore.filters.search"
             type="text"
             class="form-control-sm search-input"
-            placeholder="Search verbatim, code, or term..."
-          />
+            placeholder="Search verbatim, code, or field..."
+          >
         </div>
       </div>
 
@@ -327,14 +349,6 @@ const hasAccess = computed(() => {
 
 function setStatusFilter(status) {
   codingStore.filters.status = status;
-}
-
-function setConfidenceFilter(threshold) {
-  if (codingStore.confidenceThreshold === threshold) {
-    codingStore.setConfidenceThreshold("ALL");
-  } else {
-    codingStore.setConfidenceThreshold(threshold);
-  }
 }
 
 async function refreshQueue() {
@@ -377,82 +391,7 @@ onMounted(() => {
 
 .header-action-buttons {
   display: flex;
-  align-items: center;
   gap: 10px;
-}
-
-.view-mode-toggle-group {
-  display: flex;
-  background-color: #e2e8f0;
-  border-radius: 6px;
-  padding: 3px;
-  gap: 2px;
-}
-
-.mode-btn {
-  border: none;
-  background: transparent;
-  padding: 6px 12px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #475569;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.mode-btn.active {
-  background-color: white;
-  color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.alert-banner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-bottom: var(--spacing-xs);
-}
-
-.alert-success {
-  background-color: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
-}
-
-.alert-warning {
-  background-color: #fffbeb;
-  border: 1px solid #fef08a;
-  color: #854d0e;
-}
-
-.alert-info {
-  background-color: #f0f9ff;
-  border: 1px solid #bae6fd;
-  color: #075985;
-}
-
-.alert-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.alert-close-btn {
-  background: transparent;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  color: inherit;
-  opacity: 0.7;
-}
-
-.alert-close-btn:hover {
-  opacity: 1;
 }
 
 .gating-banner {
@@ -543,10 +482,6 @@ onMounted(() => {
   color: var(--warning);
 }
 
-.stat-instances .stat-number {
-  color: #4f46e5;
-}
-
 .toolbar-card {
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
@@ -605,11 +540,17 @@ onMounted(() => {
   background-color: white;
 }
 
-.confidence-select {
-  font-weight: 600;
-  color: #0369a1;
-  border-color: #7dd3fc;
-  background-color: #f0f9ff;
+.view-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: #e2e8f0;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.view-mode-toggle .btn {
+  font-size: 0.82rem;
+  padding: 4px 10px;
 }
 
 .search-box {

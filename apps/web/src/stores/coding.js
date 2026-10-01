@@ -5,21 +5,18 @@ export const useCodingStore = defineStore("coding", {
   state: () => ({
     assignments: [],
     selectedAssignmentIds: [],
-    selectedClusterIds: [],
-    viewMode: "INDIVIDUAL", // 'INDIVIDUAL' | 'CLUSTERS'
-    confidenceThreshold: "ALL", // 'ALL' | 'HIGH' (>=90%) | 'MEDIUM' (70-89%) | 'LOW' (<70%)
+    selectedClusterKeys: [],
+    viewMode: "INDIVIDUAL", // "INDIVIDUAL" | "CLUSTERS"
     activeAssignment: null,
     dictionarySearchResults: [],
     searchStatus: null,
     isSearching: false,
     isLoading: false,
     error: null,
-    batchAlert: null,
-    auditLedger: [],
-    synonymRules: [],
     filters: {
       status: "ALL",
       dictionaryType: "ALL",
+      confidenceThreshold: "ALL", // "ALL" | "HIGH" (>=90%) | "MEDIUM" (70-89%) | "LOW" (<70%)
       search: "",
     },
     impactAnalysis: {
@@ -41,23 +38,16 @@ export const useCodingStore = defineStore("coding", {
   }),
 
   getters: {
-    // Helper to get match confidence score (0.0 to 1.0)
-    getItemScore: () => (item) => {
-      if (typeof item.score === "number") {
-        return item.score;
+    getItemConfidenceScore: () => (item) => {
+      if (item.suggestions && Array.isArray(item.suggestions) && item.suggestions.length > 0) {
+        const score = item.suggestions[0].score ?? item.score ?? 0;
+        return score > 1 ? score / 100 : score;
       }
-      if (item.suggestions && item.suggestions.length > 0) {
-        const topSug = item.suggestions[0];
-        if (typeof topSug.score === "number") return topSug.score;
-        if (typeof topSug.confidence === "number") return topSug.confidence;
-      }
-      if (item.status === "CODED" || item.status === "AUTO_CODED") {
-        return 1.0;
-      }
-      return 0.85; // Default score fallback
+      const score = item.score ?? 0;
+      return score > 1 ? score / 100 : score;
     },
 
-    filteredAssignments(state) {
+    filteredAssignments: (state) => {
       return state.assignments.filter((item) => {
         // Filter by Status
         if (state.filters.status !== "ALL") {
@@ -80,7 +70,28 @@ export const useCodingStore = defineStore("coding", {
           }
         }
 
-        // Filter by Search Query
+        // Filter by Confidence Threshold
+        if (
+          state.filters.confidenceThreshold &&
+          state.filters.confidenceThreshold !== "ALL"
+        ) {
+          const score = state.getItemConfidenceScore(item);
+
+          if (state.filters.confidenceThreshold === "HIGH" && score < 0.90) {
+            return false;
+          }
+          if (
+            state.filters.confidenceThreshold === "MEDIUM" &&
+            (score < 0.70 || score >= 0.90)
+          ) {
+            return false;
+          }
+          if (state.filters.confidenceThreshold === "LOW" && score >= 0.70) {
+            return false;
+          }
+        }
+
+        // Filter by search query
         if (state.filters.search && state.filters.search.trim()) {
           const q = state.filters.search.toLowerCase().trim();
           const matchVerbatim = (item.verbatim_text || "")
@@ -94,247 +105,244 @@ export const useCodingStore = defineStore("coding", {
           const matchObs = (item.observation_id || "")
             .toLowerCase()
             .includes(q);
+          const matchSug = item.suggestions && item.suggestions.some(
+            (s) =>
+              (s.term || s.pt_name || s.preferred_name || "").toLowerCase().includes(q) ||
+              (s.code || "").toLowerCase().includes(q)
+          );
           if (
             !matchVerbatim &&
             !matchCode &&
             !matchTerm &&
             !matchField &&
-            !matchObs
+            !matchObs &&
+            !matchSug
           ) {
             return false;
           }
-        }
-
-        // Filter by Confidence Threshold
-        if (state.confidenceThreshold !== "ALL") {
-          let score = 0.85;
-          if (typeof item.score === "number") {
-            score = item.score;
-          } else if (item.suggestions && item.suggestions.length > 0) {
-            score = item.suggestions[0].score ?? 0.85;
-          } else if (item.status === "CODED" || item.status === "AUTO_CODED") {
-            score = 1.0;
-          }
-
-          if (state.confidenceThreshold === "HIGH" && score < 0.9) return false;
-          if (
-            state.confidenceThreshold === "MEDIUM" &&
-            (score < 0.7 || score >= 0.9)
-          )
-            return false;
-          if (state.confidenceThreshold === "LOW" && score >= 0.7) return false;
         }
 
         return true;
       });
     },
 
-    // Aggregates individual assignments into verbatim clusters
-    verbatimClusters(state) {
-      const clusterMap = new Map();
-
-      for (const item of state.assignments) {
-        const normVerbatim = (item.verbatim_text || "Unspecified")
-          .trim()
-          .toUpperCase();
-        const dictType = (item.dictionary_type || "MEDDRA").toUpperCase();
-
-        let topCode = item.coded_code || "";
-        let topTerm = item.coded_term || "";
-        let score = typeof item.score === "number" ? item.score : 0.85;
-
-        if (item.suggestions && item.suggestions.length > 0) {
-          const sug = item.suggestions[0];
-          topCode = topCode || sug.code || sug.drug_code || sug.pt_code || "10019211";
-          topTerm = topTerm || sug.pt_name || sug.preferred_term || sug.term || sug.drug_name || "Headache";
-          if (typeof sug.score === "number") score = sug.score;
-        }
-
-        const clusterKey = `${normVerbatim}___${dictType}___${topCode}`;
-
-        if (!clusterMap.has(clusterKey)) {
-          const clusterId = `cluster-${dictType.toLowerCase()}-${normVerbatim.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
-          clusterMap.set(clusterKey, {
-            id: clusterId,
-            cluster_id: clusterId,
-            verbatim_text: normVerbatim,
-            raw_verbatim: item.verbatim_text || normVerbatim,
-            dictionary_type: dictType,
-            dictionary_version: item.dictionary_version || "26.0",
-            top_suggested_code: topCode || "10019211",
-            top_suggested_term: topTerm || "Headache",
-            score: score,
-            model_id: item.model_id || "cadence-meddra-ai-v2.1",
-            instances: [],
-            status_counts: {
-              UNCODED: 0,
-              SUGGESTED: 0,
-              CODED: 0,
-              AUTO_CODED: 0,
-              QUERY_PENDING: 0,
-              RECODING_REQUIRED: 0,
-            },
-          });
-        }
-
-        const cluster = clusterMap.get(clusterKey);
-        cluster.instances.push(item);
-
-        if (score > cluster.score) {
-          cluster.score = score;
-        }
-
-        const statusKey = item.status || "UNCODED";
-        if (cluster.status_counts[statusKey] !== undefined) {
-          cluster.status_counts[statusKey]++;
-        } else {
-          cluster.status_counts[statusKey] = 1;
-        }
-      }
-
-      return Array.from(clusterMap.values()).map((cluster) => {
-        const total = cluster.instances.length;
-        cluster.instance_count = total;
-
-        if (cluster.status_counts.QUERY_PENDING > 0 && cluster.status_counts.QUERY_PENDING === total) {
-          cluster.cluster_status = "QUERY_PENDING";
-        } else if ((cluster.status_counts.CODED + cluster.status_counts.AUTO_CODED) === total) {
-          cluster.cluster_status = "CODED";
-        } else if (cluster.status_counts.SUGGESTED === total) {
-          cluster.cluster_status = "SUGGESTED";
-        } else if (cluster.status_counts.UNCODED === total) {
-          cluster.cluster_status = "UNCODED";
-        } else {
-          cluster.cluster_status = "MIXED";
-        }
-
-        cluster.blocked_count = cluster.instances.filter(
-          (inst) => inst.status === "QUERY_PENDING" || inst.has_query || inst.is_locked
-        ).length;
-        cluster.unblocked_count = total - cluster.blocked_count;
-
-        return cluster;
-      });
-    },
-
-    filteredClusters(state) {
-      return this.verbatimClusters.filter((cluster) => {
+    verbatimClusters: (state) => {
+      const items = state.assignments.filter((item) => {
         // Filter by Status
         if (state.filters.status !== "ALL") {
           if (state.filters.status === "CODED_ALL") {
-            if (
-              cluster.cluster_status !== "CODED" &&
-              cluster.status_counts.CODED + cluster.status_counts.AUTO_CODED === 0
-            ) {
+            if (item.status !== "CODED" && item.status !== "AUTO_CODED") {
               return false;
             }
-          } else if (
-            cluster.cluster_status !== state.filters.status &&
-            !cluster.instances.some((i) => i.status === state.filters.status)
-          ) {
+          } else if (item.status !== state.filters.status) {
             return false;
           }
         }
 
         // Filter by Dictionary Type
         if (state.filters.dictionaryType !== "ALL") {
-          if (cluster.dictionary_type !== state.filters.dictionaryType.toUpperCase()) {
-            return false;
-          }
-        }
-
-        // Filter by Search Query
-        if (state.filters.search && state.filters.search.trim()) {
-          const q = state.filters.search.toLowerCase().trim();
-          const matchVerbatim = cluster.verbatim_text.toLowerCase().includes(q);
-          const matchCode = cluster.top_suggested_code.toLowerCase().includes(q);
-          const matchTerm = cluster.top_suggested_term.toLowerCase().includes(q);
-          if (!matchVerbatim && !matchCode && !matchTerm) {
+          if (
+            (item.dictionary_type || "").toUpperCase() !==
+            state.filters.dictionaryType.toUpperCase()
+          ) {
             return false;
           }
         }
 
         // Filter by Confidence Threshold
-        if (state.confidenceThreshold !== "ALL") {
-          const score = cluster.score;
-          if (state.confidenceThreshold === "HIGH" && score < 0.9) return false;
-          if (
-            state.confidenceThreshold === "MEDIUM" &&
-            (score < 0.7 || score >= 0.9)
-          )
+        if (
+          state.filters.confidenceThreshold &&
+          state.filters.confidenceThreshold !== "ALL"
+        ) {
+          const score = state.getItemConfidenceScore(item);
+
+          if (state.filters.confidenceThreshold === "HIGH" && score < 0.90) {
             return false;
-          if (state.confidenceThreshold === "LOW" && score >= 0.7) return false;
+          }
+          if (
+            state.filters.confidenceThreshold === "MEDIUM" &&
+            (score < 0.70 || score >= 0.90)
+          ) {
+            return false;
+          }
+          if (state.filters.confidenceThreshold === "LOW" && score >= 0.70) {
+            return false;
+          }
+        }
+
+        // Filter by search query
+        if (state.filters.search && state.filters.search.trim()) {
+          const q = state.filters.search.toLowerCase().trim();
+          const matchVerbatim = (item.verbatim_text || "")
+            .toLowerCase()
+            .includes(q);
+          const matchCode = (item.coded_code || "").toLowerCase().includes(q);
+          const matchTerm = (item.coded_term || "").toLowerCase().includes(q);
+          const matchField = (item.source_field || "")
+            .toLowerCase()
+            .includes(q);
+          const matchObs = (item.observation_id || "")
+            .toLowerCase()
+            .includes(q);
+          const matchSug = item.suggestions && item.suggestions.some(
+            (s) =>
+              (s.term || s.pt_name || s.preferred_name || "").toLowerCase().includes(q) ||
+              (s.code || "").toLowerCase().includes(q)
+          );
+          if (
+            !matchVerbatim &&
+            !matchCode &&
+            !matchTerm &&
+            !matchField &&
+            !matchObs &&
+            !matchSug
+          ) {
+            return false;
+          }
         }
 
         return true;
       });
+
+      const clusterMap = new Map();
+
+      for (const item of items) {
+        const normText = (item.verbatim_text || "").trim().toLowerCase();
+        const dictType = (item.dictionary_type || "MEDDRA").toUpperCase();
+
+        let topSug = null;
+        let sugCode = "";
+        let sugTerm = "";
+        if (item.suggestions && Array.isArray(item.suggestions) && item.suggestions.length > 0) {
+          topSug = item.suggestions[0];
+          sugCode = topSug.code || topSug.drug_code || topSug.pt_code || "10019211";
+          sugTerm = topSug.pt_name || topSug.preferred_name || topSug.term || topSug.drug_name || "Headache";
+        } else if (item.coded_code) {
+          sugCode = item.coded_code;
+          sugTerm = item.coded_term || "";
+        }
+
+        const sugKey = sugCode ? `${sugCode}:${sugTerm.toLowerCase()}` : "uncoded";
+        const key = `${dictType}:${normText}:${sugKey}`;
+
+        let itemScore = 0;
+        if (topSug) {
+          const raw = topSug.score ?? item.score ?? 0.95;
+          itemScore = raw > 1 ? raw / 100 : raw;
+        } else if (item.score) {
+          itemScore = item.score > 1 ? item.score / 100 : item.score;
+        }
+
+        if (!clusterMap.has(key)) {
+          clusterMap.set(key, {
+            clusterKey: key,
+            verbatim_text: item.verbatim_text || "",
+            dictionary_type: item.dictionary_type || "MEDDRA",
+            dictionary_version: item.dictionary_version || "26.0",
+            items: [],
+            top_suggestion: (topSug || item.coded_code)
+              ? {
+                  code: sugCode || "10019211",
+                  term: sugTerm || "Headache",
+                  llt_name: topSug?.llt_name || topSug?.llt || topSug?.lowest_level_term || "",
+                  score: itemScore,
+                }
+              : null,
+            max_score: itemScore,
+          });
+        }
+
+        const cluster = clusterMap.get(key);
+        cluster.items.push(item);
+        if (itemScore > cluster.max_score) {
+          cluster.max_score = itemScore;
+          if (cluster.top_suggestion) {
+            cluster.top_suggestion.score = itemScore;
+          }
+        }
+      }
+
+      const result = [];
+      for (const cluster of clusterMap.values()) {
+        const instance_count = cluster.items.length;
+        const blocked_items = cluster.items.filter(
+          (a) => a.status === "QUERY_PENDING" || a.is_locked || a.is_blocked
+        );
+        const unblocked_items = cluster.items.filter(
+          (a) => a.status !== "QUERY_PENDING" && !a.is_locked && !a.is_blocked
+        );
+
+        let confidence_category = "LOW";
+        if (cluster.max_score >= 0.90) {
+          confidence_category = "HIGH";
+        } else if (cluster.max_score >= 0.70) {
+          confidence_category = "MEDIUM";
+        }
+
+        let status = "UNCODED";
+        if (cluster.items.every((a) => a.status === "CODED" || a.status === "AUTO_CODED")) {
+          status = "CODED";
+        } else if (cluster.items.some((a) => a.status === "QUERY_PENDING")) {
+          status = "QUERY_PENDING";
+        } else if (cluster.items.some((a) => a.status === "SUGGESTED")) {
+          status = "SUGGESTED";
+        }
+
+        result.push({
+          ...cluster,
+          instance_count,
+          unblocked_items,
+          blocked_items,
+          has_blocked_items: blocked_items.length > 0,
+          unblocked_ids: unblocked_items.map((i) => i.id),
+          confidence_category,
+          status,
+        });
+      }
+
+      return result;
     },
 
-    // Cluster Metrics
-    totalClustersCount() {
-      return this.verbatimClusters.length;
-    },
+    totalClusterCount: (state) => state.verbatimClusters.length,
 
-    totalClusterInstancesCount() {
-      return this.verbatimClusters.reduce((sum, c) => sum + c.instance_count, 0);
-    },
+    totalInstanceCount: (state) =>
+      state.verbatimClusters.reduce((sum, c) => sum + c.instance_count, 0),
 
-    highConfidenceClustersCount() {
-      return this.verbatimClusters.filter((c) => c.score >= 0.9).length;
-    },
-
-    autoCodingProgressPct(state) {
-      const totalInstances = this.totalClusterInstancesCount;
-      if (totalInstances === 0) return 0;
-      const codedInstances = state.assignments.filter(
+    batchAutoCodingProgress: (state) => {
+      if (state.assignments.length === 0) return 0;
+      const codedCount = state.assignments.filter(
         (a) => a.status === "CODED" || a.status === "AUTO_CODED"
       ).length;
-      return Math.round((codedInstances / totalInstances) * 100);
+      return Math.round((codedCount / state.assignments.length) * 100);
     },
 
-    uncodedCount(state) {
+    selectedClusterCount: (state) => state.selectedClusterKeys.length,
+
+    uncodedCount: (state) => {
       return state.assignments.filter((a) => a.status === "UNCODED").length;
     },
 
-    suggestedCount(state) {
+    suggestedCount: (state) => {
       return state.assignments.filter((a) => a.status === "SUGGESTED").length;
     },
 
-    codedCount(state) {
+    codedCount: (state) => {
       return state.assignments.filter(
         (a) => a.status === "CODED" || a.status === "AUTO_CODED"
       ).length;
     },
 
-    queryPendingCount(state) {
-      return state.assignments.filter((a) => a.status === "QUERY_PENDING").length;
+    queryPendingCount: (state) => {
+      return state.assignments.filter((a) => a.status === "QUERY_PENDING")
+        .length;
     },
 
-    totalCount(state) {
-      return state.assignments.length;
-    },
+    totalCount: (state) => state.assignments.length,
 
-    selectedCount(state) {
-      return state.viewMode === "CLUSTERS"
-        ? state.selectedClusterIds.length
-        : state.selectedAssignmentIds.length;
-    },
+    selectedCount: (state) => state.selectedAssignmentIds.length,
   },
 
   actions: {
-    setViewMode(mode) {
-      this.viewMode = mode;
-      this.batchAlert = null;
-    },
-
-    setConfidenceThreshold(threshold) {
-      this.confidenceThreshold = threshold;
-    },
-
-    dismissBatchAlert() {
-      this.batchAlert = null;
-    },
-
     async fetchAssignments(filterOverrides = {}) {
       this.isLoading = true;
       this.error = null;
@@ -359,11 +367,10 @@ export const useCodingStore = defineStore("coding", {
           changeReason: "Fetch medical coding assignments queue",
         });
 
-        if (Array.isArray(data)) {
-          this.assignments = data;
-        }
+        this.assignments = Array.isArray(data) ? data : [];
       } catch (err) {
         this.error = err.message || "Failed to load medical coding queue";
+        console.error("Error loading coding assignments:", err);
       } finally {
         this.isLoading = false;
       }
@@ -420,7 +427,6 @@ export const useCodingStore = defineStore("coding", {
       term,
       suggestionIndex,
       reasonForChange,
-      reviewerId,
     }) {
       this.isLoading = true;
       this.error = null;
@@ -442,56 +448,16 @@ export const useCodingStore = defineStore("coding", {
           }
         );
 
-        // Update local state
+        // Update in state
         const idx = this.assignments.findIndex((a) => a.id === assignmentId);
         if (idx !== -1) {
-          this.assignments[idx] = {
-            ...this.assignments[idx],
-            ...updated,
-            status: action === "ACCEPT" ? "AUTO_CODED" : "CODED",
-            coded_code: code || updated.coded_code,
-            coded_term: term || updated.coded_term,
-          };
-
-          // Record 21 CFR Part 11 Dual-Attribution Audit Entry
-          this.auditLedger.push({
-            assignment_id: assignmentId,
-            verbatim_text: this.assignments[idx].verbatim_text,
-            coded_code: code || updated.coded_code,
-            coded_term: term || updated.coded_term,
-            action: action,
-            reason_for_change: payload.reason_for_change,
-            reviewer_identity: reviewerId || "Data Manager",
-            ai_model_identity: this.assignments[idx].model_id || "cadence-meddra-ai-v2.1",
-            timestamp: new Date().toISOString(),
-            compliance_standard: "21 CFR Part 11 Dual-Attribution",
-          });
+          this.assignments[idx] = updated;
         }
 
         return updated;
       } catch (err) {
-        // Fallback local update if mocked
-        const idx = this.assignments.findIndex((a) => a.id === assignmentId);
-        if (idx !== -1) {
-          const item = this.assignments[idx];
-          item.status = action === "ACCEPT" ? "AUTO_CODED" : "CODED";
-          if (code) item.coded_code = code;
-          if (term) item.coded_term = term;
-
-          this.auditLedger.push({
-            assignment_id: assignmentId,
-            verbatim_text: item.verbatim_text,
-            coded_code: code || item.coded_code,
-            coded_term: term || item.coded_term,
-            action: action,
-            reason_for_change: reasonForChange || `Applied coding decision: ${action}`,
-            reviewer_identity: reviewerId || "Data Manager",
-            ai_model_identity: item.model_id || "cadence-meddra-ai-v2.1",
-            timestamp: new Date().toISOString(),
-            compliance_standard: "21 CFR Part 11 Dual-Attribution",
-          });
-        }
-        return { success: true, assignment_id: assignmentId };
+        this.error = err.message || "Failed to process coding action";
+        throw err;
       } finally {
         this.isLoading = false;
       }
@@ -506,7 +472,6 @@ export const useCodingStore = defineStore("coding", {
       dictionaryVersion,
       reason,
       action = "ACCEPT",
-      reviewerId,
     }) {
       this.isLoading = true;
       this.error = null;
@@ -522,203 +487,21 @@ export const useCodingStore = defineStore("coding", {
           action,
         };
 
-        let res = null;
-        try {
-          res = await apiClient.post(
-            "/api/v1/execution/coding/assignments/batch-assign",
-            payload,
-            {
-              changeReason: payload.reason,
-            }
-          );
-        } catch {
-          // Fallback if endpoint unbacked in mock mode
-          res = { success: true, updated_count: assignmentIds.length };
-        }
-
-        // Update assigned items locally in store
-        for (const id of assignmentIds) {
-          const item = this.assignments.find((a) => a.id === id);
-          if (item) {
-            item.status = action === "ACCEPT" ? "AUTO_CODED" : "CODED";
-            const targetCode = code || item.suggestions?.[0]?.code || item.suggestions?.[0]?.drug_code || "10019211";
-            const targetTerm = term || item.suggestions?.[0]?.term || item.suggestions?.[0]?.pt_name || item.suggestions?.[0]?.preferred_term || item.suggestions?.[0]?.drug_name || "Headache";
-            item.coded_code = targetCode;
-            item.coded_term = targetTerm;
-
-            // Record 21 CFR Part 11 Dual-Attribution Audit
-            this.auditLedger.push({
-              assignment_id: id,
-              verbatim_text: item.verbatim_text,
-              coded_code: targetCode,
-              coded_term: targetTerm,
-              action: action,
-              reason_for_change: reason || "Batch medical coding assignment",
-              reviewer_identity: reviewerId || "Data Manager",
-              ai_model_identity: item.model_id || "cadence-meddra-ai-v2.1",
-              timestamp: new Date().toISOString(),
-              compliance_standard: "21 CFR Part 11 Dual-Attribution",
-            });
+        const res = await apiClient.post(
+          "/api/v1/execution/coding/assignments/batch-assign",
+          payload,
+          {
+            changeReason: payload.reason,
           }
-        }
+        );
 
-        // Clear selections
+        // Clear selections and refresh queue
         this.selectedAssignmentIds = [];
+        await this.fetchAssignments();
+
         return res;
       } catch (err) {
-        this.error = err.message || "Batch assignment failed";
-        throw err;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    // Batch Approve Verbatim Cluster(s)
-    async batchApproveCluster({ clusterId, clusterIds, reason, reviewerId }) {
-      const targetClusterIds = clusterIds || (clusterId ? [clusterId] : [...this.selectedClusterIds]);
-      if (targetClusterIds.length === 0) return;
-
-      this.isLoading = true;
-      this.batchAlert = null;
-
-      try {
-        const clustersToApprove = this.verbatimClusters.filter((c) =>
-          targetClusterIds.includes(c.id)
-        );
-
-        let totalInstances = 0;
-        let blockedInstances = 0;
-        const unblockedAssignmentIds = [];
-
-        for (const cluster of clustersToApprove) {
-          totalInstances += cluster.instance_count;
-          for (const inst of cluster.instances) {
-            // Guardrail check: exclude active query or locked items
-            if (inst.status === "QUERY_PENDING" || inst.has_query || inst.is_locked) {
-              blockedInstances++;
-            } else {
-              unblockedAssignmentIds.push(inst.id);
-            }
-          }
-        }
-
-        if (unblockedAssignmentIds.length === 0) {
-          this.batchAlert = {
-            type: "warning",
-            message: `Batch approval bypassed: All ${totalInstances} instances in the selected cluster(s) have active discrepancy queries or lock conflicts.`,
-          };
-          return;
-        }
-
-        // Apply batch approval across unblocked instances
-        await this.batchAssign({
-          assignmentIds: unblockedAssignmentIds,
-          action: "ACCEPT",
-          reason: reason || "Batch approve verbatim cluster high-confidence match",
-          reviewerId: reviewerId || "Data Manager",
-        });
-
-        if (blockedInstances > 0) {
-          this.batchAlert = {
-            type: "info",
-            message: `Successfully batch approved ${unblockedAssignmentIds.length} instances. ${blockedInstances} instance(s) excluded due to active queries or lock conflicts.`,
-          };
-        } else {
-          this.batchAlert = {
-            type: "success",
-            message: `Successfully batch approved ${unblockedAssignmentIds.length} instances across ${clustersToApprove.length} cluster(s) with 21 CFR Part 11 audit logging.`,
-          };
-        }
-
-        this.selectedClusterIds = [];
-      } catch (err) {
-        this.error = err.message || "Failed to batch approve verbatim clusters";
-        throw err;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    // Batch Code Clusters (Assign code/term across clusters)
-    async batchCodeClusters({
-      clusterIds,
-      code,
-      term,
-      dictionaryType,
-      dictionaryVersion,
-      reason,
-      reviewerId,
-    }) {
-      const targetClusterIds = clusterIds || [...this.selectedClusterIds];
-      if (targetClusterIds.length === 0) return;
-
-      this.isLoading = true;
-      this.batchAlert = null;
-
-      try {
-        const clustersToCode = this.verbatimClusters.filter((c) =>
-          targetClusterIds.includes(c.id)
-        );
-
-        let totalInstances = 0;
-        let blockedInstances = 0;
-        const unblockedAssignmentIds = [];
-
-        for (const cluster of clustersToCode) {
-          totalInstances += cluster.instance_count;
-          for (const inst of cluster.instances) {
-            if (inst.status === "QUERY_PENDING" || inst.has_query || inst.is_locked) {
-              blockedInstances++;
-            } else {
-              unblockedAssignmentIds.push(inst.id);
-            }
-          }
-
-          // Register synonym expansion rule
-          this.synonymRules.push({
-            verbatim_text: cluster.verbatim_text,
-            target_code: code,
-            target_term: term,
-            dictionary_type: dictionaryType || cluster.dictionary_type,
-            created_at: new Date().toISOString(),
-            status: "ACTIVE",
-          });
-        }
-
-        if (unblockedAssignmentIds.length === 0) {
-          this.batchAlert = {
-            type: "warning",
-            message: `Batch coding bypassed: All ${totalInstances} instances in the selected cluster(s) have active queries or lock conflicts.`,
-          };
-          return;
-        }
-
-        await this.batchAssign({
-          assignmentIds: unblockedAssignmentIds,
-          code,
-          term,
-          dictionaryType,
-          dictionaryVersion,
-          action: "OVERRIDE",
-          reason: reason || "Batch code verbatim clusters",
-          reviewerId: reviewerId || "Data Manager",
-        });
-
-        if (blockedInstances > 0) {
-          this.batchAlert = {
-            type: "info",
-            message: `Batch coded ${unblockedAssignmentIds.length} instances to '${term}' (${code}). Excluded ${blockedInstances} instance(s) with active queries or locks.`,
-          };
-        } else {
-          this.batchAlert = {
-            type: "success",
-            message: `Batch coded ${unblockedAssignmentIds.length} instances across ${clustersToCode.length} cluster(s) to '${term}' (${code}). Synonym expansion rules updated.`,
-          };
-        }
-
-        this.selectedClusterIds = [];
-      } catch (err) {
-        this.error = err.message || "Failed to batch code verbatim clusters";
+        this.error = err.message || "Batch coding assignment failed";
         throw err;
       } finally {
         this.isLoading = false;
@@ -750,11 +533,8 @@ export const useCodingStore = defineStore("coding", {
 
         return res;
       } catch (err) {
-        const item = this.assignments.find((a) => a.id === assignmentId);
-        if (item) {
-          item.status = "QUERY_PENDING";
-        }
-        return { success: true, assignment_id: assignmentId };
+        this.error = err.message || "Failed to raise discrepancy query";
+        throw err;
       } finally {
         this.isLoading = false;
       }
@@ -809,25 +589,82 @@ export const useCodingStore = defineStore("coding", {
       this.selectedAssignmentIds = [];
     },
 
-    toggleClusterSelect(clusterId) {
-      const idx = this.selectedClusterIds.indexOf(clusterId);
+    setViewMode(mode) {
+      this.viewMode = mode;
+    },
+
+    toggleSelectCluster(clusterKey) {
+      const idx = this.selectedClusterKeys.indexOf(clusterKey);
       if (idx === -1) {
-        this.selectedClusterIds.push(clusterId);
+        this.selectedClusterKeys.push(clusterKey);
       } else {
-        this.selectedClusterIds.splice(idx, 1);
+        this.selectedClusterKeys.splice(idx, 1);
       }
     },
 
-    selectAllClusters(ids) {
-      if (this.selectedClusterIds.length === ids.length) {
-        this.selectedClusterIds = [];
+    selectAllClusters(keys) {
+      if (this.selectedClusterKeys.length === keys.length) {
+        this.selectedClusterKeys = [];
       } else {
-        this.selectedClusterIds = [...ids];
+        this.selectedClusterKeys = [...keys];
       }
     },
 
     clearClusterSelection() {
-      this.selectedClusterIds = [];
+      this.selectedClusterKeys = [];
+    },
+
+    async batchApproveClusters({ clusterKeys, reason } = {}) {
+      const keysToProcess = clusterKeys || this.selectedClusterKeys;
+      const targetClusters = this.verbatimClusters.filter((c) =>
+        keysToProcess.includes(c.clusterKey)
+      );
+
+      const unblockedIds = [];
+      for (const cluster of targetClusters) {
+        unblockedIds.push(...cluster.unblocked_ids);
+      }
+
+      if (unblockedIds.length === 0) {
+        throw new Error("No unblocked items found in selected clusters to approve.");
+      }
+
+      const res = await this.batchAssign({
+        assignmentIds: unblockedIds,
+        action: "ACCEPT",
+        reason: reason || "Batch verbatim cluster approval",
+      });
+
+      this.selectedClusterKeys = [];
+      return res;
+    },
+
+    async batchCodeClusters({ clusterKeys, code, term, dictionaryType, reason } = {}) {
+      const keysToProcess = clusterKeys || this.selectedClusterKeys;
+      const targetClusters = this.verbatimClusters.filter((c) =>
+        keysToProcess.includes(c.clusterKey)
+      );
+
+      const unblockedIds = [];
+      for (const cluster of targetClusters) {
+        unblockedIds.push(...cluster.unblocked_ids);
+      }
+
+      if (unblockedIds.length === 0) {
+        throw new Error("No unblocked items found in selected clusters to code.");
+      }
+
+      const res = await this.batchAssign({
+        assignmentIds: unblockedIds,
+        code,
+        term,
+        dictionaryType: dictionaryType || targetClusters[0]?.dictionary_type || "MEDDRA",
+        action: "OVERRIDE",
+        reason: reason || "Batch verbatim cluster code override",
+      });
+
+      this.selectedClusterKeys = [];
+      return res;
     },
 
     openBrowser(assignment) {
