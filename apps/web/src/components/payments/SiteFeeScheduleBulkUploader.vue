@@ -6,13 +6,15 @@
         <div class="badge-row">
           <span class="badge badge-gxp">21 CFR Part 11 Audit Trail</span>
           <span class="badge badge-regulatory">Site Contract Ingestion</span>
-          <span class="badge badge-standard">PRD-SYS-161 Fee Schedule Matrix</span>
+          <span class="badge badge-standard"
+            >PRD-SYS-161 Fee Schedule Matrix</span
+          >
         </div>
-        <h3 class="uploader-title">
-          Bulk Site Fee Schedule CSV Importer
-        </h3>
+        <h3 class="uploader-title">Bulk Site Fee Schedule CSV Importer</h3>
         <p class="uploader-subtitle">
-          Upload multi-site fee schedules containing procedure rates, overhead percentages, and withholding terms. Preview calculations and validation checks before committing.
+          Upload multi-site fee schedules containing procedure rates, overhead
+          percentages, and withholding terms. Preview calculations and
+          validation checks before committing.
         </p>
       </div>
       <div class="header-actions">
@@ -30,7 +32,16 @@
     <!-- Drag & Drop CSV Dropzone -->
     <div
       class="dropzone-area"
-      :class="{ 'dropzone-active': isDragging, 'dropzone-has-data': previewData !== null }"
+      :class="{
+        'dropzone-active': isDragging,
+        'dropzone-has-data': previewData !== null,
+      }"
+      role="button"
+      tabindex="0"
+      aria-label="CSV file upload dropzone"
+      @click="triggerFileInput"
+      @keydown.enter.prevent="triggerFileInput"
+      @keydown.space.prevent="triggerFileInput"
       @dragover.prevent="onDragOver"
       @dragleave.prevent="onDragLeave"
       @drop.prevent="onDrop"
@@ -48,10 +59,13 @@
         <div class="dropzone-icon">📄</div>
         <div class="dropzone-text-group">
           <label for="fee-schedule-csv-file-input" class="dropzone-label">
-            <strong>Drag &amp; Drop CSV File Here</strong> or <span class="browse-link">Browse Local Files</span>
+            <strong>Drag &amp; Drop CSV File Here</strong> or
+            <span class="browse-link">Browse Local Files</span>
           </label>
           <p class="dropzone-hint">
-            Supports multi-site standardized CSV format (StudyId, SiteId, VisitCode, ProcedureCode, ProcedureName, BaseAmount, OverheadPercentage, WithholdingPercentage...)
+            Supports multi-site standardized CSV format (StudyId, SiteId,
+            VisitCode, ProcedureCode, ProcedureName, BaseAmount,
+            OverheadPercentage, WithholdingPercentage...)
           </p>
         </div>
         <div class="preset-actions">
@@ -78,12 +92,18 @@
     <div v-if="previewData" class="preview-section card">
       <div class="preview-header">
         <div class="preview-title-group">
-          <h4 class="preview-heading">Validation Preview &amp; Line-Item Calculations</h4>
+          <h4 class="preview-heading">
+            Validation Preview &amp; Line-Item Calculations
+          </h4>
           <span
             class="badge"
             :class="previewData.isValid ? 'badge-gxp' : 'badge-danger'"
           >
-            {{ previewData.isValid ? '✓ Validation Passed' : '⚠️ Validation Errors Found' }}
+            {{
+              previewData.isValid
+                ? "✓ Validation Passed"
+                : "⚠️ Validation Errors Found"
+            }}
           </span>
         </div>
         <div class="preview-actions">
@@ -97,11 +117,20 @@
           <button
             type="button"
             class="btn btn-primary btn-sm"
-            :disabled="!previewData.isValid || isSubmitting || previewData.validRowsCount === 0"
+            :disabled="
+              !previewData.isValid ||
+              isSubmitting ||
+              previewData.validRowsCount === 0
+            "
             @click="commitImport"
           >
             <span v-if="isSubmitting" class="spinner-sm" />
-            <span v-else>🚀 Commit Fee Schedule Batch ({{ previewData.validRowsCount }} Rows)</span>
+            <span v-else
+              >🚀 Commit Fee Schedule Batch ({{
+                previewData.validRowsCount
+              }}
+              Rows)</span
+            >
           </button>
         </div>
       </div>
@@ -115,35 +144,52 @@
         </div>
         <div class="kpi-card kpi-success">
           <div class="kpi-label">Valid Rows</div>
-          <div class="kpi-value text-success">{{ previewData.validRowsCount }}</div>
+          <div class="kpi-value text-success">
+            {{ previewData.validRowsCount }}
+          </div>
           <div class="kpi-subtext">Ready for Import</div>
         </div>
-        <div class="kpi-card" :class="previewData.invalidRowsCount > 0 ? 'kpi-danger' : ''">
+        <div
+          class="kpi-card"
+          :class="previewData.invalidRowsCount > 0 ? 'kpi-danger' : ''"
+        >
           <div class="kpi-label">Validation Errors</div>
-          <div class="kpi-value" :class="previewData.invalidRowsCount > 0 ? 'text-danger' : ''">
+          <div
+            class="kpi-value"
+            :class="previewData.invalidRowsCount > 0 ? 'text-danger' : ''"
+          >
             {{ previewData.invalidRowsCount }}
           </div>
           <div class="kpi-subtext">Requires Attention</div>
         </div>
         <div class="kpi-card kpi-primary">
           <div class="kpi-label">Estimated Contract Budget</div>
-          <div class="kpi-value">${{ previewData.totalEstimatedBudget.toFixed(2) }}</div>
+          <div class="kpi-value">
+            ${{ previewData.totalEstimatedBudget.toFixed(2) }}
+          </div>
           <div class="kpi-subtext">Total Gross Payable</div>
         </div>
       </div>
 
       <!-- Global Error Banner -->
-      <div v-if="previewData.globalErrors && previewData.globalErrors.length > 0" class="alert alert-danger">
+      <div
+        v-if="previewData.globalErrors && previewData.globalErrors.length > 0"
+        class="alert alert-danger"
+      >
         <strong>Upload Errors:</strong>
         <ul>
-          <li v-for="(err, idx) in previewData.globalErrors" :key="idx">{{ err }}</li>
+          <li v-for="(err, idx) in previewData.globalErrors" :key="idx">
+            {{ err }}
+          </li>
         </ul>
       </div>
 
       <!-- Search / Filter Row -->
       <div class="table-filter-bar">
         <div class="search-box">
-          <label for="preview-filter-input" class="sr-only">Filter preview rows</label>
+          <label for="preview-filter-input" class="sr-only"
+            >Filter preview rows</label
+          >
           <input
             id="preview-filter-input"
             v-model="filterQuery"
@@ -186,21 +232,44 @@
               :class="{ 'row-error': !row.isValid }"
             >
               <td class="font-mono text-muted">{{ row.rowNumber }}</td>
-              <td><strong>{{ row.studyId }}</strong></td>
-              <td><code>{{ row.siteId }}</code></td>
-              <td><code>{{ row.visitCode }}</code></td>
               <td>
-                <div><strong>{{ row.procedureName }}</strong></div>
-                <div class="text-muted text-xs font-mono">{{ row.procedureCode }}</div>
+                <strong>{{ row.studyId }}</strong>
               </td>
-              <td class="text-right font-mono">${{ row.baseAmount.toFixed(2) }}</td>
-              <td class="text-right font-mono">{{ row.overheadPercentage.toFixed(1) }}%</td>
-              <td class="text-right font-mono font-bold">${{ row.grossAmount.toFixed(2) }}</td>
-              <td class="text-right font-mono">{{ row.withholdingPercentage.toFixed(1) }}%</td>
-              <td class="text-right font-mono font-bold text-success">${{ row.netPayable.toFixed(2) }}</td>
               <td>
-                <span class="badge" :class="row.requiresSdv ? 'badge-warning' : 'badge-standard'">
-                  {{ row.requiresSdv ? 'SDV Required' : 'Auto-Approve' }}
+                <code>{{ row.siteId }}</code>
+              </td>
+              <td>
+                <code>{{ row.visitCode }}</code>
+              </td>
+              <td>
+                <div>
+                  <strong>{{ row.procedureName }}</strong>
+                </div>
+                <div class="text-muted text-xs font-mono">
+                  {{ row.procedureCode }}
+                </div>
+              </td>
+              <td class="text-right font-mono">
+                ${{ row.baseAmount.toFixed(2) }}
+              </td>
+              <td class="text-right font-mono">
+                {{ row.overheadPercentage.toFixed(1) }}%
+              </td>
+              <td class="text-right font-mono font-bold">
+                ${{ row.grossAmount.toFixed(2) }}
+              </td>
+              <td class="text-right font-mono">
+                {{ row.withholdingPercentage.toFixed(1) }}%
+              </td>
+              <td class="text-right font-mono font-bold text-success">
+                ${{ row.netPayable.toFixed(2) }}
+              </td>
+              <td>
+                <span
+                  class="badge"
+                  :class="row.requiresSdv ? 'badge-warning' : 'badge-standard'"
+                >
+                  {{ row.requiresSdv ? "SDV Required" : "Auto-Approve" }}
                 </span>
               </td>
               <td>
@@ -314,7 +383,9 @@ async function downloadTemplate() {
   try {
     const sId = props.studyId || "STUDY-DCT-001";
     const stId = props.siteId || "SITE-101";
-    const res = await fetch(`/api/v1/payments/fee-schedules/template?studyId=${encodeURIComponent(sId)}&siteId=${encodeURIComponent(stId)}`);
+    const res = await fetch(
+      `/api/v1/payments/fee-schedules/template?studyId=${encodeURIComponent(sId)}&siteId=${encodeURIComponent(stId)}`
+    );
     if (!res.ok) {
       // Fallback local template download
       const csv = `StudyId,SiteId,VisitCode,ProcedureCode,ProcedureName,BaseAmount,OverheadPercentage,WithholdingPercentage,PatientStipend,TravelReimbursement,RequiresSdv\n${sId},${stId},V1_SCREENING,PROC-101,Blood Draw & Lab Panel,150.00,25.00,10.00,50.00,25.00,true\n${sId},${stId},V1_SCREENING,PROC-102,12-Lead ECG,120.00,25.00,10.00,25.00,0.00,false\n${sId},${stId},V2_BASELINE,PROC-201,Vital Signs & Physical Exam,200.00,25.00,10.00,75.00,30.00,true`;
@@ -365,6 +436,10 @@ function onDrop(e: DragEvent) {
   }
 }
 
+function triggerFileInput() {
+  fileInputRef.value?.click();
+}
+
 function onFileSelected(e: Event) {
   const target = e.target as HTMLInputElement;
   if (target.files && target.files.length > 0) {
@@ -401,25 +476,26 @@ function loadSampleCsv(mode: "valid" | "errors") {
   const study = props.studyId || "STUDY-DCT-001";
   const site = props.siteId || "SITE-101";
 
-  let csv = "";
-  if (mode === "valid") {
-    csv = `StudyId,SiteId,VisitCode,ProcedureCode,ProcedureName,BaseAmount,OverheadPercentage,WithholdingPercentage,PatientStipend,TravelReimbursement,RequiresSdv
+  const csv =
+    mode === "valid"
+      ? `StudyId,SiteId,VisitCode,ProcedureCode,ProcedureName,BaseAmount,OverheadPercentage,WithholdingPercentage,PatientStipend,TravelReimbursement,RequiresSdv
 ${study},${site},V1_SCREENING,PROC-101,Venipuncture & Blood Panel,150.00,25.00,10.00,50.00,20.00,true
 ${study},${site},V1_SCREENING,PROC-102,12-Lead Electrocardiogram,120.00,25.00,10.00,25.00,0.00,false
 ${study},${site},V2_BASELINE,PROC-201,Comprehensive Physical Exam,250.00,25.00,10.00,75.00,30.00,true
-${study},${site},V3_CYCLE_1,PROC-301,Biomarker Sampling,300.00,25.00,10.00,100.00,40.00,true`;
-  } else {
-    csv = `StudyId,SiteId,VisitCode,ProcedureCode,ProcedureName,BaseAmount,OverheadPercentage,WithholdingPercentage,PatientStipend,TravelReimbursement,RequiresSdv
+${study},${site},V3_CYCLE_1,PROC-301,Biomarker Sampling,300.00,25.00,10.00,100.00,40.00,true`
+      : `StudyId,SiteId,VisitCode,ProcedureCode,ProcedureName,BaseAmount,OverheadPercentage,WithholdingPercentage,PatientStipend,TravelReimbursement,RequiresSdv
 ${study},${site},V1_SCREENING,,Missing Code Procedure,150.00,25.00,10.00,50.00,20.00,true
 ${study},${site},V1_SCREENING,PROC-102,Negative Base Fee,-120.00,25.00,10.00,25.00,0.00,false
 ${study},${site},V2_BASELINE,PROC-201,Excess Overhead Rate,250.00,150.00,10.00,75.00,30.00,true`;
-  }
 
   parseCsvClientSide(csv);
 }
 
 function parseCsvClientSide(csvText: string) {
-  const lines = csvText.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+  const lines = csvText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
   if (lines.length <= 1) {
     previewData.value = {
       totalRows: 0,
@@ -454,21 +530,33 @@ function parseCsvClientSide(csvText: string) {
     const withholdingPercentage = parseFloat(cols[7]) || 10;
     const patientStipend = parseFloat(cols[8]) || 0;
     const travelReimbursement = parseFloat(cols[9]) || 0;
-    const requiresSdv = (cols[10] || "").toLowerCase() === "true" || cols[10] === "1";
+    const requiresSdv =
+      (cols[10] || "").toLowerCase() === "true" || cols[10] === "1";
 
     const errs: string[] = [];
     if (!studyId) errs.push(`Row ${rowNum}: 'StudyId' is required.`);
     if (!siteId) errs.push(`Row ${rowNum}: 'SiteId' is required.`);
     if (!visitCode) errs.push(`Row ${rowNum}: 'VisitCode' is required.`);
-    if (!procedureCode) errs.push(`Row ${rowNum}: 'ProcedureCode' is required.`);
-    if (baseAmount < 0) errs.push(`Row ${rowNum}: 'BaseAmount' must be non-negative.`);
-    if (overheadPercentage < 0 || overheadPercentage > 100) errs.push(`Row ${rowNum}: 'OverheadPercentage' must be between 0% and 100%.`);
-    if (withholdingPercentage < 0 || withholdingPercentage > 100) errs.push(`Row ${rowNum}: 'WithholdingPercentage' must be between 0% and 100%.`);
+    if (!procedureCode)
+      errs.push(`Row ${rowNum}: 'ProcedureCode' is required.`);
+    if (baseAmount < 0)
+      errs.push(`Row ${rowNum}: 'BaseAmount' must be non-negative.`);
+    if (overheadPercentage < 0 || overheadPercentage > 100)
+      errs.push(
+        `Row ${rowNum}: 'OverheadPercentage' must be between 0% and 100%.`
+      );
+    if (withholdingPercentage < 0 || withholdingPercentage > 100)
+      errs.push(
+        `Row ${rowNum}: 'WithholdingPercentage' must be between 0% and 100%.`
+      );
 
-    const overheadAmount = Math.round(baseAmount * (overheadPercentage / 100) * 100) / 100;
+    const overheadAmount =
+      Math.round(baseAmount * (overheadPercentage / 100) * 100) / 100;
     const grossAmount = Math.round((baseAmount + overheadAmount) * 100) / 100;
-    const withholdingAmount = Math.round(grossAmount * (withholdingPercentage / 100) * 100) / 100;
-    const netPayable = Math.round((grossAmount - withholdingAmount) * 100) / 100;
+    const withholdingAmount =
+      Math.round(grossAmount * (withholdingPercentage / 100) * 100) / 100;
+    const netPayable =
+      Math.round((grossAmount - withholdingAmount) * 100) / 100;
 
     const isValid = errs.length === 0;
     if (isValid) {
@@ -543,7 +631,8 @@ async function commitImport() {
 
     if (res.ok) {
       const result = await res.json();
-      commitSuccessMessage.value = result.message || "Fee schedules committed successfully.";
+      commitSuccessMessage.value =
+        result.message || "Fee schedules committed successfully.";
       useToastStore().success("Bulk fee schedules committed successfully!");
       emit("imported");
     } else {
