@@ -454,6 +454,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/exports": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ListExportJobs"];
+    put?: never;
+    post: operations["SubmitExportJob"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/exports/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetExportJob"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/exports/{id}/download": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["DownloadExportArtifact"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -578,6 +626,43 @@ export interface components {
       milestone: string;
       is_complete: boolean;
       missing_artifacts: null | string[];
+    };
+    Execution_ExportJobCreateRequest: {
+      study_id: string;
+      format: string;
+      domains: null | string[];
+      datasets: null | string[];
+      sites: null | string[];
+      cohorts: null | string[];
+      privacy_profile: null | string;
+      hmac_salt: null | string;
+      record_lock_filter: null | string;
+      include_audit_trail: null | boolean;
+      include_unmapped: null | boolean;
+    };
+    Execution_ExportJobResponse: {
+      job_id: string;
+      study_id: string;
+      format: string;
+      domains: string[];
+      datasets: string[];
+      sites: string[];
+      cohorts: string[];
+      privacy_profile: string;
+      record_lock_filter: string;
+      status: string;
+      /** Format: int32 */
+      progress_percent: number | string;
+      current_step_text: string;
+      download_url: null | string;
+      error_details: null | string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      completed_at: null | string;
+      /** Format: date-time */
+      expires_at: string;
+      created_by: string;
     };
     Execution_FlagObservationRequest: {
       reason: string;
@@ -2123,6 +2208,130 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["Execution_CecDossier"];
         };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListExportJobs: {
+    parameters: {
+      query?: {
+        studyId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_ExportJobResponse"][];
+        };
+      };
+    };
+  };
+  SubmitExportJob: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_ExportJobCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Accepted */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_ExportJobResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetExportJob: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_ExportJobResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  DownloadExportArtifact: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Not Found */
       404: {

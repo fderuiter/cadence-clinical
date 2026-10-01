@@ -17,6 +17,14 @@
         <span v-if="toast.message" class="toast-message">{{
           toast.message
         }}</span>
+        <button
+          v-if="toast.action"
+          type="button"
+          class="toast-action-btn"
+          @click="toast.action.onClick(toast)"
+        >
+          {{ toast.action.label }}
+        </button>
       </div>
       <button
         type="button"
@@ -81,6 +89,22 @@ const toastStore = useToastStore();
   font-size: 0.85rem;
   color: var(--primary-light);
   word-break: break-word;
+}
+.toast-action-btn {
+  margin-top: 6px;
+  align-self: flex-start;
+  padding: 4px 12px;
+  background: var(--accent, #0ea5e9);
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.toast-action-btn:hover {
+  filter: brightness(0.9);
 }
 .toast-dismiss {
   border: none;

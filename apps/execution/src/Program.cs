@@ -4,6 +4,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cec;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.EditChecks;
+using Cadence.Apps.Execution.Application.Exports;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Application.Queries;
@@ -191,6 +192,10 @@ builder.Services.AddScoped<IFormSubmissionApplicationService, FormSubmissionAppl
 builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplicationService>();
 builder.Services.AddScoped<IAutoQueryDispatchService, AutoQueryDispatchService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
+builder.Services.AddSingleton<IExportJobQueue, ExportJobQueue>();
+builder.Services.AddScoped<IExportJobService, ExportJobService>();
+builder.Services.AddSingleton<IDatasetJsonEtlService, DatasetJsonEtlService>();
+builder.Services.AddHostedService<ExportJobBackgroundWorker>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -249,6 +254,7 @@ app.MapObservationEndpoints();
 app.MapFormEndpoints();
 app.MapQueryEndpoints();
 app.MapCecEndpoints();
+app.MapExportEndpoints();
 
 if (args.Contains("--seed"))
 {

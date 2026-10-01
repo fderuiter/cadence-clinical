@@ -10,9 +10,9 @@ let nextId = 1;
 export const useToastStore = defineStore("toasts", {
   state: () => ({ toasts: [] }),
   actions: {
-    push({ tone = "error", title, message, timeoutMs = 8000 }) {
+    push({ tone = "error", title, message, timeoutMs = 8000, action = null }) {
       const id = nextId++;
-      this.toasts.push({ id, tone, title, message });
+      this.toasts.push({ id, tone, title, message, action });
       if (timeoutMs > 0 && typeof window !== "undefined") {
         window.setTimeout(() => this.dismiss(id), timeoutMs);
       }

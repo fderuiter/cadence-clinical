@@ -595,71 +595,82 @@
 
         <!-- Progress & Download Execution -->
         <div class="execution-box">
-          <div v-if="exportStatus === 'idle'" class="execution-idle">
+          <div v-if="!exportJobsStore.activeJob" class="execution-idle">
             <button
               type="button"
               class="btn btn-primary btn-lg"
               :disabled="totalSelectedCount === 0"
               @click="startExportPipeline"
             >
-              🚀 Generate &amp; Download Export Package
+              🚀 Launch Asynchronous Export Job
             </button>
             <p v-if="totalSelectedCount === 0" class="text-warning mt-2">
               Please select at least one SDTM domain or ADaM dataset in Step 2.
             </p>
           </div>
 
-          <div v-if="exportStatus === 'processing'" class="execution-progress">
+          <div
+            v-if="exportJobsStore.activeJob && (exportJobsStore.activeJob.status === 'Queued' || exportJobsStore.activeJob.status === 'Processing')"
+            class="execution-progress"
+          >
             <div class="progress-spinner">⏳</div>
             <h4 class="progress-title">
-              Executing Biostatistical Serializer Pipeline...
+              Background Compilation in Progress (Job ID: <span class="font-mono">{{ exportJobsStore.activeJob.jobId }}</span>)
             </h4>
             <p class="progress-step">
-              {{ progressStepText }}
+              {{ exportJobsStore.activeJob.currentStepText }}
             </p>
             <div class="progress-bar-track">
               <div
                 class="progress-bar-fill"
-                :style="{ width: progressPercent + '%' }"
+                :style="{ width: exportJobsStore.activeJob.progressPercent + '%' }"
               />
             </div>
             <span class="progress-percent-label"
-              >{{ progressPercent }}% Completed</span
+              >{{ exportJobsStore.activeJob.progressPercent }}% Completed</span
             >
+            <div class="unblocked-nav-banner mt-3">
+              💡 <strong>Navigation Unblocked</strong>: You can navigate freely to other EDC views while this export compiles in the background. A toast alert with download link will notify you upon completion.
+            </div>
           </div>
 
-          <div v-if="exportStatus === 'success'" class="execution-success">
+          <div
+            v-if="exportJobsStore.activeJob && exportJobsStore.activeJob.status === 'Completed'"
+            class="execution-success"
+          >
             <div class="success-icon">✅</div>
             <h4 class="success-title">
               Export Package Generated Successfully!
             </h4>
             <p class="success-desc">
-              Your regulatory-compliant payload has been built, schema-verified,
-              and logged in the GxP Biostat audit ledger.
+              Your regulatory-compliant payload (Job ID: <span class="font-mono">{{ exportJobsStore.activeJob.jobId }}</span>) has been built, schema-verified, and logged in the 21 CFR Part 11 audit trail.
             </p>
             <div class="success-actions">
               <button
                 type="button"
                 class="btn btn-primary"
-                @click="triggerFileDownload"
+                @click="exportJobsStore.downloadArtifact(exportJobsStore.activeJob.jobId, exportJobsStore.activeJob.downloadUrl)"
               >
-                📥 Download {{ downloadFileName }}
+                📥 Download Package
               </button>
               <button
                 type="button"
                 class="btn btn-outline"
-                @click="resetExport"
+                @click="exportJobsStore.activeJobId = null"
               >
                 🔄 Create New Export
               </button>
             </div>
           </div>
 
-          <div v-if="exportStatus === 'error'" class="execution-error">
+          <div
+            v-if="exportJobsStore.activeJob && exportJobsStore.activeJob.status === 'Failed'"
+            class="execution-error"
+          >
             <div class="error-icon">❌</div>
             <h4 class="error-title">Export Pipeline Execution Failed</h4>
             <p class="error-msg">
-              {{ errorMessage }}
+              {{ exportJobsStore.activeJob.errorDetails || "An unexpected error occurred during export generation." }}
             </p>
             <button
               type="button"
@@ -668,6 +679,60 @@
             >
               Retry Export
             </button>
+          </div>
+        </div>
+
+        <!-- Active & Recent Background Export Jobs -->
+        <div v-if="exportJobsStore.jobs.length > 0" class="recent-jobs-panel mt-4">
+          <h3 class="summary-header">Active &amp; Recent Background Export Jobs</h3>
+          <div class="jobs-table-container">
+            <table class="jobs-table">
+              <thead>
+                <tr>
+                  <th>Job ID</th>
+                  <th>Study</th>
+                  <th>Format</th>
+                  <th>Status</th>
+                  <th>Progress / Step</th>
+                  <th>Created</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="job in exportJobsStore.jobs" :key="job.jobId">
+                  <td class="font-mono">{{ job.jobId }}</td>
+                  <td>{{ job.studyId }}</td>
+                  <td><span class="badge font-mono">{{ job.format }}</span></td>
+                  <td>
+                    <span :class="['status-badge', `status-${job.status.toLowerCase()}`]">
+                      {{ job.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <span v-if="job.status === 'Completed' || job.status === 'Failed'">{{ job.currentStepText }}</span>
+                    <div v-else class="table-progress">
+                      <div class="progress-bar-track tiny">
+                        <div class="progress-bar-fill" :style="{ width: job.progressPercent + '%' }" />
+                      </div>
+                      <span class="progress-sub">{{ job.progressPercent }}%</span>
+                    </div>
+                  </td>
+                  <td>{{ new Date(job.createdAt).toLocaleTimeString() }}</td>
+                  <td>
+                    <button
+                      v-if="job.status === 'Completed'"
+                      type="button"
+                      class="btn btn-xs btn-primary"
+                      @click="exportJobsStore.downloadArtifact(job.jobId, job.downloadUrl)"
+                    >
+                      📥 Download
+                    </button>
+                    <span v-else-if="job.status === 'Failed'" class="text-error">Error</span>
+                    <span v-else class="text-muted">In Progress</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -699,6 +764,9 @@
 <script setup>
 import { ref, computed } from "vue";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import { useExportJobsStore } from "../stores/exportJobs.js";
+
+const exportJobsStore = useExportJobsStore();
 
 const STEPS = [
   { number: 1, title: "Target Format", shortDesc: "XPT, ODM, JSON, CSV" },
@@ -1093,72 +1161,26 @@ function toggleCohort(arm) {
 }
 
 async function startExportPipeline() {
-  // #4827: the package below is a hardcoded sample, not an export of study data. Only a demo build builds it.
   if (!allowUnbackedAction("Exporting study data")) return;
   exportStatus.value = "processing";
-  progressPercent.value = 15;
-  progressStepText.value =
-    "Extracting clinical observations from PostgreSQL execution ledger...";
-
-  const extMap = {
-    xpt_v5: ".xpt",
-    xpt_v8: ".xpt",
-    odm_xml: ".xml",
-    dataset_json: ".json",
-    csv_zip: ".zip",
-  };
-  downloadFileName.value = `${studyId.value.toLowerCase()}_${selectedFormat.value}${extMap[selectedFormat.value] || ".dat"}`;
-
   try {
-    // Step-by-step progress update
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    progressPercent.value = 45;
-    progressStepText.value =
-      "Applying deterministic HMAC-SHA256 pseudonymization and date shifts...";
-
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    progressPercent.value = 75;
-    progressStepText.value = `Serializing to ${formatNameById(selectedFormat.value)} standard...`;
-
-    // Create a mock client-side Blob or fetch from API if reachable
-    let blobContent;
-    let mimeType = "application/json";
-
-    if (selectedFormat.value === "dataset_json") {
-      const mockResult = {
-        datasetJSONCreationDateTime: new Date().toISOString(),
-        datasetJSONVersion: "1.0.0",
-        studyOID: studyId.value,
-        itemGroupData: {},
-      };
-      selectedDomains.value.forEach((d) => {
-        mockResult.itemGroupData[`IG.${d}`] = {
-          records: 1,
-          name: d,
-          label: `${d} Dataset`,
-        };
-      });
-      blobContent = JSON.stringify(mockResult, null, 2);
-      mimeType = "application/json";
-    } else if (selectedFormat.value === "odm_xml") {
-      blobContent = `<?xml version="1.0" encoding="UTF-8"?>\n<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" ODMVersion="1.3.2" FileType="Snapshot" FileOID="ODM.${studyId.value}"><Study OID="${studyId.value}"><GlobalVariables><StudyName>${studyId.value}</StudyName></GlobalVariables></Study></ODM>`;
-      mimeType = "application/xml";
-    } else {
-      blobContent = `STUDYID,DOMAIN,USUBJID,ARM\n${studyId.value},DM,SUBJ-001,Active Arm`;
-      mimeType = "text/csv";
-    }
-
-    const blob = new Blob([blobContent], { type: mimeType });
-    downloadBlobUrl.value = URL.createObjectURL(blob);
-
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    progressPercent.value = 100;
-    progressStepText.value = "Export package verified and ready for download.";
-    exportStatus.value = "success";
+    await exportJobsStore.submitExportJob({
+      studyId: studyId.value,
+      format: selectedFormat.value,
+      domains: selectedDomains.value,
+      datasets: selectedDatasets.value,
+      sites: selectedSites.value,
+      cohorts: selectedCohorts.value,
+      privacyProfile: privacyProfile.value,
+      hmacSalt: hmacSalt.value,
+      recordLockFilter: recordLockFilter.value,
+      includeAuditTrail: includeAuditTrail.value,
+      includeUnmapped: includeUnmapped.value,
+    });
   } catch (err) {
     exportStatus.value = "error";
     errorMessage.value =
-      err.message || "An unexpected error occurred during export generation.";
+      err.message || "An unexpected error occurred during background export job submission.";
   }
 }
 
@@ -1753,5 +1775,96 @@ function resetExport() {
 }
 .mt-4 {
   margin-top: 16px;
+}
+
+.unblocked-nav-banner {
+  font-size: 0.8rem;
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 8px 14px;
+  max-width: 500px;
+}
+
+.recent-jobs-panel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.jobs-table-container {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.jobs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.jobs-table th,
+.jobs-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.jobs-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-queued {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-processing {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status-completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.progress-bar-track.tiny {
+  width: 100px;
+  height: 4px;
+  margin: 0;
+}
+
+.table-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.btn-xs {
+  padding: 2px 8px;
+  font-size: 0.75rem;
 }
 </style>

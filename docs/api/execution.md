@@ -6,6 +6,10 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/execution/cec/dossiers/{id}` | GetCecDossierById |  |
 | `POST` | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate` | ChairAdjudicateDossier |  |
+| `GET` | `/api/v1/execution/exports` | ListExportJobs |  |
+| `POST` | `/api/v1/execution/exports` | SubmitExportJob |  |
+| `GET` | `/api/v1/execution/exports/{id}` | GetExportJob |  |
+| `GET` | `/api/v1/execution/exports/{id}/download` | DownloadExportArtifact |  |
 | `POST` | `/api/v1/execution/forms` | CreateFormSubmission |  |
 | `GET` | `/api/v1/execution/forms/subject/{studyId}/{subjectId}` | ListFormSubmissionsBySubject |  |
 | `GET` | `/api/v1/execution/forms/{id}` | GetFormSubmissionById |  |
