@@ -1,5 +1,7 @@
+using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -9,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<EtmfDbContext>();
 
 var app = builder.Build();
@@ -19,6 +22,8 @@ app.MapCadenceHealthAndStatusEndpoints(
     "etmf",
     "eTMF operations health probe.",
     "Returns eTMF operational status.");
+
+app.MapEtmfEndpoints();
 
 await app.RunAsync();
 

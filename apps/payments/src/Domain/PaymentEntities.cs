@@ -296,6 +296,7 @@ public class ParticipantWallet
     public string? VirtualCardMask { get; set; }
     public string? VirtualCardExpiry { get; set; }
     public decimal? AntiCoercionCap { get; set; }
+    public decimal? AutoDisbursementThreshold { get; set; }
     /// <summary>
     /// The payment processor's opaque reference for the participant's bank account. Routing and account numbers
     /// are held by the processor and are not stored here; only their masks are (#4770). Encrypted at rest.
@@ -309,5 +310,84 @@ public class ParticipantWallet
     public required string CreatedBy { get; set; }
     public required DateTimeOffset UpdatedAt { get; set; }
     public string? ReasonForChange { get; set; }
+    public int VersionIndex { get; set; } = 1;
+}
+
+public class ParticipantStipendRule
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string StudyId { get; set; } = string.Empty;
+    public string VisitCode { get; set; } = string.Empty;
+    public string VisitName { get; set; } = string.Empty;
+    public string? ProcedureCode { get; set; }
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = "USD";
+    public bool RequiresVerification { get; set; } = true;
+    public bool Taxable { get; set; }
+    public decimal? AntiCoercionCap { get; set; }
+    public decimal? AutoDisbursementThreshold { get; set; }
+    public bool IsMilestone { get; set; }
+    public string? MilestoneCode { get; set; }
+    public bool IsActive { get; set; } = true;
+    public required DateTimeOffset CreatedAt { get; set; }
+    public required string CreatedBy { get; set; }
+    public required DateTimeOffset UpdatedAt { get; set; }
+    public string? ReasonForChange { get; set; }
+    public int VersionIndex { get; set; } = 1;
+}
+
+public class ParticipantTransaction
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string WalletId { get; set; } = string.Empty;
+    public string SubjectId { get; set; } = string.Empty;
+    public string StudyId { get; set; } = string.Empty;
+    public string TransactionType { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public decimal BalanceAfter { get; set; }
+    public string ReferenceId { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public required DateTimeOffset CreatedAt { get; set; }
+    public required string CreatedBy { get; set; }
+    public int VersionIndex { get; set; } = 1;
+}
+
+public class ParticipantExpenseClaim
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string WalletId { get; set; } = string.Empty;
+    public string SubjectId { get; set; } = string.Empty;
+    public string StudyId { get; set; } = string.Empty;
+    public string SiteId { get; set; } = string.Empty;
+    public string ExpenseDate { get; set; } = string.Empty;
+    public string Category { get; set; } = "TRANSIT";
+    public string MerchantName { get; set; } = string.Empty;
+    public decimal GrossAmount { get; set; }
+    public decimal TaxDeduction { get; set; }
+    public decimal NetAmount { get; set; }
+    public string Status { get; set; } = "PENDING_REVIEW";
+    public string? ReceiptImageName { get; set; }
+    public string? ReceiptOcrDataJson { get; set; }
+    public string? ReviewedBy { get; set; }
+    public DateTimeOffset? ReviewedAt { get; set; }
+    public string? ReviewNotes { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
+    public required string CreatedBy { get; set; }
+    public required DateTimeOffset UpdatedAt { get; set; }
+    public string? ReasonForChange { get; set; }
+    public int VersionIndex { get; set; } = 1;
+}
+
+public class ParticipantDisbursement
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string WalletId { get; set; } = string.Empty;
+    public string SubjectId { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public string DisbursementType { get; set; } = "VIRTUAL_CARD";
+    public string ReferenceNumber { get; set; } = string.Empty;
+    public string Status { get; set; } = "DISPATCHED";
+    public required DateTimeOffset CreatedAt { get; set; }
+    public required string CreatedBy { get; set; }
     public int VersionIndex { get; set; } = 1;
 }

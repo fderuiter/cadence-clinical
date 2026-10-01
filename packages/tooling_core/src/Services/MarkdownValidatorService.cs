@@ -13,10 +13,9 @@ public static class MarkdownValidatorService
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Validating Markdown documentation formatting and workspace links...");
 
-        string docsDir = Path.Combine(repoRoot, "docs");
-
         string[] excludedDirs = [
             $"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}",
+            $"{Path.DirectorySeparatorChar}.agents{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}.venv{Path.DirectorySeparatorChar}",
             $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
@@ -30,10 +29,6 @@ public static class MarkdownValidatorService
         if (files != null && files.Length > 0)
         {
             mdFiles = files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToArray();
-        }
-        else if (Directory.Exists(docsDir))
-        {
-            mdFiles = Directory.GetFiles(docsDir, "*.md", SearchOption.AllDirectories);
         }
         else
         {
@@ -68,7 +63,8 @@ public static class MarkdownValidatorService
             bool inFencedBlock = false;
             for (int i = 0; i < lines.Length; i++)
             {
-                string trimmed = lines[i].TrimStart();
+                string line = lines[i];
+                string trimmed = line.TrimStart();
                 if (trimmed.StartsWith("```") || trimmed.StartsWith("~~~"))
                 {
                     inFencedBlock = !inFencedBlock;
@@ -80,11 +76,24 @@ public static class MarkdownValidatorService
                     continue;
                 }
 
-                if (lines[i].StartsWith('#') && !lines[i].Contains(' '))
+                if (trimmed.StartsWith('#'))
                 {
-                    string relPath = Path.GetRelativePath(repoRoot, file);
-                    Console.WriteLine($"[MARKDOWN FORMAT] {relPath}:{i + 1} - Heading missing space after '#': '{lines[i]}'");
-                    issuesCount++;
+                    int hashCount = 0;
+                    while (hashCount < trimmed.Length && trimmed[hashCount] == '#')
+                    {
+                        hashCount++;
+                    }
+
+                    if (hashCount >= 1 && hashCount <= 6 && hashCount < trimmed.Length)
+                    {
+                        char nextChar = trimmed[hashCount];
+                        if (nextChar != ' ' && nextChar != '\t' && nextChar != '#' && !char.IsDigit(nextChar))
+                        {
+                            string relPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                            Console.WriteLine($"[MARKDOWN FORMAT] {relPath}:{i + 1} - Heading missing space after '#': '{line.Trim()}'");
+                            issuesCount++;
+                        }
+                    }
                 }
             }
         }

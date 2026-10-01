@@ -23,12 +23,12 @@ public static class ApiClientValidatorService
         }
 
         // A spec change without regenerated web types would leave the typed clients compiling against the old API.
-        if (RunInWebDir(webDir, "node", ["scripts/generate-api-types.js", "--check"], "the generated web API types") != 0)
+        if (RunCommand(repoRoot, "pnpm", ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types") != 0)
         {
             return 1;
         }
 
-        if (RunInWebDir(webDir, "pnpm", ["exec", "tsc", "--noEmit"], "the web API clients") != 0)
+        if (RunCommand(repoRoot, "pnpm", ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
         {
             return 1;
         }
@@ -37,11 +37,11 @@ public static class ApiClientValidatorService
         return 0;
     }
 
-    private static int RunInWebDir(string webDir, string fileName, string[] arguments, string subject)
+    private static int RunCommand(string workingDir, string fileName, string[] arguments, string subject)
     {
         var psi = new ProcessStartInfo(fileName)
         {
-            WorkingDirectory = webDir,
+            WorkingDirectory = workingDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
