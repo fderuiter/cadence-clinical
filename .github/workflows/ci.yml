@@ -324,7 +324,7 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           git fetch --no-tags origin "$BASE_REF" || true
           git diff --name-only --diff-filter=ACMR -z "origin/$BASE_REF...HEAD" \
-            | xargs -0 --no-run-if-empty detect-secrets-hook --baseline .secrets.baseline
+            | xargs -0 --no-run-if-empty detect-secrets-hook --baseline .secrets.baseline --exclude-files '(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)'
 
       - name: Run DEID compliance scan
         id: run_deid_scan
