@@ -56,6 +56,8 @@ K-MOD-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Domain.TumorResponseAssessment
 K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.ClinicalQuery.StudyId
 K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DeviceRegistrationRecord.SiteId
 K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DeviceRegistrationRecord.StudyId
+K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DtpShipmentRecord.SiteId
+K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DtpShipmentRecord.StudyId
 K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.EhrReconciliationCandidateRecord.SiteId
 K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.EhrReconciliationCandidateRecord.StudyId
 K-MOD-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.SensorDailySummaryRecord.SiteId
@@ -182,6 +184,12 @@ K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cec.CecDossier.SiteI
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cec.CecDossier.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ClinicalObservation.LabSiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ObservationAdditionalProperties.LabSiteId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Endpoints.ColdChainIngestRequest.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Endpoints.ColdChainLoggerRegistrationRequest.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Endpoints.ColdChainLoggerResponse.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Endpoints.ExcursionEvaluationResponse.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Endpoints.ResupplyEventResponse.SiteId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Endpoints.ResupplyEventResponse.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Infrastructure.Consumers.EConsentCompletedEvent.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Infrastructure.Consumers.EConsentCompletedEvent.StudyId
 K-XS-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileAuditLog
@@ -207,6 +215,12 @@ K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.IngestInstanceRequest.
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.ClinicalQuery.StudyId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DeviceRegistrationRecord.SiteId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DeviceRegistrationRecord.StudyId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DtpShipmentCreateRequest.SiteId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DtpShipmentCreateRequest.StudyId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DtpShipmentDto.SiteId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DtpShipmentDto.StudyId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DtpShipmentRecord.SiteId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.DtpShipmentRecord.StudyId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.EhrReconciliationCandidateRecord.SiteId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.EhrReconciliationCandidateRecord.StudyId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.InteropAuditLog

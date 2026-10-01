@@ -454,6 +454,126 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/rtsm/cold-chain/loggers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List registered temperature loggers */
+    get: operations["ListTemperatureLoggers"];
+    put?: never;
+    /** Register temperature logger device */
+    post: operations["RegisterTemperatureLogger"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cold-chain/evaluate-mkt": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Direct Arrhenius Mean Kinetic Temperature (MKT) calculation per USP <1079> */
+    post: operations["EvaluateMktDirect"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cold-chain/ingest": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Ingest temperature logger file or data points and evaluate MKT */
+    post: operations["IngestTemperatureLoggerData"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cold-chain/evaluations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists cold chain excursion evaluation audit records */
+    get: operations["ListExcursionEvaluations"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/resupply-events": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List automated RTSM resupply events */
+    get: operations["ListResupplyEvents"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/resupply-events/{eventId}/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Approve a resupply event to trigger shipment generation */
+    post: operations["ApproveResupplyEvent"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/resupply-events/{eventId}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Reject a resupply event */
+    post: operations["RejectResupplyEvent"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -559,6 +679,27 @@ export interface components {
        */
       version: number | string;
     };
+    Execution_ColdChainIngestRequest: {
+      study_id: string;
+      logger_id: string;
+      readings: components["schemas"]["Execution_TemperatureReadingInputDto"][];
+    };
+    Execution_ColdChainLoggerRegistrationRequest: {
+      study_id: string;
+      logger_id: string;
+      bound_entity_type: string;
+      bound_entity_id: string;
+      /**
+       * Format: double
+       * @default 2
+       */
+      min_allowed_temp_celsius: number | string;
+      /**
+       * Format: double
+       * @default 8
+       */
+      max_allowed_temp_celsius: number | string;
+    };
     Execution_ComplianceStatusResponse: {
       study_id: components["schemas"]["Execution_StudyCode"];
       site_id: null | components["schemas"]["Execution_SiteCode"];
@@ -636,6 +777,14 @@ export interface components {
       errors?: {
         [key: string]: string[];
       };
+    };
+    Execution_MktCalculationDirectRequest: {
+      temperatures_celsius: (number | string)[];
+      /**
+       * Format: double
+       * @default 10000
+       */
+      activation_energy_over_r: number | string;
     };
     Execution_ObservationCreateRequest: {
       subject_id: string;
@@ -759,6 +908,10 @@ export interface components {
       | "CLOSED"
       | "REOPENED"
       | "CANCELLED";
+    Execution_ResupplyEventApprovalRequest: {
+      /** @default Resupply order reviewed and approved */
+      notes: string;
+    };
     Execution_SignatureManifest: {
       signer_id: string;
       signer_name: string;
@@ -857,6 +1010,14 @@ export interface components {
       active_protocol_version: string;
       /** Format: int32 */
       enrollment_index: number | string;
+    };
+    Execution_TemperatureReadingInputDto: {
+      /** Format: date-time */
+      timestamp_utc: string;
+      /** Format: double */
+      temperature_celsius: number | string;
+      /** @default LOGGER-01 */
+      logger_id: string;
     };
   };
   responses: never;
@@ -2132,6 +2293,180 @@ export interface operations {
         content: {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
+      };
+    };
+  };
+  ListTemperatureLoggers: {
+    parameters: {
+      query?: {
+        study_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RegisterTemperatureLogger: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_ColdChainLoggerRegistrationRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  EvaluateMktDirect: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_MktCalculationDirectRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  IngestTemperatureLoggerData: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_ColdChainIngestRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ListExcursionEvaluations: {
+    parameters: {
+      query?: {
+        study_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ListResupplyEvents: {
+    parameters: {
+      query?: {
+        study_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  ApproveResupplyEvent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_ResupplyEventApprovalRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  RejectResupplyEvent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        eventId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_ResupplyEventApprovalRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
     };
   };

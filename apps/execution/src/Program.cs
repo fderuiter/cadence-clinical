@@ -249,6 +249,7 @@ app.MapObservationEndpoints();
 app.MapFormEndpoints();
 app.MapQueryEndpoints();
 app.MapCecEndpoints();
+app.MapRtsmColdChainEndpoints();
 
 if (args.Contains("--seed"))
 {

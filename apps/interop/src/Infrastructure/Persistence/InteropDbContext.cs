@@ -27,6 +27,7 @@ public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options)
     public DbSet<SensorTelemetryStreamRecord> SensorTelemetryStreamRecords => Set<SensorTelemetryStreamRecord>();
     public DbSet<SensorDailySummaryRecord> SensorDailySummaryRecords => Set<SensorDailySummaryRecord>();
     public DbSet<SensorSafetyAlertRecord> SensorSafetyAlertRecords => Set<SensorSafetyAlertRecord>();
+    public DbSet<DtpShipmentRecord> DTPShipments => Set<DtpShipmentRecord>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -47,6 +48,7 @@ public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options)
         modelBuilder.ApplyConfiguration(new SensorTelemetryStreamRecordConfiguration());
         modelBuilder.ApplyConfiguration(new SensorDailySummaryRecordConfiguration());
         modelBuilder.ApplyConfiguration(new SensorSafetyAlertRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new DtpShipmentRecordConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
     }
 }

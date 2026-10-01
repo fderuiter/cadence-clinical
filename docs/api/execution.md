@@ -25,6 +25,14 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/queries/{id}/close` | CloseClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/{id}/reopen` | ReopenClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/{id}/respond` | RespondClinicalQuery |  |
+| `POST` | `/api/v1/execution/rtsm/cold-chain/evaluate-mkt` | EvaluateMktDirect | Direct Arrhenius Mean Kinetic Temperature (MKT) calculation per USP <1079> |
+| `GET` | `/api/v1/execution/rtsm/cold-chain/evaluations` | ListExcursionEvaluations | Lists cold chain excursion evaluation audit records |
+| `POST` | `/api/v1/execution/rtsm/cold-chain/ingest` | IngestTemperatureLoggerData | Ingest temperature logger file or data points and evaluate MKT |
+| `GET` | `/api/v1/execution/rtsm/cold-chain/loggers` | ListTemperatureLoggers | List registered temperature loggers |
+| `POST` | `/api/v1/execution/rtsm/cold-chain/loggers` | RegisterTemperatureLogger | Register temperature logger device |
+| `GET` | `/api/v1/execution/rtsm/resupply-events` | ListResupplyEvents | List automated RTSM resupply events |
+| `POST` | `/api/v1/execution/rtsm/resupply-events/{eventId}/confirm` | ApproveResupplyEvent | Approve a resupply event to trigger shipment generation |
+| `POST` | `/api/v1/execution/rtsm/resupply-events/{eventId}/reject` | RejectResupplyEvent | Reject a resupply event |
 | `POST` | `/api/v1/execution/sites/{siteId}/activate` | ActivateSite |  |
 | `GET` | `/api/v1/execution/sites/{siteId}/compliance-status` | GetSiteComplianceStatus |  |
 | `GET` | `/api/v1/execution/subjects` | ListSubjects | Lists one page of a study's subjects in enrollment order. |

@@ -1726,6 +1726,213 @@
           }
         }
       }
+    },
+    "/api/v1/execution/rtsm/cold-chain/loggers": {
+      "get": {
+        "tags": [
+          "RTSM Cold Chain \u0026 Resupply"
+        ],
+        "summary": "List registered temperature loggers",
+        "operationId": "ListTemperatureLoggers",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "RTSM Cold Chain \u0026 Resupply"
+        ],
+        "summary": "Register temperature logger device",
+        "operationId": "RegisterTemperatureLogger",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ColdChainLoggerRegistrationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cold-chain/evaluate-mkt": {
+      "post": {
+        "tags": [
+          "RTSM Cold Chain \u0026 Resupply"
+        ],
+        "summary": "Direct Arrhenius Mean Kinetic Temperature (MKT) calculation per USP \u003C1079\u003E",
+        "operationId": "EvaluateMktDirect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_MktCalculationDirectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cold-chain/ingest": {
+      "post": {
+        "tags": [
+          "RTSM Cold Chain \u0026 Resupply"
+        ],
+        "summary": "Ingest temperature logger file or data points and evaluate MKT",
+        "operationId": "IngestTemperatureLoggerData",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ColdChainIngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cold-chain/evaluations": {
+      "get": {
+        "tags": [
+          "RTSM Cold Chain \u0026 Resupply"
+        ],
+        "summary": "Lists cold chain excursion evaluation audit records",
+        "operationId": "ListExcursionEvaluations",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/resupply-events": {
+      "get": {
+        "tags": [
+          "RTSM Cold Chain \u0026 Resupply"
+        ],
+        "summary": "List automated RTSM resupply events",
+        "operationId": "ListResupplyEvents",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/resupply-events/{eventId}/confirm": {
+      "post": {
+        "tags": [
+          "RTSM Cold Chain \u0026 Resupply"
+        ],
+        "summary": "Approve a resupply event to trigger shipment generation",
+        "operationId": "ApproveResupplyEvent",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ResupplyEventApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/resupply-events/{eventId}/reject": {
+      "post": {
+        "tags": [
+          "RTSM Cold Chain \u0026 Resupply"
+        ],
+        "summary": "Reject a resupply event",
+        "operationId": "RejectResupplyEvent",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ResupplyEventApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2177,6 +2384,69 @@
           }
         }
       },
+      "Execution_ColdChainIngestRequest": {
+        "required": [
+          "study_id",
+          "logger_id",
+          "readings"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "logger_id": {
+            "type": "string"
+          },
+          "readings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_TemperatureReadingInputDto"
+            }
+          }
+        }
+      },
+      "Execution_ColdChainLoggerRegistrationRequest": {
+        "required": [
+          "study_id",
+          "logger_id",
+          "bound_entity_type",
+          "bound_entity_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "logger_id": {
+            "type": "string"
+          },
+          "bound_entity_type": {
+            "type": "string"
+          },
+          "bound_entity_id": {
+            "type": "string"
+          },
+          "min_allowed_temp_celsius": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double",
+            "default": 2
+          },
+          "max_allowed_temp_celsius": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double",
+            "default": 8
+          }
+        }
+      },
       "Execution_ComplianceStatusResponse": {
         "required": [
           "study_id",
@@ -2512,6 +2782,34 @@
                 "type": "string"
               }
             }
+          }
+        }
+      },
+      "Execution_MktCalculationDirectRequest": {
+        "required": [
+          "temperatures_celsius"
+        ],
+        "type": "object",
+        "properties": {
+          "temperatures_celsius": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+              "type": [
+                "number",
+                "string"
+              ],
+              "format": "double"
+            }
+          },
+          "activation_energy_over_r": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double",
+            "default": 10000
           }
         }
       },
@@ -3032,6 +3330,15 @@
         ],
         "type": "string"
       },
+      "Execution_ResupplyEventApprovalRequest": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string",
+            "default": "Resupply order reviewed and approved"
+          }
+        }
+      },
       "Execution_SignatureManifest": {
         "required": [
           "signer_id",
@@ -3474,6 +3781,31 @@
             "format": "int32"
           }
         }
+      },
+      "Execution_TemperatureReadingInputDto": {
+        "required": [
+          "timestamp_utc",
+          "temperature_celsius"
+        ],
+        "type": "object",
+        "properties": {
+          "timestamp_utc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "temperature_celsius": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "logger_id": {
+            "type": "string",
+            "default": "LOGGER-01"
+          }
+        }
       }
     }
   },
@@ -3498,6 +3830,9 @@
     },
     {
       "name": "CecEndpoints"
+    },
+    {
+      "name": "RTSM Cold Chain \u0026 Resupply"
     }
   ]
 }

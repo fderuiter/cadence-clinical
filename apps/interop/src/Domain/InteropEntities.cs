@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Cadence.Apps.Interop.Domain;
 
@@ -287,3 +288,96 @@ public class SensorSafetyAlertRecord
     public string? AuditSignature { get; set; }
     public required DateTimeOffset CreatedAt { get; set; }
 }
+
+public class DtpShipmentRecord
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string ShipmentId { get; set; } = string.Empty;
+    public string TrackingNumber { get; set; } = string.Empty;
+    public string CourierName { get; set; } = "World Courier";
+    public string StudyId { get; set; } = string.Empty;
+    public string SiteId { get; set; } = string.Empty;
+    public string SubjectPseudonymId { get; set; } = string.Empty;
+    public string DestinationAddressPseudonym { get; set; } = string.Empty;
+    public string TemperatureZone { get; set; } = "REFRIGERATED";
+    public string KitSerialsJson { get; set; } = "[]";
+    public string TamperSealId { get; set; } = string.Empty;
+    public string Status { get; set; } = "COURIER_DISPATCHED";
+    public double CurrentTempCelsius { get; set; } = 5.0;
+    public double MinTempCelsius { get; set; } = 5.0;
+    public double MaxTempCelsius { get; set; } = 5.0;
+    public double MktCelsius { get; set; } = 5.0;
+    public string ExcursionSeverity { get; set; } = "NONE";
+    public string CustodyHandoffsJson { get; set; } = "[]";
+    public string TemperatureReadingsJson { get; set; } = "[]";
+    public string? DeliverySignatureJson { get; set; }
+    public double MinAllowedTemp { get; set; } = 2.0;
+    public double MaxAllowedTemp { get; set; } = 8.0;
+    public string? ReplacementDispatchId { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = "DTP Courier Shipment Dispatch";
+    public int VersionIndex { get; set; } = 1;
+}
+
+public record DtpShipmentCreateRequest(
+    string StudyId,
+    string SiteId,
+    string SubjectPseudonymId,
+    string DestinationAddressPseudonym,
+    string TamperSealId,
+    List<string> KitSerials,
+    string CourierName = "World Courier",
+    string TemperatureZone = "REFRIGERATED");
+
+public record TemperatureReadingDto(
+    DateTimeOffset TimestampUtc,
+    double TemperatureCelsius,
+    string LoggerId = "LOGGER-01",
+    double BatteryPercent = 100.0);
+
+public record TemperatureIngestRequest(
+    List<TemperatureReadingDto> Readings);
+
+public record CustodyHandoffRequest(
+    string FromParty,
+    string ToPhase,
+    string HandedOverBy,
+    string VerificationSeal);
+
+public record DeliveryConfirmRequest(
+    string RecipientName,
+    string SignatureToken,
+    string DeliveryNotes);
+
+public record DtpShipmentDto(
+    string ShipmentId,
+    string TrackingNumber,
+    string CourierName,
+    string StudyId,
+    string SiteId,
+    string SubjectPseudonymId,
+    string DestinationAddressPseudonym,
+    string TemperatureZone,
+    List<string> KitSerials,
+    string TamperSealId,
+    string Status,
+    double CurrentTempCelsius,
+    double MinTempCelsius,
+    double MaxTempCelsius,
+    double MktCelsius,
+    string ExcursionSeverity,
+    List<object> CustodyHandoffs,
+    List<object> TemperatureReadings,
+    object? DeliverySignature,
+    DateTimeOffset CreatedAt);
+
+public record DtpShipmentListResponse(
+    bool Success,
+    List<DtpShipmentDto> Shipments,
+    int Total);
+
+public record DtpShipmentResponse(
+    bool Success,
+    DtpShipmentDto Shipment,
+    string Message = "DTP shipment processed successfully");

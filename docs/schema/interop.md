@@ -9,6 +9,7 @@ Generated from the EF Core model of `Cadence.Apps.Interop.Infrastructure.Persist
 | [`interop.audit_log_entries`](#interopaudit_log_entries) | `AuditLogEntry` | 11 |
 | [`interop.clinical_queries`](#interopclinical_queries) | `ClinicalQuery` | 10 |
 | [`interop.device_registrations`](#interopdevice_registrations) | `DeviceRegistrationRecord` | 20 |
+| [`interop.dtp_shipments`](#interopdtp_shipments) | `DtpShipmentRecord` | 27 |
 | [`interop.ehr_endpoints`](#interopehr_endpoints) | `EhrEndpointRecord` | 15 |
 | [`interop.ehr_reconciliation_candidates`](#interopehr_reconciliation_candidates) | `EhrReconciliationCandidateRecord` | 32 |
 | [`interop.epro_defeated_submissions`](#interopepro_defeated_submissions) | `EproSubmissionDefeated` | 8 |
@@ -103,6 +104,49 @@ Indexes:
 - `IX_device_registrations_StudyId`: (`StudyId`)
 - `IX_device_registrations_SubjectId`: (`SubjectId`)
 - `IX_device_registrations_UdiDi`: (`UdiDi`)
+
+## interop.dtp_shipments
+
+Entity: `DtpShipmentRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `CourierName` | `character varying(100)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `CurrentTempCelsius` | `double precision` | no |  |  |
+| `CustodyHandoffsJson` | `jsonb` | no |  |  |
+| `DeliverySignatureJson` | `jsonb` | yes |  |  |
+| `DestinationAddressPseudonym` | `character varying(255)` | no |  |  |
+| `ExcursionSeverity` | `character varying(50)` | no |  |  |
+| `KitSerialsJson` | `jsonb` | no |  |  |
+| `MaxAllowedTemp` | `double precision` | no |  |  |
+| `MaxTempCelsius` | `double precision` | no |  |  |
+| `MinAllowedTemp` | `double precision` | no |  |  |
+| `MinTempCelsius` | `double precision` | no |  |  |
+| `MktCelsius` | `double precision` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `ReplacementDispatchId` | `character varying(100)` | yes |  |  |
+| `ShipmentId` | `character varying(100)` | no |  |  |
+| `SiteId` | `character varying(255)` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectPseudonymId` | `character varying(255)` | no |  |  |
+| `TamperSealId` | `character varying(100)` | no |  |  |
+| `TemperatureReadingsJson` | `jsonb` | no |  |  |
+| `TemperatureZone` | `character varying(50)` | no |  |  |
+| `TrackingNumber` | `character varying(100)` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+
+Indexes:
+
+- `IX_dtp_shipments_ShipmentId`: unique (`ShipmentId`)
+- `IX_dtp_shipments_SiteId`: (`SiteId`)
+- `IX_dtp_shipments_Status`: (`Status`)
+- `IX_dtp_shipments_StudyId`: (`StudyId`)
+- `IX_dtp_shipments_SubjectPseudonymId`: (`SubjectPseudonymId`)
+- `IX_dtp_shipments_TrackingNumber`: unique (`TrackingNumber`)
 
 ## interop.ehr_endpoints
 

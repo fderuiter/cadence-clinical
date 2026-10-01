@@ -29,6 +29,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Returns Interoperability operational status.");
 
 app.MapEsourceEndpoints();
+app.MapDtpShipmentEndpoints();
 
 await app.RunAsync();
 

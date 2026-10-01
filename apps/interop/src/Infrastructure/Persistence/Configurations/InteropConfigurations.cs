@@ -341,3 +341,37 @@ public class SensorSafetyAlertRecordConfiguration : IEntityTypeConfiguration<Sen
         builder.Property(x => x.AuditSignature).HasMaxLength(255);
     }
 }
+
+public class DtpShipmentRecordConfiguration : IEntityTypeConfiguration<DtpShipmentRecord>
+{
+    public void Configure(EntityTypeBuilder<DtpShipmentRecord> builder)
+    {
+        builder.ToTable("dtp_shipments");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.ShipmentId).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.ShipmentId).IsUnique();
+        builder.Property(x => x.TrackingNumber).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.TrackingNumber).IsUnique();
+        builder.Property(x => x.CourierName).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.StudyId);
+        builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.SiteId);
+        builder.Property(x => x.SubjectPseudonymId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.SubjectPseudonymId);
+        builder.Property(x => x.DestinationAddressPseudonym).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.TemperatureZone).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.KitSerialsJson).HasColumnType("jsonb");
+        builder.Property(x => x.TamperSealId).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.Status);
+        builder.Property(x => x.ExcursionSeverity).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.CustodyHandoffsJson).HasColumnType("jsonb");
+        builder.Property(x => x.TemperatureReadingsJson).HasColumnType("jsonb");
+        builder.Property(x => x.DeliverySignatureJson).HasColumnType("jsonb");
+        builder.Property(x => x.ReplacementDispatchId).HasMaxLength(100);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}
