@@ -36,4 +36,8 @@ public static class ServiceAccounts
     /// <summary>The eConsent-completed consumer that auto-enrolls subjects and backfills consent records.</summary>
     public static readonly ServiceAccount EConsentConsumer =
         new("svc:econsent-consumer", "Automated consent-completion enrollment");
+
+    /// <summary>The rule engine and query dispatch worker that issues auto-queries and resolves queries upon data correction.</summary>
+    public static readonly ServiceAccount AutoQueryEngine =
+        new("svc:auto-query-engine", "Automated query dispatch and resolution");
 }
