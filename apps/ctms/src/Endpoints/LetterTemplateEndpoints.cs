@@ -9,10 +9,6 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
-using Cadence.Apps.Etmf.Domain;
-using Cadence.Apps.Etmf.Infrastructure.Persistence;
-using Cadence.Apps.Notifications.Domain;
-using Cadence.Apps.Notifications.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
@@ -128,7 +124,7 @@ public static class LetterTemplateEndpoints
         string? etmfDocId = null;
         if (pdfResult.IsSigned)
         {
-            var etmfDb = serviceProvider.GetService<EtmfDbContext>();
+            var etmfDb = serviceProvider.GetService<Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext>();
             var etmfDoc = await EtmfFilingHelper.FileToEtmfAsync(request, pdfResult, templateName, letterId, etmfDb, clock, user, ct);
             etmfDocId = etmfDoc?.Id;
         }
@@ -138,7 +134,7 @@ public static class LetterTemplateEndpoints
         string? recipientEmail = null;
         if (pdfResult.IsSigned)
         {
-            var notifDb = serviceProvider.GetService<NotificationsDbContext>();
+            var notifDb = serviceProvider.GetService<Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext>();
             var notifRecord = await EmailDispatchHelper.DispatchEmailNotificationAsync(request, pdfResult, templateName, letterId, notifDb, clock, user, ct);
             if (notifRecord is not null)
             {
@@ -399,12 +395,12 @@ public static class EtmfFilingHelper
     /// <summary>
     /// Ingests a finalized visit letter PDF into the eTMF repository.
     /// </summary>
-    public static async Task<TmfDocument?> FileToEtmfAsync(
+    public static async Task<Cadence.Apps.Etmf.Domain.TmfDocument?> FileToEtmfAsync(
         SiteVisitLetterModel request,
         GxpPdfResult pdfResult,
         string templateName,
         string letterId,
-        EtmfDbContext? etmfDb,
+        Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext? etmfDb,
         IClock clock,
         string user,
         CancellationToken ct)
@@ -415,7 +411,7 @@ public static class EtmfFilingHelper
         var docId = "DOC-CTMS-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         var filename = $"{templateName}_{request.SiteId}_{request.StudyId}_{letterId}.pdf";
 
-        var tmfDoc = new TmfDocument(docId)
+        var tmfDoc = new Cadence.Apps.Etmf.Domain.TmfDocument(docId)
         {
             StudyId = request.StudyId,
             SiteId = request.SiteId,
@@ -444,7 +440,7 @@ public static class EtmfFilingHelper
 
         etmfDb.TmfDocuments.Add(tmfDoc);
 
-        var auditLog = new TmfAuditLog
+        var auditLog = new Cadence.Apps.Etmf.Domain.TmfAuditLog
         {
             Timestamp = now,
             UserId = user,
@@ -469,12 +465,12 @@ public static class EmailDispatchHelper
     /// <summary>
     /// Dispatches an email notification with secure PDF access link to site investigator.
     /// </summary>
-    public static async Task<NotificationRecord?> DispatchEmailNotificationAsync(
+    public static async Task<Cadence.Apps.Notifications.Domain.NotificationRecord?> DispatchEmailNotificationAsync(
         SiteVisitLetterModel request,
         GxpPdfResult pdfResult,
         string templateName,
         string letterId,
-        NotificationsDbContext? notificationsDb,
+        Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext? notificationsDb,
         IClock clock,
         string user,
         CancellationToken ct)
@@ -496,7 +492,7 @@ public static class EmailDispatchHelper
         var notificationId = "NOTIF-CTMS-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         var pdfAccessUrl = $"/api/v1/ctms/letters/{letterId}/pdf";
 
-        var record = new NotificationRecord
+        var record = new Cadence.Apps.Notifications.Domain.NotificationRecord
         {
             Id = notificationId,
             RecipientUserId = recipientEmail,
@@ -518,7 +514,7 @@ public static class EmailDispatchHelper
 
         notificationsDb.NotificationRecords.Add(record);
 
-        var delivery = new NotificationDelivery
+        var delivery = new Cadence.Apps.Notifications.Domain.NotificationDelivery
         {
             Id = Guid.NewGuid().ToString(),
             NotificationId = notificationId,

@@ -140,6 +140,101 @@
         }
       }
     },
+    "/api/v1/ctms/letters/compile": {
+      "post": {
+        "tags": [
+          "LetterTemplateEndpoints"
+        ],
+        "summary": "Compiles a GxP-compliant PDF visit letter with Part 11 electronic signature, eTMF filing, and automated email dispatch.",
+        "operationId": "CompileSiteVisitLetterPdf",
+        "parameters": [
+          {
+            "name": "templateName",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_SiteVisitLetterModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_VisitLetterCompilationResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/letters/{letterId}/pdf": {
+      "get": {
+        "tags": [
+          "LetterTemplateEndpoints"
+        ],
+        "summary": "Downloads or views the compiled GxP PDF visit letter.",
+        "operationId": "GetSiteVisitLetterPdf",
+        "parameters": [
+          {
+            "name": "letterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies": {
       "get": {
         "tags": [
@@ -6217,6 +6312,102 @@
             "items": {
               "$ref": "#/components/schemas/Ctms_SiteVisitFindingModel"
             }
+          },
+          "visitId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "finalize": {
+            "type": "boolean",
+            "default": false
+          },
+          "signerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signingPurpose": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "investigatorEmail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_VisitLetterCompilationResultDto": {
+        "required": [
+          "letterId",
+          "visitId",
+          "letterType",
+          "pdfSha256Hash",
+          "pdfObjectKey",
+          "isSigned",
+          "status",
+          "signatureManifestation",
+          "etmfDocumentId",
+          "dispatchedAt",
+          "pdfAccessUrl",
+          "pdfBase64"
+        ],
+        "type": "object",
+        "properties": {
+          "letterId": {
+            "type": "string"
+          },
+          "visitId": {
+            "type": "string"
+          },
+          "letterType": {
+            "type": "string"
+          },
+          "pdfSha256Hash": {
+            "type": "string"
+          },
+          "pdfObjectKey": {
+            "type": "string"
+          },
+          "isSigned": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "signatureManifestation": {
+            "type": "string"
+          },
+          "etmfDocumentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dispatchedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "pdfAccessUrl": {
+            "type": "string"
+          },
+          "pdfBase64": {
+            "type": "string"
           }
         }
       },
