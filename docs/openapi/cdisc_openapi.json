@@ -2407,6 +2407,159 @@
         }
       }
     },
+    "/api/v1/execution/exports": {
+      "post": {
+        "tags": [
+          "Exports"
+        ],
+        "operationId": "SubmitExportJob",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ExportJobCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ExportJobResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "operationId": "ListExportJobs",
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_ExportJobResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/exports/{id}": {
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "operationId": "GetExportJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ExportJobResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/exports/{id}/download": {
+      "get": {
+        "tags": [
+          "Exports"
+        ],
+        "operationId": "DownloadExportArtifact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fileshare/status": {
       "get": {
         "tags": [
@@ -7223,6 +7376,204 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Execution_ExportJobCreateRequest": {
+        "required": [
+          "study_id",
+          "format",
+          "domains",
+          "datasets",
+          "sites",
+          "cohorts",
+          "privacy_profile",
+          "hmac_salt",
+          "record_lock_filter",
+          "include_audit_trail",
+          "include_unmapped"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "domains": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "datasets": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "sites": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "cohorts": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "privacy_profile": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hmac_salt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "record_lock_filter": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "include_audit_trail": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "include_unmapped": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "Execution_ExportJobResponse": {
+        "required": [
+          "job_id",
+          "study_id",
+          "format",
+          "domains",
+          "datasets",
+          "sites",
+          "cohorts",
+          "privacy_profile",
+          "record_lock_filter",
+          "status",
+          "progress_percent",
+          "current_step_text",
+          "download_url",
+          "error_details",
+          "created_at",
+          "completed_at",
+          "expires_at",
+          "created_by"
+        ],
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "datasets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cohorts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "privacy_profile": {
+            "type": "string"
+          },
+          "record_lock_filter": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "progress_percent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "current_step_text": {
+            "type": "string"
+          },
+          "download_url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "error_details": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
           }
         }
       },

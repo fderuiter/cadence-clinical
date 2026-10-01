@@ -106,6 +106,9 @@ out so the report only changes when results change; they are in the TRX files un
 | `ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
 | `ApproveFormSubmission_Handler_WithValidSignature_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
 | `UnlockFormSubmission_Handler_WithAuditReason_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
+| `DatasetJsonEtlService_SerializesDatasetJsonAndOdmXml` | `Cadence.UnitTests.Execution.ExportJobTests` | PRD-SYS-001 | 🟢 PASSED |
+| `ExportArtifact_ExpiresAfter24Hours` | `Cadence.UnitTests.Execution.ExportJobTests` | PRD-SYS-001 | 🟢 PASSED |
+| `SubmitExportJob_Returns202AcceptedWithUniqueJobId_AndWritesAuditLog` | `Cadence.UnitTests.Execution.ExportJobTests` | PRD-SYS-001 | 🟢 PASSED |
 | `NominalFormSubmission_ApprovalAndUnlock_MaintainsRegulatoryIntegrity` | `Cadence.UnitTests.Execution.Forms.FormSubmissionGoldenMasterTests` | SRS-EDC-003 | 🟢 PASSED |
 | `ApproveForm_WithInvalidSigningReason_ReturnsInvalidSigningReasonError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
 | `CompleteAndApprove_LocksFormInReadOnlyState` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
