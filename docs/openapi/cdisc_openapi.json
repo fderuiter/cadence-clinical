@@ -246,6 +246,139 @@
         }
       }
     },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "CaptureConsentVersioned",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Econsent_CaptureConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_CaptureConsentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/capture-consent": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "CaptureConsentLegacy",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Econsent_CaptureConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_CaptureConsentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/eisf/status": {
       "get": {
         "tags": [
@@ -284,6 +417,201 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/classify": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_ClassifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/stage-qc": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_StageDocumentQCRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/qc-queue": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/intelligence/qc-review/{doc_id}": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_CraqcReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "zone",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/ingest": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_IngestDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/taxonomy": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -2571,6 +2899,547 @@
         }
       }
     },
+    "/api/v1/interop/esource/endpoints": {
+      "get": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "ListEhrEndpoints",
+        "parameters": [
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrEndpointListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "RegisterEhrEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrEndpointCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrEndpointRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/smart/assertion": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "GenerateClientAssertion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_SmartAssertionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SmartAssertionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/smart/verify": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "VerifyClientAssertion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_SmartVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SmartVerifyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/poll": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "PollHospitalEhr",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrPollRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrPollResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/ingest": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "IngestFhirBundle",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_FhirBundleIngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_FhirBundleIngestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/candidates": {
+      "get": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "ListCandidates",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrCandidateListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/candidates/{candidate_id}": {
+      "get": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "GetCandidate",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/accept": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "AcceptCandidate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrReconcileAcceptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/reject": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "RejectCandidate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrReconcileRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/query": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "RaiseClinicalQuery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrReconcileQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/provenance/{candidate_id}": {
+      "get": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "GetProvenanceAudit",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrProvenanceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/interop/dct/dtp/shipments": {
       "get": {
         "tags": [
@@ -3860,6 +4729,152 @@
         }
       }
     },
+    "/api/v1/kernel/simulation/simulate": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Evaluates a candidate USDM protocol version in memory without database changes.",
+        "operationId": "KernelSimulateProtocol",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_SimulateProtocolRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_SimulationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/protocols/generate-proposal": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Generates a complete USDM protocol proposal from a trial brief with reasoning lineage.",
+        "operationId": "KernelGenerateProtocolProposal",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_GenerateProtocolProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_GenerativeProtocolProposal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/protocols/matrix-gap-check": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Performs immediate real-time matrix gap check on a candidate protocol design graph.",
+        "operationId": "KernelMatrixGapCheck",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kernel_MatrixGapCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/knowledge/status": {
       "get": {
         "tags": [
@@ -4001,6 +5016,562 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Direct disburse ePRO stipend to participant wallet with strict idempotency and audit trail.",
+        "operationId": "DisburseStipendDirect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseStipendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Disburse stipend to participant wallet.",
+        "operationId": "DisburseStipendWallet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseStipendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List all participant wallets.",
+        "operationId": "ListWallets",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/subject/{subjectId}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve participant wallet balance and details.",
+        "operationId": "GetSubjectWallet",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve participant wallet details by wallet ID.",
+        "operationId": "GetWalletById",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/tax-1099-status": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve IRS 1099 tax status and threshold monitoring tracer.",
+        "operationId": "GetTax1099Status",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/balance": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Real-time balance inquiry for participant wallet.",
+        "operationId": "GetBalanceInquiry",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/issue-card": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Issue or re-issue reloadable debit card for participant wallet.",
+        "operationId": "IssueReloadableCard",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_IssueCardRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Submit Form W-9 taxpayer identification certification.",
+        "operationId": "SubmitW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SubmitW9RequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/verify-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Verify participant Form W-9 submission.",
+        "operationId": "VerifyW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_VerifyW9RequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Disburse digital funds from participant wallet to debit card or bank account.",
+        "operationId": "DisburseParticipantFunds",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseFundsRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/stipend-rules": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List SoA protocol visit stipend compensation rules.",
+        "operationId": "ListStipendRules",
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Configure participant visit compensation rules linked to Schedule of Activities.",
+        "operationId": "CreateStipendRule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_ParticipantStipendRuleCreateDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/events/visit-verified": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules.",
+        "operationId": "IngestVisitVerifiedEvent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_VisitVerificationEventDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List travel and meal expense reimbursement claims.",
+        "operationId": "ListExpenseClaims",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Submit travel/meal expense claim for coordinator review.",
+        "operationId": "SubmitExpenseClaim",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SubmitExpenseClaimRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses/ocr-extract": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Extract metadata from receipt image/text using rule-based OCR engine.",
+        "operationId": "ExtractReceiptOcr",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_OcrExtractRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses/{claimId}/review": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Coordinator 1-click review and approval/rejection of expense claim.",
+        "operationId": "ReviewExpenseClaim",
+        "parameters": [
+          {
+            "name": "claimId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_ReviewExpenseClaimRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/transactions": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List participant wallet transactions ledger.",
+        "operationId": "ListTransactions",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/disbursements": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List digital disbursement dispatches.",
+        "operationId": "ListDisbursements",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/audit-logs": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve payment audit ledger records.",
+        "operationId": "GetPaymentAuditLogs",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -4874,6 +6445,189 @@
           }
         }
       },
+      "Econsent_CaptureConsentRequest": {
+        "required": [
+          "subject_pseudonym",
+          "study_id",
+          "site_id",
+          "signer_name",
+          "signer_email",
+          "signer_role",
+          "meaning",
+          "signing_reason",
+          "protocol_version",
+          "digest_sha256",
+          "signature_data",
+          "device_timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_pseudonym": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signing_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocol_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "digest_sha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_data": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Econsent_CaptureConsentResponse": {
+        "required": [
+          "id",
+          "template_id",
+          "version_index",
+          "subject_pseudonym",
+          "signer_name",
+          "signer_role",
+          "meaning",
+          "server_timestamp",
+          "status",
+          "sha256_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "subject_pseudonym": {
+            "type": "string"
+          },
+          "signer_name": {
+            "type": "string"
+          },
+          "signer_role": {
+            "type": "string"
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "server_timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "sha256_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "Econsent_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Eisf_AnonymousTypeOfstringAndstring": {
         "required": [
           "status",
@@ -4909,6 +6663,208 @@
             ]
           },
           "service": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_ClassifyRequest": {
+        "required": [
+          "filename"
+        ],
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mimeType": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "application/pdf"
+          },
+          "contentHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxonomyVersion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "v3.2.0-complete"
+          }
+        }
+      },
+      "Etmf_CraqcReviewRequest": {
+        "required": [
+          "decision",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "reasonForChange": {
+            "type": "string"
+          },
+          "overrideArtifactCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "discrepancyComment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_IngestDocumentRequest": {
+        "required": [
+          "filename",
+          "content",
+          "studyId",
+          "siteId",
+          "mimeType",
+          "zone",
+          "section",
+          "artifactCode",
+          "artifactType",
+          "taxonomyVersion",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mimeType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "zone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "section": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxonomyVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_StageDocumentQCRequest": {
+        "required": [
+          "content",
+          "filename",
+          "studyId"
+        ],
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mimeType": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "application/pdf"
+          },
+          "artifactHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxonomyVersion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "v3.2.0-complete"
+          },
+          "reasonForChange": {
+            "type": "string",
+            "default": "Batch upload AI auto-classification staging for CRA QC"
+          },
+          "assignedCra": {
             "type": [
               "null",
               "string"
@@ -7600,6 +9556,959 @@
           }
         }
       },
+      "Interop_EhrCandidateItemDto": {
+        "required": [
+          "id",
+          "studyId",
+          "siteId",
+          "subjectId",
+          "subjectPseudonym",
+          "ehrSystemId",
+          "fhirResourceType",
+          "fhirResourceId",
+          "sourceTimestamp",
+          "targetDomain",
+          "targetVariable",
+          "cdashTestcd",
+          "cdashTest",
+          "candidateValue",
+          "candidateUnit",
+          "currentEcrfValue",
+          "currentEcrfUpdatedAt",
+          "discrepancyType",
+          "confidenceScore",
+          "mappingProvenance",
+          "rawFhirResource",
+          "status",
+          "resolutionAction",
+          "resolutionReason",
+          "resolvedBy",
+          "resolvedAt",
+          "electronicSignature",
+          "clinicalQueryId",
+          "createdAt",
+          "versionIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "subjectPseudonym": {
+            "type": "string"
+          },
+          "ehrSystemId": {
+            "type": "string"
+          },
+          "fhirResourceType": {
+            "type": "string"
+          },
+          "fhirResourceId": {
+            "type": "string"
+          },
+          "sourceTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "targetDomain": {
+            "type": "string"
+          },
+          "targetVariable": {
+            "type": "string"
+          },
+          "cdashTestcd": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cdashTest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidateValue": {},
+          "candidateUnit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currentEcrfValue": {},
+          "currentEcrfUpdatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "discrepancyType": {
+            "type": "string"
+          },
+          "confidenceScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "mappingProvenance": {
+            "type": "string"
+          },
+          "rawFhirResource": {},
+          "status": {
+            "type": "string"
+          },
+          "resolutionAction": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolutionReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolvedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "electronicSignature": {},
+          "clinicalQueryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_EhrCandidateListResponse": {
+        "required": [
+          "candidates",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+            }
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_EhrEndpointCreateRequest": {
+        "required": [
+          "name",
+          "systemType",
+          "fhirBaseUrl",
+          "tokenUrl",
+          "clientId",
+          "publicKeyJwksUrl",
+          "scopes",
+          "pollingIntervalSec",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "systemType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fhirBaseUrl": {
+            "type": "string"
+          },
+          "tokenUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "publicKeyJwksUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scopes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "pollingIntervalSec": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EhrEndpointListResponse": {
+        "required": [
+          "endpoints"
+        ],
+        "type": "object",
+        "properties": {
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EhrEndpointRecord"
+            }
+          }
+        }
+      },
+      "Interop_EhrEndpointRecord": {
+        "required": [
+          "createdAt",
+          "createdBy"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "systemType": {
+            "type": "string"
+          },
+          "fhirBaseUrl": {
+            "type": "string"
+          },
+          "tokenUrl": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "publicKeyJwksUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scopesJson": {
+            "type": "string"
+          },
+          "pollingIntervalSec": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "lastPolledAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "reasonForChange": {
+            "type": "string"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_EhrPollRequest": {
+        "required": [
+          "endpointId",
+          "studyId",
+          "siteId",
+          "subjectId",
+          "privateKeyPem"
+        ],
+        "type": "object",
+        "properties": {
+          "endpointId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "privateKeyPem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EhrPollResponse": {
+        "required": [
+          "success",
+          "pollCount",
+          "newCandidatesCount",
+          "candidates",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "pollCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "newCandidatesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_EhrProvenanceResponse": {
+        "required": [
+          "candidateId",
+          "studyId",
+          "siteId",
+          "subjectId",
+          "subjectPseudonym",
+          "ehrSystemId",
+          "fhirResourceType",
+          "fhirResourceId",
+          "sourceTimestamp",
+          "targetDomain",
+          "targetVariable",
+          "cdashTestcd",
+          "cdashTest",
+          "candidateValue",
+          "candidateUnit",
+          "currentEcrfValue",
+          "currentEcrfUpdatedAt",
+          "discrepancyType",
+          "confidenceScore",
+          "mappingProvenance",
+          "rawFhirResource",
+          "status",
+          "resolutionAction",
+          "resolutionReason",
+          "resolvedBy",
+          "resolvedAt",
+          "electronicSignature",
+          "clinicalQueryId",
+          "createdAt",
+          "versionIndex",
+          "auditTrail"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "subjectPseudonym": {
+            "type": "string"
+          },
+          "ehrSystemId": {
+            "type": "string"
+          },
+          "fhirResourceType": {
+            "type": "string"
+          },
+          "fhirResourceId": {
+            "type": "string"
+          },
+          "sourceTimestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "targetDomain": {
+            "type": "string"
+          },
+          "targetVariable": {
+            "type": "string"
+          },
+          "cdashTestcd": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cdashTest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidateValue": {},
+          "candidateUnit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currentEcrfValue": {},
+          "currentEcrfUpdatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "discrepancyType": {
+            "type": "string"
+          },
+          "confidenceScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "mappingProvenance": {
+            "type": "string"
+          },
+          "rawFhirResource": {},
+          "status": {
+            "type": "string"
+          },
+          "resolutionAction": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolutionReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolvedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "electronicSignature": {},
+          "clinicalQueryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "auditTrail": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_InteropAuditLog"
+            }
+          }
+        }
+      },
+      "Interop_EhrReconcileAcceptRequest": {
+        "required": [
+          "candidateId",
+          "commitReason",
+          "changeReason"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateId": {
+            "type": "string"
+          },
+          "commitReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EhrReconcileActionResponse": {
+        "required": [
+          "success",
+          "candidate",
+          "clinicalQueryId",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+          },
+          "clinicalQueryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_EhrReconcileQueryRequest": {
+        "required": [
+          "candidateId",
+          "queryExplanation",
+          "discrepancyType",
+          "changeReason"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateId": {
+            "type": "string"
+          },
+          "queryExplanation": {
+            "type": "string"
+          },
+          "discrepancyType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EhrReconcileRejectRequest": {
+        "required": [
+          "candidateId",
+          "rejectionReason",
+          "changeReason"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateId": {
+            "type": "string"
+          },
+          "rejectionReason": {
+            "type": "string"
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_FhirBundleIngestRequest": {
+        "required": [
+          "studyId",
+          "siteId",
+          "subjectId",
+          "subjectPseudonym",
+          "ehrSystemId",
+          "rawFhirBundleJson"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "subjectPseudonym": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ehrSystemId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rawFhirBundleJson": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_FhirBundleIngestResponse": {
+        "required": [
+          "success",
+          "candidateCount",
+          "candidates",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "candidateCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_InteropAuditLog": {
+        "required": [
+          "timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "userRole": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_SmartAssertionRequest": {
+        "required": [
+          "clientId",
+          "tokenUrl",
+          "privateKeyPem",
+          "keyId"
+        ],
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string"
+          },
+          "tokenUrl": {
+            "type": "string"
+          },
+          "privateKeyPem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "keyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expirationSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 300
+          }
+        }
+      },
+      "Interop_SmartAssertionResponse": {
+        "required": [
+          "clientAssertionToken",
+          "clientAssertionType",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "clientAssertionToken": {
+            "type": "string"
+          },
+          "clientAssertionType": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Interop_SmartVerifyRequest": {
+        "required": [
+          "clientAssertionToken",
+          "clientId",
+          "tokenUrl",
+          "publicKeyPem"
+        ],
+        "type": "object",
+        "properties": {
+          "clientAssertionToken": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tokenUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "publicKeyPem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_SmartVerifyResponse": {
+        "required": [
+          "isValid",
+          "subject",
+          "issuer",
+          "audience",
+          "expiresAt",
+          "errorMessage"
+        ],
+        "type": "object",
+        "properties": {
+          "isValid": {
+            "type": "boolean"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "errorMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Interop_TemperatureIngestRequest": {
         "required": [
           "readings"
@@ -7648,6 +10557,43 @@
           }
         }
       },
+      "Kernel_ActivityLocation": {
+        "type": "integer"
+      },
+      "Kernel_ActivityTiming": {
+        "required": [
+          "day"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          }
+        }
+      },
       "Kernel_AnonymousTypeOfstringAndstring": {
         "required": [
           "status",
@@ -7662,6 +10608,654 @@
             ]
           },
           "service": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_Arm": {
+        "required": [
+          "id",
+          "name",
+          "type",
+          "intervention_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/Kernel_ArmType"
+          },
+          "intervention_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_ArmType": {
+        "type": "integer"
+      },
+      "Kernel_CandidateKind": {
+        "type": "integer"
+      },
+      "Kernel_CandidateSummary": {
+        "required": [
+          "kind",
+          "version",
+          "base_version",
+          "content_hash",
+          "base_content_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/Kernel_CandidateKind"
+          },
+          "version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_NodeRef"
+              }
+            ]
+          },
+          "base_version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_NodeRef"
+              }
+            ]
+          },
+          "content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "base_content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_CodeSystemVersionId": {},
+      "Kernel_Cohort": {
+        "required": [
+          "id",
+          "name",
+          "arm_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "arm_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_CollectionItem": {
+        "required": [
+          "id",
+          "concept"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "concept": {
+            "$ref": "#/components/schemas/Kernel_ConceptRef"
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "terminology": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_TerminologyBinding"
+              }
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "default": false
+          },
+          "purpose": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DataPurpose"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_CollectionSpec": {
+        "required": [
+          "id",
+          "name",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_CollectionItem"
+            }
+          },
+          "purpose": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DataPurpose"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_ConceptId": {},
+      "Kernel_ConceptRef": {
+        "required": [
+          "concept_id",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "concept_id": {
+            "$ref": "#/components/schemas/Kernel_ConceptId"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Kernel_CriterionCategory": {
+        "type": "integer"
+      },
+      "Kernel_DataPurpose": {
+        "type": "object",
+        "properties": {
+          "endpoint_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "estimand_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "safety_rule_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "operational_need": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_DependentGroup": {
+        "required": [
+          "kind",
+          "count",
+          "objects"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "objects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_LineageNode"
+            }
+          }
+        }
+      },
+      "Kernel_DependentsReport": {
+        "required": [
+          "start",
+          "depth",
+          "valid_at",
+          "known_at",
+          "groups",
+          "total",
+          "truncated"
+        ],
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string"
+          },
+          "depth": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "valid_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_DependentGroup"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_DesignReference": {
+        "required": [
+          "id",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "artifact": {}
+        }
+      },
+      "Kernel_Dose": {
+        "required": [
+          "amount",
+          "unit"
+        ],
+        "type": "object",
+        "properties": {
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_ElementChange": {
+        "required": [
+          "element_id",
+          "instance_type",
+          "change",
+          "properties"
+        ],
+        "type": "object",
+        "properties": {
+          "element_id": {
+            "type": "string"
+          },
+          "instance_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "change": {
+            "$ref": "#/components/schemas/Kernel_ElementChangeKind"
+          },
+          "properties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_ElementChangeKind": {
+        "type": "integer"
+      },
+      "Kernel_EligibilityCriterion": {
+        "required": [
+          "id",
+          "category",
+          "text",
+          "concepts"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Kernel_CriterionCategory"
+          },
+          "text": {
+            "type": "string"
+          },
+          "concepts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ConceptRef"
+            }
+          },
+          "expression": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_Endpoint": {
+        "required": [
+          "id",
+          "objective_id",
+          "level",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "objective_id": {
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/Kernel_ObjectiveLevel"
+          },
+          "text": {
+            "type": "string"
+          },
+          "concept": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ConceptRef"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_EngineVersion": {
+        "required": [
+          "name",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_Epoch": {
+        "required": [
+          "id",
+          "name",
+          "order"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Kernel_Estimand": {
+        "required": [
+          "id",
+          "endpoint_id",
+          "population_id",
+          "arm_ids",
+          "variable",
+          "intercurrent_events",
+          "summary_measure"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "endpoint_id": {
+            "type": "string"
+          },
+          "population_id": {
+            "type": "string"
+          },
+          "arm_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "variable": {
+            "type": "string"
+          },
+          "intercurrent_events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_IntercurrentEvent"
+            }
+          },
+          "summary_measure": {
+            "type": "string"
+          },
+          "intervention_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_GenerateProtocolProposalRequest": {
+        "required": [
+          "trial_brief"
+        ],
+        "type": "object",
+        "properties": {
+          "trial_brief": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_GenerativeProtocolProposal": {
+        "required": [
+          "design",
+          "design_json",
+          "reasoning_chain",
+          "initial_gap_check"
+        ],
+        "type": "object",
+        "properties": {
+          "design": {
+            "$ref": "#/components/schemas/Kernel_ProtocolDesign"
+          },
+          "design_json": {
+            "type": "string"
+          },
+          "reasoning_chain": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ProtocolReasoningStep"
+            }
+          },
+          "initial_gap_check": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
+            }
+          }
+        }
+      },
+      "Kernel_IntercurrentEvent": {
+        "required": [
+          "description",
+          "strategy"
+        ],
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/Kernel_IntercurrentEventStrategy"
+          },
+          "strategy_text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_IntercurrentEventStrategy": {
+        "type": "integer"
+      },
+      "Kernel_Intervention": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "product": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ConceptRef"
+              }
+            ]
+          },
+          "dose": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_Dose"
+              }
+            ]
+          },
+          "route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "regimen": {
             "type": [
               "null",
               "string"
@@ -8854,6 +12448,282 @@
           }
         }
       },
+      "Kernel_LineageNode": {
+        "required": [
+          "handle",
+          "kind",
+          "ref",
+          "mask",
+          "distance"
+        ],
+        "type": "object",
+        "properties": {
+          "handle": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "ref": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_NodeRef"
+              }
+            ]
+          },
+          "mask": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_MaskReason"
+              }
+            ]
+          },
+          "distance": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_masked": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_MaskedPart": {
+        "required": [
+          "part",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "part": {
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/Kernel_MaskReason"
+          }
+        }
+      },
+      "Kernel_MaskReason": {
+        "type": "integer"
+      },
+      "Kernel_MatrixGapCheckRequest": {
+        "required": [
+          "protocol_content"
+        ],
+        "type": "object",
+        "properties": {
+          "protocol_content": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_MatrixGapFinding": {
+        "required": [
+          "element_id",
+          "kind",
+          "severity",
+          "json_pointer_path",
+          "description"
+        ],
+        "type": "object",
+        "properties": {
+          "element_id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/Kernel_MatrixGapKind"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Kernel_MatrixGapSeverity"
+          },
+          "json_pointer_path": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_MatrixGapKind": {
+        "type": "integer"
+      },
+      "Kernel_MatrixGapSeverity": {
+        "type": "integer"
+      },
+      "Kernel_NodeRef": {},
+      "Kernel_Objective": {
+        "required": [
+          "id",
+          "level",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/Kernel_ObjectiveLevel"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "Kernel_ObjectiveLevel": {
+        "type": "integer"
+      },
+      "Kernel_PlannedActivity": {
+        "required": [
+          "id",
+          "name",
+          "epoch_id",
+          "locations",
+          "collection_spec_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "epoch_id": {
+            "type": "string"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ActivityLocation"
+            }
+          },
+          "collection_spec_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_ActivityTiming"
+              }
+            ]
+          },
+          "purpose": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DataPurpose"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_PlannedVisit": {
+        "required": [
+          "activity_id",
+          "name",
+          "epoch_id",
+          "epoch_order",
+          "study_day",
+          "window_before",
+          "window_after"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "epoch_id": {
+            "type": "string"
+          },
+          "epoch_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "study_day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Kernel_Population": {
+        "required": [
+          "id",
+          "name",
+          "criterion_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "criterion_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -8885,6 +12755,373 @@
             ]
           },
           "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_ProtocolDesign": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "objectives": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Objective"
+            }
+          },
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Endpoint"
+            }
+          },
+          "estimands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Estimand"
+            }
+          },
+          "populations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Population"
+            }
+          },
+          "eligibility_criteria": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_EligibilityCriterion"
+            }
+          },
+          "arms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Arm"
+            }
+          },
+          "epochs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Epoch"
+            }
+          },
+          "cohorts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Cohort"
+            }
+          },
+          "interventions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_Intervention"
+            }
+          },
+          "planned_activities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_PlannedActivity"
+            }
+          },
+          "collection_specs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_CollectionSpec"
+            }
+          },
+          "safety_rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ProtocolRule"
+            }
+          },
+          "discontinuation_rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ProtocolRule"
+            }
+          },
+          "randomization_scheme": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DesignReference"
+              }
+            ]
+          },
+          "statistical_design": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DesignReference"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_ProtocolReasoningStep": {
+        "required": [
+          "step_number",
+          "step_type",
+          "summary",
+          "rationale",
+          "citations"
+        ],
+        "type": "object",
+        "properties": {
+          "step_number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "step_type": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Kernel_ProtocolRule": {
+        "required": [
+          "id",
+          "text",
+          "concepts"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "concepts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ConceptRef"
+            }
+          },
+          "expression": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_ScheduleChange": {
+        "required": [
+          "activity_id",
+          "change",
+          "before",
+          "after"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "change": {
+            "$ref": "#/components/schemas/Kernel_ElementChangeKind"
+          },
+          "before": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_PlannedVisit"
+              }
+            ]
+          },
+          "after": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_PlannedVisit"
+              }
+            ]
+          }
+        }
+      },
+      "Kernel_SimulateProtocolRequest": {
+        "required": [
+          "base_version_ref",
+          "stored_version_ref",
+          "candidate_content"
+        ],
+        "type": "object",
+        "properties": {
+          "base_version_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stored_version_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidate_content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "valid_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_SimulationAsOf": {
+        "required": [
+          "valid_at",
+          "known_at"
+        ],
+        "type": "object",
+        "properties": {
+          "valid_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "known_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Kernel_SimulationResult": {
+        "required": [
+          "scope",
+          "as_of",
+          "candidate",
+          "engine_versions",
+          "input_hash",
+          "result_hash",
+          "structural_diff",
+          "schedule_changes",
+          "masked"
+        ],
+        "type": "object",
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/Kernel_NodeRef"
+          },
+          "as_of": {
+            "$ref": "#/components/schemas/Kernel_SimulationAsOf"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Kernel_CandidateSummary"
+          },
+          "engine_versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_EngineVersion"
+            }
+          },
+          "input_hash": {
+            "type": "string"
+          },
+          "result_hash": {
+            "type": "string"
+          },
+          "structural_diff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ElementChange"
+            }
+          },
+          "schedule_changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_ScheduleChange"
+            }
+          },
+          "masked": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_MaskedPart"
+            }
+          },
+          "dependents": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_DependentsReport"
+              }
+            ]
+          },
+          "matrix_gaps": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_MatrixGapFinding"
+            }
+          },
+          "is_empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Kernel_TerminologyBinding": {
+        "required": [
+          "code_system_version_id"
+        ],
+        "type": "object",
+        "properties": {
+          "code_system_version_id": {
+            "$ref": "#/components/schemas/Kernel_CodeSystemVersionId"
+          },
+          "codelist": {
             "type": [
               "null",
               "string"
@@ -9138,6 +13375,376 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Payments_DisburseFundsRequestDto": {
+        "required": [
+          "disbursementType",
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "disbursementType": {
+            "type": "string"
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Payments_DisburseStipendRequest": {
+        "required": [
+          "subjectId",
+          "studyId",
+          "siteId",
+          "sequenceNumber",
+          "assignmentId",
+          "diaryId",
+          "amount",
+          "idempotencyKey",
+          "disbursementType"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sequenceNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "assignmentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "diaryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "disbursementType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_IssueCardRequestDto": {
+        "type": "object",
+        "properties": {
+          "cardType": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "RELOADABLE_DEBIT"
+          }
+        }
+      },
+      "Payments_OcrExtractRequestDto": {
+        "type": "object",
+        "properties": {
+          "rawText": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "imageBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "categoryHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "filename": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_ParticipantStipendRuleCreateDto": {
+        "required": [
+          "studyId",
+          "visitCode",
+          "visitName",
+          "procedureCode",
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "visitCode": {
+            "type": "string"
+          },
+          "visitName": {
+            "type": "string"
+          },
+          "procedureCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "USD"
+          },
+          "requiresVerification": {
+            "type": "boolean",
+            "default": true
+          },
+          "taxable": {
+            "type": "boolean",
+            "default": false
+          },
+          "antiCoercionCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "autoDisbursementThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMilestone": {
+            "type": "boolean",
+            "default": false
+          },
+          "milestoneCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_ReviewExpenseClaimRequestDto": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "reviewNotes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjustedAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Payments_SubmitExpenseClaimRequestDto": {
+        "required": [
+          "subjectId",
+          "studyId",
+          "siteId",
+          "category",
+          "merchantName",
+          "grossAmount"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "merchantName": {
+            "type": "string"
+          },
+          "grossAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMealAllowance": {
+            "type": "boolean",
+            "default": false
+          },
+          "perDiemCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "expenseDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptOcrData": {}
+        }
+      },
+      "Payments_SubmitW9RequestDto": {
+        "required": [
+          "fullLegalName",
+          "taxIdLastFour"
+        ],
+        "type": "object",
+        "properties": {
+          "fullLegalName": {
+            "type": "string"
+          },
+          "taxIdLastFour": {
+            "type": "string"
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certifyAccurate": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "Payments_VerifyW9RequestDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_VisitVerificationEventDto": {
+        "required": [
+          "studyId",
+          "siteId",
+          "subjectId",
+          "visitCode",
+          "eventId"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "visitCode": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "verifiedBy": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "crc_coordinator"
           }
         }
       },
