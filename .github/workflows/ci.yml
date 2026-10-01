@@ -134,9 +134,13 @@ jobs:
           fi
           if command -v hadolint >/dev/null 2>&1; then
             mapfile -t DOCKERFILES < <(find . -type f -name Dockerfile)
-            echo "Linting Dockerfiles:"
-            printf '%s\n' "${DOCKERFILES[@]}"
-            hadolint --failure-threshold error "${DOCKERFILES[@]}"
+            if [ ${#DOCKERFILES[@]} -gt 0 ] && [ -n "${DOCKERFILES[0]}" ]; then
+              echo "Linting Dockerfiles:"
+              printf '%s\n' "${DOCKERFILES[@]}"
+              hadolint --failure-threshold error "${DOCKERFILES[@]}"
+            else
+              echo "No Dockerfiles found to lint."
+            fi
           else
             echo "::error::Hadolint is not installed or unavailable."
             exit 1
@@ -153,9 +157,13 @@ jobs:
           fi
           if command -v shellcheck >/dev/null 2>&1; then
             mapfile -t SHELL_SCRIPTS < <(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/node_modules/*")
-            echo "Linting shell scripts:"
-            printf '%s\n' "${SHELL_SCRIPTS[@]}"
-            shellcheck "${SHELL_SCRIPTS[@]}"
+            if [ ${#SHELL_SCRIPTS[@]} -gt 0 ] && [ -n "${SHELL_SCRIPTS[0]}" ]; then
+              echo "Linting shell scripts:"
+              printf '%s\n' "${SHELL_SCRIPTS[@]}"
+              shellcheck "${SHELL_SCRIPTS[@]}"
+            else
+              echo "No shell scripts found to lint."
+            fi
           else
             echo "::error::ShellCheck is not installed or unavailable."
             exit 1
