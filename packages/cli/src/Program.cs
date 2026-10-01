@@ -55,6 +55,7 @@ public static class Program
         AddCommand(root, "validate-readmes", "Checks that every app and package has a README", () => ReadmeValidatorService.ValidateReadmes());
         AddCommand(root, "validate-codeowners", "Checks the CODEOWNERS file", () => CodeownersValidatorService.ValidateCodeowners());
         AddCommand(root, "validate-markdown", "Checks Markdown formatting and workspace links", () => MarkdownValidatorService.ValidateMarkdown());
+        AddCommand(root, "sync-doc-index", "Scans documentation files and updates docs/DOCUMENTATION_INDEX.md", () => Cadence.Cli.Services.DocIndexSyncService.SyncDocIndex());
         AddCommand(root, "query-linter", "Lints database and ORM query statements", () => QueryLinterService.LintQueries());
         AddCommand(root, "extract-env-vars", "Checks that environment variables read in code are documented", ToolCommands.ConfigureExtractEnvVars);
         AddCommand(root, "verify-contracts", "Verifies hexagonal port definitions and contracts", () => ContractVerifierService.VerifyContracts());

@@ -93,6 +93,14 @@ gate. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop stale entr
 
 See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
+### `cadence sync-doc-index`
+
+Scans all non-execution markdown files under `docs/` and synchronizes `docs/DOCUMENTATION_INDEX.md` with domain-grouped catalog entries, titles, and descriptions.
+
+```bash
+pnpm cadence sync-doc-index
+```
+
 ### `cadence test`
 
 Runs `dotnet test Cadence.sln` from the repository root.

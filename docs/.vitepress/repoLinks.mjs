@@ -96,8 +96,16 @@ function pageExists(docsDir, link) {
   const page = splitAnchor(link)[0]
     .replace(/^\//, "")
     .replace(/\.(html|md)$/, "");
+  const repoRoot = path.resolve(docsDir, "..");
   if (page === "" || page.endsWith("/")) {
-    return fs.existsSync(path.join(docsDir, page, "index.md"));
+    return (
+      fs.existsSync(path.join(docsDir, page, "index.md")) ||
+      fs.existsSync(path.join(repoRoot, "README.md"))
+    );
   }
-  return fs.existsSync(path.join(docsDir, `${page}.md`));
+  return (
+    fs.existsSync(path.join(docsDir, `${page}.md`)) ||
+    fs.existsSync(path.join(repoRoot, `${page}.md`)) ||
+    (page === "LICENSE" && fs.existsSync(path.join(repoRoot, "LICENSE")))
+  );
 }

@@ -1,3 +1,8 @@
+---
+title: "ADR Template"
+exclude_from_sidebar: true
+---
+
 # ADR-[NUMBER]: [Short, Descriptive Title]
 
 - **Status:** [ Proposed | Accepted | Deprecated | Superseded by ADR-XXX ]

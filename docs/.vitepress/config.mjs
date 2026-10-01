@@ -10,6 +10,143 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
+ * Formats a filename or folder name into a Title Case display string.
+ * @param {string} name
+ * @return {string}
+ */
+function formatTitle(name) {
+  return name
+    .replace(/\.md$/i, "")
+    .replace(/^(\d+)[-_]/, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
+/**
+ * Parses frontmatter and first H1 title from a Markdown document.
+ * @param {string} filePath
+ * @param {string} defaultTitle
+ * @return {{ title: string, excludeFromSidebar: boolean }}
+ */
+function getDocMetadata(filePath, defaultTitle) {
+  try {
+    const content = fs.readFileSync(filePath, "utf-8");
+    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    let excludeFromSidebar = false;
+    let title = null;
+
+    if (fmMatch) {
+      const yaml = fmMatch[1];
+      if (/exclude_from_sidebar:\s*true/i.test(yaml)) {
+        excludeFromSidebar = true;
+      }
+      const titleMatch = yaml.match(/^title:\s*["']?(.*?)["']?$/m);
+      if (titleMatch) {
+        title = titleMatch[1].trim();
+      }
+    }
+
+    if (excludeFromSidebar) {
+      return { excludeFromSidebar: true };
+    }
+
+    if (!title) {
+      const h1Match = content.match(/^#\s+(.*)/m);
+      if (h1Match) {
+        title = h1Match[1].trim();
+      }
+    }
+
+    return { title: title || defaultTitle, excludeFromSidebar: false };
+  } catch (e) {
+    return { title: defaultTitle, excludeFromSidebar: false };
+  }
+}
+
+/**
+ * Dynamically crawls a directory relative to `docs/` and builds sidebar items.
+ * @param {string} dirRelativePath
+ * @return {Array<{text: string, link?: string, collapsed?: boolean, items?: Array}>}
+ */
+function crawlDirectory(dirRelativePath) {
+  const docsDir = path.resolve(__dirname, "..");
+  const targetDir = path.join(docsDir, dirRelativePath);
+  if (!fs.existsSync(targetDir)) return [];
+
+  function scan(currentDir) {
+    const items = [];
+    const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+
+    for (const entry of entries) {
+      const fullPath = path.join(currentDir, entry.name);
+      const relToDocs = path.relative(docsDir, fullPath).replace(/\\/g, "/");
+
+      if (entry.isDirectory()) {
+        if (
+          entry.name === "runs" ||
+          entry.name === ".vitepress" ||
+          entry.name === "node_modules"
+        ) {
+          continue;
+        }
+        const subItems = scan(fullPath);
+        if (subItems.length > 0) {
+          items.push({
+            text: formatTitle(entry.name),
+            collapsed: true,
+            items: subItems,
+          });
+        }
+      } else if (entry.isFile() && entry.name.endsWith(".md")) {
+        if (
+          relToDocs.includes("/SDLC/runs/") ||
+          relToDocs.includes("/runs/")
+        ) {
+          continue;
+        }
+        const meta = getDocMetadata(fullPath, formatTitle(entry.name));
+        if (meta.excludeFromSidebar) continue;
+
+        const link = "/" + relToDocs.replace(/\.md$/, "");
+        items.push({
+          text: meta.title,
+          link: link,
+        });
+      }
+    }
+    return items;
+  }
+
+  return scan(targetDir);
+}
+
+function getKernelSidebar() {
+  return crawlDirectory("kernel");
+}
+
+function getMigrationSidebar() {
+  return crawlDirectory("migration");
+}
+
+function getSpecsSidebar() {
+  return crawlDirectory("specs");
+}
+
+function getAgentsSidebar() {
+  return crawlDirectory("agents");
+}
+
+function getCdiscSidebar() {
+  return crawlDirectory("CDISC");
+}
+
+function getSchemaSidebar() {
+  return crawlDirectory("schema");
+}
+
+/**
  * Builds domain-grouped sidebar entries for architectural decision records.
  * Parses `docs/adr/index.md` to extract domain headings and markdown links.
  *
@@ -82,10 +219,8 @@ function getSdlcSidebar() {
     .sort()
     .map((file) => {
       const filePath = path.join(sdlcDir, file);
-      const content = fs.readFileSync(filePath, "utf-8");
-      const titleMatch = content.match(/^#\s+(.*)/m);
-      const title = titleMatch ? titleMatch[1].trim() : file.replace(".md", "");
-      return { text: title, link: `/SDLC/${file}` };
+      const meta = getDocMetadata(filePath, file.replace(".md", ""));
+      return { text: meta.title, link: `/SDLC/${file}` };
     });
 }
 
@@ -98,6 +233,10 @@ function getApiSidebarGroups() {
     {
       text: "API Overview & Architecture",
       link: "/api/index",
+    },
+    {
+      text: "Core Kernel API",
+      link: "/api/kernel",
     },
     {
       text: "Protocol & Study Design",
@@ -139,6 +278,10 @@ function getApiSidebarGroups() {
         { text: "eISF Site Binders (8010)", link: "/api/eisf" },
         { text: "FileShare & StoragePort (8013)", link: "/api/fileshare" },
       ],
+    },
+    {
+      text: "OpenAPI Specifications",
+      link: "/openapi/README",
     },
     {
       text: "Gateway",
@@ -206,55 +349,32 @@ const config = defineConfig({
           { text: "CI and Quality Gates", link: "/CI" },
           { text: "Developer CLI (`cadence`)", link: "/cli" },
           { text: "Agent & Contributor Rules", link: "/AGENTS" },
+          { text: "Project License", link: "/LICENSE" },
+          { text: "Inbound Email Integration", link: "/OPERATIONAL_INBOUND_EMAIL" },
+          { text: "Laboratory Reference Ranges", link: "/OPERATIONAL_LAB_RANGES" },
+          { text: "Python Reference Inventory", link: "/PYTHON_REFERENCE_INVENTORY" },
+          { text: "Migration Workflow Playbook", link: "/MIGRATION_WORKFLOW" },
+          { text: "Web API Migration", link: "/web/API_MIGRATION" },
         ],
       },
       {
         text: "Clinical Kernel",
-        items: [
-          {
-            text: "Kernel Specification v0.2",
-            link: "/kernel/CLINICAL_KERNEL_SPECIFICATION",
-          },
-          {
-            text: "Roadmap (§15)",
-            link: "/kernel/CLINICAL_KERNEL_SPECIFICATION#_15-roadmap",
-          },
-          {
-            text: "Execution Migration Inventory",
-            link: "/kernel/EXECUTION_MIGRATION_INVENTORY",
-          },
-          {
-            text: "Clock Migration Backlog",
-            link: "/kernel/CLOCK_MIGRATION_BACKLOG",
-          },
-        ],
+        items: getKernelSidebar(),
+      },
+      {
+        text: "Design Specifications",
+        collapsed: true,
+        items: getSpecsSidebar(),
+      },
+      {
+        text: "Agent Working Notes",
+        collapsed: true,
+        items: getAgentsSidebar(),
       },
       {
         text: "Python-to-.NET Port (Historical)",
         collapsed: true,
-        items: [
-          { text: "Modernization Hub Overview", link: "/migration/index" },
-          {
-            text: "Surface & Data Topology Audit",
-            link: "/migration/SYSTEM_TOPOLOGY_AUDIT",
-          },
-          {
-            text: "Dependency & Parity Catalog",
-            link: "/migration/DEPENDENCY_AND_PARITY_CATALOG",
-          },
-          {
-            text: "Bounded Context Migration Matrix",
-            link: "/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX",
-          },
-          {
-            text: "Solution Scaffold Guide",
-            link: "/migration/SCAFFOLD_GUIDE",
-          },
-          {
-            text: "Migration Workflow Playbook",
-            link: "/MIGRATION_WORKFLOW",
-          },
-        ],
+        items: getMigrationSidebar(),
       },
       {
         text: "REST API Reference",
@@ -271,10 +391,28 @@ const config = defineConfig({
         ],
       },
       {
+        text: "Clinical Canvas & UX",
+        items: [
+          { text: "Clinical Canvas UX Interaction Model", link: "/ux/CLINICAL_CANVAS" },
+        ],
+      },
+      {
+        text: "CDISC Data Standards",
+        collapsed: true,
+        items: getCdiscSidebar(),
+      },
+      {
+        text: "Database Schemas",
+        collapsed: true,
+        items: getSchemaSidebar(),
+      },
+      {
         text: "Baseline Specifications",
         items: [
           { text: "Data Lifecycle Management", link: "/DATA_LIFECYCLE" },
           { text: "Feature Matrix", link: "/FEATURE_MATRIX" },
+          { text: "Functional Product Specification", link: "/FUNCTIONAL_PRODUCT_SPECIFICATION" },
+          { text: "Competitive Analysis & Market Superiority", link: "/COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY" },
           { text: "System Requirements Specification (SRS)", link: "/SRS" },
         ],
       },

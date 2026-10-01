@@ -23,6 +23,7 @@
     "verify": "pnpm check && pnpm test",
     "rtm": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- generate-rtm --validate",
     "sync-gxp": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync",
+    "sync-doc-index": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- sync-doc-index",
     "setup:dev": "dotnet restore Cadence.sln",
     "ports:check": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check-ports",
     "openapi:export": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- sync-openapi-spec",
