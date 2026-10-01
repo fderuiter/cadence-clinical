@@ -1184,7 +1184,7 @@ async function startExportPipeline() {
   }
 }
 
-function triggerFileDownload() {
+function _triggerFileDownload() {
   if (!downloadBlobUrl.value) return;
   const link = document.createElement("a");
   link.href = downloadBlobUrl.value;
@@ -1194,7 +1194,7 @@ function triggerFileDownload() {
   document.body.removeChild(link);
 }
 
-function resetExport() {
+function _resetExport() {
   exportStatus.value = "idle";
   progressPercent.value = 0;
   progressStepText.value = "";
