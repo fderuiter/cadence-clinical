@@ -265,22 +265,15 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     expect(wrapper.findAll("#participants-section tbody tr")).toHaveLength(1);
   });
 
-  it("shows Simulate disabled, saying what it waits on, and Trace, Impact, Explain and Act live (UX-5)", async () => {
+  it("shows Trace, Impact, Explain, Act and Simulate live when a participant is selected (UX-5)", async () => {
     await open(
       `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[0]}`
     );
 
-    for (const verb of ["trace", "impact", "explain", "act"]) {
+    for (const verb of ["trace", "impact", "explain", "act", "simulate"]) {
       expect(wrapper.find(`#verb-${verb}`).attributes("aria-disabled")).toBe(
         undefined
       );
-    }
-    for (const verb of ["simulate"]) {
-      const button = wrapper.find(`#verb-${verb}`);
-      expect(button.attributes("aria-disabled")).toBe("true");
-      await button.trigger("click");
-      expect(wrapper.find("#verb-note").text()).toMatch(/#48\d\d/);
-      expect(button.attributes("aria-describedby")).toBe("verb-note");
     }
     expect(wrapper.find("#verb-details").attributes("aria-pressed")).toBe(
       "true"
