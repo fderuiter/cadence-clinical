@@ -38,7 +38,8 @@ public sealed class FormSubmissionApplicationService(
     ICurrentAuditContextAccessor auditContextAccessor,
     ISubjectRepository? subjectRepository = null,
     IEditCheckEngine? editCheckEngine = null,
-    IAutoQueryDispatchService? autoQueryDispatchService = null) : IFormSubmissionApplicationService
+    IAutoQueryDispatchService? autoQueryDispatchService = null,
+    IConsentRepository? consentRepository = null) : IFormSubmissionApplicationService
 {
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -107,11 +108,28 @@ public sealed class FormSubmissionApplicationService(
             }
         }
 
+        // EDC execution engine write-gating for subjects requiring re-consent
+        if (consentRepository != null)
+        {
+            var pendingConsents = await consentRepository.GetOtherRequiringReconsentAsync(subjectCode, studyCode, excludeVersionIndex: -1, cancellationToken).ConfigureAwait(false);
+            if (pendingConsents.Count > 0 && pendingConsents.Any(c => c.RequiresReconsent))
+            {
+                var active = pendingConsents.FirstOrDefault(c => c.RequiresReconsent);
+                string vTag = active?.ProtocolVersion.VersionTag ?? request.ProtocolVersion ?? "2.0.0";
+                return SubjectErrors.ReconsentRequired(vTag, request.SubjectId, request.VisitId ?? "VISIT-001");
+            }
+        }
+
         ClinicalSubject? subject = null;
         if (subjectRepository is not null)
         {
             subject = await subjectRepository.GetByIdAsync(request.SubjectId, cancellationToken).ConfigureAwait(false)
                 ?? await subjectRepository.GetByCodeAsync(request.SubjectId, cancellationToken).ConfigureAwait(false);
+
+            if (subject != null && subject.Status == SubjectState.ReconsentRequired)
+            {
+                return SubjectErrors.ReconsentRequired(request.ProtocolVersion ?? "2.0.0", request.SubjectId, request.VisitId ?? "VISIT-001");
+            }
         }
 
         string activeProtocolVersion = subject?.ActiveProtocolVersion ?? "1.0.0";
@@ -238,6 +256,27 @@ public sealed class FormSubmissionApplicationService(
         if (submission is null)
         {
             return FormErrors.NotFound(id);
+        }
+
+        // EDC execution engine write-gating for subjects requiring re-consent
+        if (consentRepository != null)
+        {
+            var pendingConsents = await consentRepository.GetOtherRequiringReconsentAsync(submission.SubjectId, submission.StudyId, excludeVersionIndex: -1, cancellationToken).ConfigureAwait(false);
+            if (pendingConsents.Count > 0 && pendingConsents.Any(c => c.RequiresReconsent))
+            {
+                var active = pendingConsents.FirstOrDefault(c => c.RequiresReconsent);
+                string vTag = active?.ProtocolVersion.VersionTag ?? submission.ProtocolVersion ?? "2.0.0";
+                return SubjectErrors.ReconsentRequired(vTag, submission.SubjectId.Value, submission.VisitId ?? "VISIT-001");
+            }
+        }
+
+        if (subjectRepository != null)
+        {
+            var subject = await subjectRepository.GetByCodeAsync(submission.SubjectId.Value, cancellationToken).ConfigureAwait(false);
+            if (subject != null && subject.Status == SubjectState.ReconsentRequired)
+            {
+                return SubjectErrors.ReconsentRequired(submission.ProtocolVersion ?? "2.0.0", submission.SubjectId.Value, submission.VisitId ?? "VISIT-001");
+            }
         }
 
         var updateResult = submission.UpdatePayload(newPayload, auditContextAccessor.ChangeReason);

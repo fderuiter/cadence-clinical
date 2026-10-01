@@ -228,6 +228,7 @@ builder.Services.AddMassTransit(x =>
     });
 
     x.AddConsumer<EConsentCompletedConsumer>();
+    x.AddConsumer<ProtocolVersionApprovedSyncConsumer>();
 
     x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
 });
