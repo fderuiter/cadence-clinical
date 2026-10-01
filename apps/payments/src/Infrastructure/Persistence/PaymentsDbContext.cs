@@ -32,6 +32,10 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
     public DbSet<RemittanceAdvice> RemittanceAdvices => Set<RemittanceAdvice>();
     public DbSet<ErpSyncLog> ErpSyncLogs => Set<ErpSyncLog>();
     public DbSet<ParticipantWallet> ParticipantWallets => Set<ParticipantWallet>();
+    public DbSet<ParticipantStipendRule> ParticipantStipendRules => Set<ParticipantStipendRule>();
+    public DbSet<ParticipantTransaction> ParticipantTransactions => Set<ParticipantTransaction>();
+    public DbSet<ParticipantExpenseClaim> ParticipantExpenseClaims => Set<ParticipantExpenseClaim>();
+    public DbSet<ParticipantDisbursement> ParticipantDisbursements => Set<ParticipantDisbursement>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -56,6 +60,10 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
         modelBuilder.ApplyConfiguration(new RemittanceAdviceConfiguration());
         modelBuilder.ApplyConfiguration(new ErpSyncLogConfiguration());
         modelBuilder.ApplyConfiguration(new ParticipantWalletConfiguration(FieldEncryptor));
+        modelBuilder.ApplyConfiguration(new ParticipantStipendRuleConfiguration());
+        modelBuilder.ApplyConfiguration(new ParticipantTransactionConfiguration());
+        modelBuilder.ApplyConfiguration(new ParticipantExpenseClaimConfiguration());
+        modelBuilder.ApplyConfiguration(new ParticipantDisbursementConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
     }
 }

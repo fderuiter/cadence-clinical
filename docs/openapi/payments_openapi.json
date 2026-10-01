@@ -51,6 +51,562 @@
           }
         }
       }
+    },
+    "/api/v1/payments/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Direct disburse ePRO stipend to participant wallet with strict idempotency and audit trail.",
+        "operationId": "DisburseStipendDirect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseStipendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Disburse stipend to participant wallet.",
+        "operationId": "DisburseStipendWallet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseStipendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List all participant wallets.",
+        "operationId": "ListWallets",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/subject/{subjectId}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve participant wallet balance and details.",
+        "operationId": "GetSubjectWallet",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve participant wallet details by wallet ID.",
+        "operationId": "GetWalletById",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/tax-1099-status": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve IRS 1099 tax status and threshold monitoring tracer.",
+        "operationId": "GetTax1099Status",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/balance": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Real-time balance inquiry for participant wallet.",
+        "operationId": "GetBalanceInquiry",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/issue-card": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Issue or re-issue reloadable debit card for participant wallet.",
+        "operationId": "IssueReloadableCard",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_IssueCardRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Submit Form W-9 taxpayer identification certification.",
+        "operationId": "SubmitW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SubmitW9RequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/verify-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Verify participant Form W-9 submission.",
+        "operationId": "VerifyW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_VerifyW9RequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Disburse digital funds from participant wallet to debit card or bank account.",
+        "operationId": "DisburseParticipantFunds",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseFundsRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/stipend-rules": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List SoA protocol visit stipend compensation rules.",
+        "operationId": "ListStipendRules",
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Configure participant visit compensation rules linked to Schedule of Activities.",
+        "operationId": "CreateStipendRule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_ParticipantStipendRuleCreateDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/events/visit-verified": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules.",
+        "operationId": "IngestVisitVerifiedEvent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_VisitVerificationEventDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List travel and meal expense reimbursement claims.",
+        "operationId": "ListExpenseClaims",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Submit travel/meal expense claim for coordinator review.",
+        "operationId": "SubmitExpenseClaim",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SubmitExpenseClaimRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses/ocr-extract": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Extract metadata from receipt image/text using rule-based OCR engine.",
+        "operationId": "ExtractReceiptOcr",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_OcrExtractRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses/{claimId}/review": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Coordinator 1-click review and approval/rejection of expense claim.",
+        "operationId": "ReviewExpenseClaim",
+        "parameters": [
+          {
+            "name": "claimId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_ReviewExpenseClaimRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/transactions": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List participant wallet transactions ledger.",
+        "operationId": "ListTransactions",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/disbursements": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List digital disbursement dispatches.",
+        "operationId": "ListDisbursements",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/audit-logs": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve payment audit ledger records.",
+        "operationId": "GetPaymentAuditLogs",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -75,12 +631,385 @@
             ]
           }
         }
+      },
+      "Payments_DisburseFundsRequestDto": {
+        "required": [
+          "disbursementType",
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "disbursementType": {
+            "type": "string"
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Payments_DisburseStipendRequest": {
+        "required": [
+          "subjectId",
+          "studyId",
+          "siteId",
+          "sequenceNumber",
+          "assignmentId",
+          "diaryId",
+          "amount",
+          "idempotencyKey",
+          "disbursementType"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sequenceNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "assignmentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "diaryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "idempotencyKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "disbursementType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_IssueCardRequestDto": {
+        "type": "object",
+        "properties": {
+          "cardType": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "RELOADABLE_DEBIT"
+          }
+        }
+      },
+      "Payments_OcrExtractRequestDto": {
+        "type": "object",
+        "properties": {
+          "rawText": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "imageBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "categoryHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "filename": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_ParticipantStipendRuleCreateDto": {
+        "required": [
+          "studyId",
+          "visitCode",
+          "visitName",
+          "procedureCode",
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "visitCode": {
+            "type": "string"
+          },
+          "visitName": {
+            "type": "string"
+          },
+          "procedureCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "USD"
+          },
+          "requiresVerification": {
+            "type": "boolean",
+            "default": true
+          },
+          "taxable": {
+            "type": "boolean",
+            "default": false
+          },
+          "antiCoercionCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "autoDisbursementThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMilestone": {
+            "type": "boolean",
+            "default": false
+          },
+          "milestoneCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_ReviewExpenseClaimRequestDto": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "reviewNotes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjustedAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Payments_SubmitExpenseClaimRequestDto": {
+        "required": [
+          "subjectId",
+          "studyId",
+          "siteId",
+          "category",
+          "merchantName",
+          "grossAmount"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "merchantName": {
+            "type": "string"
+          },
+          "grossAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMealAllowance": {
+            "type": "boolean",
+            "default": false
+          },
+          "perDiemCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "expenseDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptOcrData": {}
+        }
+      },
+      "Payments_SubmitW9RequestDto": {
+        "required": [
+          "fullLegalName",
+          "taxIdLastFour"
+        ],
+        "type": "object",
+        "properties": {
+          "fullLegalName": {
+            "type": "string"
+          },
+          "taxIdLastFour": {
+            "type": "string"
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certifyAccurate": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "Payments_VerifyW9RequestDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_VisitVerificationEventDto": {
+        "required": [
+          "studyId",
+          "siteId",
+          "subjectId",
+          "visitCode",
+          "eventId"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "visitCode": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "verifiedBy": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "crc_coordinator"
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Cadence.Apps.Payments"
+    },
+    {
+      "name": "Payments"
     }
   ]
 }
