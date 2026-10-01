@@ -378,6 +378,118 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.ToTable("form_submissions", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Locks.DataLockRecord", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FieldName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FormId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsOverride")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LockType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("OpenQueryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OverrideJustification")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PreflightSummary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ScopeId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ScopeType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SigToken")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("SiteId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SubjectId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("UnansweredQueryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UnlockJustification")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset?>("UnlockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UnlockedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("UnverifiedSourceDataCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("VisitId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudyId", "ScopeType", "ScopeId", "IsActive")
+                        .HasDatabaseName("idx_data_locks_scope");
+
+                    b.ToTable("data_lock_records", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Apps.Execution.Domain.Observations.ClinicalObservation", b =>
                 {
                     b.Property<Guid>("Id")

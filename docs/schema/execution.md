@@ -15,6 +15,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 38 |
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
+| [`edc.data_lock_records`](#edcdata_lock_records) | `DataLockRecord` | 26 |
 | [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
@@ -314,6 +315,43 @@ Indexes:
 - `IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex`: (`StudyCode`, `SiteCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_StudyCode_Status_EnrollmentIndex`: (`StudyCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_SubjectCode`: unique (`SubjectCode`)
+
+## edc.data_lock_records
+
+Entity: `DataLockRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(100)` | no |  | PK |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `FieldName` | `character varying(255)` | yes |  |  |
+| `FormId` | `character varying(255)` | yes |  |  |
+| `IsActive` | `boolean` | no |  |  |
+| `IsOverride` | `boolean` | no |  |  |
+| `LockType` | `character varying(50)` | no |  |  |
+| `OpenQueryCount` | `integer` | no |  |  |
+| `OverrideJustification` | `character varying(2000)` | yes |  |  |
+| `PreflightSummary` | `character varying(2000)` | yes |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `ScopeId` | `character varying(255)` | no |  |  |
+| `ScopeType` | `character varying(50)` | no |  |  |
+| `SigToken` | `character varying(2000)` | yes |  |  |
+| `SiteId` | `character varying(255)` | yes |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectId` | `character varying(255)` | yes |  |  |
+| `UnansweredQueryCount` | `integer` | no |  |  |
+| `UnlockJustification` | `character varying(2000)` | yes |  |  |
+| `UnlockedAt` | `timestamp with time zone` | yes |  |  |
+| `UnlockedBy` | `character varying(255)` | yes |  |  |
+| `UnverifiedSourceDataCount` | `integer` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+| `VisitId` | `character varying(255)` | yes |  |  |
+
+Indexes:
+
+- `idx_data_locks_scope`: (`StudyId`, `ScopeType`, `ScopeId`, `IsActive`)
 
 ## edc.form_submissions
 

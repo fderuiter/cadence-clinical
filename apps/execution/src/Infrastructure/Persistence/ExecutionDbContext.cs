@@ -1,6 +1,7 @@
 using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Forms;
+using Cadence.Apps.Execution.Domain.Locks;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -15,7 +16,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 persistence gateway for the Execution bounded context.
-/// Exposes aggregates for subjects, observations, form submissions, clinical queries, and CEC dossiers.
+/// Exposes aggregates for subjects, observations, form submissions, clinical queries, CEC dossiers, and data locks.
 /// @req:PRD-SUB-001
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
@@ -45,6 +46,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<CecChairAdjudication> CecChairAdjudications => Set<CecChairAdjudication>();
 
+    public DbSet<DataLockRecord> DataLocks => Set<DataLockRecord>();
+
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -59,6 +62,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new ClinicalQueryConfiguration());
         modelBuilder.ApplyConfiguration(new CecDossierConfiguration());
         modelBuilder.ApplyConfiguration(new CecChairAdjudicationConfiguration());
+        modelBuilder.ApplyConfiguration(new DataLockRecordConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
     }

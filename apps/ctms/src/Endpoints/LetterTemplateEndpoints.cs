@@ -124,11 +124,9 @@ public static class LetterTemplateEndpoints
         string? etmfDocId = null;
         if (pdfResult.IsSigned)
         {
-            var etmfDbType = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => a.GetTypes())
-                .FirstOrDefault(t => t.FullName == "Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext");
-            var etmfDb = etmfDbType != null ? serviceProvider.GetService(etmfDbType) : null;
-            etmfDocId = await EtmfFilingHelper.FileToEtmfAsync(request, pdfResult, templateName, letterId, etmfDb, clock, user, ct);
+            var etmfDb = serviceProvider.GetService<Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext>();
+            var etmfDoc = await EtmfFilingHelper.FileToEtmfAsync(request, pdfResult, templateName, letterId, etmfDb, clock, user, ct);
+            etmfDocId = etmfDoc?.Id;
         }
 
         // Dispatch Email Notification if finalized
@@ -136,14 +134,12 @@ public static class LetterTemplateEndpoints
         string? recipientEmail = null;
         if (pdfResult.IsSigned)
         {
-            var notifDbType = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(a => a.GetTypes())
-                .FirstOrDefault(t => t.FullName == "Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext");
-            var notifDb = notifDbType != null ? serviceProvider.GetService(notifDbType) : null;
-            recipientEmail = await EmailDispatchHelper.DispatchEmailNotificationAsync(request, pdfResult, templateName, letterId, notifDb, clock, user, ct);
-            if (recipientEmail is not null)
+            var notifDb = serviceProvider.GetService<Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext>();
+            var notifRecord = await EmailDispatchHelper.DispatchEmailNotificationAsync(request, pdfResult, templateName, letterId, notifDb, clock, user, ct);
+            if (notifRecord is not null)
             {
                 dispatchedAt = now;
+                recipientEmail = notifRecord.RecipientUserId;
             }
         }
 
@@ -399,83 +395,65 @@ public static class EtmfFilingHelper
     /// <summary>
     /// Ingests a finalized visit letter PDF into the eTMF repository.
     /// </summary>
-    public static async Task<string?> FileToEtmfAsync(
+    public static async Task<Cadence.Apps.Etmf.Domain.TmfDocument?> FileToEtmfAsync(
         SiteVisitLetterModel request,
         GxpPdfResult pdfResult,
         string templateName,
         string letterId,
-        object? etmfDb,
+        Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext? etmfDb,
         IClock clock,
         string user,
         CancellationToken ct)
     {
         if (etmfDb is null) return null;
 
-        var etmfAssembly = etmfDb.GetType().Assembly;
-        var tmfDocType = etmfAssembly.GetType("Cadence.Apps.Etmf.Domain.TmfDocument");
-        var tmfAuditLogType = etmfAssembly.GetType("Cadence.Apps.Etmf.Domain.TmfAuditLog");
-        if (tmfDocType is null || tmfAuditLogType is null) return null;
-
         var now = clock.UtcNow;
         var docId = "DOC-CTMS-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         var filename = $"{templateName}_{request.SiteId}_{request.StudyId}_{letterId}.pdf";
 
-        var tmfDoc = Activator.CreateInstance(tmfDocType, docId);
-        if (tmfDoc is null) return null;
-
-        SetProp(tmfDoc, "StudyId", request.StudyId);
-        SetProp(tmfDoc, "SiteId", request.SiteId);
-        SetProp(tmfDoc, "Filename", filename);
-        SetProp(tmfDoc, "Content", Convert.ToBase64String(pdfResult.PdfBytes));
-        SetProp(tmfDoc, "MimeType", "application/pdf");
-        SetProp(tmfDoc, "Zone", 5);
-        SetProp(tmfDoc, "Section", "05.02");
-        SetProp(tmfDoc, "ArtifactCode", "05.02.06");
-        SetProp(tmfDoc, "ArtifactType", "Monitoring Visit Correspondence");
-        SetProp(tmfDoc, "Status", "APPROVED");
-        SetProp(tmfDoc, "ApprovalStatus", "APPROVED");
-        SetProp(tmfDoc, "TaxonomyVersion", "v3.2.0-complete");
-        SetProp(tmfDoc, "CreatedAt", now.UtcDateTime);
-        SetProp(tmfDoc, "CreatedBy", user);
-        SetProp(tmfDoc, "VersionIndex", 1);
-        SetProp(tmfDoc, "ReasonForChange", request.ReasonForChange ?? "Automated eTMF filing for finalized monitoring visit letter.");
-        SetProp(tmfDoc, "MetadataJson", JsonSerializer.Serialize(new
+        var tmfDoc = new Cadence.Apps.Etmf.Domain.TmfDocument(docId)
         {
-            source = "CTMS_MONITORING_PIPELINE",
-            letter_type = templateName,
-            is_signed = pdfResult.IsSigned,
-            sha256_hash = pdfResult.Sha256Hash
-        }));
+            StudyId = request.StudyId,
+            SiteId = request.SiteId,
+            Filename = filename,
+            Content = Convert.ToBase64String(pdfResult.PdfBytes),
+            MimeType = "application/pdf",
+            Zone = 5,
+            Section = "05.02",
+            ArtifactCode = "05.02.06",
+            ArtifactType = "Monitoring Visit Correspondence",
+            Status = "APPROVED",
+            ApprovalStatus = "APPROVED",
+            TaxonomyVersion = "v3.2.0-complete",
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = user,
+            VersionIndex = 1,
+            ReasonForChange = request.ReasonForChange ?? "Automated eTMF filing for finalized monitoring visit letter.",
+            MetadataJson = JsonSerializer.Serialize(new
+            {
+                source = "CTMS_MONITORING_PIPELINE",
+                letter_type = templateName,
+                is_signed = pdfResult.IsSigned,
+                sha256_hash = pdfResult.Sha256Hash
+            })
+        };
 
-        var dbContextType = etmfDb.GetType();
-        var addMethod = dbContextType.GetMethod("Add", [typeof(object)]) ?? dbContextType.GetMethod("Add");
-        addMethod?.Invoke(etmfDb, [tmfDoc]);
+        etmfDb.TmfDocuments.Add(tmfDoc);
 
-        var auditLog = Activator.CreateInstance(tmfAuditLogType);
-        if (auditLog is not null)
+        var auditLog = new Cadence.Apps.Etmf.Domain.TmfAuditLog
         {
-            SetProp(auditLog, "Timestamp", now);
-            SetProp(auditLog, "UserId", user);
-            SetProp(auditLog, "UserRole", "System/CRA");
-            SetProp(auditLog, "Action", "INGEST_MONITORING_LETTER");
-            SetProp(auditLog, "DocumentId", docId);
-            SetProp(auditLog, "Details", $"Filed finalized monitoring visit letter {filename} into eTMF Zone 5.");
-            SetProp(auditLog, "ReasonForChange", request.ReasonForChange ?? "Automated visit letter eTMF integration");
-            addMethod?.Invoke(etmfDb, [auditLog]);
-        }
+            Timestamp = now,
+            UserId = user,
+            UserRole = "System/CRA",
+            Action = "INGEST_MONITORING_LETTER",
+            DocumentId = docId,
+            Details = $"Filed finalized monitoring visit letter {filename} into eTMF Zone 5.",
+            ReasonForChange = request.ReasonForChange ?? "Automated visit letter eTMF integration"
+        };
+        etmfDb.TmfAuditLogs.Add(auditLog);
 
-        var saveChangesMethod = dbContextType.GetMethod("SaveChangesAsync", [typeof(CancellationToken)]);
-        if (saveChangesMethod is not null)
-        {
-            await (Task)saveChangesMethod.Invoke(etmfDb, [ct])!;
-        }
-
-        return docId;
-    }
-
-    private static void SetProp(object target, string name, object? value)
-    {
-        target.GetType().GetProperty(name)?.SetValue(target, value);
+        await etmfDb.SaveChangesAsync(ct);
+        return tmfDoc;
     }
 }
 
@@ -487,12 +465,12 @@ public static class EmailDispatchHelper
     /// <summary>
     /// Dispatches an email notification with secure PDF access link to site investigator.
     /// </summary>
-    public static async Task<string?> DispatchEmailNotificationAsync(
+    public static async Task<Cadence.Apps.Notifications.Domain.NotificationRecord?> DispatchEmailNotificationAsync(
         SiteVisitLetterModel request,
         GxpPdfResult pdfResult,
         string templateName,
         string letterId,
-        object? notificationsDb,
+        Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext? notificationsDb,
         IClock clock,
         string user,
         CancellationToken ct)
@@ -510,63 +488,46 @@ public static class EmailDispatchHelper
             return null;
         }
 
-        var notifAssembly = notificationsDb.GetType().Assembly;
-        var recordType = notifAssembly.GetType("Cadence.Apps.Notifications.Domain.NotificationRecord");
-        var deliveryType = notifAssembly.GetType("Cadence.Apps.Notifications.Domain.NotificationDelivery");
-        if (recordType is null || deliveryType is null) return null;
-
         var now = clock.UtcNow;
         var notificationId = "NOTIF-CTMS-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         var pdfAccessUrl = $"/api/v1/ctms/letters/{letterId}/pdf";
 
-        var record = Activator.CreateInstance(recordType);
-        if (record is null) return null;
-
-        SetProp(record, "Id", notificationId);
-        SetProp(record, "RecipientUserId", recipientEmail);
-        SetProp(record, "RecipientRoleId", "PRINCIPAL_INVESTIGATOR");
-        SetProp(record, "Category", "VISIT_LETTER_DISPATCH");
-        SetProp(record, "Priority", "HIGH");
-        SetProp(record, "Channels", "EMAIL,IN_APP");
-        SetProp(record, "MessageContent", $"Official Monitoring Visit Letter ({templateName}) for Study {request.StudyId} Site {request.SiteId} is ready. Access secure PDF: {pdfAccessUrl}");
-        SetProp(record, "RelatedEntityId", letterId);
-        SetProp(record, "RelatedEntityType", "CTMS_VISIT_LETTER");
-        SetProp(record, "Status", "SENT");
-        SetProp(record, "DeliveryState", "COMPLETED");
-        SetProp(record, "Retries", 0);
-        SetProp(record, "CreatedAt", now);
-        SetProp(record, "CreatedBy", user);
-        SetProp(record, "VersionIndex", 1);
-        SetProp(record, "ReasonForChange", "Automated email notification dispatch for visit letter finalization.");
-
-        var dbContextType = notificationsDb.GetType();
-        var addMethod = dbContextType.GetMethod("Add", [typeof(object)]) ?? dbContextType.GetMethod("Add");
-        addMethod?.Invoke(notificationsDb, [record]);
-
-        var delivery = Activator.CreateInstance(deliveryType);
-        if (delivery is not null)
+        var record = new Cadence.Apps.Notifications.Domain.NotificationRecord
         {
-            SetProp(delivery, "Id", Guid.NewGuid().ToString());
-            SetProp(delivery, "NotificationId", notificationId);
-            SetProp(delivery, "Channel", "EMAIL");
-            SetProp(delivery, "Status", "COMPLETED");
-            SetProp(delivery, "Attempts", 1);
-            SetProp(delivery, "CompletedAt", now);
-            SetProp(delivery, "RetryEligible", false);
-            addMethod?.Invoke(notificationsDb, [delivery]);
-        }
+            Id = notificationId,
+            RecipientUserId = recipientEmail,
+            RecipientRoleId = "PRINCIPAL_INVESTIGATOR",
+            Category = "VISIT_LETTER_DISPATCH",
+            Priority = "HIGH",
+            Channels = "EMAIL,IN_APP",
+            MessageContent = $"Official Monitoring Visit Letter ({templateName}) for Study {request.StudyId} Site {request.SiteId} is ready. Access secure PDF: {pdfAccessUrl}",
+            RelatedEntityId = letterId,
+            RelatedEntityType = "CTMS_VISIT_LETTER",
+            Status = "SENT",
+            DeliveryState = "COMPLETED",
+            Retries = 0,
+            CreatedAt = now,
+            CreatedBy = user,
+            VersionIndex = 1,
+            ReasonForChange = "Automated email notification dispatch for visit letter finalization."
+        };
 
-        var saveChangesMethod = dbContextType.GetMethod("SaveChangesAsync", [typeof(CancellationToken)]);
-        if (saveChangesMethod is not null)
+        notificationsDb.NotificationRecords.Add(record);
+
+        var delivery = new Cadence.Apps.Notifications.Domain.NotificationDelivery
         {
-            await (Task)saveChangesMethod.Invoke(notificationsDb, [ct])!;
-        }
+            Id = Guid.NewGuid().ToString(),
+            NotificationId = notificationId,
+            Channel = "EMAIL",
+            Status = "COMPLETED",
+            Attempts = 1,
+            CompletedAt = now,
+            RetryEligible = false
+        };
 
-        return recipientEmail;
-    }
+        notificationsDb.NotificationDeliveries.Add(delivery);
 
-    private static void SetProp(object target, string name, object? value)
-    {
-        target.GetType().GetProperty(name)?.SetValue(target, value);
+        await notificationsDb.SaveChangesAsync(ct);
+        return record;
     }
 }

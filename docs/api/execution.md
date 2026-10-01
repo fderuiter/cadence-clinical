@@ -13,6 +13,30 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/forms/{id}/approve` | ApproveFormSubmission |  |
 | `POST` | `/api/v1/execution/forms/{id}/complete` | CompleteFormSubmission |  |
 | `POST` | `/api/v1/execution/forms/{id}/unlock` | UnlockFormSubmission |  |
+| `GET` | `/api/v1/execution/locks` | ListLocks |  |
+| `POST` | `/api/v1/execution/locks/form/{form_id}/freeze` |  |  |
+| `POST` | `/api/v1/execution/locks/form/{form_id}/lock` |  |  |
+| `POST` | `/api/v1/execution/locks/form/{form_id}/unfreeze` |  |  |
+| `POST` | `/api/v1/execution/locks/form/{form_id}/unlock` |  |  |
+| `POST` | `/api/v1/execution/locks/lock` | LockData |  |
+| `POST` | `/api/v1/execution/locks/pre-flight` | PreflightLockCheck |  |
+| `POST` | `/api/v1/execution/locks/site/{site_id}/freeze` |  |  |
+| `POST` | `/api/v1/execution/locks/site/{site_id}/lock` |  |  |
+| `POST` | `/api/v1/execution/locks/site/{site_id}/unfreeze` |  |  |
+| `POST` | `/api/v1/execution/locks/site/{site_id}/unlock` |  |  |
+| `POST` | `/api/v1/execution/locks/subject/{subject_id}/freeze` |  |  |
+| `POST` | `/api/v1/execution/locks/subject/{subject_id}/lock` |  |  |
+| `POST` | `/api/v1/execution/locks/subject/{subject_id}/unfreeze` |  |  |
+| `POST` | `/api/v1/execution/locks/subject/{subject_id}/unlock` |  |  |
+| `POST` | `/api/v1/execution/locks/trial/freeze` |  |  |
+| `POST` | `/api/v1/execution/locks/trial/lock` |  |  |
+| `POST` | `/api/v1/execution/locks/trial/unfreeze` |  |  |
+| `POST` | `/api/v1/execution/locks/trial/unlock` |  |  |
+| `POST` | `/api/v1/execution/locks/unlock` | UnlockData |  |
+| `POST` | `/api/v1/execution/locks/visit/{visit_id}/freeze` |  |  |
+| `POST` | `/api/v1/execution/locks/visit/{visit_id}/lock` |  |  |
+| `POST` | `/api/v1/execution/locks/visit/{visit_id}/unfreeze` |  |  |
+| `POST` | `/api/v1/execution/locks/visit/{visit_id}/unlock` |  |  |
 | `POST` | `/api/v1/execution/observations` | CreateClinicalObservation |  |
 | `GET` | `/api/v1/execution/observations/subject/{studyId}/{subjectId}` | ListObservationsBySubject |  |
 | `GET` | `/api/v1/execution/observations/{id}` | GetObservationById |  |

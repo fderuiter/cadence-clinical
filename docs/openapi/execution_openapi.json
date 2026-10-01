@@ -1726,6 +1726,912 @@
           }
         }
       }
+    },
+    "/api/v1/execution/locks/pre-flight": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "operationId": "PreflightLockCheck",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_PreflightCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_PreflightCheckResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/lock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "operationId": "LockData",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_DataLockRecordResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/unlock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "operationId": "UnlockData",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_DataLockRecordResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks": {
+      "get": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "operationId": "ListLocks",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "scope_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_DataLockRecordResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/site/{site_id}/freeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/site/{site_id}/lock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/site/{site_id}/unfreeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/site/{site_id}/unlock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/visit/{visit_id}/freeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/visit/{visit_id}/lock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/visit/{visit_id}/unfreeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/visit/{visit_id}/unlock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/form/{form_id}/freeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/form/{form_id}/lock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/form/{form_id}/unfreeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/form/{form_id}/unlock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/subject/{subject_id}/freeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/subject/{subject_id}/lock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/subject/{subject_id}/unfreeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/subject/{subject_id}/unlock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/trial/freeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/trial/lock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockExecuteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/trial/unfreeze": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/trial/unlock": {
+      "post": {
+        "tags": [
+          "Data Lock Governance"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Execution_DataLockUnlockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2214,6 +3120,263 @@
           }
         }
       },
+      "Execution_DataLockExecuteRequest": {
+        "required": [
+          "scope_type",
+          "scope_id",
+          "study_id"
+        ],
+        "type": "object",
+        "properties": {
+          "scope_type": {
+            "type": "string"
+          },
+          "scope_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visit_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "field_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "default": "HARD_LOCK"
+          },
+          "lock_type": {
+            "type": "string",
+            "default": "HARD_LOCK"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": ""
+          },
+          "sig_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "override_approved": {
+            "type": "boolean",
+            "default": false
+          },
+          "override_justification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_DataLockRecordResponse": {
+        "required": [
+          "lock_id",
+          "scope_type",
+          "scope_id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_id",
+          "form_id",
+          "field_name",
+          "lock_type",
+          "status",
+          "is_active",
+          "created_by",
+          "created_at",
+          "reason_for_change",
+          "preflight_summary",
+          "open_query_count",
+          "unanswered_query_count",
+          "unverified_source_data_count",
+          "is_override",
+          "override_justification",
+          "unlock_justification",
+          "unlocked_by",
+          "unlocked_at"
+        ],
+        "type": "object",
+        "properties": {
+          "lock_id": {
+            "type": "string"
+          },
+          "scope_type": {
+            "type": "string"
+          },
+          "scope_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visit_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "field_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lock_type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "preflight_summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "open_query_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unanswered_query_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unverified_source_data_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_override": {
+            "type": "boolean"
+          },
+          "override_justification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unlock_justification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unlocked_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unlocked_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_DataLockUnlockRequest": {
+        "required": [
+          "lock_id",
+          "scope_type",
+          "scope_id",
+          "justification"
+        ],
+        "type": "object",
+        "properties": {
+          "lock_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope_type": {
+            "type": "string"
+          },
+          "scope_id": {
+            "type": "string"
+          },
+          "justification": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
       "Execution_DemographicsPayload": {
         "required": [
           "name",
@@ -2246,6 +3409,49 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Execution_DiscrepancyCounts": {
+        "required": [
+          "open_queries",
+          "unanswered_queries",
+          "unverified_source_data",
+          "total_discrepancies"
+        ],
+        "type": "object",
+        "properties": {
+          "open_queries": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unanswered_queries": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unverified_source_data": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_discrepancies": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -2809,6 +4015,181 @@
             "type": "string"
           },
           "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Execution_PreflightCheckRequest": {
+        "required": [
+          "scope_type",
+          "scope_id",
+          "study_id"
+        ],
+        "type": "object",
+        "properties": {
+          "scope_type": {
+            "type": "string"
+          },
+          "scope_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visit_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "field_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "action": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "HARD_LOCK"
+          }
+        }
+      },
+      "Execution_PreflightCheckResponse": {
+        "required": [
+          "scope_type",
+          "scope_id",
+          "status",
+          "can_proceed",
+          "requires_override",
+          "summary",
+          "discrepancy_counts",
+          "discrepancies",
+          "checked_at",
+          "execution_time_ms"
+        ],
+        "type": "object",
+        "properties": {
+          "scope_type": {
+            "type": "string"
+          },
+          "scope_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "can_proceed": {
+            "type": "boolean"
+          },
+          "requires_override": {
+            "type": "boolean"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "discrepancy_counts": {
+            "$ref": "#/components/schemas/Execution_DiscrepancyCounts"
+          },
+          "discrepancies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_PreLockDiscrepancyItem"
+            }
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "execution_time_ms": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Execution_PreLockDiscrepancyItem": {
+        "required": [
+          "id",
+          "discrepancy_type",
+          "scope_type",
+          "scope_id",
+          "subject_id",
+          "visit_id",
+          "form_id",
+          "field_id",
+          "description",
+          "severity",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "discrepancy_type": {
+            "type": "string"
+          },
+          "scope_type": {
+            "type": "string"
+          },
+          "scope_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "visit_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "field_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "status": {
             "type": "string"
           }
         }
@@ -3498,6 +4879,9 @@
     },
     {
       "name": "CecEndpoints"
+    },
+    {
+      "name": "Data Lock Governance"
     }
   ]
 }

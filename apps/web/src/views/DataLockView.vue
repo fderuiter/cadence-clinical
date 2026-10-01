@@ -639,6 +639,204 @@
               placeholder="Enter formal reason for locking this data scope..."
             />
           </div>
+
+          <!-- Automated Pre-Lock Discrepancy & Source Data Validation Panel -->
+          <div class="preflight-panel form-group">
+            <div class="preflight-header">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label class="form-label" style="margin-bottom: 0"
+                >Automated Pre-Lock Validation Check:</label
+              >
+              <button
+                class="btn btn-sm btn-outline"
+                type="button"
+                :disabled="isPreflightLoading"
+                @click="runPreflightCheck"
+              >
+                {{
+                  isPreflightLoading
+                    ? "Checking..."
+                    : "🔄 Re-run Pre-flight Check"
+                }}
+              </button>
+            </div>
+
+            <div v-if="isPreflightLoading" class="preflight-loading">
+              <span class="spinner"></span> Running automated pre-flight
+              discrepancy check across {{ lockForm.scope_type }} hierarchy...
+            </div>
+
+            <div v-else-if="preflightResult" class="preflight-results">
+              <div
+                :class="[
+                  'preflight-badge-banner',
+                  preflightResult.status === 'PASSED'
+                    ? 'banner-passed'
+                    : 'banner-blocked',
+                ]"
+              >
+                <div class="banner-status-title">
+                  <span class="status-icon">{{
+                    preflightResult.status === "PASSED" ? "✓" : "⚠️"
+                  }}</span>
+                  <strong
+                    >PRE-FLIGHT VALIDATION {{ preflightResult.status }}</strong
+                  >
+                  <span
+                    v-if="preflightResult.execution_time_ms !== undefined"
+                    class="execution-time"
+                  >
+                    ({{ preflightResult.execution_time_ms.toFixed(1) }}ms)
+                  </span>
+                </div>
+                <p class="banner-summary">{{ preflightResult.summary }}</p>
+              </div>
+
+              <!-- Summary Count Badges -->
+              <div
+                v-if="preflightResult.discrepancy_counts"
+                class="discrepancy-grid"
+              >
+                <div
+                  class="discrepancy-card"
+                  :class="{
+                    'card-warning':
+                      preflightResult.discrepancy_counts.open_queries > 0,
+                  }"
+                >
+                  <span class="card-num">{{
+                    preflightResult.discrepancy_counts.open_queries
+                  }}</span>
+                  <span class="card-label">Open Queries</span>
+                </div>
+                <div
+                  class="discrepancy-card"
+                  :class="{
+                    'card-warning':
+                      preflightResult.discrepancy_counts.unanswered_queries > 0,
+                  }"
+                >
+                  <span class="card-num">{{
+                    preflightResult.discrepancy_counts.unanswered_queries
+                  }}</span>
+                  <span class="card-label">Unanswered Queries</span>
+                </div>
+                <div
+                  class="discrepancy-card"
+                  :class="{
+                    'card-warning':
+                      preflightResult.discrepancy_counts
+                        .unverified_source_data > 0,
+                  }"
+                >
+                  <span class="card-num">{{
+                    preflightResult.discrepancy_counts.unverified_source_data
+                  }}</span>
+                  <span class="card-label">Unverified SDV Records</span>
+                </div>
+                <div
+                  class="discrepancy-card"
+                  :class="{
+                    'card-alert':
+                      preflightResult.discrepancy_counts.total_discrepancies >
+                      0,
+                    'card-success':
+                      preflightResult.discrepancy_counts.total_discrepancies ===
+                      0,
+                  }"
+                >
+                  <span class="card-num">{{
+                    preflightResult.discrepancy_counts.total_discrepancies
+                  }}</span>
+                  <span class="card-label">Total Discrepancies</span>
+                </div>
+              </div>
+
+              <!-- Itemized Discrepancy List (if discrepancies > 0) -->
+              <div
+                v-if="
+                  preflightResult.discrepancy_counts &&
+                  preflightResult.discrepancy_counts.total_discrepancies > 0
+                "
+                class="discrepancy-list-container"
+              >
+                <h4 class="discrepancy-list-title">
+                  Detected Open Discrepancies in Scope:
+                </h4>
+                <div class="discrepancy-list">
+                  <div
+                    v-for="item in preflightResult.discrepancies"
+                    :key="item.id"
+                    class="discrepancy-item"
+                  >
+                    <div class="discrepancy-header">
+                      <span
+                        :class="['discrepancy-tag', item.discrepancy_type]"
+                        >{{ item.discrepancy_type }}</span
+                      >
+                      <span class="discrepancy-scope"
+                        >{{ item.scope_type }}: {{ item.scope_id }}</span
+                      >
+                      <span
+                        v-if="item.severity"
+                        class="discrepancy-severity"
+                        :class="'severity-' + item.severity.toLowerCase()"
+                        >{{ item.severity }}</span
+                      >
+                    </div>
+                    <div class="discrepancy-body">
+                      <p>{{ item.description }}</p>
+                      <small v-if="item.subject_id">
+                        Subject: {{ item.subject_id }}
+                        <span v-if="item.form_id">
+                          | Form: {{ item.form_id }}</span
+                        >
+                        <span v-if="item.field_id">
+                          | Field: {{ item.field_id }}</span
+                        >
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Override Controls -->
+                <div class="override-box">
+                  <div class="override-checkbox-row">
+                    <label class="override-label">
+                      <input v-model="overrideApproved" type="checkbox" />
+                      <span>
+                        <strong
+                          >Request Data Manager Approved Override Lock</strong
+                        >
+                        <br />
+                        <small
+                          >Logs pre-flight discrepancy snapshot and formal
+                          justification to Part 11 audit trail.</small
+                        >
+                      </span>
+                    </label>
+                  </div>
+                  <div
+                    v-if="overrideApproved"
+                    class="override-justification-field"
+                  >
+                    <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                    <label class="form-label"
+                      >Approved Override Justification:
+                      <span class="required-star">*</span></label
+                    >
+                    <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                    <textarea
+                      v-model="overrideJustification"
+                      class="form-textarea"
+                      rows="2"
+                      placeholder="Enter mandatory override justification (e.g. Lead Data Manager Dr. Smith approved interim snapshot)..."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" @click="isLockModalOpen = false">
@@ -646,7 +844,7 @@
           </button>
           <button
             class="btn btn-primary"
-            :disabled="!lockForm.reason.trim() || isSubmitting"
+            :disabled="isSubmitLockDisabled"
             @click="submitLock"
           >
             {{ isSubmitting ? "Locking..." : "Confirm Lock Operation" }}
@@ -786,6 +984,13 @@ export default {
       // Modal Dialog States
       isLockModalOpen: false,
       isUnlockModalOpen: false,
+
+      // Pre-flight Discrepancy Validation Engine State
+      isPreflightLoading: false,
+      preflightResult: null,
+      preflightError: null,
+      overrideApproved: false,
+      overrideJustification: "",
 
       lockForm: {
         scope_type: "FORM",
@@ -928,6 +1133,17 @@ export default {
   },
 
   computed: {
+    isSubmitLockDisabled() {
+      if (this.isSubmitting || this.isPreflightLoading) return true;
+      if (!this.lockForm.reason.trim()) return true;
+      if (this.preflightResult && this.preflightResult.status === "BLOCKED") {
+        if (!this.overrideApproved || !this.overrideJustification.trim()) {
+          return true;
+        }
+      }
+      return false;
+    },
+
     isJustificationValid() {
       return this.unlockForm.justification.trim().length >= 50;
     },
@@ -1076,7 +1292,11 @@ export default {
         sig_token: "",
         reason: "",
       };
+      this.overrideApproved = false;
+      this.overrideJustification = "";
+      this.preflightResult = null;
       this.isLockModalOpen = true;
+      this.runPreflightCheck();
     },
 
     openUnlockDialog(node) {
@@ -1098,6 +1318,38 @@ export default {
       this.isUnlockModalOpen = true;
     },
 
+    async runPreflightCheck() {
+      this.isPreflightLoading = true;
+      this.preflightError = null;
+      try {
+        const payload = {
+          scope_type: this.lockForm.scope_type,
+          scope_id: this.lockForm.scope_id,
+          study_id: this.lockForm.study_id,
+          site_id: this.lockForm.site_id || null,
+          subject_id: this.lockForm.subject_id || null,
+          visit_id: this.lockForm.visit_id || null,
+          form_id: this.lockForm.form_id || null,
+          field_name: this.lockForm.field_name || null,
+          action: this.lockForm.action,
+        };
+
+        const res = await fetch("/api/v1/execution/locks/pre-flight", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        await ensureOk(res);
+        this.preflightResult = await res.json();
+      } catch (err) {
+        this.preflightError = err;
+        useToastStore().apiError("Pre-flight validation check failed", err);
+      } finally {
+        this.isPreflightLoading = false;
+      }
+    },
+
     async submitLock() {
       this.isSubmitting = true;
       try {
@@ -1113,6 +1365,8 @@ export default {
           action: this.lockForm.action,
           lock_type: this.lockForm.action === "FREEZE" ? "FROZEN" : "HARD_LOCK",
           reason_for_change: this.lockForm.reason,
+          override_approved: this.overrideApproved,
+          override_justification: this.overrideJustification || null,
         };
 
         const headers = { "Content-Type": "application/json" };
@@ -1754,5 +2008,236 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Pre-flight Validation Engine Styles */
+.preflight-panel {
+  border: 1px solid var(--border, #e2e8f0);
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.preflight-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background-color: #e2e8f0;
+}
+
+.preflight-loading {
+  font-size: 0.88rem;
+  color: #0284c7;
+  padding: 12px;
+  background-color: #e0f2fe;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preflight-badge-banner {
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.banner-passed {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.banner-blocked {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.banner-status-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+}
+
+.execution-time {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-left: auto;
+}
+
+.banner-summary {
+  margin: 6px 0 0 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.discrepancy-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.discrepancy-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-num {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.card-label {
+  font-size: 0.72rem;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.card-warning .card-num {
+  color: #d97706;
+}
+
+.card-alert .card-num {
+  color: #dc2626;
+}
+
+.card-success .card-num {
+  color: #16a34a;
+}
+
+.discrepancy-list-container {
+  margin-top: 12px;
+}
+
+.discrepancy-list-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.discrepancy-list {
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: #ffffff;
+  margin-bottom: 12px;
+}
+
+.discrepancy-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.discrepancy-item:last-child {
+  border-bottom: none;
+}
+
+.discrepancy-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+}
+
+.discrepancy-tag {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.72rem;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.discrepancy-tag.UNANSWERED_QUERY,
+.discrepancy-tag.OPEN_QUERY {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.discrepancy-tag.UNVERIFIED_SOURCE_DATA {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.discrepancy-scope {
+  color: #64748b;
+  font-family: monospace;
+}
+
+.discrepancy-severity {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.severity-high {
+  color: #dc2626;
+}
+
+.severity-medium {
+  color: #d97706;
+}
+
+.discrepancy-body p {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #1e293b;
+}
+
+.discrepancy-body small {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.override-box {
+  background-color: #fffbeb;
+  border: 1px dashed #fcd34d;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.override-checkbox-row {
+  margin-bottom: 8px;
+}
+
+.override-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #92400e;
+  cursor: pointer;
+}
+
+.override-justification-field {
+  margin-top: 8px;
 }
 </style>
