@@ -2,13 +2,16 @@
   <div class="soa-matrix-editor">
     <div class="matrix-toolbar">
       <div class="toolbar-stats">
-        <span class="stat-badge"><strong>{{ localActivities.length }}</strong> Procedures</span>
-        <span class="stat-badge"><strong>{{ visits.length }}</strong> Visits</span>
-        <span class="stat-badge highlight"><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span>
-        <span
-          v-if="selectedRangeCellCount > 0"
-          class="stat-badge range-badge"
+        <span class="stat-badge"
+          ><strong>{{ localActivities.length }}</strong> Procedures</span
         >
+        <span class="stat-badge"
+          ><strong>{{ visits.length }}</strong> Visits</span
+        >
+        <span class="stat-badge highlight"
+          ><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span
+        >
+        <span v-if="selectedRangeCellCount > 0" class="stat-badge range-badge">
           ⚡ <strong>{{ selectedRangeCellCount }}</strong> Cells Selected
         </span>
       </div>
@@ -48,10 +51,7 @@
     </div>
 
     <!-- Range Selection Bulk Actions Bar -->
-    <div
-      v-if="selectedRangeCellCount > 0"
-      class="range-action-banner"
-    >
+    <div v-if="selectedRangeCellCount > 0" class="range-action-banner">
       <div class="range-banner-title">
         Selected Multi-Cell Range ({{ selectedRangeCellCount }} cells)
       </div>
@@ -81,10 +81,7 @@
     </div>
 
     <!-- Inline Add Procedure Form -->
-    <div
-      v-if="showAddProcedure"
-      class="inline-add-box"
-    >
+    <div v-if="showAddProcedure" class="inline-add-box">
       <div class="inline-form-group">
         <label for="new-proc-name">Procedure Name</label>
         <input
@@ -92,7 +89,7 @@
           v-model="newProcedureName"
           placeholder="e.g. Pharmacokinetic Blood Sampling"
           class="input-text"
-        >
+        />
       </div>
       <div class="inline-form-group">
         <label for="new-proc-domain">CDASH Domain</label>
@@ -101,33 +98,15 @@
           v-model="newProcedureDomain"
           class="input-select"
         >
-          <option value="VS">
-            VS - Vital Signs
-          </option>
-          <option value="EG">
-            EG - ECG
-          </option>
-          <option value="LB">
-            LB - Laboratory
-          </option>
-          <option value="QS">
-            QS - Questionnaire / VAS
-          </option>
-          <option value="PE">
-            PE - Physical Exam / Body Map
-          </option>
-          <option value="AE">
-            AE - Adverse Events
-          </option>
-          <option value="CM">
-            CM - Concomitant Medications
-          </option>
-          <option value="DM">
-            DM - Demographics
-          </option>
-          <option value="EX">
-            EX - Exposure
-          </option>
+          <option value="VS">VS - Vital Signs</option>
+          <option value="EG">EG - ECG</option>
+          <option value="LB">LB - Laboratory</option>
+          <option value="QS">QS - Questionnaire / VAS</option>
+          <option value="PE">PE - Physical Exam / Body Map</option>
+          <option value="AE">AE - Adverse Events</option>
+          <option value="CM">CM - Concomitant Medications</option>
+          <option value="DM">DM - Demographics</option>
+          <option value="EX">EX - Exposure</option>
         </select>
       </div>
       <button
@@ -148,10 +127,7 @@
     </div>
 
     <!-- Inline Add Visit Form -->
-    <div
-      v-if="showAddVisit"
-      class="inline-add-box"
-    >
+    <div v-if="showAddVisit" class="inline-add-box">
       <div class="inline-form-group">
         <label for="new-visit-name">Visit Name</label>
         <input
@@ -159,7 +135,7 @@
           v-model="newVisitName"
           placeholder="e.g. Visit 4 / Week 8"
           class="input-text"
-        >
+        />
       </div>
       <div class="inline-form-group">
         <label for="new-visit-day">Target Day</label>
@@ -169,7 +145,7 @@
           type="number"
           class="input-text"
           style="width: 90px"
-        >
+        />
       </div>
       <button
         type="button"
@@ -189,10 +165,7 @@
     </div>
 
     <!-- Inline Clone Procedure Group Form -->
-    <div
-      v-if="showCloneGroup"
-      class="inline-add-box clone-group-box"
-    >
+    <div v-if="showCloneGroup" class="inline-add-box clone-group-box">
       <div class="inline-form-group">
         <label for="clone-domain-select">Source Procedure Group (Domain)</label>
         <select
@@ -200,23 +173,21 @@
           v-model="cloneSourceDomain"
           class="input-select"
         >
-          <option
-            v-for="d in availableDomains"
-            :key="d"
-            :value="d"
-          >
+          <option v-for="d in availableDomains" :key="d" :value="d">
             {{ d }} Domain
           </option>
         </select>
       </div>
       <div class="inline-form-group">
-        <label for="clone-suffix-input">Cloned Group Name Prefix / Suffix</label>
+        <label for="clone-suffix-input"
+          >Cloned Group Name Prefix / Suffix</label
+        >
         <input
           id="clone-suffix-input"
           v-model="cloneNameSuffix"
           placeholder="e.g. (Cohort B)"
           class="input-text"
-        >
+        />
       </div>
       <button
         type="button"
@@ -240,10 +211,7 @@
       <table class="soa-interactive-table">
         <thead>
           <tr>
-            <th
-              class="col-procedure-header"
-              scope="col"
-            >
+            <th class="col-procedure-header" scope="col">
               <div class="header-with-master">
                 <input
                   type="checkbox"
@@ -253,16 +221,11 @@
                   aria-label="Master select all matrix cells"
                   @change="toggleGrandMaster"
                   @click.stop="toggleGrandMaster"
-                >
+                />
                 <span>Clinical Procedure / Assessment</span>
               </div>
             </th>
-            <th
-              class="col-domain-header"
-              scope="col"
-            >
-              CDASH
-            </th>
+            <th class="col-domain-header" scope="col">CDASH</th>
             <th
               v-for="visit in visits"
               :key="visit.visit_name"
@@ -278,14 +241,12 @@
                   :aria-label="`Toggle all procedures for ${visit.visit_name}`"
                   @change="toggleColumnMaster(visit.visit_name)"
                   @click.stop="toggleColumnMaster(visit.visit_name)"
-                >
+                />
                 <div class="visit-header-title">
                   {{ visit.visit_name }}
                 </div>
               </div>
-              <div class="visit-header-meta">
-                Day {{ visit.target_day }}
-              </div>
+              <div class="visit-header-meta">Day {{ visit.target_day }}</div>
             </th>
           </tr>
         </thead>
@@ -305,7 +266,7 @@
                   :aria-label="`Toggle all visits for ${act.activity_name}`"
                   @change="toggleRowMaster(act)"
                   @click.stop="toggleRowMaster(act)"
-                >
+                />
                 <div>
                   <span class="procedure-label">{{ act.activity_name }}</span>
                   <span
@@ -333,9 +294,12 @@
                 active: isAssigned(act, visit.visit_name),
                 'in-range': isCellInSelectedRange(rIdx, cIdx),
               }"
-              @mousedown.prevent="handleCellMouseDown(rIdx, cIdx, $event)"
-              @mouseenter="handleCellMouseEnter(rIdx, cIdx)"
-              @mouseup="handleCellMouseUp(rIdx, cIdx, $event)"
+              :data-r-idx="rIdx"
+              :data-c-idx="cIdx"
+              @pointerdown.prevent="handleCellPointerDown(rIdx, cIdx, $event)"
+              @pointermove="handleCellPointerMove($event)"
+              @pointerup="handleCellPointerUp(rIdx, cIdx, $event)"
+              @pointercancel="handleCellPointerCancel($event)"
               @click="
                 handleCellClick(act, visit.visit_name, rIdx, cIdx, $event)
               "
@@ -348,7 +312,7 @@
                 @click.stop="
                   handleCellClick(act, visit.visit_name, rIdx, cIdx, $event)
                 "
-              >
+              />
             </td>
           </tr>
         </tbody>
@@ -531,7 +495,7 @@ const selectedRangeCellCount = computed(() => {
   );
 });
 
-const handleCellMouseDown = (rIdx, cIdx, event) => {
+const handleCellPointerDown = (rIdx, cIdx, event) => {
   if (event.shiftKey && lastClickedCell.value) {
     // Shift+Click range selection
     selectedRangeBounds.value = {
@@ -545,17 +509,37 @@ const handleCellMouseDown = (rIdx, cIdx, event) => {
     dragStartCell.value = { rIdx, cIdx };
     dragCurrentCell.value = { rIdx, cIdx };
     selectedRangeBounds.value = null;
-    window.addEventListener("mouseup", handleGlobalMouseUpOnce);
+    if (event.target && typeof event.target.setPointerCapture === "function") {
+      try {
+        event.target.setPointerCapture(event.pointerId);
+      } catch {
+        // ignore
+      }
+    }
+    window.addEventListener("pointerup", handleGlobalPointerUpOnce);
+    window.addEventListener("pointercancel", handleGlobalPointerCancelOnce);
   }
 };
 
-const handleCellMouseEnter = (rIdx, cIdx) => {
+const handleCellPointerMove = (event) => {
   if (isDragging.value) {
-    dragCurrentCell.value = { rIdx, cIdx };
+    const el = document.elementFromPoint(event.clientX, event.clientY);
+    const cellEl = el?.closest(".cell-toggle");
+    if (
+      cellEl &&
+      cellEl.dataset.rIdx !== undefined &&
+      cellEl.dataset.cIdx !== undefined
+    ) {
+      const r = parseInt(cellEl.dataset.rIdx, 10);
+      const c = parseInt(cellEl.dataset.cIdx, 10);
+      if (!isNaN(r) && !isNaN(c)) {
+        dragCurrentCell.value = { rIdx: r, cIdx: c };
+      }
+    }
   }
 };
 
-const handleGlobalMouseUpOnce = () => {
+const finishPointerDrag = (event) => {
   if (isDragging.value) {
     if (
       dragStartCell.value &&
@@ -572,10 +556,37 @@ const handleGlobalMouseUpOnce = () => {
     }
     isDragging.value = false;
   }
-  window.removeEventListener("mouseup", handleGlobalMouseUpOnce);
+  if (
+    event &&
+    event.target &&
+    typeof event.target.releasePointerCapture === "function"
+  ) {
+    try {
+      if (
+        event.target.hasPointerCapture &&
+        event.target.hasPointerCapture(event.pointerId)
+      ) {
+        event.target.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // ignore
+    }
+  }
 };
 
-const handleCellMouseUp = (rIdx, cIdx, _event) => {
+const handleGlobalPointerUpOnce = (event) => {
+  finishPointerDrag(event);
+  window.removeEventListener("pointerup", handleGlobalPointerUpOnce);
+  window.removeEventListener("pointercancel", handleGlobalPointerCancelOnce);
+};
+
+const handleGlobalPointerCancelOnce = (event) => {
+  finishPointerDrag(event);
+  window.removeEventListener("pointerup", handleGlobalPointerUpOnce);
+  window.removeEventListener("pointercancel", handleGlobalPointerCancelOnce);
+};
+
+const handleCellPointerUp = (rIdx, cIdx, event) => {
   if (isDragging.value) {
     if (
       dragStartCell.value &&
@@ -590,6 +601,11 @@ const handleCellMouseUp = (rIdx, cIdx, _event) => {
     }
     isDragging.value = false;
   }
+  finishPointerDrag(event);
+};
+
+const handleCellPointerCancel = (event) => {
+  finishPointerDrag(event);
 };
 
 const handleCellClick = (act, visitName, rIdx, cIdx, event) => {
@@ -702,7 +718,8 @@ const addCustomVisit = () => {
 };
 
 onUnmounted(() => {
-  window.removeEventListener("mouseup", handleGlobalMouseUpOnce);
+  window.removeEventListener("pointerup", handleGlobalPointerUpOnce);
+  window.removeEventListener("pointercancel", handleGlobalPointerCancelOnce);
 });
 </script>
 
@@ -824,6 +841,7 @@ onUnmounted(() => {
   overflow-x: auto;
   border: 1px solid var(--border, #e2e8f0);
   border-radius: 6px;
+  touch-action: none;
 }
 
 .soa-interactive-table {
@@ -831,6 +849,7 @@ onUnmounted(() => {
   border-collapse: collapse;
   font-size: 0.85rem;
   text-align: left;
+  touch-action: none;
 }
 
 .soa-interactive-table th,
@@ -959,6 +978,9 @@ onUnmounted(() => {
   cursor: pointer;
   transition: background-color 0.12s ease;
   position: relative;
+  touch-action: none;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .cell-toggle.active {
@@ -972,16 +994,29 @@ onUnmounted(() => {
 }
 
 .soa-checkbox {
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
   cursor: pointer;
   accent-color: #059669;
 }
 
 .soa-master-checkbox {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
   cursor: pointer;
   accent-color: #2563eb;
+}
+
+.soa-matrix-editor .btn {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 </style>

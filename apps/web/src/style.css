@@ -96,8 +96,8 @@ body {
     font-size: 1.1rem;
     cursor: pointer;
     transition: all 0.15s ease;
-    min-height: 40px;
-    min-width: 40px;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .mobile-menu-btn:hover,
@@ -198,6 +198,7 @@ body {
   font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
 }
 
 .cmd-palette-trigger:hover {
@@ -269,6 +270,7 @@ body {
   cursor: pointer;
   outline: none;
   transition: all 0.15s;
+  min-height: 44px;
 }
 
 .persona-select:hover {
@@ -322,7 +324,8 @@ body {
   font-weight: 600;
 }
 
-.btn-logout-action {
+.btn-logout-action,
+.btn-login-action {
   padding: 4px 8px;
   font-size: 0.72rem;
   font-weight: 600;
@@ -332,6 +335,11 @@ body {
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.15s;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-logout-action:hover {
@@ -406,6 +414,7 @@ body {
   text-align: left;
   text-decoration: none;
   transition: all 0.15s ease;
+  min-height: 44px;
 }
 
 .nav-item button:hover,

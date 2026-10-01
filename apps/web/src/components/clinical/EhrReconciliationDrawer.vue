@@ -898,12 +898,15 @@ function formatResolutionAction(act?: string): string {
 .drawer-backdrop {
   position: fixed;
   inset: 0;
+  max-width: 100vw;
   background-color: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(3px);
   display: flex;
   justify-content: flex-end;
   z-index: 1050;
   animation: fadeIn 0.2s ease-out;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .ehr-reconciliation-drawer {
@@ -919,6 +922,8 @@ function formatResolutionAction(act?: string): string {
   flex-direction: column;
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 /* Header */
@@ -992,6 +997,11 @@ function formatResolutionAction(act?: string): string {
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
     color 0.15s,
     background-color 0.15s;
@@ -1174,6 +1184,8 @@ function formatResolutionAction(act?: string): string {
   overflow-y: auto;
   padding: 16px 24px;
   background-color: #f8fafc;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .state-container {
