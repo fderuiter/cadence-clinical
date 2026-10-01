@@ -226,16 +226,7 @@ export function getCurrentPersonaKey(): string {
 
 export function getStorageKey(baseKey: string, personaKey?: string): string {
   const persona = personaKey || getCurrentPersonaKey();
-  const scopedKey = `clinical_${persona}_${baseKey}`;
-  if (typeof window !== "undefined" && window.localStorage) {
-    if (window.localStorage.getItem(scopedKey) !== null) {
-      return scopedKey;
-    }
-    if (window.localStorage.getItem(baseKey) !== null) {
-      return baseKey;
-    }
-  }
-  return scopedKey;
+  return `clinical_${persona}_${baseKey}`;
 }
 
 export function readStorageItem(
@@ -245,20 +236,7 @@ export function readStorageItem(
   if (typeof window === "undefined" || !window.localStorage) return null;
   const persona = personaKey || getCurrentPersonaKey();
   const scopedKey = `clinical_${persona}_${baseKey}`;
-  const scopedValue = window.localStorage.getItem(scopedKey);
-  if (scopedValue !== null) {
-    return scopedValue;
-  }
-  const unscopedValue = window.localStorage.getItem(baseKey);
-  if (unscopedValue !== null) {
-    try {
-      window.localStorage.setItem(scopedKey, unscopedValue);
-    } catch (e) {
-      console.error(`Failed to migrate ${baseKey} to ${scopedKey}`, e);
-    }
-    return unscopedValue;
-  }
-  return null;
+  return window.localStorage.getItem(scopedKey);
 }
 
 export const DEFAULT_CLINICAL_USDM = Object.freeze({
@@ -1255,10 +1233,6 @@ const useClinicalStoreInner = defineStore("clinical", {
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.setItem(
           getStorageKey("subjects"),
-          JSON.stringify(this.subjects)
-        );
-        window.localStorage.setItem(
-          getStorageKey("cadence_clinical_subjects"),
           JSON.stringify(this.subjects)
         );
       }
