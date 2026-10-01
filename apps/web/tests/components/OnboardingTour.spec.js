@@ -182,7 +182,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       // Dismiss tour in super_admin
       store.dismissTour();
       expect(store.isActive).toBe(false);
-      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe("true");
+      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe(
+        "true"
+      );
 
       // Switch to unvisited persona site_crc
       authStore.switchPersona("site_crc");
@@ -195,7 +197,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       // Advance step in site_crc
       store.nextStep("Step 1 for site_crc");
       expect(store.currentStep).toBe(2);
-      expect(window.localStorage.getItem("onboarding_site_crc_current_step")).toBe("2");
+      expect(
+        window.localStorage.getItem("onboarding_site_crc_current_step")
+      ).toBe("2");
 
       // Switch back to super_admin
       authStore.switchPersona("super_admin");
@@ -211,7 +215,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       store.disableTour();
       expect(store.disabled).toBe(true);
       expect(store.isActive).toBe(false);
-      expect(window.localStorage.getItem("onboarding_global_disabled")).toBe("true");
+      expect(window.localStorage.getItem("onboarding_global_disabled")).toBe(
+        "true"
+      );
 
       // Switch to unvisited persona site_crc
       authStore.switchPersona("site_crc");
@@ -224,13 +230,19 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
     it("clears global dismissal and disabled flags when tour is reset or restarted", () => {
       const store = useOnboardingStore();
       store.dismissTour();
-      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe("true");
+      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe(
+        "true"
+      );
 
       store.resetTour();
       expect(store.isActive).toBe(true);
       expect(store.disabled).toBe(false);
-      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe("false");
-      expect(window.localStorage.getItem("onboarding_global_disabled")).toBe("false");
+      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBe(
+        "false"
+      );
+      expect(window.localStorage.getItem("onboarding_global_disabled")).toBe(
+        "false"
+      );
     });
   });
 

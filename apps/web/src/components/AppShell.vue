@@ -963,6 +963,7 @@ watch(
         activePersonaKey.value = newVal;
       }
       onboardingStore.loadPersonaState(newVal);
+      clinicalStore.loadPersonaState(newVal);
       refreshNotifications();
     }
   },

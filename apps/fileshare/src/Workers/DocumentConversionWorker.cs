@@ -123,7 +123,7 @@ public sealed partial class DocumentConversionWorker : BackgroundService
             }
         }
 
-        if (success is true && pdfKey is not null)
+        if (success && pdfKey is not null)
         {
             record.ConversionStatus = "COMPLETED";
             record.PdfRenditionKey = pdfKey;
