@@ -71,20 +71,25 @@ public sealed partial class MediaTranscoderWorker : BackgroundService
             return;
         }
 
-        var tasks = pendingRecords.Select(async record =>
-        {
-            await _throttle.WaitAsync(ct).ConfigureAwait(false);
-            try
-            {
-                await ProcessSingleRecordAsync(dbContext, processor, record, ct).ConfigureAwait(false);
-            }
-            finally
-            {
-                _throttle.Release();
-            }
-        });
+        await Task.WhenAll(pendingRecords.Select(record => ProcessThrottledRecordAsync(
+            dbContext, processor, record, ct))).ConfigureAwait(false);
+    }
 
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+    private async Task ProcessThrottledRecordAsync(
+        FileshareDbContext dbContext,
+        IMediaTranscoderProcessor processor,
+        FileRecord record,
+        CancellationToken ct)
+    {
+        await _throttle.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await ProcessSingleRecordAsync(dbContext, processor, record, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _throttle.Release();
+        }
     }
 
     private async Task ProcessSingleRecordAsync(

@@ -3,6 +3,7 @@ using System.Text.Json;
 
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Kernel;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;

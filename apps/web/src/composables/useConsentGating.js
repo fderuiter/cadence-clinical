@@ -54,12 +54,15 @@ export function useConsentGating(selectedSubjectId) {
           sigToken
         );
       }
+      const targetLedgerStore =
+        storeInstance && typeof storeInstance.addLedgerBlock === "function"
+          ? storeInstance
+          : store;
       if (
-        storeInstance &&
-        storeInstance !== store &&
-        typeof storeInstance.addLedgerBlock === "function"
+        targetLedgerStore &&
+        typeof targetLedgerStore.addLedgerBlock === "function"
       ) {
-        await storeInstance.addLedgerBlock(
+        await targetLedgerStore.addLedgerBlock(
           "RECONSENT_COMPLETED",
           {
             subject_id: selectedSubjectId.value,
