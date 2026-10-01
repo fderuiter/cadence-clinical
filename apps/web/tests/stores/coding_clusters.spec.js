@@ -28,7 +28,12 @@ describe("Coding Store - Verbatim Clusters and Confidence Threshold Workbench", 
       status: "SUGGESTED",
       score: 0.95,
       suggestions: [
-        { code: "10019211", pt_name: "Headache", llt_name: "Severe headache", score: 0.95 },
+        {
+          code: "10019211",
+          pt_name: "Headache",
+          llt_name: "Severe headache",
+          score: 0.95,
+        },
       ],
     },
     {
@@ -39,7 +44,12 @@ describe("Coding Store - Verbatim Clusters and Confidence Threshold Workbench", 
       status: "SUGGESTED",
       score: 0.95,
       suggestions: [
-        { code: "10019211", pt_name: "Headache", llt_name: "Severe headache", score: 0.95 },
+        {
+          code: "10019211",
+          pt_name: "Headache",
+          llt_name: "Severe headache",
+          score: 0.95,
+        },
       ],
     },
     {
@@ -49,9 +59,7 @@ describe("Coding Store - Verbatim Clusters and Confidence Threshold Workbench", 
       dictionary_version: "26.0",
       status: "SUGGESTED",
       score: 0.82,
-      suggestions: [
-        { code: "10028813", pt_name: "Nausea", score: 0.82 },
-      ],
+      suggestions: [{ code: "10028813", pt_name: "Nausea", score: 0.82 }],
     },
     {
       id: "OBS-4",
@@ -60,9 +68,7 @@ describe("Coding Store - Verbatim Clusters and Confidence Threshold Workbench", 
       dictionary_version: "26.0",
       status: "UNCODED",
       score: 0.55,
-      suggestions: [
-        { code: "10037844", pt_name: "Rash", score: 0.55 },
-      ],
+      suggestions: [{ code: "10037844", pt_name: "Rash", score: 0.55 }],
     },
     {
       id: "OBS-5",
@@ -83,9 +89,7 @@ describe("Coding Store - Verbatim Clusters and Confidence Threshold Workbench", 
       status: "QUERY_PENDING",
       score: 0.95,
       is_blocked: true,
-      suggestions: [
-        { code: "10019211", pt_name: "Headache", score: 0.95 },
-      ],
+      suggestions: [{ code: "10019211", pt_name: "Headache", score: 0.95 }],
     },
   ];
 
@@ -122,7 +126,12 @@ describe("Coding Store - Verbatim Clusters and Confidence Threshold Workbench", 
     // High confidence filter (>= 90%)
     store.filters.confidenceThreshold = "HIGH";
     let filtered = store.filteredAssignments;
-    expect(filtered.map((a) => a.id)).toEqual(["OBS-1", "OBS-2", "OBS-5", "OBS-6"]);
+    expect(filtered.map((a) => a.id)).toEqual([
+      "OBS-1",
+      "OBS-2",
+      "OBS-5",
+      "OBS-6",
+    ]);
     let clusters = store.verbatimClusters;
     expect(clusters.length).toBe(2);
 

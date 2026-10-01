@@ -531,7 +531,10 @@ function readPersonaStorage(personaKey?: string) {
         const legacy = window.localStorage.getItem("formQueries");
         if (legacy) {
           storedFormQueries = legacy;
-          window.localStorage.setItem(`clinical_${persona}_formQueries`, legacy);
+          window.localStorage.setItem(
+            `clinical_${persona}_formQueries`,
+            legacy
+          );
         }
       }
       if (storedFormQueries) {
@@ -543,7 +546,10 @@ function readPersonaStorage(personaKey?: string) {
         const legacy = window.localStorage.getItem("ledgerBlocks");
         if (legacy) {
           storedLedgerBlocks = legacy;
-          window.localStorage.setItem(`clinical_${persona}_ledgerBlocks`, legacy);
+          window.localStorage.setItem(
+            `clinical_${persona}_ledgerBlocks`,
+            legacy
+          );
         }
       }
       if (storedLedgerBlocks) {
@@ -555,7 +561,10 @@ function readPersonaStorage(personaKey?: string) {
         const legacy = window.localStorage.getItem("currentUsdm");
         if (legacy) {
           storedUsdm = legacy;
-          window.localStorage.setItem(`clinical_${persona}_currentUsdm`, legacy);
+          window.localStorage.setItem(
+            `clinical_${persona}_currentUsdm`,
+            legacy
+          );
         }
       }
       if (storedUsdm) {

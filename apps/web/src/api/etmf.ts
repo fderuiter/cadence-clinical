@@ -91,7 +91,13 @@ export const etmfService = {
   },
 
   verifySignature(
-    { username, password, totp = null, action, semanticAction }: SignatureVerificationPayload,
+    {
+      username,
+      password,
+      totp = null,
+      action,
+      semanticAction,
+    }: SignatureVerificationPayload,
     options: Record<string, unknown> = {}
   ) {
     let semantic = semanticAction;

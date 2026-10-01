@@ -5,7 +5,9 @@
       <div class="header-text-group">
         <h2>Interactive Medical Coding Workbench</h2>
         <p>
-          Standardized MedDRA and WHODrug terminology coding with verbatim cluster grouping, AI match confidence filtering, and 21 CFR Part 11 dual-attribution audit logs.
+          Standardized MedDRA and WHODrug terminology coding with verbatim
+          cluster grouping, AI match confidence filtering, and 21 CFR Part 11
+          dual-attribution audit logs.
         </p>
       </div>
       <div class="header-action-buttons">
@@ -56,7 +58,13 @@
     >
       <div class="alert-content">
         <span class="alert-icon">
-          {{ codingStore.batchAlert.type === 'success' ? '✅' : codingStore.batchAlert.type === 'warning' ? '⚠️' : 'ℹ️' }}
+          {{
+            codingStore.batchAlert.type === "success"
+              ? "✅"
+              : codingStore.batchAlert.type === "warning"
+                ? "⚠️"
+                : "ℹ️"
+          }}
         </span>
         <span>{{ codingStore.batchAlert.message }}</span>
       </div>
@@ -88,7 +96,10 @@
     <!-- Authorized Coding Workspace -->
     <div v-else class="coding-workspace-container">
       <!-- Summary Metric Cards (Adapted for View Mode) -->
-      <div v-if="codingStore.viewMode === 'CLUSTERS'" class="stats-overview-grid cluster-stats-grid">
+      <div
+        v-if="codingStore.viewMode === 'CLUSTERS'"
+        class="stats-overview-grid cluster-stats-grid"
+      >
         <div
           class="stat-card"
           :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"

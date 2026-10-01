@@ -45,7 +45,8 @@ describe("Participant eConsent Step-Up Signature Verification", () => {
       props: {
         isOpen: true,
         username: "participant.cadence101",
-        actionUrl: "/api/v1/econsent/templates/icf-001/versions/1/capture-consent",
+        actionUrl:
+          "/api/v1/econsent/templates/icf-001/versions/1/capture-consent",
         onSign: onSignMock,
       },
       global: {
@@ -97,7 +98,8 @@ describe("Participant eConsent Step-Up Signature Verification", () => {
       props: {
         isOpen: true,
         username: "participant.cadence101",
-        actionUrl: "/api/v1/econsent/templates/icf-001/versions/1/capture-consent",
+        actionUrl:
+          "/api/v1/econsent/templates/icf-001/versions/1/capture-consent",
       },
       global: {
         plugins: [pinia],
@@ -121,7 +123,8 @@ describe("Participant eConsent Step-Up Signature Verification", () => {
   it("useConsentGating handles step-up signature re-authentication token for re-consent", async () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");
     const activeSubject = ref("SUBJ-002");
-    const { handleCompleteReconsent, isReconsentGated } = useConsentGating(activeSubject);
+    const { handleCompleteReconsent, isReconsentGated } =
+      useConsentGating(activeSubject);
 
     const mockStore = {
       clearReconsentGate: vi.fn().mockResolvedValue(),

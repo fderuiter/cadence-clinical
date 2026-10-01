@@ -100,7 +100,7 @@
       <table v-else class="qc-table">
         <thead>
           <tr>
-            <th style="width: 36px"></th>
+            <th style="width: 36px" />
             <th>Document File</th>
             <th>Staged At / By</th>
             <th>Predicted DIA Taxonomy</th>
@@ -117,9 +117,9 @@
           >
             <td>
               <input
+                v-model="selectedItemIds"
                 type="checkbox"
                 :value="item.document_id"
-                v-model="selectedItemIds"
               />
             </td>
             <td>
