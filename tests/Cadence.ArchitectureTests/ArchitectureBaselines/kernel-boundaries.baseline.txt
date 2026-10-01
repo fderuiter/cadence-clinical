@@ -229,6 +229,10 @@ K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.RemittanceAdvice.SiteI
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.RemittanceAdvice.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.SelfBillingInvoice.SiteId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.SelfBillingInvoice.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.DisburseStipendRequest.SiteId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.DisburseStipendRequest.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.WalletResponse.SiteId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.WalletResponse.StudyId
 K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityAuditLog
 K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityCapaRecord.SiteId
 K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityCapaRecord.StudyId
@@ -274,6 +278,8 @@ K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.MultiEchelonNode.StudyId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.MultiEchelonRollup.StudyId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.PredictiveForecastResult.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.PredictiveForecastResult.StudyId
+K-XS-1|Cadence.Ddf|Cadence.Ddf.BatchCellMutationRequest.StudyId
+K-XS-1|Cadence.Ddf|Cadence.Ddf.BatchCellMutationResult.StudyId
 K-XS-1|Cadence.Ddf|Cadence.Ddf.DDFCompilationResult.StudyId
 K-XS-1|Cadence.Ddf|Cadence.Ddf.DDFStudyIR.StudyId
 K-XS-1|Cadence.Deid|Cadence.Deid.DicomDeidCertificate.SiteId
