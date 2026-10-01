@@ -2497,6 +2497,547 @@
         }
       }
     },
+    "/api/v1/interop/esource/endpoints": {
+      "get": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "ListEhrEndpoints",
+        "parameters": [
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrEndpointListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "RegisterEhrEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrEndpointCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrEndpointRecord"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/smart/assertion": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "GenerateClientAssertion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_SmartAssertionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SmartAssertionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/smart/verify": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "VerifyClientAssertion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_SmartVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SmartVerifyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/poll": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "PollHospitalEhr",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrPollRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrPollResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/ingest": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "IngestFhirBundle",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_FhirBundleIngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_FhirBundleIngestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/candidates": {
+      "get": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "ListCandidates",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrCandidateListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/candidates/{candidate_id}": {
+      "get": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "GetCandidate",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/accept": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "AcceptCandidate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrReconcileAcceptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/reject": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "RejectCandidate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrReconcileRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/query": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "RaiseClinicalQuery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrReconcileQueryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/provenance/{candidate_id}": {
+      "get": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "GetProvenanceAudit",
+        "parameters": [
+          {
+            "name": "candidate_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrProvenanceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/status": {
       "get": {
         "tags": [
@@ -3940,6 +4481,20 @@
         }
       }
     },
+    "/api/v1/payments/participant/wallets": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List all participant wallets.",
+        "operationId": "ListWallets",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/payments/participant/wallets/subject/{subjectId}": {
       "get": {
         "tags": [
@@ -3952,6 +4507,453 @@
             "name": "subjectId",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve participant wallet details by wallet ID.",
+        "operationId": "GetWalletById",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/tax-1099-status": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve IRS 1099 tax status and threshold monitoring tracer.",
+        "operationId": "GetTax1099Status",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/balance": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Real-time balance inquiry for participant wallet.",
+        "operationId": "GetBalanceInquiry",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/issue-card": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Issue or re-issue reloadable debit card for participant wallet.",
+        "operationId": "IssueReloadableCard",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_IssueCardRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Submit Form W-9 taxpayer identification certification.",
+        "operationId": "SubmitW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SubmitW9RequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/verify-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Verify participant Form W-9 submission.",
+        "operationId": "VerifyW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_VerifyW9RequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Disburse digital funds from participant wallet to debit card or bank account.",
+        "operationId": "DisburseParticipantFunds",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_DisburseFundsRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/stipend-rules": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List SoA protocol visit stipend compensation rules.",
+        "operationId": "ListStipendRules",
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Configure participant visit compensation rules linked to Schedule of Activities.",
+        "operationId": "CreateStipendRule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_ParticipantStipendRuleCreateDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/events/visit-verified": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules.",
+        "operationId": "IngestVisitVerifiedEvent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_VisitVerificationEventDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List travel and meal expense reimbursement claims.",
+        "operationId": "ListExpenseClaims",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Submit travel/meal expense claim for coordinator review.",
+        "operationId": "SubmitExpenseClaim",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SubmitExpenseClaimRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses/ocr-extract": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Extract metadata from receipt image/text using rule-based OCR engine.",
+        "operationId": "ExtractReceiptOcr",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_OcrExtractRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/expenses/{claimId}/review": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Coordinator 1-click review and approval/rejection of expense claim.",
+        "operationId": "ReviewExpenseClaim",
+        "parameters": [
+          {
+            "name": "claimId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_ReviewExpenseClaimRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/transactions": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List participant wallet transactions ledger.",
+        "operationId": "ListTransactions",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/disbursements": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "List digital disbursement dispatches.",
+        "operationId": "ListDisbursements",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -7556,6 +8558,959 @@
           }
         }
       },
+      "Interop_EhrCandidateItemDto": {
+        "required": [
+          "id",
+          "studyId",
+          "siteId",
+          "subjectId",
+          "subjectPseudonym",
+          "ehrSystemId",
+          "fhirResourceType",
+          "fhirResourceId",
+          "sourceTimestamp",
+          "targetDomain",
+          "targetVariable",
+          "cdashTestcd",
+          "cdashTest",
+          "candidateValue",
+          "candidateUnit",
+          "currentEcrfValue",
+          "currentEcrfUpdatedAt",
+          "discrepancyType",
+          "confidenceScore",
+          "mappingProvenance",
+          "rawFhirResource",
+          "status",
+          "resolutionAction",
+          "resolutionReason",
+          "resolvedBy",
+          "resolvedAt",
+          "electronicSignature",
+          "clinicalQueryId",
+          "createdAt",
+          "versionIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "subjectPseudonym": {
+            "type": "string"
+          },
+          "ehrSystemId": {
+            "type": "string"
+          },
+          "fhirResourceType": {
+            "type": "string"
+          },
+          "fhirResourceId": {
+            "type": "string"
+          },
+          "sourceTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "targetDomain": {
+            "type": "string"
+          },
+          "targetVariable": {
+            "type": "string"
+          },
+          "cdashTestcd": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cdashTest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidateValue": {},
+          "candidateUnit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currentEcrfValue": {},
+          "currentEcrfUpdatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "discrepancyType": {
+            "type": "string"
+          },
+          "confidenceScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "mappingProvenance": {
+            "type": "string"
+          },
+          "rawFhirResource": {},
+          "status": {
+            "type": "string"
+          },
+          "resolutionAction": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolutionReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolvedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "electronicSignature": {},
+          "clinicalQueryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_EhrCandidateListResponse": {
+        "required": [
+          "candidates",
+          "totalCount"
+        ],
+        "type": "object",
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+            }
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_EhrEndpointCreateRequest": {
+        "required": [
+          "name",
+          "systemType",
+          "fhirBaseUrl",
+          "tokenUrl",
+          "clientId",
+          "publicKeyJwksUrl",
+          "scopes",
+          "pollingIntervalSec",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "systemType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fhirBaseUrl": {
+            "type": "string"
+          },
+          "tokenUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "publicKeyJwksUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scopes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "pollingIntervalSec": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EhrEndpointListResponse": {
+        "required": [
+          "endpoints"
+        ],
+        "type": "object",
+        "properties": {
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EhrEndpointRecord"
+            }
+          }
+        }
+      },
+      "Interop_EhrEndpointRecord": {
+        "required": [
+          "createdAt",
+          "createdBy"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "systemType": {
+            "type": "string"
+          },
+          "fhirBaseUrl": {
+            "type": "string"
+          },
+          "tokenUrl": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "publicKeyJwksUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scopesJson": {
+            "type": "string"
+          },
+          "pollingIntervalSec": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "lastPolledAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "reasonForChange": {
+            "type": "string"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_EhrPollRequest": {
+        "required": [
+          "endpointId",
+          "studyId",
+          "siteId",
+          "subjectId",
+          "privateKeyPem"
+        ],
+        "type": "object",
+        "properties": {
+          "endpointId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "privateKeyPem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EhrPollResponse": {
+        "required": [
+          "success",
+          "pollCount",
+          "newCandidatesCount",
+          "candidates",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "pollCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "newCandidatesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_EhrProvenanceResponse": {
+        "required": [
+          "candidateId",
+          "studyId",
+          "siteId",
+          "subjectId",
+          "subjectPseudonym",
+          "ehrSystemId",
+          "fhirResourceType",
+          "fhirResourceId",
+          "sourceTimestamp",
+          "targetDomain",
+          "targetVariable",
+          "cdashTestcd",
+          "cdashTest",
+          "candidateValue",
+          "candidateUnit",
+          "currentEcrfValue",
+          "currentEcrfUpdatedAt",
+          "discrepancyType",
+          "confidenceScore",
+          "mappingProvenance",
+          "rawFhirResource",
+          "status",
+          "resolutionAction",
+          "resolutionReason",
+          "resolvedBy",
+          "resolvedAt",
+          "electronicSignature",
+          "clinicalQueryId",
+          "createdAt",
+          "versionIndex",
+          "auditTrail"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "subjectPseudonym": {
+            "type": "string"
+          },
+          "ehrSystemId": {
+            "type": "string"
+          },
+          "fhirResourceType": {
+            "type": "string"
+          },
+          "fhirResourceId": {
+            "type": "string"
+          },
+          "sourceTimestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "targetDomain": {
+            "type": "string"
+          },
+          "targetVariable": {
+            "type": "string"
+          },
+          "cdashTestcd": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cdashTest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidateValue": {},
+          "candidateUnit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currentEcrfValue": {},
+          "currentEcrfUpdatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "discrepancyType": {
+            "type": "string"
+          },
+          "confidenceScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "mappingProvenance": {
+            "type": "string"
+          },
+          "rawFhirResource": {},
+          "status": {
+            "type": "string"
+          },
+          "resolutionAction": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolutionReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolvedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "electronicSignature": {},
+          "clinicalQueryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "auditTrail": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_InteropAuditLog"
+            }
+          }
+        }
+      },
+      "Interop_EhrReconcileAcceptRequest": {
+        "required": [
+          "candidateId",
+          "commitReason",
+          "changeReason"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateId": {
+            "type": "string"
+          },
+          "commitReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EhrReconcileActionResponse": {
+        "required": [
+          "success",
+          "candidate",
+          "clinicalQueryId",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "candidate": {
+            "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+          },
+          "clinicalQueryId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_EhrReconcileQueryRequest": {
+        "required": [
+          "candidateId",
+          "queryExplanation",
+          "discrepancyType",
+          "changeReason"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateId": {
+            "type": "string"
+          },
+          "queryExplanation": {
+            "type": "string"
+          },
+          "discrepancyType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EhrReconcileRejectRequest": {
+        "required": [
+          "candidateId",
+          "rejectionReason",
+          "changeReason"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateId": {
+            "type": "string"
+          },
+          "rejectionReason": {
+            "type": "string"
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_FhirBundleIngestRequest": {
+        "required": [
+          "studyId",
+          "siteId",
+          "subjectId",
+          "subjectPseudonym",
+          "ehrSystemId",
+          "rawFhirBundleJson"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "subjectPseudonym": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ehrSystemId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rawFhirBundleJson": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_FhirBundleIngestResponse": {
+        "required": [
+          "success",
+          "candidateCount",
+          "candidates",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "candidateCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_InteropAuditLog": {
+        "required": [
+          "timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "userRole": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_SmartAssertionRequest": {
+        "required": [
+          "clientId",
+          "tokenUrl",
+          "privateKeyPem",
+          "keyId"
+        ],
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string"
+          },
+          "tokenUrl": {
+            "type": "string"
+          },
+          "privateKeyPem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "keyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expirationSeconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 300
+          }
+        }
+      },
+      "Interop_SmartAssertionResponse": {
+        "required": [
+          "clientAssertionToken",
+          "clientAssertionType",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "clientAssertionToken": {
+            "type": "string"
+          },
+          "clientAssertionType": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Interop_SmartVerifyRequest": {
+        "required": [
+          "clientAssertionToken",
+          "clientId",
+          "tokenUrl",
+          "publicKeyPem"
+        ],
+        "type": "object",
+        "properties": {
+          "clientAssertionToken": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tokenUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "publicKeyPem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_SmartVerifyResponse": {
+        "required": [
+          "isValid",
+          "subject",
+          "issuer",
+          "audience",
+          "expiresAt",
+          "errorMessage"
+        ],
+        "type": "object",
+        "properties": {
+          "isValid": {
+            "type": "boolean"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "errorMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_ActivityLocation": {
         "type": "integer"
       },
@@ -10377,6 +12332,26 @@
           }
         }
       },
+      "Payments_DisburseFundsRequestDto": {
+        "required": [
+          "disbursementType",
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "disbursementType": {
+            "type": "string"
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "Payments_DisburseStipendRequest": {
         "required": [
           "subjectId",
@@ -10447,6 +12422,283 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Payments_IssueCardRequestDto": {
+        "type": "object",
+        "properties": {
+          "cardType": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "RELOADABLE_DEBIT"
+          }
+        }
+      },
+      "Payments_OcrExtractRequestDto": {
+        "type": "object",
+        "properties": {
+          "rawText": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "imageBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "categoryHint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "filename": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_ParticipantStipendRuleCreateDto": {
+        "required": [
+          "studyId",
+          "visitCode",
+          "visitName",
+          "procedureCode",
+          "amount"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "visitCode": {
+            "type": "string"
+          },
+          "visitName": {
+            "type": "string"
+          },
+          "procedureCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "currency": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "USD"
+          },
+          "requiresVerification": {
+            "type": "boolean",
+            "default": true
+          },
+          "taxable": {
+            "type": "boolean",
+            "default": false
+          },
+          "antiCoercionCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "autoDisbursementThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMilestone": {
+            "type": "boolean",
+            "default": false
+          },
+          "milestoneCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_ReviewExpenseClaimRequestDto": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "reviewNotes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjustedAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Payments_SubmitExpenseClaimRequestDto": {
+        "required": [
+          "subjectId",
+          "studyId",
+          "siteId",
+          "category",
+          "merchantName",
+          "grossAmount"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "merchantName": {
+            "type": "string"
+          },
+          "grossAmount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMealAllowance": {
+            "type": "boolean",
+            "default": false
+          },
+          "perDiemCap": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "expenseDate": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptOcrData": {}
+        }
+      },
+      "Payments_SubmitW9RequestDto": {
+        "required": [
+          "fullLegalName",
+          "taxIdLastFour"
+        ],
+        "type": "object",
+        "properties": {
+          "fullLegalName": {
+            "type": "string"
+          },
+          "taxIdLastFour": {
+            "type": "string"
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certifyAccurate": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "Payments_VerifyW9RequestDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_VisitVerificationEventDto": {
+        "required": [
+          "studyId",
+          "siteId",
+          "subjectId",
+          "visitCode",
+          "eventId"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "visitCode": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "verifiedBy": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "crc_coordinator"
           }
         }
       },

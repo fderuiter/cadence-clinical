@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(PaymentsDbContext))]
     partial class PaymentsDbContextModelSnapshot : ModelSnapshot
     {
@@ -32,7 +33,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -82,7 +83,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<decimal>("TotalBudget")
                         .HasColumnType("numeric(18,4)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -108,7 +109,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -187,7 +188,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -228,7 +229,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<decimal>("TravelReimbursement")
                         .HasColumnType("numeric(18,4)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -264,7 +265,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -277,7 +278,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
-                    b.Property<DateTime?>("DmSignoffAt")
+                    b.Property<DateTimeOffset?>("DmSignoffAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DmSignoffBy")
@@ -292,7 +293,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime?>("QualitySignoffAt")
+                    b.Property<DateTimeOffset?>("QualitySignoffAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("QualitySignoffBy")
@@ -303,7 +304,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<DateTime?>("ReleaseAuthorizedAt")
+                    b.Property<DateTimeOffset?>("ReleaseAuthorizedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ReleaseAuthorizedBy")
@@ -329,7 +330,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -360,7 +361,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<decimal>("BaseAmount")
                         .HasColumnType("numeric(18,4)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -414,7 +415,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<decimal>("TravelReimbursement")
                         .HasColumnType("numeric(18,4)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -444,6 +445,321 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.ToTable("payments_invoice_line_items", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Payments.Domain.ParticipantDisbursement", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("DisbursementType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ReferenceNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("VersionIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WalletId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReferenceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("payments_participant_disbursements", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Payments.Domain.ParticipantExpenseClaim", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ExpenseDate")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("MerchantName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<string>("ReasonForChange")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ReceiptImageName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ReceiptOcrDataJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SiteId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<decimal>("TaxDeduction")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("VersionIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WalletId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("StudyId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("payments_participant_expense_claims", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Payments.Domain.ParticipantStipendRule", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal?>("AntiCoercionCap")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal?>("AutoDisbursementThreshold")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsMilestone")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MilestoneCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ProcedureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ReasonForChange")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("RequiresVerification")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("Taxable")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("VersionIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("VisitCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("VisitName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudyId");
+
+                    b.HasIndex("VisitCode");
+
+                    b.ToTable("payments_participant_stipend_rules", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Payments.Domain.ParticipantTransaction", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ReferenceId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("VersionIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WalletId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReferenceId");
+
+                    b.HasIndex("StudyId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TransactionType");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("payments_participant_transactions", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Apps.Payments.Domain.ParticipantWallet", b =>
                 {
                     b.Property<string>("Id")
@@ -469,6 +785,9 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<decimal?>("AntiCoercionCap")
                         .HasColumnType("numeric(18,4)");
 
+                    b.Property<decimal?>("AutoDisbursementThreshold")
+                        .HasColumnType("numeric(18,4)");
+
                     b.Property<string>("CardStatus")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -479,7 +798,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -538,7 +857,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<decimal>("TaxableYtd")
                         .HasColumnType("numeric(18,4)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -561,10 +880,10 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime?>("W9SubmittedAt")
+                    b.Property<DateTimeOffset?>("W9SubmittedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("W9VerifiedAt")
+                    b.Property<DateTimeOffset?>("W9VerifiedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
@@ -596,7 +915,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -640,7 +959,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<DateTime?>("SdvVerifiedAt")
+                    b.Property<DateTimeOffset?>("SdvVerifiedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SdvVerifiedBy")
@@ -685,7 +1004,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -737,7 +1056,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<decimal>("AllocationPercentage")
                         .HasColumnType("numeric(18,4)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -785,7 +1104,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -814,7 +1133,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -880,7 +1199,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -898,7 +1217,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime?>("DispatchedAt")
+                    b.Property<DateTimeOffset?>("DispatchedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DispatchedTo")
@@ -948,7 +1267,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<string>("SignatureManifestJson")
                         .HasColumnType("jsonb");
 
-                    b.Property<DateTime?>("SignedAt")
+                    b.Property<DateTimeOffset?>("SignedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SignedBy")
@@ -969,7 +1288,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -998,7 +1317,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime?>("ApprovedAt")
+                    b.Property<DateTimeOffset?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ApprovedBy")
@@ -1015,7 +1334,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -1037,7 +1356,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime?>("ErpSyncedAt")
+                    b.Property<DateTimeOffset?>("ErpSyncedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ErpSystem")
@@ -1066,7 +1385,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<DateTime?>("ReconciledAt")
+                    b.Property<DateTimeOffset?>("ReconciledAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ReconciledBy")
@@ -1117,7 +1436,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                     b.Property<decimal>("TotalTravelReimbursement")
                         .HasColumnType("numeric(18,4)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -1163,7 +1482,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -1197,7 +1516,7 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<DateTime>("UpdatedAt")
+                    b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("VersionIndex")
@@ -1269,3 +1588,4 @@ namespace Cadence.Apps.Payments.Infrastructure.Persistence.Migrations;
 #pragma warning restore 612, 618
         }
     }
+}

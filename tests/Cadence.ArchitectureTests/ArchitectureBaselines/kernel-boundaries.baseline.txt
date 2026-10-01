@@ -75,6 +75,10 @@ K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.SiteId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.StudyId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.HoldbackReserve.SiteId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.HoldbackReserve.StudyId
+K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantExpenseClaim.SiteId
+K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantExpenseClaim.StudyId
+K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantStipendRule.StudyId
+K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantTransaction.StudyId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantWallet.SiteId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantWallet.StudyId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.Payable.SiteId
@@ -134,6 +138,8 @@ K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ReconsentRequirement.S
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ReconsentRequirement.StudyId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.SiteId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.StudyId
+K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Endpoints.CaptureConsentRequest.SiteId
+K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Endpoints.CaptureConsentRequest.StudyId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.SiteId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.StudyId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfAuditLog
@@ -228,6 +234,10 @@ K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.SiteId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.HoldbackReserve.SiteId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.HoldbackReserve.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantExpenseClaim.SiteId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantExpenseClaim.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantStipendRule.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantTransaction.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantWallet.SiteId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.ParticipantWallet.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.Payable.SiteId
@@ -239,6 +249,11 @@ K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.SelfBillingInvoice.Sit
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.SelfBillingInvoice.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.DisburseStipendRequest.SiteId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.DisburseStipendRequest.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.ParticipantStipendRuleCreateDto.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.SubmitExpenseClaimRequestDto.SiteId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.SubmitExpenseClaimRequestDto.StudyId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.VisitVerificationEventDto.SiteId
+K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.VisitVerificationEventDto.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.WalletResponse.SiteId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.WalletResponse.StudyId
 K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityAuditLog

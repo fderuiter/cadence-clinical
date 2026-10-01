@@ -359,6 +359,7 @@ public class ParticipantWalletConfiguration(IFieldEncryptor fieldEncryptor) : IE
         builder.Property(x => x.LifetimeDisbursements).HasColumnType("numeric(18,4)");
         builder.Property(x => x.TaxableYtd).HasColumnType("numeric(18,4)");
         builder.Property(x => x.AntiCoercionCap).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.AutoDisbursementThreshold).HasColumnType("numeric(18,4)");
         builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
         builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
         builder.HasIndex(x => x.Status);
@@ -378,5 +379,105 @@ public class ParticipantWalletConfiguration(IFieldEncryptor fieldEncryptor) : IE
         builder.Property(x => x.AchAccountHolder).HasMaxLength(255);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000);
+    }
+}
+
+public class ParticipantStipendRuleConfiguration : IEntityTypeConfiguration<ParticipantStipendRule>
+{
+    public void Configure(EntityTypeBuilder<ParticipantStipendRule> builder)
+    {
+        builder.ToTable("payments_participant_stipend_rules");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.StudyId);
+        builder.Property(x => x.VisitCode).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.VisitCode);
+        builder.Property(x => x.VisitName).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ProcedureCode).HasMaxLength(100);
+        builder.Property(x => x.Amount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.Currency).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.AntiCoercionCap).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.AutoDisbursementThreshold).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.MilestoneCode).HasMaxLength(100);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000);
+    }
+}
+
+public class ParticipantTransactionConfiguration : IEntityTypeConfiguration<ParticipantTransaction>
+{
+    public void Configure(EntityTypeBuilder<ParticipantTransaction> builder)
+    {
+        builder.ToTable("payments_participant_transactions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.WalletId).HasMaxLength(36).IsRequired();
+        builder.HasIndex(x => x.WalletId);
+        builder.Property(x => x.SubjectId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.SubjectId);
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.StudyId);
+        builder.Property(x => x.TransactionType).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.TransactionType);
+        builder.Property(x => x.Amount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.BalanceAfter).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.ReferenceId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.ReferenceId);
+        builder.Property(x => x.Description).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+    }
+}
+
+public class ParticipantExpenseClaimConfiguration : IEntityTypeConfiguration<ParticipantExpenseClaim>
+{
+    public void Configure(EntityTypeBuilder<ParticipantExpenseClaim> builder)
+    {
+        builder.ToTable("payments_participant_expense_claims");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.WalletId).HasMaxLength(36).IsRequired();
+        builder.HasIndex(x => x.WalletId);
+        builder.Property(x => x.SubjectId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.SubjectId);
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.StudyId);
+        builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.SiteId);
+        builder.Property(x => x.ExpenseDate).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Category).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.MerchantName).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.GrossAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.TaxDeduction).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.NetAmount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.Status);
+        builder.Property(x => x.ReceiptImageName).HasMaxLength(255);
+        builder.Property(x => x.ReceiptOcrDataJson).HasColumnType("jsonb");
+        builder.Property(x => x.ReviewedBy).HasMaxLength(255);
+        builder.Property(x => x.ReviewNotes).HasMaxLength(1000);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000);
+    }
+}
+
+public class ParticipantDisbursementConfiguration : IEntityTypeConfiguration<ParticipantDisbursement>
+{
+    public void Configure(EntityTypeBuilder<ParticipantDisbursement> builder)
+    {
+        builder.ToTable("payments_participant_disbursements");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.WalletId).HasMaxLength(36).IsRequired();
+        builder.HasIndex(x => x.WalletId);
+        builder.Property(x => x.SubjectId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.SubjectId);
+        builder.Property(x => x.Amount).HasColumnType("numeric(18,4)");
+        builder.Property(x => x.DisbursementType).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.ReferenceNumber).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.ReferenceNumber).IsUnique();
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.Status);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
     }
 }
