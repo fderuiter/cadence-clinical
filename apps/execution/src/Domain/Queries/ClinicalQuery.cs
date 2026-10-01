@@ -126,7 +126,7 @@ public sealed class ClinicalQuery : AggregateRoot<QueryId>
 
     public Result<bool> Close(string resolverUserId, DateTimeOffset resolvedAt)
     {
-        if (Status != QueryStatus.Answered && Status != QueryStatus.Candidate)
+        if (Status != QueryStatus.Open && Status != QueryStatus.Answered && Status != QueryStatus.Candidate && Status != QueryStatus.Reopened)
         {
             return QueryErrors.InvalidStateTransition(Status.ToString(), QueryStatus.Closed.ToString());
         }

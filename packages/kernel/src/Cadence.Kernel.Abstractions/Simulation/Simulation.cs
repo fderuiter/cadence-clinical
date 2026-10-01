@@ -180,6 +180,7 @@ public sealed record MaskedPart(string Part, MaskReason Reason);
 /// the actor may not see are counted and masked. Null when the candidate changes nothing, has no base, or is masked.
 /// Until protocol elements are nodes of their own (#4808) the changed object is the base version as a whole.
 /// </param>
+/// <param name="MatrixGaps">Schedule matrix gaps and structural findings detected in the candidate protocol graph.</param>
 public sealed record SimulationResult(
     NodeRef Scope,
     SimulationAsOf AsOf,
@@ -190,7 +191,8 @@ public sealed record SimulationResult(
     IReadOnlyList<ElementChange> StructuralDiff,
     IReadOnlyList<ScheduleChange> ScheduleChanges,
     IReadOnlyList<MaskedPart> Masked,
-    DependentsReport? Dependents = null)
+    DependentsReport? Dependents = null,
+    IReadOnlyList<MatrixGapFinding>? MatrixGaps = null)
 {
     /// <summary>True when the candidate changes nothing this actor may see.</summary>
     public bool IsEmpty => StructuralDiff.Count == 0 && ScheduleChanges.Count == 0 && Masked.Count == 0;

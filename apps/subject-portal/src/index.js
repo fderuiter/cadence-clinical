@@ -101,6 +101,16 @@ const MOCK_INSTRUMENTS = {
         min: 30,
         max: 200,
       },
+      pain_scale: {
+        label: "Symptom Severity (Visual Analog Scale 0-10)",
+        type: "visual_analog",
+        required: true,
+        min: 0,
+        max: 10,
+        step: 1,
+        min_label: "No Pain (0)",
+        max_label: "Worst Possible (10)",
+      },
       has_symptoms: {
         label: "Are you experiencing any new physical symptoms today?",
         type: "choice_single",
@@ -164,6 +174,7 @@ const state = reactive({
     isOfflineMode: true,
     isDemoMode: true, // explicit flag, defaulting consistent with demo-first behavior
   },
+  walletBalance: 0.0,
   assignments: [],
   notifications: [],
   ledgerBlocks: [],
@@ -411,6 +422,8 @@ async function dispatchApi(endpoint, options = {}) {
   let url;
   if (cleanEndpoint.startsWith("api/v1/")) {
     url = `http://localhost:8000/${cleanEndpoint}`;
+  } else if (cleanEndpoint.startsWith("payments/")) {
+    url = `http://localhost:8000/api/v1/${cleanEndpoint}`;
   } else {
     url = `http://localhost:8000/api/v1/interop/${cleanEndpoint}`;
   }
@@ -671,7 +684,22 @@ async function startQuestionnaire(assignmentId) {
   formHtml += `<h2 class="form-title">Enter Clinical Findings</h2>`;
 
   Object.entries(instrument.items).forEach(([id, field]) => {
-    if (field.type === "choice_single") {
+    const isSlider =
+      field.type === "visual_analog" ||
+      field.type === "vas" ||
+      field.type === "slider" ||
+      field.type === "range";
+
+    if (isSlider) {
+      formHtml += createClinicalSlider(
+        id,
+        field.label,
+        "",
+        null,
+        12,
+        field
+      );
+    } else if (field.type === "choice_single") {
       formHtml += createClinicalRadioGrid(
         id,
         field.label,
@@ -732,6 +760,10 @@ async function startQuestionnaire(assignmentId) {
             const inputEl = document.getElementById(id);
             if (inputEl) {
               inputEl.value = val;
+              const dispEl = document.getElementById(`${id}_display`);
+              if (dispEl) {
+                dispEl.textContent = `Value: ${val}`;
+              }
             }
           }
         }
@@ -786,13 +818,21 @@ function validateActiveQuestionnaire() {
       r.removeAttribute("aria-describedby");
     });
 
+    const isNumericField =
+      field.type === "numeric" ||
+      field.type === "number" ||
+      field.type === "visual_analog" ||
+      field.type === "vas" ||
+      field.type === "slider" ||
+      field.type === "range";
+
     const fieldMeta = {
       id: id,
       label: field.label,
       validation: {
         required: field.required,
-        min: field.type === "numeric" ? field.min : undefined,
-        max: field.type === "numeric" ? field.max : undefined,
+        min: isNumericField ? field.min : undefined,
+        max: isNumericField ? field.max : undefined,
       },
     };
 
@@ -804,7 +844,8 @@ function validateActiveQuestionnaire() {
       markFieldInvalid(id, errorMsg);
     }
 
-    state.activeQuestionnaire.answers[id] = val;
+    state.activeQuestionnaire.answers[id] =
+      isNumericField && val !== "" && !isNaN(Number(val)) ? Number(val) : val;
   });
 
   return allValid;
@@ -2225,6 +2266,51 @@ async function syncOfflineQueue(isManual = false, options = {}) {
         await bulkUpdateSubmissionStatuses(updates);
       }
 
+      // Automatic Stipend Wallet Disbursement upon successful ePRO sync
+      if (validSubmissions.length > 0 && options.autoDisburse === true) {
+        for (const sub of validSubmissions) {
+          try {
+            const targetSubjectId = sub.subject_id || state.session.userId;
+            const disbursePayload = {
+              subject_id: targetSubjectId,
+              study_id: "study_01",
+              site_id: "site_01",
+              sequence_number: sub.sequence_number,
+              assignment_id: sub.assignment_id,
+              diary_id: sub.diary_id,
+              amount: 25.0,
+              idempotency_key: `seq_${sub.sequence_number}_${targetSubjectId}`,
+              disbursement_type: "STIPEND",
+              answers: sub.answers,
+            };
+
+            const disburseRes = await dispatchApi("payments/disburse", {
+              method: "POST",
+              body: JSON.stringify(disbursePayload),
+            });
+
+            if (disburseRes && typeof disburseRes.new_balance === "number") {
+              state.walletBalance = disburseRes.new_balance;
+            } else if (disburseRes && typeof disburseRes.NewBalance === "number") {
+              state.walletBalance = disburseRes.NewBalance;
+            }
+
+            await logAuditRecord(
+              "AUTOMATIC_STIPEND_DISBURSED",
+              {
+                subject_id: targetSubjectId,
+                sequence_number: sub.sequence_number,
+                stipend_amount: disburseRes?.amount ?? disburseRes?.Amount ?? 25.0,
+                new_balance: state.walletBalance,
+              },
+              "Instant ePRO survey auto-disbursement"
+            );
+          } catch (disburseErr) {
+            console.warn("Auto-disbursement payment call warning:", disburseErr);
+          }
+        }
+      }
+
       if (hasQuarantined) {
         state.autoSyncSuspended = true;
         const msg =
@@ -2344,7 +2430,7 @@ async function initializeApp() {
         try {
           mountedApp.unmount();
         } catch {
-          /* ignore */
+          // Ignore unmount errors during teardown
         }
         mountedApp = null;
       }
@@ -2606,13 +2692,13 @@ async function initializeApp() {
   }
 
   // Initial sync & sync queue rendering
-  await syncOfflineQueue();
+  await syncOfflineQueue(false, { autoDisburse: true });
 
   // Attach online/offline listener
   if (typeof window !== "undefined") {
     window.addEventListener("online", () => {
       console.log("[App] Network online detected. Triggering sync...");
-      syncOfflineQueue();
+      syncOfflineQueue(false, { autoDisburse: true });
     });
   }
 
@@ -2620,7 +2706,7 @@ async function initializeApp() {
   const btnSyncNow = document.getElementById("btn-sync-now");
   if (btnSyncNow) {
     btnSyncNow.addEventListener("click", () => {
-      syncOfflineQueue();
+      syncOfflineQueue(true, { autoDisburse: true });
     });
   }
 
@@ -3150,6 +3236,59 @@ export {
   resetSyncRetryInfo,
 };
 
+function createClinicalSlider(
+  id,
+  label,
+  value = "",
+  query = null,
+  gridSpan = 12,
+  attributes = {}
+) {
+  const minVal = attributes.min !== undefined ? attributes.min : 0;
+  const maxVal = attributes.max !== undefined ? attributes.max : 100;
+  const stepVal = attributes.step !== undefined ? attributes.step : 1;
+  const initialValue =
+    value !== "" && value !== null && value !== undefined ? value : minVal;
+  const minLabel = attributes.min_label || attributes.minLabel || `${minVal}`;
+  const maxLabel = attributes.max_label || attributes.maxLabel || `${maxVal}`;
+
+  const queryFlagHTML = createClinicalQueryFlag(id, query);
+  const queryPanelHTML = createQueryPanel(id, query);
+
+  return `
+<div class="clinical-input vas-slider-container grid-span-${gridSpan}" style="grid-column: span ${gridSpan}; margin-bottom: 20px;" id="field-container-${id}">
+  <label for="${id}" class="vas-slider-label" style="font-weight: 600; display: block; margin-bottom: 8px;">
+    ${label}
+  </label>
+  <div class="vas-slider-wrapper" style="background: #f8fafc; padding: 16px; border: 1px solid var(--border-color, #cbd5e1); border-radius: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <span class="vas-min-label" style="font-size: 12px; color: #64748b; font-weight: 500;">${minLabel}</span>
+      <span class="vas-value-badge" id="${id}_display" style="background: #2563eb; color: white; padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px;">
+        Value: ${initialValue}
+      </span>
+      <span class="vas-max-label" style="font-size: 12px; color: #64748b; font-weight: 500;">${maxLabel}</span>
+    </div>
+    <div class="input-wrapper" style="position: relative;">
+      <input
+        type="range"
+        id="${id}"
+        name="${id}"
+        min="${minVal}"
+        max="${maxVal}"
+        step="${stepVal}"
+        value="${initialValue}"
+        class="vas-slider-input"
+        style="width: 100%; cursor: pointer; accent-color: #2563eb; height: 8px;"
+        oninput="const disp = document.getElementById('${id}_display'); if (disp) disp.textContent = 'Value: ' + this.value;"
+      />
+      ${queryFlagHTML}
+    </div>
+  </div>
+  ${queryPanelHTML}
+</div>
+  `.trim();
+}
+
 function createClinicalInput(
   id,
   label,
@@ -3320,7 +3459,7 @@ export function unmountApp() {
     try {
       mountedApp.unmount();
     } catch {
-      /* ignore */
+      // Ignore unmount errors during teardown
     }
     mountedApp = null;
   }

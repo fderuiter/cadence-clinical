@@ -13,6 +13,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "keycloak-js": "^26.2.4",
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",
     "vue": "^3.5.42"
@@ -24,7 +25,6 @@
     "@vitest/coverage-v8": "^5.0.2",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.0.1",
-    "keycloak-js": "^26.2.4",
     "msw": "^2.15.0",
     "vite": "^8.3.0",
     "vitest": "^5.0.2"
