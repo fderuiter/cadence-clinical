@@ -8,6 +8,16 @@ apps/execution/src/Infrastructure/Persistence/Migrations/20260905174215_AddExecu
 apps/execution/src/Infrastructure/Security/AesGcmDemographicsEncryptionService.cs|device_serial|6027352f25ff3b89
 apps/gateway/src/Program.cs|urls|f1c2971dc8dd9c29
 apps/gateway/src/Signatures/KeycloakCredentialVerifier.cs|ip_mac_addresses|38b82aeb958c832d
+apps/interop/src/Endpoints/EsourceEndpoints.cs|telephone_fax|05f5f3a2c73f5026
+apps/interop/src/Endpoints/EsourceEndpoints.cs|telephone_fax|382edacae32fbd0f
+apps/interop/src/Endpoints/EsourceEndpoints.cs|telephone_fax|3c8c53cf14bd5f96
+apps/interop/src/Endpoints/EsourceEndpoints.cs|telephone_fax|e09e0330068a33db
+apps/interop/src/Endpoints/EsourceEndpoints.cs|telephone_fax|f3e97ea1331fa68e
+apps/interop/src/Endpoints/EsourceEndpoints.cs|urls|2b819b14aa17e11f
+apps/interop/src/Endpoints/EsourceEndpoints.cs|urls|3b18ea17047615fc
+apps/interop/src/Endpoints/EsourceEndpoints.cs|urls|53d4dff5124ee648
+apps/interop/src/Endpoints/EsourceEndpoints.cs|urls|657a33c68460d1c7
+apps/interop/src/Endpoints/EsourceEndpoints.cs|urls|d551a274e4bf296b
 apps/web/src/api/types.ts|ip_mac_addresses|62a36757ae909c73
 apps/web/src/api/types.ts|medical_record_account|0d9cf6da6e682195
 apps/web/src/auth/keycloak.js|dates|43f696c4a6c12766

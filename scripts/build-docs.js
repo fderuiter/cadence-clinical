@@ -321,6 +321,201 @@ function prepareRootDocs() {
   }
 
   copyAndPreprocess("README.md", "index.md");
+  generateDocumentationIndex();
+}
+
+/**
+ * Synthesizes or updates docs/DOCUMENTATION_INDEX.md with a complete categorical table of contents.
+ */
+function generateDocumentationIndex() {
+  const docsDir = path.join(repoRoot, "docs");
+
+  function extractTitle(filePath, fallbackName) {
+    try {
+      const content = fs.readFileSync(filePath, "utf8");
+      if (content.startsWith("---")) {
+        const endFm = content.indexOf("\n---", 3);
+        if (endFm !== -1) {
+          const fm = content.substring(3, endFm);
+          const titleMatch = fm.match(/^title:\s*["']?(.*?)["']?\s*$/m);
+          if (titleMatch && titleMatch[1].trim()) {
+            return titleMatch[1].trim();
+          }
+        }
+      }
+      const lines = content.split("\n");
+      for (let line of lines) {
+        line = line.trim();
+        if (line.startsWith("# ")) {
+          return line.substring(2).trim().replace(/[*`]/g, "");
+        }
+      }
+    } catch (e) {}
+
+    return cleanName(fallbackName);
+  }
+
+  function cleanName(name) {
+    return name
+      .replace(/\.md$/, "")
+      .replace(/[-_]/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function shouldExclude(relPath) {
+    const norm = relPath.replace(/\\/g, "/");
+    if (norm.includes("SDLC/runs/") || norm.includes("/runs/")) return true;
+    if (norm.includes("node_modules") || norm.includes(".vitepress")) return true;
+    if (
+      norm === "index.md" ||
+      norm === "LICENSE.md" ||
+      norm === "ARCHITECTURE.md" ||
+      norm === "AGENTS.md"
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  function getAllDocFiles(dir) {
+    let results = [];
+    if (!fs.existsSync(dir)) return results;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      const relFromDocs = path.relative(docsDir, fullPath).replace(/\\/g, "/");
+      if (shouldExclude(relFromDocs)) continue;
+
+      if (entry.isDirectory()) {
+        results = results.concat(getAllDocFiles(fullPath));
+      } else if (entry.isFile() && entry.name.endsWith(".md")) {
+        results.push({
+          fullPath,
+          relPath: relFromDocs,
+          fileName: entry.name,
+        });
+      }
+    }
+    return results;
+  }
+
+  const files = getAllDocFiles(docsDir);
+
+  const categories = {
+    "Start Here & Core System Overview": [
+      { title: "README - Cadence Platform Overview", relPath: "../README.md" },
+      { title: "ARCHITECTURE - System Architecture", relPath: "../ARCHITECTURE.md" },
+      { title: "AGENTS - Agent & Contributor Guidelines", relPath: "../AGENTS.md" },
+      { title: "CONTRIBUTING - Workflow & Standards", relPath: "../CONTRIBUTING.md" },
+      { title: "LICENSE - Project License", relPath: "../LICENSE" },
+    ],
+    "Clinical Kernel & Roadmap": [],
+    "Architectural Decision Records (ADRs)": [],
+    "System & Feature Specifications": [],
+    "Python-to-.NET Port & Migration": [],
+    "SDLC Compliance & Regulatory Documentation": [],
+    "Clinical Standards, Schemas & Reference Data": [],
+    "REST API Reference": [],
+    "UI Components & User Experience": [],
+    "Agent Guidelines & Working Notes": [],
+  };
+
+  const uncategorized = {};
+
+  for (const file of files) {
+    const title = extractTitle(file.fullPath, file.fileName);
+    const rel = file.relPath;
+    const item = { title, relPath: rel };
+
+    if (!rel.includes("/")) {
+      categories["Start Here & Core System Overview"].push(item);
+    } else if (rel.startsWith("kernel/")) {
+      categories["Clinical Kernel & Roadmap"].push(item);
+    } else if (rel.startsWith("adr/")) {
+      categories["Architectural Decision Records (ADRs)"].push(item);
+    } else if (rel.startsWith("specs/")) {
+      categories["System & Feature Specifications"].push(item);
+    } else if (rel.startsWith("migration/")) {
+      categories["Python-to-.NET Port & Migration"].push(item);
+    } else if (rel.startsWith("SDLC/")) {
+      categories["SDLC Compliance & Regulatory Documentation"].push(item);
+    } else if (
+      rel.startsWith("CDISC/") ||
+      rel.startsWith("NCI/") ||
+      rel.startsWith("schema/") ||
+      rel.startsWith("openapi/")
+    ) {
+      categories["Clinical Standards, Schemas & Reference Data"].push(item);
+    } else if (rel.startsWith("api/")) {
+      categories["REST API Reference"].push(item);
+    } else if (
+      rel.startsWith("components/") ||
+      rel.startsWith("ux/") ||
+      rel.startsWith("web/")
+    ) {
+      categories["UI Components & User Experience"].push(item);
+    } else if (rel.startsWith("agents/")) {
+      categories["Agent Guidelines & Working Notes"].push(item);
+    } else {
+      const topDir = rel.split("/")[0];
+      const catName = cleanName(topDir);
+      if (!uncategorized[catName]) uncategorized[catName] = [];
+      uncategorized[catName].push(item);
+    }
+  }
+
+  for (const [catName, items] of Object.entries(uncategorized)) {
+    categories[catName] = items;
+  }
+
+  let md = `# Documentation Index
+
+The single map of Cadence documentation. Every document is listed once, with its status:
+
+- **Normative:** the source of truth; other documents must agree with it.
+- **Current:** maintained with the code; updated in the same pull request as the change.
+- **Generated:** produced by a command; never edit by hand.
+- **Baseline:** written for the pre-kernel, per-service design. Kept for requirement IDs and
+  traceability; a banner at the top says what supersedes it.
+- **Historical:** records of completed work (the Python-to-.NET port).
+
+When you add a document, add it here. When a change makes a document wrong, fix it in the same PR
+([CONTRIBUTING.md §5](../CONTRIBUTING.md#5-documentation-is-part-of-the-change)).
+
+---
+
+`;
+
+  let totalCount = 0;
+
+  for (const [category, items] of Object.entries(categories)) {
+    if (!items || items.length === 0) continue;
+
+    items.sort((a, b) =>
+      a.relPath.localeCompare(b.relPath, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      })
+    );
+
+    md += `## ${category}\n\n`;
+    md += `| Document | Path |\n`;
+    md += `| --- | --- |\n`;
+
+    for (const item of items) {
+      totalCount++;
+      const safeTitle = item.title.replace(/\|/g, "\\|").trim();
+      md += `| [${safeTitle}](${item.relPath}) | \`${item.relPath}\` |\n`;
+    }
+
+    md += `\n`;
+  }
+
+  const outputPath = path.join(docsDir, "DOCUMENTATION_INDEX.md");
+  fs.writeFileSync(outputPath, md, "utf8");
+  console.log(
+    `Successfully synthesized docs/DOCUMENTATION_INDEX.md (${totalCount} documents indexed)`
+  );
 }
 
 // `node scripts/build-docs.js --prepare-only` stages the root documents for `vitepress dev` and exits.

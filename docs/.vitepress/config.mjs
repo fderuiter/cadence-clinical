@@ -10,148 +10,239 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Builds domain-grouped sidebar entries for architectural decision records.
- * Parses `docs/adr/index.md` to extract domain headings and markdown links.
- *
- * @return {Array<{text: string, collapsed?: boolean, items: Array<{text: string, link: string}>}>} Grouped ADR sidebar entries.
+ * Extracts custom document title from H1 header or YAML frontmatter,
+ * falling back to a cleaned file/directory name.
  */
-function getAdrSidebarGroups() {
-  const indexPath = path.resolve(__dirname, "../adr/index.md");
-  if (!fs.existsSync(indexPath)) return [];
-
-  const content = fs.readFileSync(indexPath, "utf-8");
-  const lines = content.split("\n");
-
-  const groups = [];
-  let currentGroup = null;
-
-  for (const line of lines) {
-    const headingMatch = line.match(/^###\s+(.*)/);
-    if (headingMatch) {
-      if (currentGroup && currentGroup.items.length > 0) {
-        groups.push(currentGroup);
+function extractDocTitle(filePath, fallbackName) {
+  try {
+    const content = fs.readFileSync(filePath, "utf8");
+    if (content.startsWith("---")) {
+      const endFm = content.indexOf("\n---", 3);
+      if (endFm !== -1) {
+        const fm = content.substring(3, endFm);
+        const titleMatch = fm.match(/^title:\s*["']?(.*?)["']?\s*$/m);
+        if (titleMatch && titleMatch[1].trim()) {
+          return titleMatch[1].trim();
+        }
       }
-      currentGroup = {
-        text: headingMatch[1].trim(),
-        collapsed: true,
-        items: [],
-      };
-      continue;
     }
+    const lines = content.split("\n");
+    for (let line of lines) {
+      line = line.trim();
+      if (line.startsWith("# ")) {
+        return line.substring(2).trim().replace(/[*`]/g, "");
+      }
+    }
+  } catch (e) {}
 
-    const linkMatch = line.match(/^-\s*\[(.*?)\]\((.*?)\)/);
-    if (linkMatch && currentGroup) {
-      const text = linkMatch[1].trim();
-      let filename = linkMatch[2].trim();
-      if (filename.startsWith("docs/adr/")) {
-        filename = filename.replace("docs/adr/", "");
+  return cleanName(fallbackName);
+}
+
+function cleanName(name) {
+  return name
+    .replace(/\.md$/, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function shouldExcludePath(relPath) {
+  const norm = relPath.replace(/\\/g, "/");
+  if (norm.includes("SDLC/runs/") || norm.includes("/runs/")) return true;
+  if (norm.includes("node_modules") || norm.includes(".vitepress")) return true;
+  if (norm === "index.md") return true; // Root index.md is Home
+  return false;
+}
+
+/**
+ * Recursively scans a directory under docs/ to build hierarchical sidebar items.
+ */
+function getSubtreeItems(dirPath, baseDocsDir) {
+  if (!fs.existsSync(dirPath)) return [];
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  entries.sort((a, b) => {
+    if (a.isDirectory() && !b.isDirectory()) return -1;
+    if (!a.isDirectory() && b.isDirectory()) return 1;
+    return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+  });
+
+  const items = [];
+
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    const relFromDocs = path.relative(baseDocsDir, fullPath).replace(/\\/g, "/");
+
+    if (shouldExcludePath(relFromDocs)) continue;
+
+    if (entry.isDirectory()) {
+      const subItems = getSubtreeItems(fullPath, baseDocsDir);
+      if (subItems.length > 0) {
+        let groupTitle = cleanName(entry.name);
+        const indexPath = path.join(fullPath, "index.md");
+        if (fs.existsSync(indexPath)) {
+          groupTitle = extractDocTitle(indexPath, entry.name);
+        }
+        items.push({
+          text: groupTitle,
+          collapsed: true,
+          items: subItems,
+        });
       }
-      if (filename.endsWith(".md")) {
-        filename = filename.replace(".md", "");
-      }
-      currentGroup.items.push({
-        text,
-        link: `/adr/${filename}`,
+    } else if (entry.isFile() && entry.name.endsWith(".md")) {
+      const title = extractDocTitle(fullPath, entry.name);
+      const linkPath = "/" + relFromDocs.replace(/\.md$/, "");
+      items.push({
+        text: title,
+        link: linkPath,
       });
     }
   }
 
-  if (currentGroup && currentGroup.items.length > 0) {
-    groups.push(currentGroup);
+  return items;
+}
+
+/**
+ * Dynamically builds hierarchical sidebar categories for all non-excluded markdown files in docs/.
+ */
+function getFullDynamicSidebar(baseDocsDir) {
+  const categoryConfig = [
+    {
+      key: "(root)",
+      title: "Overview & Guides",
+    },
+    {
+      key: "kernel",
+      title: "Clinical Kernel",
+    },
+    {
+      key: "adr",
+      title: "Architectural Decision Records (ADRs)",
+    },
+    {
+      key: "specs",
+      title: "Design & Platform Specifications",
+    },
+    {
+      key: "migration",
+      title: "Python-to-.NET Port & Migration",
+    },
+    {
+      key: "SDLC",
+      title: "SDLC Compliance & Regulatory Guidelines",
+    },
+    {
+      key: "api",
+      title: "REST API Reference",
+    },
+    {
+      key: "components",
+      title: "Enterprise UI & User Experience",
+      mergeKeys: ["components", "ux", "web"],
+    },
+    {
+      key: "CDISC",
+      title: "Clinical Standards & Reference Data",
+      mergeKeys: ["CDISC", "NCI", "schema", "openapi"],
+    },
+    {
+      key: "agents",
+      title: "Agent Working Notes",
+    },
+  ];
+
+  const processedTopDirs = new Set();
+  const sidebar = [];
+
+  // 1. Root files group ("Overview & Guides")
+  const rootFilesGroup = {
+    text: "Overview & Guides",
+    items: [
+      { text: "Welcome & Readme", link: "/" },
+      { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
+      { text: "System Architecture", link: "/ARCHITECTURE" },
+      { text: "Local Development Environment", link: "/LOCAL_DEV_ENVIRONMENT" },
+      { text: "Environment Variables", link: "/ENVIRONMENT_VARIABLES" },
+      { text: "Database and Migrations", link: "/OPERATIONAL_DATABASE" },
+      { text: "Testing and Requirement Qualification", link: "/TESTING" },
+      { text: "CI and Quality Gates", link: "/CI" },
+      { text: "Developer CLI (`cadence`)", link: "/cli" },
+      { text: "Agent & Contributor Rules", link: "/AGENTS" },
+    ],
+  };
+
+  const rootEntries = fs.readdirSync(baseDocsDir, { withFileTypes: true });
+  const existingRootLinks = new Set(rootFilesGroup.items.map((i) => i.link));
+
+  for (const entry of rootEntries) {
+    if (entry.isFile() && entry.name.endsWith(".md") && entry.name !== "index.md") {
+      const relPath = entry.name;
+      const link = "/" + relPath.replace(/\.md$/, "");
+      if (!existingRootLinks.has(link)) {
+        const title = extractDocTitle(path.join(baseDocsDir, entry.name), entry.name);
+        rootFilesGroup.items.push({ text: title, link });
+      }
+    }
   }
 
-  return [
-    {
-      text: "ADR Overview & Log",
-      link: "/adr/index",
-    },
-    ...groups,
-  ];
+  sidebar.push(rootFilesGroup);
+  processedTopDirs.add("(root)");
+
+  const getDirItems = (dirName) => {
+    const fullDirPath = path.join(baseDocsDir, dirName);
+    return getSubtreeItems(fullDirPath, baseDocsDir);
+  };
+
+  // 2. Predefined categories
+  for (const cat of categoryConfig) {
+    if (cat.key === "(root)") continue;
+
+    const keysToMerge = cat.mergeKeys || [cat.key];
+    const catItems = [];
+
+    for (const key of keysToMerge) {
+      processedTopDirs.add(key);
+      const items = getDirItems(key);
+      if (items.length > 0) {
+        if (keysToMerge.length > 1) {
+          catItems.push({
+            text: cleanName(key),
+            collapsed: true,
+            items,
+          });
+        } else {
+          catItems.push(...items);
+        }
+      }
+    }
+
+    if (catItems.length > 0) {
+      sidebar.push({
+        text: cat.title,
+        collapsed: cat.key !== "kernel" && cat.key !== "specs",
+        items: catItems,
+      });
+    }
+  }
+
+  // 3. Dynamic scan for any newly added top-level directories
+  for (const entry of rootEntries) {
+    if (entry.isDirectory() && entry.name !== ".vitepress" && entry.name !== "node_modules") {
+      if (!processedTopDirs.has(entry.name)) {
+        const items = getDirItems(entry.name);
+        if (items.length > 0) {
+          sidebar.push({
+            text: cleanName(entry.name),
+            collapsed: true,
+            items,
+          });
+        }
+      }
+    }
+  }
+
+  return sidebar;
 }
 
-/**
- * Builds sidebar entries from the Markdown files in the SDLC documentation directory.
- * @return {Array<{text: string, link: string}>} Sorted sidebar entries using each file's first H1 heading or filename as its text.
- */
-function getSdlcSidebar() {
-  const sdlcDir = path.resolve(__dirname, "../SDLC");
-  if (!fs.existsSync(sdlcDir)) return [];
-  const files = fs.readdirSync(sdlcDir);
-  return files
-    .filter((file) => file.endsWith(".md"))
-    .sort()
-    .map((file) => {
-      const filePath = path.join(sdlcDir, file);
-      const content = fs.readFileSync(filePath, "utf-8");
-      const titleMatch = content.match(/^#\s+(.*)/m);
-      const title = titleMatch ? titleMatch[1].trim() : file.replace(".md", "");
-      return { text: title, link: `/SDLC/${file}` };
-    });
-}
-
-/**
- * Builds sidebar entries for programmatically generated API Reference documentation.
- * @return {Array<{text: string, link?: string, collapsed?: boolean, items?: Array<{text: string, link: string}>}>}
- */
-function getApiSidebarGroups() {
-  return [
-    {
-      text: "API Overview & Architecture",
-      link: "/api/index",
-    },
-    {
-      text: "Protocol & Study Design",
-      collapsed: false,
-      items: [
-        { text: "Designer / USDM (8001)", link: "/api/designer" },
-        { text: "Knowledge & SOPs (8015)", link: "/api/knowledge" },
-        { text: "AI Gateway (8017)", link: "/api/ai_gateway" },
-      ],
-    },
-    {
-      text: "Clinical Operations & Execution",
-      collapsed: false,
-      items: [
-        { text: "EDC Execution (8002)", link: "/api/execution" },
-        { text: "CTMS Operations (8007)", link: "/api/ctms" },
-        { text: "Organization Directory (8012)", link: "/api/org" },
-        { text: "Clinical Issue Hub (8009)", link: "/api/tickets" },
-        { text: "Payments & Grants (8016)", link: "/api/payments" },
-      ],
-    },
-    {
-      text: "Patient & Interoperability",
-      collapsed: false,
-      items: [
-        { text: "FHIR & eSource Gateway (8004)", link: "/api/interop" },
-        { text: "Notifications Dispatcher (8006)", link: "/api/notifications" },
-        { text: "Electronic Consent (8011)", link: "/api/econsent" },
-      ],
-    },
-    {
-      text: "Safety, Quality & Governance",
-      collapsed: false,
-      items: [
-        { text: "Safety & Pharmacovigilance (8008)", link: "/api/safety" },
-        { text: "Quality & CAPA (8005)", link: "/api/quality" },
-        { text: "Blinded Imaging Adjudication (8014)", link: "/api/imaging" },
-        { text: "eTMF Document Archive (8003)", link: "/api/etmf" },
-        { text: "eISF Site Binders (8010)", link: "/api/eisf" },
-        { text: "FileShare & StoragePort (8013)", link: "/api/fileshare" },
-      ],
-    },
-    {
-      text: "Gateway",
-      collapsed: false,
-      items: [
-        {
-          text: "API Gateway (8000)",
-          link: "https://github.com/fderuiter/cadence-clinical/blob/main/apps/gateway/README.md",
-        },
-      ],
-    },
-  ];
-}
+const docsDir = path.resolve(__dirname, "..");
 
 const config = defineConfig({
   title: "Cadence Clinical Portal",
@@ -189,104 +280,7 @@ const config = defineConfig({
       { text: "CLI Reference", link: "/cli" },
       { text: "Agents", link: "/AGENTS" },
     ],
-    sidebar: [
-      {
-        text: "Overview & Guides",
-        items: [
-          { text: "Welcome & Readme", link: "/" },
-          { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
-          { text: "System Architecture", link: "/ARCHITECTURE" },
-          {
-            text: "Local Development Environment",
-            link: "/LOCAL_DEV_ENVIRONMENT",
-          },
-          { text: "Environment Variables", link: "/ENVIRONMENT_VARIABLES" },
-          { text: "Database and Migrations", link: "/OPERATIONAL_DATABASE" },
-          { text: "Testing and Requirement Qualification", link: "/TESTING" },
-          { text: "CI and Quality Gates", link: "/CI" },
-          { text: "Developer CLI (`cadence`)", link: "/cli" },
-          { text: "Agent & Contributor Rules", link: "/AGENTS" },
-        ],
-      },
-      {
-        text: "Clinical Kernel",
-        items: [
-          {
-            text: "Kernel Specification v0.2",
-            link: "/kernel/CLINICAL_KERNEL_SPECIFICATION",
-          },
-          {
-            text: "Roadmap (§15)",
-            link: "/kernel/CLINICAL_KERNEL_SPECIFICATION#_15-roadmap",
-          },
-          {
-            text: "Execution Migration Inventory",
-            link: "/kernel/EXECUTION_MIGRATION_INVENTORY",
-          },
-          {
-            text: "Clock Migration Backlog",
-            link: "/kernel/CLOCK_MIGRATION_BACKLOG",
-          },
-        ],
-      },
-      {
-        text: "Python-to-.NET Port (Historical)",
-        collapsed: true,
-        items: [
-          { text: "Modernization Hub Overview", link: "/migration/index" },
-          {
-            text: "Surface & Data Topology Audit",
-            link: "/migration/SYSTEM_TOPOLOGY_AUDIT",
-          },
-          {
-            text: "Dependency & Parity Catalog",
-            link: "/migration/DEPENDENCY_AND_PARITY_CATALOG",
-          },
-          {
-            text: "Bounded Context Migration Matrix",
-            link: "/migration/BOUNDED_CONTEXT_MIGRATION_MATRIX",
-          },
-          {
-            text: "Solution Scaffold Guide",
-            link: "/migration/SCAFFOLD_GUIDE",
-          },
-          {
-            text: "Migration Workflow Playbook",
-            link: "/MIGRATION_WORKFLOW",
-          },
-        ],
-      },
-      {
-        text: "REST API Reference",
-        items: getApiSidebarGroups(),
-      },
-      {
-        text: "Enterprise UI Components",
-        items: [
-          { text: "Component Catalog Overview", link: "/components/index" },
-          { text: "ClinicalDataTable", link: "/components/data-table" },
-          { text: "ClinicalModal", link: "/components/modal" },
-          { text: "PersonaSwitcher", link: "/components/persona-switcher" },
-          { text: "AuditLogViewer", link: "/components/audit-viewer" },
-        ],
-      },
-      {
-        text: "Baseline Specifications",
-        items: [
-          { text: "Data Lifecycle Management", link: "/DATA_LIFECYCLE" },
-          { text: "Feature Matrix", link: "/FEATURE_MATRIX" },
-          { text: "System Requirements Specification (SRS)", link: "/SRS" },
-        ],
-      },
-      {
-        text: "SDLC Compliance Guidelines",
-        items: getSdlcSidebar(),
-      },
-      {
-        text: "Architectural Decision Records (ADRs)",
-        items: getAdrSidebarGroups(),
-      },
-    ],
+    sidebar: getFullDynamicSidebar(docsDir),
   },
 });
 
