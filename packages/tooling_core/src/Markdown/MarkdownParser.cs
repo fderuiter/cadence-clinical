@@ -25,7 +25,7 @@ public static class MarkdownParser
 
     private static readonly string[] IgnoredSubstrings = new[]
     {
-        "placeholder", "your-", "example", "path-to-new-adr", "node.js"
+        "placeholder", "your-", "example", "path-to-new-adr", "node.js", "..."
     };
 
     public static List<MarkdownValidationIssue> ValidateWorkspaceLinks(
@@ -48,70 +48,76 @@ public static class MarkdownParser
 
             try
             {
-                string content = File.ReadAllText(file);
-                var matches = MarkdownLinkRegex.Matches(content);
-                foreach (Match m in matches)
+                string[] lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
                 {
-                    string rawTarget = m.Groups[2].Value.Trim();
-                    if (rawTarget.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                        rawTarget.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
-                        rawTarget.StartsWith('#') ||
-                        rawTarget.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
-                        rawTarget.StartsWith("tel:", StringComparison.OrdinalIgnoreCase))
+                    var matches = MarkdownLinkRegex.Matches(lines[i]);
+                    foreach (Match m in matches)
                     {
-                        continue;
-                    }
-
-                    // Strip anchors, queries, pytest selectors
-                    string target = rawTarget.Split('#')[0].Split('?')[0].Split(new[] { "::" }, StringSplitOptions.None)[0].Trim();
-                    if (string.IsNullOrEmpty(target)) continue;
-
-                    // Ignore placeholders
-                    if (IgnoredSubstrings.Any(ign => target.Contains(ign, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        continue;
-                    }
-
-                    string fileDir = Path.GetDirectoryName(file) ?? repoRoot;
-
-                    // Try relative to file directory
-                    string pathFromDir = Path.GetFullPath(Path.Combine(fileDir, target));
-                    if (File.Exists(pathFromDir) || Directory.Exists(pathFromDir))
-                    {
-                        continue;
-                    }
-
-                    // Try relative to repo root
-                    string pathFromRoot = Path.GetFullPath(Path.Combine(repoRoot, target.TrimStart('/')));
-                    if (File.Exists(pathFromRoot) || Directory.Exists(pathFromRoot))
-                    {
-                        continue;
-                    }
-
-                    // Fallback 1: Check .cs equivalent or src/ directory for transcribed C# code
-                    if (target.EndsWith(".py", StringComparison.OrdinalIgnoreCase) ||
-                        target.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
-                        target.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-                        target.EndsWith(".vue", StringComparison.OrdinalIgnoreCase))
-                    {
-                        string csTarget = Path.ChangeExtension(target, ".cs");
-                        string csFromRoot = Path.GetFullPath(Path.Combine(repoRoot, csTarget.TrimStart('/')));
-                        if (File.Exists(csFromRoot)) continue;
-
-                        if (isHistoricalDoc)
+                        string rawTarget = m.Groups[2].Value.Trim();
+                        if (rawTarget.Contains("://") ||
+                            rawTarget.StartsWith('#') ||
+                            rawTarget.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
+                            rawTarget.StartsWith("tel:", StringComparison.OrdinalIgnoreCase))
                         {
-                            // Historical ADRs/migration docs reference pre-migration Python/Vue files
                             continue;
                         }
-                    }
 
-                    if (isHistoricalDoc && target.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Allow historical ADR cross-references
-                        continue;
-                    }
+                        // Strip anchors, queries, pytest selectors
+                        string target = rawTarget.Split('#')[0].Split('?')[0].Split(new[] { "::" }, StringSplitOptions.None)[0].Trim();
+                        if (string.IsNullOrEmpty(target)) continue;
 
-                    issues.Add(new MarkdownValidationIssue(relativeFile, rawTarget, $"Broken Markdown link in '{relativeFile}': '{rawTarget}'"));
+                        // Ignore placeholders
+                        if (IgnoredSubstrings.Any(ign => target.Contains(ign, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            continue;
+                        }
+
+                        string fileDir = Path.GetDirectoryName(file) ?? repoRoot;
+
+                        // Try relative to file directory
+                        string pathFromDir = Path.GetFullPath(Path.Combine(fileDir, target));
+                        if (File.Exists(pathFromDir) || Directory.Exists(pathFromDir))
+                        {
+                            continue;
+                        }
+
+                        // Try relative to repo root
+                        string pathFromRoot = Path.GetFullPath(Path.Combine(repoRoot, target.TrimStart('/')));
+                        if (File.Exists(pathFromRoot) || Directory.Exists(pathFromRoot))
+                        {
+                            continue;
+                        }
+
+                        // Fallback 1: Check .cs equivalent or src/ directory for transcribed C# code
+                        if (target.EndsWith(".py", StringComparison.OrdinalIgnoreCase) ||
+                            target.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+                            target.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+                            target.EndsWith(".vue", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string csTarget = Path.ChangeExtension(target, ".cs");
+                            string csFromRoot = Path.GetFullPath(Path.Combine(repoRoot, csTarget.TrimStart('/')));
+                            if (File.Exists(csFromRoot)) continue;
+
+                            if (isHistoricalDoc)
+                            {
+                                // Historical ADRs/migration docs reference pre-migration Python/Vue files
+                                continue;
+                            }
+                        }
+
+                        if (isHistoricalDoc && target.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Allow historical ADR cross-references
+                            continue;
+                        }
+
+                        issues.Add(new MarkdownValidationIssue(
+                            relativeFile,
+                            rawTarget,
+                            $"Broken Markdown link in '{relativeFile}:{i + 1}': '{rawTarget}'",
+                            i + 1));
+                    }
                 }
             }
             catch (Exception ex)
