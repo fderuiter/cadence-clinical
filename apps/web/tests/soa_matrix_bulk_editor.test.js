@@ -138,15 +138,16 @@ describe("SoAMatrixEditor.vue & SoaMatrixGrid.vue - Bulk Matrix & Range Selectio
     const cells = wrapper.findAll(".cell-toggle");
     expect(cells.length).toBe(9); // 3 rows x 3 cols
 
-    // Mouse down on (0, 0)
-    await cells[0].trigger("mousedown");
-    // Mouse enter on (1, 1)
-    await cells[4].trigger("mouseenter");
+    // Pointer down on (0, 0)
+    await cells[0].trigger("pointerdown");
+    // Pointer move on (1, 1)
+    await cells[4].trigger("pointermove");
 
     expect(wrapper.vm.isDragging).toBe(true);
     expect(wrapper.vm.selectedRangeCellCount).toBe(4); // 2x2 grid = 4 cells
 
-    await cells[4].trigger("mouseup");
+    window.dispatchEvent(new Event("pointerup"));
+    await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".range-action-banner").exists()).toBe(true);
 

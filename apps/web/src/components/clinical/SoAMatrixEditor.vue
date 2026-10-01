@@ -526,7 +526,12 @@ const handleCellPointerDown = (rIdx, cIdx, event) => {
 
 const handleCellPointerMove = (event) => {
   if (isDragging.value) {
-    const el = document.elementFromPoint(event.clientX, event.clientY);
+    const el =
+      typeof document !== "undefined" &&
+      typeof document.elementFromPoint === "function"
+        ? document.elementFromPoint(event.clientX, event.clientY) ||
+          event.target
+        : event.target;
     const cellEl = el?.closest(".cell-toggle");
     if (
       cellEl &&
