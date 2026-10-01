@@ -310,6 +310,170 @@ export const useNotificationsStore = defineStore("notifications", {
         this.loading = false;
       }
     },
+    async acknowledgeBulk(ids, changeReason) {
+      this.loading = true;
+      this.error = null;
+      this.errorStatus = null;
+      try {
+        const authStore = useAuthStore();
+        const storageKey = getStorageKey(authStore);
+        const isMocked =
+          notificationsService.acknowledgeBulkNotifications &&
+          (notificationsService.acknowledgeBulkNotifications._isMockFunction ||
+            typeof notificationsService.acknowledgeBulkNotifications.mock ===
+              "object");
+        if (
+          isDemoBuild() &&
+          authStore.isDemoMode &&
+          !authStore.token &&
+          !isMocked
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          let list = [];
+          if (typeof window !== "undefined" && window.localStorage) {
+            const stored = window.localStorage.getItem(storageKey);
+            if (stored) {
+              list = JSON.parse(stored);
+            }
+          }
+          if (list.length === 0) {
+            list = JSON.parse(JSON.stringify(this.notifications));
+          }
+
+          const updatedItems = [];
+          ids.forEach((id) => {
+            const index = list.findIndex((n) => n.id === id);
+            if (index !== -1) {
+              const updated = {
+                ...list[index],
+                status: "ACKNOWLEDGED",
+                version_index: (list[index].version_index || 1) + 1,
+                reason_for_change: changeReason,
+              };
+              list[index] = updated;
+              updatedItems.push(updated);
+
+              const activeIndex = this.notifications.findIndex(
+                (n) => n.id === id
+              );
+              if (activeIndex !== -1) {
+                this.notifications[activeIndex] = updated;
+              }
+            }
+          });
+
+          if (typeof window !== "undefined" && window.localStorage) {
+            window.localStorage.setItem(storageKey, JSON.stringify(list));
+          }
+
+          return updatedItems;
+        }
+
+        const updated =
+          await notificationsService.acknowledgeBulkNotifications(ids, {
+            changeReason,
+          });
+        const updatedArray = Array.isArray(updated) ? updated : [updated];
+        updatedArray.forEach((item) => {
+          if (item && item.id) {
+            const index = this.notifications.findIndex((n) => n.id === item.id);
+            if (index !== -1) {
+              this.notifications[index] = item;
+            }
+          }
+        });
+        return updated;
+      } catch (err) {
+        this.error = err.message || "Failed to bulk acknowledge notifications";
+        this.errorStatus = err.status || null;
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+    async resolveBulk(ids, changeReason) {
+      this.loading = true;
+      this.error = null;
+      this.errorStatus = null;
+      try {
+        const authStore = useAuthStore();
+        const storageKey = getStorageKey(authStore);
+        const isMocked =
+          notificationsService.resolveBulkNotifications &&
+          (notificationsService.resolveBulkNotifications._isMockFunction ||
+            typeof notificationsService.resolveBulkNotifications.mock ===
+              "object");
+        if (
+          isDemoBuild() &&
+          authStore.isDemoMode &&
+          !authStore.token &&
+          !isMocked
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          let list = [];
+          if (typeof window !== "undefined" && window.localStorage) {
+            const stored = window.localStorage.getItem(storageKey);
+            if (stored) {
+              list = JSON.parse(stored);
+            }
+          }
+          if (list.length === 0) {
+            list = JSON.parse(JSON.stringify(this.notifications));
+          }
+
+          const updatedItems = [];
+          ids.forEach((id) => {
+            const index = list.findIndex((n) => n.id === id);
+            if (index !== -1) {
+              const updated = {
+                ...list[index],
+                status: "RESOLVED",
+                version_index: (list[index].version_index || 1) + 1,
+                reason_for_change: changeReason,
+              };
+              list[index] = updated;
+              updatedItems.push(updated);
+
+              const activeIndex = this.notifications.findIndex(
+                (n) => n.id === id
+              );
+              if (activeIndex !== -1) {
+                this.notifications[activeIndex] = updated;
+              }
+            }
+          });
+
+          if (typeof window !== "undefined" && window.localStorage) {
+            window.localStorage.setItem(storageKey, JSON.stringify(list));
+          }
+
+          return updatedItems;
+        }
+
+        const updated = await notificationsService.resolveBulkNotifications(
+          ids,
+          {
+            changeReason,
+          }
+        );
+        const updatedArray = Array.isArray(updated) ? updated : [updated];
+        updatedArray.forEach((item) => {
+          if (item && item.id) {
+            const index = this.notifications.findIndex((n) => n.id === item.id);
+            if (index !== -1) {
+              this.notifications[index] = item;
+            }
+          }
+        });
+        return updated;
+      } catch (err) {
+        this.error = err.message || "Failed to bulk resolve notifications";
+        this.errorStatus = err.status || null;
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
     resetDemoStorage() {
       if (typeof window !== "undefined" && window.localStorage) {
         const authStore = useAuthStore();

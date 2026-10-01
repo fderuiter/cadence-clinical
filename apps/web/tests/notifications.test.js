@@ -23,6 +23,8 @@ vi.mock("../src/api/notifications", () => {
       getNotification: vi.fn(),
       acknowledgeNotification: vi.fn(),
       resolveNotification: vi.fn(),
+      acknowledgeBulkNotifications: vi.fn(),
+      resolveBulkNotifications: vi.fn(),
     },
   };
 });
@@ -812,6 +814,266 @@ describe("Notifications System End-to-End Visual Integration", () => {
       expect(
         window.localStorage.getItem("demo_notifications_site_crc")
       ).toBeNull();
+    });
+  });
+
+  describe("Bulk Notification Acknowledgment & Batch Operations", () => {
+    const multiNotifications = [
+      {
+        id: "notif-101",
+        category: "ALERTS",
+        priority: "CRITICAL",
+        status: "OPEN",
+        message_content: "Critical alert 1",
+        created_at: "2026-08-15T12:00:00Z",
+      },
+      {
+        id: "notif-102",
+        category: "ALERTS",
+        priority: "HIGH",
+        status: "OPEN",
+        message_content: "High alert 2",
+        created_at: "2026-08-15T13:00:00Z",
+      },
+      {
+        id: "notif-103",
+        category: "SYSTEM",
+        priority: "LOW",
+        status: "ACKNOWLEDGED",
+        message_content: "System notice 3",
+        created_at: "2026-08-15T14:00:00Z",
+      },
+      {
+        id: "notif-104",
+        category: "ACTION_ITEMS",
+        priority: "MEDIUM",
+        status: "RESOLVED",
+        message_content: "Action item 4",
+        created_at: "2026-08-15T15:00:00Z",
+      },
+    ];
+
+    beforeEach(() => {
+      notificationsService.getNotifications.mockResolvedValue(
+        JSON.parse(JSON.stringify(multiNotifications))
+      );
+    });
+
+    it("toggles individual card selection and updates selection count", async () => {
+      const wrapper = mount(NotificationsView, {
+        global: { plugins: [pinia] },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await wrapper.vm.$nextTick();
+
+      const checkboxes = wrapper.findAll(".notif-checkbox");
+      expect(checkboxes.length).toBe(4);
+      expect(wrapper.find("#selected-count").text()).toContain("0 selected");
+
+      await checkboxes[0].setValue(true);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#selected-count").text()).toContain("1 selected");
+
+      await checkboxes[1].setValue(true);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#selected-count").text()).toContain("2 selected");
+    });
+
+    it("toggles select-all checkbox to select or deselect all visible notifications", async () => {
+      const wrapper = mount(NotificationsView, {
+        global: { plugins: [pinia] },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await wrapper.vm.$nextTick();
+
+      const selectAll = wrapper.find("#select-all-checkbox");
+      expect(selectAll.element.checked).toBe(false);
+
+      await selectAll.setChecked(true);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#selected-count").text()).toContain("4 selected");
+
+      await selectAll.setChecked(false);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#selected-count").text()).toContain("0 selected");
+    });
+
+    it("selects and deselects notifications by category using category batch buttons", async () => {
+      const wrapper = mount(NotificationsView, {
+        global: { plugins: [pinia] },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find("#btn-select-category-alerts").trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#selected-count").text()).toContain("2 selected");
+
+      await wrapper.find("#btn-select-category-alerts").trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#selected-count").text()).toContain("0 selected");
+    });
+
+    it("clears active selections when filter criteria changes", async () => {
+      const wrapper = mount(NotificationsView, {
+        global: { plugins: [pinia] },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find("#select-all-checkbox").setChecked(true);
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#selected-count").text()).toContain("4 selected");
+
+      await wrapper.find("#filter-category").setValue("ALERTS");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#selected-count").text()).toContain("0 selected");
+    });
+
+    it("disables Bulk Acknowledge if any selected item is not OPEN, and disables Bulk Resolve if any selected item is RESOLVED", async () => {
+      const wrapper = mount(NotificationsView, {
+        global: { plugins: [pinia] },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await wrapper.vm.$nextTick();
+
+      const checkboxes = wrapper.findAll(".notif-checkbox");
+      const bulkAck = wrapper.find("#btn-bulk-acknowledge");
+      const bulkRes = wrapper.find("#btn-bulk-resolve");
+
+      await checkboxes[0].setValue(true);
+      await checkboxes[1].setValue(true);
+      await wrapper.vm.$nextTick();
+
+      expect(bulkAck.element.disabled).toBe(false);
+      expect(bulkRes.element.disabled).toBe(false);
+
+      await checkboxes[2].setValue(true);
+      await wrapper.vm.$nextTick();
+
+      expect(bulkAck.element.disabled).toBe(true);
+      expect(bulkRes.element.disabled).toBe(false);
+
+      await checkboxes[3].setValue(true);
+      await wrapper.vm.$nextTick();
+
+      expect(bulkAck.element.disabled).toBe(true);
+      expect(bulkRes.element.disabled).toBe(true);
+    });
+
+    it("submits bulk acknowledge via justification modal and updates store items in place", async () => {
+      notificationsService.acknowledgeBulkNotifications.mockResolvedValue([
+        { ...multiNotifications[0], status: "ACKNOWLEDGED", version_index: 2 },
+        { ...multiNotifications[1], status: "ACKNOWLEDGED", version_index: 2 },
+      ]);
+
+      const wrapper = mount(NotificationsView, {
+        global: { plugins: [pinia] },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await wrapper.vm.$nextTick();
+
+      const checkboxes = wrapper.findAll(".notif-checkbox");
+      await checkboxes[0].setValue(true);
+      await checkboxes[1].setValue(true);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find("#btn-bulk-acknowledge").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find("#justification-modal").exists()).toBe(true);
+      expect(wrapper.find(".modal-header").text()).toContain("Batch Acknowledge: 2 items");
+
+      await wrapper
+        .find("#modal-reason-select")
+        .setValue("Clinical event acknowledged");
+      await wrapper.find("#btn-submit-modal").trigger("click");
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await wrapper.vm.$nextTick();
+
+      expect(notificationsService.acknowledgeBulkNotifications).toHaveBeenCalledWith(
+        ["notif-101", "notif-102"],
+        { changeReason: "Clinical event acknowledged" }
+      );
+
+      expect(wrapper.find("#justification-modal").exists()).toBe(false);
+      expect(wrapper.find("#selected-count").text()).toContain("0 selected");
+    });
+
+    it("submits bulk resolve via justification modal and forwards X-Change-Reason header", async () => {
+      notificationsService.resolveBulkNotifications.mockResolvedValue([
+        { ...multiNotifications[0], status: "RESOLVED", version_index: 2 },
+        { ...multiNotifications[2], status: "RESOLVED", version_index: 2 },
+      ]);
+
+      const wrapper = mount(NotificationsView, {
+        global: { plugins: [pinia] },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await wrapper.vm.$nextTick();
+
+      const checkboxes = wrapper.findAll(".notif-checkbox");
+      await checkboxes[0].setValue(true);
+      await checkboxes[2].setValue(true);
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find("#btn-bulk-resolve").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".modal-header").text()).toContain("Batch Resolve: 2 items");
+
+      await wrapper
+        .find("#modal-reason-select")
+        .setValue("Corrective action documented");
+      await wrapper.find("#btn-submit-modal").trigger("click");
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await wrapper.vm.$nextTick();
+
+      expect(notificationsService.resolveBulkNotifications).toHaveBeenCalledWith(
+        ["notif-101", "notif-103"],
+        { changeReason: "Corrective action documented" }
+      );
+    });
+
+    it("attaches X-Change-Reason header correctly in bulk API client contract methods", async () => {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.accessToken = "bulk-test-jwt-token";
+
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          headers: new Headers({ "content-type": "application/json" }),
+          json: async () => [{ id: "notif-101", status: "ACKNOWLEDGED" }],
+        })
+      );
+
+      const { notificationsService: realService } = await vi.importActual(
+        "../src/api/notifications"
+      );
+
+      await realService.acknowledgeBulkNotifications(
+        ["notif-101", "notif-102"],
+        {
+          changeReason: "Batch compliance review",
+        }
+      );
+
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      const [req, options] = globalThis.fetch.mock.calls[0];
+      const url = typeof req === "string" ? req : req.url;
+      const reasonHeader =
+        typeof req === "string"
+          ? options?.headers?.["X-Change-Reason"]
+          : req.headers.get("x-change-reason") ||
+            req.headers.get("X-Change-Reason");
+
+      expect(url).toContain("/api/v1/notifications/bulk-acknowledge");
+      expect(reasonHeader).toBe("Batch compliance review");
     });
   });
 });

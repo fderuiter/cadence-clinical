@@ -174,38 +174,175 @@
       No notifications found matching the active filters.
     </div>
 
-    <!-- Notifications List -->
-    <div
-      v-else
-      id="notifications-list"
-      style="display: flex; flex-direction: column; gap: 16px"
-    >
+    <!-- Notifications Container -->
+    <template v-else>
+      <!-- Bulk Operations Toolbar -->
       <div
-        v-for="notif in store.notifications"
-        :key="notif.id"
-        class="card notification-card"
+        id="bulk-toolbar"
+        class="card bulk-toolbar"
         style="
+          margin-bottom: 16px;
+          padding: 12px 16px;
           display: flex;
-          flex-direction: column;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
           gap: 12px;
-          border-left: 5px solid var(--accent);
+          background-color: #f8fafc;
         "
       >
         <div
+          style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap"
+        >
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              font-size: 0.9rem;
+              font-weight: 600;
+              cursor: pointer;
+            "
+          >
+            <input
+              id="select-all-checkbox"
+              type="checkbox"
+              class="select-all-checkbox"
+              :checked="isAllSelected"
+              @change="toggleSelectAll"
+            />
+            <span>Select All</span>
+          </label>
+          <div style="display: flex; gap: 6px; align-items: center">
+            <span
+              style="
+                font-size: 0.8rem;
+                color: #64748b;
+                font-weight: 600;
+                margin-right: 4px;
+              "
+              >Category Select:</span
+            >
+            <button
+              id="btn-select-category-alerts"
+              class="btn btn-category-select"
+              style="
+                padding: 4px 8px;
+                font-size: 0.75rem;
+                background-color: #e2e8f0;
+                border: 1px solid #cbd5e1;
+                border-radius: 4px;
+              "
+              @click="selectByCategory('ALERTS')"
+            >
+              ALERTS
+            </button>
+            <button
+              id="btn-select-category-system"
+              class="btn btn-category-select"
+              style="
+                padding: 4px 8px;
+                font-size: 0.75rem;
+                background-color: #e2e8f0;
+                border: 1px solid #cbd5e1;
+                border-radius: 4px;
+              "
+              @click="selectByCategory('SYSTEM')"
+            >
+              SYSTEM
+            </button>
+            <button
+              id="btn-select-category-action_items"
+              class="btn btn-category-select"
+              style="
+                padding: 4px 8px;
+                font-size: 0.75rem;
+                background-color: #e2e8f0;
+                border: 1px solid #cbd5e1;
+                border-radius: 4px;
+              "
+              @click="selectByCategory('ACTION_ITEMS')"
+            >
+              ACTION_ITEMS
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px">
+          <span
+            id="selected-count"
+            class="selected-count"
+            style="font-size: 0.85rem; color: #475569; font-weight: 500"
+          >
+            {{ selectedIds.length }} selected
+          </span>
+          <button
+            id="btn-bulk-acknowledge"
+            class="btn btn-acknowledge-bulk"
+            style="padding: 6px 12px; font-size: 0.8rem"
+            :disabled="!canBulkAcknowledge"
+            @click="openBulkActionModal('acknowledge')"
+          >
+            Bulk Acknowledge
+          </button>
+          <button
+            id="btn-bulk-resolve"
+            class="btn btn-primary btn-resolve-bulk"
+            style="padding: 6px 12px; font-size: 0.8rem"
+            :disabled="!canBulkResolve"
+            @click="openBulkActionModal('resolve')"
+          >
+            Bulk Resolve
+          </button>
+        </div>
+      </div>
+
+      <!-- Notifications List -->
+      <div
+        id="notifications-list"
+        style="display: flex; flex-direction: column; gap: 16px"
+      >
+        <div
+          v-for="notif in store.notifications"
+          :key="notif.id"
+          class="card notification-card"
           style="
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
+            flex-direction: column;
             gap: 12px;
+            border-left: 5px solid var(--accent);
           "
         >
-          <div style="display: flex; gap: 8px; flex-wrap: wrap">
-            <span
-              class="badge category-badge"
-              style="background-color: var(--primary-light); color: white"
-              >{{ notif.category }}</span
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              flex-wrap: wrap;
+              gap: 12px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                align-items: center;
+              "
             >
+              <input
+                type="checkbox"
+                class="notif-checkbox"
+                :value="notif.id"
+                :checked="selectedIds.includes(notif.id)"
+                @change="toggleSelect(notif.id)"
+                style="margin-right: 4px; cursor: pointer"
+              />
+              <span
+                class="badge category-badge"
+                style="background-color: var(--primary-light); color: white"
+                >{{ notif.category }}</span
+              >
             <span
               class="badge priority-badge"
               :style="getPriorityStyle(notif.priority)"
@@ -322,6 +459,7 @@
         </div>
       </div>
     </div>
+    </template>
 
     <!-- Justification Modal -->
     <div
@@ -365,6 +503,18 @@
           "
         >
           21 CFR Part 11 Justification Reason Required
+          <span
+            v-if="isBulk"
+            style="
+              font-size: 0.85rem;
+              font-weight: normal;
+              color: #64748b;
+              display: block;
+              margin-top: 4px;
+            "
+          >
+            (Batch {{ actionType === 'acknowledge' ? 'Acknowledge' : 'Resolve' }}: {{ selectedIds.length }} items)
+          </span>
         </div>
         <div class="modal-body" style="padding: 0; margin-bottom: 16px">
           <p style="font-size: 0.9rem; color: #475569; margin-bottom: 12px">
@@ -525,6 +675,66 @@ const goToTarget = (notif) => {
   router.push(target);
 };
 
+// Selection and Batch State
+const selectedIds = ref([]);
+const isBulk = ref(false);
+
+const toggleSelect = (id) => {
+  const index = selectedIds.value.indexOf(id);
+  if (index === -1) {
+    selectedIds.value.push(id);
+  } else {
+    selectedIds.value.splice(index, 1);
+  }
+};
+
+const isAllSelected = computed(() => {
+  if (store.notifications.length === 0) return false;
+  return store.notifications.every((n) => selectedIds.value.includes(n.id));
+});
+
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedIds.value = [];
+  } else {
+    selectedIds.value = store.notifications.map((n) => n.id);
+  }
+};
+
+const selectByCategory = (category) => {
+  const matchingIds = store.notifications
+    .filter((n) => n.category === category)
+    .map((n) => n.id);
+  if (matchingIds.length === 0) return;
+
+  const allCategorySelected = matchingIds.every((id) =>
+    selectedIds.value.includes(id)
+  );
+
+  if (allCategorySelected) {
+    selectedIds.value = selectedIds.value.filter(
+      (id) => !matchingIds.includes(id)
+    );
+  } else {
+    const newSet = new Set([...selectedIds.value, ...matchingIds]);
+    selectedIds.value = Array.from(newSet);
+  }
+};
+
+const selectedNotifications = computed(() => {
+  return store.notifications.filter((n) => selectedIds.value.includes(n.id));
+});
+
+const canBulkAcknowledge = computed(() => {
+  if (selectedIds.value.length === 0) return false;
+  return selectedNotifications.value.every((n) => n.status === "OPEN");
+});
+
+const canBulkResolve = computed(() => {
+  if (selectedIds.value.length === 0) return false;
+  return selectedNotifications.value.every((n) => n.status !== "RESOLVED");
+});
+
 // Modal properties
 const showModal = ref(false);
 const selectedReason = ref("Action completed successfully");
@@ -534,10 +744,12 @@ const currentNotif = ref(null);
 const actionType = ref(null); // "acknowledge" or "resolve"
 
 const onFilterChange = async () => {
+  selectedIds.value = [];
   await store.fetchNotifications();
 };
 
 const resetFilters = async () => {
+  selectedIds.value = [];
   store.filters.category = "";
   store.filters.priority = "";
   store.filters.status = "";
@@ -585,6 +797,17 @@ const formatTimestamp = (created_at) => {
 const openActionModal = (notif, action) => {
   currentNotif.value = notif;
   actionType.value = action;
+  isBulk.value = false;
+  selectedReason.value = "Action completed successfully";
+  customReason.value = "";
+  modalError.value = null;
+  showModal.value = true;
+};
+
+const openBulkActionModal = (action) => {
+  currentNotif.value = null;
+  actionType.value = action;
+  isBulk.value = true;
   selectedReason.value = "Action completed successfully";
   customReason.value = "";
   modalError.value = null;
@@ -595,6 +818,7 @@ const closeModal = () => {
   showModal.value = false;
   currentNotif.value = null;
   actionType.value = null;
+  isBulk.value = false;
   modalError.value = null;
 };
 
@@ -616,10 +840,19 @@ const submitAction = async () => {
   modalError.value = null;
 
   try {
-    if (actionType.value === "acknowledge") {
-      await store.acknowledge(currentNotif.value.id, reason);
-    } else if (actionType.value === "resolve") {
-      await store.resolve(currentNotif.value.id, reason);
+    if (isBulk.value) {
+      if (actionType.value === "acknowledge") {
+        await store.acknowledgeBulk(selectedIds.value, reason);
+      } else if (actionType.value === "resolve") {
+        await store.resolveBulk(selectedIds.value, reason);
+      }
+      selectedIds.value = [];
+    } else {
+      if (actionType.value === "acknowledge") {
+        await store.acknowledge(currentNotif.value.id, reason);
+      } else if (actionType.value === "resolve") {
+        await store.resolve(currentNotif.value.id, reason);
+      }
     }
     closeModal();
   } catch (err) {
