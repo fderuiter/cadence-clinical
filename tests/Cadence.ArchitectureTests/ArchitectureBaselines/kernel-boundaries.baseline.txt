@@ -204,6 +204,14 @@ K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.SensorSafetyAlertRecord.
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.SensorSafetyAlertRecord.StudyId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.SensorTelemetryStreamRecord.SiteId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.SensorTelemetryStreamRecord.StudyId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EhrCandidateItemDto.SiteId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EhrCandidateItemDto.StudyId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EhrPollRequest.SiteId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EhrPollRequest.StudyId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EhrProvenanceResponse.SiteId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EhrProvenanceResponse.StudyId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.FhirBundleIngestRequest.SiteId
+K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.FhirBundleIngestRequest.StudyId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.KnowledgeArticleAuditLog
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Domain.ProtocolKnowledgeChunk.StudyId
 K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationAuditLog
