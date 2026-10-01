@@ -150,6 +150,12 @@ K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocument.SiteId
 K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocument.StudyId
 K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExpectedDocument.SiteId
 K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExpectedDocument.StudyId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.CraqcStagingItem.SiteId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.CraqcStagingItem.StudyId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.IngestDocumentRequest.SiteId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.IngestDocumentRequest.StudyId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.StageDocumentQCRequest.SiteId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.StageDocumentQCRequest.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.EtmfCompletenessWebhookPayload.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.EtmfCompletenessWebhookPayload.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.SiteActivationRequest.StudyId
