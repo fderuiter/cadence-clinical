@@ -130,7 +130,7 @@ public sealed class ProtocolDesignPostgresTests(KernelPostgresFixture fixture) :
 
         var before = await UsdmDesignImporter.ImportAsync(usdm, fixture.ConceptRegistry, tenant, cancellationToken: ct);
         before.IsSuccess.Should().BeFalse();
-        before.Problems.Should().HaveCount(7, "the example's seven Biomedical Concepts are not in the tenant yet");
+        before.UnmappedConcepts.Should().HaveCount(7, "the example's seven Biomedical Concepts are not in the tenant yet");
 
         foreach (var code in UsdmSamples.CdiscExampleConceptCodes)
         {
