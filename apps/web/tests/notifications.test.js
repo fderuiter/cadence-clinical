@@ -233,6 +233,7 @@ describe("Notifications System End-to-End Visual Integration", () => {
 
       // Trigger acknowledge click on OPEN card
       await wrapper.find(".btn-acknowledge").trigger("click");
+      await wrapper.vm.$nextTick();
       expect(wrapper.find("#justification-modal").exists()).toBe(true);
 
       // Set select to 'Other' to test text area requirement
@@ -480,6 +481,7 @@ describe("Notifications System End-to-End Visual Integration", () => {
 
       // Trigger resolve modal on card 1
       await wrapper.find(".btn-resolve").trigger("click");
+      await wrapper.vm.$nextTick();
       expect(wrapper.find("#justification-modal").exists()).toBe(true);
 
       await wrapper
@@ -509,15 +511,18 @@ describe("Notifications System End-to-End Visual Integration", () => {
 
       // Open, change fields
       await wrapper.find(".btn-acknowledge").trigger("click");
+      await wrapper.vm.$nextTick();
       await wrapper.find("#modal-reason-select").setValue("Other");
       await wrapper.find("#modal-custom-reason").setValue("Modified reason");
 
       // Close
       await wrapper.find("#btn-cancel-modal").trigger("click");
+      await wrapper.vm.$nextTick();
       expect(wrapper.find("#justification-modal").exists()).toBe(false);
 
       // Reopen
       await wrapper.find(".btn-acknowledge").trigger("click");
+      await wrapper.vm.$nextTick();
       expect(wrapper.find("#modal-reason-select").element.value).toBe(
         "Action completed successfully"
       );
@@ -535,7 +540,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       await wrapper.vm.$nextTick();
 
       await wrapper.find(".btn-acknowledge").trigger("click");
+      await wrapper.vm.$nextTick();
       await wrapper.find("#btn-cancel-modal").trigger("click");
+      await wrapper.vm.$nextTick();
 
       expect(wrapper.find("#justification-modal").exists()).toBe(false);
       expect(

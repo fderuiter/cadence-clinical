@@ -233,6 +233,7 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     );
 
     await wrapper.find("#participant-017-0002").trigger("click");
+    await router.isReady();
     await flushPromises();
 
     expect(router.currentRoute.value.query.node).toBe(`participant:${IDS[1]}`);
@@ -251,6 +252,7 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     expect(wrapper.find("#zoom-participant").text()).toBe("017-0002");
     expect(wrapper.find("#zoom-site").text()).toBe("Site 022");
     await wrapper.find("#zoom-site").trigger("click");
+    await router.isReady();
     await flushPromises();
     expect(router.currentRoute.value.query).toEqual({
       stage: "conduct",

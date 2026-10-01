@@ -133,6 +133,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
   it("lists the study's versions from the kernel, a hidden one in place", async () => {
     await open("/studies/CAD-101?stage=design");
     await wrapper.find("#nav-protocol-versions").trigger("click");
+    await router.isReady();
     await flushPromises();
 
     expect(kernelApi.search).toHaveBeenCalledWith({
@@ -221,6 +222,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     await open("/studies/CAD-101?section=protocol-versions");
 
     await wrapper.find("#protocol-version-2").trigger("click");
+    await router.isReady();
     await flushPromises();
 
     expect(router.currentRoute.value.query.node).toBe(V2);

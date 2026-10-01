@@ -66,25 +66,23 @@ public sealed partial class DocumentConversionWorker : BackgroundService
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
-        if (pendingRecords.Count == 0)
+        if (pendingRecords.Count > 0)
         {
-            return;
+            await Task.WhenAll(pendingRecords.Select(r => ProcessThrottledRecordAsync(r, rec => ProcessSingleRecordAsync(dbContext, processor, rec, ct), ct))).ConfigureAwait(false);
         }
+    }
 
-        var tasks = pendingRecords.Select(async record =>
+    private async Task ProcessThrottledRecordAsync(FileRecord record, Func<FileRecord, Task> action, CancellationToken ct)
+    {
+        await _throttle.WaitAsync(ct).ConfigureAwait(false);
+        try
         {
-            await _throttle.WaitAsync(ct).ConfigureAwait(false);
-            try
-            {
-                await ProcessSingleRecordAsync(dbContext, processor, record, ct).ConfigureAwait(false);
-            }
-            finally
-            {
-                _throttle.Release();
-            }
-        });
-
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+            await action(record).ConfigureAwait(false);
+        }
+        finally
+        {
+            _throttle.Release();
+        }
     }
 
     private async Task ProcessSingleRecordAsync(

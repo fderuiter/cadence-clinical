@@ -122,7 +122,11 @@ public static partial class DeidComplianceService
         }
 
         var scannedSet = scanned.ToHashSet(StringComparer.Ordinal);
-        var baseline = ReadBaseline(baselinePath).Where(k => scannedSet.Contains(k[..k.IndexOf('|', StringComparison.Ordinal)])).ToList();
+        var baseline = ReadBaseline(baselinePath).Where(k =>
+        {
+            int pipeIdx = k.IndexOf('|', StringComparison.Ordinal);
+            return pipeIdx > 0 && scannedSet.Contains(k[..pipeIdx]);
+        }).ToList();
         var (newFindings, stale) = CompareWithBaseline(findings, baseline);
 
         foreach (var finding in newFindings)

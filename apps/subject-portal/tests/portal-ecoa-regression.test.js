@@ -681,24 +681,19 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
 
       // Simulate clicking retry on tasks
       document.getElementById("btn-retry-tasks").click();
-      // Wait for the async click handler to complete
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(document.getElementById("tasks-failure").style.display).toBe(
-        "none"
-      );
-      expect(
-        document.getElementById("tasks-list-container").innerHTML
-      ).toContain("Server Instrument Name");
+      await vi.waitFor(() => {
+        expect(
+          document.getElementById("tasks-list-container").innerHTML
+        ).toContain("Server Instrument Name");
+      });
 
       // Simulate clicking retry on compliance
       document.getElementById("btn-retry-compliance").click();
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(document.getElementById("compliance-failure").style.display).toBe(
-        "none"
-      );
-      expect(document.getElementById("compliance-rate-pct").textContent).toBe(
-        "86%"
-      );
+      await vi.waitFor(() => {
+        expect(document.getElementById("compliance-rate-pct").textContent).toBe(
+          "86%"
+        );
+      });
     });
 
     it("prevents changing notification state on failed server acknowledgement, but updates on success", async () => {

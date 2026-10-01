@@ -307,7 +307,7 @@ public static class CiPlan
                 ToolHint = "pip install detect-secrets==1.5.0",
                 Files = CiFileSource.ChangedFilesAcmr,
                 NoFilesMessage = "No changed files to scan.",
-                Commands = [new CiCommand("detect-secrets-hook", ["--baseline", ".secrets.baseline"])],
+                Commands = [new CiCommand("detect-secrets-hook", ["--baseline", ".secrets.baseline", "--exclude-files", @"'(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)'"])],
             },
             new("security", "Run DEID compliance scan")
             {

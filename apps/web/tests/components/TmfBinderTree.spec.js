@@ -1,9 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import TmfBinderTree from "../../src/components/etmf/TmfBinderTree.vue";
 import { nextTick } from "vue";
 
 describe("TmfBinderTree Keyboard Navigation & Roving Tabindex Tests", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
   const mockTree = [
     {
       id: "zone_1",
