@@ -36,6 +36,7 @@ public sealed class FormSubmissionApplicationService(
     IObservationRepository observationRepository,
     IUcumNormalizationService ucumService,
     ICurrentAuditContextAccessor auditContextAccessor,
+    ISubjectRepository? subjectRepository = null,
     IEditCheckEngine? editCheckEngine = null,
     IAutoQueryDispatchService? autoQueryDispatchService = null) : IFormSubmissionApplicationService
 {
@@ -106,13 +107,38 @@ public sealed class FormSubmissionApplicationService(
             }
         }
 
+        ClinicalSubject? subject = null;
+        if (subjectRepository is not null)
+        {
+            subject = await subjectRepository.GetByIdAsync(request.SubjectId, cancellationToken).ConfigureAwait(false)
+                ?? await subjectRepository.GetByCodeAsync(request.SubjectId, cancellationToken).ConfigureAwait(false);
+        }
+
+        string activeProtocolVersion = subject?.ActiveProtocolVersion ?? "1.0.0";
+
+        string resolvedProtocolVersion;
+        if (string.IsNullOrWhiteSpace(request.ProtocolVersion))
+        {
+            resolvedProtocolVersion = activeProtocolVersion;
+        }
+        else
+        {
+            string suppliedVersion = request.ProtocolVersion.Trim();
+            if (!string.Equals(suppliedVersion, activeProtocolVersion.Trim(), StringComparison.Ordinal))
+            {
+                return FormErrors.ProtocolVersionMismatch(suppliedVersion, activeProtocolVersion);
+            }
+
+            resolvedProtocolVersion = suppliedVersion;
+        }
+
         var initResult = FormSubmission.Initialize(
             studyId: studyCode,
             subjectId: subjectCode,
             formId: formId,
             siteId: siteCode,
             visitId: request.VisitId,
-            protocolVersion: request.ProtocolVersion ?? "1.0.0",
+            protocolVersion: resolvedProtocolVersion,
             initialPayload: request.Payload);
 
         if (initResult.IsFailure)

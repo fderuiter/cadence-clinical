@@ -99,6 +99,14 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
         return true;
     }
 
+    public void SetActiveProtocolVersion(string protocolVersion)
+    {
+        if (!string.IsNullOrWhiteSpace(protocolVersion))
+        {
+            ActiveProtocolVersion = protocolVersion.Trim();
+        }
+    }
+
     /// <summary>Raise site #25 (`SOFT_DELETE_BLOCKED`, 403) — distinct error family from
     /// `LOCKED_FACTOR_MUTATION` even though both gate on the same `IsPostRandomization()` predicate.</summary>
     public Result<bool> ClearDemographics()
