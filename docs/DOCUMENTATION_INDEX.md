@@ -500,6 +500,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2507: Visit Timing, Anchored Visits and Cycles on the Expected Schedule](adr/2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md) | `adr/2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md` |
 | [ADR-2486: Work Queues as Capability-Keyed Definitions](adr/2026-09-30-work-queues-as-capability-keyed-definitions.md) | `adr/2026-09-30-work-queues-as-capability-keyed-definitions.md` |
 | [ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet](adr/2026-10-01-automated-stipend-disbursement-threshold-rules.md) | `adr/2026-10-01-automated-stipend-disbursement-threshold-rules.md` |
+| [ADR-2802: CTMS Visit Letter PDF Compilation and Automated Dispatch Pipeline](adr/2026-10-01-ctms-visit-letter-pdf-compilation-and-automated-dispatch-pipeline.md) | `adr/2026-10-01-ctms-visit-letter-pdf-compilation-and-automated-dispatch-pipeline.md` |
 | [Architectural Decision Records (ADRs) Index](adr/index.md) | `adr/index.md` |
 | [ADR-[NUMBER]: [Short, Descriptive Title]](adr/TEMPLATE.md) | `adr/TEMPLATE.md` |
 
