@@ -295,7 +295,7 @@ jobs:
         id: run_audit
         if: always()
         run: |
-          python3 -m pip install --quiet pip-audit==2.10.1 || true
+          python3 -m pip install --quiet --upgrade pip pip-audit==2.10.1 || true
           dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check vulnerabilities
 
       - name: Run secret detection
