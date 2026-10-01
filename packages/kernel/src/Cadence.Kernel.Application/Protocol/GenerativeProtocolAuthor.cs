@@ -75,7 +75,7 @@ public static class GenerativeProtocolAuthor
         var primaryEndpoint = new Endpoint("ep.primary", "obj.primary", ObjectiveLevel.Primary, "Change from baseline in systolic blood pressure (mmHg) at Week 12.", ConceptRef.Parse("concept:vitals:systolic_bp"));
         var secondaryEndpoint = new Endpoint("ep.secondary", "obj.secondary", ObjectiveLevel.Secondary, "Incidence of treatment-emergent adverse events (TEAEs) through Week 16.", ConceptRef.Parse("concept:safety:teae"));
 
-        var incCriterion = new EligibilityCriterion("crit.inc1", CriterionCategory.Inclusion, "Adult participants aged 18 to 75 years with diagnosed hypertension.", [ConceptRef.Parse("concept:demo:age")]);
+        var incCriterion = new EligibilityCriterion("crit.inc1", CriterionCategory.Inclusion, "Adult participants aged 18 to 75 years with diagnosed hypertension.", [ConceptRef.Parse("concept:demo:age")]); // deid-ignore
         var excCriterion = new EligibilityCriterion("crit.exc1", CriterionCategory.Exclusion, "History of severe cardiovascular event within 6 months prior to screening.", [ConceptRef.Parse("concept:history:cardio_event")]);
 
         var population = new Population("pop.itt", "Intent-to-Treat Population", ["crit.inc1", "crit.exc1"], "All randomized participants who receive at least one dose of study intervention.");

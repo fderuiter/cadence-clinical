@@ -763,91 +763,18 @@
     </div>
 
     <!-- eConsent Signing Modal Dialog -->
-    <div
+    <SignatureCaptureModal
       v-if="showEconsentModal"
-      id="econsent-modal"
-      class="modal-overlay"
-      style="display: flex"
-    >
-      <div class="modal" style="max-width: 520px">
-        <div class="modal-header">
-          Execute Electronic Re-Consent (ICF v2.0.0)
-        </div>
-        <div class="modal-body">
-          <p>
-            Recording 21 CFR Part 11 compliant digital informed consent for
-            Subject <strong>{{ selectedSubjectId }}</strong> under Protocol
-            Version <strong>2.0.0</strong>.
-          </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Signer Printed Name:</label
-            >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              :value="econsentSignerName"
-              type="text"
-              class="form-control"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 4px;
-                box-sizing: border-box;
-              "
-              placeholder="Full legal name of subject"
-              @input="$emit('update:econsentSignerName', $event.target.value)"
-            />
-          </div>
-          <div class="form-group" style="margin-bottom: 12px">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label style="font-size: 0.85rem; font-weight: 600"
-              >Consent Declaration:</label
-            >
-            <div
-              style="
-                background: #f8fafc;
-                padding: 8px 12px;
-                border-radius: 4px;
-                border: 1px solid var(--border);
-                font-size: 0.8rem;
-                color: var(--text-muted);
-              "
-            >
-              "I confirm that I have reviewed the amended protocol details
-              (v2.0.0) and agree to continue participation."
-            </div>
-          </div>
-        </div>
-        <div
-          class="modal-footer"
-          style="
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            padding: 12px 16px;
-          "
-        >
-          <button
-            class="btn btn-secondary"
-            @click="$emit('update:showEconsentModal', false)"
-          >
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            style="background-color: #2563eb; color: white"
-            :disabled="!econsentSignerName.trim() || reconsentSubmitting"
-            @click="$emit('handle-complete-reconsent', 'ECONSENT')"
-          >
-            {{
-              reconsentSubmitting ? "Signing..." : "Confirm & Sign ICF v2.0.0"
-            }}
-          </button>
-        </div>
-      </div>
-    </div>
+      :is-open="showEconsentModal"
+      :username="econsentSignerName || selectedSubjectId"
+      :signer-name="econsentSignerName || selectedSubjectId"
+      signer-role="Subject"
+      action-url="/api/v1/econsent/templates/icf-001/versions/2/capture-consent"
+      semantic-action="econsent.consent.capture"
+      :on-sign="(sigToken, signingReason) => $emit('handle-complete-reconsent', 'ECONSENT', { sigToken, signingReason })"
+      @cancel="$emit('update:showEconsentModal', false)"
+      @success="() => $emit('update:showEconsentModal', false)"
+    />
 
     <!-- Paper ICF Upload Modal Dialog -->
     <div
@@ -939,6 +866,7 @@
 import { computed, reactive, ref } from "vue";
 import { ClinicalFormField } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
+import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
 const clinicalStore = useClinicalStore();
 

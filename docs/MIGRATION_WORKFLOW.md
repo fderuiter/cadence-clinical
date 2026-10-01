@@ -316,4 +316,4 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 | **Run Integration Tests** | `dotnet test Cadence.sln --filter "Category=Integration"`  | Runs Testcontainers PostgreSQL tests                           |
 | **ADR Validation**        | `python scripts/validate_adrs.py`                          | Validates ADR index formatting and requirement tags            |
 | **GxP Compliance Sync**   | `python scripts/sync_gxp.py`                               | Parses tests, extracts `@req` tags, and updates SDLC docs      |
-| **Docker Dev Stack**      | `docker compose --profile dotnet up -d`                    | Starts .NET container with hot reload and live datastores      |
+| **Docker Dev Stack**      | `docker compose -f docker/docker-compose.yml up -d`        | Starts unprofiled operational core stack (add `--profile storage` for MinIO/ClamAV) |

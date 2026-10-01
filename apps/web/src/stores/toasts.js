@@ -18,6 +18,9 @@ export const useToastStore = defineStore("toasts", {
       }
       return id;
     },
+    addToast(payload) {
+      return this.push(payload);
+    },
     /** Reports a failed API call: `title` says what failed, the message comes from the error. */
     apiError(title, err) {
       console.error(`${title}:`, err);

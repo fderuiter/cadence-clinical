@@ -127,6 +127,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  semanticAction: {
+    type: String,
+    default: "",
+  },
   // async callback to handle the final sign request using sigToken and signingReason
   // e.g., (sigToken, signingReason, metadata) => Promise<any>
   onSign: {
@@ -255,6 +259,11 @@ async function confirm() {
       password: p,
       totp: t,
       action: props.actionUrl,
+      semanticAction:
+        props.semanticAction ||
+        (props.actionUrl.includes("capture-consent")
+          ? "econsent.consent.capture"
+          : undefined),
     });
 
     const sigToken = reauthRes.sig_token;

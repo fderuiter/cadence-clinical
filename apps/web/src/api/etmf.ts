@@ -24,6 +24,7 @@ export interface SignatureVerificationPayload {
   password?: string;
   totp?: string | null;
   action: string;
+  semanticAction?: string;
 }
 
 export interface DocumentSignOffPayload {
@@ -90,17 +91,31 @@ export const etmfService = {
   },
 
   verifySignature(
-    { username, password, totp = null, action }: SignatureVerificationPayload,
+    { username, password, totp = null, action, semanticAction }: SignatureVerificationPayload,
     options: Record<string, unknown> = {}
   ) {
+    let semantic = semanticAction;
+    if (!semantic) {
+      if (action.includes("capture-consent")) {
+        semantic = "econsent.consent.capture";
+      } else if (action.includes("sign-off")) {
+        semantic = "etmf.document.sign_off";
+      } else if (action.includes("chair-adjudicate")) {
+        semantic = "execution.cec.chair_adjudicate";
+      } else {
+        semantic = "execution.signature.verify";
+      }
+    }
+
     return unwrapResponse(
-      openApiClient.POST("/api/v1/execution/signatures/verify", {
+      (openApiClient as any).POST("/api/v1/auth/signature-verification", {
         body: {
           username,
           password: password || "",
           totp: totp ?? undefined,
           action,
-        } as never,
+          semantic_action: semantic,
+        },
         ...options,
       })
     );
@@ -151,6 +166,78 @@ export const etmfService = {
               null) as unknown as string,
           },
         },
+        ...options,
+      })
+    );
+  },
+
+  classifyIntelligence(
+    body: {
+      filename: string;
+      content?: string;
+      mime_type?: string;
+      content_hint?: string;
+      taxonomy_version?: string;
+    },
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/etmf/intelligence/classify", {
+        body: body as never,
+        ...options,
+      })
+    );
+  },
+
+  stageQcDocument(
+    body: {
+      content: string;
+      filename: string;
+      study_id: string;
+      site_id?: string | null;
+      mime_type?: string;
+      artifact_hint?: string | null;
+      taxonomy_version?: string | null;
+      reason_for_change: string;
+      assigned_cra?: string | null;
+    },
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/etmf/intelligence/stage-qc", {
+        body: body as never,
+        ...options,
+      })
+    );
+  },
+
+  getQcQueue(studyId?: string, options: Record<string, unknown> = {}) {
+    return unwrapResponse(
+      openApiClient.GET("/api/v1/etmf/intelligence/qc-queue", {
+        params: {
+          query: {
+            study_id: studyId || null,
+          },
+        },
+        ...options,
+      })
+    );
+  },
+
+  submitQcReview(
+    docId: string,
+    body: {
+      decision: string;
+      reason_for_change: string;
+      override_artifact_code?: string | null;
+      discrepancy_comment?: string | null;
+    },
+    options: Record<string, unknown> = {}
+  ) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/etmf/intelligence/qc-review/{doc_id}", {
+        params: { path: { doc_id: docId } },
+        body: body as never,
         ...options,
       })
     );

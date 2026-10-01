@@ -859,6 +859,8 @@ function formatDiscrepancy(disc: string): string {
       return "⚠️ Value Conflict";
     case "UNIT_MISMATCH":
       return "🔄 Unit Mismatch";
+    case "DATE_MISMATCH":
+      return "📅 Date Mismatch";
     default:
       return disc;
   }
@@ -1309,6 +1311,11 @@ function formatResolutionAction(act?: string): string {
 .pill-unit_mismatch {
   background-color: #fef3c7;
   color: #b45309;
+}
+
+.pill-date_mismatch {
+  background-color: #ffedd5;
+  color: #c2410c;
 }
 
 .status-pill {

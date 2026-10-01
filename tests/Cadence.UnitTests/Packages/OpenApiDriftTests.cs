@@ -69,4 +69,34 @@ public sealed class OpenApiDriftTests : IDisposable
             .And.Contain("| `POST` | `/api/v1/ctms/letters/render` | RenderLetter | Renders a \\| letter. |");
         pages["index.md"].Should().Contain("| [ctms](ctms.md) | 2 |");
     }
+
+    [Fact]
+    public void FindDrift_WhenTargetedExport_DoesNotReportStaleSpecsForUntargetedServices()
+    {
+        File.WriteAllText(Path.Combine(_exported, "ctms_openapi.json"), Spec);
+        File.WriteAllText(Path.Combine(_committed, "ctms_openapi.json"), Spec);
+        File.WriteAllText(Path.Combine(_committed, "org_openapi.json"), Spec);
+
+        OpenApiSyncService.FindDrift(_exported, _committed, isTargetedExport: true).Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("apps/execution/src/Endpoints/SubjectEndpoints.cs", "execution")]
+    [InlineData("apps/kernel-api/src/Host/Program.cs", "kernel")]
+    [InlineData("apps/ctms/src/Endpoints/CtmsEndpoints.cs", "ctms")]
+    [InlineData("apps/ai_gateway/src/Program.cs", "ai_gateway")]
+    [InlineData("packages/contracts/src/Dto/SubjectDto.cs", null)]
+    [InlineData("apps/web/src/components/Footer.vue", null)]
+    public void ResolveServiceFromPath_MapsMicroservicePathsCorrectly(string path, string? expectedService)
+    {
+        PreCommitOpenApiService.ResolveServiceFromPath(path).Should().Be(expectedService);
+    }
+
+    [Fact]
+    public void ExecutePreCommitOpenApi_WhenNoCsharpFilesStaged_BypassesServiceStartup()
+    {
+        string[] targetFiles = ["apps/web/src/components/Footer.vue", "docs/README.md"];
+        int result = PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: true, targetFiles: targetFiles);
+        result.Should().Be(0);
+    }
 }
