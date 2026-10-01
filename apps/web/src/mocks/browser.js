@@ -1,10 +1,19 @@
 import { setupWorker } from "msw/browser";
 import { gatewayHandlers } from "./handlers.js";
 
-export const worker = setupWorker(...gatewayHandlers);
+let workerInstance = null;
+try {
+  if (typeof window !== "undefined") {
+    workerInstance = setupWorker(...gatewayHandlers);
+  }
+} catch {
+  // Ignored in jsdom/node test environment
+}
+
+export const worker = workerInstance;
 
 export async function startMswWorker() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || !worker) return;
   try {
     await worker.start({
       onUnhandledRequest: "bypass",
@@ -16,6 +25,8 @@ export async function startMswWorker() {
       "[MSW] Mock Service Worker started for API Gateway simulation."
     );
   } catch (err) {
-    console.warn("[MSW] Service Worker startup warning:", err);
+    if (import.meta.env?.MODE !== "test") {
+      console.warn("[MSW] Service Worker startup warning:", err);
+    }
   }
 }
