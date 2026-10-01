@@ -1,6 +1,8 @@
 <template>
   <div class="explanation">
-    <p class="explanation-claim">{{ explanation.claim }}</p>
+    <p class="explanation-claim">
+      {{ explanation.claim }}
+    </p>
     <ol v-if="explanation.steps.length" class="explanation-steps">
       <li v-for="(step, index) in explanation.steps" :key="`step-${index}`">
         {{ step.claim }}

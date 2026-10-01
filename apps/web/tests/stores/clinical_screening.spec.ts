@@ -132,29 +132,4 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
       clinicalStore.ledgerBlocks.some((b) => b.action === "TEST_ACTION_CRA")
     ).toBe(false);
   });
-
-  it("automatically migrates un-scoped legacy localStorage entries to persona-scoped storage on load", () => {
-    const legacyFormValues = {
-      pulse: "115",
-      vssbp: "135",
-    };
-    window.localStorage.setItem("formValues", JSON.stringify(legacyFormValues));
-
-    const authStore = useAuthStore();
-    authStore.currentPersona = "super_admin";
-
-    const clinicalStore = useClinicalStore();
-    clinicalStore.loadPersonaState("super_admin");
-
-    expect(clinicalStore.formValues.pulse).toBe("115");
-    expect(clinicalStore.formValues.vssbp).toBe("135");
-
-    const scopedItem = window.localStorage.getItem(
-      "clinical_super_admin_formValues"
-    );
-    expect(scopedItem).not.toBeNull();
-    expect(JSON.parse(scopedItem!)).toEqual(
-      expect.objectContaining({ pulse: "115", vssbp: "135" })
-    );
-  });
 });

@@ -369,10 +369,12 @@ export const useNotificationsStore = defineStore("notifications", {
           return updatedItems;
         }
 
-        const updated =
-          await notificationsService.acknowledgeBulkNotifications(ids, {
+        const updated = await notificationsService.acknowledgeBulkNotifications(
+          ids,
+          {
             changeReason,
-          });
+          }
+        );
         const updatedArray = Array.isArray(updated) ? updated : [updated];
         updatedArray.forEach((item) => {
           if (item && item.id) {

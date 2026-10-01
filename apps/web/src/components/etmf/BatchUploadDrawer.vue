@@ -112,7 +112,7 @@
             <div
               class="progress-bar-fill"
               :style="{ width: overallProgress + '%' }"
-            ></div>
+            />
           </div>
         </div>
 

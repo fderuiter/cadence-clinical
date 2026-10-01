@@ -300,7 +300,7 @@
               @pointermove="handleCellPointerMove($event)"
               @pointerup="handleCellPointerUp(rIdx, cIdx, $event)"
               @pointercancel="handleCellPointerCancel($event)"
-              @mousedown="handleCellPointerDown(rIdx, cIdx, $event)"
+              @mousedown.prevent="handleCellPointerDown(rIdx, cIdx, $event)"
               @mouseenter="handleCellMouseEnter(rIdx, cIdx)"
               @mouseup="handleCellPointerUp(rIdx, cIdx, $event)"
               @click="
@@ -521,6 +521,12 @@ const handleCellPointerDown = (rIdx, cIdx, event) => {
     }
     window.addEventListener("pointerup", handleGlobalPointerUpOnce);
     window.addEventListener("pointercancel", handleGlobalPointerCancelOnce);
+  }
+};
+
+const handleCellMouseEnter = (rIdx, cIdx) => {
+  if (isDragging.value) {
+    dragCurrentCell.value = { rIdx, cIdx };
   }
 };
 

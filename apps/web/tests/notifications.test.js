@@ -982,7 +982,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find("#justification-modal").exists()).toBe(true);
-      expect(wrapper.find(".modal-header").text()).toContain("Batch Acknowledge: 2 items");
+      expect(wrapper.find(".modal-header").text()).toContain(
+        "Batch Acknowledge: 2 items"
+      );
 
       await wrapper
         .find("#modal-reason-select")
@@ -992,10 +994,11 @@ describe("Notifications System End-to-End Visual Integration", () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
       await wrapper.vm.$nextTick();
 
-      expect(notificationsService.acknowledgeBulkNotifications).toHaveBeenCalledWith(
-        ["notif-101", "notif-102"],
-        { changeReason: "Clinical event acknowledged" }
-      );
+      expect(
+        notificationsService.acknowledgeBulkNotifications
+      ).toHaveBeenCalledWith(["notif-101", "notif-102"], {
+        changeReason: "Clinical event acknowledged",
+      });
 
       expect(wrapper.find("#justification-modal").exists()).toBe(false);
       expect(wrapper.find("#selected-count").text()).toContain("0 selected");
@@ -1021,7 +1024,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       await wrapper.find("#btn-bulk-resolve").trigger("click");
       await wrapper.vm.$nextTick();
 
-      expect(wrapper.find(".modal-header").text()).toContain("Batch Resolve: 2 items");
+      expect(wrapper.find(".modal-header").text()).toContain(
+        "Batch Resolve: 2 items"
+      );
 
       await wrapper
         .find("#modal-reason-select")
@@ -1031,10 +1036,11 @@ describe("Notifications System End-to-End Visual Integration", () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
       await wrapper.vm.$nextTick();
 
-      expect(notificationsService.resolveBulkNotifications).toHaveBeenCalledWith(
-        ["notif-101", "notif-103"],
-        { changeReason: "Corrective action documented" }
-      );
+      expect(
+        notificationsService.resolveBulkNotifications
+      ).toHaveBeenCalledWith(["notif-101", "notif-103"], {
+        changeReason: "Corrective action documented",
+      });
     });
 
     it("attaches X-Change-Reason header correctly in bulk API client contract methods", async () => {

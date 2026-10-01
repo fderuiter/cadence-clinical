@@ -335,130 +335,131 @@
                 class="notif-checkbox"
                 :value="notif.id"
                 :checked="selectedIds.includes(notif.id)"
-                @change="toggleSelect(notif.id)"
+                :aria-label="'Select notification ' + notif.id"
                 style="margin-right: 4px; cursor: pointer"
+                @change="toggleSelect(notif.id)"
               />
               <span
                 class="badge category-badge"
                 style="background-color: var(--primary-light); color: white"
                 >{{ notif.category }}</span
               >
-            <span
-              class="badge priority-badge"
-              :style="getPriorityStyle(notif.priority)"
-              >{{ notif.priority }}</span
-            >
-            <span
-              class="badge status-badge"
-              :style="getStatusStyle(notif.status)"
-              >{{ notif.status }}</span
-            >
-            <span
-              class="badge delivery-badge"
-              style="
-                background-color: #f1f5f9;
-                color: #475569;
-                border-color: #cbd5e1;
-              "
-              >{{ notif.delivery_state }}</span
-            >
-          </div>
-          <span class="timestamp" style="font-size: 0.8rem; color: #94a3b8">{{
-            formatTimestamp(notif.created_at)
-          }}</span>
-        </div>
-
-        <div
-          class="message-content"
-          style="
-            font-size: 1.05rem;
-            font-weight: 500;
-            color: var(--primary);
-            word-break: break-word;
-          "
-        >
-          {{ notif.message_content }}
-        </div>
-
-        <div
-          style="
-            font-size: 0.85rem;
-            color: #64748b;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-          "
-        >
-          <div class="target-context">
-            <strong>Recipient Context:</strong>
-            <span v-if="notif.recipient_user_id || notif.recipient_role">
-              <span v-if="notif.recipient_user_id" style="margin-right: 12px"
-                >User: <code>{{ notif.recipient_user_id }}</code></span
+              <span
+                class="badge priority-badge"
+                :style="getPriorityStyle(notif.priority)"
+                >{{ notif.priority }}</span
               >
-              <span v-if="notif.recipient_role"
-                >Role: <code>{{ notif.recipient_role }}</code></span
+              <span
+                class="badge status-badge"
+                :style="getStatusStyle(notif.status)"
+                >{{ notif.status }}</span
               >
-            </span>
-            <span
-              v-else
-              class="global-indicator"
-              style="font-style: italic; color: #94a3b8"
-              >Global / Broadcast</span
-            >
+              <span
+                class="badge delivery-badge"
+                style="
+                  background-color: #f1f5f9;
+                  color: #475569;
+                  border-color: #cbd5e1;
+                "
+                >{{ notif.delivery_state }}</span
+              >
+            </div>
+            <span class="timestamp" style="font-size: 0.8rem; color: #94a3b8">{{
+              formatTimestamp(notif.created_at)
+            }}</span>
           </div>
-          <div v-if="notif.related_entity_id" class="linkage">
-            <strong>Related:</strong>
-            <code
-              >{{ notif.related_entity_type }} ({{
-                notif.related_entity_id
-              }})</code
-            >
-          </div>
-        </div>
 
-        <!-- Action Controls -->
-        <div
-          style="
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 8px;
-            border-top: 1px dashed var(--border);
-            padding-top: 12px;
-          "
-        >
-          <button
-            class="btn btn-goto"
+          <div
+            class="message-content"
             style="
-              padding: 6px 12px;
-              font-size: 0.8rem;
-              background-color: var(--secondary-light, #e2e8f0);
-              border: 1px solid var(--secondary, #cbd5e1);
-              color: var(--primary, #1e293b);
+              font-size: 1.05rem;
+              font-weight: 500;
+              color: var(--primary);
+              word-break: break-word;
             "
-            @click="goToTarget(notif)"
           >
-            🔗 Go to Target
-          </button>
-          <button
-            v-if="notif.status === 'OPEN'"
-            class="btn btn-acknowledge"
-            style="padding: 6px 12px; font-size: 0.8rem"
-            @click="openActionModal(notif, 'acknowledge')"
+            {{ notif.message_content }}
+          </div>
+
+          <div
+            style="
+              font-size: 0.85rem;
+              color: #64748b;
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+            "
           >
-            Acknowledge
-          </button>
-          <button
-            v-if="notif.status === 'OPEN' || notif.status === 'ACKNOWLEDGED'"
-            class="btn btn-primary btn-resolve"
-            style="padding: 6px 12px; font-size: 0.8rem"
-            @click="openActionModal(notif, 'resolve')"
+            <div class="target-context">
+              <strong>Recipient Context:</strong>
+              <span v-if="notif.recipient_user_id || notif.recipient_role">
+                <span v-if="notif.recipient_user_id" style="margin-right: 12px"
+                  >User: <code>{{ notif.recipient_user_id }}</code></span
+                >
+                <span v-if="notif.recipient_role"
+                  >Role: <code>{{ notif.recipient_role }}</code></span
+                >
+              </span>
+              <span
+                v-else
+                class="global-indicator"
+                style="font-style: italic; color: #94a3b8"
+                >Global / Broadcast</span
+              >
+            </div>
+            <div v-if="notif.related_entity_id" class="linkage">
+              <strong>Related:</strong>
+              <code
+                >{{ notif.related_entity_type }} ({{
+                  notif.related_entity_id
+                }})</code
+              >
+            </div>
+          </div>
+
+          <!-- Action Controls -->
+          <div
+            style="
+              display: flex;
+              justify-content: flex-end;
+              gap: 12px;
+              margin-top: 8px;
+              border-top: 1px dashed var(--border);
+              padding-top: 12px;
+            "
           >
-            Resolve
-          </button>
+            <button
+              class="btn btn-goto"
+              style="
+                padding: 6px 12px;
+                font-size: 0.8rem;
+                background-color: var(--secondary-light, #e2e8f0);
+                border: 1px solid var(--secondary, #cbd5e1);
+                color: var(--primary, #1e293b);
+              "
+              @click="goToTarget(notif)"
+            >
+              🔗 Go to Target
+            </button>
+            <button
+              v-if="notif.status === 'OPEN'"
+              class="btn btn-acknowledge"
+              style="padding: 6px 12px; font-size: 0.8rem"
+              @click="openActionModal(notif, 'acknowledge')"
+            >
+              Acknowledge
+            </button>
+            <button
+              v-if="notif.status === 'OPEN' || notif.status === 'ACKNOWLEDGED'"
+              class="btn btn-primary btn-resolve"
+              style="padding: 6px 12px; font-size: 0.8rem"
+              @click="openActionModal(notif, 'resolve')"
+            >
+              Resolve
+            </button>
+          </div>
         </div>
       </div>
-    </div>
     </template>
 
     <!-- Justification Modal -->
@@ -513,7 +514,9 @@
               margin-top: 4px;
             "
           >
-            (Batch {{ actionType === 'acknowledge' ? 'Acknowledge' : 'Resolve' }}: {{ selectedIds.length }} items)
+            (Batch
+            {{ actionType === "acknowledge" ? "Acknowledge" : "Resolve" }}:
+            {{ selectedIds.length }} items)
           </span>
         </div>
         <div class="modal-body" style="padding: 0; margin-bottom: 16px">

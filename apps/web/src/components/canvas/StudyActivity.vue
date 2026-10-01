@@ -50,8 +50,9 @@
           v-else-if="versionLink(entry)"
           class="activity-subject"
           :to="versionLink(entry)!"
-          >{{ subjectLabel(entry) }}</router-link
         >
+          {{ subjectLabel(entry) }}
+        </router-link>
         <span v-else-if="entry.subject" class="activity-subject">{{
           subjectLabel(entry)
         }}</span>

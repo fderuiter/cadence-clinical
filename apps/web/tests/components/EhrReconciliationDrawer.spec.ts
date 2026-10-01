@@ -36,7 +36,10 @@ describe("EhrReconciliationDrawer.vue", () => {
       discrepancy_type: "VALUE_MISMATCH",
       confidence_score: 0.98,
       mapping_provenance: "LOINC 8480-6 -> VS.SYSBP",
-      raw_fhir_resource: { resourceType: "Observation", valueQuantity: { value: 128, unit: "mmHg" } },
+      raw_fhir_resource: {
+        resourceType: "Observation",
+        valueQuantity: { value: 128, unit: "mmHg" },
+      },
       status: "PENDING_REVIEW",
       version_index: 1,
       created_at: "2026-10-01T10:00:00Z",
@@ -62,7 +65,10 @@ describe("EhrReconciliationDrawer.vue", () => {
       discrepancy_type: "NEW_FIELD",
       confidence_score: 0.95,
       mapping_provenance: "LOINC 2339-0 -> LB.GLUC",
-      raw_fhir_resource: { resourceType: "Observation", valueQuantity: { value: 105, unit: "mg/dL" } },
+      raw_fhir_resource: {
+        resourceType: "Observation",
+        valueQuantity: { value: 105, unit: "mg/dL" },
+      },
       status: "PENDING_REVIEW",
       version_index: 1,
       created_at: "2026-10-01T10:00:00Z",
@@ -88,7 +94,10 @@ describe("EhrReconciliationDrawer.vue", () => {
       discrepancy_type: "UNIT_MISMATCH",
       confidence_score: 0.92,
       mapping_provenance: "LOINC 8310-5 -> VS.TEMP",
-      raw_fhir_resource: { resourceType: "Observation", valueQuantity: { value: 37.0, unit: "C" } },
+      raw_fhir_resource: {
+        resourceType: "Observation",
+        valueQuantity: { value: 37.0, unit: "C" },
+      },
       status: "PENDING_REVIEW",
       version_index: 1,
       created_at: "2026-10-01T10:00:00Z",
@@ -148,7 +157,11 @@ describe("EhrReconciliationDrawer.vue", () => {
     const cand = getMockCandidates()[0];
     vi.mocked(interopService.acceptEhrCandidate).mockResolvedValue({
       success: true,
-      candidate: { ...cand, status: "ACCEPTED", resolution_action: "ACCEPT_COMMIT" } as any,
+      candidate: {
+        ...cand,
+        status: "ACCEPTED",
+        resolution_action: "ACCEPT_COMMIT",
+      } as any,
       message: "Accepted candidate",
     });
 
@@ -174,7 +187,11 @@ describe("EhrReconciliationDrawer.vue", () => {
     const cand = getMockCandidates()[0];
     vi.mocked(interopService.rejectEhrCandidate).mockResolvedValue({
       success: true,
-      candidate: { ...cand, status: "REJECTED", resolution_action: "REJECT" } as any,
+      candidate: {
+        ...cand,
+        status: "REJECTED",
+        resolution_action: "REJECT",
+      } as any,
       message: "Rejected candidate",
     });
 
@@ -211,7 +228,11 @@ describe("EhrReconciliationDrawer.vue", () => {
     const cand = getMockCandidates()[0];
     vi.mocked(interopService.raiseEhrClinicalQuery).mockResolvedValue({
       success: true,
-      candidate: { ...cand, status: "QUERIED", resolution_action: "QUERY" } as any,
+      candidate: {
+        ...cand,
+        status: "QUERIED",
+        resolution_action: "QUERY",
+      } as any,
       clinical_query_id: "query-999",
       message: "Opened query",
     });
@@ -228,7 +249,9 @@ describe("EhrReconciliationDrawer.vue", () => {
     expect(wrapper.text()).toContain("Raise GxP Discrepancy Query");
 
     const textarea = wrapper.find("#query-explanation");
-    await textarea.setValue("Investigator review needed for blood pressure discrepancy");
+    await textarea.setValue(
+      "Investigator review needed for blood pressure discrepancy"
+    );
     await wrapper.vm.$nextTick();
 
     const submitBtn = wrapper.find(".modal-card .btn-primary");
@@ -237,7 +260,8 @@ describe("EhrReconciliationDrawer.vue", () => {
 
     expect(interopService.raiseEhrClinicalQuery).toHaveBeenCalledWith({
       candidate_id: "cand-1",
-      query_explanation: "Investigator review needed for blood pressure discrepancy",
+      query_explanation:
+        "Investigator review needed for blood pressure discrepancy",
       discrepancy_type: "VALUE_MISMATCH",
       change_reason: "CRC Raised eSource Discrepancy Query",
     });
