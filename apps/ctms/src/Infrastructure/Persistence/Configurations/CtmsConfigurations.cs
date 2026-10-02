@@ -385,3 +385,33 @@ public sealed class CtmsInvestigatorPayableConfiguration : IEntityTypeConfigurat
         builder.HasIndex(x => x.MilestoneId);
     }
 }
+
+public sealed class CtmsSiteGreenlightGateConfiguration : IEntityTypeConfiguration<CtmsSiteGreenlightGate>
+{
+    public void Configure(EntityTypeBuilder<CtmsSiteGreenlightGate> builder)
+    {
+        builder.ToTable("ctms_site_greenlight_gates");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteName).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.CountryCode).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.OverallStatus).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.GreenlightToken).HasMaxLength(1024);
+        builder.Property(x => x.GreenlightCertifiedBy).HasMaxLength(255);
+        builder.Property(x => x.OverrideSponsorUserId).HasMaxLength(255);
+        builder.Property(x => x.OverrideMedicalUserId).HasMaxLength(255);
+        builder.Property(x => x.OverrideJustification).HasMaxLength(2000);
+        builder.Property(x => x.UnfulfilledReasons).HasMaxLength(2000);
+        builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.VersionIndex).IsRequired();
+
+        builder.HasIndex(x => x.StudyId);
+        builder.HasIndex(x => x.SiteId);
+        builder.HasIndex(x => x.CountryCode);
+        builder.HasIndex(x => new { x.StudyId, x.CountryCode });
+    }
+}
