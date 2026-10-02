@@ -149,9 +149,9 @@ function readStorageForPersona(personaKey) {
       const activeKey = `onboarding_${personaKey}_is_active`;
       const disabledKey = `onboarding_${personaKey}_disabled`;
       const bypassKey = `onboarding_${personaKey}_bypass_overview`;
-      const tasksKey = `onboarding_${personaKey}_completed_tasks`;
+      const completedTasksKey = `onboarding_${personaKey}_completed_tasks`;
       const eventsKey = `onboarding_${personaKey}_events`;
-      const tasksKey = `onboarding_${personaKey}_tasks`;
+      const setupTasksKey = `onboarding_${personaKey}_tasks`;
 
       const storedStep = window.localStorage.getItem(stepKey);
       if (storedStep !== null) {
@@ -176,16 +176,16 @@ function readStorageForPersona(personaKey) {
         isActive = true;
       }
 
-      const storedTasks = window.localStorage.getItem(tasksKey);
-      if (storedTasks !== null) {
+      const storedCompletedTasks = window.localStorage.getItem(completedTasksKey);
+      if (storedCompletedTasks !== null) {
         try {
-          const parsedTasks = JSON.parse(storedTasks);
+          const parsedTasks = JSON.parse(storedCompletedTasks);
           if (Array.isArray(parsedTasks)) {
             completedTasks = parsedTasks;
           }
         } catch (e) {
           console.error(
-            "Failed to parse onboarding tasks from localStorage",
+            "Failed to parse onboarding completed tasks from localStorage",
             e
           );
         }
@@ -206,10 +206,10 @@ function readStorageForPersona(personaKey) {
         }
       }
 
-      const storedTasks = window.localStorage.getItem(tasksKey);
-      if (storedTasks !== null) {
+      const storedSetupTasks = window.localStorage.getItem(setupTasksKey);
+      if (storedSetupTasks !== null) {
         try {
-          const parsedTasks = JSON.parse(storedTasks);
+          const parsedTasks = JSON.parse(storedSetupTasks);
           if (Array.isArray(parsedTasks) && parsedTasks.length > 0) {
             tasks = DEFAULT_SETUP_TASKS.map((defTask) => {
               const found = parsedTasks.find((t) => t.id === defTask.id);
