@@ -135,3 +135,8 @@ public class EffectivityIdValueConverter() : ValueConverter<EffectivityId, Guid>
     id => id.Value,
     guid => new EffectivityId(guid)
 );
+
+public class ProposalIdValueConverter() : ValueConverter<ProposalId, Guid>(
+    id => id.Value,
+    guid => new ProposalId(guid)
+);

@@ -44,6 +44,7 @@ public static class KernelModelConfigurationBuilderExtensions
         configurationBuilder.Properties<WorkQueueDefinitionId>().HaveConversion<WorkQueueDefinitionIdValueConverter, EntityIdValueComparer<WorkQueueDefinitionId>>();
         configurationBuilder.Properties<ValidationRunId>().HaveConversion<ValidationRunIdValueConverter, EntityIdValueComparer<ValidationRunId>>();
         configurationBuilder.Properties<ValidationFindingId>().HaveConversion<ValidationFindingIdValueConverter, EntityIdValueComparer<ValidationFindingId>>();
+        configurationBuilder.Properties<ProposalId>().HaveConversion<ProposalIdValueConverter, EntityIdValueComparer<ProposalId>>();
 
         return configurationBuilder;
     }

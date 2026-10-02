@@ -1,4 +1,4 @@
-DO $EF$
+﻿DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -3550,6 +3550,103 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930133015_Qualifications', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE TABLE kernel.proposals (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        intent character varying(2000) NOT NULL,
+        plan_artifact_version_id uuid NOT NULL,
+        affected text[] NOT NULL,
+        simulated_impact character varying(71),
+        requested_capabilities text[] NOT NULL,
+        expires_at timestamp with time zone NOT NULL,
+        proposed_at timestamp with time zone NOT NULL,
+        proposed_by_id character varying(256) NOT NULL,
+        proposed_by_kind character varying(32) NOT NULL,
+        model_id character varying(200),
+        content_hash character varying(71) NOT NULL,
+        status character varying(16) NOT NULL,
+        decided_at timestamp with time zone,
+        decided_by_id character varying(256),
+        decided_by_kind character varying(32),
+        approval_attestation_id uuid,
+        decision_reason character varying(1000),
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_proposals" PRIMARY KEY (id),
+        CONSTRAINT "AK_proposals_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_proposals_affected CHECK (cardinality(affected) <= 200),
+        CONSTRAINT ck_proposals_content_hash CHECK (content_hash ~ '^sha256:[0-9a-f]{64}$'),
+        CONSTRAINT ck_proposals_decision CHECK ((status = 'Open' AND decided_at IS NULL AND decided_by_id IS NULL AND decided_by_kind IS NULL AND approval_attestation_id IS NULL AND decision_reason IS NULL) OR (status = 'Approved' AND decided_at IS NOT NULL AND decided_by_id IS NOT NULL AND decided_by_kind = 'Person' AND approval_attestation_id IS NOT NULL) OR (status IN ('Rejected', 'Withdrawn') AND decided_at IS NOT NULL AND decided_by_id IS NOT NULL AND decided_by_kind IS NOT NULL AND approval_attestation_id IS NULL AND decision_reason IS NOT NULL)),
+        CONSTRAINT ck_proposals_expiry CHECK (expires_at > proposed_at AND expires_at <= proposed_at + interval '90 days'),
+        CONSTRAINT ck_proposals_intent CHECK (char_length(intent) BETWEEN 1 AND 2000),
+        CONSTRAINT ck_proposals_model CHECK ((proposed_by_kind = 'AutomationAgent' AND model_id IS NOT NULL AND char_length(model_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND model_id IS NULL)),
+        CONSTRAINT ck_proposals_requested_capabilities CHECK (cardinality(requested_capabilities) BETWEEN 1 AND 20),
+        CONSTRAINT ck_proposals_simulated_impact CHECK (simulated_impact IS NULL OR simulated_impact ~ '^sha256:[0-9a-f]{64}$'),
+        CONSTRAINT "FK_proposals_artifact_versions_tenant_id_plan_artifact_version~" FOREIGN KEY (tenant_id, plan_artifact_version_id) REFERENCES kernel.artifact_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_proposals_attestations_tenant_id_approval_attestation_id" FOREIGN KEY (tenant_id, approval_attestation_id) REFERENCES kernel.attestations (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_proposals_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_proposals_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE INDEX "IX_proposals_tenant_id_approval_attestation_id" ON kernel.proposals (tenant_id, approval_attestation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE INDEX "IX_proposals_tenant_id_plan_artifact_version_id" ON kernel.proposals (tenant_id, plan_artifact_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE INDEX "IX_proposals_tenant_id_study_id_status" ON kernel.proposals (tenant_id, study_id, status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    ALTER TABLE "kernel"."proposals" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."proposals" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."proposals"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE TRIGGER "trg_proposals_immutable" BEFORE UPDATE ON "kernel"."proposals"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_immutable_columns('id', 'tenant_id', 'study_id', 'intent', 'plan_artifact_version_id', 'affected', 'simulated_impact', 'requested_capabilities', 'expires_at', 'proposed_at', 'proposed_by_id', 'proposed_by_kind', 'model_id', 'content_hash', 'created_at', 'created_by');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930142430_Proposals', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;
