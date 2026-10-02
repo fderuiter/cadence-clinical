@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json;
 
+using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Kernel;
@@ -81,6 +82,17 @@ public sealed class ClinicalObservationConfiguration : IEntityTypeConfiguration<
         builder.Property(o => o.ProtocolVersionTag)
             .HasMaxLength(50);
 
+        builder.Property(o => o.FormSubmissionId)
+            .HasConversion(
+                c => c.HasValue ? c.Value.Value : (Guid?)null,
+                v => v == null ? null : new FormSubmissionId(v.Value))
+            .HasColumnName("form_submission_id");
+
+        builder.Property(o => o.IsActive)
+            .HasColumnName("is_active")
+            .HasDefaultValue(true)
+            .IsRequired();
+
         // ADR-2332 dynamic property bag mapped to PostgreSQL jsonb
         var additionalPropertiesComparer = new ValueComparer<ObservationAdditionalProperties>(
             (a, b) => JsonSerializer.Serialize(a, JsonSerializerOptions.Default) == JsonSerializer.Serialize(b, JsonSerializerOptions.Default),
@@ -111,5 +123,14 @@ public sealed class ClinicalObservationConfiguration : IEntityTypeConfiguration<
 
         builder.HasIndex(o => new { o.SubjectId, o.ObservationDate })
             .HasDatabaseName("idx_observation_subject_date");
+
+        builder.HasIndex(o => o.FormSubmissionId)
+            .HasDatabaseName("ix_clinical_observations_form_submission_id");
+
+        builder.HasIndex(o => o.IsActive)
+            .HasDatabaseName("ix_clinical_observations_is_active");
+
+        builder.HasIndex(o => new { o.FormSubmissionId, o.IsActive })
+            .HasDatabaseName("idx_observation_form_submission_active");
     }
 }
