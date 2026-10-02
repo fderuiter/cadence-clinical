@@ -1,10 +1,8 @@
 <template>
   <div class="icf-section-editor-container card">
     <div class="editor-header">
-      <h3>{{ $t("econsent.editor.editSection", { title: section.title }) }}</h3>
-      <span class="section-id-badge">{{
-        $t("econsent.editor.sectionId", { id: section.id })
-      }}</span>
+      <h3>{{ $t('econsent.editor.editSection', { title: section.title }) }}</h3>
+      <span class="section-id-badge">{{ $t('econsent.editor.sectionId', { id: section.id }) }}</span>
     </div>
 
     <!-- Formatting Toolbar -->
@@ -47,7 +45,7 @@
         :title="$t('econsent.editor.bulletList')"
         @click="formatDoc('insertUnorderedList')"
       >
-        • {{ $t("econsent.editor.list") }}
+        • {{ $t('econsent.editor.list') }}
       </button>
       <button
         type="button"
@@ -55,7 +53,7 @@
         :title="$t('econsent.editor.numberedList')"
         @click="formatDoc('insertOrderedList')"
       >
-        1. {{ $t("econsent.editor.list") }}
+        1. {{ $t('econsent.editor.list') }}
       </button>
       <button
         type="button"
@@ -63,7 +61,7 @@
         :title="$t('econsent.editor.insertTable')"
         @click="insertTable"
       >
-        📊 {{ $t("econsent.editor.table") }}
+        📊 {{ $t('econsent.editor.table') }}
       </button>
       <button
         type="button"
@@ -71,7 +69,7 @@
         :title="$t('econsent.editor.insertImage')"
         @click="insertImage"
       >
-        🖼️ {{ $t("econsent.editor.image") }}
+        🖼️ {{ $t('econsent.editor.image') }}
       </button>
       <button
         type="button"
@@ -79,7 +77,7 @@
         :title="$t('econsent.editor.annotateGlossary')"
         @click="promptGlossary"
       >
-        🏷️ {{ $t("econsent.editor.glossaryTerm") }}
+        🏷️ {{ $t('econsent.editor.glossaryTerm') }}
       </button>
       <button
         type="button"
@@ -87,7 +85,7 @@
         :title="$t('econsent.editor.readabilityHarmonizerTitle')"
         @click="showReadabilityDrawer = true"
       >
-        📖 {{ $t("econsent.editor.readabilityHarmonizer") }}
+        📖 {{ $t('econsent.editor.readabilityHarmonizer') }}
       </button>
     </div>
 
@@ -112,14 +110,12 @@
     <!-- Glossary Term Annotation Dialog/Modal -->
     <div v-if="showGlossaryModal" class="glossary-modal-overlay">
       <div class="glossary-modal card">
-        <h4>{{ $t("econsent.editor.annotateSelectedText") }}</h4>
+        <h4>{{ $t('econsent.editor.annotateSelectedText') }}</h4>
         <p class="selected-text-preview">
-          {{ $t("econsent.editor.selectedText", { text: selectedText }) }}
+          {{ $t('econsent.editor.selectedText', { text: selectedText }) }}
         </p>
         <div class="form-group">
-          <label for="glossary-definition">{{
-            $t("econsent.editor.termDefinitionLabel")
-          }}</label>
+          <label for="glossary-definition">{{ $t('econsent.editor.termDefinitionLabel') }}</label>
           <textarea
             id="glossary-definition"
             v-model="glossaryDefinition"
@@ -134,14 +130,14 @@
             class="btn btn-secondary"
             @click="showGlossaryModal = false"
           >
-            {{ $t("econsent.editor.cancel") }}
+            {{ $t('econsent.editor.cancel') }}
           </button>
           <button
             type="button"
             class="btn btn-primary"
             @click="applyGlossaryAnnotation"
           >
-            {{ $t("econsent.editor.applyAnnotation") }}
+            {{ $t('econsent.editor.applyAnnotation') }}
           </button>
         </div>
       </div>
@@ -153,9 +149,7 @@
       class="glossary-popover"
       :style="{ top: popoverY + 'px', left: popoverX + 'px' }"
     >
-      <div class="popover-title">
-        {{ $t("econsent.editor.glossaryDefinition") }}
-      </div>
+      <div class="popover-title">{{ $t('econsent.editor.glossaryDefinition') }}</div>
       <div class="popover-body">
         <strong>{{ hoveredGlossaryTerm }}</strong
         >: {{ hoveredGlossaryDefinition }}

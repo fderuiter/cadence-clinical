@@ -65,11 +65,7 @@ describe("Screen availability", () => {
     const navIds = wrapper
       .findAll(".app-sidebar li[id^='tab-btn-']")
       .map((li) => li.attributes("id"));
-    expect(navIds).toEqual([
-      "tab-btn-overview",
-      "tab-btn-ecrf",
-      "tab-btn-ctms",
-    ]);
+    expect(navIds).toEqual(["tab-btn-overview", "tab-btn-ecrf", "tab-btn-ctms"]);
     expect(wrapper.text()).not.toContain("Design & Metadata");
     // No .NET service serves the user's notifications yet.
     expect(fetchNotifications).not.toHaveBeenCalled();

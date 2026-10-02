@@ -1,9 +1,9 @@
 <template>
   <div id="section-econsent-authoring" class="dashboard-section active">
     <div class="section-header">
-      <h2>{{ $t("econsent.authoring.title") }}</h2>
+      <h2>{{ $t('econsent.authoring.title') }}</h2>
       <p>
-        {{ $t("econsent.authoring.description") }}
+        {{ $t('econsent.authoring.description') }}
       </p>
     </div>
 
@@ -24,7 +24,7 @@
           <h3
             style="color: var(--error); font-weight: bold; margin-bottom: 8px"
           >
-            {{ $t("econsent.authoring.accessDeniedTitle") }}
+            {{ $t('econsent.authoring.accessDeniedTitle') }}
           </h3>
           <p
             style="
@@ -33,7 +33,7 @@
               line-height: 1.6;
             "
           >
-            {{ $t("econsent.authoring.accessDeniedMsg") }}
+            {{ $t('econsent.authoring.accessDeniedMsg') }}
           </p>
         </div>
       </div>
@@ -55,12 +55,12 @@
             margin-bottom: 16px;
           "
         >
-          <span>{{ $t("econsent.authoring.templatesTitle") }}</span>
+          <span>{{ $t('econsent.authoring.templatesTitle') }}</span>
           <span
             v-if="loading"
             style="font-size: 0.85rem; color: #64748b"
             role="status"
-            >{{ $t("econsent.authoring.loading") }}</span
+            >{{ $t('econsent.authoring.loading') }}</span
           >
         </div>
 
@@ -78,7 +78,7 @@
             font-size: 0.85rem;
           "
         >
-          {{ $t("econsent.authoring.degradedMsg") }}
+          {{ $t('econsent.authoring.degradedMsg') }}
         </div>
 
         <!-- List container -->
@@ -100,7 +100,7 @@
               text-align: center;
             "
           >
-            {{ $t("econsent.authoring.noTemplates") }}
+            {{ $t('econsent.authoring.noTemplates') }}
           </div>
           <div v-else>
             <div
@@ -141,7 +141,7 @@
                     "
                     @click="openEditor(tpl)"
                   >
-                    {{ $t("econsent.authoring.edit") }}
+                    {{ $t('econsent.authoring.edit') }}
                   </button>
                   <button
                     v-if="!tpl.is_published"
@@ -157,7 +157,7 @@
                     "
                     @click="promptPublish(tpl)"
                   >
-                    {{ $t("econsent.authoring.publish") }}
+                    {{ $t('econsent.authoring.publish') }}
                   </button>
                   <span
                     v-else
@@ -170,35 +170,23 @@
                       border-radius: 4px;
                     "
                   >
-                    {{ $t("econsent.authoring.published") }}
+                    {{ $t('econsent.authoring.published') }}
                   </span>
                 </div>
               </div>
               <div style="font-size: 0.85rem; color: var(--neutral-dark)">
                 <div>
-                  <strong>{{ $t("econsent.authoring.templateId") }}</strong>
+                  <strong>{{ $t('econsent.authoring.templateId') }}</strong>
                   <code>{{ tpl.template_id }}</code>
                 </div>
+                <div><strong>{{ $t('econsent.authoring.study') }}</strong> {{ tpl.study_id }}</div>
                 <div>
-                  <strong>{{ $t("econsent.authoring.study") }}</strong>
-                  {{ tpl.study_id }}
-                </div>
-                <div>
-                  <strong>{{ $t("econsent.authoring.version") }}</strong>
-                  {{ tpl.version_index }} ({{
-                    $t("econsent.authoring.protocol")
-                  }}
+                  <strong>{{ $t('econsent.authoring.version') }}</strong> {{ tpl.version_index }} ({{ $t('econsent.authoring.protocol') }}
                   {{ tpl.protocol_version }})
                 </div>
                 <div>
-                  <strong>{{
-                    $t("econsent.authoring.reconsentRequired")
-                  }}</strong>
-                  {{
-                    tpl.requires_reconsent
-                      ? $t("econsent.authoring.yes")
-                      : $t("econsent.authoring.no")
-                  }}
+                  <strong>{{ $t('econsent.authoring.reconsentRequired') }}</strong>
+                  {{ tpl.requires_reconsent ? $t('econsent.authoring.yes') : $t('econsent.authoring.no') }}
                 </div>
               </div>
             </div>
@@ -217,7 +205,7 @@
           "
           @click="openEditor(null)"
         >
-          <span>➕</span> {{ $t("econsent.authoring.createNew") }}
+          <span>➕</span> {{ $t('econsent.authoring.createNew') }}
         </button>
       </div>
 
@@ -229,11 +217,7 @@
         style="display: flex; flex-direction: column"
       >
         <div id="editor-title" class="card-title" style="margin-bottom: 16px">
-          {{
-            isEdit
-              ? $t("econsent.authoring.editTitle")
-              : $t("econsent.authoring.composeTitle")
-          }}
+          {{ isEdit ? $t('econsent.authoring.editTitle') : $t('econsent.authoring.composeTitle') }}
         </div>
 
         <!-- Accessible inline error banner -->
@@ -278,7 +262,7 @@
             <legend
               style="padding: 0 8px; font-weight: bold; color: var(--accent)"
             >
-              {{ $t("econsent.authoring.metadataHeader") }}
+              {{ $t('econsent.authoring.metadataHeader') }}
             </legend>
             <div class="grid-2-responsive">
               <div class="form-group">
@@ -290,7 +274,7 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                  >{{ $t("econsent.authoring.studyIdLabel") }}</label
+                  >{{ $t('econsent.authoring.studyIdLabel') }}</label
                 >
                 <input
                   id="input-study-id"
@@ -316,7 +300,7 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                  >{{ $t("econsent.authoring.templateNameLabel") }}</label
+                  >{{ $t('econsent.authoring.templateNameLabel') }}</label
                 >
                 <input
                   id="input-template-name"
@@ -342,7 +326,7 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                  >{{ $t("econsent.authoring.protocolVersionLabel") }}</label
+                  >{{ $t('econsent.authoring.protocolVersionLabel') }}</label
                 >
                 <input
                   id="input-protocol-version"
@@ -372,7 +356,7 @@
                 <label
                   for="checkbox-reconsent"
                   style="font-weight: 600; font-size: 0.85rem; cursor: pointer"
-                  >{{ $t("econsent.authoring.requiresReconsentLabel") }}</label
+                  >{{ $t('econsent.authoring.requiresReconsentLabel') }}</label
                 >
               </div>
             </div>
@@ -389,10 +373,10 @@
             <legend
               style="padding: 0 8px; font-weight: bold; color: var(--accent)"
             >
-              {{ $t("econsent.authoring.clausesHeader") }}
+              {{ $t('econsent.authoring.clausesHeader') }}
             </legend>
             <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px">
-              {{ $t("econsent.authoring.clausesHelp") }}
+              {{ $t('econsent.authoring.clausesHelp') }}
             </p>
 
             <div
@@ -473,7 +457,7 @@
               style="margin-top: 12px; padding: 6px 12px; font-size: 0.8rem"
               @click="addClauseRow"
             >
-              ➕ {{ $t("econsent.authoring.addClause") }}
+              ➕ {{ $t('econsent.authoring.addClause') }}
             </button>
           </fieldset>
 
@@ -488,10 +472,10 @@
             <legend
               style="padding: 0 8px; font-weight: bold; color: var(--accent)"
             >
-              {{ $t("econsent.authoring.stepsHeader") }}
+              {{ $t('econsent.authoring.stepsHeader') }}
             </legend>
             <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px">
-              {{ $t("econsent.authoring.stepsHelp") }}
+              {{ $t('econsent.authoring.stepsHelp') }}
             </p>
 
             <div
@@ -518,12 +502,7 @@
                     align-items: center;
                   "
                 >
-                  <strong>{{
-                    $t("econsent.authoring.stepTitle", {
-                      index: index + 1,
-                      type: step.type,
-                    })
-                  }}</strong>
+                  <strong>{{ $t('econsent.authoring.stepTitle', { index: index + 1, type: step.type }) }}</strong>
                   <button
                     type="button"
                     class="btn btn-remove-step"
@@ -537,14 +516,14 @@
                     "
                     @click="removeStep(index)"
                   >
-                    {{ $t("econsent.authoring.remove") }}
+                    {{ $t('econsent.authoring.remove') }}
                   </button>
                 </div>
                 <div v-if="step.type === 'comprehension_check'">
                   <label
                     :for="'step-question-' + index"
                     style="font-size: 0.75rem"
-                    >{{ $t("econsent.authoring.verificationPrompt") }}</label
+                    >{{ $t('econsent.authoring.verificationPrompt') }}</label
                   >
                   <input
                     :id="'step-question-' + index"
@@ -555,10 +534,8 @@
                   />
                 </div>
                 <div v-else-if="step.type === 'signature_placeholder'">
-                  <label
-                    :for="'step-role-' + index"
-                    style="font-size: 0.75rem"
-                    >{{ $t("econsent.authoring.requiredRole") }}</label
+                  <label :for="'step-role-' + index" style="font-size: 0.75rem"
+                    >{{ $t('econsent.authoring.requiredRole') }}</label
                   >
                   <input
                     :id="'step-role-' + index"
@@ -578,7 +555,7 @@
                 style="padding: 6px 12px; font-size: 0.8rem"
                 @click="addWorkflowStep('comprehension_check')"
               >
-                ➕ {{ $t("econsent.authoring.addComprehensionStep") }}
+                ➕ {{ $t('econsent.authoring.addComprehensionStep') }}
               </button>
               <button
                 type="button"
@@ -586,7 +563,7 @@
                 style="padding: 6px 12px; font-size: 0.8rem"
                 @click="addWorkflowStep('signature_placeholder')"
               >
-                ➕ {{ $t("econsent.authoring.addSignatureStep") }}
+                ➕ {{ $t('econsent.authoring.addSignatureStep') }}
               </button>
             </div>
           </fieldset>
@@ -602,7 +579,7 @@
             <legend
               style="padding: 0 8px; font-weight: bold; color: var(--accent)"
             >
-              {{ $t("econsent.authoring.previewHeader") }}
+              {{ $t('econsent.authoring.previewHeader') }}
             </legend>
             <div
               style="
@@ -622,29 +599,29 @@
                   margin-bottom: 8px;
                 "
               >
-                <strong style="color: var(--primary); font-size: 0.85rem">{{
-                  $t("econsent.authoring.previewSubheader")
-                }}</strong>
+                <strong style="color: var(--primary); font-size: 0.85rem"
+                  >{{ $t('econsent.authoring.previewSubheader') }}</strong
+                >
                 <button
                   type="button"
                   class="btn btn-preview"
                   style="padding: 4px 10px; font-size: 0.75rem"
                   @click="triggerComposePreview"
                 >
-                  {{ $t("econsent.authoring.refreshPreview") }}
+                  {{ $t('econsent.authoring.refreshPreview') }}
                 </button>
               </div>
               <div
                 v-if="previewLoading"
                 style="font-size: 0.8rem; font-style: italic"
               >
-                {{ $t("econsent.authoring.previewLoading") }}
+                {{ $t('econsent.authoring.previewLoading') }}
               </div>
               <div
                 v-else-if="previewClauses.length === 0"
                 style="font-size: 0.8rem; color: #64748b; font-style: italic"
               >
-                {{ $t("econsent.authoring.noClauses") }}
+                {{ $t('econsent.authoring.noClauses') }}
               </div>
               <div
                 v-else
@@ -696,14 +673,14 @@
             style="padding: 8px 16px; cursor: pointer"
             @click="showEditor = false"
           >
-            {{ $t("econsent.authoring.cancel") }}
+            {{ $t('econsent.authoring.cancel') }}
           </button>
           <button
             class="btn btn-primary btn-save"
             style="padding: 8px 16px; cursor: pointer"
             @click="promptSave"
           >
-            {{ $t("econsent.authoring.saveTemplate") }}
+            {{ $t('econsent.authoring.saveTemplate') }}
           </button>
         </div>
       </div>

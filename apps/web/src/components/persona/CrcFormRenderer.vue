@@ -10,7 +10,7 @@
         "
       >
         <div class="card-title" style="margin-bottom: 0">
-          {{ $t("ecrf.form.title") }}
+          {{ $t('ecrf.form.title') }}
         </div>
         <div style="display: flex; align-items: center; gap: 8px">
           <span
@@ -25,7 +25,7 @@
               fontSize: '0.75rem',
             }"
           >
-            {{ $t("ecrf.form.schemaBadge", { version: activeSubjectVersion }) }}
+            {{ $t('ecrf.form.schemaBadge', { version: activeSubjectVersion }) }}
           </span>
           <button
             id="btn-enroll-subject"
@@ -44,7 +44,7 @@
             "
             @click="showEnrollModal = true"
           >
-            <span>➕</span> {{ $t("ecrf.form.enrollNewSubject") }}
+            <span>➕</span> {{ $t('ecrf.form.enrollNewSubject') }}
           </button>
         </div>
       </div>
@@ -61,9 +61,9 @@
         "
       >
         <div class="form-group" style="flex: 1">
-          <label for="ecrf-subject-selector" style="font-weight: bold">{{
-            $t("ecrf.form.activeSubjectId")
-          }}</label>
+          <label for="ecrf-subject-selector" style="font-weight: bold"
+            >{{ $t('ecrf.form.activeSubjectId') }}</label
+          >
           <select
             id="ecrf-subject-selector"
             :value="selectedSubjectId"
@@ -83,7 +83,7 @@
               value=""
               disabled
             >
-              {{ $t("ecrf.form.noSubjects") }}
+              {{ $t('ecrf.form.noSubjects') }}
             </option>
             <option
               v-for="sub in store?.subjects || clinicalStore.subjects"
@@ -95,9 +95,9 @@
           </select>
         </div>
         <div class="form-group" style="flex: 1">
-          <label for="ecrf-visit-selector" style="font-weight: bold">{{
-            $t("ecrf.form.activeVisit")
-          }}</label>
+          <label for="ecrf-visit-selector" style="font-weight: bold"
+            >{{ $t('ecrf.form.activeVisit') }}</label
+          >
           <select
             id="ecrf-visit-selector"
             :value="selectedVisitId"
@@ -112,11 +112,9 @@
               $emit('load-ecrf-session');
             "
           >
-            <option value="Screening">
-              {{ $t("ecrf.form.visitScreening") }}
-            </option>
-            <option value="Week2">{{ $t("ecrf.form.visitWeek2") }}</option>
-            <option value="Week4">{{ $t("ecrf.form.visitWeek4") }}</option>
+            <option value="Screening">{{ $t('ecrf.form.visitScreening') }}</option>
+            <option value="Week2">{{ $t('ecrf.form.visitWeek2') }}</option>
+            <option value="Week4">{{ $t('ecrf.form.visitWeek4') }}</option>
           </select>
         </div>
       </div>
@@ -151,10 +149,12 @@
             "
           >
             <span>🎓</span>
-            <span>{{ $t("ecrf.form.trainingGatedTitle") }}</span>
+            <span
+              >{{ $t('ecrf.form.trainingGatedTitle') }}</span
+            >
           </div>
           <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #78350f">
-            {{ $t("ecrf.form.trainingGatedDesc") }}
+            {{ $t('ecrf.form.trainingGatedDesc') }}
           </p>
         </div>
         <div>
@@ -175,7 +175,7 @@
               "
               @click="navigate"
             >
-              {{ $t("ecrf.form.completeTrainingNow") }}
+              {{ $t('ecrf.form.completeTrainingNow') }}
             </button>
           </router-link>
         </div>
@@ -211,10 +211,12 @@
             "
           >
             <span>⚠️</span>
-            <span>{{ $t("ecrf.form.reconsentGatedTitle") }}</span>
+            <span
+              >{{ $t('ecrf.form.reconsentGatedTitle') }}</span
+            >
           </div>
           <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #7f1d1d">
-            {{ $t("ecrf.form.reconsentGatedDesc") }}
+            {{ $t('ecrf.form.reconsentGatedDesc') }}
           </p>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap">
@@ -234,7 +236,7 @@
             "
             @click="$emit('open-econsent-modal')"
           >
-            ✍️ {{ $t("ecrf.form.openEconsent") }}
+            ✍️ {{ $t('ecrf.form.openEconsent') }}
           </button>
           <button
             id="btn-upload-paper-icf"
@@ -252,7 +254,7 @@
             "
             @click="$emit('open-paper-icf-modal')"
           >
-            📄 {{ $t("ecrf.form.uploadPaperIcf") }}
+            📄 {{ $t('ecrf.form.uploadPaperIcf') }}
           </button>
         </div>
       </div>
@@ -285,7 +287,7 @@
             font-weight: 600;
           "
         >
-          <span>⚡ {{ $t("ecrf.form.liveEditChecks") }}</span>
+          <span>⚡ {{ $t('ecrf.form.liveEditChecks') }}</span>
           <span
             v-if="discrepancyAlertsCount > 0"
             class="badge badge-discrepancy"
@@ -297,11 +299,7 @@
               font-size: 0.75rem;
             "
           >
-            {{
-              $t("ecrf.form.discrepancyCount", {
-                count: discrepancyAlertsCount,
-              })
-            }}
+            {{ $t('ecrf.form.discrepancyCount', { count: discrepancyAlertsCount }) }}
           </span>
           <span
             v-if="warningAlertsCount > 0"
@@ -314,11 +312,11 @@
               font-size: 0.75rem;
             "
           >
-            {{ $t("ecrf.form.warningCount", { count: warningAlertsCount }) }}
+            {{ $t('ecrf.form.warningCount', { count: warningAlertsCount }) }}
           </span>
         </div>
         <div style="font-size: 0.8rem; color: #b45309">
-          {{ $t("ecrf.form.realtimeEvaluationActive") }}
+          {{ $t('ecrf.form.realtimeEvaluationActive') }}
         </div>
       </div>
 
@@ -517,7 +515,7 @@
           :disabled="isReconsentGated"
           @click="$emit('clear-form')"
         >
-          {{ $t("ecrf.form.clearForm") }}
+          {{ $t('ecrf.form.clearForm') }}
         </button>
         <button
           id="btn-submit-ecrf"
@@ -530,8 +528,8 @@
         >
           {{
             isReconsentGated
-              ? $t("ecrf.form.lockedReconsent")
-              : $t("ecrf.form.submitEcrfSession")
+              ? $t('ecrf.form.lockedReconsent')
+              : $t('ecrf.form.submitEcrfSession')
           }}
         </button>
       </div>
@@ -545,16 +543,16 @@
       style="display: flex"
     >
       <div class="modal" style="max-width: 520px">
-        <div class="modal-header">➕ {{ $t("ecrf.enrollModal.header") }}</div>
+        <div class="modal-header">➕ {{ $t('ecrf.enrollModal.header') }}</div>
         <div class="modal-body">
           <p style="font-size: 0.9rem; color: var(--text-muted)">
-            {{ $t("ecrf.enrollModal.desc") }}
+            {{ $t('ecrf.enrollModal.desc') }}
           </p>
           <div class="form-group" style="margin-bottom: 12px">
             <label
               for="enroll-subject-id"
               style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.subjectId") }}</label
+              >{{ $t('ecrf.enrollModal.subjectId') }}</label
             >
             <input
               id="enroll-subject-id"
@@ -575,7 +573,7 @@
             <label
               for="enroll-site-id"
               style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.siteId") }}</label
+              >{{ $t('ecrf.enrollModal.siteId') }}</label
             >
             <select
               id="enroll-site-id"
@@ -602,7 +600,7 @@
             <label
               for="enroll-consent-date"
               style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.consentDate") }}</label
+              >{{ $t('ecrf.enrollModal.consentDate') }}</label
             >
             <input
               id="enroll-consent-date"
@@ -622,7 +620,7 @@
             <label
               for="enroll-arm-id"
               style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.assignedArm") }}</label
+              >{{ $t('ecrf.enrollModal.assignedArm') }}</label
             >
             <select
               id="enroll-arm-id"
@@ -646,7 +644,7 @@
             <label
               for="enroll-change-reason"
               style="font-size: 0.85rem; font-weight: 600"
-              >{{ $t("ecrf.enrollModal.changeReason") }}</label
+              >{{ $t('ecrf.enrollModal.changeReason') }}</label
             >
             <input
               id="enroll-change-reason"
@@ -678,7 +676,7 @@
             class="btn btn-secondary"
             @click="showEnrollModal = false"
           >
-            {{ $t("ecrf.enrollModal.cancel") }}
+            {{ $t('ecrf.enrollModal.cancel') }}
           </button>
           <button
             id="btn-confirm-enroll"
@@ -687,7 +685,7 @@
             :disabled="!enrollForm.subjectId.trim()"
             @click="handleEnrollSubmit"
           >
-            {{ $t("ecrf.enrollModal.submit") }}
+            {{ $t('ecrf.enrollModal.submit') }}
           </button>
         </div>
       </div>
@@ -705,14 +703,14 @@
           class="modal-header"
           style="color: #991b1b; display: flex; align-items: center; gap: 8px"
         >
-          <span>⚠️</span> {{ $t("ecrf.gateModal.header") }}
+          <span>⚠️</span> {{ $t('ecrf.gateModal.header') }}
         </div>
         <div class="modal-body">
           <p style="font-size: 0.95rem; color: #7f1d1d; font-weight: 600">
-            {{ $t("ecrf.gateModal.subjectGated", { id: selectedSubjectId }) }}
+            {{ $t('ecrf.gateModal.subjectGated', { id: selectedSubjectId }) }}
           </p>
           <p style="font-size: 0.875rem; color: var(--text-muted)">
-            {{ $t("ecrf.gateModal.desc") }}
+            {{ $t('ecrf.gateModal.desc') }}
           </p>
         </div>
         <div
@@ -728,7 +726,7 @@
             class="btn btn-secondary"
             @click="showReconsentGateModal = false"
           >
-            {{ $t("ecrf.gateModal.close") }}
+            {{ $t('ecrf.gateModal.close') }}
           </button>
           <button
             type="button"
@@ -739,7 +737,7 @@
               $emit('open-econsent-modal');
             "
           >
-            ✍️ {{ $t("ecrf.form.openEconsent") }}
+            ✍️ {{ $t('ecrf.form.openEconsent') }}
           </button>
           <button
             type="button"
@@ -750,7 +748,7 @@
               $emit('open-paper-icf-modal');
             "
           >
-            📄 {{ $t("ecrf.form.uploadPaperIcf") }}
+            📄 {{ $t('ecrf.form.uploadPaperIcf') }}
           </button>
         </div>
       </div>

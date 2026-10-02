@@ -72,9 +72,7 @@ describe("OverviewView Orientation Hub Component", () => {
     expect(onboardingStore.bypassOverview).toBe(true);
 
     // Verify localStorage persistence
-    const saved = window.localStorage.getItem(
-      "onboarding_site_crc_bypass_overview"
-    );
+    const saved = window.localStorage.getItem("onboarding_site_crc_bypass_overview");
     expect(saved).toBe("true");
   });
 

@@ -32,9 +32,7 @@ describe("SsuGreenlightConsole Country-Level Multi-Site Activation Matrix", () =
     await new Promise((r) => setTimeout(r, 50));
 
     // Find disabled checkboxes for non-compliant sites
-    const disabledCheckboxes = wrapper.findAll(
-      ".site-select-checkbox:disabled"
-    );
+    const disabledCheckboxes = wrapper.findAll(".site-select-checkbox:disabled");
     expect(disabledCheckboxes.length).toBeGreaterThan(0);
 
     // Verify non-compliant status badge or indicator is present
@@ -65,9 +63,7 @@ describe("SsuGreenlightConsole Country-Level Multi-Site Activation Matrix", () =
     await batchBtn.trigger("click");
     await nextTick();
 
-    expect(wrapper.text()).toContain(
-      "21 CFR Part 11 Country-Level Batch Greenlight Certification"
-    );
+    expect(wrapper.text()).toContain("21 CFR Part 11 Country-Level Batch Greenlight Certification");
   });
 
   it("executes batch certification and displays individual HMAC tokens", async () => {
