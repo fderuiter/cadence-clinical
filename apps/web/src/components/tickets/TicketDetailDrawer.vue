@@ -520,7 +520,11 @@
             </div>
 
             <div v-if="attachments.length === 0" class="empty-placeholder">
-              No evidence files attached to this ticket.
+              <EmptyState
+                icon="📎"
+                title="No Evidence Attached"
+                message="No evidence files have been attached to this ticket yet."
+              />
             </div>
           </div>
         </div>
@@ -582,23 +586,33 @@
         <!-- TAB 5: AUDIT TRAIL -->
         <div v-if="activeTab === 'audit'" class="tab-pane">
           <div class="audit-timeline">
-            <div v-for="(log, idx) in auditLogs" :key="idx" class="audit-row">
-              <div class="audit-bullet" />
-              <div class="audit-content">
-                <div class="audit-row-header">
-                  <span class="audit-action">{{ log.action }}</span>
-                  <span class="audit-user">{{ log.user_id }}</span>
-                  <span class="audit-time">{{
-                    formatDate(log.timestamp)
-                  }}</span>
+            <template v-if="isAuditLoading">
+              <SkeletonLoader type="timeline" :count="3" />
+            </template>
+            <template v-else-if="auditLogs && auditLogs.length > 0">
+              <div v-for="(log, idx) in auditLogs" :key="idx" class="audit-row">
+                <div class="audit-bullet" />
+                <div class="audit-content">
+                  <div class="audit-row-header">
+                    <span class="audit-action">{{ log.action }}</span>
+                    <span class="audit-user">{{ log.user_id }}</span>
+                    <span class="audit-time">{{
+                      formatDate(log.timestamp)
+                    }}</span>
+                  </div>
+                  <div class="audit-reason">
+                    Reason: {{ log.change_reason }}
+                  </div>
                 </div>
-                <div class="audit-reason">Reason: {{ log.change_reason }}</div>
               </div>
-            </div>
-
-            <div v-if="auditLogs.length === 0" class="empty-placeholder">
-              Audit logs loading or empty.
-            </div>
+            </template>
+            <template v-else>
+              <EmptyState
+                icon="🔒"
+                title="No Audit Entries Found"
+                message="No GxP 21 CFR Part 11 audit trail events have been recorded for this ticket."
+              />
+            </template>
           </div>
         </div>
       </div>
@@ -700,6 +714,8 @@
 <script setup>
 import { ref, computed } from "vue";
 import TicketSignModal from "./TicketSignModal.vue";
+import SkeletonLoader from "../common/SkeletonLoader.vue";
+import EmptyState from "../common/EmptyState.vue";
 
 const props = defineProps({
   isOpen: {
@@ -721,6 +737,10 @@ const props = defineProps({
   auditLogs: {
     type: Array,
     default: () => [],
+  },
+  isAuditLoading: {
+    type: Boolean,
+    default: false,
   },
 });
 
