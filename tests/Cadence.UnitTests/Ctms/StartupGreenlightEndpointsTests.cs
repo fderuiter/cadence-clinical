@@ -52,7 +52,7 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task GetCountryMatrix_ReturnsSixFacetReadinessForAllSites()
     {
         // Act
-        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "DE", _db, CancellationToken.None);
+        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "DE", _db, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -75,10 +75,10 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task BatchCertify_RejectsNonCompliantSites()
     {
         // Arrange: Seed country matrix
-        await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "US", _db, CancellationToken.None);
+        await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "US", _db, TestContext.Current.CancellationToken);
 
         var nonCompliantSite = await _db.CtmsSiteGreenlightGates
-            .FirstAsync(g => !g.FacetDoaLog || !g.FacetIpRelease);
+            .FirstAsync(g => !g.FacetDoaLog || !g.FacetIpRelease, TestContext.Current.CancellationToken);
 
         var request = new BatchCertifyRequestDto(
             StudyId: "PROTOCOL-2026-01",
@@ -91,7 +91,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "21 CFR Part 11 Batch Certification", _db, _clock, _config, CancellationToken.None);
+            request, "21 CFR Part 11 Batch Certification", _db, _clock, _config, TestContext.Current.CancellationToken);
 
         // Assert
         result.Result.Should().BeOfType<BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>();
@@ -105,7 +105,7 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task BatchCertify_CertifiesCompliantSites_WithIndividualTokensAndAuditLogs()
     {
         // Arrange
-        var matrix = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "GB", _db, CancellationToken.None);
+        var matrix = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "GB", _db, TestContext.Current.CancellationToken);
         var compliantSiteIds = matrix.Value!
             .Where(s => s.IsCompliant)
             .Select(s => s.SiteId)
@@ -124,7 +124,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Batch activation approved", _db, _clock, _config, CancellationToken.None);
+            request, "Batch activation approved", _db, _clock, _config, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>().Subject;
@@ -142,7 +142,7 @@ public sealed class StartupGreenlightEndpointsTests
         // Individual Audit Log entries
         var auditLogs = await _db.CtmsAuditLogs
             .Where(a => a.Action == "BATCH_GREENLIGHT_CERTIFIED")
-            .ToListAsync();
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         auditLogs.Count.Should().Be(compliantSiteIds.Count);
         auditLogs.Select(a => a.UserId).Distinct().Single().Should().Be("Dr. Eleanor Vance");
@@ -179,7 +179,7 @@ public sealed class StartupGreenlightEndpointsTests
                 ReasonForChange = "Performance benchmark setup"
             });
         }
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var request = new BatchCertifyRequestDto(
             StudyId: "PROTOCOL-2026-01",
@@ -194,7 +194,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Performance test batch certification", _db, _clock, _config, CancellationToken.None);
+            request, "Performance test batch certification", _db, _clock, _config, TestContext.Current.CancellationToken);
 
         sw.Stop();
 
