@@ -32,6 +32,7 @@ public sealed class ObservationApplicationService(
     IEditCheckEngine editCheckEngine,
     IClock clock,
     ICurrentAuditContextAccessor auditContextAccessor,
+    IDemographicsNormalizationService? demographicsNormalizationService = null,
     IAutoQueryDispatchService? autoQueryDispatchService = null) : IObservationApplicationService
 {
     public async Task<Result<ObservationResponse>> CreateAsync(
@@ -48,7 +49,8 @@ public sealed class ObservationApplicationService(
             return DomainError.Validation("INVALID_SUBJECT_CODE", ex.Message);
         }
 
-        ClinicalSubject? subject = await subjectRepository.GetByIdAsync(request.SubjectId, cancellationToken).ConfigureAwait(false);
+        ClinicalSubject? subject = await subjectRepository.GetByIdAsync(request.SubjectId, cancellationToken).ConfigureAwait(false)
+            ?? await subjectRepository.GetByCodeAsync(request.SubjectId, cancellationToken).ConfigureAwait(false);
 
         StudyCode studyCode;
         if (!string.IsNullOrWhiteSpace(request.StudyId))
@@ -111,12 +113,26 @@ public sealed class ObservationApplicationService(
         // UCUM normalization
         var (normVal, normUnit) = ucumService.GetNormalizedRepresentation(request.Value, request.Unit);
 
+        // Resolve subject demographics for lab range evaluation
+        string? sex = null;
+        int? ageYears = null;
+
+        if (subject != null && demographicsNormalizationService != null)
+        {
+            var safeDemo = demographicsNormalizationService.GetSafeDemographics(subject);
+            sex = safeDemo.Gender;
+            if (safeDemo.Age is double decimalAge)
+            {
+                ageYears = (int)Math.Floor(decimalAge);
+            }
+        }
+
         // Lab range evaluation
         var labResult = labRangeService.Evaluate(
             testCode,
             normVal ?? request.Value,
-            sex: null,
-            ageYears: null,
+            sex: sex,
+            ageYears: ageYears,
             labSource: request.LabSource);
 
         var additionalProps = new ObservationAdditionalProperties
