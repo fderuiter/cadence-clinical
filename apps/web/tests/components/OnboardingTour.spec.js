@@ -256,6 +256,59 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
         window.localStorage.getItem("onboarding_super_admin_is_active")
       ).toBe("true");
     });
+
+    it("purges all onboarding storage keys across all personas in resetTour and clears state for persona switching", () => {
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+
+      // Populate storage keys for multiple personas
+      window.localStorage.setItem("onboarding_super_admin_current_step", "3");
+      window.localStorage.setItem("onboarding_super_admin_disabled", "true");
+      window.localStorage.setItem("onboarding_site_crc_current_step", "2");
+      window.localStorage.setItem("onboarding_site_crc_disabled", "true");
+      window.localStorage.setItem("onboarding_site_crc_is_active", "false");
+      window.localStorage.setItem("onboarding_pi_current_step", "4");
+
+      // Reset tour from active persona super_admin
+      store.resetTour();
+
+      // All previous persona keys should be purged
+      expect(
+        window.localStorage.getItem("onboarding_site_crc_current_step")
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_site_crc_disabled")
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_site_crc_is_active")
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_pi_current_step")
+      ).toBeNull();
+
+      // Current persona active state is re-initialized and persisted cleanly
+      expect(store.currentStep).toBe(1);
+      expect(store.isActive).toBe(true);
+      expect(store.disabled).toBe(false);
+      expect(
+        window.localStorage.getItem("onboarding_super_admin_current_step")
+      ).toBe("1");
+      expect(
+        window.localStorage.getItem("onboarding_super_admin_is_active")
+      ).toBe("true");
+      expect(
+        window.localStorage.getItem("onboarding_super_admin_disabled")
+      ).toBe("false");
+
+      // Switching persona receives clean initial onboarding state
+      authStore.switchPersona("site_crc");
+      store.loadPersonaState("site_crc");
+
+      expect(store.currentPersona).toBe("site_crc");
+      expect(store.currentStep).toBe(1);
+      expect(store.isActive).toBe(true);
+      expect(store.disabled).toBe(false);
+    });
   });
 
   describe("OnboardingTour.vue component", () => {

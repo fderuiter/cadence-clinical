@@ -739,9 +739,25 @@ export const useOnboardingStore = defineStore("onboarding", {
       this.persist();
     },
     resetTour() {
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          const keysToRemove = [];
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const key = window.localStorage.key(i);
+            if (key && key.startsWith("onboarding_")) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+        } catch (e) {
+          console.error("Failed to purge onboarding storage keys", e);
+        }
+      }
+
       this.currentStep = 1;
       this.isActive = true;
       this.disabled = false;
+      this.events = [];
       this.addEvent(
         "tour_reset",
         "Onboarding Tour Reset",
