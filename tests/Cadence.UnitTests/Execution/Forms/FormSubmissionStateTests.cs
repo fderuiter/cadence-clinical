@@ -8,7 +8,9 @@ using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Kernel.Trust;
+using Cadence.Security;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
 using Cadence.UnitTests.Fixtures.Execution;
@@ -206,20 +208,65 @@ public sealed class FormSubmissionStateTests
         badApproveResult.IsFailure.Should().BeTrue();
         badApproveResult.Error!.Code.Should().Be("INVALID_PAYLOAD_HASH");
 
-        // Attempt approve with correct hash
+        // Attempt approve with correct hash and valid HMAC
+        Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
         var validHash = ComputeHash(payload);
+        var validHmac = HmacSigner.ComputeSignature(validHash, TestSecurityContext.GatewaySecret);
         var goodApproveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: validHash),
+            PayloadHash: validHash,
+            HmacSignature: validHmac),
             PrincipalInvestigator,
             CancellationToken.None);
 
         goodApproveResult.IsSuccess.Should().BeTrue();
         goodApproveResult.Value!.Status.Should().Be(FormSubmissionStatus.Approved);
         goodApproveResult.Value!.IsReadonly.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task FormApplicationService_Approve_WithInvalidHmac_ReturnsInvalidHmacSignatureError()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi_investigator_01", "PI approval");
+
+        var service = new FormSubmissionApplicationService(
+            formRepo,
+            obsRepo,
+            ucum,
+            audit);
+
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: payload), CancellationToken.None);
+
+        var formId = createResult.Value!.Id;
+        await service.CompleteAsync(formId, CancellationToken.None);
+
+        Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
+        var validHash = ComputeHash(payload);
+
+        // Attempt approve with missing/invalid HMAC
+        var badApproveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
+            SignerId: "pi-user-01",
+            SignerRole: "PRINCIPAL_INVESTIGATOR",
+            SigningReason: "I attest that I have reviewed and approved these clinical data.",
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
+            PayloadHash: validHash,
+            HmacSignature: "invalid-hmac-signature"),
+            PrincipalInvestigator,
+            CancellationToken.None);
+
+        badApproveResult.IsFailure.Should().BeTrue();
+        badApproveResult.Error!.Code.Should().Be("INVALID_HMAC_SIGNATURE");
     }
 
     /// <summary>

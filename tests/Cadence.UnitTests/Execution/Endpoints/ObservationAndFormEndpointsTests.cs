@@ -13,6 +13,7 @@ using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Kernel.Trust;
+using Cadence.Security;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
@@ -319,12 +320,17 @@ public sealed class ObservationAndFormEndpointsTests
         form.Complete();
         await formRepo.AddAsync(form, CancellationToken.None);
 
+        Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
+        var payloadHash = JsonCanonicalization.Sha256Hex(payload);
+        var hmacSignature = HmacSigner.ComputeSignature(payloadHash, TestSecurityContext.GatewaySecret);
+
         var request = FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
             SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: JsonCanonicalization.Sha256Hex(payload));
+            PayloadHash: payloadHash,
+            HmacSignature: hmacSignature);
 
         var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("pi-user-01", "Principal Investigator") };
         var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
@@ -359,12 +365,17 @@ public sealed class ObservationAndFormEndpointsTests
         form.Complete();
         await formRepo.AddAsync(form, CancellationToken.None);
 
+        Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
+        var payloadHash = JsonCanonicalization.Sha256Hex(payload);
+        var hmacSignature = HmacSigner.ComputeSignature(payloadHash, TestSecurityContext.GatewaySecret);
+
         var request = FormSubmissionApproveRequest.Create(
             SignerId: "user-01",
             SignerRole: "unauthorized_role",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
             SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: JsonCanonicalization.Sha256Hex(payload));
+            PayloadHash: payloadHash,
+            HmacSignature: hmacSignature);
 
         var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("user-01", "unauthorized_role") };
         var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
@@ -372,6 +383,49 @@ public sealed class ObservationAndFormEndpointsTests
         result.Should().BeOfType<ProblemHttpResult>();
         var problem = (ProblemHttpResult)result;
         problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+    }
+
+    /// <summary>
+    /// Validates that FormEndpoints.ApproveFormSubmissionAsync returns 400 Bad Request when HMAC signature is invalid.
+    /// @req:SRS-EDC-003
+    /// </summary>
+    [Fact]
+    public async Task ApproveFormSubmission_Handler_WithInvalidHmac_ReturnsBadRequest()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi-user-01", "GxP Audit Reason");
+
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+        var form = FormSubmission.Initialize(
+            studyId: new Apps.Execution.Domain.Subjects.StudyCode("STUDY-001"),
+            subjectId: new Apps.Execution.Domain.Subjects.SubjectCode("SUBJ-001"),
+            formId: new FormId("FORM-VS"),
+            initialPayload: payload).Value!;
+        form.Complete();
+        await formRepo.AddAsync(form, CancellationToken.None);
+
+        Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
+        var payloadHash = JsonCanonicalization.Sha256Hex(payload);
+
+        var request = FormSubmissionApproveRequest.Create(
+            SignerId: "pi-user-01",
+            SignerRole: "PRINCIPAL_INVESTIGATOR",
+            SigningReason: "I attest that I have reviewed and approved these clinical data.",
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
+            PayloadHash: payloadHash,
+            HmacSignature: "invalid-hmac-signature");
+
+        var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("pi-user-01", "Principal Investigator") };
+        var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
+
+        result.Should().BeOfType<ProblemHttpResult>();
+        var problem = (ProblemHttpResult)result;
+        problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        problem.ProblemDetails.Detail.Should().Contain("INVALID_HMAC_SIGNATURE");
     }
 
     /// <summary>
