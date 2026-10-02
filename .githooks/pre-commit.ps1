@@ -1,14 +1,28 @@
 <#
 .SYNOPSIS
     Cadence Clinical Platform - Git Pre-Commit Hook (PowerShell)
-    Validates C# code formatting, ADR integrity, and GxP compliance.
+    Validates Prettier formatting, C# code formatting, ADR integrity, and GxP compliance.
 #>
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "[Pre-Commit] Executing Cadence Quality Sentinels..." -ForegroundColor Cyan
 
-# 1. Format check
+# 1. Prettier check on staged files
+$pnpm = Get-Command "pnpm" -ErrorAction SilentlyContinue
+if ($pnpm) {
+    $stagedPrettier = @(git diff --cached --name-only --diff-filter=ACMR -- '*.js' '*.jsx' '*.ts' '*.tsx' '*.vue' '*.json' '*.css' '*.md' '*.yaml' '*.yml')
+    if ($stagedPrettier.Count -gt 0) {
+        Write-Host "  Validating Prettier formatting on staged files..." -ForegroundColor Gray
+        & pnpm exec prettier --check @stagedPrettier
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "::error:: Prettier formatting violations detected! Run 'pnpm format' to auto-fix." -ForegroundColor Red
+            exit 1
+        }
+    }
+}
+
+# 2. C# Format check
 $dotnet = Get-Command "dotnet" -ErrorAction SilentlyContinue
 if ($dotnet) {
     # Format only the staged C# files; CI and 'pnpm cadence check' cover the whole solution.
@@ -23,7 +37,7 @@ if ($dotnet) {
     }
 }
 
-# 2. Run the quality gates (same as .githooks/pre-commit)
+# 3. Run the quality gates (same as .githooks/pre-commit)
 Write-Host "  Running the Cadence quality gates..." -ForegroundColor Gray
 & dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check --pre-commit
 if ($LASTEXITCODE -ne 0) {
