@@ -9,6 +9,7 @@ using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Kernel.Trust;
+using Cadence.Security;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -138,6 +139,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
                     signer_role = "Site Investigator",
                     signing_reason = "PI approval and sign-off.",
                     payload_hash = JsonCanonicalization.Sha256Hex(payload),
+                    hmac_signature = HmacSigner.ComputeSignature(JsonCanonicalization.Sha256Hex(payload), TestSecurityContext.GatewaySecret),
                     signed_at = FakeClock.DefaultStart.UtcDateTime,
                 },
             },

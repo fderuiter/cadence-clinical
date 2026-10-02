@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Kernel.Trust;
+using Cadence.Security;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
@@ -282,7 +283,7 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
         return await client.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
-    private static object ApproveBody(string signerId, string signerRole, string payload) => new
+    private static object ApproveBody(string signerId, string signerRole, string payload, string? hmacSignature = null) => new
     {
         signing_reason = SigningReason,
         signature_manifest = new
@@ -292,6 +293,7 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
             signer_role = signerRole,
             signing_reason = SigningReason,
             payload_hash = JsonCanonicalization.Sha256Hex(payload),
+            hmac_signature = hmacSignature ?? HmacSigner.ComputeSignature(JsonCanonicalization.Sha256Hex(payload), TestSecurityContext.GatewaySecret),
             signed_at = FakeClock.DefaultStart.UtcDateTime,
         },
     };
