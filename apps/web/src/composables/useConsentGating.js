@@ -27,13 +27,18 @@ export function useConsentGating(selectedSubjectId) {
     showPaperIcfModal.value = true;
   }
 
-  async function handleCompleteReconsent(method, storeInstance, payload = null) {
+  async function handleCompleteReconsent(
+    method,
+    storeInstance,
+    payload = null
+  ) {
     // #4827: nothing sends this re-consent to a service yet, so outside demo builds the gate stays locked
     // and nothing is logged.
     if (!allowUnbackedAction("Recording re-consent")) return;
     reconsentSubmitting.value = true;
     try {
-      const sigToken = typeof payload === "string" ? payload : payload?.sigToken || null;
+      const sigToken =
+        typeof payload === "string" ? payload : payload?.sigToken || null;
       if (store && typeof store.clearReconsentGate === "function") {
         await store.clearReconsentGate(
           selectedSubjectId.value,

@@ -123,6 +123,7 @@ function rewriteLinks(content) {
         return match;
       }
 
+      let rawTargetClean = cleanUrl.split("#")[0].split("?")[0];
       // If the relative link starts with docs/, strip 'docs/' prefix
       if (cleanUrl.startsWith("docs/")) {
         cleanUrl = cleanUrl.substring(5); // strip 'docs/'
@@ -131,8 +132,8 @@ function rewriteLinks(content) {
         cleanUrl = "LICENSE.md";
       } else if (
         !cleanUrl.startsWith("../") &&
-        fs.existsSync(path.join(repoRoot, cleanUrl)) &&
-        !fs.existsSync(path.join(repoRoot, "docs", cleanUrl))
+        fs.existsSync(path.join(repoRoot, rawTargetClean)) &&
+        !fs.existsSync(path.join(repoRoot, "docs", rawTargetClean))
       ) {
         cleanUrl = "../" + cleanUrl;
       }
@@ -156,14 +157,15 @@ function rewriteLinks(content) {
         return match;
       }
 
+      let rawTargetClean = cleanUrl.split("#")[0].split("?")[0];
       if (cleanUrl.startsWith("docs/")) {
         cleanUrl = cleanUrl.substring(5);
       } else if (cleanUrl === "LICENSE") {
         cleanUrl = "LICENSE.md";
       } else if (
         !cleanUrl.startsWith("../") &&
-        fs.existsSync(path.join(repoRoot, cleanUrl)) &&
-        !fs.existsSync(path.join(repoRoot, "docs", cleanUrl))
+        fs.existsSync(path.join(repoRoot, rawTargetClean)) &&
+        !fs.existsSync(path.join(repoRoot, "docs", rawTargetClean))
       ) {
         cleanUrl = "../" + cleanUrl;
       }

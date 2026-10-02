@@ -771,7 +771,13 @@
       signer-role="Subject"
       action-url="/api/v1/econsent/templates/icf-001/versions/2/capture-consent"
       semantic-action="econsent.consent.capture"
-      :on-sign="(sigToken, signingReason) => $emit('handle-complete-reconsent', 'ECONSENT', { sigToken, signingReason })"
+      :on-sign="
+        (sigToken, signingReason) =>
+          $emit('handle-complete-reconsent', 'ECONSENT', {
+            sigToken,
+            signingReason,
+          })
+      "
       @cancel="$emit('update:showEconsentModal', false)"
       @success="() => $emit('update:showEconsentModal', false)"
     />
