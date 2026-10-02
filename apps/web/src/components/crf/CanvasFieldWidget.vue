@@ -131,7 +131,7 @@
               align-items: center;
               gap: 6px;
               font-size: 0.8rem;
-              color: #475569;
+              color: var(--semantic-color-text-muted);
               cursor: pointer;
             "
             :class="{ 'touch-target': designerStore.viewport !== 'desktop' }"
@@ -139,7 +139,10 @@
             <input
               type="radio"
               disabled
-              style="cursor: pointer; accent-color: #026597"
+              style="
+                cursor: pointer;
+                accent-color: var(--semantic-color-interactive-brand);
+              "
               :class="{
                 'touch-target-interactive':
                   designerStore.viewport !== 'desktop',
@@ -153,22 +156,31 @@
       <template v-else-if="field.type === 'grid'">
         <div
           style="
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--semantic-color-border);
             border-radius: 6px;
             overflow: hidden;
             font-size: 0.75rem;
           "
         >
           <table
-            style="width: 100%; background: #f8fafc; border-collapse: collapse"
+            style="
+              width: 100%;
+              background: var(--semantic-color-surface-muted);
+              border-collapse: collapse;
+            "
           >
             <thead>
-              <tr style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0">
+              <tr
+                style="
+                  background: var(--semantic-color-surface-header);
+                  border-bottom: 1px solid var(--semantic-color-border);
+                "
+              >
                 <th
                   style="
                     padding: 4px 8px;
                     text-align: left;
-                    border-right: 1px solid #e2e8f0;
+                    border-right: 1px solid var(--semantic-color-border);
                   "
                 >
                   Column 1
@@ -181,13 +193,20 @@
                 <td
                   style="
                     padding: 4px 8px;
-                    border-right: 1px solid #e2e8f0;
-                    color: #94a3b8;
+                    border-right: 1px solid var(--semantic-color-border);
+                    color: var(--semantic-color-text-subtle);
                   "
                 >
                   Data item A
                 </td>
-                <td style="padding: 4px 8px; color: #94a3b8">Data item B</td>
+                <td
+                  style="
+                    padding: 4px 8px;
+                    color: var(--semantic-color-text-subtle);
+                  "
+                >
+                  Data item B
+                </td>
               </tr>
             </tbody>
           </table>
@@ -199,13 +218,13 @@
       >
         <div
           style="
-            border: 2px dashed #cbd5e1;
+            border: 2px dashed var(--semantic-color-border-muted);
             border-radius: 6px;
             padding: 12px;
             text-align: center;
-            background: #f8fafc;
+            background: var(--semantic-color-surface-muted);
             font-size: 0.75rem;
-            color: #64748b;
+            color: var(--semantic-color-text-secondary);
           "
         >
           <span>📁 Attachment Upload Area</span>
@@ -213,7 +232,13 @@
       </template>
 
       <template v-else>
-        <div style="font-size: 0.75rem; color: #94a3b8; font-style: italic">
+        <div
+          style="
+            font-size: 0.75rem;
+            color: var(--semantic-color-text-subtle);
+            font-style: italic;
+          "
+        >
           Standard clinical field preview
         </div>
       </template>
@@ -229,8 +254,8 @@
         right: 8px;
         display: flex;
         gap: 4px;
-        background-color: #026597;
-        color: white;
+        background-color: var(--semantic-color-interactive-brand);
+        color: var(--semantic-color-surface);
         border-radius: 6px;
         padding: 2px 6px;
         z-index: 10;
@@ -242,7 +267,7 @@
         style="
           background: none;
           border: none;
-          color: white;
+          color: var(--semantic-color-surface);
           cursor: pointer;
           font-weight: 600;
           padding: 2px 4px;
@@ -252,12 +277,15 @@
       >
         Duplicate
       </button>
-      <span style="color: #93c5fd; user-select: none">|</span>
+      <span
+        style="color: var(--semantic-color-divider-accent); user-select: none"
+        >|</span
+      >
       <button
         style="
           background: none;
           border: none;
-          color: white;
+          color: var(--semantic-color-surface);
           cursor: pointer;
           font-weight: 600;
           padding: 2px 4px;
@@ -267,12 +295,15 @@
       >
         Inspect
       </button>
-      <span style="color: #93c5fd; user-select: none">|</span>
+      <span
+        style="color: var(--semantic-color-divider-accent); user-select: none"
+        >|</span
+      >
       <button
         style="
           background: none;
           border: none;
-          color: #fca5a5;
+          color: var(--semantic-color-error-border);
           cursor: pointer;
           font-weight: 600;
           padding: 2px 4px;
@@ -288,9 +319,9 @@
     <div
       v-if="hasWarning"
       style="
-        background-color: #fefce8;
-        border: 1px solid #fef08a;
-        color: #854d0e;
+        background-color: var(--semantic-color-warning-bg-light);
+        border: 1px solid var(--semantic-color-warning-border);
+        color: var(--semantic-color-warning-text);
         font-size: 0.72rem;
         border-radius: 6px;
         padding: 6px 8px;

@@ -42,7 +42,13 @@
           </button>
         </template>
         <template v-else>
-          <p style="font-size: 0.85rem; color: #64748b; font-style: italic">
+          <p
+            style="
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-secondary);
+              font-style: italic;
+            "
+          >
             Raising queries is restricted to clinical monitors (CRA) and data
             managers.
           </p>
@@ -136,7 +142,7 @@
           style="
             margin-top: 12px;
             font-size: 0.85rem;
-            color: #64748b;
+            color: var(--semantic-color-text-secondary);
             font-style: italic;
           "
         >
