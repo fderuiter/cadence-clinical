@@ -959,6 +959,120 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.ToTable("doa_delegation_records", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("FacetCtaBudget")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("FacetDoaLog")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("FacetEisfBaseline")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("FacetIpRelease")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("FacetRegulatoryIrb")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("FacetStaffTraining")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("GreenlightCertifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GreenlightCertifiedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("GreenlightToken")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<bool>("IsOverridden")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OverallStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset?>("OverrideAuthorizedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OverrideJustification")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("OverrideMedicalUserId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("OverrideSponsorUserId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("ReadinessPercentage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("SiteId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SiteName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("UnfulfilledReasons")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CountryCode");
+
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("StudyId");
+
+                    b.HasIndex("StudyId", "CountryCode");
+
+                    b.ToTable("ctms_site_greenlight_gates", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Core.Domain.Audit.AuditLogEntry", b =>
                 {
                     b.Property<Guid>("Id")
