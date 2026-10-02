@@ -17,6 +17,7 @@ builder.Services.AddCadenceSecurity();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<CtmsDbContext>();
 builder.Services.AddFluidTemplating();
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
 FluidTemplateRenderer.RegisterType<SiteVisitFindingModel>();
 FluidTemplateRenderer.RegisterType<SiteVisitLetterModel>();
