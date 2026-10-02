@@ -265,6 +265,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       authStore.rawRoles = ["Sponsor Designer"]; // maps to sponsor_designer
 
       const wrapper = mount(OnboardingTour, {
+        global: {
+          plugins: [router],
+        },
         props: {
           activeTab: "soa",
         },
@@ -289,6 +292,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       authStore.rawRoles = ["Data Manager"]; // maps to data_manager
 
       const wrapper = mount(OnboardingTour, {
+        global: {
+          plugins: [router],
+        },
         props: {
           activeTab: "soa",
         },
@@ -302,6 +308,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       authStore.rawRoles = ["Sponsor Admin"]; // maps to sponsor_admin
 
       const wrapper = mount(OnboardingTour, {
+        global: {
+          plugins: [router],
+        },
         props: {
           activeTab: "soa",
         },
@@ -313,6 +322,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
     it("supports dismissing and completely disabling from UI buttons", async () => {
       const store = useOnboardingStore();
       const wrapper = mount(OnboardingTour, {
+        global: {
+          plugins: [router],
+        },
         props: {
           activeTab: "soa",
         },
@@ -338,6 +350,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       window.localStorage.setItem("onboarding_site_crc_is_active", "true");
 
       const wrapper = mount(OnboardingTour, {
+        global: {
+          plugins: [router],
+        },
         props: {
           activeTab: "soa",
         },
@@ -358,6 +373,9 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
 
       const wrapper = mount(OnboardingTour, {
+        global: {
+          plugins: [router],
+        },
         props: {
           activeTab: "soa",
         },
@@ -377,6 +395,95 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.currentPersona).toBe("site_crc");
       expect(store.isActive).toBe(true);
       expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
+    });
+
+    it("renders role-tailored step sequences on landing routes for non-designer personas", async () => {
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Data Manager"]);
+
+      authStore.switchPersona("data_manager");
+      store.loadPersonaState("data_manager");
+
+      const wrapper = mount(OnboardingTour, {
+        global: {
+          plugins: [router],
+        },
+      });
+
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
+      expect(wrapper.text()).toContain("Welcome to Data Management");
+      expect(wrapper.text()).toContain("Welcome, Data Manager!");
+      expect(store.currentStepConfig.routeName).toBe("rules");
+
+      // Switch to CRA / Monitor persona
+      authStore.switchPersona("cra_monitor");
+      store.loadPersonaState("cra_monitor");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.text()).toContain("Welcome to Clinical Operations");
+      expect(wrapper.text()).toContain("Welcome, CRA!");
+      expect(store.currentStepConfig.routeName).toBe("ctms");
+
+      // Switch to Auditor persona
+      authStore.switchPersona("auditor");
+      store.loadPersonaState("auditor");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.text()).toContain("Welcome to Regulatory & Audit");
+      expect(wrapper.text()).toContain("Welcome, Auditor!");
+      expect(store.currentStepConfig.routeName).toBe("audit");
+
+      // Switch to Site CRC persona
+      authStore.switchPersona("site_crc");
+      store.loadPersonaState("site_crc");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.text()).toContain("Welcome to Electronic Data Capture");
+      expect(wrapper.text()).toContain("Welcome, Site Coordinator!");
+      expect(store.currentStepConfig.routeName).toBe("ecrf");
+    });
+
+    it("invokes router navigation when advancing across cross-view steps", async () => {
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Data Manager"]);
+
+      authStore.switchPersona("data_manager");
+      store.loadPersonaState("data_manager");
+
+      const pushSpy = vi.spyOn(router, "push");
+
+      const wrapper = mount(OnboardingTour, {
+        global: {
+          plugins: [router],
+        },
+      });
+
+      // Advance through steps 1 -> 2 -> 3 -> 4 (step 4 for data_manager goes to mdr)
+      await wrapper.find(".btn-tour-next").trigger("click"); // step 2
+      await wrapper.find(".btn-tour-next").trigger("click"); // step 3
+      await wrapper.find(".btn-tour-next").trigger("click"); // step 4 (cross-view to mdr)
+
+      expect(store.currentStep).toBe(4);
+      expect(store.currentStepConfig.routeName).toBe("mdr");
+      expect(pushSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "mdr" })
+      );
+    });
+
+    it("does not render onboarding tour on unauthenticated routes inside AppShell", async () => {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = false;
+
+      await router.push("/login");
+
+      const wrapper = mount(AppShell, {
+        global: {
+          plugins: [router],
+        },
+      });
+
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(false);
+      expect(wrapper.find(".onboarding-tour-container").exists()).toBe(false);
     });
   });
 
