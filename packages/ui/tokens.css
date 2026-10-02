@@ -85,6 +85,48 @@
   --semantic-color-error: var(--color-error);
   --semantic-color-error-bg: var(--color-error-bg);
 
+  /* Info & Notice Banners / Badges */
+  --semantic-color-info: #1e40af;
+  --semantic-color-info-bg: #eff6ff;
+  --semantic-color-info-border: #bfdbfe;
+  --semantic-color-info-light: #dbeafe;
+
+  /* Extended Warning Banners & Badges */
+  --semantic-color-warning-text: #854d0e;
+  --semantic-color-warning-text-dark: #713f12;
+  --semantic-color-warning-bg-light: #fefce8;
+  --semantic-color-warning-bg-badge: #fef3c7;
+  --semantic-color-warning-border: #fef08a;
+  --semantic-color-warning-border-strong: #eab308;
+  --semantic-color-warning-dark: #b45309;
+  --semantic-color-warning-action: #ca8a04;
+  --semantic-color-warning-action-border: #a16207;
+
+  /* Extended Success & Validation States */
+  --semantic-color-success-dark: #166534;
+  --semantic-color-success-border: #86efac;
+  --semantic-color-success-interactive: #16a34a;
+  --semantic-color-success-accent: #10b981;
+
+  /* Extended Error & Validation States */
+  --semantic-color-error-border: #fca5a5;
+  --semantic-color-error-dark: #dc2626;
+
+  /* Interactive Controls, Neutrals & Layout */
+  --semantic-color-interactive-primary: #2563eb;
+  --semantic-color-interactive-brand: #026597;
+  --semantic-color-border-muted: #cbd5e1;
+  --semantic-color-text-dark: #1e293b;
+  --semantic-color-text-body: #334155;
+  --semantic-color-text-secondary: #64748b;
+  --semantic-color-text-subtle: #94a3b8;
+  --semantic-color-surface-header: #f1f5f9;
+  --semantic-color-divider-accent: #93c5fd;
+
+  /* Financial Wallet & Gradient Roles */
+  --semantic-color-wallet-start: #0284c7;
+  --semantic-color-wallet-end: #0369a1;
+
   /* Semantic Typography */
   --semantic-font-family: var(--font-sans);
   --semantic-font-size-base: var(--font-size-base);

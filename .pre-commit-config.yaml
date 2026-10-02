@@ -6,7 +6,6 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
 
-
   # Secret scanning against the committed baseline (issue #4765). New findings fail the commit; mark a
   # reviewed false positive with an inline `pragma: allowlist secret` comment.
   - repo: https://github.com/Yelp/detect-secrets
@@ -39,15 +38,15 @@ repos:
         name: Prettier Formatting & Syntax Check
         entry: pnpm exec prettier --check
         language: system
-        files: \.(json|css|md)$
+        files: \.(js|jsx|ts|tsx|vue|json|css|md|yaml|yml)$
         pass_filenames: true
 
       - id: dotnet-format
         name: .NET C# Code Formatting Check (.editorconfig)
-        entry: dotnet format Cadence.sln --verify-no-changes
+        entry: dotnet format Cadence.sln --verify-no-changes --include
         language: system
-        files: \.(cs|csproj|sln)$
-        pass_filenames: false
+        files: \.cs$
+        pass_filenames: true
 
       - id: validate-markdown
         name: Native Markdown Link & Path Sentinel

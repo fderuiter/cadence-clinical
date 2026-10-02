@@ -6,8 +6,8 @@
       id="batch-sdv-bar"
       class="batch-sdv-bar"
       style="
-        background-color: #eff6ff;
-        border: 1px solid #bfdbfe;
+        background-color: var(--semantic-color-info-bg);
+        border: 1px solid var(--semantic-color-info-border);
         border-radius: 8px;
         padding: 12px 16px;
         margin-bottom: var(--spacing-md, 16px);
@@ -18,7 +18,13 @@
         gap: 12px;
       "
     >
-      <div style="font-size: 0.9rem; font-weight: 600; color: #1e40af">
+      <div
+        style="
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: var(--semantic-color-info);
+        "
+      >
         Selected {{ effectiveSelectedBatchFields.length }} fields for Batch
         Source Data Verification
       </div>
@@ -27,8 +33,8 @@
         type="button"
         class="btn btn-primary"
         style="
-          background-color: #2563eb;
-          color: white;
+          background-color: var(--semantic-color-interactive-primary);
+          color: var(--semantic-color-surface);
           font-weight: bold;
           padding: 6px 14px;
           font-size: 0.85rem;
@@ -63,8 +69,8 @@
           <span
             class="badge"
             :style="{
-              backgroundColor: '#dbeafe',
-              color: '#1e40af',
+              backgroundColor: 'var(--semantic-color-info-light)',
+              color: 'var(--semantic-color-info)',
               fontWeight: 600,
               fontSize: '0.75rem',
             }"
@@ -82,8 +88,8 @@
           gap: 16px;
           flex-wrap: wrap;
           padding: 12px;
-          background-color: #f8fafc;
-          border: 1px solid var(--border, #e2e8f0);
+          background-color: var(--semantic-color-surface-muted);
+          border: 1px solid var(--semantic-color-border);
           border-radius: 6px;
           margin-bottom: 16px;
           align-items: center;
@@ -101,7 +107,7 @@
             style="
               width: 100%;
               padding: 6px 10px;
-              border: 1px solid #cbd5e1;
+              border: 1px solid var(--semantic-color-border-muted);
               border-radius: 4px;
             "
           >
@@ -127,7 +133,7 @@
             style="
               width: 100%;
               padding: 6px 10px;
-              border: 1px solid #cbd5e1;
+              border: 1px solid var(--semantic-color-border-muted);
               border-radius: 4px;
             "
           >
@@ -144,20 +150,30 @@
             gap: 12px;
             align-items: center;
             font-size: 0.85rem;
-            color: #475569;
+            color: var(--semantic-color-text-muted);
           "
         >
           <div>
             <strong>SDV Completion:</strong>
-            <span style="font-weight: 700; color: #166534; margin-left: 4px"
+            <span
+              style="
+                font-weight: 700;
+                color: var(--semantic-color-success-dark);
+                margin-left: 4px;
+              "
               >{{ sdvCompletionRate }}%</span
             >
           </div>
           <div>
             <strong>Open Queries:</strong>
-            <span style="font-weight: 700; color: #b45309; margin-left: 4px">{{
-              openQueriesCount
-            }}</span>
+            <span
+              style="
+                font-weight: 700;
+                color: var(--semantic-color-warning-dark);
+                margin-left: 4px;
+              "
+              >{{ openQueriesCount }}</span
+            >
           </div>
         </div>
       </div>
@@ -208,14 +224,21 @@
 
               <!-- Reported Value -->
               <td>
-                <span style="font-weight: 600; color: #0f172a">
+                <span
+                  style="font-weight: 600; color: var(--semantic-color-text)"
+                >
                   {{ getFieldValue(field.id) || "—" }}
                 </span>
               </td>
 
               <!-- Source Document Reference -->
               <td>
-                <span style="color: #64748b; font-size: 0.85rem">
+                <span
+                  style="
+                    color: var(--semantic-color-text-secondary);
+                    font-size: 0.85rem;
+                  "
+                >
                   {{ getSourceValue(field.id) }}
                 </span>
               </td>
@@ -231,7 +254,7 @@
                     cursor: pointer;
                     width: 18px;
                     height: 18px;
-                    accent-color: #16a34a;
+                    accent-color: var(--semantic-color-success-interactive);
                   "
                   @change="
                     handleSingleSdvToggle(field.id, $event.target.checked)
@@ -254,7 +277,11 @@
                     {{ getFieldQuery(field.id).status }}
                   </span>
                   <div
-                    style="font-size: 0.75rem; color: #334155; margin-top: 2px"
+                    style="
+                      font-size: 0.75rem;
+                      color: var(--semantic-color-text-body);
+                      margin-top: 2px;
+                    "
                   >
                     {{
                       getFieldQuery(field.id).text ||
@@ -267,7 +294,11 @@
                       getFieldQuery(field.id).response ||
                       getFieldQuery(field.id).response_text
                     "
-                    style="font-size: 0.72rem; color: #1e40af; margin-top: 2px"
+                    style="
+                      font-size: 0.72rem;
+                      color: var(--semantic-color-info);
+                      margin-top: 2px;
+                    "
                   >
                     <em
                       >Ans:
@@ -279,7 +310,11 @@
                   </div>
                 </template>
                 <template v-else>
-                  <span style="color: #94a3b8; font-size: 0.8rem"
+                  <span
+                    style="
+                      color: var(--semantic-color-text-subtle);
+                      font-size: 0.8rem;
+                    "
                     >— Clean —</span
                   >
                 </template>
@@ -313,7 +348,9 @@
                     style="
                       padding: 2px 8px;
                       font-size: 0.75rem;
-                      background-color: #2563eb;
+                      background-color: var(
+                        --semantic-color-interactive-primary
+                      );
                     "
                     @click="openAnswerQueryModal(field)"
                   >
@@ -332,8 +369,10 @@
                     style="
                       padding: 2px 8px;
                       font-size: 0.75rem;
-                      background-color: #16a34a;
-                      color: white;
+                      background-color: var(
+                        --semantic-color-success-interactive
+                      );
+                      color: var(--semantic-color-surface);
                     "
                     @click="openCloseQueryModal(field)"
                   >
@@ -350,11 +389,20 @@
     <!-- Modal 1: Raise Discrepancy Query -->
     <div v-if="showRaiseModal" class="modal-overlay" style="display: flex">
       <div class="modal" style="max-width: 480px">
-        <div class="modal-header" style="background-color: #b45309">
+        <div
+          class="modal-header"
+          style="background-color: var(--semantic-color-warning-dark)"
+        >
           ⚠️ Raise Clinical Discrepancy Query
         </div>
         <div class="modal-body">
-          <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px">
+          <p
+            style="
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-muted);
+              margin-bottom: 12px;
+            "
+          >
             Issue a formal GCP data discrepancy query on
             <strong>{{ activeModalField?.label }}</strong
             >. The field visual badge will update to yellow (OPEN).
@@ -370,7 +418,7 @@
                 width: 100%;
                 height: 80px;
                 padding: 8px;
-                border: 1px solid #cbd5e1;
+                border: 1px solid var(--semantic-color-border-muted);
                 border-radius: 6px;
               "
               placeholder="e.g. Systolic blood pressure out of expected physiological range."
@@ -379,7 +427,7 @@
           <div
             v-if="modalError"
             class="error-msg"
-            style="color: #dc2626; font-size: 0.8rem"
+            style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
           >
             ⚠️ {{ modalError }}
           </div>
@@ -395,7 +443,10 @@
           <button
             type="button"
             class="btn btn-primary"
-            style="background-color: #b45309; color: white"
+            style="
+              background-color: var(--semantic-color-warning-dark);
+              color: var(--semantic-color-surface);
+            "
             @click="confirmRaiseQuery"
           >
             Issue Query (OPEN)
@@ -407,11 +458,20 @@
     <!-- Modal 2: Submit Site CRC Response / Answer -->
     <div v-if="showAnswerModal" class="modal-overlay" style="display: flex">
       <div class="modal" style="max-width: 480px">
-        <div class="modal-header" style="background-color: #1e40af">
+        <div
+          class="modal-header"
+          style="background-color: var(--semantic-color-info)"
+        >
           💬 Site CRC Query Response
         </div>
         <div class="modal-body">
-          <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
+          <p
+            style="
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-muted);
+              margin-bottom: 8px;
+            "
+          >
             <strong>Query:</strong>
             {{
               getFieldQuery(activeModalField?.id)?.text ||
@@ -428,7 +488,7 @@
                 width: 100%;
                 height: 80px;
                 padding: 8px;
-                border: 1px solid #cbd5e1;
+                border: 1px solid var(--semantic-color-border-muted);
                 border-radius: 6px;
               "
               placeholder="e.g. Value confirmed with medical record"
@@ -437,7 +497,7 @@
           <div
             v-if="modalError"
             class="error-msg"
-            style="color: #dc2626; font-size: 0.8rem"
+            style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
           >
             ⚠️ {{ modalError }}
           </div>
@@ -453,7 +513,10 @@
           <button
             type="button"
             class="btn btn-primary"
-            style="background-color: #1e40af; color: white"
+            style="
+              background-color: var(--semantic-color-info);
+              color: var(--semantic-color-surface);
+            "
             @click="confirmAnswerQuery"
           >
             Submit Response (ANSWERED)
@@ -465,11 +528,20 @@
     <!-- Modal 3: Close Discrepancy Query -->
     <div v-if="showCloseModal" class="modal-overlay" style="display: flex">
       <div class="modal" style="max-width: 480px">
-        <div class="modal-header" style="background-color: #166534">
+        <div
+          class="modal-header"
+          style="background-color: var(--semantic-color-success-dark)"
+        >
           ✅ CRA Monitor Close Query
         </div>
         <div class="modal-body">
-          <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
+          <p
+            style="
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-muted);
+              margin-bottom: 8px;
+            "
+          >
             Document supervisory audit rationale to mark this query CLOSED and
             resolved.
           </p>
@@ -482,7 +554,7 @@
                 width: 100%;
                 height: 80px;
                 padding: 8px;
-                border: 1px solid #cbd5e1;
+                border: 1px solid var(--semantic-color-border-muted);
                 border-radius: 6px;
               "
               placeholder="e.g. Verified with source hospital chart and accepted by CRA."
@@ -491,7 +563,7 @@
           <div
             v-if="modalError"
             class="error-msg"
-            style="color: #dc2626; font-size: 0.8rem"
+            style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
           >
             ⚠️ {{ modalError }}
           </div>
@@ -507,7 +579,10 @@
           <button
             type="button"
             class="btn btn-primary"
-            style="background-color: #166534; color: white"
+            style="
+              background-color: var(--semantic-color-success-dark);
+              color: var(--semantic-color-surface);
+            "
             @click="confirmCloseQuery"
           >
             Close Query (CLOSED)
@@ -862,7 +937,7 @@ function confirmCloseQuery() {
 
 .modal-header {
   padding: 14px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--semantic-color-border, #e2e8f0);
   font-weight: 600;
   font-size: 15px;
   color: white;
@@ -874,10 +949,10 @@ function confirmCloseQuery() {
 
 .modal-footer {
   padding: 12px 16px;
-  background: #f8fafc;
+  background: var(--semantic-color-surface-muted, #f8fafc);
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--semantic-color-border, #e2e8f0);
 }
 </style>
