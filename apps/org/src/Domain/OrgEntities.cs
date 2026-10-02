@@ -69,3 +69,19 @@ public class OrgAuditLog
     public string Details { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
 }
+
+public class UserOnboardingPreference
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string UserId { get; set; } = string.Empty;
+    public string Persona { get; set; } = string.Empty;
+    public int CurrentStep { get; set; } = 1;
+    public bool IsActive { get; set; } = true;
+    public bool Disabled { get; set; } = false;
+    public string EventsJson { get; set; } = "[]";
+    public DateTimeOffset UpdatedAt { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+    public int VersionIndex { get; set; } = 1;
+}

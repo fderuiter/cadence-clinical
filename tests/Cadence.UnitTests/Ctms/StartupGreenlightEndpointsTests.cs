@@ -75,10 +75,10 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task BatchCertify_RejectsNonCompliantSites()
     {
         // Arrange: Seed country matrix
-        await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "US", _db, CancellationToken.None);
+        await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "US", _db, TestContext.Current.CancellationToken);
 
         var nonCompliantSite = await _db.CtmsSiteGreenlightGates
-            .FirstAsync(g => !g.FacetDoaLog || !g.FacetIpRelease);
+            .FirstAsync(g => !g.FacetDoaLog || !g.FacetIpRelease, TestContext.Current.CancellationToken);
 
         var request = new BatchCertifyRequestDto(
             StudyId: "PROTOCOL-2026-01",
@@ -142,7 +142,7 @@ public sealed class StartupGreenlightEndpointsTests
         // Individual Audit Log entries
         var auditLogs = await _db.CtmsAuditLogs
             .Where(a => a.Action == "BATCH_GREENLIGHT_CERTIFIED")
-            .ToListAsync();
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         auditLogs.Count.Should().Be(compliantSiteIds.Count);
         auditLogs.Select(a => a.UserId).Distinct().Single().Should().Be("Dr. Eleanor Vance");
@@ -179,7 +179,7 @@ public sealed class StartupGreenlightEndpointsTests
                 ReasonForChange = "Performance benchmark setup"
             });
         }
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var request = new BatchCertifyRequestDto(
             StudyId: "PROTOCOL-2026-01",

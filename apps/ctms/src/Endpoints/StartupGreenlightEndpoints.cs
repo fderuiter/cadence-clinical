@@ -24,7 +24,7 @@ using Microsoft.Extensions.Configuration;
 namespace Cadence.Apps.Ctms.Endpoints;
 
 /// <summary>
-/// Site Startup (SSU) & Country-Level Multi-Site Greenlight Activation Matrix endpoints.
+/// Site Startup (SSU) &amp; Country-Level Multi-Site Greenlight Activation Matrix endpoints.
 /// @req:PRD-SSU-001
 /// @req:PRD-SSU-002
 /// @req:PRD-SSU-003
@@ -81,7 +81,7 @@ public static class StartupGreenlightEndpoints
         [FromQuery] string? countryCode,
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         IConfiguration config,
         CancellationToken ct)
     {
@@ -157,7 +157,7 @@ public static class StartupGreenlightEndpoints
         [FromBody] BatchCertifyRequestDto request,
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         IConfiguration config,
         CancellationToken ct)
     {
@@ -326,7 +326,7 @@ public static class StartupGreenlightEndpoints
                 FacetDoaLog = true,
                 FacetStaffTraining = true,
                 FacetIpRelease = true,
-                CreatedBy = "system",
+                CreatedBy = "svc:ctms-startup",
                 ReasonForChange = "Initial greenlight gate creation"
             };
             db.CtmsSiteGreenlightGates.Add(gate);
@@ -368,7 +368,7 @@ public static class StartupGreenlightEndpoints
                 FacetDoaLog = isCompliant,
                 FacetStaffTraining = true,
                 FacetIpRelease = isCompliant,
-                CreatedBy = "system",
+                CreatedBy = "svc:ctms-startup",
                 ReasonForChange = "Seed country matrix sites"
             });
         }

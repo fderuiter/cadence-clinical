@@ -17,6 +17,7 @@ public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbCon
     public DbSet<DelegationOfAuthority> DelegationsOfAuthority => Set<DelegationOfAuthority>();
     public DbSet<TrainingLog> TrainingLogs => Set<TrainingLog>();
     public DbSet<OrgAuditLog> OrgAuditLogs => Set<OrgAuditLog>();
+    public DbSet<UserOnboardingPreference> UserOnboardingPreferences => Set<UserOnboardingPreference>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -27,6 +28,7 @@ public sealed class OrgDbContext(DbContextOptions<OrgDbContext> options) : DbCon
         modelBuilder.ApplyConfiguration(new DelegationOfAuthorityConfiguration());
         modelBuilder.ApplyConfiguration(new TrainingLogConfiguration());
         modelBuilder.ApplyConfiguration(new OrgAuditLogConfiguration());
+        modelBuilder.ApplyConfiguration(new UserOnboardingPreferenceConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
     }
 }

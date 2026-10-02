@@ -86,3 +86,20 @@ public class OrgAuditLogConfiguration : IEntityTypeConfiguration<OrgAuditLog>
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
 }
+
+public class UserOnboardingPreferenceConfiguration : IEntityTypeConfiguration<UserOnboardingPreference>
+{
+    public void Configure(EntityTypeBuilder<UserOnboardingPreference> builder)
+    {
+        builder.ToTable("user_onboarding_preferences");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.UserId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.UserId);
+        builder.Property(x => x.Persona).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => new { x.UserId, x.Persona }).IsUnique();
+        builder.Property(x => x.EventsJson).HasColumnType("jsonb");
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}
