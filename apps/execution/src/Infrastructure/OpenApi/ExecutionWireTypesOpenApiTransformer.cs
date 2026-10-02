@@ -9,6 +9,7 @@ using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Kernel;
 
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;

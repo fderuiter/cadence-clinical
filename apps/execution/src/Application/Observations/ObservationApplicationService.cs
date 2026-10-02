@@ -12,6 +12,7 @@ using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Observations;
@@ -211,7 +212,7 @@ public sealed class ObservationApplicationService(
 
     public async Task<Result<ObservationResponse>> GetByIdAsync(string id, CancellationToken cancellationToken)
     {
-        if (!ObservationId.TryParse(id, out var observationId))
+        if (!ObservationId.TryParse(id, out var observationId) || observationId.IsEmpty)
         {
             return ObservationErrors.NotFound(id);
         }
@@ -244,7 +245,7 @@ public sealed class ObservationApplicationService(
             return ObservationErrors.UnauthorizedSdvRole(verifier is null ? string.Empty : string.Join(",", verifier.Roles));
         }
 
-        if (!ObservationId.TryParse(id, out var observationId))
+        if (!ObservationId.TryParse(id, out var observationId) || observationId.IsEmpty)
         {
             return ObservationErrors.NotFound(id);
         }
@@ -274,7 +275,7 @@ public sealed class ObservationApplicationService(
             return ObservationErrors.UnauthorizedSdvRole(verifier is null ? string.Empty : string.Join(",", verifier.Roles));
         }
 
-        if (!ObservationId.TryParse(id, out var observationId))
+        if (!ObservationId.TryParse(id, out var observationId) || observationId.IsEmpty)
         {
             return ObservationErrors.NotFound(id);
         }

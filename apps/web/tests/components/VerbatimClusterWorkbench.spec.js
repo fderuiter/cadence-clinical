@@ -27,7 +27,12 @@ describe("Verbatim Cluster Auto-Coding Workbench UI Components", () => {
       status: "SUGGESTED",
       score: 0.95,
       suggestions: [
-        { code: "10019211", pt_name: "Headache", llt_name: "Severe headache", score: 0.95 },
+        {
+          code: "10019211",
+          pt_name: "Headache",
+          llt_name: "Severe headache",
+          score: 0.95,
+        },
       ],
     },
     {
@@ -38,7 +43,12 @@ describe("Verbatim Cluster Auto-Coding Workbench UI Components", () => {
       status: "SUGGESTED",
       score: 0.95,
       suggestions: [
-        { code: "10019211", pt_name: "Headache", llt_name: "Severe headache", score: 0.95 },
+        {
+          code: "10019211",
+          pt_name: "Headache",
+          llt_name: "Severe headache",
+          score: 0.95,
+        },
       ],
     },
     {
@@ -138,7 +148,9 @@ describe("Verbatim Cluster Auto-Coding Workbench UI Components", () => {
 
   it("opens Batch Approve Cluster modal and executes batch approval with GxP reason", async () => {
     codingStore.setViewMode("CLUSTERS");
-    vi.spyOn(codingStore, "batchApproveClusters").mockResolvedValue({ status: "SUCCESS" });
+    vi.spyOn(codingStore, "batchApproveClusters").mockResolvedValue({
+      status: "SUCCESS",
+    });
 
     const wrapper = mount(CodingQueueTable, {
       global: { plugins: [pinia] },
@@ -160,7 +172,9 @@ describe("Verbatim Cluster Auto-Coding Workbench UI Components", () => {
     await reasonInput.setValue("High confidence verbatim batch approval");
 
     // Click approve submit button
-    const submitBtn = modal.findAll("button").find((b) => b.text().includes("Batch Approve Cluster(s)"));
+    const submitBtn = modal
+      .findAll("button")
+      .find((b) => b.text().includes("Batch Approve Cluster(s)"));
     await submitBtn.trigger("click");
 
     expect(codingStore.batchApproveClusters).toHaveBeenCalledWith(

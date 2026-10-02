@@ -88,20 +88,6 @@ public sealed class SiteCodeJsonConverter : JsonConverter<SiteCode>
         writer.WriteStringValue(value.Value);
 }
 
-public sealed class ObservationIdJsonConverter : JsonConverter<ObservationId>
-{
-    public override ObservationId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        string? raw = reader.GetString();
-        return raw is null
-            ? throw new JsonException("Expected a non-null JSON string for ObservationId.")
-            : new ObservationId(Guid.Parse(raw));
-    }
-
-    public override void Write(Utf8JsonWriter writer, ObservationId value, JsonSerializerOptions options) =>
-        writer.WriteStringValue(value.Value);
-}
-
 public sealed class DomainCodeJsonConverter : JsonConverter<DomainCode>
 {
     public override DomainCode Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

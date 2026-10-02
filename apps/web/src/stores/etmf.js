@@ -1010,7 +1010,7 @@ export const useEtmfStore = defineStore("etmf", {
           content_hint: contentHint,
           taxonomy_version: "v3.2.0-complete",
         });
-      } catch (err) {
+      } catch {
         // Deterministic local heuristic fallback (<100ms)
         return buildLocalIntelligenceReport(filename, content, mimeType);
       }
@@ -1021,7 +1021,7 @@ export const useEtmfStore = defineStore("etmf", {
         const result = await etmfService.stageQcDocument(payload);
         await this.fetchQcQueue(payload.study_id || this.currentStudyId);
         return result;
-      } catch (err) {
+      } catch {
         // Fallback for demo or offline mode
         const report = buildLocalIntelligenceReport(
           payload.filename,
@@ -1075,7 +1075,7 @@ export const useEtmfStore = defineStore("etmf", {
         const queue = await etmfService.getQcQueue(studyId);
         this.qcQueue = queue || [];
         return this.qcQueue;
-      } catch (err) {
+      } catch {
         // Fallback: derive from documentsList in local state
         this.qcQueue = this.documentsList
           .filter((d) => d.status === "TECHNICAL_QC")
@@ -1122,7 +1122,7 @@ export const useEtmfStore = defineStore("etmf", {
         await this.fetchQcQueue(this.currentStudyId);
         await this.fetchDocuments(this.selectedArtifactId);
         return res;
-      } catch (err) {
+      } catch {
         // Fallback for local state update
         const doc = this.documentsList.find((d) => d.id === docId);
         if (doc) {

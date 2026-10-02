@@ -689,6 +689,39 @@ library items, evaluated in `Cadence.Rules` ([docs/kernel/INDICATORS.md](../../d
 - `StudyIndicators` (`Cadence.Rules`) reads a study's populations and leaves out the records the reader may not see
   (`INodeVisibility`) before counting; such a value is marked partial with the mask reasons and no hidden count.
 
+## Proposals and automation agents (ADR-2489)
+
+A `Proposal` is what an AI or a person suggests for a study. It has no effect on kernel state: nothing reads it to
+decide anything else, and approving it does not run its plan (K-SIM-5).
+
+- **Content.** `Propose` records the intent (1 to 2,000 characters), the plan (an `ArtifactVersionId` of the study or
+  tenant-wide), 0 to 200 distinct affected `NodeRef`s, an optional simulation result hash, 1 to 20 requested
+  capabilities (each an Execute or Approve command of `KernelCommandCatalog.Kernel`), and an expiry at most 90 days
+  out. The acting actor is the proposer. An automation agent must name its `ModelId`, and any other actor must not
+  (K-PROV-3). `ContentHash` covers all of it, and the database fixes those columns once written.
+- **Lifecycle.** `Open → Approved | Rejected | Withdrawn`. An open proposal past `ExpiresAt` reads as `Expired`
+  (`Proposal.StatusAt(now)`); nothing stores expiry, and an expired proposal can no longer be decided.
+  - `ApproveProposal` (`proposal.approve`, Approve) names an `Approved` attestation by the acting person over
+    `(proposal, id, ContentHash)`. The proposer cannot approve (`K.Proposal.SelfApproval`).
+  - `RejectProposal` (`proposal.reject`, Approve) takes its reason from the reason for change.
+  - `WithdrawProposal` (`proposal.withdraw`, Propose) is for the proposer only (`K.Proposal.NotProposer`).
+  - The events are `ProposalCreated`, `ProposalApproved`, `ProposalRejected` and `ProposalWithdrawn`, in the
+    Intelligence family.
+- **Agents (K-AI-1, K-AI-3).** `Actor.AutomationAgent("name")` builds an `agent:name` actor. The evaluator denies an
+  agent every Execute and Approve command (`actor.agent_verb`), including approving, rejecting and signing
+  attestations, so an agent can only read, propose and withdraw its own proposals. Proposing needs a grant of
+  `proposal.create` in the study, and the plan and every affected object must be visible to the proposer
+  (`K.Proposal.NotVisible`). A proposal is on its study's scope path, so reads, `INodeVisibility` and navigation
+  treat it as a study object.
+- **Provenance and lineage (K-PROV-3).** The pipeline records the agent as the actor of `Propose`, and the proposal
+  keeps the model and the plan. The approval keeps the person and the attestation. Lineage records the proposal as
+  `DerivedFrom` its plan version and `DefinedBy` each affected reference that names a version. An unversioned affected
+  reference is kept on the proposal only.
+- **Attestations.** `Attest` accepts target kind `proposal` through `ProposalAttestationCheck`: the proposal must exist
+  and the hash must be its content hash.
+- **Not yet:** the K-AI-2 execution link (`ProposalExecuted`), standing grants for agents, the `QueryStatus.DraftAi`
+  migration and a proposals work-queue source (ADR-2489 §4.5).
+
 ## Migrations
 
 ```bash

@@ -44,6 +44,7 @@ public static class NodeKinds
     public const string ValidationRun = "validation_run";
     public const string ValidationFinding = "validation_finding";
     public const string ProtocolElement = "protocol_element";
+    public const string Proposal = "proposal";
 
     private static readonly FrozenDictionary<Type, string> ByIdType = new Dictionary<Type, string>
     {
@@ -77,6 +78,7 @@ public static class NodeKinds
         [typeof(ValidationRunId)] = ValidationRun,
         [typeof(ValidationFindingId)] = ValidationFinding,
         [typeof(ProtocolElementId)] = ProtocolElement,
+        [typeof(ProposalId)] = Proposal,
     }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, Type> ByKind =

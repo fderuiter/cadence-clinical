@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Domain.Forms;
+using Cadence.Kernel.Time;
 
 using FluentAssertions;
 
@@ -50,7 +51,7 @@ public sealed class CecDossierTests
             SignerRole: "CEC_CHAIR",
             SigningReason: "I confirm this clinical endpoint adjudication determination is final",
             SignedAt: new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc),
-            PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", // pragma: allowlist secret
             SignerName: "Dr. Adjudication Chair");
 
         var result = dossier.AdjudicateChair(
@@ -90,7 +91,7 @@ public sealed class CecDossierTests
             SignerRole: "CEC_CHAIR",
             SigningReason: "Sign-off",
             SignedAt: new DateTime(2026, 2, 10, 12, 0, 0, DateTimeKind.Utc),
-            PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+            PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"); // pragma: allowlist secret
 
         var result = dossier.AdjudicateChair(
             finalClassification: "NON_ST_ELEVATION_MI",
