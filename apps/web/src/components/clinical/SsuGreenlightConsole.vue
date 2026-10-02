@@ -30,11 +30,17 @@
         <div class="modal-body">
           <div class="form-group">
             <label for="doc-type-select">Document Type:</label>
-            <select id="doc-type-select" v-model="docForm.type" class="select-input">
+            <select
+              id="doc-type-select"
+              v-model="docForm.type"
+              class="select-input"
+            >
               <option value="FDA_1572">Form FDA 1572</option>
               <option value="IRB_APPROVAL">IRB Approval Letter</option>
               <option value="CTA_AGREEMENT">Clinical Trial Agreement</option>
-              <option value="PROTOCOL_SIGNATURE">Protocol Signature Page</option>
+              <option value="PROTOCOL_SIGNATURE">
+                Protocol Signature Page
+              </option>
             </select>
           </div>
 
@@ -53,7 +59,11 @@
           <button class="btn btn-secondary" @click="showUploadDocModal = false">
             Cancel
           </button>
-          <button class="btn btn-primary" :disabled="isSubmitting" @click="submitDoc">
+          <button
+            class="btn btn-primary"
+            :disabled="isSubmitting"
+            @click="submitDoc"
+          >
             {{ isSubmitting ? "Uploading..." : "Upload Document" }}
           </button>
         </div>
@@ -79,7 +89,10 @@
             Country-Level Multi-Site Activation Matrix
           </h2>
           <p class="console-subtitle">
-            Evaluate 6-facet readiness across all trial sites in {{ activeCountry }} simultaneously, identify exception bottlenecks, and batch-certify compliant sites with a single 21 CFR Part 11 electronic signature.
+            Evaluate 6-facet readiness across all trial sites in
+            {{ activeCountry }} simultaneously, identify exception bottlenecks,
+            and batch-certify compliant sites with a single 21 CFR Part 11
+            electronic signature.
           </p>
         </div>
 
@@ -127,7 +140,9 @@
             @change="fetchCountryMatrix"
           >
             <option value="US">🇺🇸 United States (FDA 1572 + IRB)</option>
-            <option value="DE">🇩🇪 Germany (EU CTR Part I/II + Ethikkommission)</option>
+            <option value="DE">
+              🇩🇪 Germany (EU CTR Part I/II + Ethikkommission)
+            </option>
             <option value="EU">🇪🇺 European Union (EU CTR + EC)</option>
             <option value="JP">🇯🇵 Japan (PMDA Notification + IRB)</option>
             <option value="GB">🇬🇧 United Kingdom (MHRA + HRA REC)</option>
@@ -144,7 +159,9 @@
           >
             <option value="ALL">All Sites in Country</option>
             <option value="COMPLIANT">Fully Compliant (100% Ready)</option>
-            <option value="NON_COMPLIANT">Non-Compliant / Exceptions (&lt;100%)</option>
+            <option value="NON_COMPLIANT">
+              Non-Compliant / Exceptions (&lt;100%)
+            </option>
             <option value="CERTIFIED">Greenlight Certified Only</option>
           </select>
         </div>
@@ -193,10 +210,15 @@
             :disabled="compliantSites.length === 0"
             @click="toggleSelectAllCompliant"
           >
-            {{ isAllCompliantSelected ? "Deselect All" : "Select All Compliant (100%)" }}
+            {{
+              isAllCompliantSelected
+                ? "Deselect All"
+                : "Select All Compliant (100%)"
+            }}
           </button>
           <span class="selection-count-text">
-            <strong>{{ selectedSiteIds.size }}</strong> compliant site(s) selected for 21 CFR Part 11 batch certification
+            <strong>{{ selectedSiteIds.size }}</strong> compliant site(s)
+            selected for 21 CFR Part 11 batch certification
           </span>
         </div>
 
@@ -216,11 +238,17 @@
           <div>
             <h4>Batch Greenlight Certification Successfully Processed!</h4>
             <p>
-              Batch certified {{ batchSuccessData.certified_count }} site(s) in {{ batchSuccessData.country_code }} for study {{ batchSuccessData.study_id }}.
-              Distinct HMAC-SHA256 activation tokens generated and 21 CFR Part 11 audit records written.
+              Batch certified {{ batchSuccessData.certified_count }} site(s) in
+              {{ batchSuccessData.country_code }} for study
+              {{ batchSuccessData.study_id }}. Distinct HMAC-SHA256 activation
+              tokens generated and 21 CFR Part 11 audit records written.
             </p>
           </div>
-          <button class="btn-icon-only" title="Dismiss" @click="batchSuccessData = null">
+          <button
+            class="btn-icon-only"
+            title="Dismiss"
+            @click="batchSuccessData = null"
+          >
             ✖
           </button>
         </div>
@@ -230,7 +258,9 @@
             :key="site.site_id"
             class="token-item"
           >
-            <span class="token-site-id"><strong>{{ site.site_id }}</strong> ({{ site.site_name }}):</span>
+            <span class="token-site-id"
+              ><strong>{{ site.site_id }}</strong> ({{ site.site_name }}):</span
+            >
             <code class="token-code">{{ site.greenlight_token }}</code>
           </div>
         </div>
@@ -244,6 +274,7 @@
               <th class="col-checkbox">
                 <input
                   type="checkbox"
+                  aria-label="Select all compliant sites"
                   title="Select / Deselect All Compliant Sites"
                   :checked="isAllCompliantSelected"
                   :disabled="compliantSites.length === 0"
@@ -263,7 +294,9 @@
               :key="site.site_id"
               :class="{
                 'row-selected': selectedSiteIds.has(site.site_id),
-                'row-certified': site.overall_status === 'APPROVED' || site.overall_status === 'OVERRIDDEN',
+                'row-certified':
+                  site.overall_status === 'APPROVED' ||
+                  site.overall_status === 'OVERRIDDEN',
                 'row-non-compliant': !site.is_compliant,
               }"
             >
@@ -271,10 +304,21 @@
               <td class="col-checkbox">
                 <input
                   type="checkbox"
+                  aria-label="Select site"
                   class="site-select-checkbox"
-                  :disabled="!site.is_compliant || site.overall_status === 'APPROVED' || site.overall_status === 'OVERRIDDEN'"
+                  :disabled="
+                    !site.is_compliant ||
+                    site.overall_status === 'APPROVED' ||
+                    site.overall_status === 'OVERRIDDEN'
+                  "
                   :checked="selectedSiteIds.has(site.site_id)"
-                  @change="toggleSiteSelection(site.site_id, site.is_compliant, site.overall_status)"
+                  @change="
+                    toggleSiteSelection(
+                      site.site_id,
+                      site.is_compliant,
+                      site.overall_status
+                    )
+                  "
                 />
               </td>
 
@@ -283,7 +327,9 @@
                 <div class="site-cell">
                   <span class="site-id-badge">{{ site.site_id }}</span>
                   <span class="site-name-text">{{ site.site_name }}</span>
-                  <span class="site-jurisdiction-tag">📍 {{ site.country_code }}</span>
+                  <span class="site-jurisdiction-tag"
+                    >📍 {{ site.country_code }}</span
+                  >
                 </div>
               </td>
 
@@ -292,43 +338,67 @@
                 <div class="facets-pill-grid">
                   <span
                     class="facet-pill"
-                    :class="site.facet_regulatory_irb ? 'pill-pass' : 'pill-fail'"
-                    :title="'Regulatory & IRB: ' + (site.facet_regulatory_irb ? 'PASSED' : 'ACTION REQ')"
+                    :class="
+                      site.facet_regulatory_irb ? 'pill-pass' : 'pill-fail'
+                    "
+                    :title="
+                      'Regulatory & IRB: ' +
+                      (site.facet_regulatory_irb ? 'PASSED' : 'ACTION REQ')
+                    "
                   >
                     ⚖️ Reg/IRB
                   </span>
                   <span
                     class="facet-pill"
                     :class="site.facet_cta_budget ? 'pill-pass' : 'pill-fail'"
-                    :title="'CTA & Budget: ' + (site.facet_cta_budget ? 'PASSED' : 'ACTION REQ')"
+                    :title="
+                      'CTA & Budget: ' +
+                      (site.facet_cta_budget ? 'PASSED' : 'ACTION REQ')
+                    "
                   >
                     📝 CTA
                   </span>
                   <span
                     class="facet-pill"
-                    :class="site.facet_eisf_baseline ? 'pill-pass' : 'pill-fail'"
-                    :title="'eISF Baseline: ' + (site.facet_eisf_baseline ? 'PASSED' : 'ACTION REQ')"
+                    :class="
+                      site.facet_eisf_baseline ? 'pill-pass' : 'pill-fail'
+                    "
+                    :title="
+                      'eISF Baseline: ' +
+                      (site.facet_eisf_baseline ? 'PASSED' : 'ACTION REQ')
+                    "
                   >
                     📁 eISF
                   </span>
                   <span
                     class="facet-pill"
                     :class="site.facet_doa_log ? 'pill-pass' : 'pill-fail'"
-                    :title="'DOA Log: ' + (site.facet_doa_log ? 'PASSED' : 'ACTION REQ')"
+                    :title="
+                      'DOA Log: ' +
+                      (site.facet_doa_log ? 'PASSED' : 'ACTION REQ')
+                    "
                   >
                     👥 DOA
                   </span>
                   <span
                     class="facet-pill"
-                    :class="site.facet_staff_training ? 'pill-pass' : 'pill-fail'"
-                    :title="'Staff Training: ' + (site.facet_staff_training ? 'PASSED' : 'ACTION REQ')"
+                    :class="
+                      site.facet_staff_training ? 'pill-pass' : 'pill-fail'
+                    "
+                    :title="
+                      'Staff Training: ' +
+                      (site.facet_staff_training ? 'PASSED' : 'ACTION REQ')
+                    "
                   >
                     🎓 Train
                   </span>
                   <span
                     class="facet-pill"
                     :class="site.facet_ip_release ? 'pill-pass' : 'pill-fail'"
-                    :title="'IP Depot Release: ' + (site.facet_ip_release ? 'PASSED' : 'ACTION REQ')"
+                    :title="
+                      'IP Depot Release: ' +
+                      (site.facet_ip_release ? 'PASSED' : 'ACTION REQ')
+                    "
                   >
                     💊 IP
                   </span>
@@ -340,11 +410,17 @@
                 <div class="readiness-cell">
                   <span
                     class="readiness-score-badge"
-                    :class="site.is_compliant ? 'badge-score-100' : 'badge-score-fail'"
+                    :class="
+                      site.is_compliant ? 'badge-score-100' : 'badge-score-fail'
+                    "
                   >
                     {{ site.readiness_percentage }}%
                   </span>
-                  <span v-if="site.unfulfilled_reasons?.length > 0" class="exception-warning" :title="site.unfulfilled_reasons.join('\n')">
+                  <span
+                    v-if="site.unfulfilled_reasons?.length > 0"
+                    class="exception-warning"
+                    :title="site.unfulfilled_reasons.join('\n')"
+                  >
                     ⚠️ {{ site.unfulfilled_reasons.length }} Missing
                   </span>
                 </div>
@@ -371,16 +447,15 @@
                   >
                     ✅ 100% Compliant (Ready)
                   </span>
-                  <span
-                    v-else
-                    class="status-chip chip-blocked"
-                  >
+                  <span v-else class="status-chip chip-blocked">
                     🚫 Non-Compliant
                   </span>
 
                   <div v-if="site.greenlight_token" class="token-mini-preview">
                     <code :title="site.greenlight_token">
-                      {{ site.greenlight_token.slice(0, 10) }}...{{ site.greenlight_token.slice(-6) }}
+                      {{ site.greenlight_token.slice(0, 10) }}...{{
+                        site.greenlight_token.slice(-6)
+                      }}
                     </code>
                   </div>
                 </div>
@@ -412,7 +487,10 @@
         <div class="modal-card modal-lg">
           <div class="modal-header">
             <h3>21 CFR Part 11 Country-Level Batch Greenlight Certification</h3>
-            <button class="btn-icon-only" @click="showBatchCertifyModal = false">
+            <button
+              class="btn-icon-only"
+              @click="showBatchCertifyModal = false"
+            >
               ✖
             </button>
           </div>
@@ -422,8 +500,12 @@
               <span class="alert-icon">🛡️</span>
               <div>
                 <strong>Legal Certification Scope:</strong>
-                You are applying a single 21 CFR Part 11 compliant electronic signature to batch-certify greenlight activation for
-                <strong>{{ selectedSiteIds.size }} compliant site(s)</strong> in <strong>{{ activeCountry }}</strong> for study <strong>{{ activeStudyId }}</strong>.
+                You are applying a single 21 CFR Part 11 compliant electronic
+                signature to batch-certify greenlight activation for
+                <strong>{{ selectedSiteIds.size }} compliant site(s)</strong> in
+                <strong>{{ activeCountry }}</strong> for study
+                <strong>{{ activeStudyId }}</strong
+                >.
               </div>
             </div>
 
@@ -469,7 +551,9 @@
               </div>
 
               <div class="form-group">
-                <label for="batch-sig-reason">Certification Statement / Change Reason:</label>
+                <label for="batch-sig-reason"
+                  >Certification Statement / Change Reason:</label
+                >
                 <textarea
                   id="batch-sig-reason"
                   v-model="batchSigForm.changeReason"
@@ -482,15 +566,24 @@
           </div>
 
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="showBatchCertifyModal = false">
+            <button
+              class="btn btn-secondary"
+              @click="showBatchCertifyModal = false"
+            >
               Cancel
             </button>
             <button
               class="btn btn-primary btn-submit-batch-certify"
-              :disabled="!batchSigForm.name || !batchSigForm.role || isSubmitting"
+              :disabled="
+                !batchSigForm.name || !batchSigForm.role || isSubmitting
+              "
               @click="executeBatchCertification"
             >
-              {{ isSubmitting ? "Certifying Cohort..." : "Sign & Batch Certify Country Sites" }}
+              {{
+                isSubmitting
+                  ? "Certifying Cohort..."
+                  : "Sign & Batch Certify Country Sites"
+              }}
             </button>
           </div>
         </div>
@@ -505,7 +598,10 @@
       <div class="console-header">
         <div class="header-titles">
           <div class="badge-row">
-            <button class="btn btn-secondary btn-sm" @click="switchToMatrixView">
+            <button
+              class="btn btn-secondary btn-sm"
+              @click="switchToMatrixView"
+            >
               ← Back to Country Matrix
             </button>
             <span class="badge badge-gxp">21 CFR Part 11</span>
@@ -521,7 +617,8 @@
             Site Greenlight Console: {{ activeSiteId }}
           </h2>
           <p class="console-subtitle">
-            Single-site 6-facet greenlight scorecard, essential document review, regulatory milestones, and single-site certification.
+            Single-site 6-facet greenlight scorecard, essential document review,
+            regulatory milestones, and single-site certification.
           </p>
         </div>
 
@@ -533,10 +630,7 @@
           >
             <span class="btn-icon">🔄</span> Refresh
           </button>
-          <button
-            class="btn btn-primary"
-            @click="showUploadDocModal = true"
-          >
+          <button class="btn btn-primary" @click="showUploadDocModal = true">
             <span class="btn-icon">📄</span> Upload Document
           </button>
           <button
@@ -591,7 +685,9 @@
             @change="onJurisdictionChange"
           >
             <option value="US">🇺🇸 United States (FDA 1572 + IRB)</option>
-            <option value="EU">🇪🇺 European Union (EU CTR Part I/II + EC)</option>
+            <option value="EU">
+              🇪🇺 European Union (EU CTR Part I/II + EC)
+            </option>
             <option value="JP">🇯🇵 Japan (PMDA Notification + IRB)</option>
             <option value="GB">🇬🇧 United Kingdom (MHRA + HRA REC)</option>
             <option value="GLOBAL">🌐 Global Default (ICH GCP E6 R2)</option>
@@ -626,7 +722,8 @@
               />
             </div>
             <span class="gauge-text" :style="{ color: gaugeColor }">
-              {{ readinessPercentage }}% Ready ({{ passedFacetsCount }}/6 Facets Passed)
+              {{ readinessPercentage }}% Ready ({{ passedFacetsCount }}/6 Facets
+              Passed)
             </span>
           </div>
         </div>
@@ -644,11 +741,15 @@
               <span class="facet-icon">⚖️</span>
               <div class="facet-titles">
                 <span class="facet-name">Regulatory &amp; IRB / Ethics</span>
-                <span class="facet-rule-tag">{{ activeCountry }} Startup Rule</span>
+                <span class="facet-rule-tag"
+                  >{{ activeCountry }} Startup Rule</span
+                >
               </div>
               <span
                 class="facet-status-chip"
-                :class="gateData?.facet_regulatory_irb ? 'chip-pass' : 'chip-fail'"
+                :class="
+                  gateData?.facet_regulatory_irb ? 'chip-pass' : 'chip-fail'
+                "
               >
                 {{ gateData?.facet_regulatory_irb ? "PASSED" : "ACTION REQ" }}
               </span>
@@ -680,7 +781,8 @@
               </span>
             </div>
             <p class="facet-desc">
-              Fully executed Clinical Trial Agreement and investigator grant payment schedules.
+              Fully executed Clinical Trial Agreement and investigator grant
+              payment schedules.
             </p>
           </div>
 
@@ -700,13 +802,16 @@
               </div>
               <span
                 class="facet-status-chip"
-                :class="gateData?.facet_eisf_baseline ? 'chip-pass' : 'chip-fail'"
+                :class="
+                  gateData?.facet_eisf_baseline ? 'chip-pass' : 'chip-fail'
+                "
               >
                 {{ gateData?.facet_eisf_baseline ? "PASSED" : "ACTION REQ" }}
               </span>
             </div>
             <p class="facet-desc">
-              Validated electronic Investigator Site File with required core startup documents.
+              Validated electronic Investigator Site File with required core
+              startup documents.
             </p>
           </div>
 
@@ -721,7 +826,9 @@
             <div class="facet-header">
               <span class="facet-icon">👥</span>
               <div class="facet-titles">
-                <span class="facet-name">Delegation of Authority (DOA) Log</span>
+                <span class="facet-name"
+                  >Delegation of Authority (DOA) Log</span
+                >
                 <span class="facet-rule-tag">PI Governance</span>
               </div>
               <span
@@ -732,7 +839,8 @@
               </span>
             </div>
             <p class="facet-desc">
-              Principal Investigator signed-off site delegation log covering all active personnel.
+              Principal Investigator signed-off site delegation log covering all
+              active personnel.
             </p>
           </div>
 
@@ -747,18 +855,23 @@
             <div class="facet-header">
               <span class="facet-icon">🎓</span>
               <div class="facet-titles">
-                <span class="facet-name">Protocol &amp; GCP Staff Training</span>
+                <span class="facet-name"
+                  >Protocol &amp; GCP Staff Training</span
+                >
                 <span class="facet-rule-tag">GCP Compliance</span>
               </div>
               <span
                 class="facet-status-chip"
-                :class="gateData?.facet_staff_training ? 'chip-pass' : 'chip-fail'"
+                :class="
+                  gateData?.facet_staff_training ? 'chip-pass' : 'chip-fail'
+                "
               >
                 {{ gateData?.facet_staff_training ? "PASSED" : "ACTION REQ" }}
               </span>
             </div>
             <p class="facet-desc">
-              Verified completion of protocol curriculum, GCP E6(R2), and EDC system qualifications.
+              Verified completion of protocol curriculum, GCP E6(R2), and EDC
+              system qualifications.
             </p>
           </div>
 
@@ -784,7 +897,8 @@
               </span>
             </div>
             <p class="facet-desc">
-              Authorized depot greenlight release for investigational drug kit shipment to site.
+              Authorized depot greenlight release for investigational drug kit
+              shipment to site.
             </p>
           </div>
         </div>
@@ -801,26 +915,48 @@
           </div>
           <div class="modal-body">
             <p>
-              You are certifying regulatory greenlight activation for site <strong>{{ activeSiteId }}</strong> in <strong>{{ activeCountry }}</strong>.
+              You are certifying regulatory greenlight activation for site
+              <strong>{{ activeSiteId }}</strong> in
+              <strong>{{ activeCountry }}</strong
+              >.
             </p>
             <div class="form-group">
               <label for="ssu-sig-name">Signer Name:</label>
-              <input id="ssu-sig-name" v-model="sigForm.name" type="text" class="text-input" />
+              <input
+                id="ssu-sig-name"
+                v-model="sigForm.name"
+                type="text"
+                class="text-input"
+              />
             </div>
             <div class="form-group">
               <label for="ssu-sig-role">Role:</label>
-              <input id="ssu-sig-role" v-model="sigForm.role" type="text" class="text-input" />
+              <input
+                id="ssu-sig-role"
+                v-model="sigForm.role"
+                type="text"
+                class="text-input"
+              />
             </div>
             <div class="form-group">
               <label for="ssu-sig-reason">Change Reason:</label>
-              <input id="ssu-sig-reason" v-model="sigForm.changeReason" type="text" class="text-input" />
+              <input
+                id="ssu-sig-reason"
+                v-model="sigForm.changeReason"
+                type="text"
+                class="text-input"
+              />
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" @click="showCertifyModal = false">
               Cancel
             </button>
-            <button class="btn btn-primary" :disabled="isSubmitting" @click="executeGreenlightCertification">
+            <button
+              class="btn btn-primary"
+              :disabled="isSubmitting"
+              @click="executeGreenlightCertification"
+            >
               {{ isSubmitting ? "Certifying..." : "Sign & Certify Greenlight" }}
             </button>
           </div>
@@ -835,7 +971,6 @@ import { encodeChangeReason } from "../../api/changeReason";
 import { computed, onMounted, reactive, ref } from "vue";
 
 import { useToastStore } from "../../stores/toasts.js";
-import { ensureOk } from "../../utils/apiErrors.js";
 
 const props = defineProps({
   studyId: {
@@ -888,7 +1023,8 @@ const sigForm = reactive({
 const batchSigForm = reactive({
   name: "Dr. Eleanor Vance",
   role: "VP of Regulatory & Clinical Operations",
-  changeReason: "I certify under 21 CFR Part 11 that all selected sites meet statutory greenlight requirements and authorize trial execution.",
+  changeReason:
+    "I certify under 21 CFR Part 11 that all selected sites meet statutory greenlight requirements and authorize trial execution.",
 });
 
 const docForm = reactive({
@@ -970,7 +1106,10 @@ const regulatoryMilestones = ref([]);
 // Computed Matrix Filters & Aggregates
 const compliantSites = computed(() => {
   return matrixSites.value.filter(
-    (s) => s.is_compliant && s.overall_status !== "APPROVED" && s.overall_status !== "OVERRIDDEN"
+    (s) =>
+      s.is_compliant &&
+      s.overall_status !== "APPROVED" &&
+      s.overall_status !== "OVERRIDDEN"
   );
 });
 
@@ -986,7 +1125,9 @@ const certifiedSitesCount = computed(() => {
 
 const isAllCompliantSelected = computed(() => {
   if (compliantSites.value.length === 0) return false;
-  return compliantSites.value.every((s) => selectedSiteIds.value.has(s.site_id));
+  return compliantSites.value.every((s) =>
+    selectedSiteIds.value.has(s.site_id)
+  );
 });
 
 const filteredMatrixSites = computed(() => {
@@ -997,7 +1138,10 @@ const filteredMatrixSites = computed(() => {
   } else if (matrixStatusFilter.value === "NON_COMPLIANT") {
     list = list.filter((s) => !s.is_compliant);
   } else if (matrixStatusFilter.value === "CERTIFIED") {
-    list = list.filter((s) => s.overall_status === "APPROVED" || s.overall_status === "OVERRIDDEN");
+    list = list.filter(
+      (s) =>
+        s.overall_status === "APPROVED" || s.overall_status === "OVERRIDDEN"
+    );
   }
 
   if (matrixSearchQuery.value.trim()) {
@@ -1109,10 +1253,16 @@ async function fetchCountryMatrix() {
     if (res.ok) {
       matrixSites.value = await res.json();
     } else {
-      matrixSites.value = generateFallbackMatrix(activeStudyId.value, activeCountry.value);
+      matrixSites.value = generateFallbackMatrix(
+        activeStudyId.value,
+        activeCountry.value
+      );
     }
-  } catch (err) {
-    matrixSites.value = generateFallbackMatrix(activeStudyId.value, activeCountry.value);
+  } catch {
+    matrixSites.value = generateFallbackMatrix(
+      activeStudyId.value,
+      activeCountry.value
+    );
   } finally {
     loading.value = false;
   }
@@ -1147,7 +1297,7 @@ async function executeBatchCertification() {
     } else {
       executeFallbackBatchCertification(selectedIds);
     }
-  } catch (err) {
+  } catch {
     executeFallbackBatchCertification(selectedIds);
   } finally {
     isSubmitting.value = false;
@@ -1197,10 +1347,18 @@ async function evaluateGreenlight() {
     if (res.ok) {
       gateData.value = await res.json();
     } else {
-      gateData.value = generateFallbackSingleGate(activeStudyId.value, activeSiteId.value, activeCountry.value);
+      gateData.value = generateFallbackSingleGate(
+        activeStudyId.value,
+        activeSiteId.value,
+        activeCountry.value
+      );
     }
-  } catch (err) {
-    gateData.value = generateFallbackSingleGate(activeStudyId.value, activeSiteId.value, activeCountry.value);
+  } catch {
+    gateData.value = generateFallbackSingleGate(
+      activeStudyId.value,
+      activeSiteId.value,
+      activeCountry.value
+    );
   } finally {
     loading.value = false;
   }
@@ -1270,7 +1428,14 @@ function copyToken() {
 // Fallback Generators
 function generateFallbackMatrix(studyId, countryCode) {
   const country = (countryCode || "US").toUpperCase();
-  const prefixMap = { US: "SITE-10", DE: "SITE-20", EU: "SITE-20", JP: "SITE-30", GB: "SITE-40", GLOBAL: "SITE-50" };
+  const prefixMap = {
+    US: "SITE-10",
+    DE: "SITE-20",
+    EU: "SITE-20",
+    JP: "SITE-30",
+    GB: "SITE-40",
+    GLOBAL: "SITE-50",
+  };
   const prefix = prefixMap[country] || "SITE-50";
 
   return [
