@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Cadence Clinical Platform - Automated Git Pre-Commit Hook
-# Validates C# code formatting, ADR integrity, and 21 GxP quality sentinels.
+# Validates Prettier formatting, C# code formatting, ADR integrity, and 21 GxP quality sentinels.
 # Requirements: PRD-SYS-053, ADR-2233
 # ==============================================================================
 
@@ -33,11 +33,26 @@ if command -v python3 >/dev/null 2>&1 && [ -f "scripts/check-action-pinning.py" 
     python3 scripts/check-action-pinning.py
 fi
 
+if command -v pnpm >/dev/null 2>&1; then
+    mapfile -t staged_prettier < <(git diff --cached --name-only --diff-filter=ACMR -- '*.js' '*.jsx' '*.ts' '*.tsx' '*.vue' '*.json' '*.css' '*.md' '*.yaml' '*.yml')
+    if [ "${#staged_prettier[@]}" -gt 0 ]; then
+        if ! pnpm exec prettier --check "${staged_prettier[@]}"; then
+            echo "::error:: Prettier formatting violations detected! Run 'pnpm format' to auto-fix."
+            exit 1
+        fi
+    fi
+else
+    echo "::warning:: pnpm not found; Prettier check skipped."
+fi
+
 if command -v dotnet >/dev/null 2>&1; then
     # Format only the staged C# files; CI and 'pnpm cadence check' cover the whole solution.
     mapfile -t staged_cs < <(git diff --cached --name-only --diff-filter=ACMR -- '*.cs')
     if [ "${#staged_cs[@]}" -gt 0 ]; then
-        dotnet format Cadence.sln --verify-no-changes --include "${staged_cs[@]}"
+        if ! dotnet format Cadence.sln --verify-no-changes --include "${staged_cs[@]}"; then
+            echo "::error:: C# formatting, style or analyzer violations detected! Run 'dotnet format Cadence.sln' to auto-fix."
+            exit 1
+        fi
     fi
     dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check --pre-commit
 else

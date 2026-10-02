@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { router } from "../src/router";
 import { setKeycloakClient } from "../src/auth/keycloak.js";
 import { useAuthStore } from "../src/stores/auth";
+import { useOnboardingStore } from "../src/stores/onboarding.js";
 
 describe("Router OIDC & RBAC Navigation Guards", () => {
   beforeEach(async () => {
@@ -130,47 +131,68 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.path).toBe("/login");
     });
 
-    it("should dynamically redirect CRC (Site Investigator) to /ecrf when landing on /", async () => {
+    it("should redirect authenticated users to /overview hub when no explicit bypass preference exists", async () => {
       const authStore = useAuthStore();
+      const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["Site Investigator"];
+      onboardingStore.bypassOverview = false;
+
+      await router.push("/");
+      expect(router.currentRoute.value.path).toBe("/overview");
+    });
+
+    it("should dynamically redirect CRC (Site Investigator) to /ecrf when bypass preference is set", async () => {
+      const authStore = useAuthStore();
+      const onboardingStore = useOnboardingStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["Site Investigator"];
+      onboardingStore.setBypassOverview(true);
 
       await router.push("/");
       expect(router.currentRoute.value.path).toBe("/ecrf");
     });
 
-    it("should dynamically redirect CRA to /ctms when landing on /", async () => {
+    it("should dynamically redirect CRA to /ctms when bypass preference is set", async () => {
       const authStore = useAuthStore();
+      const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["CRA"];
+      onboardingStore.setBypassOverview(true);
 
       await router.push("/");
       expect(router.currentRoute.value.path).toBe("/ctms");
     });
 
-    it("should land Data Manager on /ecrf while /rules has no .NET backend", async () => {
+    it("should land Data Manager on /ecrf when bypass preference is set while /rules has no .NET backend", async () => {
       const authStore = useAuthStore();
+      const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["Data Manager"];
+      onboardingStore.setBypassOverview(true);
 
       await router.push("/");
       expect(router.currentRoute.value.path).toBe("/ecrf");
     });
 
-    it("should land TMF Auditor on /unavailable while no auditor screen has a .NET backend", async () => {
+    it("should land TMF Auditor on /unavailable when bypass preference is set while no auditor screen has a .NET backend", async () => {
       const authStore = useAuthStore();
+      const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["Auditor"];
+      onboardingStore.setBypassOverview(true);
 
       await router.push("/");
       expect(router.currentRoute.value.path).toBe("/unavailable");
       expect(router.currentRoute.value.query.screen).toBeUndefined();
     });
 
-    it("should land Study Designer on /unavailable while no designer screen has a .NET backend", async () => {
+    it("should land Study Designer on /unavailable when bypass preference is set while no designer screen has a .NET backend", async () => {
       const authStore = useAuthStore();
+      const onboardingStore = useOnboardingStore();
       authStore.isAuthenticated = true;
       authStore.rawRoles = ["Study Designer"];
+      onboardingStore.setBypassOverview(true);
 
       await router.push("/");
       expect(router.currentRoute.value.path).toBe("/unavailable");

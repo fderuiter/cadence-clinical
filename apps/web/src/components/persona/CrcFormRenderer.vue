@@ -10,7 +10,7 @@
         "
       >
         <div class="card-title" style="margin-bottom: 0">
-          Subject eCRF Data Entry Form
+          {{ $t('ecrf.form.title') }}
         </div>
         <div style="display: flex; align-items: center; gap: 8px">
           <span
@@ -25,7 +25,7 @@
               fontSize: '0.75rem',
             }"
           >
-            Protocol Schema v{{ activeSubjectVersion }}
+            {{ $t('ecrf.form.schemaBadge', { version: activeSubjectVersion }) }}
           </span>
           <button
             id="btn-enroll-subject"
@@ -44,7 +44,7 @@
             "
             @click="showEnrollModal = true"
           >
-            <span>➕</span> Enroll New Subject
+            <span>➕</span> {{ $t('ecrf.form.enrollNewSubject') }}
           </button>
         </div>
       </div>
@@ -62,7 +62,7 @@
       >
         <div class="form-group" style="flex: 1">
           <label for="ecrf-subject-selector" style="font-weight: bold"
-            >Active Subject ID</label
+            >{{ $t('ecrf.form.activeSubjectId') }}</label
           >
           <select
             id="ecrf-subject-selector"
@@ -83,7 +83,7 @@
               value=""
               disabled
             >
-              No subjects listed
+              {{ $t('ecrf.form.noSubjects') }}
             </option>
             <option
               v-for="sub in store?.subjects || clinicalStore.subjects"
@@ -96,7 +96,7 @@
         </div>
         <div class="form-group" style="flex: 1">
           <label for="ecrf-visit-selector" style="font-weight: bold"
-            >Active Visit / Encounter</label
+            >{{ $t('ecrf.form.activeVisit') }}</label
           >
           <select
             id="ecrf-visit-selector"
@@ -112,9 +112,9 @@
               $emit('load-ecrf-session');
             "
           >
-            <option value="Screening">Screening / Day -7</option>
-            <option value="Week2">Week 2 Treatment</option>
-            <option value="Week4">Week 4 Treatment</option>
+            <option value="Screening">{{ $t('ecrf.form.visitScreening') }}</option>
+            <option value="Week2">{{ $t('ecrf.form.visitWeek2') }}</option>
+            <option value="Week4">{{ $t('ecrf.form.visitWeek4') }}</option>
           </select>
         </div>
       </div>
@@ -150,13 +150,11 @@
           >
             <span>🎓</span>
             <span
-              >Mandatory Protocol Training Incomplete — EDC Write Gated</span
+              >{{ $t('ecrf.form.trainingGatedTitle') }}</span
             >
           </div>
           <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #78350f">
-            Under ICH GCP E6(R2) §4 &amp; PRD-TRN-002, site staff must complete
-            mandatory protocol amendment training before saving or signing eCRF
-            entries.
+            {{ $t('ecrf.form.trainingGatedDesc') }}
           </p>
         </div>
         <div>
@@ -177,7 +175,7 @@
               "
               @click="navigate"
             >
-              Complete Training Now ➡️
+              {{ $t('ecrf.form.completeTrainingNow') }}
             </button>
           </router-link>
         </div>
@@ -214,13 +212,11 @@
           >
             <span>⚠️</span>
             <span
-              >Protocol Amendment Active (v2.0.0) — Re-Consent Required</span
+              >{{ $t('ecrf.form.reconsentGatedTitle') }}</span
             >
           </div>
           <p style="margin: 4px 0 0 0; font-size: 0.875rem; color: #7f1d1d">
-            This subject must complete re-consent for Protocol Version 2.0.0
-            before further visit data entry can be saved (PRD-SUB-007). All
-            input fields are currently locked.
+            {{ $t('ecrf.form.reconsentGatedDesc') }}
           </p>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap">
@@ -240,7 +236,7 @@
             "
             @click="$emit('open-econsent-modal')"
           >
-            ✍️ Open eConsent Form
+            ✍️ {{ $t('ecrf.form.openEconsent') }}
           </button>
           <button
             id="btn-upload-paper-icf"
@@ -258,7 +254,7 @@
             "
             @click="$emit('open-paper-icf-modal')"
           >
-            📄 Upload Signed Paper ICF
+            📄 {{ $t('ecrf.form.uploadPaperIcf') }}
           </button>
         </div>
       </div>
@@ -291,7 +287,7 @@
             font-weight: 600;
           "
         >
-          <span>⚡ Live Edit Checks:</span>
+          <span>⚡ {{ $t('ecrf.form.liveEditChecks') }}</span>
           <span
             v-if="discrepancyAlertsCount > 0"
             class="badge badge-discrepancy"
@@ -303,7 +299,7 @@
               font-size: 0.75rem;
             "
           >
-            {{ discrepancyAlertsCount }} Discrepancy
+            {{ $t('ecrf.form.discrepancyCount', { count: discrepancyAlertsCount }) }}
           </span>
           <span
             v-if="warningAlertsCount > 0"
@@ -316,11 +312,11 @@
               font-size: 0.75rem;
             "
           >
-            {{ warningAlertsCount }} Warning
+            {{ $t('ecrf.form.warningCount', { count: warningAlertsCount }) }}
           </span>
         </div>
         <div style="font-size: 0.8rem; color: #b45309">
-          Real-time rule evaluation active
+          {{ $t('ecrf.form.realtimeEvaluationActive') }}
         </div>
       </div>
 
@@ -519,7 +515,7 @@
           :disabled="isReconsentGated"
           @click="$emit('clear-form')"
         >
-          Clear Form
+          {{ $t('ecrf.form.clearForm') }}
         </button>
         <button
           id="btn-submit-ecrf"
@@ -532,8 +528,8 @@
         >
           {{
             isReconsentGated
-              ? "Locked (Re-Consent Required)"
-              : "Submit eCRF Session"
+              ? $t('ecrf.form.lockedReconsent')
+              : $t('ecrf.form.submitEcrfSession')
           }}
         </button>
       </div>
@@ -547,17 +543,16 @@
       style="display: flex"
     >
       <div class="modal" style="max-width: 520px">
-        <div class="modal-header">➕ Enroll New Clinical Subject</div>
+        <div class="modal-header">➕ {{ $t('ecrf.enrollModal.header') }}</div>
         <div class="modal-body">
           <p style="font-size: 0.9rem; color: var(--text-muted)">
-            Assign subject identifier, study site, initial protocol consent
-            date, and treatment arm (PRD-SYS-001).
+            {{ $t('ecrf.enrollModal.desc') }}
           </p>
           <div class="form-group" style="margin-bottom: 12px">
             <label
               for="enroll-subject-id"
               style="font-size: 0.85rem; font-weight: 600"
-              >Subject ID:</label
+              >{{ $t('ecrf.enrollModal.subjectId') }}</label
             >
             <input
               id="enroll-subject-id"
@@ -578,7 +573,7 @@
             <label
               for="enroll-site-id"
               style="font-size: 0.85rem; font-weight: 600"
-              >Site ID:</label
+              >{{ $t('ecrf.enrollModal.siteId') }}</label
             >
             <select
               id="enroll-site-id"
@@ -605,7 +600,7 @@
             <label
               for="enroll-consent-date"
               style="font-size: 0.85rem; font-weight: 600"
-              >Informed Consent Date:</label
+              >{{ $t('ecrf.enrollModal.consentDate') }}</label
             >
             <input
               id="enroll-consent-date"
@@ -625,7 +620,7 @@
             <label
               for="enroll-arm-id"
               style="font-size: 0.85rem; font-weight: 600"
-              >Assigned Study Arm:</label
+              >{{ $t('ecrf.enrollModal.assignedArm') }}</label
             >
             <select
               id="enroll-arm-id"
@@ -649,7 +644,7 @@
             <label
               for="enroll-change-reason"
               style="font-size: 0.85rem; font-weight: 600"
-              >GxP Reason for Change:</label
+              >{{ $t('ecrf.enrollModal.changeReason') }}</label
             >
             <input
               id="enroll-change-reason"
@@ -681,7 +676,7 @@
             class="btn btn-secondary"
             @click="showEnrollModal = false"
           >
-            Cancel
+            {{ $t('ecrf.enrollModal.cancel') }}
           </button>
           <button
             id="btn-confirm-enroll"
@@ -690,7 +685,7 @@
             :disabled="!enrollForm.subjectId.trim()"
             @click="handleEnrollSubmit"
           >
-            Enroll Subject
+            {{ $t('ecrf.enrollModal.submit') }}
           </button>
         </div>
       </div>
@@ -708,17 +703,14 @@
           class="modal-header"
           style="color: #991b1b; display: flex; align-items: center; gap: 8px"
         >
-          <span>⚠️</span> Re-Consent Gate Active — Data Entry Blocked
+          <span>⚠️</span> {{ $t('ecrf.gateModal.header') }}
         </div>
         <div class="modal-body">
           <p style="font-size: 0.95rem; color: #7f1d1d; font-weight: 600">
-            Subject <strong>{{ selectedSubjectId }}</strong> is currently gated
-            under Protocol Amendment v2.0.0.
+            {{ $t('ecrf.gateModal.subjectGated', { id: selectedSubjectId }) }}
           </p>
           <p style="font-size: 0.875rem; color: var(--text-muted)">
-            Per 21 CFR Part 11 and PRD-SUB-007, visit data entry and clinical
-            observations cannot be submitted until re-consent has been completed
-            and verified by site clinical staff.
+            {{ $t('ecrf.gateModal.desc') }}
           </p>
         </div>
         <div
@@ -734,7 +726,7 @@
             class="btn btn-secondary"
             @click="showReconsentGateModal = false"
           >
-            Close
+            {{ $t('ecrf.gateModal.close') }}
           </button>
           <button
             type="button"
@@ -745,7 +737,7 @@
               $emit('open-econsent-modal');
             "
           >
-            ✍️ Open eConsent Form
+            ✍️ {{ $t('ecrf.form.openEconsent') }}
           </button>
           <button
             type="button"
@@ -756,7 +748,7 @@
               $emit('open-paper-icf-modal');
             "
           >
-            📄 Upload Signed Paper ICF
+            📄 {{ $t('ecrf.form.uploadPaperIcf') }}
           </button>
         </div>
       </div>

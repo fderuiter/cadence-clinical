@@ -52,7 +52,7 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task GetCountryMatrix_ReturnsSixFacetReadinessForAllSites()
     {
         // Act
-        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "DE", _db, CancellationToken.None);
+        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "DE", _db, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();

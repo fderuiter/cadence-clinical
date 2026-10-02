@@ -149,6 +149,25 @@
       <!-- Sidebar -->
       <aside class="app-sidebar">
         <div class="sidebar-nav-scroll">
+          <!-- Home / Overview Hub -->
+          <div class="nav-category">
+            <div class="nav-category-title">Home &amp; Orientation</div>
+            <ul class="nav-menu">
+              <li
+                id="tab-btn-overview"
+                class="nav-item"
+                :class="{ active: $route.name === 'overview' }"
+              >
+                <router-link v-slot="{ navigate }" to="/overview" custom>
+                  <button type="button" @click="navigate">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Overview Hub</span>
+                  </button>
+                </router-link>
+              </li>
+            </ul>
+          </div>
+
           <!-- Section 1: Study Design & MDR -->
           <div v-if="hasAvailableScreen(DESIGN_SCREENS)" class="nav-category">
             <div class="nav-category-title">Design &amp; Metadata</div>

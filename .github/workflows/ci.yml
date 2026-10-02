@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request && github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+permissions:
+  contents: read
+
 jobs:
   actionlint:
     name: Workflow Action Pinning & Actionlint Gate
@@ -66,21 +69,30 @@ jobs:
         run: |
           if ! command -v hadolint >/dev/null 2>&1; then
             echo "Installing hadolint..."
+            EXPECTED_CHECKSUM="c7187db94eeeeca956519a6af171adc31453941a1e777961f6e680f697c8c507"
+            TMP_HADOLINT=$(mktemp)
             for i in {1..5}; do
-              if sudo curl --connect-timeout 15 --retry 5 --retry-delay 5 -sSfL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-Linux-x86_64; then
+              if sudo curl --connect-timeout 15 --retry 5 --retry-delay 5 -sSfL -o "$TMP_HADOLINT" https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-Linux-x86_64; then
+                ACTUAL_CHECKSUM=$(sha256sum "$TMP_HADOLINT" | awk '{print $1}')
+                if [ "$ACTUAL_CHECKSUM" != "$EXPECTED_CHECKSUM" ]; then
+                  echo "::error::Hadolint SHA256 checksum mismatch! Expected: $EXPECTED_CHECKSUM, Got: $ACTUAL_CHECKSUM"
+                  rm -f "$TMP_HADOLINT"
+                  exit 1
+                fi
+                echo "Hadolint SHA256 checksum verified successfully."
+                sudo mv "$TMP_HADOLINT" /usr/local/bin/hadolint
+                sudo chmod +x /usr/local/bin/hadolint
                 break
               else
                 if [ "$i" -eq 5 ]; then
                   echo "::error::Failed to install hadolint after 5 attempts."
+                  rm -f "$TMP_HADOLINT"
                   exit 1
                 fi
                 echo "Download failed, retrying in 5 seconds... (Attempt $i/5)"
                 sleep 5
               fi
             done
-            if [ -f /usr/local/bin/hadolint ]; then
-              sudo chmod +x /usr/local/bin/hadolint || true
-            fi
           fi
           if command -v hadolint >/dev/null 2>&1; then
             mapfile -t DOCKERFILES < <(find . -type f -name Dockerfile)

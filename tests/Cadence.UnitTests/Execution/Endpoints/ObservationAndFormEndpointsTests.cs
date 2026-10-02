@@ -425,7 +425,7 @@ public sealed class ObservationAndFormEndpointsTests
         result.Should().BeOfType<ProblemHttpResult>();
         var problem = (ProblemHttpResult)result;
         problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        problem.ProblemDetails.Detail.Should().Contain("HMAC signature verification failed");
+        problem.ProblemDetails.Extensions["code"]?.ToString().Should().Be("INVALID_HMAC_SIGNATURE");
     }
 
     /// <summary>
