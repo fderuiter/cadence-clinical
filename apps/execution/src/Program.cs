@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cec;
+using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.EditChecks;
 using Cadence.Apps.Execution.Application.Forms;
@@ -191,6 +192,7 @@ builder.Services.AddScoped<IFormSubmissionApplicationService, FormSubmissionAppl
 builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplicationService>();
 builder.Services.AddScoped<IAutoQueryDispatchService, AutoQueryDispatchService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
+builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -249,6 +251,7 @@ app.MapObservationEndpoints();
 app.MapFormEndpoints();
 app.MapQueryEndpoints();
 app.MapCecEndpoints();
+app.MapCgtEndpoints();
 
 if (args.Contains("--seed"))
 {
