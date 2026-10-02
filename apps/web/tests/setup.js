@@ -1,5 +1,9 @@
 import { vi, expect } from "vitest";
+import { config } from "@vue/test-utils";
 import { toBeAccessible } from "ui";
+import { i18n } from "../src/i18n/index.js";
+
+config.global.plugins = [i18n];
 
 expect.extend({
   toBeAccessible,
