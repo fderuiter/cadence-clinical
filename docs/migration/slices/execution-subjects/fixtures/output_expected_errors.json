@@ -49,8 +49,9 @@
     {
       "scenario_id": "INV-008",
       "raise_site": 18,
-      "status": 400,
-      "body": { "detail": "INVALID_STATE_TRANSITION" }
+      "status": 422,
+      "body": { "detail": "INVALID_STATE_TRANSITION" },
+      "note": "Deliberate break from legacy parity: the Python reference answered 400, but PRD-SUB-001 requires a forbidden subject transition to answer 422 Unprocessable Entity."
     },
     {
       "scenario_id": "INV-009",
@@ -149,9 +150,9 @@
     {
       "scenario_id": "INV-020",
       "raise_site": 6,
-      "status": 400,
+      "status": 422,
       "body": { "detail": "INVALID_STATE_TRANSITION" },
-      "note": "Same fixed-string body as INV-008 — a malformed state name (\"ENROLED\") and a legal-but-forbidden transition are indistinguishable in the response, per 01_spec.md §5.1 #6."
+      "note": "Same fixed-string body and status as INV-008 — a malformed state name (\"ENROLED\") and a legal-but-forbidden transition are indistinguishable in the response, per 01_spec.md §5.1 #6. The Python reference answered 400; PRD-SUB-001 requires 422."
     },
     {
       "scenario_id": "INV-021",

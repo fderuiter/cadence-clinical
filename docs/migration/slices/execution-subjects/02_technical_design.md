@@ -820,17 +820,17 @@ public static class SubjectErrors
 }
 ```
 
-`DomainError` → HTTP mapping (registered once via `IProblemDetailsService.CustomizeProblemDetails`, plus one explicit override table for the two codes that don't follow the `ErrorType` default):
+`DomainError` → HTTP mapping (registered once via `IProblemDetailsService.CustomizeProblemDetails`, plus one explicit override table for the codes that don't follow the `ErrorType` default):
 
-| `ErrorType` (default) | HTTP Status | Override by `Code`       | HTTP Status |
-| --------------------- | ----------- | ------------------------ | ----------- |
-| `Validation`          | 400         | `LOCKED_FACTOR_MUTATION` | **422**     |
-| `NotFound`            | 404         | `RECONSENT_REQUIRED`     | **423**     |
-| `Conflict`            | 409         |                          |             |
-| `Forbidden`           | 403         |                          |             |
-| `Unauthorized`        | 401         |                          |             |
+| `ErrorType` (default) | HTTP Status | Override by `Code`         | HTTP Status |
+| --------------------- | ----------- | -------------------------- | ----------- |
+| `Validation`          | 400         | `LOCKED_FACTOR_MUTATION`   | **422**     |
+| `NotFound`            | 404         | `RECONSENT_REQUIRED`       | **423**     |
+| `Conflict`            | 409         | `INVALID_STATE_TRANSITION` | **422**     |
+| `Forbidden`           | 403         |                            |             |
+| `Unauthorized`        | 401         |                            |             |
 
-This is implemented as a small `static class DomainErrorHttpMapping` consulted by a `ToProblemResult()` extension on `DomainError`, rather than scattering status-code literals across handlers.
+`INVALID_STATE_TRANSITION` answers 422 rather than the legacy 400 because PRD-SUB-001 requires a forbidden subject transition to return `422 Unprocessable Entity`; golden masters INV-008 and INV-020 record the deliberate break from parity. This is implemented as a small `static class DomainErrorHttpMapping` consulted by a `ToProblemResult()` extension on `DomainError`, rather than scattering status-code literals across handlers.
 
 **Raise site #19 (`subjects.py:643-644`, the genuine bare `except Exception as e:` catch-all) is explicitly NOT ported.** No handler in this design catches `Exception` and maps it to a 400. An unexpected exception (e.g. a database failure) falls through to ASP.NET Core's global `IExceptionHandler`, which maps to a generic 500 `ProblemDetails` — consistent with `01_spec.md` §5's explicit instruction ("`.NET` must not reproduce a blanket `catch (Exception) -> 400`").
 

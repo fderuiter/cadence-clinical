@@ -1161,6 +1161,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   GetSubjectDetail: {
