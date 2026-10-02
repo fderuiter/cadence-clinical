@@ -24,7 +24,7 @@ using Microsoft.Extensions.Configuration;
 namespace Cadence.Apps.Ctms.Endpoints;
 
 /// <summary>
-/// Site Startup (SSU) &amp; Country-Level Multi-Site Greenlight Activation Matrix endpoints.
+/// Site Startup (SSU) and Country-Level Multi-Site Greenlight Activation Matrix endpoints.
 /// @req:PRD-SSU-001
 /// @req:PRD-SSU-002
 /// @req:PRD-SSU-003
@@ -326,7 +326,7 @@ public static class StartupGreenlightEndpoints
                 FacetDoaLog = true,
                 FacetStaffTraining = true,
                 FacetIpRelease = true,
-                CreatedBy = "svc:ctms",
+                CreatedBy = "svc:site-startup-engine",
                 ReasonForChange = "Initial greenlight gate creation"
             };
             db.CtmsSiteGreenlightGates.Add(gate);
@@ -368,7 +368,7 @@ public static class StartupGreenlightEndpoints
                 FacetDoaLog = isCompliant,
                 FacetStaffTraining = true,
                 FacetIpRelease = isCompliant,
-                CreatedBy = "svc:ctms",
+                CreatedBy = "svc:site-startup-engine",
                 ReasonForChange = "Seed country matrix sites"
             });
         }
