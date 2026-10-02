@@ -191,6 +191,62 @@ describe("Coding Store - Verbatim Clusters and Confidence Threshold Workbench", 
         changeReason: "High confidence verbatim cluster batch approval",
       })
     );
+
+    // Verify synonym rule generated for approved cluster
+    expect(store.synonymRules.length).toBe(1);
+    expect(store.synonymRules[0].verbatim_text).toBe("SEVERE HEADACHE");
+    expect(store.synonymRules[0].target_code).toBe("10019211");
+  });
+
+  it("propagates active synonym rules automatically on queue refresh", async () => {
+    store.synonymRules = [
+      {
+        verbatim_text: "MILD RASH",
+        target_code: "10037844",
+        target_term: "Rash",
+        dictionary_type: "MEDDRA",
+        status: "ACTIVE",
+      },
+    ];
+
+    apiClient.get.mockResolvedValue([
+      {
+        id: "NEW-OBS-1",
+        verbatim_text: "Mild Rash",
+        dictionary_type: "MEDDRA",
+        dictionary_version: "26.0",
+        status: "UNCODED",
+      },
+    ]);
+
+    await store.fetchAssignments();
+
+    const newInst = store.assignments.find((a) => a.id === "NEW-OBS-1");
+    expect(newInst.status).toBe("AUTO_CODED");
+    expect(newInst.coded_code).toBe("10037844");
+    expect(newInst.coded_term).toBe("Rash");
+  });
+
+  it("bypasses batch approval when all instances in cluster are blocked", async () => {
+    store.assignments = [
+      {
+        id: "BLOCKED-1",
+        verbatim_text: "BLOCKED EVENT",
+        dictionary_type: "MEDDRA",
+        status: "QUERY_PENDING",
+        has_query: true,
+      },
+    ];
+
+    const cluster = store.verbatimClusters[0];
+    await store.batchApproveClusters({
+      clusterIds: [cluster.id],
+      reason: "Batch approve blocked cluster",
+    });
+
+    expect(store.batchAlert).not.toBeNull();
+    expect(store.batchAlert.type).toBe("warning");
+    expect(store.batchAlert.message).toContain("Batch approval bypassed");
   });
 
   it("executes batchCodeClusters for WHODrug multi-cluster selection", async () => {
