@@ -137,6 +137,8 @@ flowchart TD
         econsent[econsent - Electronic Consent Service]
         fileshare[fileshare - Fileshare & Media Service]
         fileshare-transcoder[fileshare-transcoder - Media Transcoding Worker]
+        payments[payments - Subject & Site Payments Service]
+        ai-gateway[ai-gateway - AI Gateway Service]
         clamav[clamav - Antivirus Scanning Engine]
 
         %% Databases & Object Storage
@@ -265,6 +267,21 @@ The Fileshare & Media Storage Service manages binary document storage, direct br
 - **Object Storage Integration:** Interacts with S3/MinIO through `S3StorageAdapter` / `MinioStorageAdapter`, generating short-lived presigned upload and download URLs to bypass server memory.
 - **Envelope Security Pattern:** Persists document metadata, access grants, SHA-256 Merkle root checksums, and legal retention hold flags in relational storage (`fileshare.db` / PostgreSQL).
 - **Audit Logging:** Emits 21 CFR Part 11 compliant immutable audit entries (`FileshareAuditLog`) for all file transfers, share grants, and guest links.
+
+#### 2.3.8 Payments Service (`apps/payments`)
+
+The Payments Service manages subject stipend reimbursements, site payment tracking, and financial transaction processing.
+
+- **Service Boundary:** Exposes payment and subject stipend management endpoints via ASP.NET Core Minimal API.
+- **Encrypted Storage:** Financial references and processor tokens are secured using AES-256 field encryption (`FIELD_ENCRYPTION_KEY`).
+- **Audit Attribution:** Writes Part 11 compliant audit entries (`PaymentsDbContext`) for subject disbursements and site invoicing.
+
+#### 2.3.9 AI Gateway Service (`apps/ai_gateway` / `ai-gateway`)
+
+The AI Gateway Service manages LLM proxy routing, automated query proposal generation, and intelligent assistant capabilities.
+
+- **Service Boundary:** Exposes AI proxy routes (`/api/v1/ai`) behind gateway authentication.
+- **Proposal Model:** Evaluates candidate versions without modifying clinical state directly, producing human-in-the-loop proposals for review.
 
 ### 2.4 Distributed Caching Layer
 

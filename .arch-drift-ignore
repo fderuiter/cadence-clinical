@@ -1,0 +1,3 @@
+# Exclusion ledger for architecture drift validation (validate-architecture-drift)
+# Non-application or utility container profiles to ignore during documentation parity checks.
+dotnet-dev

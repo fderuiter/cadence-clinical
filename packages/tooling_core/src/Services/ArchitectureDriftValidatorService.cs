@@ -15,6 +15,7 @@ public static class ArchitectureDriftValidatorService
         string composePath = Path.Combine(repoRoot, "docker", "docker-compose.yml");
         string archPath = Path.Combine(repoRoot, "ARCHITECTURE.md");
         string tddPath = Path.Combine(repoRoot, "docs", "SDLC", "02_Technical_Design_Document_TDD.md");
+        string ignorePath = Path.Combine(repoRoot, ".arch-drift-ignore");
 
         if (!File.Exists(composePath))
         {
@@ -29,31 +30,77 @@ public static class ArchitectureDriftValidatorService
             return 1;
         }
 
-        if (File.Exists(archPath))
+        var ignoredServices = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (File.Exists(ignorePath))
+        {
+            foreach (var line in File.ReadLines(ignorePath))
+            {
+                string trimmed = line.Trim();
+                if (!string.IsNullOrEmpty(trimmed) && !trimmed.StartsWith('#'))
+                {
+                    ignoredServices.Add(trimmed);
+                }
+            }
+        }
+
+        var targetServices = new List<string>();
+        foreach (var svc in composeServices)
+        {
+            if (ignoredServices.Contains(svc))
+            {
+                Console.WriteLine($"[INFO] Ignoring container service '{svc}' per exclusion ledger (.arch-drift-ignore).");
+            }
+            else
+            {
+                targetServices.Add(svc);
+            }
+        }
+
+        bool hasDrift = false;
+
+        if (!File.Exists(archPath))
+        {
+            Console.WriteLine($"[ERROR] ARCHITECTURE.md not found at {archPath}");
+            hasDrift = true;
+        }
+        else
         {
             string archText = File.ReadAllText(archPath);
-            foreach (var svc in composeServices)
+            foreach (var svc in targetServices)
             {
                 if (!archText.Contains(svc, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine($"[WARNING] Compose service '{svc}' not explicitly mentioned in ARCHITECTURE.md");
+                    Console.WriteLine($"[ERROR] Compose service '{svc}' not explicitly mentioned in ARCHITECTURE.md");
+                    hasDrift = true;
                 }
             }
         }
 
-        if (File.Exists(tddPath))
+        if (!File.Exists(tddPath))
+        {
+            Console.WriteLine($"[ERROR] Technical Design Document not found at {tddPath}");
+            hasDrift = true;
+        }
+        else
         {
             string tddText = File.ReadAllText(tddPath);
-            foreach (var svc in composeServices)
+            foreach (var svc in targetServices)
             {
                 if (!tddText.Contains(svc, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine($"[WARNING] Compose service '{svc}' not explicitly mentioned in TDD.md");
+                    Console.WriteLine($"[ERROR] Compose service '{svc}' not explicitly mentioned in TDD.md");
+                    hasDrift = true;
                 }
             }
         }
 
-        Console.WriteLine($"✔ Architecture drift validation completed cleanly across {composeServices.Count} services.");
+        if (hasDrift)
+        {
+            Console.WriteLine("[ERROR] Architecture drift validation failed due to undocumented container service(s).");
+            return 1;
+        }
+
+        Console.WriteLine($"✔ Architecture drift validation completed cleanly across {targetServices.Count} services.");
         return 0;
     }
 
