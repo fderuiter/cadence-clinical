@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
@@ -39,10 +40,12 @@ public sealed class BatchEvaluationContext
     {
         StudyId = studyId;
         SubjectId = subjectId;
-        Submissions = formSubmissions;
-        Observations = observations;
+        var activeSubmissions = formSubmissions.Where(f => f.IsActive).ToList();
+        var activeObservations = observations.Where(o => o.IsActive).ToList();
+        Submissions = activeSubmissions;
+        Observations = activeObservations;
 
-        foreach (var sub in formSubmissions)
+        foreach (var sub in activeSubmissions)
         {
             if (!string.IsNullOrWhiteSpace(sub.VisitId))
             {
@@ -63,7 +66,7 @@ public sealed class BatchEvaluationContext
             formList.Add(sub);
         }
 
-        foreach (var obs in observations)
+        foreach (var obs in activeObservations)
         {
             string code = obs.TestCode.Value;
             if (!_obsByCode.TryGetValue(code, out var codeList))

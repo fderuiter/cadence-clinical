@@ -17,7 +17,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 32 |
 | [`edc.cgt_milestone_events`](#edccgt_milestone_events) | `CgtMilestoneEvent` | 25 |
 | [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 20 |
-| [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 38 |
+| [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 40 |
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
 | [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
@@ -412,11 +412,16 @@ Entity: `ClinicalObservation`
 | `VisitId` | `character varying(255)` | yes |  |  |
 | `_version` | `bigint` | no | `0` |  |
 | `additional_properties` | `jsonb` | no |  |  |
+| `form_submission_id` | `uuid` | yes |  |  |
+| `is_active` | `boolean` | no | `True` |  |
 
 Indexes:
 
 - `idx_observation_coords`: (`StudyId`, `SubjectId`, `VisitId`, `Domain`, `TestCode`)
+- `idx_observation_form_submission_active`: (`form_submission_id`, `is_active`)
 - `idx_observation_subject_date`: (`SubjectId`, `ObservationDate`)
+- `ix_clinical_observations_form_submission_id`: (`form_submission_id`)
+- `ix_clinical_observations_is_active`: (`is_active`)
 - `ix_clinical_observations_site_id`: (`SiteId`)
 
 ## edc.clinical_queries

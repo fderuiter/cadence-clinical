@@ -210,14 +210,20 @@ public sealed class ObservationApplicationService(
         return MapToResponse(observation);
     }
 
-    public async Task<Result<ObservationResponse>> GetByIdAsync(string id, CancellationToken cancellationToken)
+    public Task<Result<ObservationResponse>> GetByIdAsync(string id, CancellationToken cancellationToken = default) =>
+        GetByIdAsync(id, includeInactive: false, cancellationToken);
+
+    public async Task<Result<ObservationResponse>> GetByIdAsync(
+        string id,
+        bool includeInactive,
+        CancellationToken cancellationToken = default)
     {
         if (!ObservationId.TryParse(id, out var observationId) || observationId.IsEmpty)
         {
             return ObservationErrors.NotFound(id);
         }
 
-        var observation = await observationRepository.GetByIdAsync(observationId, cancellationToken).ConfigureAwait(false);
+        var observation = await observationRepository.GetByIdAsync(observationId, includeInactive, cancellationToken).ConfigureAwait(false);
         if (observation is null)
         {
             return ObservationErrors.NotFound(id);
@@ -226,15 +232,22 @@ public sealed class ObservationApplicationService(
         return MapToResponse(observation);
     }
 
+    public Task<Result<IReadOnlyList<ObservationResponse>>> ListBySubjectAsync(
+        string studyId,
+        string subjectId,
+        CancellationToken cancellationToken = default) =>
+        ListBySubjectAsync(studyId, subjectId, includeInactive: false, cancellationToken);
+
     public async Task<Result<IReadOnlyList<ObservationResponse>>> ListBySubjectAsync(
         string studyId,
         string subjectId,
-        CancellationToken cancellationToken)
+        bool includeInactive,
+        CancellationToken cancellationToken = default)
     {
         var studyCode = new StudyCode(studyId);
         var subjectCode = new SubjectCode(subjectId);
 
-        var list = await observationRepository.ListBySubjectAsync(studyCode, subjectCode, cancellationToken).ConfigureAwait(false);
+        var list = await observationRepository.ListBySubjectAsync(studyCode, subjectCode, includeInactive, cancellationToken).ConfigureAwait(false);
         return Result<IReadOnlyList<ObservationResponse>>.Success(list.Select(MapToResponse).ToList());
     }
 
@@ -345,6 +358,8 @@ public sealed class ObservationApplicationService(
             ReferenceRangeLow: o.ReferenceRangeLow,
             ReferenceRangeHigh: o.ReferenceRangeHigh,
             ProtocolVersionTag: o.ProtocolVersionTag,
-            ProtocolVersionIndex: o.ProtocolVersionIndex
+            ProtocolVersionIndex: o.ProtocolVersionIndex,
+            FormSubmissionId: o.FormSubmissionId?.ToString(),
+            IsActive: o.IsActive
         );
 }

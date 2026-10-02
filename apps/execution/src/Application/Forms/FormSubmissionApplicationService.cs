@@ -287,6 +287,10 @@ public sealed class FormSubmissionApplicationService(
                     cancellationToken).ConfigureAwait(false);
             }
         }
+        else
+        {
+            await observationRepository.DeactivateByFormSubmissionIdAsync(submission.Id, cancellationToken).ConfigureAwait(false);
+        }
 
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -593,7 +597,9 @@ public sealed class FormSubmissionApplicationService(
             protocolVersionTag: submission.ProtocolVersion,
             protocolVersionIndex: 1,
             normalizedValue: normVal,
-            normalizedUnit: normUnit);
+            normalizedUnit: normUnit,
+            formSubmissionId: submission.Id,
+            isActive: true);
 
         if (obsResult.IsSuccess && obsResult.Value is not null)
         {
@@ -629,6 +635,8 @@ public sealed class FormSubmissionApplicationService(
         {
             return extracted.Error!;
         }
+
+        await observationRepository.DeactivateByFormSubmissionIdAsync(submission.Id, cancellationToken).ConfigureAwait(false);
 
         foreach (var observation in extracted.Value!)
         {

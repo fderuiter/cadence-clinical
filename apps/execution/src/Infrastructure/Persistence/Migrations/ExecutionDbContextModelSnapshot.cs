@@ -940,6 +940,16 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid?>("FormSubmissionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("form_submission_id");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
                     b.Property<bool?>("IsOutOfRange")
                         .HasColumnType("boolean");
 
@@ -1062,8 +1072,17 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("FormSubmissionId")
+                        .HasDatabaseName("ix_clinical_observations_form_submission_id");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_clinical_observations_is_active");
+
                     b.HasIndex("SiteId")
                         .HasDatabaseName("ix_clinical_observations_site_id");
+
+                    b.HasIndex("FormSubmissionId", "IsActive")
+                        .HasDatabaseName("idx_observation_form_submission_active");
 
                     b.HasIndex("SubjectId", "ObservationDate")
                         .HasDatabaseName("idx_observation_subject_date");

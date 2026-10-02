@@ -634,6 +634,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
           }
         ],
         "responses": {
@@ -681,6 +689,14 @@
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "include_inactive",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
             }
           }
         ],
@@ -3694,6 +3710,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "form_submission_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_active": {
+            "type": "boolean",
+            "default": true
           }
         }
       },

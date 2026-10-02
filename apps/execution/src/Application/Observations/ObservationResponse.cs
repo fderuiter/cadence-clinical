@@ -37,5 +37,7 @@ public sealed record ObservationResponse(
     [property: JsonPropertyName("reference_range_low")] double? ReferenceRangeLow = null,
     [property: JsonPropertyName("reference_range_high")] double? ReferenceRangeHigh = null,
     [property: JsonPropertyName("protocol_version_tag")] string? ProtocolVersionTag = null,
-    [property: JsonPropertyName("protocol_version_index")] int? ProtocolVersionIndex = null
+    [property: JsonPropertyName("protocol_version_index")] int? ProtocolVersionIndex = null,
+    [property: JsonPropertyName("form_submission_id")] string? FormSubmissionId = null,
+    [property: JsonPropertyName("is_active")] bool IsActive = true
 );

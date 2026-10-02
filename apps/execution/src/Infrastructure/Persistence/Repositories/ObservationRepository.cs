@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -23,27 +24,49 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 public sealed class ObservationRepository(ExecutionDbContext context, ResiliencePipeline saveChangesResilience)
     : ExecutionRepositoryBase(context, saveChangesResilience), IObservationRepository
 {
-    public async Task<ClinicalObservation?> GetByIdAsync(ObservationId id, CancellationToken cancellationToken) =>
+    public Task<ClinicalObservation?> GetByIdAsync(ObservationId id, CancellationToken cancellationToken = default) =>
+        GetByIdAsync(id, includeInactive: false, cancellationToken);
+
+    public async Task<ClinicalObservation?> GetByIdAsync(
+        ObservationId id,
+        bool includeInactive,
+        CancellationToken cancellationToken = default) =>
         await Context.ClinicalObservations
             .AsNoTracking()
-            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken)
+            .FirstOrDefaultAsync(o => o.Id == id && (includeInactive || o.IsActive), cancellationToken)
             .ConfigureAwait(false);
 
-    public async Task<ClinicalObservation?> GetForUpdateAsync(ObservationId id, CancellationToken cancellationToken) =>
+    public async Task<ClinicalObservation?> GetForUpdateAsync(ObservationId id, CancellationToken cancellationToken = default) =>
         await Context.ClinicalObservations
-            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken)
+            .FirstOrDefaultAsync(o => o.Id == id && o.IsActive, cancellationToken)
             .ConfigureAwait(false);
+
+    public Task<IReadOnlyList<ClinicalObservation>> ListBySubjectAsync(
+        StudyCode studyId,
+        SubjectCode subjectId,
+        CancellationToken cancellationToken = default) =>
+        ListBySubjectAsync(studyId, subjectId, includeInactive: false, cancellationToken);
 
     public async Task<IReadOnlyList<ClinicalObservation>> ListBySubjectAsync(
         StudyCode studyId,
         SubjectCode subjectId,
-        CancellationToken cancellationToken) =>
+        bool includeInactive,
+        CancellationToken cancellationToken = default) =>
         await Context.ClinicalObservations
             .AsNoTracking()
-            .Where(o => o.StudyId == studyId && o.SubjectId == subjectId)
+            .Where(o => o.StudyId == studyId && o.SubjectId == subjectId && (includeInactive || o.IsActive))
             .OrderByDescending(o => o.ObservationDate)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+    public Task<IReadOnlyList<ClinicalObservation>> ListByCoordinatesAsync(
+        StudyCode studyId,
+        SubjectCode subjectId,
+        string? visitId,
+        DomainCode? domain,
+        TestCode? testCode,
+        CancellationToken cancellationToken = default) =>
+        ListByCoordinatesAsync(studyId, subjectId, visitId, domain, testCode, includeInactive: false, cancellationToken);
 
     public async Task<IReadOnlyList<ClinicalObservation>> ListByCoordinatesAsync(
         StudyCode studyId,
@@ -51,11 +74,12 @@ public sealed class ObservationRepository(ExecutionDbContext context, Resilience
         string? visitId,
         DomainCode? domain,
         TestCode? testCode,
-        CancellationToken cancellationToken)
+        bool includeInactive,
+        CancellationToken cancellationToken = default)
     {
         var query = Context.ClinicalObservations
             .AsNoTracking()
-            .Where(o => o.StudyId == studyId && o.SubjectId == subjectId);
+            .Where(o => o.StudyId == studyId && o.SubjectId == subjectId && (includeInactive || o.IsActive));
 
         if (visitId != null)
         {
@@ -78,7 +102,33 @@ public sealed class ObservationRepository(ExecutionDbContext context, Resilience
             .ConfigureAwait(false);
     }
 
-    public async Task AddAsync(ClinicalObservation observation, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ClinicalObservation>> ListByFormSubmissionAsync(
+        FormSubmissionId formSubmissionId,
+        bool includeInactive = false,
+        CancellationToken cancellationToken = default) =>
+        await Context.ClinicalObservations
+            .AsNoTracking()
+            .Where(o => o.FormSubmissionId == formSubmissionId && (includeInactive || o.IsActive))
+            .OrderByDescending(o => o.ObservationDate)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    public async Task DeactivateByFormSubmissionIdAsync(
+        FormSubmissionId formSubmissionId,
+        CancellationToken cancellationToken = default)
+    {
+        var activeObservations = await Context.ClinicalObservations
+            .Where(o => o.FormSubmissionId == formSubmissionId && o.IsActive)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var obs in activeObservations)
+        {
+            obs.Deactivate();
+        }
+    }
+
+    public async Task AddAsync(ClinicalObservation observation, CancellationToken cancellationToken = default)
     {
         await Context.ClinicalObservations.AddAsync(observation, cancellationToken).ConfigureAwait(false);
     }

@@ -1,5 +1,6 @@
 using System;
 
+using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
@@ -39,6 +40,8 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
     public string? SdvFlagReason { get; private set; }
     public string? ProtocolVersionTag { get; private set; }
     public int? ProtocolVersionIndex { get; private set; }
+    public FormSubmissionId? FormSubmissionId { get; private set; }
+    public bool IsActive { get; private set; } = true;
 
     /// <summary>
     /// ADR-2332 dynamic property bag mapped to PostgreSQL jsonb.
@@ -119,7 +122,9 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
         int? protocolVersionIndex = null,
         double? normalizedValue = null,
         string? normalizedUnit = null,
-        ObservationAdditionalProperties? additionalProperties = null)
+        ObservationAdditionalProperties? additionalProperties = null,
+        FormSubmissionId? formSubmissionId = null,
+        bool isActive = true)
     {
         if (value is null && string.IsNullOrWhiteSpace(valueString))
         {
@@ -163,6 +168,8 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
             ProtocolVersionIndex = protocolVersionIndex,
             NormalizedValue = normalizedValue,
             NormalizedUnit = normalizedUnit,
+            FormSubmissionId = formSubmissionId,
+            IsActive = isActive,
             IsOutlier = false,
             IsSdvVerified = false,
             IsSdvFlagged = false,
@@ -221,6 +228,11 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
     public void SetOutlier(bool isOutlier)
     {
         IsOutlier = isOutlier;
+    }
+
+    public void Deactivate()
+    {
+        IsActive = false;
     }
 
     public bool MatchesCoordinates(SubjectCode subjectId, string? visitId, DomainCode domain, SiteCode? siteId) =>

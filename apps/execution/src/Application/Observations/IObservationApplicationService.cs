@@ -18,9 +18,13 @@ public interface IObservationApplicationService
 {
     Task<Result<ObservationResponse>> CreateAsync(ObservationCreateRequest request, CancellationToken cancellationToken);
 
-    Task<Result<ObservationResponse>> GetByIdAsync(string id, CancellationToken cancellationToken);
+    Task<Result<ObservationResponse>> GetByIdAsync(string id, CancellationToken cancellationToken = default);
 
-    Task<Result<IReadOnlyList<ObservationResponse>>> ListBySubjectAsync(string studyId, string subjectId, CancellationToken cancellationToken);
+    Task<Result<ObservationResponse>> GetByIdAsync(string id, bool includeInactive, CancellationToken cancellationToken = default);
+
+    Task<Result<IReadOnlyList<ObservationResponse>>> ListBySubjectAsync(string studyId, string subjectId, CancellationToken cancellationToken = default);
+
+    Task<Result<IReadOnlyList<ObservationResponse>>> ListBySubjectAsync(string studyId, string subjectId, bool includeInactive, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Marks an observation source-verified by <paramref name="verifier"/>, who must hold a source data

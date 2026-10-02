@@ -47,7 +47,7 @@ public sealed class CgtBedsideVerification : AggregateRoot<Guid>
         DateTimeOffset verifiedAt,
         bool isMatch = true,
         string? notes = null,
-        string createdBy = "system",
+        string createdBy = "svc:execution",
         string reasonForChange = "Bedside dual verification completed")
         : base(id)
     {
