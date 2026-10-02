@@ -24,7 +24,7 @@ using Microsoft.Extensions.Configuration;
 namespace Cadence.Apps.Ctms.Endpoints;
 
 /// <summary>
-/// Site Startup (SSU) & Country-Level Multi-Site Greenlight Activation Matrix endpoints.
+/// Site Startup (SSU) &amp; Country-Level Multi-Site Greenlight Activation Matrix endpoints.
 /// @req:PRD-SSU-001
 /// @req:PRD-SSU-002
 /// @req:PRD-SSU-003

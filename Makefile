@@ -24,6 +24,8 @@ CADENCE_CLI := ./bin/cadence
 
 setup: ## Install all Node deps and pre-commit hooks
 	pnpm install --frozen-lockfile
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-commit
 	@echo "$(CYAN)✔ Environment ready. Run 'make verify' to confirm everything passes.$(RESET)"
 
 wizard: ## Interactive full-stack onboarding wizard (.NET SDK + setup, for new/CI/Codespaces environments)
