@@ -21,8 +21,8 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// <summary>
 /// Coverage for `MIG-SUBJ-010`'s <see cref="DomainError"/> -&gt; RFC 9457 <c>ProblemDetails</c> HTTP mapping:
 /// one <c>Theory</c> case per <see cref="SubjectErrors"/> factory method asserting the exact resulting
-/// HTTP status via <c>DomainError.ToProblemResult()</c>, explicit highlight coverage of the two named-`Code`
-/// overrides (422, 423), the "keyed by Code, not Type" boundary check, and the `Program.cs`
+/// HTTP status via <c>DomainError.ToProblemResult()</c>, explicit highlight coverage of the named-`Code`
+/// overrides (422 for a locked factor and a forbidden transition, 423), the "keyed by Code, not Type" boundary check, and the `Program.cs`
 /// `CustomizeProblemDetails` safety net's <see cref="DomainErrorHttpMapping.ApplyKnownCodeStatus"/> — proving
 /// it forces the one family the legacy system lacked a global handler for (`SUBJECT_NOT_FOUND`) to 404, while
 /// leaving anything it does not recognize (most importantly a bare exception's generic 500) untouched, so
@@ -33,7 +33,7 @@ public class DomainErrorHttpMappingTests
 {
     [Theory]
     [InlineData("NotFound", StatusCodes.Status404NotFound)]
-    [InlineData("InvalidStateTransition", StatusCodes.Status400BadRequest)]
+    [InlineData("InvalidStateTransition", StatusCodes.Status422UnprocessableEntity)]
     [InlineData("LockedFactorMutation", StatusCodes.Status422UnprocessableEntity)]
     [InlineData("SoftDeleteBlocked", StatusCodes.Status403Forbidden)]
     [InlineData("BlockedEnrollment", StatusCodes.Status400BadRequest)]
@@ -61,6 +61,31 @@ public class DomainErrorHttpMappingTests
         result.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
         result.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be("LOCKED_FACTOR_MUTATION");
         result.ProblemDetails.Detail.Should().Be(error.Description);
+    }
+
+    /// <summary>
+    /// PRD-SUB-001 answers a forbidden subject transition with 422, not the validation default of 400, through both
+    /// the direct mapping and the safety net. The override is keyed by the subject code alone: the query workflow's
+    /// own forbidden transition keeps the validation default.
+    /// </summary>
+    [Fact]
+    public void ToProblemResult_InvalidStateTransition_Returns422NotTheValidationDefaultOf400()
+    {
+        var error = SubjectErrors.InvalidStateTransition("RANDOMIZED", "SCREENING");
+        error.Type.Should().Be(ErrorType.Validation); // sanity: the override genuinely deviates from Type's own default
+
+        var result = error.ToProblemResult();
+
+        result.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
+        result.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be("INVALID_STATE_TRANSITION");
+
+        var bare = new ProblemDetails { Status = StatusCodes.Status400BadRequest };
+        bare.Extensions["code"] = "INVALID_STATE_TRANSITION";
+        DomainErrorHttpMapping.ApplyKnownCodeStatus(bare);
+        bare.Status.Should().Be(StatusCodes.Status422UnprocessableEntity);
+
+        DomainErrorHttpMapping.GetStatusCode(DomainError.Validation("INVALID_QUERY_TRANSITION", "Forbidden."))
+            .Should().Be(StatusCodes.Status400BadRequest);
     }
 
     [Fact]
