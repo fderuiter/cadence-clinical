@@ -28,7 +28,11 @@ public static class MarkdownValidatorService
         string[] mdFiles;
         if (files != null && files.Length > 0)
         {
-            mdFiles = files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToArray();
+            mdFiles = files
+                .Where(f => f.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                .Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f))
+                .Where(File.Exists)
+                .ToArray();
         }
         else
         {

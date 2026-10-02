@@ -1,10 +1,9 @@
 <template>
   <div id="section-econsent-authoring" class="dashboard-section active">
     <div class="section-header">
-      <h2>eConsent Template Authoring</h2>
+      <h2>{{ $t('econsent.authoring.title') }}</h2>
       <p>
-        Draft, compose, order clauses, specify comprehension checks, and publish
-        eConsent templates.
+        {{ $t('econsent.authoring.description') }}
       </p>
     </div>
 
@@ -25,7 +24,7 @@
           <h3
             style="color: var(--error); font-weight: bold; margin-bottom: 8px"
           >
-            21 CFR Part 11 Role Gating - Access Denied
+            {{ $t('econsent.authoring.accessDeniedTitle') }}
           </h3>
           <p
             style="
@@ -34,10 +33,7 @@
               line-height: 1.6;
             "
           >
-            You do not have the required <strong>SPONSOR_DESIGNER</strong>,
-            <strong>DATA_MANAGER</strong>, or
-            <strong>SPONSOR_ADMIN</strong> role to edit consent templates.
-            Please authenticate with an authorized clinical token.
+            {{ $t('econsent.authoring.accessDeniedMsg') }}
           </p>
         </div>
       </div>
@@ -59,12 +55,12 @@
             margin-bottom: 16px;
           "
         >
-          <span>Consent Templates</span>
+          <span>{{ $t('econsent.authoring.templatesTitle') }}</span>
           <span
             v-if="loading"
             style="font-size: 0.85rem; color: #64748b"
             role="status"
-            >Loading...</span
+            >{{ $t('econsent.authoring.loading') }}</span
           >
         </div>
 
@@ -82,8 +78,7 @@
             font-size: 0.85rem;
           "
         >
-          <strong>API Mode Degraded:</strong> Running in Local Sandbox VM. Sync
-          with GxP Server offline.
+          {{ $t('econsent.authoring.degradedMsg') }}
         </div>
 
         <!-- List container -->
@@ -105,7 +100,7 @@
               text-align: center;
             "
           >
-            No templates configured. Click "Create New Template" to get started.
+            {{ $t('econsent.authoring.noTemplates') }}
           </div>
           <div v-else>
             <div
@@ -146,7 +141,7 @@
                     "
                     @click="openEditor(tpl)"
                   >
-                    Edit
+                    {{ $t('econsent.authoring.edit') }}
                   </button>
                   <button
                     v-if="!tpl.is_published"
@@ -162,7 +157,7 @@
                     "
                     @click="promptPublish(tpl)"
                   >
-                    Publish
+                    {{ $t('econsent.authoring.publish') }}
                   </button>
                   <span
                     v-else
@@ -175,23 +170,23 @@
                       border-radius: 4px;
                     "
                   >
-                    Published
+                    {{ $t('econsent.authoring.published') }}
                   </span>
                 </div>
               </div>
               <div style="font-size: 0.85rem; color: var(--neutral-dark)">
                 <div>
-                  <strong>Template ID:</strong>
+                  <strong>{{ $t('econsent.authoring.templateId') }}</strong>
                   <code>{{ tpl.template_id }}</code>
                 </div>
-                <div><strong>Study:</strong> {{ tpl.study_id }}</div>
+                <div><strong>{{ $t('econsent.authoring.study') }}</strong> {{ tpl.study_id }}</div>
                 <div>
-                  <strong>Version:</strong> {{ tpl.version_index }} (Protocol:
+                  <strong>{{ $t('econsent.authoring.version') }}</strong> {{ tpl.version_index }} ({{ $t('econsent.authoring.protocol') }}
                   {{ tpl.protocol_version }})
                 </div>
                 <div>
-                  <strong>Re-consent required:</strong>
-                  {{ tpl.requires_reconsent ? "Yes" : "No" }}
+                  <strong>{{ $t('econsent.authoring.reconsentRequired') }}</strong>
+                  {{ tpl.requires_reconsent ? $t('econsent.authoring.yes') : $t('econsent.authoring.no') }}
                 </div>
               </div>
             </div>
@@ -210,7 +205,7 @@
           "
           @click="openEditor(null)"
         >
-          <span>➕</span> Create New Template
+          <span>➕</span> {{ $t('econsent.authoring.createNew') }}
         </button>
       </div>
 
@@ -222,7 +217,7 @@
         style="display: flex; flex-direction: column"
       >
         <div id="editor-title" class="card-title" style="margin-bottom: 16px">
-          {{ isEdit ? "Edit Consent Template" : "Compose Consent Template" }}
+          {{ isEdit ? $t('econsent.authoring.editTitle') : $t('econsent.authoring.composeTitle') }}
         </div>
 
         <!-- Accessible inline error banner -->
@@ -267,7 +262,7 @@
             <legend
               style="padding: 0 8px; font-weight: bold; color: var(--accent)"
             >
-              Metadata & Configuration
+              {{ $t('econsent.authoring.metadataHeader') }}
             </legend>
             <div class="grid-2-responsive">
               <div class="form-group">
@@ -279,7 +274,7 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                  >Study ID</label
+                  >{{ $t('econsent.authoring.studyIdLabel') }}</label
                 >
                 <input
                   id="input-study-id"
@@ -305,7 +300,7 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                  >Template Name</label
+                  >{{ $t('econsent.authoring.templateNameLabel') }}</label
                 >
                 <input
                   id="input-template-name"
@@ -331,7 +326,7 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                  >Protocol Version</label
+                  >{{ $t('econsent.authoring.protocolVersionLabel') }}</label
                 >
                 <input
                   id="input-protocol-version"
@@ -361,7 +356,7 @@
                 <label
                   for="checkbox-reconsent"
                   style="font-weight: 600; font-size: 0.85rem; cursor: pointer"
-                  >Requires Re-consent</label
+                  >{{ $t('econsent.authoring.requiresReconsentLabel') }}</label
                 >
               </div>
             </div>
@@ -378,11 +373,10 @@
             <legend
               style="padding: 0 8px; font-weight: bold; color: var(--accent)"
             >
-              Consent Clauses & Order
+              {{ $t('econsent.authoring.clausesHeader') }}
             </legend>
             <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px">
-              Add and sort referenced clause IDs below in their exact display
-              order.
+              {{ $t('econsent.authoring.clausesHelp') }}
             </p>
 
             <div
@@ -463,7 +457,7 @@
               style="margin-top: 12px; padding: 6px 12px; font-size: 0.8rem"
               @click="addClauseRow"
             >
-              ➕ Add Clause Reference
+              ➕ {{ $t('econsent.authoring.addClause') }}
             </button>
           </fieldset>
 
@@ -478,11 +472,10 @@
             <legend
               style="padding: 0 8px; font-weight: bold; color: var(--accent)"
             >
-              Workflow Steps Definition
+              {{ $t('econsent.authoring.stepsHeader') }}
             </legend>
             <p style="font-size: 0.8rem; color: #64748b; margin-bottom: 12px">
-              Templates must include a comprehension-check and a signature step
-              to be published.
+              {{ $t('econsent.authoring.stepsHelp') }}
             </p>
 
             <div
@@ -509,7 +502,7 @@
                     align-items: center;
                   "
                 >
-                  <strong>Step #{{ index + 1 }} - {{ step.type }}</strong>
+                  <strong>{{ $t('econsent.authoring.stepTitle', { index: index + 1, type: step.type }) }}</strong>
                   <button
                     type="button"
                     class="btn btn-remove-step"
@@ -523,14 +516,14 @@
                     "
                     @click="removeStep(index)"
                   >
-                    Remove
+                    {{ $t('econsent.authoring.remove') }}
                   </button>
                 </div>
                 <div v-if="step.type === 'comprehension_check'">
                   <label
                     :for="'step-question-' + index"
                     style="font-size: 0.75rem"
-                    >Verification prompt</label
+                    >{{ $t('econsent.authoring.verificationPrompt') }}</label
                   >
                   <input
                     :id="'step-question-' + index"
@@ -542,7 +535,7 @@
                 </div>
                 <div v-else-if="step.type === 'signature_placeholder'">
                   <label :for="'step-role-' + index" style="font-size: 0.75rem"
-                    >Required Role</label
+                    >{{ $t('econsent.authoring.requiredRole') }}</label
                   >
                   <input
                     :id="'step-role-' + index"
@@ -562,7 +555,7 @@
                 style="padding: 6px 12px; font-size: 0.8rem"
                 @click="addWorkflowStep('comprehension_check')"
               >
-                ➕ Add Comprehension Check Step
+                ➕ {{ $t('econsent.authoring.addComprehensionStep') }}
               </button>
               <button
                 type="button"
@@ -570,7 +563,7 @@
                 style="padding: 6px 12px; font-size: 0.8rem"
                 @click="addWorkflowStep('signature_placeholder')"
               >
-                ➕ Add Signature Placeholder Step
+                ➕ {{ $t('econsent.authoring.addSignatureStep') }}
               </button>
             </div>
           </fieldset>
@@ -586,7 +579,7 @@
             <legend
               style="padding: 0 8px; font-weight: bold; color: var(--accent)"
             >
-              Live Preview (Compose Dry-run)
+              {{ $t('econsent.authoring.previewHeader') }}
             </legend>
             <div
               style="
@@ -607,7 +600,7 @@
                 "
               >
                 <strong style="color: var(--primary); font-size: 0.85rem"
-                  >Hydrated Clauses Preview:</strong
+                  >{{ $t('econsent.authoring.previewSubheader') }}</strong
                 >
                 <button
                   type="button"
@@ -615,20 +608,20 @@
                   style="padding: 4px 10px; font-size: 0.75rem"
                   @click="triggerComposePreview"
                 >
-                  Refresh Preview
+                  {{ $t('econsent.authoring.refreshPreview') }}
                 </button>
               </div>
               <div
                 v-if="previewLoading"
                 style="font-size: 0.8rem; font-style: italic"
               >
-                Loading composition...
+                {{ $t('econsent.authoring.previewLoading') }}
               </div>
               <div
                 v-else-if="previewClauses.length === 0"
                 style="font-size: 0.8rem; color: #64748b; font-style: italic"
               >
-                No clauses compiled or template not yet saved on server.
+                {{ $t('econsent.authoring.noClauses') }}
               </div>
               <div
                 v-else
@@ -680,14 +673,14 @@
             style="padding: 8px 16px; cursor: pointer"
             @click="showEditor = false"
           >
-            Cancel
+            {{ $t('econsent.authoring.cancel') }}
           </button>
           <button
             class="btn btn-primary btn-save"
             style="padding: 8px 16px; cursor: pointer"
             @click="promptSave"
           >
-            Save Template Version
+            {{ $t('econsent.authoring.saveTemplate') }}
           </button>
         </div>
       </div>

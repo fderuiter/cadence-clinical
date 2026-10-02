@@ -1,4 +1,4 @@
-# ADR-2805: User Onboarding Preferences Persistence and Client Synchronization
+# ADR-2806: User Onboarding Preferences Persistence and Client Synchronization
 
 - **Status:** Accepted
 - **Date:** 2026-10-02

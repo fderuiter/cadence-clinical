@@ -82,7 +82,7 @@ public static class StartupGreenlightEndpoints
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
         [FromServices] IClock clock,
-        IConfiguration config,
+        [FromServices] IConfiguration config,
         CancellationToken ct)
     {
         countryCode = (countryCode ?? "US").ToUpperInvariant();
@@ -158,7 +158,7 @@ public static class StartupGreenlightEndpoints
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
         [FromServices] IClock clock,
-        IConfiguration config,
+        [FromServices] IConfiguration config,
         CancellationToken ct)
     {
         if (request.SiteIds == null || request.SiteIds.Count == 0)
@@ -326,7 +326,7 @@ public static class StartupGreenlightEndpoints
                 FacetDoaLog = true,
                 FacetStaffTraining = true,
                 FacetIpRelease = true,
-                CreatedBy = "svc:ctms-startup",
+                CreatedBy = "svc:ctms",
                 ReasonForChange = "Initial greenlight gate creation"
             };
             db.CtmsSiteGreenlightGates.Add(gate);
@@ -368,7 +368,7 @@ public static class StartupGreenlightEndpoints
                 FacetDoaLog = isCompliant,
                 FacetStaffTraining = true,
                 FacetIpRelease = isCompliant,
-                CreatedBy = "svc:ctms-startup",
+                CreatedBy = "svc:ctms",
                 ReasonForChange = "Seed country matrix sites"
             });
         }
