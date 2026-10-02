@@ -804,10 +804,52 @@
           >
         </div>
         <div class="panel-body">
+          <div class="batch-action-bar" v-if="pendingClaims.length > 0">
+            <div class="batch-summary">
+              <span v-if="selectedClaimIds.length === 0" class="text-muted">
+                Select claims below for batch approval or rejection (up to 100).
+              </span>
+              <span v-else class="text-primary font-bold">
+                Selected: {{ selectedClaimIds.length }} claim(s) | Total: ${{ selectedClaimsTotalAmount.toFixed(2) }}
+              </span>
+            </div>
+            <div class="batch-controls">
+              <input
+                type="text"
+                v-model="batchReviewNotes"
+                placeholder="Optional batch review notes..."
+                class="form-control form-control-sm batch-notes-input"
+                :disabled="isSubmitting"
+              />
+              <button
+                class="btn btn-sm btn-success"
+                :disabled="isSubmitting || selectedClaimIds.length === 0 || selectedClaimIds.length > 100"
+                @click="batchReviewClaims('APPROVED')"
+              >
+                ✓ Batch Approve ({{ selectedClaimIds.length }})
+              </button>
+              <button
+                class="btn btn-sm btn-danger"
+                :disabled="isSubmitting || selectedClaimIds.length === 0 || selectedClaimIds.length > 100"
+                @click="batchReviewClaims('REJECTED')"
+              >
+                ✕ Batch Reject ({{ selectedClaimIds.length }})
+              </button>
+            </div>
+          </div>
           <div class="table-container">
             <table class="data-table">
               <thead>
                 <tr>
+                  <th class="text-center" style="width: 40px">
+                    <input
+                      type="checkbox"
+                      :checked="isAllSelected"
+                      :disabled="isSubmitting || pendingClaims.length === 0"
+                      @change="toggleSelectAll"
+                      title="Select all pending claims"
+                    />
+                  </th>
                   <th>Claim ID</th>
                   <th>Subject</th>
                   <th>Date</th>
@@ -821,7 +863,19 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="c in pendingClaims" :key="c.id">
+                <tr
+                  v-for="c in pendingClaims"
+                  :key="c.id"
+                  :class="{ 'row-selected': selectedClaimIds.includes(c.id) }"
+                >
+                  <td class="text-center">
+                    <input
+                      type="checkbox"
+                      :value="c.id"
+                      v-model="selectedClaimIds"
+                      :disabled="isSubmitting"
+                    />
+                  </td>
                   <td>
                     <code>{{ c.id.substring(0, 8) }}...</code>
                   </td>
@@ -863,7 +917,7 @@
                   </td>
                 </tr>
                 <tr v-if="pendingClaims.length === 0">
-                  <td colspan="10" class="empty-cell">
+                  <td colspan="11" class="empty-cell">
                     🎉 No pending expense claims in queue!
                   </td>
                 </tr>
@@ -1079,6 +1133,41 @@ const pendingClaims = computed(() =>
   expenseClaims.value.filter((c) => c.status === "PENDING_REVIEW")
 );
 const pendingClaimsCount = computed(() => pendingClaims.value.length);
+
+const selectedClaimIds = ref<string[]>([]);
+const batchReviewNotes = ref("");
+
+const isAllSelected = computed(() => {
+  return (
+    pendingClaims.value.length > 0 &&
+    selectedClaimIds.value.length === pendingClaims.value.length
+  );
+});
+
+const selectedClaimsTotalAmount = computed(() => {
+  const selectedSet = new Set(selectedClaimIds.value);
+  return pendingClaims.value
+    .filter((c) => selectedSet.has(c.id))
+    .reduce(
+      (sum, c) =>
+        sum +
+        (c.net_amount ??
+          c.netAmount ??
+          c.gross_amount ??
+          c.grossAmount ??
+          0),
+      0
+    );
+});
+
+function toggleSelectAll(event: Event) {
+  const checked = (event.target as HTMLInputElement).checked;
+  if (checked) {
+    selectedClaimIds.value = pendingClaims.value.map((c) => c.id);
+  } else {
+    selectedClaimIds.value = [];
+  }
+}
 
 function formatDate(iso: string) {
   if (!iso) return "-";
@@ -1502,6 +1591,44 @@ async function reviewClaim(claimId: string, decision: string) {
     await loadAllData();
   } catch (e) {
     useToastStore().apiError("Reviewing the expense claim failed", e);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+async function batchReviewClaims(decision: string) {
+  if (selectedClaimIds.value.length === 0) return;
+  if (selectedClaimIds.value.length > 100) {
+    useToastStore().warning(
+      "Cannot review more than 100 claims in a single batch request."
+    );
+    return;
+  }
+
+  isSubmitting.value = true;
+  try {
+    const res = await fetch(
+      "/api/v1/payments/participant/expenses/batch-review",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          claim_ids: selectedClaimIds.value,
+          action: decision,
+          review_notes:
+            batchReviewNotes.value ||
+            (decision === "APPROVED"
+              ? "Batch approved by site coordinator."
+              : "Batch rejected by site coordinator."),
+        }),
+      }
+    );
+    await ensureOk(res);
+    selectedClaimIds.value = [];
+    batchReviewNotes.value = "";
+    await loadAllData();
+  } catch (e) {
+    useToastStore().apiError("Batch reviewing expense claims failed", e);
   } finally {
     isSubmitting.value = false;
   }
@@ -2308,5 +2435,37 @@ onMounted(() => {
   padding: 14px 20px;
   background-color: var(--semantic-color-surface-muted, #f8fafc);
   border-top: 1px solid var(--semantic-color-border, #e2e8f0);
+}
+
+.batch-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background-color: var(--semantic-color-surface-muted, #f8fafc);
+  border: 1px solid var(--semantic-color-border, #e2e8f0);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.batch-summary {
+  font-size: 0.85rem;
+}
+
+.batch-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-notes-input {
+  min-width: 220px;
+  font-size: 0.82rem;
+}
+
+.row-selected {
+  background-color: rgba(59, 130, 246, 0.08) !important;
 }
 </style>

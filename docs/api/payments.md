@@ -10,6 +10,7 @@ Generated from `docs/openapi/payments_openapi.json` by `pnpm cadence generate-ap
 | `POST` | `/api/v1/payments/participant/events/visit-verified` | IngestVisitVerifiedEvent | Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules. |
 | `GET` | `/api/v1/payments/participant/expenses` | ListExpenseClaims | List travel and meal expense reimbursement claims. |
 | `POST` | `/api/v1/payments/participant/expenses` | SubmitExpenseClaim | Submit travel/meal expense claim for coordinator review. |
+| `POST` | `/api/v1/payments/participant/expenses/batch-review` | BatchReviewExpenseClaims | Coordinator batch review and approval/rejection of expense claims. |
 | `POST` | `/api/v1/payments/participant/expenses/ocr-extract` | ExtractReceiptOcr | Extract metadata from receipt image/text using rule-based OCR engine. |
 | `POST` | `/api/v1/payments/participant/expenses/{claimId}/review` | ReviewExpenseClaim | Coordinator 1-click review and approval/rejection of expense claim. |
 | `GET` | `/api/v1/payments/participant/stipend-rules` | ListStipendRules | List SoA protocol visit stipend compensation rules. |

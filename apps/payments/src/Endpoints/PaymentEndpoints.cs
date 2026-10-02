@@ -143,6 +143,21 @@ public record ReviewExpenseClaimRequestDto(
     decimal? AdjustedAmount = null
 );
 
+public record BatchReviewExpenseClaimsRequestDto(
+    List<string>? ClaimIds = null,
+    string? Action = null,
+    string? Status = null,
+    string? ReviewNotes = null
+);
+
+public record BatchReviewExpenseClaimsResponseDto(
+    bool Success,
+    int ProcessedCount,
+    string Action,
+    List<string> ProcessedClaimIds,
+    decimal TotalAmount
+);
+
 public record OcrExtractRequestDto(
     string? RawText = null,
     string? ImageBase64 = null,
@@ -232,6 +247,10 @@ public static class PaymentEndpoints
         group.MapPost("/participant/expenses/{claimId}/review", ReviewExpenseClaim)
             .WithName("ReviewExpenseClaim")
             .WithSummary("Coordinator 1-click review and approval/rejection of expense claim.");
+
+        group.MapPost("/participant/expenses/batch-review", BatchReviewExpenseClaims)
+            .WithName("BatchReviewExpenseClaims")
+            .WithSummary("Coordinator batch review and approval/rejection of expense claims.");
 
         // Transactions, Disbursements & Audit Logs
         group.MapGet("/participant/transactions", ListTransactions)
@@ -1343,6 +1362,175 @@ public static class PaymentEndpoints
         await dbContext.SaveChangesAsync();
 
         return Results.Ok(claim);
+    }
+
+    public static async Task<IResult> BatchReviewExpenseClaims(BatchReviewExpenseClaimsRequestDto request, PaymentsDbContext dbContext)
+    {
+        if (request.ClaimIds == null || request.ClaimIds.Count == 0)
+        {
+            return Results.BadRequest(new { detail = "ClaimIds array cannot be empty." });
+        }
+
+        if (request.ClaimIds.Count > 100)
+        {
+            return Results.BadRequest(new { detail = "Batch request exceeds maximum allowed limit of 100 claims." });
+        }
+
+        string decision = (request.Action ?? request.Status ?? string.Empty).Trim().ToUpperInvariant();
+        if (decision is not ("APPROVED" or "REJECTED"))
+        {
+            return Results.BadRequest(new { detail = "Action must be either APPROVED or REJECTED." });
+        }
+
+        var requestedIds = request.ClaimIds.Distinct().ToList();
+        var claims = await dbContext.ParticipantExpenseClaims
+            .Where(c => requestedIds.Contains(c.Id))
+            .ToListAsync();
+
+        if (claims.Count != requestedIds.Count)
+        {
+            var foundIds = claims.Select(c => c.Id).ToHashSet();
+            var missingIds = requestedIds.Where(id => !foundIds.Contains(id)).ToList();
+            return Results.NotFound(new { detail = $"One or more expense claims were not found: {string.Join(", ", missingIds)}" });
+        }
+
+        var nonPendingClaims = claims.Where(c => c.Status != "PENDING_REVIEW").ToList();
+        if (nonPendingClaims.Count > 0)
+        {
+            var invalidDetails = nonPendingClaims.Select(c => $"{c.Id} ({c.Status})");
+            return Results.BadRequest(new { detail = $"Batch request rejected because the following claims are not in PENDING_REVIEW status: {string.Join(", ", invalidDetails)}" });
+        }
+
+        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        decimal totalNet = 0m;
+
+        await using var transaction = dbContext.Database.IsRelational()
+            ? await dbContext.Database.BeginTransactionAsync()
+            : null;
+
+        try
+        {
+            var walletIds = claims.Select(c => c.WalletId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+            var subjectIds = claims.Select(c => c.SubjectId).Where(id => !string.IsNullOrEmpty(id)).Distinct().ToList();
+
+            var wallets = await dbContext.ParticipantWallets
+                .Where(w => walletIds.Contains(w.Id) || subjectIds.Contains(w.SubjectId))
+                .ToListAsync();
+
+            var walletMap = new Dictionary<string, ParticipantWallet>();
+            foreach (var w in wallets)
+            {
+                if (!walletMap.ContainsKey(w.Id)) walletMap[w.Id] = w;
+                if (!walletMap.ContainsKey(w.SubjectId)) walletMap[w.SubjectId] = w;
+            }
+
+            foreach (var claim in claims)
+            {
+                claim.Status = decision;
+                claim.ReviewedBy = "coordinator_alice";
+                claim.ReviewedAt = now;
+                claim.ReviewNotes = request.ReviewNotes;
+                claim.UpdatedAt = now;
+                claim.VersionIndex += 1;
+
+                totalNet += claim.NetAmount;
+
+                if (decision == "APPROVED")
+                {
+                    ParticipantWallet? wallet = null;
+                    if (!string.IsNullOrEmpty(claim.WalletId) && walletMap.TryGetValue(claim.WalletId, out var w1))
+                    {
+                        wallet = w1;
+                    }
+                    else if (!string.IsNullOrEmpty(claim.SubjectId) && walletMap.TryGetValue(claim.SubjectId, out var w2))
+                    {
+                        wallet = w2;
+                    }
+
+                    if (wallet != null)
+                    {
+                        wallet.CurrentBalance += claim.NetAmount;
+                        wallet.LifetimeReimbursements += claim.NetAmount;
+                        wallet.UpdatedAt = now;
+                        wallet.VersionIndex += 1;
+
+                        var tx = new ParticipantTransaction
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            WalletId = wallet.Id,
+                            SubjectId = wallet.SubjectId,
+                            StudyId = wallet.StudyId,
+                            TransactionType = "REIMBURSEMENT_CREDIT",
+                            Amount = claim.NetAmount,
+                            BalanceAfter = wallet.CurrentBalance,
+                            ReferenceId = claim.Id,
+                            Description = $"Batch reimbursement approval for {claim.Category} expense ({claim.MerchantName})",
+                            CreatedAt = now,
+                            CreatedBy = "coordinator_alice",
+                            VersionIndex = 1
+                        };
+                        dbContext.ParticipantTransactions.Add(tx);
+                    }
+
+                    var audit = new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantExpenseClaim",
+                        EntityId = claim.Id,
+                        Action = "EXPENSE_CLAIM_APPROVED",
+                        UserId = "coordinator_alice",
+                        UserRoles = "Coordinator",
+                        Details = JsonSerializer.Serialize(new { claim_id = claim.Id, net_amount = claim.NetAmount, status = claim.Status, review_notes = request.ReviewNotes, is_batch = true }),
+                        CreatedAt = now,
+                        CreatedBy = "coordinator_alice",
+                        ReasonForChange = "Expense claim approved in batch review by coordinator",
+                        VersionIndex = claim.VersionIndex
+                    };
+                    dbContext.PaymentAuditLogs.Add(audit);
+                }
+                else
+                {
+                    var audit = new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantExpenseClaim",
+                        EntityId = claim.Id,
+                        Action = "EXPENSE_CLAIM_REJECTED",
+                        UserId = "coordinator_alice",
+                        UserRoles = "Coordinator",
+                        Details = JsonSerializer.Serialize(new { claim_id = claim.Id, status = claim.Status, notes = request.ReviewNotes, is_batch = true }),
+                        CreatedAt = now,
+                        CreatedBy = "coordinator_alice",
+                        ReasonForChange = "Expense claim rejected in batch review by coordinator",
+                        VersionIndex = claim.VersionIndex
+                    };
+                    dbContext.PaymentAuditLogs.Add(audit);
+                }
+            }
+
+            await dbContext.SaveChangesAsync();
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync();
+            }
+
+            return Results.Ok(new BatchReviewExpenseClaimsResponseDto(
+                Success: true,
+                ProcessedCount: claims.Count,
+                Action: decision,
+                ProcessedClaimIds: claims.Select(c => c.Id).ToList(),
+                TotalAmount: totalNet
+            ));
+        }
+        catch
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync();
+            }
+            throw;
+        }
     }
 
     private static async Task<IResult> ListTransactions(PaymentsDbContext dbContext, string? subjectId = null, string? walletId = null)

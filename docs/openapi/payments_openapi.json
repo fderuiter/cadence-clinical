@@ -525,6 +525,30 @@
         }
       }
     },
+    "/api/v1/payments/participant/expenses/batch-review": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Coordinator batch review and approval/rejection of expense claims.",
+        "operationId": "BatchReviewExpenseClaims",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_BatchReviewExpenseClaimsRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/payments/participant/transactions": {
       "get": {
         "tags": [
@@ -625,6 +649,38 @@
             ]
           },
           "service": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_BatchReviewExpenseClaimsRequestDto": {
+        "type": "object",
+        "properties": {
+          "claimIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "action": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reviewNotes": {
             "type": [
               "null",
               "string"
