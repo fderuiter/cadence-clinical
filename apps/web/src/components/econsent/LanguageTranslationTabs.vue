@@ -1,7 +1,7 @@
 <template>
   <div class="language-translation-tabs-container card">
     <div class="tabs-header">
-      <span class="tabs-label">🌍 Localized Consent Translations:</span>
+      <span class="tabs-label">🌍 {{ $t('econsent.translationTabs.headerLabel') }}</span>
       <div ref="tabsListRef" class="tabs-list" role="tablist">
         <button
           v-for="lang in availableLanguages"
@@ -26,14 +26,11 @@
     <!-- Active Language Banner/Info -->
     <div class="active-lang-banner">
       <p>
-        Currently editing content in <strong>{{ activeLanguageName }}</strong
-        >. All modifications to the section content will be saved under the
-        <strong>{{ econsentStore.activeLanguage }}</strong> translation locale.
+        {{ $t('econsent.translationTabs.bannerText', { language: activeLanguageName, locale: econsentStore.activeLanguage }) }}
       </p>
       <div class="completion-metrics">
         <span class="metric-badge">
-          Sections: {{ translatedSectionsCount }} /
-          {{ econsentStore.sections.length }} Translated
+          {{ $t('econsent.translationTabs.sectionsMetric', { translated: translatedSectionsCount, total: econsentStore.sections.length }) }}
         </span>
       </div>
     </div>
@@ -44,6 +41,7 @@
 import { computed, ref } from "vue";
 import { useEconsentStore } from "../../stores/econsent.js";
 import { useRovingTabindex } from "../../composables/useRovingTabindex.js";
+import { setGlobalLocale } from "../../i18n/index.js";
 
 const econsentStore = useEconsentStore();
 const tabsListRef = ref(null);
@@ -84,6 +82,7 @@ const translatedSectionsCount = computed(() => {
 
 const selectLanguage = (langCode) => {
   econsentStore.setLanguage(langCode);
+  setGlobalLocale(langCode);
 };
 </script>
 

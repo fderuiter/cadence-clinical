@@ -213,7 +213,7 @@
             <span
               id="session-wallet-balance"
               class="info-val text-success"
-              style="font-weight: bold; color: #10b981"
+              style="font-weight: bold; color: var(--semantic-color-success)"
             >
               ${{
                 state.walletBalance !== undefined &&
@@ -245,9 +245,9 @@
           id="reconsent-urgent-banner"
           class="card urgent-reconsent-banner"
           style="
-            border: 2px solid #eab308;
-            background-color: #fefce8;
-            color: #854d0e;
+            border: 2px solid var(--semantic-color-warning-border-strong);
+            background-color: var(--semantic-color-warning-bg-light);
+            color: var(--semantic-color-warning-text);
             padding: 16px 20px;
             margin-bottom: 24px;
             border-radius: 8px;
@@ -267,7 +267,7 @@
                   margin: 0 0 4px 0;
                   font-size: 16px;
                   font-weight: 700;
-                  color: #713f12;
+                  color: var(--semantic-color-warning-text-dark);
                 "
               >
                 Action Required: Protocol Amendment Re-Consent
@@ -284,8 +284,8 @@
             class="btn btn-primary"
             style="
               white-space: nowrap;
-              background-color: #ca8a04;
-              border-color: #a16207;
+              background-color: var(--semantic-color-warning-action);
+              border-color: var(--semantic-color-warning-action-border);
             "
             @click="openReconsentModal"
           >
@@ -299,8 +299,8 @@
           class="card error-state"
           style="
             border: 1px solid var(--danger);
-            background-color: #fee2e2;
-            color: #b91c1c;
+            background-color: var(--semantic-color-error-bg);
+            color: var(--semantic-color-error);
             padding: 16px;
             margin-bottom: 24px;
             text-align: center;
@@ -881,8 +881,12 @@
             class="card"
             style="
               margin-bottom: 20px;
-              background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-              color: #ffffff;
+              background: linear-gradient(
+                135deg,
+                var(--semantic-color-wallet-start) 0%,
+                var(--semantic-color-wallet-end) 100%
+              );
+              color: var(--semantic-color-surface);
             "
           >
             <div style="font-size: 14px; font-weight: 600; opacity: 0.9">
@@ -1053,8 +1057,8 @@
                 display: none;
                 padding: 8px;
                 border-radius: 4px;
-                background-color: #fee2e2;
-                color: #b91c1c;
+                background-color: var(--semantic-color-error-bg);
+                color: var(--semantic-color-error);
                 margin-bottom: 12px;
                 font-size: 13px;
                 font-weight: 600;
@@ -1159,8 +1163,8 @@
               style="
                 padding: 8px 12px;
                 border-radius: 4px;
-                background-color: #fee2e2;
-                color: #b91c1c;
+                background-color: var(--semantic-color-error-bg);
+                color: var(--semantic-color-error);
                 margin-bottom: 12px;
                 font-size: 13px;
                 font-weight: 600;
@@ -1175,17 +1179,29 @@
               id="reconsent-change-summary"
               class="card"
               style="
-                background-color: #f8fafc;
-                border: 1px solid #e2e8f0;
+                background-color: var(--semantic-color-surface-muted);
+                border: 1px solid var(--semantic-color-border);
                 padding: 12px 16px;
                 margin-bottom: 16px;
                 border-radius: 6px;
               "
             >
-              <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #1e293b">
+              <h4
+                style="
+                  margin: 0 0 6px 0;
+                  font-size: 14px;
+                  color: var(--semantic-color-text-dark);
+                "
+              >
                 Summary of Protocol Amendments:
               </h4>
-              <p style="margin: 0; font-size: 13px; color: #475569">
+              <p
+                style="
+                  margin: 0;
+                  font-size: 13px;
+                  color: var(--semantic-color-text-muted);
+                "
+              >
                 {{
                   state.pendingReconsent?.change_summary ||
                   state.pendingReconsent?.summary_of_changes ||

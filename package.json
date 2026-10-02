@@ -12,7 +12,7 @@
     "test:all": "pnpm -r test && dotnet run --project packages/cli/src/Cadence.Cli.csproj -- test",
     "check-docs-drift": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- validate-architecture-drift",
     "lint": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- validate-path-patterns && pnpm -r lint",
-    "format": "pnpm -r format && pnpm exec prettier --write \"**/*.{json,css,md}\"",
+    "format": "pnpm -r format && pnpm exec prettier --write \"**/*.{js,jsx,ts,tsx,vue,json,css,md,yaml,yml}\"",
     "fix": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- fix",
     "cadence": "dotnet run --project packages/cli/src/Cadence.Cli.csproj --",
     "doctor": "dotnet run --project packages/cli/src/Cadence.Cli.csproj -- doctor",
