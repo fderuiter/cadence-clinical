@@ -36,7 +36,7 @@ public static class FormErrors
         DomainError.Validation("INVALID_PAYLOAD_HASH", "Signature payload hash does not match current canonical form payload.");
 
     public static DomainError InvalidHmacSignature() =>
-        DomainError.Validation("INVALID_HMAC_SIGNATURE", "Signature manifest HMAC signature verification failed (INVALID_HMAC_SIGNATURE).");
+        DomainError.Validation("INVALID_HMAC_SIGNATURE", "INVALID_HMAC_SIGNATURE: Signature manifest HMAC signature verification failed.");
 
     public static DomainError SignatureRequired() =>
         DomainError.Validation("SIGNATURE_MANIFEST_REQUIRED", "A valid 21 CFR Part 11 signature manifest is required for form approval.");

@@ -11,7 +11,6 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Kernel.Trust;
 using Cadence.Security;
 using Cadence.Security.Authentication;
-using HmacSigner = Cadence.Security.Authentication.HmacSigner;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
@@ -22,6 +21,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
+
+using HmacSigner = Cadence.Security.Authentication.HmacSigner;
 
 namespace Cadence.IntegrationTests.Execution;
 

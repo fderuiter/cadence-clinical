@@ -78,7 +78,7 @@ public sealed class StartupGreenlightEndpointsTests
         await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "US", _db, CancellationToken.None);
 
         var nonCompliantSite = await _db.CtmsSiteGreenlightGates
-            .FirstAsync(g => !g.FacetDoaLog || !g.FacetIpRelease, TestContext.Current.CancellationToken);
+            .FirstAsync(g => !g.FacetDoaLog || !g.FacetIpRelease, cancellationToken: TestContext.Current.CancellationToken);
 
         var request = new BatchCertifyRequestDto(
             StudyId: "PROTOCOL-2026-01",
@@ -142,7 +142,7 @@ public sealed class StartupGreenlightEndpointsTests
         // Individual Audit Log entries
         var auditLogs = await _db.CtmsAuditLogs
             .Where(a => a.Action == "BATCH_GREENLIGHT_CERTIFIED")
-            .ToListAsync(TestContext.Current.CancellationToken);
+            .ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         auditLogs.Count.Should().Be(compliantSiteIds.Count);
         auditLogs.Select(a => a.UserId).Distinct().Single().Should().Be("Dr. Eleanor Vance");

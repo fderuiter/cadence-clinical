@@ -21,6 +21,7 @@ Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistenc
 | [`ctms.ctms_payment_milestones`](#ctmsctms_payment_milestones) | `CtmsPaymentMilestone` | 11 |
 | [`ctms.ctms_recruitment_records`](#ctmsctms_recruitment_records) | `CtmsRecruitmentRecord` | 11 |
 | [`ctms.ctms_regulatory_forms`](#ctmsctms_regulatory_forms) | `CtmsRegulatoryForm` | 13 |
+| [`ctms.ctms_site_greenlight_gates`](#ctmsctms_site_greenlight_gates) | `CtmsSiteGreenlightGate` | 26 |
 | [`ctms.ctms_site_milestones`](#ctmsctms_site_milestones) | `CtmsSiteMilestone` | 11 |
 | [`ctms.doa_delegation_records`](#ctmsdoa_delegation_records) | `DoaDelegationRecord` | 15 |
 
@@ -386,6 +387,46 @@ Indexes:
 
 - `IX_ctms_regulatory_forms_SiteId`: (`SiteId`)
 - `IX_ctms_regulatory_forms_StudyId`: (`StudyId`)
+
+## ctms.ctms_site_greenlight_gates
+
+Entity: `CtmsSiteGreenlightGate`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `CountryCode` | `character varying(10)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `FacetCtaBudget` | `boolean` | no |  |  |
+| `FacetDoaLog` | `boolean` | no |  |  |
+| `FacetEisfBaseline` | `boolean` | no |  |  |
+| `FacetIpRelease` | `boolean` | no |  |  |
+| `FacetRegulatoryIrb` | `boolean` | no |  |  |
+| `FacetStaffTraining` | `boolean` | no |  |  |
+| `GreenlightCertifiedAt` | `timestamp with time zone` | yes |  |  |
+| `GreenlightCertifiedBy` | `character varying(255)` | yes |  |  |
+| `GreenlightToken` | `character varying(1024)` | yes |  |  |
+| `IsOverridden` | `boolean` | no |  |  |
+| `OverallStatus` | `character varying(50)` | no |  |  |
+| `OverrideAuthorizedAt` | `timestamp with time zone` | yes |  |  |
+| `OverrideJustification` | `character varying(2000)` | yes |  |  |
+| `OverrideMedicalUserId` | `character varying(255)` | yes |  |  |
+| `OverrideSponsorUserId` | `character varying(255)` | yes |  |  |
+| `ReadinessPercentage` | `integer` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `SiteId` | `character varying(255)` | no |  |  |
+| `SiteName` | `character varying(255)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `UnfulfilledReasons` | `character varying(2000)` | yes |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_ctms_site_greenlight_gates_CountryCode`: (`CountryCode`)
+- `IX_ctms_site_greenlight_gates_SiteId`: (`SiteId`)
+- `IX_ctms_site_greenlight_gates_StudyId`: (`StudyId`)
+- `IX_ctms_site_greenlight_gates_StudyId_CountryCode`: (`StudyId`, `CountryCode`)
 
 ## ctms.ctms_site_milestones
 

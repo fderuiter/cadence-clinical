@@ -74,26 +74,13 @@ public sealed class UcumNormalizationService : IUcumNormalizationService
         ["kpa"] = "kPa",
         ["kilopascal"] = "kPa",
         ["kilopascals"] = "kPa",
-        // Enzyme / Concentration / Clinical Lab Units
+        // Enzyme / Catalytic Activity
         ["u/l"] = "U/L",
-        ["iu/l"] = "IU/L",
-        ["mmol/l"] = "mmol/L",
-        ["mg/dl"] = "mg/dL",
-        ["g/dl"] = "g/dL",
-        ["ng/ml"] = "ng/mL",
-        ["bpm"] = "/min",
-        ["beats/min"] = "/min",
-        ["breaths/min"] = "/min",
-        ["/min"] = "/min",
-        ["%"] = "%",
-        ["percent"] = "%",
-        ["1"] = "1",
-        ["count"] = "1",
-        ["cells/ul"] = "10*9/L",
-        ["10*9/l"] = "10*9/L",
-        ["10^9/l"] = "10*9/L",
-        ["fl"] = "fL",
-        ["pg"] = "pg",
+        ["u/L"] = "U/L",
+        ["U/L"] = "U/L",
+        ["iu/l"] = "U/L",
+        ["IU/L"] = "U/L",
+        ["[IU]/L"] = "U/L",
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     private static readonly FrozenDictionary<string, (string BaseUnit, double Factor)> Conversions = new Dictionary<string, (string, double)>(StringComparer.Ordinal)
@@ -113,19 +100,8 @@ public sealed class UcumNormalizationService : IUcumNormalizationService
         // Pressure (Base: mm[Hg])
         ["mm[Hg]"] = ("mm[Hg]", 1.0),
         ["kPa"] = ("mm[Hg]", 7.5006156),
-        // Clinical Lab & Vital Units (Base: identity)
+        // Enzyme Activity (Base: U/L)
         ["U/L"] = ("U/L", 1.0),
-        ["IU/L"] = ("IU/L", 1.0),
-        ["mmol/L"] = ("mmol/L", 1.0),
-        ["mg/dL"] = ("mg/dL", 1.0),
-        ["g/dL"] = ("g/dL", 1.0),
-        ["ng/mL"] = ("ng/mL", 1.0),
-        ["/min"] = ("/min", 1.0),
-        ["%"] = ("%", 1.0),
-        ["1"] = ("1", 1.0),
-        ["10*9/L"] = ("10*9/L", 1.0),
-        ["fL"] = ("fL", 1.0),
-        ["pg"] = ("pg", 1.0),
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> TemperatureUnits = new[] { "Cel", "[degF]", "[Fahr]", "K" }.ToFrozenSet(StringComparer.Ordinal);

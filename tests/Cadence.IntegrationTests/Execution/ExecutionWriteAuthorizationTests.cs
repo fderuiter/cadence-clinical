@@ -10,7 +10,6 @@ using Cadence.Apps.Execution.Endpoints;
 using Cadence.Kernel.Trust;
 using Cadence.Security;
 using Cadence.Security.Authentication;
-using HmacSigner = Cadence.Security.Authentication.HmacSigner;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
@@ -18,6 +17,8 @@ using Cadence.Testing.Time;
 using FluentAssertions;
 
 using Xunit;
+
+using HmacSigner = Cadence.Security.Authentication.HmacSigner;
 
 namespace Cadence.IntegrationTests.Execution;
 

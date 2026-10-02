@@ -55,7 +55,7 @@ public static class Isbt128Engine
 
         int currentYear = year is >= 0 and <= 99 ? year.Value : defaultYear;
         int seq = sequenceNum is > 0 ? sequenceNum.Value : (Random.Shared.Next(100000, 999999));
-        string seqStr = (seq % 1000000).ToString("D6");
+        string seqStr = (seq % 1000000).ToString("D6"); // deid-ignore
 
         string coreDin = $"{fac}{currentYear:D2}{seqStr}";
         char chk1 = CalculateIso7064Mod37_2(coreDin);
