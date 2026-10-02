@@ -2407,6 +2407,256 @@
         }
       }
     },
+    "/api/v1/execution/rtsm/cgt/apheresis": {
+      "post": {
+        "tags": [
+          "CGT"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CgtApheresisCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/milestone": {
+      "post": {
+        "tags": [
+          "CGT"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CgtMilestoneCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/manufacturing-bind": {
+      "post": {
+        "tags": [
+          "CGT"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CgtManufacturingBindRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/bedside-verify": {
+      "post": {
+        "tags": [
+          "CGT"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CgtBedsideVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/infuse": {
+      "post": {
+        "tags": [
+          "CGT"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CgtInfusionExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/returns": {
+      "post": {
+        "tags": [
+          "CGT"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CgtVialReturnReconciliationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/destruction-certificate": {
+      "post": {
+        "tags": [
+          "CGT"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CgtDestructionCertificateCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/verify-barcode": {
+      "post": {
+        "tags": [
+          "CGT"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CgtBarcodeVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/chain-of-custody/{studyId}/{subjectId}": {
+      "get": {
+        "tags": [
+          "CGT"
+        ],
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/certificates/{studyId}": {
+      "get": {
+        "tags": [
+          "CGT"
+        ],
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/cgt/reconciliations/{studyId}": {
+      "get": {
+        "tags": [
+          "CGT"
+        ],
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/fileshare/status": {
       "get": {
         "tags": [
@@ -6817,6 +7067,645 @@
               "string"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "Execution_CgtApheresisCreateRequest": {
+        "required": [
+          "study_id",
+          "collection_site_id",
+          "subject_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "collection_site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "din": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "apheresis_bag_identifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "cell_count_billions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "custodian_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "custodian_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "custodian_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtBarcodeVerifyRequest": {
+        "required": [
+          "barcode_payload"
+        ],
+        "type": "object",
+        "properties": {
+          "barcode_payload": {
+            "type": "string"
+          },
+          "expected_subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_din": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_batch_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtBedsideVerificationRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "din",
+          "batch_id",
+          "bag_barcode_payload",
+          "patient_wristband_id",
+          "primary_verifier_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "din": {
+            "type": "string"
+          },
+          "batch_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bag_barcode_payload": {
+            "type": "string"
+          },
+          "patient_wristband_id": {
+            "type": "string"
+          },
+          "primary_verifier_id": {
+            "type": "string"
+          },
+          "primary_verifier_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "primary_verifier_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "primary_signature_token": {
+            "type": "string",
+            "default": ""
+          },
+          "secondary_verifier_id": {
+            "type": "string",
+            "default": ""
+          },
+          "secondary_verifier_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "secondary_verifier_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "secondary_signature_token": {
+            "type": "string",
+            "default": ""
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtDestructionCertificateCreateRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "lot_number",
+          "kit_numbers",
+          "vial_identifiers",
+          "destruction_reason",
+          "destruction_method",
+          "destruction_facility",
+          "witness_1_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "kit_numbers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vial_identifiers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "destruction_reason": {
+            "type": "string"
+          },
+          "destruction_method": {
+            "type": "string"
+          },
+          "destruction_facility": {
+            "type": "string"
+          },
+          "witness_1_id": {
+            "type": "string"
+          },
+          "witness_1_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "witness_1_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "witness_1_signature_token": {
+            "type": "string",
+            "default": ""
+          },
+          "witness_2_id": {
+            "type": "string",
+            "default": ""
+          },
+          "witness_2_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "witness_2_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "witness_2_signature_token": {
+            "type": "string",
+            "default": ""
+          },
+          "quantity_destroyed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 1
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "din": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "coc_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtInfusionExecuteRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "chain_of_custody_id",
+          "unlock_token",
+          "primary_verifier_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "chain_of_custody_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unlock_token": {
+            "type": "string"
+          },
+          "primary_verifier_id": {
+            "type": "string"
+          },
+          "infusion_start": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "infusion_end": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "volume_infused_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "adverse_event_observed": {
+            "type": "boolean",
+            "default": false
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtManufacturingBindRequest": {
+        "required": [
+          "study_id",
+          "chain_of_custody_id",
+          "batch_id",
+          "manufacturing_facility_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "chain_of_custody_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "batch_id": {
+            "type": "string"
+          },
+          "manufacturing_facility_id": {
+            "type": "string"
+          },
+          "synthesis_start": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "synthesis_end": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "release_qc_status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "qualified_person_signoff_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtMilestoneCreateRequest": {
+        "required": [
+          "study_id",
+          "chain_of_custody_id",
+          "stage",
+          "milestone_type"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "chain_of_custody_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "milestone_type": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "location_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "facility_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "latitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "longitude": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "temperature_celsius": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "custodian_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "custodian_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "custodian_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "carrier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tracking_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "seal_intact": {
+            "type": "boolean",
+            "default": true
+          },
+          "seal_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dry_shipper_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_CgtVialReturnReconciliationRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "kit_number",
+          "vial_identifier"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "kit_number": {
+            "type": "string"
+          },
+          "vial_identifier": {
+            "type": "string"
+          },
+          "returned_quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 1
+          },
+          "intact_vials": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "used_vials": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 1
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "logged_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
