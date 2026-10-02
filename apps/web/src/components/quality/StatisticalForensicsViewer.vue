@@ -1365,7 +1365,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+
+const route = useRoute();
+const router = useRouter();
 
 const availableStudies = ref([
   "STUDY-ONC-2026",
@@ -1373,7 +1377,39 @@ const availableStudies = ref([
   "STUDY-CARDIO-401",
 ]);
 const selectedStudyId = ref("STUDY-CSM-2026");
-const activeSubTab = ref("overview");
+const internalSubTab = ref("overview");
+
+const syncForensicsTabFromRoute = (path) => {
+  if (!path) return;
+  if (path.includes("/quality/forensics/benford")) internalSubTab.value = "benford";
+  else if (path.includes("/quality/forensics/rounding")) internalSubTab.value = "rounding";
+  else if (path.includes("/quality/forensics/mahalanobis")) internalSubTab.value = "mahalanobis";
+  else if (path.includes("/quality/forensics/variance")) internalSubTab.value = "variance";
+  else if (path.includes("/quality/forensics/duplicate-patients")) internalSubTab.value = "duplicate-patients";
+  else if (path.includes("/quality/forensics/temporal")) internalSubTab.value = "temporal";
+  else if (path.includes("/quality/forensics/phash")) internalSubTab.value = "phash";
+  else if (path.includes("/quality/forensics/overview")) internalSubTab.value = "overview";
+};
+
+if (route) {
+  syncForensicsTabFromRoute(route.path);
+  watch(() => route.path, (newPath) => syncForensicsTabFromRoute(newPath));
+}
+
+const activeSubTab = computed({
+  get() {
+    return internalSubTab.value;
+  },
+  set(val) {
+    internalSubTab.value = val;
+    if (router && route) {
+      const target = `/quality/forensics/${val}`;
+      if (route.path !== target) {
+        router.push(target);
+      }
+    }
+  },
+});
 const isLoading = ref(false);
 const showOnlyOutliers = ref(false);
 const showDossierModal = ref(false);

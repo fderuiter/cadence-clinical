@@ -261,8 +261,98 @@ const routes = [
     component: () => import("../views/CtmsView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: ["cra", "monitor", "sponsor_admin"],
+      requiresRole: [
+        "cra",
+        "monitor",
+        "sponsor_admin",
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "finance_officer",
+        "super_admin",
+      ],
     },
+    children: [
+      {
+        path: "operations",
+        name: "ctms-operations",
+        component: () => import("../views/ctms/CtmsOperationsView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "cra",
+            "monitor",
+            "sponsor_admin",
+            "site_investigator",
+            "crc",
+            "data_manager",
+          ],
+        },
+      },
+      {
+        path: "monitoring",
+        name: "ctms-monitoring",
+        component: () => import("../views/ctms/CtmsMonitoringView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: ["cra", "monitor", "sponsor_admin"],
+        },
+      },
+      {
+        path: "delegation",
+        name: "ctms-delegation",
+        component: () => import("../views/ctms/CtmsDelegationView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "cra",
+            "monitor",
+            "sponsor_admin",
+            "site_investigator",
+            "crc",
+          ],
+        },
+      },
+      {
+        path: "financials",
+        name: "ctms-financials",
+        component: () => import("../views/ctms/CtmsFinancialsView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: ["sponsor_admin", "finance_officer", "super_admin"],
+        },
+      },
+      {
+        path: "startup",
+        name: "ctms-startup",
+        component: () => import("../views/ctms/CtmsStartupView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "cra",
+            "monitor",
+            "sponsor_admin",
+            "site_investigator",
+            "crc",
+          ],
+        },
+      },
+      {
+        path: "rtsm",
+        name: "ctms-rtsm",
+        component: () => import("../views/ctms/CtmsRtsmView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "site_investigator",
+            "crc",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+          ],
+        },
+      },
+    ],
   },
   {
     path: "/ssu",
@@ -424,6 +514,111 @@ const routes = [
         "super_admin",
       ],
     },
+    children: [
+      {
+        path: "exposure",
+        name: "safety-exposure",
+        component: () => import("../views/safety/SafetyExposureView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "safety_physician",
+            "sponsor_pv_officer",
+            "sponsor_medical_monitor",
+            "medical_monitor",
+            "sponsor_admin",
+            "data_manager",
+            "super_admin",
+          ],
+        },
+      },
+      {
+        path: "tabulations",
+        name: "safety-tabulations",
+        component: () => import("../views/safety/SafetyTabulationsView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "safety_physician",
+            "sponsor_pv_officer",
+            "sponsor_medical_monitor",
+            "medical_monitor",
+            "sponsor_admin",
+            "data_manager",
+            "super_admin",
+          ],
+        },
+      },
+      {
+        path: "line-listings",
+        name: "safety-line-listings",
+        component: () => import("../views/safety/SafetyLineListingsView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "safety_physician",
+            "sponsor_pv_officer",
+            "sponsor_medical_monitor",
+            "medical_monitor",
+            "sponsor_admin",
+            "data_manager",
+            "super_admin",
+          ],
+        },
+      },
+      {
+        path: "signals",
+        name: "safety-signals",
+        component: () => import("../views/safety/SafetySignalsView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "safety_physician",
+            "qppv",
+            "qppv_officer",
+            "qualified_person_pv",
+            "safety_officer",
+            "sponsor_pv_officer",
+            "sponsor_medical_monitor",
+            "medical_monitor",
+            "sponsor_admin",
+            "data_manager",
+            "super_admin",
+          ],
+        },
+      },
+      {
+        path: "signoff",
+        name: "safety-signoff",
+        component: () => import("../views/safety/SafetySignoffView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "qppv",
+            "qppv_officer",
+            "qualified_person_pv",
+            "safety_officer",
+            "sponsor_admin",
+            "super_admin",
+          ],
+        },
+      },
+      {
+        path: "simulator",
+        name: "safety-simulator",
+        component: () => import("../views/safety/SafetySimulatorView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "safety_physician",
+            "safety_officer",
+            "sponsor_pv_officer",
+            "sponsor_admin",
+            "super_admin",
+          ],
+        },
+      },
+    ],
   },
   {
     path: "/exports",
@@ -475,6 +670,169 @@ const routes = [
     },
   },
   {
+    path: "/quality/forensics",
+    name: "quality-forensics",
+    component: () =>
+      import("../components/quality/StatisticalForensicsViewer.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: [
+        "sponsor_designer",
+        "data_manager",
+        "sponsor_admin",
+        "super_admin",
+        "auditor",
+        "tmf_auditor",
+        "sponsor_statistician",
+        "unblinded_statistician",
+        "cra",
+        "monitor",
+        "site_investigator",
+        "crc",
+      ],
+    },
+    children: [
+      {
+        path: "overview",
+        name: "forensics-overview",
+        component: () => import("../views/forensics/ForensicsOverviewView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "sponsor_designer",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+            "auditor",
+            "tmf_auditor",
+            "cra",
+            "monitor",
+            "site_investigator",
+            "crc",
+          ],
+        },
+      },
+      {
+        path: "benford",
+        name: "forensics-benford",
+        component: () => import("../views/forensics/ForensicsBenfordView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "sponsor_designer",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+            "auditor",
+            "sponsor_statistician",
+            "unblinded_statistician",
+          ],
+        },
+      },
+      {
+        path: "rounding",
+        name: "forensics-rounding",
+        component: () => import("../views/forensics/ForensicsRoundingView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "sponsor_designer",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+            "auditor",
+            "sponsor_statistician",
+            "unblinded_statistician",
+          ],
+        },
+      },
+      {
+        path: "mahalanobis",
+        name: "forensics-mahalanobis",
+        component: () =>
+          import("../views/forensics/ForensicsMahalanobisView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "sponsor_designer",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+            "auditor",
+            "sponsor_statistician",
+            "unblinded_statistician",
+          ],
+        },
+      },
+      {
+        path: "variance",
+        name: "forensics-variance",
+        component: () => import("../views/forensics/ForensicsVarianceView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "sponsor_designer",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+            "auditor",
+            "sponsor_statistician",
+            "unblinded_statistician",
+          ],
+        },
+      },
+      {
+        path: "duplicate-patients",
+        name: "forensics-duplicate-patients",
+        component: () =>
+          import("../views/forensics/ForensicsDuplicatePatientsView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "sponsor_designer",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+            "auditor",
+            "tmf_auditor",
+          ],
+        },
+      },
+      {
+        path: "temporal",
+        name: "forensics-temporal",
+        component: () => import("../views/forensics/ForensicsTemporalView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "sponsor_designer",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+            "auditor",
+            "tmf_auditor",
+          ],
+        },
+      },
+      {
+        path: "phash",
+        name: "forensics-phash",
+        component: () => import("../views/forensics/ForensicsPhashView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "sponsor_designer",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+            "auditor",
+            "tmf_auditor",
+          ],
+        },
+      },
+    ],
+  },
+  {
     path: "/notifications",
     name: "notifications",
     component: () => import("../views/NotificationsView.vue"),
@@ -505,6 +863,45 @@ const routes = [
     meta: {
       requiresAuth: true,
     },
+    children: [
+      {
+        path: "documents",
+        name: "knowledge-documents",
+        component: () => import("../views/knowledge/KnowledgeDocumentsView.vue"),
+        meta: {
+          requiresAuth: true,
+        },
+      },
+      {
+        path: "authoring",
+        name: "knowledge-authoring",
+        component: () => import("../views/knowledge/KnowledgeAuthoringView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "sponsor_designer",
+            "data_manager",
+            "sponsor_admin",
+            "super_admin",
+          ],
+        },
+      },
+      {
+        path: "audit",
+        name: "knowledge-audit",
+        component: () => import("../views/knowledge/KnowledgeAuditView.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresRole: [
+            "auditor",
+            "tmf_auditor",
+            "sponsor_admin",
+            "super_admin",
+            "data_manager",
+          ],
+        },
+      },
+    ],
   },
   {
     path: "/training",
@@ -559,15 +956,17 @@ router.beforeEach(async (to) => {
       return { path: "/login", query: { redirect: to.fullPath } };
     }
 
-    // Role-based authorization guard
-    const requiredRoles = to.meta.requiresRole;
-    if (requiredRoles && requiredRoles.length > 0) {
-      const hasRole = hasRequiredRole(authStore.normalizedRoles, requiredRoles);
-      if (!hasRole) {
-        console.warn(
-          `User does not have required roles: ${requiredRoles.join(", ")}`
-        );
-        return { path: "/forbidden" };
+    // Role-based authorization guard across all matched route records
+    for (const record of to.matched) {
+      const requiredRoles = record.meta?.requiresRole;
+      if (requiredRoles && requiredRoles.length > 0) {
+        const hasRole = hasRequiredRole(authStore.normalizedRoles, requiredRoles);
+        if (!hasRole) {
+          console.warn(
+            `User does not have required roles for route ${record.path}: ${requiredRoles.join(", ")}`
+          );
+          return { path: "/forbidden" };
+        }
       }
     }
   }

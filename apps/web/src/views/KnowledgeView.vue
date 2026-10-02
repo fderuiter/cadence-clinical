@@ -1126,6 +1126,7 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
   knowledgeService,
   DEFAULT_CATEGORIES,
@@ -1140,6 +1141,8 @@ export default {
   setup() {
     const authStore = useAuthStore();
     const toastStore = useToastStore();
+    const route = useRoute();
+    const router = useRouter();
 
     // Data State: bundled sample SOPs only in a demo build; otherwise the list comes from the server (#4523).
     const demoBuild = isDemoBuild();
@@ -1152,7 +1155,39 @@ export default {
     const searchQuery = ref("");
     const selectedTag = ref(null);
     const activeStatusFilter = ref("ALL");
-    const activeReaderTab = ref("content");
+    const internalReaderTab = ref("content");
+
+    const syncTabFromRoute = (path) => {
+      if (!path) return;
+      if (path.includes("/knowledge/authoring")) internalReaderTab.value = "versions";
+      else if (path.includes("/knowledge/audit")) internalReaderTab.value = "audit";
+      else if (path.includes("/knowledge/documents")) internalReaderTab.value = "content";
+    };
+
+    if (route) {
+      syncTabFromRoute(route.path);
+      watch(() => route.path, (newPath) => syncTabFromRoute(newPath));
+    }
+
+    const activeReaderTab = computed({
+      get() {
+        return internalReaderTab.value;
+      },
+      set(val) {
+        internalReaderTab.value = val;
+        if (router && route) {
+          const map = {
+            content: "/knowledge/documents",
+            versions: "/knowledge/authoring",
+            audit: "/knowledge/audit",
+          };
+          const target = map[val] || `/knowledge/${val}`;
+          if (route.path !== target) {
+            router.push(target);
+          }
+        }
+      },
+    });
     const loading = ref(false);
 
     // Version & Audit Log Lists for Tab Viewers

@@ -61,6 +61,7 @@ const SCREEN_TITLES = {
   exports: "Data Export Wizard",
   etmf: "eTMF Document Vault",
   quality: "Quality & RBQM Cockpit",
+  "quality-forensics": "Statistical Forensics",
   notifications: "Notifications",
   tickets: "Clinical Issues & Tickets",
   documents: "Documents Hub",
@@ -68,6 +69,29 @@ const SCREEN_TITLES = {
   training: "Study Training & Gating",
   "participant-wallet": "Participant Financial Wallet",
   "lay-summaries": "EU CTR Lay Summaries",
+  "ctms-operations": "CTMS Core Operations",
+  "ctms-monitoring": "CTMS Site Monitoring",
+  "ctms-delegation": "CTMS Delegation Log",
+  "ctms-financials": "CTMS Site Financials",
+  "ctms-startup": "CTMS Study Startup",
+  "ctms-rtsm": "CTMS RTSM",
+  "forensics-overview": "Forensics Overview",
+  "forensics-benford": "Forensics Benford",
+  "forensics-rounding": "Forensics Rounding",
+  "forensics-mahalanobis": "Forensics Mahalanobis",
+  "forensics-variance": "Forensics Variance",
+  "forensics-duplicate-patients": "Forensics Duplicate Patients",
+  "forensics-temporal": "Forensics Temporal",
+  "forensics-phash": "Forensics pHash",
+  "safety-exposure": "Safety Exposure",
+  "safety-tabulations": "Safety Tabulations",
+  "safety-line-listings": "Safety Line Listings",
+  "safety-signals": "Safety Signals",
+  "safety-signoff": "Safety Sign-off",
+  "safety-simulator": "Safety Simulator",
+  "knowledge-documents": "Knowledge Documents",
+  "knowledge-authoring": "Knowledge Authoring",
+  "knowledge-audit": "Knowledge Audit",
 };
 
 export function screenTitle(routeName) {
@@ -76,5 +100,15 @@ export function screenTitle(routeName) {
 
 export function isScreenAvailable(routeName) {
   if (!routeName) return false;
-  return ALWAYS_AVAILABLE.has(routeName) || AVAILABLE_SCREENS.has(routeName);
+  if (ALWAYS_AVAILABLE.has(routeName) || AVAILABLE_SCREENS.has(routeName)) {
+    return true;
+  }
+  const prefix = String(routeName).split("-")[0];
+  if (prefix && AVAILABLE_SCREENS.has(prefix)) {
+    return true;
+  }
+  if (String(routeName).startsWith("forensics-") && (AVAILABLE_SCREENS.has("quality") || AVAILABLE_SCREENS.has("quality-forensics"))) {
+    return true;
+  }
+  return false;
 }

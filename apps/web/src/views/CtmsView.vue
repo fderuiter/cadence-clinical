@@ -2328,7 +2328,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
@@ -2344,6 +2344,7 @@ import { useToastStore } from "../stores/toasts.js";
 // Active session store/router setup
 const store = useClinicalStore();
 const route = useRoute();
+const router = useRouter();
 const demoBuild = isDemoBuild();
 
 // Scope comes from the route; apply it before the first render so the site activation panel sees it.
@@ -2359,11 +2360,41 @@ const siteId = computed(() => store.activeSiteId || "SITE-001");
 const studyId = computed(() => store.activeStudyId || "STUDY-USDM-001");
 
 // Tabs selection
-const activeTab = ref(
+const internalActiveTab = ref(
   route?.path === "/ssu" || route?.query?.tab === "startup"
     ? "startup"
     : "operations"
 );
+
+const syncCtmsTabFromRoute = (path) => {
+  if (!path) return;
+  if (path.includes("/ctms/monitoring")) internalActiveTab.value = "monitoring";
+  else if (path.includes("/ctms/delegation")) internalActiveTab.value = "delegation";
+  else if (path.includes("/ctms/financials")) internalActiveTab.value = "financials";
+  else if (path.includes("/ctms/startup") || path === "/ssu") internalActiveTab.value = "startup";
+  else if (path.includes("/ctms/rtsm")) internalActiveTab.value = "rtsm";
+  else if (path.includes("/ctms/operations")) internalActiveTab.value = "operations";
+};
+
+if (route) {
+  syncCtmsTabFromRoute(route.path);
+  watch(() => route.path, (newPath) => syncCtmsTabFromRoute(newPath));
+}
+
+const activeTab = computed({
+  get() {
+    return internalActiveTab.value;
+  },
+  set(val) {
+    internalActiveTab.value = val;
+    if (router && route) {
+      const target = val === "startup" && route.path === "/ssu" ? "/ssu" : `/ctms/${val}`;
+      if (route.path !== target) {
+        router.push(target);
+      }
+    }
+  },
+});
 
 // Core Operations state
 const milestones = ref([]);

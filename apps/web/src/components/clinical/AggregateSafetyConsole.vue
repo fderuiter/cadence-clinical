@@ -1339,7 +1339,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+
+const route = useRoute();
+const router = useRouter();
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";
@@ -1361,9 +1365,47 @@ const props = withDefaults(
 );
 
 // State Variables
-const activeTab = ref<
+const internalTab = ref<
   "exposure" | "tabulations" | "line_listings" | "signals" | "clocks" | "qppv"
 >("exposure");
+
+const syncSafetyTabFromRoute = (path?: string) => {
+  if (!path) return;
+  if (path.includes("/safety/tabulations")) internalTab.value = "tabulations";
+  else if (path.includes("/safety/line-listings")) internalTab.value = "line_listings";
+  else if (path.includes("/safety/signals")) internalTab.value = "signals";
+  else if (path.includes("/safety/signoff")) internalTab.value = "qppv";
+  else if (path.includes("/safety/simulator")) internalTab.value = "clocks";
+  else if (path.includes("/safety/exposure")) internalTab.value = "exposure";
+};
+
+if (route) {
+  syncSafetyTabFromRoute(route.path);
+  watch(() => route.path, (newPath) => syncSafetyTabFromRoute(newPath));
+}
+
+const activeTab = computed({
+  get(): "exposure" | "tabulations" | "line_listings" | "signals" | "clocks" | "qppv" {
+    return internalTab.value;
+  },
+  set(val: "exposure" | "tabulations" | "line_listings" | "signals" | "clocks" | "qppv") {
+    internalTab.value = val;
+    if (router && route) {
+      const routePathMap: Record<string, string> = {
+        exposure: "/safety/exposure",
+        tabulations: "/safety/tabulations",
+        line_listings: "/safety/line-listings",
+        signals: "/safety/signals",
+        qppv: "/safety/signoff",
+        clocks: "/safety/simulator",
+      };
+      const target = routePathMap[val] || `/safety/${val}`;
+      if (route.path !== target) {
+        router.push(target);
+      }
+    }
+  },
+});
 const reportType = ref<"DSUR" | "PSUR" | "PBRER">("DSUR");
 const studyId = ref(props.initialStudyId);
 const compoundName = ref(props.initialCompound);
