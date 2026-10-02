@@ -1,5 +1,7 @@
+using Cadence.Apps.Org.Endpoints;
 using Cadence.Apps.Org.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -9,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<OrgDbContext>();
 
 var app = builder.Build();
@@ -19,6 +22,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "org",
     "Organization directory health probe.",
     "Returns Organization directory operational status.");
+app.MapOnboardingPreferencesEndpoints();
 
 await app.RunAsync();
 
