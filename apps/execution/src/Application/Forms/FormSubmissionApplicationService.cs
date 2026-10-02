@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.EditChecks;
 using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Domain.Forms;
@@ -17,8 +18,13 @@ using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Contracts.Events;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Sentinels;
+
+using MassTransit;
 
 namespace Cadence.Apps.Execution.Application.Forms;
 
@@ -28,6 +34,7 @@ namespace Cadence.Apps.Execution.Application.Forms;
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
 /// @req:PRD-SYS-053
+/// @req:PRD-SYS-174
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-003
 /// </summary>
@@ -38,7 +45,11 @@ public sealed class FormSubmissionApplicationService(
     ICurrentAuditContextAccessor auditContextAccessor,
     ISubjectRepository? subjectRepository = null,
     IEditCheckEngine? editCheckEngine = null,
-    IAutoQueryDispatchService? autoQueryDispatchService = null) : IFormSubmissionApplicationService
+    IAutoQueryDispatchService? autoQueryDispatchService = null,
+    SentinelEngine? sentinelEngine = null,
+    IFraudBaselineCache? baselineCache = null,
+    IPublishEndpoint? publishEndpoint = null,
+    IClock? clock = null) : IFormSubmissionApplicationService
 {
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -152,10 +163,10 @@ public sealed class FormSubmissionApplicationService(
 
         await formSubmissionRepository.AddAsync(submission, cancellationToken).ConfigureAwait(false);
 
-        // Extract and persist discrete observations from structured payload
+        // Extract, run fraud sentinels, and persist discrete observations from structured payload
         if (!string.IsNullOrWhiteSpace(request.Payload))
         {
-            var persisted = await PersistObservationsAsync(submission, request.Payload, cancellationToken).ConfigureAwait(false);
+            var persisted = await ProcessPayloadAndEvaluateSentinelsAsync(submission, request.Payload, cancellationToken).ConfigureAwait(false);
             if (persisted.IsFailure)
             {
                 return persisted.Error!;
@@ -248,7 +259,7 @@ public sealed class FormSubmissionApplicationService(
 
         if (!string.IsNullOrWhiteSpace(newPayload))
         {
-            var persisted = await PersistObservationsAsync(submission, newPayload, cancellationToken).ConfigureAwait(false);
+            var persisted = await ProcessPayloadAndEvaluateSentinelsAsync(submission, newPayload, cancellationToken).ConfigureAwait(false);
             if (persisted.IsFailure)
             {
                 return persisted.Error!;
@@ -309,6 +320,25 @@ public sealed class FormSubmissionApplicationService(
         }
 
         submission.ReasonForChange = auditContextAccessor.ChangeReason;
+
+        if (publishEndpoint != null)
+        {
+            var evaluatedEvent = new FraudSentinelEvaluatedEvent(
+                EventId: Guid.NewGuid(),
+                SubmissionId: submission.Id.ToString(),
+                StudyId: submission.StudyId.Value,
+                SubjectId: submission.SubjectId.Value,
+                SiteId: submission.SiteId?.Value,
+                FormId: submission.FormId.Value,
+                VisitId: submission.VisitId,
+                EvaluatedAt: (clock ?? SystemClock.Instance).UtcNow.UtcDateTime,
+                TotalNumericObservations: 0,
+                IsFlagged: false,
+                ChecksExecuted: ["eCRF_Completion_Sentinel_Check"]);
+
+            await publishEndpoint.Publish(evaluatedEvent, cancellationToken).ConfigureAwait(false);
+        }
+
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToResponse(submission);
@@ -606,7 +636,7 @@ public sealed class FormSubmissionApplicationService(
         return (DateTime?)parsed.UtcDateTime;
     }
 
-    private async Task<Result<List<ClinicalObservation>>> PersistObservationsAsync(
+    private async Task<Result<List<ClinicalObservation>>> ProcessPayloadAndEvaluateSentinelsAsync(
         FormSubmission submission,
         string payloadJson,
         CancellationToken cancellationToken)
@@ -617,12 +647,119 @@ public sealed class FormSubmissionApplicationService(
             return extracted.Error!;
         }
 
-        foreach (var observation in extracted.Value!)
+        var observations = extracted.Value!;
+
+        // 1. Run Fraud Sentinel Engine before observation state persistence
+        if (sentinelEngine != null && observations.Count > 0)
+        {
+            var numericObs = observations
+                .Where(o => o.Value.HasValue)
+                .Select(o => new FraudObservationValue(o.TestCode.Value, o.Value!.Value, submission.SiteId?.Value))
+                .ToList();
+
+            if (numericObs.Count > 0)
+            {
+                StatisticalBaseline baseline = baselineCache != null
+                    ? await baselineCache.GetOrFetchBaselineAsync(submission.StudyId, cancellationToken).ConfigureAwait(false)
+                    : new StatisticalBaseline(new Dictionary<int, long>(), 0, new Dictionary<string, FieldBaselineStats>());
+
+                var fraudContext = new FraudEvaluationContext(
+                    SubmissionId: submission.Id.ToString(),
+                    StudyId: submission.StudyId.Value,
+                    SubjectId: submission.SubjectId.Value,
+                    SiteId: submission.SiteId?.Value,
+                    FormId: submission.FormId.Value,
+                    VisitId: submission.VisitId,
+                    Observations: numericObs,
+                    Baseline: baseline);
+
+                var sentinelResults = await sentinelEngine.EvaluateFraudSentinelsAsync(fraudContext, cancellationToken).ConfigureAwait(false);
+
+                var checksExecuted = sentinelResults.Select(r => r.Name).ToList();
+                bool isAnyFlagged = sentinelResults.Any(r => !r.Passed);
+
+                var sentinelViolations = new List<EditCheckViolation>();
+                foreach (var result in sentinelResults)
+                {
+                    if (!result.Passed && result.Violations != null)
+                    {
+                        foreach (var violationText in result.Violations)
+                        {
+                            sentinelViolations.Add(new EditCheckViolation(
+                                RuleId: result.Name,
+                                Message: violationText,
+                                Severity: "WARNING",
+                                TargetField: null,
+                                FormId: submission.FormId.Value,
+                                VisitId: submission.VisitId,
+                                IsAutoDispatchEnabled: true,
+                                StandardTemplate: violationText));
+
+                            if (publishEndpoint != null)
+                            {
+                                var flaggedEvent = new FraudSentinelFlaggedEvent(
+                                    EventId: Guid.NewGuid(),
+                                    SubmissionId: submission.Id.ToString(),
+                                    StudyId: submission.StudyId.Value,
+                                    SubjectId: submission.SubjectId.Value,
+                                    SiteId: submission.SiteId?.Value,
+                                    FormId: submission.FormId.Value,
+                                    VisitId: submission.VisitId,
+                                    FlaggedAt: (clock ?? SystemClock.Instance).UtcNow.UtcDateTime,
+                                    AnomalyType: result.Name,
+                                    Severity: "WARNING",
+                                    ChiSquareScore: null,
+                                    PValue: null,
+                                    VarianceRatio: null,
+                                    Summary: result.Summary,
+                                    Violations: result.Violations);
+
+                                await publishEndpoint.Publish(flaggedEvent, cancellationToken).ConfigureAwait(false);
+                            }
+                        }
+                    }
+                }
+
+                if (publishEndpoint != null)
+                {
+                    var evaluatedEvent = new FraudSentinelEvaluatedEvent(
+                        EventId: Guid.NewGuid(),
+                        SubmissionId: submission.Id.ToString(),
+                        StudyId: submission.StudyId.Value,
+                        SubjectId: submission.SubjectId.Value,
+                        SiteId: submission.SiteId?.Value,
+                        FormId: submission.FormId.Value,
+                        VisitId: submission.VisitId,
+                        EvaluatedAt: (clock ?? SystemClock.Instance).UtcNow.UtcDateTime,
+                        TotalNumericObservations: numericObs.Count,
+                        IsFlagged: isAnyFlagged,
+                        ChecksExecuted: checksExecuted);
+
+                    await publishEndpoint.Publish(evaluatedEvent, cancellationToken).ConfigureAwait(false);
+                }
+
+                if (autoQueryDispatchService != null && sentinelViolations.Count > 0)
+                {
+                    await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
+                        submission.StudyId,
+                        submission.SubjectId,
+                        submission.SiteId,
+                        submission.VisitId,
+                        submission.FormId.Value,
+                        observations,
+                        sentinelViolations,
+                        cancellationToken).ConfigureAwait(false);
+                }
+            }
+        }
+
+        // 2. Persist discrete observations
+        foreach (var observation in observations)
         {
             await observationRepository.AddAsync(observation, cancellationToken).ConfigureAwait(false);
         }
 
-        return extracted.Value!;
+        return observations;
     }
 
     private static FormSubmissionResponse MapToResponse(FormSubmission f) =>

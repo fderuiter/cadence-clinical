@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -6,6 +7,8 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Sentinels;
+using Cadence.Sentinels.Checks;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -75,6 +78,48 @@ public sealed class ObservationRepository(ExecutionDbContext context, Resilience
             .OrderByDescending(o => o.ObservationDate)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    public async Task<StatisticalBaseline> GetStudyBaselineStatsAsync(StudyCode studyId, CancellationToken cancellationToken)
+    {
+        var obsList = await Context.ClinicalObservations
+            .AsNoTracking()
+            .Where(o => o.StudyId == studyId && o.Value.HasValue)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var digitCounts = new Dictionary<int, long>();
+        for (int d = 1; d <= 9; d++)
+        {
+            digitCounts[d] = 0;
+        }
+
+        long totalDigits = 0;
+        var fieldStatsDict = new Dictionary<string, FieldBaselineStats>(StringComparer.OrdinalIgnoreCase);
+
+        var groupedByTest = obsList.GroupBy(o => o.TestCode.Value, StringComparer.OrdinalIgnoreCase);
+        foreach (var group in groupedByTest)
+        {
+            var values = group.Where(o => o.Value.HasValue).Select(o => o.Value!.Value).ToList();
+            if (values.Count > 0)
+            {
+                double mean = values.Average();
+                double variance = values.Count > 1 ? values.Sum(v => Math.Pow(v - mean, 2)) / (values.Count - 1) : 0.0;
+                fieldStatsDict[group.Key] = new FieldBaselineStats(mean, variance, values.Count);
+
+                foreach (var v in values)
+                {
+                    int digit = BenfordDigitPreferenceSentinelCheck.ExtractLeadingDigit(v);
+                    if (digit >= 1 && digit <= 9)
+                    {
+                        digitCounts[digit]++;
+                        totalDigits++;
+                    }
+                }
+            }
+        }
+
+        return new StatisticalBaseline(digitCounts, totalDigits, fieldStatsDict);
     }
 
     public async Task AddAsync(ClinicalObservation observation, CancellationToken cancellationToken)

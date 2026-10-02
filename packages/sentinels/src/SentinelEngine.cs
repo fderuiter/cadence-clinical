@@ -26,4 +26,17 @@ public class SentinelEngine
         var results = await Task.WhenAll(tasks);
         return results;
     }
+
+    public async Task<IReadOnlyList<SentinelResult>> EvaluateFraudSentinelsAsync(FraudEvaluationContext context, CancellationToken ct = default)
+    {
+        var fraudChecks = _checks.OfType<IFraudSentinelCheck>().ToList();
+        if (fraudChecks.Count == 0)
+        {
+            return [];
+        }
+
+        var tasks = fraudChecks.Select(c => c.EvaluateAsync(context, ct));
+        var results = await Task.WhenAll(tasks);
+        return results;
+    }
 }

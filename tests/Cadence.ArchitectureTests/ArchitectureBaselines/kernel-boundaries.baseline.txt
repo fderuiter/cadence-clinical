@@ -291,6 +291,10 @@ K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.SubjectExposureDetail.Stud
 K-XS-1|Cadence.Apps.Tickets|Cadence.Apps.Tickets.Domain.Ticket.SiteId
 K-XS-1|Cadence.Apps.Tickets|Cadence.Apps.Tickets.Domain.Ticket.StudyId
 K-XS-1|Cadence.Apps.Tickets|Cadence.Apps.Tickets.Domain.TicketAuditLog
+K-XS-1|Cadence.Contracts|Cadence.Contracts.Events.FraudSentinelEvaluatedEvent.SiteId
+K-XS-1|Cadence.Contracts|Cadence.Contracts.Events.FraudSentinelEvaluatedEvent.StudyId
+K-XS-1|Cadence.Contracts|Cadence.Contracts.Events.FraudSentinelFlaggedEvent.SiteId
+K-XS-1|Cadence.Contracts|Cadence.Contracts.Events.FraudSentinelFlaggedEvent.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.PublishAmendmentRequestDto.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.SubjectSummaryDto.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.SiteId
@@ -313,3 +317,6 @@ K-XS-1|Cadence.Ddf|Cadence.Ddf.DDFCompilationResult.StudyId
 K-XS-1|Cadence.Ddf|Cadence.Ddf.DDFStudyIR.StudyId
 K-XS-1|Cadence.Deid|Cadence.Deid.DicomDeidCertificate.SiteId
 K-XS-1|Cadence.Deid|Cadence.Deid.DicomDeidCertificate.StudyId
+K-XS-1|Cadence.Sentinels|Cadence.Sentinels.FraudEvaluationContext.SiteId
+K-XS-1|Cadence.Sentinels|Cadence.Sentinels.FraudEvaluationContext.StudyId
+K-XS-1|Cadence.Sentinels|Cadence.Sentinels.FraudObservationValue.SiteId

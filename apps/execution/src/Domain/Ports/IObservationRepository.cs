@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Sentinels;
 
 namespace Cadence.Apps.Execution.Domain.Ports;
 
@@ -31,6 +32,8 @@ public interface IObservationRepository
         DomainCode? domain,
         TestCode? testCode,
         CancellationToken cancellationToken);
+
+    Task<StatisticalBaseline> GetStudyBaselineStatsAsync(StudyCode studyId, CancellationToken cancellationToken);
 
     Task AddAsync(ClinicalObservation observation, CancellationToken cancellationToken);
 

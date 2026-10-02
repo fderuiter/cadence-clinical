@@ -10,6 +10,8 @@
     <ProjectReference Include="..\..\..\packages\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
+    <ProjectReference Include="..\..\..\packages\sentinels\src\Cadence.Sentinels.csproj" />
+    <ProjectReference Include="..\..\..\packages\contracts\src\Cadence.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

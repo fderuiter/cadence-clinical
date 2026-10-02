@@ -13,6 +13,7 @@ using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure;
+using Cadence.Apps.Execution.Infrastructure.Compliance;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
@@ -23,6 +24,8 @@ using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
+using Cadence.Sentinels;
+using Cadence.Sentinels.Checks;
 using Cadence.Telemetry;
 
 using FluentValidation;
@@ -121,6 +124,17 @@ builder.Services.AddSingleton<ILabRangeService, LabRangeService>();
 builder.Services.AddSingleton<IOutlierDetectionService, OutlierDetectionService>();
 builder.Services.AddScoped<IBatchEvaluationContextLoader, BatchEvaluationContextLoader>();
 builder.Services.AddSingleton<IEditCheckEngine, AstEditCheckEngine>();
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<IFraudBaselineCache, StatisticalBaselineCache>();
+builder.Services.AddSingleton<BenfordDigitPreferenceSentinelCheck>();
+builder.Services.AddSingleton<SiteVarianceSentinelCheck>();
+builder.Services.AddSingleton(sp =>
+{
+    var engine = new SentinelEngine();
+    engine.Register(sp.GetRequiredService<BenfordDigitPreferenceSentinelCheck>());
+    engine.Register(sp.GetRequiredService<SiteVarianceSentinelCheck>());
+    return engine;
+});
 
 // ExecutionDbContext (Scoped, the EF Core default `AddDbContext` lifetime) -- the connection string mirrors
 // ExecutionDbContextFactory's own design-time convention exactly (same POSTGRES_CONNECTION_STRING
