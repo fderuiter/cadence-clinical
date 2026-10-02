@@ -7,7 +7,9 @@
     <!-- Translucent backdrop only on unanchored modal steps to highlight onboarding introduction/completion without blocking interaction during edits -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
-      v-if="currentStep === 1 || currentStep === totalSteps || !hasTargetElement"
+      v-if="
+        currentStep === 1 || currentStep === totalSteps || !hasTargetElement
+      "
       class="onboarding-backdrop"
       style="
         position: fixed;
@@ -235,11 +237,15 @@ try {
 }
 
 const currentStep = computed(() => onboardingStore.currentStep);
-const currentStepConfig = computed(() => onboardingStore.currentStepConfig || {});
+const currentStepConfig = computed(
+  () => onboardingStore.currentStepConfig || {}
+);
 const totalSteps = computed(() => onboardingStore.totalSteps || 5);
 
 const stepTitle = computed(() => currentStepConfig.value?.title || "");
-const stepDescription = computed(() => currentStepConfig.value?.description || "");
+const stepDescription = computed(
+  () => currentStepConfig.value?.description || ""
+);
 const dynamicPrompt = computed(() => currentStepConfig.value?.prompt || "");
 const stepTargetDescription = computed(
   () => currentStepConfig.value?.title || `Step ${currentStep.value}`
@@ -276,7 +282,10 @@ async function syncStepRoute() {
         }
       }
       if (needsUpdate) {
-        await router.push({ name: config.routeName || route.name, query: newQuery });
+        await router.push({
+          name: config.routeName || route.name,
+          query: newQuery,
+        });
       }
     }
   }
@@ -348,18 +357,15 @@ const handleComplete = () => {
   onboardingStore.disableTour();
 };
 
-watch(
-  currentStep,
-  async () => {
-    const config = currentStepConfig.value;
-    if (config?.query?.tab) {
-      emit("update:activeTab", config.query.tab);
-    }
-    await syncStepRoute();
-    updatePosition();
-    setTimeout(updatePosition, 50);
+watch(currentStep, async () => {
+  const config = currentStepConfig.value;
+  if (config?.query?.tab) {
+    emit("update:activeTab", config.query.tab);
   }
-);
+  await syncStepRoute();
+  updatePosition();
+  setTimeout(updatePosition, 50);
+});
 
 watch(
   () => route?.fullPath,

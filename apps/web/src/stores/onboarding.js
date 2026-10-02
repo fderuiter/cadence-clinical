@@ -557,7 +557,9 @@ function getSequenceForPersona(personaKey) {
     return ROLE_STEP_SEQUENCES[personaKey];
   }
 
-  return ROLE_STEP_SEQUENCES.super_admin || ROLE_STEP_SEQUENCES.sponsor_designer;
+  return (
+    ROLE_STEP_SEQUENCES.super_admin || ROLE_STEP_SEQUENCES.sponsor_designer
+  );
 }
 
 export const useOnboardingStore = defineStore("onboarding", {
