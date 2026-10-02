@@ -9,7 +9,6 @@ using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Kernel.Trust;
-using Cadence.Security;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;

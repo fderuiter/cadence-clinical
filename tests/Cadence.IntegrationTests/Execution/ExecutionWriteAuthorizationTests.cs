@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Kernel.Trust;
-using Cadence.Security;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;

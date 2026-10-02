@@ -274,9 +274,8 @@
               <th class="col-checkbox">
                 <input
                   type="checkbox"
-                  aria-label="Select all compliant sites"
                   title="Select / Deselect All Compliant Sites"
-                  aria-label="Select all compliant sites"
+                  aria-label="Select or deselect all compliant sites"
                   :checked="isAllCompliantSelected"
                   :disabled="compliantSites.length === 0"
                   @change="toggleSelectAllCompliant"
@@ -305,8 +304,8 @@
               <td class="col-checkbox">
                 <input
                   type="checkbox"
-                  aria-label="Select site"
                   class="site-select-checkbox"
+                  :aria-label="'Select site ' + site.site_id"
                   :disabled="
                     !site.is_compliant ||
                     site.overall_status === 'APPROVED' ||
