@@ -429,6 +429,7 @@ export const useCodingStore = defineStore("coding", {
 
         if (Array.isArray(data)) {
           this.assignments = data;
+          this.applySynonymRulesToQueue();
         } else {
           this.assignments = [];
         }
@@ -436,6 +437,47 @@ export const useCodingStore = defineStore("coding", {
         this.error = err.message || "Failed to load medical coding queue";
       } finally {
         this.isLoading = false;
+      }
+    },
+
+    applySynonymRulesToQueue() {
+      if (!this.synonymRules || this.synonymRules.length === 0) return;
+
+      for (const item of this.assignments) {
+        if (
+          (item.status === "UNCODED" || item.status === "SUGGESTED") &&
+          !item.has_query &&
+          item.status !== "QUERY_PENDING" &&
+          !item.is_locked &&
+          !item.is_blocked
+        ) {
+          const matchingRule = this.synonymRules.find(
+            (rule) =>
+              rule.status === "ACTIVE" &&
+              rule.verbatim_text.toUpperCase() === (item.verbatim_text || "").trim().toUpperCase() &&
+              (!rule.dictionary_type ||
+                rule.dictionary_type.toUpperCase() === (item.dictionary_type || "").toUpperCase())
+          );
+
+          if (matchingRule) {
+            item.status = "AUTO_CODED";
+            item.coded_code = matchingRule.target_code;
+            item.coded_term = matchingRule.target_term;
+
+            this.auditLedger.push({
+              assignment_id: item.id,
+              verbatim_text: item.verbatim_text,
+              coded_code: matchingRule.target_code,
+              coded_term: matchingRule.target_term,
+              action: "ACCEPT",
+              reason_for_change: "Automated cross-study synonym rule propagation",
+              reviewer_identity: "Synonym Propagation Engine",
+              ai_model_identity: item.model_id || "cadence-synonym-engine-v1.0",
+              timestamp: new Date().toISOString(),
+              compliance_standard: "21 CFR Part 11 Dual-Attribution",
+            });
+          }
+        }
       }
     },
 
@@ -611,8 +653,8 @@ export const useCodingStore = defineStore("coding", {
           const item = this.assignments.find((a) => a.id === id);
           if (item) {
             item.status = action === "ACCEPT" ? "AUTO_CODED" : "CODED";
-            const targetCode = code || item.suggestions?.[0]?.code || item.suggestions?.[0]?.drug_code || "10019211";
-            const targetTerm = term || item.suggestions?.[0]?.term || item.suggestions?.[0]?.pt_name || item.suggestions?.[0]?.preferred_term || item.suggestions?.[0]?.drug_name || "Headache";
+            const targetCode = code || item.suggestions?.[0]?.code || item.suggestions?.[0]?.drug_code || item.suggestions?.[0]?.pt_code || item.suggestions?.[0]?.llt_code || item.coded_code || "10019211";
+            const targetTerm = term || item.suggestions?.[0]?.term || item.suggestions?.[0]?.pt_name || item.suggestions?.[0]?.preferred_term || item.suggestions?.[0]?.drug_name || item.suggestions?.[0]?.llt_name || item.coded_term || "Headache";
             item.coded_code = targetCode;
             item.coded_term = targetTerm;
 
@@ -650,8 +692,8 @@ export const useCodingStore = defineStore("coding", {
       const targetKeys = clusterKeys || null;
 
       const targetClusters = this.verbatimClusters.filter((c) => {
-        if (targetIds) return targetIds.includes(c.id) || targetIds.includes(c.cluster_id);
-        if (targetKeys) return targetKeys.includes(c.clusterKey);
+        if (targetIds) return targetIds.includes(c.id) || targetIds.includes(c.cluster_id) || targetIds.includes(c.clusterKey);
+        if (targetKeys) return targetKeys.includes(c.clusterKey) || targetKeys.includes(c.id) || targetKeys.includes(c.cluster_id);
         return (
           this.selectedClusterIds.includes(c.id) ||
           this.selectedClusterIds.includes(c.cluster_id) ||
@@ -671,12 +713,38 @@ export const useCodingStore = defineStore("coding", {
 
         for (const cluster of targetClusters) {
           totalInstances += cluster.instance_count;
+          let clusterUnblockedCount = 0;
           for (const inst of cluster.instances) {
             // Guardrail check: exclude active query or locked items
             if (inst.status === "QUERY_PENDING" || inst.has_query || inst.is_locked || inst.is_blocked) {
               blockedInstances++;
             } else {
               unblockedAssignmentIds.push(inst.id);
+              clusterUnblockedCount++;
+            }
+          }
+
+          if (clusterUnblockedCount > 0) {
+            // Register synonym expansion rule for approved verbatim cluster
+            const targetCode = cluster.top_suggested_code || cluster.top_suggestion?.code || "10019211";
+            const targetTerm = cluster.top_suggested_term || cluster.top_suggestion?.term || "Headache";
+            const newRule = {
+              verbatim_text: cluster.verbatim_text,
+              target_code: targetCode,
+              target_term: targetTerm,
+              dictionary_type: cluster.dictionary_type,
+              created_at: new Date().toISOString(),
+              status: "ACTIVE",
+            };
+            const existingIdx = this.synonymRules.findIndex(
+              (r) =>
+                r.verbatim_text.toUpperCase() === cluster.verbatim_text.toUpperCase() &&
+                (r.dictionary_type || "").toUpperCase() === (cluster.dictionary_type || "").toUpperCase()
+            );
+            if (existingIdx !== -1) {
+              this.synonymRules[existingIdx] = newRule;
+            } else {
+              this.synonymRules.push(newRule);
             }
           }
         }
@@ -740,8 +808,8 @@ export const useCodingStore = defineStore("coding", {
       const targetKeys = clusterKeys || null;
 
       const targetClusters = this.verbatimClusters.filter((c) => {
-        if (targetIds) return targetIds.includes(c.id) || targetIds.includes(c.cluster_id);
-        if (targetKeys) return targetKeys.includes(c.clusterKey);
+        if (targetIds) return targetIds.includes(c.id) || targetIds.includes(c.cluster_id) || targetIds.includes(c.clusterKey);
+        if (targetKeys) return targetKeys.includes(c.clusterKey) || targetKeys.includes(c.id) || targetKeys.includes(c.cluster_id);
         return (
           this.selectedClusterIds.includes(c.id) ||
           this.selectedClusterIds.includes(c.cluster_id) ||
@@ -761,23 +829,37 @@ export const useCodingStore = defineStore("coding", {
 
         for (const cluster of targetClusters) {
           totalInstances += cluster.instance_count;
+          let clusterUnblockedCount = 0;
           for (const inst of cluster.instances) {
             if (inst.status === "QUERY_PENDING" || inst.has_query || inst.is_locked || inst.is_blocked) {
               blockedInstances++;
             } else {
               unblockedAssignmentIds.push(inst.id);
+              clusterUnblockedCount++;
             }
           }
 
-          // Register synonym expansion rule
-          this.synonymRules.push({
-            verbatim_text: cluster.verbatim_text,
-            target_code: code,
-            target_term: term,
-            dictionary_type: dictionaryType || cluster.dictionary_type,
-            created_at: new Date().toISOString(),
-            status: "ACTIVE",
-          });
+          if (clusterUnblockedCount > 0) {
+            // Register synonym expansion rule
+            const newRule = {
+              verbatim_text: cluster.verbatim_text,
+              target_code: code,
+              target_term: term,
+              dictionary_type: dictionaryType || cluster.dictionary_type,
+              created_at: new Date().toISOString(),
+              status: "ACTIVE",
+            };
+            const existingIdx = this.synonymRules.findIndex(
+              (r) =>
+                r.verbatim_text.toUpperCase() === cluster.verbatim_text.toUpperCase() &&
+                (r.dictionary_type || "").toUpperCase() === ((dictionaryType || cluster.dictionary_type) || "").toUpperCase()
+            );
+            if (existingIdx !== -1) {
+              this.synonymRules[existingIdx] = newRule;
+            } else {
+              this.synonymRules.push(newRule);
+            }
+          }
         }
 
         if (unblockedAssignmentIds.length === 0) {
