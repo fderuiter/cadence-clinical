@@ -29,6 +29,7 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
     public DbSet<CtmsPaymentMilestone> CtmsPaymentMilestones => Set<CtmsPaymentMilestone>();
     public DbSet<DoaDelegationRecord> DoaDelegationRecords => Set<DoaDelegationRecord>();
     public DbSet<CtmsInvestigatorPayable> CtmsInvestigatorPayables => Set<CtmsInvestigatorPayable>();
+    public DbSet<CtmsSiteGreenlightGate> CtmsSiteGreenlightGates => Set<CtmsSiteGreenlightGate>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -51,6 +52,7 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new CtmsPaymentMilestoneConfiguration());
         modelBuilder.ApplyConfiguration(new DoaDelegationRecordConfiguration());
         modelBuilder.ApplyConfiguration(new CtmsInvestigatorPayableConfiguration());
+        modelBuilder.ApplyConfiguration(new CtmsSiteGreenlightGateConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
     }
 }
