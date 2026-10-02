@@ -19,7 +19,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [kernel](kernel.md) | 18 |
 | [knowledge](knowledge.md) | 2 |
 | [notifications](notifications.md) | 3 |
-| [org](org.md) | 2 |
+| [org](org.md) | 6 |
 | [payments](payments.md) | 23 |
 | [quality](quality.md) | 2 |
 | [safety](safety.md) | 14 |
