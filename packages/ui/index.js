@@ -767,6 +767,9 @@ import ClinicalLookupInput from "./src/components/clinical/ClinicalLookupInput.v
 import ClinicalQueryFlag from "./src/components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./src/components/clinical/ClinicalQueryPanel.vue";
 import ConfidenceBadge from "./src/components/clinical/ConfidenceBadge.vue";
+import FileUploadModal from "./src/components/FileUploadModal.vue";
+import ModalErrorAlert from "./src/components/ModalErrorAlert.vue";
+import { useAsyncRetry } from "./src/composables/useAsyncRetry.js";
 
 export {
   AiActionButton,
@@ -778,6 +781,9 @@ export {
   ClinicalQueryFlag,
   ClinicalQueryPanel,
   ConfidenceBadge,
+  FileUploadModal,
+  ModalErrorAlert,
+  useAsyncRetry,
 };
 
 // Dynamic Hover Pointer Capability Detection
