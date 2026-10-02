@@ -11,6 +11,7 @@ Generated from the EF Core model of `Cadence.Apps.Org.Infrastructure.Persistence
 | [`org.org_audit_logs`](#orgorg_audit_logs) | `OrgAuditLog` | 8 |
 | [`org.org_training_logs`](#orgorg_training_logs) | `TrainingLog` | 13 |
 | [`org.personnel_assignments`](#orgpersonnel_assignments) | `PersonnelAssignment` | 9 |
+| [`org.user_onboarding_preferences`](#orguser_onboarding_preferences) | `UserOnboardingPreference` | 12 |
 
 ## org.audit_log_entries
 
@@ -133,3 +134,27 @@ Indexes:
 
 - `IX_personnel_assignments_SiteId`: (`SiteId`)
 - `IX_personnel_assignments_StudyId`: (`StudyId`)
+
+## org.user_onboarding_preferences
+
+Entity: `UserOnboardingPreference`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `CurrentStep` | `integer` | no |  |  |
+| `Disabled` | `boolean` | no |  |  |
+| `EventsJson` | `jsonb` | no |  |  |
+| `IsActive` | `boolean` | no |  |  |
+| `Persona` | `character varying(100)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `UpdatedAt` | `timestamp with time zone` | no |  |  |
+| `UserId` | `character varying(255)` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+
+Indexes:
+
+- `IX_user_onboarding_preferences_UserId`: (`UserId`)
+- `IX_user_onboarding_preferences_UserId_Persona`: unique (`UserId`, `Persona`)

@@ -6,7 +6,7 @@ One document per module, rendered from each module's EF Core design-time model. 
 
 | Module | DbContext | Tables |
 | --- | --- | --- |
-| [ctms](ctms.md) | `CtmsDbContext` | 17 |
+| [ctms](ctms.md) | `CtmsDbContext` | 18 |
 | [econsent](econsent.md) | `EconsentDbContext` | 15 |
 | [eisf](eisf.md) | `EisfDbContext` | 5 |
 | [etmf](etmf.md) | `EtmfDbContext` | 7 |
@@ -17,7 +17,7 @@ One document per module, rendered from each module's EF Core design-time model. 
 | [kernel](kernel.md) | `KernelDbContext` | 54 |
 | [knowledge](knowledge.md) | `KnowledgeDbContext` | 7 |
 | [notifications](notifications.md) | `NotificationsDbContext` | 4 |
-| [org](org.md) | `OrgDbContext` | 5 |
+| [org](org.md) | `OrgDbContext` | 6 |
 | [payments](payments.md) | `PaymentsDbContext` | 17 |
 | [quality](quality.md) | `QualityDbContext` | 5 |
 | [safety](safety.md) | `SafetyDbContext` | 15 |

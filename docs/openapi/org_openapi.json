@@ -51,6 +51,107 @@
           }
         }
       }
+    },
+    "/api/v1/org/preferences/onboarding/{persona}": {
+      "get": {
+        "tags": [
+          "OnboardingPreferencesEndpoints"
+        ],
+        "summary": "Fetch user onboarding preferences by persona route parameter",
+        "operationId": "GetUserOnboardingPreferenceByRoute",
+        "parameters": [
+          {
+            "name": "persona",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OnboardingPreferencesEndpoints"
+        ],
+        "summary": "Save user onboarding preferences by persona route parameter",
+        "operationId": "SaveUserOnboardingPreferenceByRoute",
+        "parameters": [
+          {
+            "name": "persona",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Org_SaveUserOnboardingPreferenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/org/preferences/onboarding": {
+      "get": {
+        "tags": [
+          "OnboardingPreferencesEndpoints"
+        ],
+        "summary": "Fetch user onboarding preferences by persona query parameter",
+        "operationId": "GetUserOnboardingPreference",
+        "parameters": [
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OnboardingPreferencesEndpoints"
+        ],
+        "summary": "Save user onboarding preferences",
+        "operationId": "SaveUserOnboardingPreference",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Org_SaveUserOnboardingPreferenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -75,12 +176,61 @@
             ]
           }
         }
+      },
+      "Org_SaveUserOnboardingPreferenceRequest": {
+        "required": [
+          "persona",
+          "currentStep",
+          "isActive",
+          "disabled",
+          "eventsJson",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "persona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "currentStep": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "eventsJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "updatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Cadence.Apps.Org"
+    },
+    {
+      "name": "OnboardingPreferencesEndpoints"
     }
   ]
 }
