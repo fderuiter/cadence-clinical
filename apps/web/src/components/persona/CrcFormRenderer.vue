@@ -341,7 +341,7 @@
         >
           <template v-for="field in renderedFields" :key="field.id">
             <div
-              v-show="store.fieldVisibility[field.id] !== false"
+              v-show="store.fieldVisibility[field.id] ?? true"
               :style="`grid-column: span ${field.gridSpan || 12}; display: flex; flex-direction: column; gap: 8px;`"
               style="margin-bottom: 8px"
             >
@@ -450,7 +450,7 @@
                 <input
                   :id="`sdv-${field.id}`"
                   type="checkbox"
-                  :checked="sdvStates[getSdvKey(field.id)] === true"
+                  :checked="Boolean(sdvStates[getSdvKey(field.id)])"
                   style="cursor: pointer"
                   @change="
                     $emit('handle-sdv-toggle', field.id, $event.target.checked)
@@ -771,7 +771,13 @@
       signer-role="Subject"
       action-url="/api/v1/econsent/templates/icf-001/versions/2/capture-consent"
       semantic-action="econsent.consent.capture"
-      :on-sign="(sigToken, signingReason) => $emit('handle-complete-reconsent', 'ECONSENT', { sigToken, signingReason })"
+      :on-sign="
+        (sigToken, signingReason) =>
+          $emit('handle-complete-reconsent', 'ECONSENT', {
+            sigToken,
+            signingReason,
+          })
+      "
       @cancel="$emit('update:showEconsentModal', false)"
       @success="() => $emit('update:showEconsentModal', false)"
     />
