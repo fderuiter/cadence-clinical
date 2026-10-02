@@ -280,6 +280,7 @@ export const useOnboardingStore = defineStore("onboarding", {
         );
       }
       this.persist();
+    },
     touchTimestamp() {
       this.updatedAt = new Date().toISOString();
       this.persist();
