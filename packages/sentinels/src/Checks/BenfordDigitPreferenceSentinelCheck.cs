@@ -11,15 +11,15 @@ public class BenfordDigitPreferenceSentinelCheck : IFraudSentinelCheck
 {
     private static readonly double[] TheoreticalBenfordProbabilities =
     [
-        0.30103, // d = 1
-        0.17609, // d = 2
-        0.12494, // d = 3
-        0.09691, // d = 4
-        0.07918, // d = 5
-        0.06695, // d = 6
-        0.05799, // d = 7
-        0.05115, // d = 8
-        0.04576  // d = 9
+        0.30103, // d = 1, deid-ignore: Benford probability constant
+        0.17609, // d = 2, deid-ignore: Benford probability constant
+        0.12494, // d = 3, deid-ignore: Benford probability constant
+        0.09691, // d = 4, deid-ignore: Benford probability constant
+        0.07918, // d = 5, deid-ignore: Benford probability constant
+        0.06695, // d = 6, deid-ignore: Benford probability constant
+        0.05799, // d = 7, deid-ignore: Benford probability constant
+        0.05115, // d = 8, deid-ignore: Benford probability constant
+        0.04576  // d = 9, deid-ignore: Benford probability constant
     ];
 
     public string Name => "BenfordDigitPreferenceCheck";
