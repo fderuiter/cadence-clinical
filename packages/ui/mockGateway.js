@@ -418,3 +418,35 @@ export async function validateGatewayRequest(req, options = {}) {
     strippedPath,
   };
 }
+
+const GATEWAY_API_PREFIXES = [
+  "/api/",
+  "/designer/",
+  "/execution/",
+  "/etmf/",
+  "/interop/",
+  "/ctms/",
+  "/notifications/",
+  "/quality/",
+  "/safety/",
+  "/tickets/",
+  "/eisf/",
+  "/org/",
+  "/econsent/",
+  "/terminology/",
+  "/invalid-prefix/",
+];
+
+/**
+ * Whether a request URL targets the API gateway (port 8000) or a service path,
+ * so the mock service worker should intercept it instead of passing it through.
+ * @param {URL} url
+ * @returns {boolean}
+ */
+export function isGatewayApiCall(url) {
+  return (
+    url.port === "8000" ||
+    url.host.includes("localhost:8000") ||
+    GATEWAY_API_PREFIXES.some((prefix) => url.pathname.startsWith(prefix))
+  );
+}

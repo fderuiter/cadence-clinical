@@ -210,8 +210,17 @@
           </div>
           <div class="info-row">
             <span class="info-lbl">Stipend Wallet:</span>
-            <span id="session-wallet-balance" class="info-val text-success" style="font-weight: bold; color: #10b981;">
-              ${{ state.walletBalance !== undefined && state.walletBalance !== null ? Number(state.walletBalance).toFixed(2) : "0.00" }}
+            <span
+              id="session-wallet-balance"
+              class="info-val text-success"
+              style="font-weight: bold; color: #10b981"
+            >
+              ${{
+                state.walletBalance !== undefined &&
+                state.walletBalance !== null
+                  ? Number(state.walletBalance).toFixed(2)
+                  : "0.00"
+              }}
             </span>
           </div>
           <div class="info-row" style="margin-top: 12px">
@@ -1420,6 +1429,7 @@ import {
   openReconsentModal,
   closeReconsentModal,
   submitReconsentSignature,
+  describeQueuedSync,
 } from "./index.js";
 
 function handleReconsentModalKeyDown(e) {
@@ -1579,28 +1589,7 @@ function getStatusLabel(item) {
 
 function getStatusDescription(item) {
   if (item.status === "QUEUED") {
-    if (
-      state.syncRetryInfo &&
-      state.syncRetryInfo.isRetrying &&
-      (state.syncRetryInfo.sequenceNumber === null ||
-        state.syncRetryInfo.sequenceNumber === undefined ||
-        state.syncRetryInfo.sequenceNumber === item.sequence_number)
-    ) {
-      if (
-        state.syncRetryInfo.nextRetryDelay > 0 &&
-        state.syncRetryInfo.nextRetryTimestamp
-      ) {
-        const delaySec = Math.max(
-          1,
-          Math.ceil(
-            (state.syncRetryInfo.nextRetryTimestamp - Date.now()) / 1000
-          )
-        );
-        return `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries} (Next retry in ${delaySec}s)`;
-      }
-      return `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries}`;
-    }
-    return "Waiting for network connection...";
+    return describeQueuedSync(state.syncRetryInfo, item);
   } else if (
     item.status === "CREATED" ||
     item.status === "UPDATED_CLIENT_WINS"

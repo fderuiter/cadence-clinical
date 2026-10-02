@@ -104,6 +104,7 @@ export {
 } from "./signing.js";
 
 export {
+  isGatewayApiCall,
   validateGatewayRequest,
   isPathSignatureGated,
   isWhitelistedSubjectRoute,
@@ -466,7 +467,11 @@ export function deserializeConditionsTree(tree) {
   if (tree.type === "logical") {
     matchOperator = tree.operator || "and";
     operands = tree.operands || [];
-  } else if (tree.type === "constant" && tree.value === true) {
+  } else if (
+    tree.type === "constant" &&
+    typeof tree.value === "boolean" &&
+    tree.value
+  ) {
     return { conditions: [], matchOperator: "and" };
   } else {
     operands = [tree];
