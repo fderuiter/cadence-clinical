@@ -658,3 +658,5 @@ fails the build.
 | [ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet](adr/2026-10-01-automated-stipend-disbursement-threshold-rules.md) | Current | Architectural decision record: ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet |
 
 | [Project License](LICENSE.md) | Current | Project License |
+
+| [ADR-2802: CTMS Visit Letter PDF Compilation and Automated Dispatch Pipeline](adr/2026-10-01-ctms-visit-letter-pdf-compilation-and-automated-dispatch-pipeline.md) | Current | Architectural decision record: ADR-2802: CTMS Visit Letter PDF Compilation and Automated Dispatch Pipeline |
