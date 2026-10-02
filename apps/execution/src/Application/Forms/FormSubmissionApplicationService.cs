@@ -42,6 +42,7 @@ public sealed class FormSubmissionApplicationService(
     ISubjectRepository? subjectRepository = null,
     IEditCheckEngine? editCheckEngine = null,
     IAutoQueryDispatchService? autoQueryDispatchService = null,
+    IBatchEvaluationContextLoader? batchEvaluationContextLoader = null,
     IConfiguration? configuration = null) : IFormSubmissionApplicationService
 {
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
@@ -175,13 +176,18 @@ public sealed class FormSubmissionApplicationService(
                     violations.AddRange(editCheckEngine.EvaluateInlineConstraints(obs));
                 }
 
-                var batchContext = new BatchEvaluationContext(
-                    submission.StudyId.Value,
-                    submission.SubjectId.Value,
-                    observations,
-                    [submission]);
+                var batchContext = batchEvaluationContextLoader != null
+                    ? await batchEvaluationContextLoader.LoadAsync(submission.StudyId, submission.SubjectId, cancellationToken).ConfigureAwait(false)
+                    : new BatchEvaluationContext(
+                        submission.StudyId.Value,
+                        submission.SubjectId.Value,
+                        observations,
+                        [submission]);
 
-                violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
+                if (batchContext.IsConsented)
+                {
+                    violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
+                }
 
                 await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
                     submission.StudyId,
@@ -191,7 +197,8 @@ public sealed class FormSubmissionApplicationService(
                     submission.FormId.Value,
                     observations,
                     violations,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    isConsented: batchContext.IsConsented).ConfigureAwait(false);
             }
         }
 
@@ -268,13 +275,18 @@ public sealed class FormSubmissionApplicationService(
                     violations.AddRange(editCheckEngine.EvaluateInlineConstraints(obs));
                 }
 
-                var batchContext = new BatchEvaluationContext(
-                    submission.StudyId.Value,
-                    submission.SubjectId.Value,
-                    observations,
-                    [submission]);
+                var batchContext = batchEvaluationContextLoader != null
+                    ? await batchEvaluationContextLoader.LoadAsync(submission.StudyId, submission.SubjectId, cancellationToken).ConfigureAwait(false)
+                    : new BatchEvaluationContext(
+                        submission.StudyId.Value,
+                        submission.SubjectId.Value,
+                        observations,
+                        [submission]);
 
-                violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
+                if (batchContext.IsConsented)
+                {
+                    violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
+                }
 
                 await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
                     submission.StudyId,
@@ -284,7 +296,8 @@ public sealed class FormSubmissionApplicationService(
                     submission.FormId.Value,
                     observations,
                     violations,
-                    cancellationToken).ConfigureAwait(false);
+                    cancellationToken,
+                    isConsented: batchContext.IsConsented).ConfigureAwait(false);
             }
         }
         else

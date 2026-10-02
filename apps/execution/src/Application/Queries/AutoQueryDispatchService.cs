@@ -36,8 +36,14 @@ public sealed class AutoQueryDispatchService(
         string? formId,
         IReadOnlyList<ClinicalObservation> observations,
         IReadOnlyList<EditCheckViolation> violations,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool isConsented = true)
     {
+        if (!isConsented)
+        {
+            return Array.Empty<ClinicalQuery>();
+        }
+
         string actingUserId;
         try
         {

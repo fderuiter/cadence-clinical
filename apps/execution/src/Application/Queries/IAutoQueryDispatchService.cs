@@ -26,5 +26,6 @@ public interface IAutoQueryDispatchService
         string? formId,
         IReadOnlyList<ClinicalObservation> observations,
         IReadOnlyList<EditCheckViolation> violations,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        bool isConsented = true);
 }

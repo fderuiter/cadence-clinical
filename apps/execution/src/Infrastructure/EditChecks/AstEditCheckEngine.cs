@@ -354,6 +354,11 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
 
     public IReadOnlyList<EditCheckViolation> EvaluateBatchRules(BatchEvaluationContext context)
     {
+        if (!context.IsConsented)
+        {
+            return Array.Empty<EditCheckViolation>();
+        }
+
         var violations = new List<EditCheckViolation>();
 
         // Cross-field rule: Diastolic BP must not exceed Systolic BP in the same visit

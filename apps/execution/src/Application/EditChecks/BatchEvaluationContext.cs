@@ -4,12 +4,14 @@ using System.Linq;
 
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
+using Cadence.Apps.Execution.Domain.Subjects;
 
 namespace Cadence.Apps.Execution.Application.EditChecks;
 
 /// <summary>
 /// Pre-fetched in-memory evaluation container loaded via consolidated batch queries to eliminate
 /// N+1 database roundtrips during longitudinal and cross-form edit check evaluations.
+/// Exposes consent gating state (<see cref="IsConsented"/> and <see cref="ConsentStatus"/>).
 /// @req:PRD-SYS-004
 /// @req:SRS-EDC-005
 /// </summary>
@@ -19,6 +21,8 @@ public sealed class BatchEvaluationContext
     public string? SubjectId { get; }
     public IReadOnlyList<FormSubmission> Submissions { get; }
     public IReadOnlyList<ClinicalObservation> Observations { get; }
+    public bool IsConsented { get; }
+    public string ConsentStatus { get; }
 
     private readonly Dictionary<string, List<ClinicalObservation>> _obsByCode = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<(string VisitId, string TestCode), List<ClinicalObservation>> _obsByVisitAndCode = new();
@@ -27,8 +31,10 @@ public sealed class BatchEvaluationContext
 
     public BatchEvaluationContext(
         IReadOnlyList<FormSubmission> submissions,
-        IReadOnlyList<ClinicalObservation> observations)
-        : this(null, null, observations, submissions)
+        IReadOnlyList<ClinicalObservation> observations,
+        bool isConsented = true,
+        string consentStatus = "CONSENTED")
+        : this(null, null, observations, submissions, isConsented, consentStatus)
     {
     }
 
@@ -36,7 +42,22 @@ public sealed class BatchEvaluationContext
         string? studyId,
         string? subjectId,
         IReadOnlyList<ClinicalObservation> observations,
-        IReadOnlyList<FormSubmission> formSubmissions)
+        IReadOnlyList<FormSubmission> formSubmissions,
+        ClinicalSubject? subject,
+        IReadOnlyList<SubjectConsent>? consents)
+        : this(studyId, subjectId, observations, formSubmissions,
+               EvaluateConsent(subject, consents).IsConsented,
+               EvaluateConsent(subject, consents).ConsentStatus)
+    {
+    }
+
+    public BatchEvaluationContext(
+        string? studyId,
+        string? subjectId,
+        IReadOnlyList<ClinicalObservation> observations,
+        IReadOnlyList<FormSubmission> formSubmissions,
+        bool isConsented = true,
+        string consentStatus = "CONSENTED")
     {
         StudyId = studyId;
         SubjectId = subjectId;
@@ -44,6 +65,8 @@ public sealed class BatchEvaluationContext
         var activeObservations = observations.Where(o => o.IsActive).ToList();
         Submissions = activeSubmissions;
         Observations = activeObservations;
+        IsConsented = isConsented;
+        ConsentStatus = consentStatus;
 
         foreach (var sub in activeSubmissions)
         {
@@ -100,4 +123,29 @@ public sealed class BatchEvaluationContext
 
     public IReadOnlyList<FormSubmission> GetSubmissionsByFormId(string formId) =>
         _submissionsByFormId.TryGetValue(formId, out var list) ? list : Array.Empty<FormSubmission>();
+
+    public static (bool IsConsented, string ConsentStatus) EvaluateConsent(
+        ClinicalSubject? subject,
+        IReadOnlyList<SubjectConsent>? consents)
+    {
+        if (subject is not null)
+        {
+            if (subject.Status == SubjectState.Withdrawn)
+            {
+                return (false, "WITHDRAWN");
+            }
+            if (subject.Status == SubjectState.ScreenFailed)
+            {
+                return (false, "SCREEN_FAILED");
+            }
+        }
+
+        bool hasSignedConsent = consents is not null && consents.Any(c => c.IcfSigned || c.IsPaperOverride);
+        if (!hasSignedConsent)
+        {
+            return (false, "UNCONSENTED");
+        }
+
+        return (true, "CONSENTED");
+    }
 }
