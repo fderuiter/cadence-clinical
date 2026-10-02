@@ -13,10 +13,7 @@
       <div class="modal-header">
         <div class="header-details">
           <h3>
-            <span
-              class="secure-icon"
-              aria-hidden="true"
-            >🔒</span> Secure
+            <span class="secure-icon" aria-hidden="true">🔒</span> Secure
             Regulated Viewer -
             {{ document.filename }}
           </h3>
@@ -36,10 +33,7 @@
 
       <div class="modal-body-layout">
         <!-- Sidebar with GxP Provenance Ledger Metadata -->
-        <aside
-          class="metadata-sidebar"
-          aria-label="Document Metadata"
-        >
+        <aside class="metadata-sidebar" aria-label="Document Metadata">
           <div class="meta-section">
             <h4>Record Details</h4>
             <div class="meta-row">
@@ -67,10 +61,7 @@
                 formatDate(document.created_at)
               }}</span>
             </div>
-            <div
-              v-if="document.site_id"
-              class="meta-row"
-            >
+            <div v-if="document.site_id" class="meta-row">
               <span class="meta-label">Site Scope:</span>
               <span class="meta-value font-mono">{{ document.site_id }}</span>
             </div>
@@ -83,26 +74,17 @@
               <p class="reason-text">
                 {{
                   document.reason_for_change ||
-                    "No change justification provided."
+                  "No change justification provided."
                 }}
               </p>
             </div>
-            <div
-              v-if="document.content_checksum"
-              class="checksum-block"
-            >
+            <div v-if="document.content_checksum" class="checksum-block">
               <h5>SHA-256 Digest:</h5>
-              <code
-                class="checksum-text"
-                :title="document.content_checksum"
-              >
+              <code class="checksum-text" :title="document.content_checksum">
                 {{ document.content_checksum }}
               </code>
             </div>
-            <div
-              v-else
-              class="checksum-block"
-            >
+            <div v-else class="checksum-block">
               <h5>Verification Integrity:</h5>
               <code class="checksum-text text-success">
                 MOCK-SHA256-VALIDATED-INTEGRITY-OK
@@ -117,9 +99,7 @@
               v-if="document.signer && document.signing_timestamp"
               class="manifest-card signed"
             >
-              <p class="sign-status">
-                📝 ELECTRONICALLY SIGNED
-              </p>
+              <p class="sign-status">📝 ELECTRONICALLY SIGNED</p>
               <p class="signer-meta">
                 Signer: <strong>{{ document.signer }}</strong>
               </p>
@@ -133,13 +113,8 @@
                 Date: <span>{{ formatDate(document.signing_timestamp) }}</span>
               </p>
             </div>
-            <div
-              v-else
-              class="manifest-card unsigned"
-            >
-              <p class="sign-status">
-                ⚠️ UNSIGNED RECORD
-              </p>
+            <div v-else class="manifest-card unsigned">
+              <p class="sign-status">⚠️ UNSIGNED RECORD</p>
               <p class="unsigned-warning">
                 This document is a working electronic draft and has not been
                 locked by signature manifestation.
@@ -154,9 +129,7 @@
           >
             <h4>Redaction Manifest</h4>
             <div class="manifest-card redacted">
-              <p class="redact-status">
-                🛡️ HIPAA/GDPR COMPLIANT
-              </p>
+              <p class="redact-status">🛡️ HIPAA/GDPR COMPLIANT</p>
               <p
                 v-if="document.redaction_manifest_json?.operator_name"
                 class="redact-meta"
@@ -166,10 +139,7 @@
                   document.redaction_manifest_json.operator_name
                 }}</strong>
               </p>
-              <p
-                v-else-if="document.created_by"
-                class="redact-meta"
-              >
+              <p v-else-if="document.created_by" class="redact-meta">
                 Operator: <strong>{{ document.created_by }}</strong>
               </p>
               <p
@@ -179,10 +149,7 @@
                 Reason:
                 <strong>{{ document.redaction_manifest_json.reason }}</strong>
               </p>
-              <p
-                v-else-if="document.reason_for_change"
-                class="redact-meta"
-              >
+              <p v-else-if="document.reason_for_change" class="redact-meta">
                 Reason: <strong>{{ document.reason_for_change }}</strong>
               </p>
               <div
@@ -217,21 +184,11 @@
         </aside>
 
         <!-- Simulated Document Frame with Dynamic Overlay Watermark -->
-        <main
-          class="viewer-workspace"
-          aria-label="Document Viewer"
-        >
+        <main class="viewer-workspace" aria-label="Document Viewer">
           <div class="pdf-document-canvas">
             <!-- Dynamic CSS Rotating Diagonal Watermark -->
-            <div
-              class="watermark-overlay-container"
-              aria-hidden="true"
-            >
-              <div
-                v-for="n in 3"
-                :key="n"
-                class="diagonal-watermark-row"
-              >
+            <div class="watermark-overlay-container" aria-hidden="true">
+              <div v-for="n in 3" :key="n" class="diagonal-watermark-row">
                 <span class="watermark-text">{{ watermarkText }}</span>
               </div>
             </div>
@@ -239,19 +196,12 @@
             <!-- Page 1 Content Sheet Mock -->
             <div class="document-page">
               <div class="page-header">
-                <div class="logo">
-                  Cadence Clinical Systems
-                </div>
-                <div class="doc-code">
-                  ST-{{ document.study_id }}
-                </div>
+                <div class="logo">Cadence Clinical Systems</div>
+                <div class="doc-code">ST-{{ document.study_id }}</div>
               </div>
 
               <div class="page-content">
-                <div
-                  v-if="document.is_redacted"
-                  class="redaction-badge-banner"
-                >
+                <div v-if="document.is_redacted" class="redaction-badge-banner">
                   🛡️ COMPLIANT DERIVATIVE - SENSITIVE PII MASKED BY AUTOMATED
                   NER SCANS
                 </div>
@@ -264,7 +214,7 @@
                   {{ document.version_index }}.0
                 </p>
 
-                <hr class="divider">
+                <hr class="divider" />
 
                 <section class="doc-section-content">
                   <h3>1. REGULATORY INTENT AND AUDIT CLASSIFICATION</h3>
@@ -282,18 +232,19 @@
                 <section class="doc-section-content">
                   <h3>2. DIGITAL TRACEABILITY DATA</h3>
                   <p>
-                    <strong>Parent Study:</strong> {{ document.study_id }}<br>
-                    <strong>Record ID:</strong> {{ document.id }}<br>
+                    <strong>Parent Study:</strong> {{ document.study_id }}<br />
+                    <strong>Record ID:</strong> {{ document.id }}<br />
                     <strong>Ingestion Filename:</strong> {{ document.filename
-                    }}<br>
+                    }}<br />
                     <strong>MIME Category:</strong> {{ document.mime_type
-                    }}<br>
+                    }}<br />
                     <strong>Author Identity:</strong>
                     <span
                       v-if="document.is_redacted"
                       class="redaction-overlay-block"
                       title="Redacted: Author Identity"
-                    >[REDACTED_NAME]</span>
+                      >[REDACTED_NAME]</span
+                    >
                     <span v-else>{{ document.created_by }}</span>
                   </p>
                 </section>
@@ -332,7 +283,9 @@
                       </div>
                       <div class="redacted-line">
                         Electronic Mail:
-                        <span class="redaction-overlay-block">john.doe@example.com</span>
+                        <span class="redaction-overlay-block"
+                          >john.doe@example.com</span
+                        ><!-- deid-ignore -->
                       </div>
                     </div>
                   </div>

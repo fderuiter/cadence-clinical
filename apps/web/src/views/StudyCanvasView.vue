@@ -1,24 +1,12 @@
 <template>
-  <div
-    id="study-canvas"
-    class="canvas"
-  >
-    <a
-      class="skip-link"
-      href="#canvas-workspace"
-    >Skip to workspace</a>
+  <div id="study-canvas" class="canvas">
+    <a class="skip-link" href="#canvas-workspace">Skip to workspace</a>
 
     <header class="topbar">
-      <nav
-        class="zoom-path"
-        aria-label="Zoom path"
-      >
+      <nav class="zoom-path" aria-label="Zoom path">
         <ol>
           <li>
-            <router-link
-              id="zoom-studies"
-              :to="{ name: 'study' }"
-            >
+            <router-link id="zoom-studies" :to="{ name: 'study' }">
               Studies
             </router-link>
           </li>
@@ -51,7 +39,8 @@
               v-if="zoomCurrent === 'participant'"
               id="zoom-participant"
               aria-current="page"
-            >{{ zoomParticipant.subject_id }}</span>
+              >{{ zoomParticipant.subject_id }}</span
+            >
             <router-link
               v-else
               id="zoom-participant"
@@ -61,10 +50,7 @@
             </router-link>
           </li>
           <li v-if="selectedObservation">
-            <span
-              id="zoom-observation"
-              aria-current="page"
-            >{{
+            <span id="zoom-observation" aria-current="page">{{
               selectedObservation.test_name
             }}</span>
           </li>
@@ -104,10 +90,7 @@
         </h1>
         <nav aria-label="Lifecycle">
           <ol class="lifecycle-rail">
-            <li
-              v-for="item in STAGES"
-              :key="item.id"
-            >
+            <li v-for="item in STAGES" :key="item.id">
               <router-link
                 :id="`stage-${item.id}`"
                 :to="studyLocation({ stage: item.id })"
@@ -123,11 +106,7 @@
       </div>
 
       <div class="panes">
-        <nav
-          id="canvas-navigator"
-          class="navigator"
-          aria-label="Sections"
-        >
+        <nav id="canvas-navigator" class="navigator" aria-label="Sections">
           <router-link
             id="nav-study-home"
             :to="studyLocation()"
@@ -146,10 +125,7 @@
               {{ group.label }}
             </h2>
             <ul v-if="group.sections.length">
-              <li
-                v-for="item in group.sections"
-                :key="item.id"
-              >
+              <li v-for="item in group.sections" :key="item.id">
                 <router-link
                   :id="`nav-${item.id}`"
                   :to="studyLocation({ stage: group.id, section: item.id })"
@@ -161,12 +137,7 @@
                 </router-link>
               </li>
             </ul>
-            <p
-              v-else
-              class="nav-empty"
-            >
-              Nothing here has a service yet.
-            </p>
+            <p v-else class="nav-empty">Nothing here has a service yet.</p>
           </div>
         </nav>
 
@@ -185,28 +156,21 @@
               @select-observation="selectObservation"
               @retry="canvas.loadRecord(recordParticipant.subject_id)"
             />
-            <p
-              v-else
-              id="record-not-loaded"
-              class="stage-empty"
-            >
+            <p v-else id="record-not-loaded" class="stage-empty">
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
                 :to="
                   studyLocation({ stage: 'conduct', section: 'participants' })
                 "
               >
-                Find it in Participants
-              </router-link>.
+                Find it in Participants </router-link
+              >.
             </p>
           </template>
 
           <template v-else-if="!stage">
             <StudyPulse @drill="drillToParticipants" />
-            <StudyActivity
-              :key="studyCode"
-              :study-code="studyCode"
-            />
+            <StudyActivity :key="studyCode" :study-code="studyCode" />
           </template>
 
           <ParticipantsSection
@@ -242,30 +206,20 @@
             <h2 id="stage-overview-title">
               {{ stage.label }}
             </h2>
-            <p class="stage-scope">
-              {{ stage.scope }}.
-            </p>
-            <ul
-              v-if="stage.sections.length"
-              class="stage-sections"
-            >
-              <li
-                v-for="item in stage.sections"
-                :key="item.id"
-              >
+            <p class="stage-scope">{{ stage.scope }}.</p>
+            <ul v-if="stage.sections.length" class="stage-sections">
+              <li v-for="item in stage.sections" :key="item.id">
                 <router-link
                   :to="studyLocation({ stage: stage.id, section: item.id })"
                 >
                   {{ item.label }}
                 </router-link>
                 <span class="stage-section-description">
-                  {{ item.description }}.</span>
+                  {{ item.description }}.</span
+                >
               </li>
             </ul>
-            <p
-              id="stage-empty"
-              class="stage-empty"
-            >
+            <p id="stage-empty" class="stage-empty">
               {{
                 stage.sections.length
                   ? `The rest of ${stage.label} arrives as its services are built.`
@@ -275,7 +229,8 @@
                 :href="UNAVAILABLE_SCREENS_ISSUE"
                 target="_blank"
                 rel="noopener"
-              >See what's planned (#4829)</a>.
+                >See what's planned (#4829)</a
+              >.
             </p>
           </section>
         </main>
@@ -304,15 +259,8 @@
       </div>
     </template>
 
-    <main
-      v-else
-      id="canvas-workspace"
-      class="open-study"
-      tabindex="-1"
-    >
-      <h1 id="canvas-study-title">
-        Open a study
-      </h1>
+    <main v-else id="canvas-workspace" class="open-study" tabindex="-1">
+      <h1 id="canvas-study-title">Open a study</h1>
       <form
         id="open-study-form"
         class="open-study-form"
@@ -326,7 +274,7 @@
           autocomplete="off"
           maxlength="255"
           placeholder="e.g. CAD-101"
-        >
+        />
         <button
           id="btn-open-study"
           type="submit"

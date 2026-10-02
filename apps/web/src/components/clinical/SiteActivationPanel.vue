@@ -4,12 +4,7 @@
     class="card site-activation"
     aria-labelledby="site-activation-title"
   >
-    <h3
-      id="site-activation-title"
-      class="card-title"
-    >
-      Site activation
-    </h3>
+    <h3 id="site-activation-title" class="card-title">Site activation</h3>
 
     <form
       id="site-activation-scope"
@@ -25,7 +20,7 @@
           type="text"
           autocomplete="off"
           placeholder="Study code"
-        >
+        />
       </template>
       <label for="site-activation-site">Site</label>
       <input
@@ -34,7 +29,7 @@
         type="text"
         autocomplete="off"
         placeholder="Site code"
-      >
+      />
       <button
         id="btn-check-site-compliance"
         type="submit"
@@ -45,12 +40,7 @@
       </button>
     </form>
 
-    <p
-      v-if="!checked"
-      id="site-compliance-status"
-      class="status"
-      role="status"
-    >
+    <p v-if="!checked" id="site-compliance-status" class="status" role="status">
       Enter a study and site to see whether eTMF reports the site's activation
       documents complete.
     </p>
@@ -70,15 +60,8 @@
     >
       The eTMF status couldn't be loaded, so activation is unavailable.
     </p>
-    <div
-      v-else-if="compliance"
-      id="site-compliance-status"
-      role="status"
-    >
-      <p
-        v-if="compliance.is_complete"
-        class="status status-complete"
-      >
+    <div v-else-if="compliance" id="site-compliance-status" role="status">
+      <p v-if="compliance.is_complete" class="status status-complete">
         Complete: eTMF reports every activation document for site
         {{ compliance.site_id }} in {{ compliance.study_id }} approved.
       </p>
@@ -87,27 +70,18 @@
           Incomplete: eTMF reports these activation documents missing.
         </p>
         <ul id="site-missing-documents">
-          <li
-            v-for="doc in compliance.missing_documents"
-            :key="doc"
-          >
+          <li v-for="doc in compliance.missing_documents" :key="doc">
             {{ doc }}
           </li>
         </ul>
       </template>
-      <p
-        v-else
-        class="status status-incomplete"
-      >
+      <p v-else class="status status-incomplete">
         Not confirmed: eTMF has not reported this site's activation documents
         complete.
       </p>
     </div>
 
-    <div
-      v-if="compliance?.is_complete"
-      class="activate"
-    >
+    <div v-if="compliance?.is_complete" class="activate">
       <label for="site-activation-reason">Reason for activation</label>
       <textarea
         id="site-activation-reason"
@@ -128,17 +102,12 @@
       </button>
     </div>
 
-    <p
-      v-if="!props.studyCode"
-      class="unavailable-note"
-    >
+    <p v-if="!props.studyCode" class="unavailable-note">
       Milestones, monitoring visits, delegation, financials, start-up and RTSM
       aren't available yet: no Cadence service serves them. See
-      <a
-        :href="UNAVAILABLE_SCREENS_ISSUE"
-        target="_blank"
-        rel="noopener"
-      >#4829</a>.
+      <a :href="UNAVAILABLE_SCREENS_ISSUE" target="_blank" rel="noopener"
+        >#4829</a
+      >.
     </p>
   </section>
 </template>

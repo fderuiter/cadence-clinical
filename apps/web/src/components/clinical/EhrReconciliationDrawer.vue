@@ -1,11 +1,7 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    @click.self="closeDrawer"
-  >
+  <div v-if="isOpen" class="drawer-backdrop" @click.self="closeDrawer">
     <aside
       class="ehr-reconciliation-drawer"
       role="dialog"
@@ -20,10 +16,7 @@
             <span class="badge badge-gxp">21 CFR Part 11</span>
             <span class="badge badge-provenance">Immutable Provenance</span>
           </div>
-          <h2
-            id="drawer-heading"
-            class="drawer-title"
-          >
+          <h2 id="drawer-heading" class="drawer-title">
             eSource EHR Reconciliation Drawer
           </h2>
           <p class="drawer-subtitle">
@@ -118,30 +111,17 @@
         <!-- Status Filter & Search Input -->
         <div class="toolbar-controls">
           <div class="filter-control">
-            <label
-              for="status-filter"
-              class="filter-label"
-            >Status:</label>
+            <label for="status-filter" class="filter-label">Status:</label>
             <select
               id="status-filter"
               v-model="selectedStatus"
               class="select-input"
             >
-              <option value="ALL">
-                All Statuses
-              </option>
-              <option value="PENDING_REVIEW">
-                Pending Review
-              </option>
-              <option value="ACCEPTED">
-                Accepted
-              </option>
-              <option value="REJECTED">
-                Rejected
-              </option>
-              <option value="QUERIED">
-                Queried
-              </option>
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING_REVIEW">Pending Review</option>
+              <option value="ACCEPTED">Accepted</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="QUERIED">Queried</option>
             </select>
           </div>
 
@@ -152,17 +132,14 @@
               class="search-input"
               placeholder="Search variable, test code, or value..."
               aria-label="Search candidate records"
-            >
+            />
           </div>
         </div>
       </div>
 
       <!-- Main Split-Screen Reconciliation View -->
       <main class="drawer-body">
-        <div
-          v-if="isLoading"
-          class="state-container"
-        >
+        <div v-if="isLoading" class="state-container">
           <div class="spinner" />
           <p>Loading eSource candidate data and current eCRF mappings...</p>
         </div>
@@ -179,10 +156,7 @@
           </p>
         </div>
 
-        <div
-          v-else
-          class="candidate-list"
-        >
+        <div v-else class="candidate-list">
           <article
             v-for="item in filteredCandidates"
             :key="item.id"
@@ -235,19 +209,18 @@
                   <span class="val-num">{{
                     formatValue(item.candidate_value)
                   }}</span>
-                  <span
-                    v-if="item.candidate_unit"
-                    class="val-unit"
-                  >{{
+                  <span v-if="item.candidate_unit" class="val-unit">{{
                     item.candidate_unit
                   }}</span>
                 </div>
                 <div class="provenance-metadata">
                   <div class="meta-row">
                     <span class="lbl">Resource:</span>
-                    <span class="val mono">{{ item.fhir_resource_type }}/{{
-                      item.fhir_resource_id
-                    }}</span>
+                    <span class="val mono"
+                      >{{ item.fhir_resource_type }}/{{
+                        item.fhir_resource_id
+                      }}</span
+                    >
                   </div>
                   <div class="meta-row">
                     <span class="lbl">Obs Timestamp:</span>
@@ -257,7 +230,9 @@
                   </div>
                   <div class="meta-row">
                     <span class="lbl">Confidence:</span>
-                    <span class="val">{{ Math.round(item.confidence_score * 100) }}%</span>
+                    <span class="val"
+                      >{{ Math.round(item.confidence_score * 100) }}%</span
+                    >
                   </div>
                 </div>
               </div>
@@ -272,16 +247,13 @@
                   <span
                     v-if="
                       item.current_ecrf_value !== null &&
-                        item.current_ecrf_value !== undefined
+                      item.current_ecrf_value !== undefined
                     "
                     class="val-num"
                   >
                     {{ formatValue(item.current_ecrf_value) }}
                   </span>
-                  <span
-                    v-else
-                    class="val-empty italic"
-                  >
+                  <span v-else class="val-empty italic">
                     [Empty / Unentered Field]
                   </span>
                 </div>
@@ -303,7 +275,8 @@
                     <span
                       class="val truncate"
                       :title="item.mapping_provenance"
-                    >{{ item.mapping_provenance }}</span>
+                      >{{ item.mapping_provenance }}</span
+                    >
                   </div>
                 </div>
               </div>
@@ -316,23 +289,21 @@
               :class="`banner-${item.status.toLowerCase()}`"
             >
               <div class="resolution-info">
-                <strong>{{ formatResolutionAction(item.resolution_action) }}:</strong>
+                <strong
+                  >{{ formatResolutionAction(item.resolution_action) }}:</strong
+                >
                 <span class="reason-text">{{
                   item.resolution_reason || "No comment provided"
                 }}</span>
-                <span class="resolved-by-tag">by {{ item.resolved_by || "CRC Coordinator" }} at
-                  {{ formatDate(item.resolved_at) }}</span>
+                <span class="resolved-by-tag"
+                  >by {{ item.resolved_by || "CRC Coordinator" }} at
+                  {{ formatDate(item.resolved_at) }}</span
+                >
               </div>
-              <div
-                v-if="item.electronic_signature"
-                class="esign-badge"
-              >
+              <div v-if="item.electronic_signature" class="esign-badge">
                 ✍️ 21 CFR Part 11 eSigned
               </div>
-              <div
-                v-if="item.clinical_query_id"
-                class="query-badge"
-              >
+              <div v-if="item.clinical_query_id" class="query-badge">
                 ❓ Query #{{ item.clinical_query_id.substring(0, 8) }} Open
               </div>
             </div>
@@ -398,14 +369,8 @@
           aria-labelledby="reject-modal-title"
         >
           <div class="modal-header">
-            <h3 id="reject-modal-title">
-              Reject EHR Candidate Data
-            </h3>
-            <button
-              type="button"
-              class="btn-close"
-              @click="closeRejectModal"
-            >
+            <h3 id="reject-modal-title">Reject EHR Candidate Data</h3>
+            <button type="button" class="btn-close" @click="closeRejectModal">
               ✕
             </button>
           </div>
@@ -417,15 +382,14 @@
             <div class="field-summary">
               <strong>Field:</strong> {{ activeItem?.target_variable }} ({{
                 activeItem?.cdash_test
-              }})<br>
+              }})<br />
               <strong>Candidate Value:</strong>
               {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}
             </div>
             <div class="form-group">
-              <label
-                for="reject-reason"
-                class="form-label"
-              >Rejection Reason: *</label>
+              <label for="reject-reason" class="form-label"
+                >Rejection Reason: *</label
+              >
               <textarea
                 id="reject-reason"
                 v-model="rejectReasonInput"
@@ -469,14 +433,8 @@
           aria-labelledby="query-modal-title"
         >
           <div class="modal-header">
-            <h3 id="query-modal-title">
-              Raise GxP Discrepancy Query
-            </h3>
-            <button
-              type="button"
-              class="btn-close"
-              @click="closeQueryModal"
-            >
+            <h3 id="query-modal-title">Raise GxP Discrepancy Query</h3>
+            <button type="button" class="btn-close" @click="closeQueryModal">
               ✕
             </button>
           </div>
@@ -487,18 +445,17 @@
             </p>
             <div class="field-summary">
               <strong>Target Field:</strong> {{ activeItem?.target_variable
-              }}<br>
+              }}<br />
               <strong>EHR Source Value:</strong>
               {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit
-              }}<br>
+              }}<br />
               <strong>Current eCRF Value:</strong>
               {{ activeItem?.current_ecrf_value || "[Empty]" }}
             </div>
             <div class="form-group">
-              <label
-                for="query-explanation"
-                class="form-label"
-              >Discrepancy Explanation: *</label>
+              <label for="query-explanation" class="form-label"
+                >Discrepancy Explanation: *</label
+              >
               <textarea
                 id="query-explanation"
                 v-model="queryExplanationInput"
@@ -561,9 +518,11 @@
               </div>
               <div class="prov-stat">
                 <span class="lbl">FHIR Resource:</span>
-                <span class="val mono">{{ activeItem?.fhir_resource_type }}/{{
-                  activeItem?.fhir_resource_id
-                }}</span>
+                <span class="val mono"
+                  >{{ activeItem?.fhir_resource_type }}/{{
+                    activeItem?.fhir_resource_id
+                  }}</span
+                >
               </div>
               <div class="prov-stat">
                 <span class="lbl">Observation Date:</span>
@@ -580,9 +539,7 @@
             </div>
 
             <div class="raw-fhir-container">
-              <h4 class="section-subheading">
-                Raw FHIR JSON Payload:
-              </h4>
+              <h4 class="section-subheading">Raw FHIR JSON Payload:</h4>
               <pre
                 class="json-code"
               ><code>{{ JSON.stringify(activeItem?.raw_fhir_resource, null, 2) }}</code></pre>

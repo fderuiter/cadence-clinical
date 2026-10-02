@@ -9,18 +9,12 @@
     :aria-label="'Secure Media Preview: ' + (fileRecord?.filename || 'File')"
     @click.self="$emit('close')"
   >
-    <div
-      class="modal-card media-preview-modal"
-      @contextmenu.prevent
-    >
+    <div class="modal-card media-preview-modal" @contextmenu.prevent>
       <!-- Header -->
       <div class="modal-header">
         <div class="header-details">
           <h3>
-            <span
-              class="secure-icon"
-              aria-hidden="true"
-            >🔒</span>
+            <span class="secure-icon" aria-hidden="true">🔒</span>
             Secure Regulated Viewer — {{ fileRecord?.filename }}
           </h3>
           <p class="gxp-tracking-subtitle">
@@ -57,10 +51,9 @@
           >
             <span class="badge-icon">✅</span>
             <span class="badge-label">Approved</span>
-            <span
-              v-if="fileRecord?.approved_by"
-              class="badge-signer font-mono"
-            >by {{ fileRecord.approved_by }}</span>
+            <span v-if="fileRecord?.approved_by" class="badge-signer font-mono"
+              >by {{ fileRecord.approved_by }}</span
+            >
           </div>
           <button
             v-if="canApprove && !isApproved"
@@ -104,7 +97,8 @@
               <span
                 class="meta-value font-mono"
                 :title="fileRecord?.filename"
-              >{{ fileRecord?.filename }}</span>
+                >{{ fileRecord?.filename }}</span
+              >
             </div>
             <div class="meta-row">
               <span class="meta-label">Study ID:</span>
@@ -112,10 +106,7 @@
                 fileRecord?.study_id
               }}</span>
             </div>
-            <div
-              v-if="fileRecord?.site_id"
-              class="meta-row"
-            >
+            <div v-if="fileRecord?.site_id" class="meta-row">
               <span class="meta-label">Site ID:</span>
               <span class="meta-value font-mono">{{
                 fileRecord?.site_id
@@ -158,19 +149,16 @@
               <p class="reason-text">
                 {{
                   fileRecord?.reason_for_change ||
-                    "Standard regulated file ingestion."
+                  "Standard regulated file ingestion."
                 }}
               </p>
             </div>
             <div class="checksum-block">
               <h5>SHA-256 Digest:</h5>
-              <code
-                class="checksum-text"
-                :title="fileRecord?.checksum_sha256"
-              >
+              <code class="checksum-text" :title="fileRecord?.checksum_sha256">
                 {{
                   fileRecord?.checksum_sha256 ||
-                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
                 }}
               </code>
             </div>
@@ -180,9 +168,7 @@
           <div class="meta-section border-top">
             <h4>Security Context</h4>
             <div class="manifest-card signed">
-              <p class="sign-status">
-                🛡️ PROTECTED VIEW ENFORCED
-              </p>
+              <p class="sign-status">🛡️ PROTECTED VIEW ENFORCED</p>
               <p class="signer-meta">
                 Viewer: <strong>{{ currentUserId }}</strong>
               </p>
@@ -207,27 +193,16 @@
           >
             <h4>Document Approval</h4>
             <div class="manifest-card approved">
-              <p class="sign-status text-success font-bold">
-                ✅ Approved
-              </p>
-              <p
-                v-if="fileRecord?.approved_by"
-                class="signer-meta"
-              >
+              <p class="sign-status text-success font-bold">✅ Approved</p>
+              <p v-if="fileRecord?.approved_by" class="signer-meta">
                 Signer:
                 <strong class="font-mono">{{ fileRecord.approved_by }}</strong>
               </p>
-              <p
-                v-if="fileRecord?.approved_at"
-                class="signer-meta"
-              >
+              <p v-if="fileRecord?.approved_at" class="signer-meta">
                 Approved At:
                 <span>{{ formatDate(fileRecord.approved_at) }}</span>
               </p>
-              <p
-                v-if="fileRecord?.approval_reason"
-                class="signer-meta"
-              >
+              <p v-if="fileRecord?.approval_reason" class="signer-meta">
                 Meaning: <em>{{ fileRecord.approval_reason }}</em>
               </p>
             </div>
@@ -235,20 +210,10 @@
         </aside>
 
         <!-- Viewer Workspace -->
-        <main
-          class="viewer-workspace"
-          aria-label="Media Canvas Workspace"
-        >
+        <main class="viewer-workspace" aria-label="Media Canvas Workspace">
           <!-- Watermark Overlay (Pointer events none, subtle rotating diagonal text) -->
-          <div
-            class="watermark-overlay-container"
-            aria-hidden="true"
-          >
-            <div
-              v-for="n in 4"
-              :key="n"
-              class="diagonal-watermark-row"
-            >
+          <div class="watermark-overlay-container" aria-hidden="true">
+            <div v-for="n in 4" :key="n" class="diagonal-watermark-row">
               <span class="watermark-text">{{ watermarkText }}</span>
             </div>
           </div>
@@ -264,16 +229,13 @@
               <div
                 v-if="
                   transcodeStatus === 'PENDING' ||
-                    transcodeStatus === 'IN_PROGRESS'
+                  transcodeStatus === 'IN_PROGRESS'
                 "
                 class="video-processing-card"
                 role="status"
                 aria-live="polite"
               >
-                <div
-                  class="spinner-circle"
-                  aria-hidden="true"
-                />
+                <div class="spinner-circle" aria-hidden="true" />
                 <h4 class="processing-title">
                   Processing video — check back soon
                 </h4>
@@ -293,10 +255,9 @@
                 class="video-processing-card timeout-card"
                 role="alert"
               >
-                <span
-                  class="processing-icon warning-icon"
-                  aria-hidden="true"
-                >⏱️</span>
+                <span class="processing-icon warning-icon" aria-hidden="true"
+                  >⏱️</span
+                >
                 <h4 class="processing-title">
                   Video processing is taking longer than expected — try again
                   later
@@ -319,17 +280,14 @@
                 class="video-processing-card error-card"
                 role="alert"
               >
-                <span
-                  class="processing-icon error-icon"
-                  aria-hidden="true"
-                >⚠️</span>
-                <h4 class="processing-title">
-                  Video Transcoding Failed
-                </h4>
+                <span class="processing-icon error-icon" aria-hidden="true"
+                  >⚠️</span
+                >
+                <h4 class="processing-title">Video Transcoding Failed</h4>
                 <p class="processing-subtitle font-mono">
                   {{
                     transcodeError ||
-                      "An unexpected error occurred during HLS stream processing."
+                    "An unexpected error occurred during HLS stream processing."
                   }}
                 </p>
                 <button
@@ -341,10 +299,7 @@
               </div>
 
               <!-- 4. Video Player Ready State -->
-              <div
-                v-else
-                class="video-player-wrapper"
-              >
+              <div v-else class="video-player-wrapper">
                 <video
                   ref="videoPlayerRef"
                   controls
@@ -356,7 +311,7 @@
                   @timeupdate="onVideoTimeUpdate"
                   @ended="onVideoEnded"
                 >
-                  <track kind="captions">
+                  <track kind="captions" />
                   Your browser does not support HTML5 video playback.
                 </video>
 
@@ -365,10 +320,9 @@
                   v-if="qualityLevels.length > 0"
                   class="video-quality-overlay"
                 >
-                  <label
-                    for="quality-select"
-                    class="quality-label"
-                  >Quality:</label>
+                  <label for="quality-select" class="quality-label"
+                    >Quality:</label
+                  >
                   <select
                     id="quality-select"
                     class="quality-select"
@@ -392,7 +346,8 @@
                 <span
                   v-if="selectedQualityLabel && transcodeStatus === 'READY'"
                   class="quality-badge font-mono"
-                >[{{ selectedQualityLabel }}]</span>
+                  >[{{ selectedQualityLabel }}]</span
+                >
               </div>
             </div>
 
@@ -402,9 +357,7 @@
               class="media-player-container audio-container"
             >
               <div class="audio-player-card">
-                <div class="audio-icon-display">
-                  🎙️
-                </div>
+                <div class="audio-icon-display">🎙️</div>
                 <h4 class="audio-filename">
                   {{ fileRecord?.filename }}
                 </h4>
@@ -417,7 +370,7 @@
                   class="audio-element"
                   :src="mediaSourceUrl"
                 >
-                  <track kind="captions">
+                  <track kind="captions" />
                   Your browser does not support the audio element.
                 </audio>
               </div>
@@ -433,14 +386,11 @@
                 :alt="fileRecord?.filename || 'Clinical Image'"
                 class="preview-image-element"
                 @error="onImageError"
-              >
+              />
             </div>
 
             <!-- PDF / Document Page Canvas View -->
-            <div
-              v-else
-              class="media-player-container pdf-container"
-            >
+            <div v-else class="media-player-container pdf-container">
               <div class="pdf-document-sheet">
                 <div class="doc-sheet-header">
                   <div class="header-logo">
@@ -461,7 +411,7 @@
                       fileRecord?.version_index || 1
                     }}.0
                   </p>
-                  <hr class="doc-divider">
+                  <hr class="doc-divider" />
 
                   <section class="doc-text-section">
                     <h4>1. ELECTRONIC RECORD INTEGRITY & CLASSIFICATION</h4>
@@ -479,14 +429,14 @@
                     <h4>2. CLINICAL METADATA SUMMARY</h4>
                     <p>
                       <strong>Parent Study:</strong> {{ fileRecord?.study_id
-                      }}<br>
+                      }}<br />
                       <strong>Site Code:</strong>
-                      {{ fileRecord?.site_id || "Global Study Level" }}<br>
+                      {{ fileRecord?.site_id || "Global Study Level" }}<br />
                       <strong>Originator:</strong>
                       {{ fileRecord?.uploaded_by || fileRecord?.created_by
-                      }}<br>
+                      }}<br />
                       <strong>MIME Specification:</strong>
-                      {{ fileRecord?.mime_type }}<br>
+                      {{ fileRecord?.mime_type }}<br />
                       <strong>Reason for Ingestion:</strong>
                       {{ fileRecord?.reason_for_change }}
                     </p>

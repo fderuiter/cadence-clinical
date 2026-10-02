@@ -1,11 +1,7 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div
-    v-if="isOpen"
-    class="share-drawer-overlay"
-    @click.self="$emit('close')"
-  >
+  <div v-if="isOpen" class="share-drawer-overlay" @click.self="$emit('close')">
     <div
       ref="drawerRef"
       class="share-drawer"
@@ -23,10 +19,7 @@
                 isBulk ? `Bulk Share (${files.length} Files)` : "Share Document"
               }}
             </h3>
-            <p
-              class="drawer-subtitle"
-              :title="fileNamesDisplay"
-            >
+            <p class="drawer-subtitle" :title="fileNamesDisplay">
               {{ fileNamesDisplay }}
             </p>
           </div>
@@ -70,17 +63,11 @@
       <!-- Drawer Body -->
       <div class="drawer-body">
         <!-- TAB 1: Internal Share Form -->
-        <div
-          v-if="activeTab === 'internal'"
-          class="tab-content"
-        >
+        <div v-if="activeTab === 'internal'" class="tab-content">
           <form @submit.prevent="submitInternalShare">
             <!-- User / Role Target -->
             <div class="form-group">
-              <label
-                for="share-user-input"
-                class="form-label required"
-              >
+              <label for="share-user-input" class="form-label required">
                 Grant Access To (User ID or Role)
               </label>
               <div class="autocomplete-wrapper">
@@ -92,7 +79,7 @@
                   class="form-control"
                   required
                   @focus="showUserSuggestions = true"
-                >
+                />
                 <div
                   v-if="showUserSuggestions && userSuggestions.length > 0"
                   class="suggestions-dropdown"
@@ -114,10 +101,9 @@
 
             <!-- Scope Selector -->
             <div class="form-group">
-              <label
-                for="share-scope-select"
-                class="form-label"
-              >Delegation Scope</label>
+              <label for="share-scope-select" class="form-label"
+                >Delegation Scope</label
+              >
               <select
                 id="share-scope-select"
                 v-model="shareScope"
@@ -126,24 +112,19 @@
                 <option value="individual">
                   Individual (Specific User ID)
                 </option>
-                <option value="role">
-                  Role (All Users in Assigned Role)
-                </option>
+                <option value="role">Role (All Users in Assigned Role)</option>
                 <option value="site">
                   Site Scope (All Investigators at Site)
                 </option>
-                <option value="study">
-                  Study Scope (Entire Study Team)
-                </option>
+                <option value="study">Study Scope (Entire Study Team)</option>
               </select>
             </div>
 
             <!-- Permission Level Selector -->
             <div class="form-group">
-              <label
-                for="share-perm-select"
-                class="form-label required"
-              >Permission Level</label>
+              <label for="share-perm-select" class="form-label required"
+                >Permission Level</label
+              >
               <select
                 id="share-perm-select"
                 v-model="permissionLevel"
@@ -181,7 +162,7 @@
                   v-model="hasExpiry"
                   type="checkbox"
                   class="custom-checkbox"
-                >
+                />
                 <span>Set Time-Bounded Expiration Date</span>
               </label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -191,15 +172,12 @@
                 type="datetime-local"
                 class="form-control expiry-input"
                 required
-              >
+              />
             </div>
 
             <!-- Mandatory Reason for Change (21 CFR Part 11) -->
             <div class="form-group">
-              <label
-                for="share-reason-input"
-                class="form-label required"
-              >
+              <label for="share-reason-input" class="form-label required">
                 21 CFR Part 11 Reason for Delegation
               </label>
               <textarea
@@ -212,10 +190,7 @@
               />
             </div>
 
-            <div
-              v-if="submitSuccessMsg"
-              class="success-alert"
-            >
+            <div v-if="submitSuccessMsg" class="success-alert">
               ✅ {{ submitSuccessMsg }}
             </div>
 
@@ -243,10 +218,7 @@
         </div>
 
         <!-- TAB 2: External Guest Link Generator -->
-        <div
-          v-else-if="activeTab === 'guest'"
-          class="tab-content"
-        >
+        <div v-else-if="activeTab === 'guest'" class="tab-content">
           <div class="guest-info-banner">
             <strong>🌐 Public Protected Guest Links:</strong>
             Generates a signed, time-limited URL for external reviewers (e.g.
@@ -254,41 +226,26 @@
             logged to the GxP audit ledger.
           </div>
 
-          <form
-            v-if="!generatedGuestUrl"
-            @submit.prevent="submitGuestLink"
-          >
+          <form v-if="!generatedGuestUrl" @submit.prevent="submitGuestLink">
             <div class="form-group">
-              <label
-                for="guest-expiry-select"
-                class="form-label required"
-              >Link Expiration</label>
+              <label for="guest-expiry-select" class="form-label required"
+                >Link Expiration</label
+              >
               <select
                 id="guest-expiry-select"
                 v-model="guestExpiryHours"
                 class="form-control"
               >
-                <option :value="24">
-                  24 Hours (Standard Review)
-                </option>
-                <option :value="72">
-                  3 Days (Weekend Window)
-                </option>
-                <option :value="168">
-                  7 Days (1 Week)
-                </option>
-                <option :value="720">
-                  30 Days (Full Regulatory Review)
-                </option>
+                <option :value="24">24 Hours (Standard Review)</option>
+                <option :value="72">3 Days (Weekend Window)</option>
+                <option :value="168">7 Days (1 Week)</option>
+                <option :value="720">30 Days (Full Regulatory Review)</option>
               </select>
             </div>
 
             <!-- Mandatory Reason for Change -->
             <div class="form-group">
-              <label
-                for="guest-reason-input"
-                class="form-label required"
-              >
+              <label for="guest-reason-input" class="form-label required">
                 21 CFR Part 11 Justification
               </label>
               <textarea
@@ -321,13 +278,12 @@
           </form>
 
           <!-- Generated Link Display Card -->
-          <div
-            v-else
-            class="generated-link-card"
-          >
+          <div v-else class="generated-link-card">
             <div class="link-header">
               <span class="badge status-approved">LINK ACTIVE</span>
-              <span class="expires-text">Expires in {{ guestExpiryHours }}h</span>
+              <span class="expires-text"
+                >Expires in {{ guestExpiryHours }}h</span
+              >
             </div>
             <div class="url-copy-box">
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -336,7 +292,7 @@
                 :value="generatedGuestUrl"
                 readonly
                 class="form-control url-input"
-              >
+              />
               <button
                 type="button"
                 class="btn btn-primary btn-copy-link"
@@ -359,10 +315,7 @@
         </div>
 
         <!-- TAB 3: Active Grants List & Revocation -->
-        <div
-          v-else-if="activeTab === 'active_grants'"
-          class="tab-content"
-        >
+        <div v-else-if="activeTab === 'active_grants'" class="tab-content">
           <div
             v-if="activeGrantsList.length === 0"
             class="empty-grants-message"
@@ -370,10 +323,7 @@
             No active share delegations found for this document.
           </div>
 
-          <div
-            v-else
-            class="grants-list-container"
-          >
+          <div v-else class="grants-list-container">
             <div
               v-for="grant in activeGrantsList"
               :key="grant.id"
@@ -392,9 +342,13 @@
                   }}</span>
                 </div>
                 <div class="grant-meta-line">
-                  <span>Granted By:
-                    <strong>{{ grant.granted_by_user_id }}</strong></span>
-                  <span v-if="grant.expires_at">Expires: {{ formatDate(grant.expires_at) }}</span>
+                  <span
+                    >Granted By:
+                    <strong>{{ grant.granted_by_user_id }}</strong></span
+                  >
+                  <span v-if="grant.expires_at"
+                    >Expires: {{ formatDate(grant.expires_at) }}</span
+                  >
                   <span v-else>No Expiration</span>
                 </div>
                 <div class="grant-reason-line">
@@ -414,18 +368,18 @@
           </div>
 
           <!-- Revoke Confirmation Modal / Overlay -->
-          <div
-            v-if="grantToRevoke"
-            class="revoke-confirm-card"
-          >
+          <div v-if="grantToRevoke" class="revoke-confirm-card">
             <h4>Revoke Access Delegation</h4>
             <p>
               Are you sure you want to revoke access for
-              <strong>{{ grantToRevoke.granted_to_user_id }}</strong>?
+              <strong>{{ grantToRevoke.granted_to_user_id }}</strong
+              >?
             </p>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label required">Revocation Reason (21 CFR Part 11):</label>
+              <label class="form-label required"
+                >Revocation Reason (21 CFR Part 11):</label
+              >
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="revokeReason"
@@ -433,7 +387,7 @@
                 class="form-control"
                 placeholder="Reason for revoking grant..."
                 required
-              >
+              />
             </div>
             <div class="drawer-actions">
               <button

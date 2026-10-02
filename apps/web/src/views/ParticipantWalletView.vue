@@ -1,15 +1,16 @@
 <template>
-  <div
-    id="section-participant-wallet"
-    class="dashboard-section active"
-  >
+  <div id="section-participant-wallet" class="dashboard-section active">
     <!-- Header -->
     <div class="section-header">
       <div class="header-content-group">
         <div class="header-badge-row">
           <span class="badge badge-gxp">21 CFR Part 11</span>
-          <span class="badge badge-regulatory">Participant Financial Wallet</span>
-          <span class="badge badge-standard">PRD-SYS-182 Micro-Ledger Tracer</span>
+          <span class="badge badge-regulatory"
+            >Participant Financial Wallet</span
+          >
+          <span class="badge badge-standard"
+            >PRD-SYS-182 Micro-Ledger Tracer</span
+          >
         </div>
         <h2 class="view-title">
           Participant Financial Wallet &amp; Automated Stipend Micro-Ledger
@@ -35,84 +36,55 @@
     <!-- Quick Stats Cards Grid -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon balance-icon">
-          💳
-        </div>
+        <div class="stat-icon balance-icon">💳</div>
         <div class="stat-details">
-          <div class="stat-value">
-            ${{ totalBalance.toFixed(2) }}
-          </div>
-          <div class="stat-label">
-            Active Total Balances
-          </div>
+          <div class="stat-value">${{ totalBalance.toFixed(2) }}</div>
+          <div class="stat-label">Active Total Balances</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon stipend-icon">
-          📅
-        </div>
+        <div class="stat-icon stipend-icon">📅</div>
         <div class="stat-details">
-          <div class="stat-value">
-            ${{ totalStipends.toFixed(2) }}
-          </div>
-          <div class="stat-label">
-            Lifetime Visit Stipends
-          </div>
+          <div class="stat-value">${{ totalStipends.toFixed(2) }}</div>
+          <div class="stat-label">Lifetime Visit Stipends</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon travel-icon">
-          🧾
-        </div>
+        <div class="stat-icon travel-icon">🧾</div>
         <div class="stat-details">
-          <div class="stat-value">
-            ${{ totalReimbursements.toFixed(2) }}
-          </div>
-          <div class="stat-label">
-            Approved Reimbursements
-          </div>
+          <div class="stat-value">${{ totalReimbursements.toFixed(2) }}</div>
+          <div class="stat-label">Approved Reimbursements</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon tax-icon">
-          🏛️
-        </div>
+        <div class="stat-icon tax-icon">🏛️</div>
         <div class="stat-details">
-          <div class="stat-value">
-            ${{ totalTaxableYtd.toFixed(2) }}
-          </div>
-          <div class="stat-label">
-            YTD 1099 Taxable Earnings
-          </div>
+          <div class="stat-value">${{ totalTaxableYtd.toFixed(2) }}</div>
+          <div class="stat-label">YTD 1099 Taxable Earnings</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon pending-icon">
-          ⏳
-        </div>
+        <div class="stat-icon pending-icon">⏳</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ pendingClaimsCount }}
           </div>
-          <div class="stat-label">
-            Claims Pending Review
-          </div>
+          <div class="stat-label">Claims Pending Review</div>
         </div>
       </div>
     </div>
 
     <!-- 1099 Tax Threshold Progress Banner -->
-    <div
-      v-if="selectedWallet"
-      class="tax-threshold-banner"
-    >
+    <div v-if="selectedWallet" class="tax-threshold-banner">
       <div class="tax-banner-header">
         <div class="tax-title-group">
           <span class="tax-icon-badge">📑</span>
           <div>
             <strong>IRS Form 1099 Tax Reporting Threshold Tracer</strong>
-            <span class="tax-subtext">Subject: {{ selectedWallet.subject_id }} | Annual Cap:
-              $600.00</span>
+            <span class="tax-subtext"
+              >Subject: {{ selectedWallet.subject_id }} | Annual Cap:
+              $600.00</span
+            >
           </div>
         </div>
         <div class="tax-badge-group">
@@ -163,12 +135,16 @@
         />
       </div>
       <div class="tax-legend">
-        <span>Current Taxable YTD: ${{
-          (selectedWallet.taxable_ytd || 0).toFixed(2)
-        }}</span>
-        <span>Remaining to $600 Cap: ${{
-          Math.max(0, 600 - (selectedWallet.taxable_ytd || 0)).toFixed(2)
-        }}</span>
+        <span
+          >Current Taxable YTD: ${{
+            (selectedWallet.taxable_ytd || 0).toFixed(2)
+          }}</span
+        >
+        <span
+          >Remaining to $600 Cap: ${{
+            Math.max(0, 600 - (selectedWallet.taxable_ytd || 0)).toFixed(2)
+          }}</span
+        >
       </div>
 
       <!-- W-9 Warning Alert & Trigger -->
@@ -176,13 +152,12 @@
         v-if="selectedWallet.w9_status === 'REQUIRED'"
         class="alert-tax-warning"
       >
-        <span>⚠️ <strong>W-9 Required:</strong> Subject has reached or exceeded the
+        <span
+          >⚠️ <strong>W-9 Required:</strong> Subject has reached or exceeded the
           $600.00 IRS 1099 threshold. Taxpayer identification certification must
-          be collected.</span>
-        <button
-          class="btn btn-xs btn-primary"
-          @click="showW9Modal = true"
+          be collected.</span
         >
+        <button class="btn btn-xs btn-primary" @click="showW9Modal = true">
           Submit Form W-9
         </button>
       </div>
@@ -190,9 +165,11 @@
         v-else-if="selectedWallet.w9_status === 'SUBMITTED'"
         class="alert-tax-info"
       >
-        <span>⏳ <strong>W-9 Pending Verification:</strong> Subject submitted TIN
+        <span
+          >⏳ <strong>W-9 Pending Verification:</strong> Subject submitted TIN
           ending in {{ selectedWallet.tax_id_last_four || "****" }}. Awaiting
-          coordinator validation.</span>
+          coordinator validation.</span
+        >
         <button
           class="btn btn-xs btn-success"
           @click="verifyW9Form(selectedWallet.id)"
@@ -242,16 +219,15 @@
     </div>
 
     <!-- TAB 1: Participant Wallets Directory -->
-    <div
-      v-if="activeTab === 'wallets'"
-      class="tab-content"
-    >
+    <div v-if="activeTab === 'wallets'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
           <h3 class="panel-title">
             Participant Wallet Directory &amp; 1099 Compliance State
           </h3>
-          <span class="panel-tag">{{ wallets.length }} Wallets Provisioned</span>
+          <span class="panel-tag"
+            >{{ wallets.length }} Wallets Provisioned</span
+          >
         </div>
         <div class="panel-body">
           <div class="table-container">
@@ -315,11 +291,9 @@
                     <span
                       v-if="w.anti_coercion_cap"
                       class="badge badge-regulatory"
-                    >${{ w.anti_coercion_cap.toFixed(2) }} max</span>
-                    <span
-                      v-else
-                      class="text-muted"
-                    >Protocol Default</span>
+                      >${{ w.anti_coercion_cap.toFixed(2) }} max</span
+                    >
+                    <span v-else class="text-muted">Protocol Default</span>
                   </td>
                   <td>
                     <span class="badge badge-gxp">{{ w.status }}</span>
@@ -335,7 +309,7 @@
                       <button
                         v-if="
                           !w.virtual_card_token ||
-                            w.virtual_card_token.startsWith('VTOK')
+                          w.virtual_card_token.startsWith('VTOK')
                         "
                         class="btn btn-sm btn-secondary"
                         @click="issueReloadableCard(w.id)"
@@ -346,10 +320,7 @@
                   </td>
                 </tr>
                 <tr v-if="wallets.length === 0">
-                  <td
-                    colspan="9"
-                    class="empty-cell"
-                  >
+                  <td colspan="9" class="empty-cell">
                     No participant wallets provisioned yet.
                   </td>
                 </tr>
@@ -358,10 +329,7 @@
           </div>
 
           <!-- Selected Wallet Details Drawer & Real-Time Balance Inquiry -->
-          <div
-            v-if="selectedWallet"
-            class="selected-wallet-card"
-          >
+          <div v-if="selectedWallet" class="selected-wallet-card">
             <div class="card-header-flex">
               <div>
                 <h4 class="card-heading">
@@ -390,33 +358,40 @@
             </div>
 
             <!-- Balance Inquiry Stats -->
-            <div
-              v-if="balanceInquiryData"
-              class="balance-inquiry-box"
-            >
+            <div v-if="balanceInquiryData" class="balance-inquiry-box">
               <div class="inquiry-stat">
                 <span class="inquiry-label">Available Balance</span>
-                <span class="inquiry-val text-success font-bold">${{ balanceInquiryData.available_balance.toFixed(2) }}</span>
+                <span class="inquiry-val text-success font-bold"
+                  >${{ balanceInquiryData.available_balance.toFixed(2) }}</span
+                >
               </div>
               <div class="inquiry-stat">
                 <span class="inquiry-label">Pending Expense Claims</span>
-                <span class="inquiry-val text-warning font-bold">${{
-                  balanceInquiryData.pending_claims_total.toFixed(2)
-                }}</span>
+                <span class="inquiry-val text-warning font-bold"
+                  >${{
+                    balanceInquiryData.pending_claims_total.toFixed(2)
+                  }}</span
+                >
               </div>
               <div class="inquiry-stat">
                 <span class="inquiry-label">Lifetime Stipends</span>
-                <span class="inquiry-val">${{ balanceInquiryData.lifetime_stipends.toFixed(2) }}</span>
+                <span class="inquiry-val"
+                  >${{ balanceInquiryData.lifetime_stipends.toFixed(2) }}</span
+                >
               </div>
               <div class="inquiry-stat">
                 <span class="inquiry-label">Lifetime Reimbursements</span>
-                <span class="inquiry-val">${{
-                  balanceInquiryData.lifetime_reimbursements.toFixed(2)
-                }}</span>
+                <span class="inquiry-val"
+                  >${{
+                    balanceInquiryData.lifetime_reimbursements.toFixed(2)
+                  }}</span
+                >
               </div>
               <div class="inquiry-stat">
                 <span class="inquiry-label">1099 Taxable YTD</span>
-                <span class="inquiry-val">${{ balanceInquiryData.taxable_ytd.toFixed(2) }}</span>
+                <span class="inquiry-val"
+                  >${{ balanceInquiryData.taxable_ytd.toFixed(2) }}</span
+                >
               </div>
             </div>
 
@@ -437,14 +412,12 @@
                 <div class="card-holder">
                   {{
                     selectedWallet.ach_account_holder ||
-                      "Participant " + selectedWallet.subject_id
+                    "Participant " + selectedWallet.subject_id
                   }}
                 </div>
               </div>
               <div class="cred-card ach-preview">
-                <div class="card-chip">
-                  🏦 Direct ACH Payout Account
-                </div>
+                <div class="card-chip">🏦 Direct ACH Payout Account</div>
                 <div class="ach-row">
                   <strong>Routing:</strong>
                   {{ selectedWallet.ach_routing_number || "021000021" }}
@@ -471,16 +444,11 @@
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Payout Method:</label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select
-                  v-model="disburseForm.type"
-                  class="form-select"
-                >
+                <select v-model="disburseForm.type" class="form-select">
                   <option value="VIRTUAL_CARD">
                     Instant Reloadable Debit Card
                   </option>
-                  <option value="DIRECT_ACH">
-                    Direct Bank ACH Transfer
-                  </option>
+                  <option value="DIRECT_ACH">Direct Bank ACH Transfer</option>
                 </select>
               </div>
               <div class="disburse-input-group">
@@ -493,7 +461,7 @@
                   step="0.01"
                   :max="selectedWallet.current_balance"
                   class="form-input"
-                >
+                />
               </div>
               <button
                 class="btn btn-primary"
@@ -513,10 +481,7 @@
     </div>
 
     <!-- TAB 2: SoA Protocol Stipend Rules & Milestone Triggers -->
-    <div
-      v-if="activeTab === 'stipends'"
-      class="tab-content"
-    >
+    <div v-if="activeTab === 'stipends'" class="tab-content">
       <div class="grid-2-col">
         <!-- Stipend Rules Catalog -->
         <div class="panel-box">
@@ -524,7 +489,9 @@
             <h3 class="panel-title">
               Schedule of Activities (SoA) Compensation Matrix
             </h3>
-            <span class="panel-tag">{{ stipendRules.length }} Active Rules</span>
+            <span class="panel-tag"
+              >{{ stipendRules.length }} Active Rules</span
+            >
           </div>
           <div class="panel-body">
             <div class="table-container">
@@ -540,10 +507,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
-                    v-for="r in stipendRules"
-                    :key="r.id"
-                  >
+                  <tr v-for="r in stipendRules" :key="r.id">
                     <td>
                       <code>{{ r.visit_code }}</code>
                     </td>
@@ -557,21 +521,17 @@
                       <span
                         v-if="r.is_milestone"
                         class="badge badge-regulatory"
-                      >{{ r.milestone_code || "Milestone" }}</span>
-                      <span
-                        v-else
-                        class="text-muted"
-                      >Standard Visit</span>
+                        >{{ r.milestone_code || "Milestone" }}</span
+                      >
+                      <span v-else class="text-muted">Standard Visit</span>
                     </td>
                     <td>
                       <span
                         v-if="r.anti_coercion_cap"
                         class="badge badge-warning"
-                      >${{ r.anti_coercion_cap.toFixed(2) }} limit</span>
-                      <span
-                        v-else
-                        class="text-muted"
-                      >Standard</span>
+                        >${{ r.anti_coercion_cap.toFixed(2) }} limit</span
+                      >
+                      <span v-else class="text-muted">Standard</span>
                     </td>
                     <td>
                       <span class="badge badge-standard">{{
@@ -602,35 +562,23 @@
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study Protocol:</label>
-              <input
-                v-model="visitEventForm.study_id"
-                class="form-input"
-              >
+              <input v-model="visitEventForm.study_id" class="form-input" />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Site ID:</label>
-              <input
-                v-model="visitEventForm.site_id"
-                class="form-input"
-              >
+              <input v-model="visitEventForm.site_id" class="form-input" />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Subject ID / MRN:</label>
-              <input
-                v-model="visitEventForm.subject_id"
-                class="form-input"
-              >
+              <input v-model="visitEventForm.subject_id" class="form-input" />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Completed Visit:</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select
-                v-model="visitEventForm.visit_code"
-                class="form-select"
-              >
+              <select v-model="visitEventForm.visit_code" class="form-select">
                 <option
                   v-for="r in stipendRules"
                   :key="r.id"
@@ -650,10 +598,7 @@
             >
               ✅ Trigger EDC Visit Verification &amp; Credit Wallet
             </button>
-            <div
-              v-if="visitTriggerSuccess"
-              class="alert-success-box"
-            >
+            <div v-if="visitTriggerSuccess" class="alert-success-box">
               {{ visitTriggerSuccess }}
             </div>
           </div>
@@ -662,29 +607,19 @@
     </div>
 
     <!-- TAB 3: Receipt OCR Scanner -->
-    <div
-      v-if="activeTab === 'ocr'"
-      class="tab-content"
-    >
+    <div v-if="activeTab === 'ocr'" class="tab-content">
       <div class="grid-2-col">
         <!-- OCR Scanner Upload & Extraction -->
         <div class="panel-box">
           <div class="panel-header">
-            <h3 class="panel-title">
-              Receipt OCR Expense Extraction Engine
-            </h3>
+            <h3 class="panel-title">Receipt OCR Expense Extraction Engine</h3>
             <span class="badge badge-regulatory">Automated Parser</span>
           </div>
           <div class="panel-body">
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <div
-              class="ocr-dropzone"
-              @click="simulateReceiptUpload"
-            >
-              <div class="dropzone-icon">
-                📷
-              </div>
+            <div class="ocr-dropzone" @click="simulateReceiptUpload">
+              <div class="dropzone-icon">📷</div>
               <div class="dropzone-text">
                 <strong>Click to Upload Receipt Image / Sample OCR</strong>
                 <p>
@@ -728,10 +663,7 @@
               </button>
             </div>
 
-            <div
-              v-if="ocrResult"
-              class="ocr-result-card"
-            >
+            <div v-if="ocrResult" class="ocr-result-card">
               <div class="ocr-header">
                 <h4>
                   Extracted Metadata (Confidence:
@@ -756,13 +688,12 @@
                 </div>
                 <div>
                   <strong>Net Reimbursement:</strong>
-                  <span class="text-success font-bold">${{ ocrResult.net_amount.toFixed(2) }}</span>
+                  <span class="text-success font-bold"
+                    >${{ ocrResult.net_amount.toFixed(2) }}</span
+                  >
                 </div>
               </div>
-              <div
-                v-if="ocrResult.tax_deduction > 0"
-                class="tax-offset-notice"
-              >
+              <div v-if="ocrResult.tax_deduction > 0" class="tax-offset-notice">
                 ⚠️ Gross amount exceeds the $75.00 meal per-diem cap. Tax
                 withholding of ${{ ocrResult.tax_deduction.toFixed(2) }}
                 deducted from reimbursement.
@@ -786,60 +717,33 @@
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Participant Subject ID:</label>
-              <input
-                v-model="expenseForm.subject_id"
-                class="form-input"
-              >
+              <input v-model="expenseForm.subject_id" class="form-input" />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Study ID / Site ID:</label>
               <div class="form-row-2">
-                <input
-                  v-model="expenseForm.study_id"
-                  class="form-input"
-                >
-                <input
-                  v-model="expenseForm.site_id"
-                  class="form-input"
-                >
+                <input v-model="expenseForm.study_id" class="form-input" />
+                <input v-model="expenseForm.site_id" class="form-input" />
               </div>
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Category:</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select
-                v-model="expenseForm.category"
-                class="form-select"
-              >
-                <option value="MILEAGE">
-                  Mileage / Fuel
-                </option>
-                <option value="PARKING">
-                  Parking Fee / Garage
-                </option>
-                <option value="TRANSIT">
-                  Public Transit / Taxi / Uber
-                </option>
-                <option value="MEAL">
-                  Meal Allowance
-                </option>
-                <option value="LODGING">
-                  Hotel / Lodging
-                </option>
-                <option value="OTHER">
-                  Other Clinical Expense
-                </option>
+              <select v-model="expenseForm.category" class="form-select">
+                <option value="MILEAGE">Mileage / Fuel</option>
+                <option value="PARKING">Parking Fee / Garage</option>
+                <option value="TRANSIT">Public Transit / Taxi / Uber</option>
+                <option value="MEAL">Meal Allowance</option>
+                <option value="LODGING">Hotel / Lodging</option>
+                <option value="OTHER">Other Clinical Expense</option>
               </select>
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Merchant / Vendor Name:</label>
-              <input
-                v-model="expenseForm.merchant_name"
-                class="form-input"
-              >
+              <input v-model="expenseForm.merchant_name" class="form-input" />
             </div>
             <div class="form-row-2">
               <div class="form-group">
@@ -851,7 +755,7 @@
                   type="number"
                   step="0.01"
                   class="form-input"
-                >
+                />
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -861,18 +765,15 @@
                   v-model="expenseForm.expense_date"
                   type="date"
                   class="form-input"
-                >
+                />
               </div>
             </div>
-            <div
-              v-if="expenseForm.category === 'MEAL'"
-              class="form-group"
-            >
+            <div v-if="expenseForm.category === 'MEAL'" class="form-group">
               <label class="checkbox-label">
                 <input
                   v-model="expenseForm.is_meal_allowance"
                   type="checkbox"
-                >
+                />
                 Apply standard $75.00 daily per-diem cap
               </label>
             </div>
@@ -883,10 +784,7 @@
             >
               📤 Submit Expense Claim for Coordinator Approval
             </button>
-            <div
-              v-if="claimSubmitSuccess"
-              class="alert-success-box"
-            >
+            <div v-if="claimSubmitSuccess" class="alert-success-box">
               {{ claimSubmitSuccess }}
             </div>
           </div>
@@ -895,16 +793,15 @@
     </div>
 
     <!-- TAB 4: Coordinator 1-Click Review Queue -->
-    <div
-      v-if="activeTab === 'approvals'"
-      class="tab-content"
-    >
+    <div v-if="activeTab === 'approvals'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
           <h3 class="panel-title">
             1-Click Coordinator Expense Claim Review Queue
           </h3>
-          <span class="badge badge-regulatory">{{ pendingClaims.length }} Pending Decisions</span>
+          <span class="badge badge-regulatory"
+            >{{ pendingClaims.length }} Pending Decisions</span
+          >
         </div>
         <div class="panel-body">
           <div class="table-container">
@@ -924,10 +821,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="c in pendingClaims"
-                  :key="c.id"
-                >
+                <tr v-for="c in pendingClaims" :key="c.id">
                   <td>
                     <code>{{ c.id.substring(0, 8) }}...</code>
                   </td>
@@ -969,10 +863,7 @@
                   </td>
                 </tr>
                 <tr v-if="pendingClaims.length === 0">
-                  <td
-                    colspan="10"
-                    class="empty-cell"
-                  >
+                  <td colspan="10" class="empty-cell">
                     🎉 No pending expense claims in queue!
                   </td>
                 </tr>
@@ -984,10 +875,7 @@
     </div>
 
     <!-- TAB 5: Disbursements & Ledger Audit Trail -->
-    <div
-      v-if="activeTab === 'disbursements'"
-      class="tab-content"
-    >
+    <div v-if="activeTab === 'disbursements'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
           <h3 class="panel-title">
@@ -1010,10 +898,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="tx in ledgerTransactions"
-                  :key="tx.id"
-                >
+                <tr v-for="tx in ledgerTransactions" :key="tx.id">
                   <td>{{ formatDate(tx.created_at) }}</td>
                   <td>
                     <strong>{{ tx.subject_id }}</strong>
@@ -1040,10 +925,7 @@
                   <td>{{ tx.description }}</td>
                 </tr>
                 <tr v-if="ledgerTransactions.length === 0">
-                  <td
-                    colspan="7"
-                    class="empty-cell"
-                  >
+                  <td colspan="7" class="empty-cell">
                     No transaction ledger records recorded yet.
                   </td>
                 </tr>
@@ -1065,10 +947,7 @@
       <div class="modal-card">
         <div class="modal-header">
           <h3>IRS Form W-9 Taxpayer Certification</h3>
-          <button
-            class="modal-close-btn"
-            @click="showW9Modal = false"
-          >
+          <button class="modal-close-btn" @click="showW9Modal = false">
             &times;
           </button>
         </div>
@@ -1084,7 +963,7 @@
               v-model="w9Form.full_legal_name"
               class="form-input"
               placeholder="e.g. Jane Doe"
-            >
+            />
           </div>
           <div class="form-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -1094,7 +973,7 @@
               maxlength="4"
               class="form-input"
               placeholder="e.g. 1234"
-            >
+            />
           </div>
           <div class="form-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -1103,24 +982,18 @@
               v-model="w9Form.address"
               class="form-input"
               placeholder="123 Clinical Way, City, State"
-            >
+            />
           </div>
           <div class="form-group">
             <label class="checkbox-label">
-              <input
-                v-model="w9Form.certify_accurate"
-                type="checkbox"
-              >
+              <input v-model="w9Form.certify_accurate" type="checkbox" />
               I certify under penalty of perjury that the TIN entered above is
               correct.
             </label>
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="showW9Modal = false"
-          >
+          <button class="btn btn-secondary" @click="showW9Modal = false">
             Cancel
           </button>
           <button

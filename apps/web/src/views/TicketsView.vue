@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-tickets-hub"
-    class="dashboard-section active"
-  >
+  <div id="section-tickets-hub" class="dashboard-section active">
     <!-- Header -->
     <div class="section-header">
       <div class="header-content-group">
@@ -12,9 +9,7 @@
           <span class="badge badge-standard">ICH Q9(R1) Quality Risk</span>
           <span class="badge badge-standard">GxP Audited Trail</span>
         </div>
-        <h2 class="view-title">
-          Clinical Issue &amp; Operations Hub
-        </h2>
+        <h2 class="view-title">Clinical Issue &amp; Operations Hub</h2>
         <p class="view-subtitle">
           Unified eClinical operations desk synthesizing protocol deviations,
           site queries, data discrepancies, supply excursions, and CAPA linkages
@@ -52,85 +47,53 @@
     <div class="stats-grid">
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
-        class="stat-card"
-        @click="filterStatus = 'ALL'"
-      >
-        <div class="stat-icon alert-icon">
-          🎫
-        </div>
+      <div class="stat-card" @click="filterStatus = 'ALL'">
+        <div class="stat-icon alert-icon">🎫</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ activeTicketsCount }}
           </div>
-          <div class="stat-label">
-            Active Clinical Issues
-          </div>
+          <div class="stat-label">Active Clinical Issues</div>
         </div>
       </div>
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
-        class="stat-card"
-        @click="filterSeverity = 'CRITICAL'"
-      >
-        <div class="stat-icon capa-icon">
-          🚨
-        </div>
+      <div class="stat-card" @click="filterSeverity = 'CRITICAL'">
+        <div class="stat-icon capa-icon">🚨</div>
         <div class="stat-details">
           <div class="stat-value text-danger">
             {{ criticalTicketsCount }}
           </div>
-          <div class="stat-label">
-            Critical GxP Deviations
-          </div>
+          <div class="stat-label">Critical GxP Deviations</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon rbqm-icon">
-          ⏱
-        </div>
+        <div class="stat-icon rbqm-icon">⏱</div>
         <div class="stat-details">
-          <div
-            class="stat-value"
-            :class="slaComplianceClass"
-          >
+          <div class="stat-value" :class="slaComplianceClass">
             {{ kpis.sla_compliance_rate || 96.4 }}%
           </div>
-          <div class="stat-label">
-            SLA Target Compliance
-          </div>
+          <div class="stat-label">SLA Target Compliance</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon qtl-icon">
-          ⚡
-        </div>
+        <div class="stat-icon qtl-icon">⚡</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ kpis.mttr_hours ? kpis.mttr_hours.toFixed(1) + "h" : "4.2h" }}
           </div>
-          <div class="stat-label">
-            Mean Resolution Time (MTTR)
-          </div>
+          <div class="stat-label">Mean Resolution Time (MTTR)</div>
         </div>
       </div>
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
-        class="stat-card"
-        @click="filterStatus = 'WAITING_ON_SITE'"
-      >
-        <div class="stat-icon breach-icon">
-          ⏸
-        </div>
+      <div class="stat-card" @click="filterStatus = 'WAITING_ON_SITE'">
+        <div class="stat-icon breach-icon">⏸</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ pausedTicketsCount }}
           </div>
-          <div class="stat-label">
-            SLA Paused (Waiting Site)
-          </div>
+          <div class="stat-label">SLA Paused (Waiting Site)</div>
         </div>
       </div>
     </div>
@@ -145,86 +108,39 @@
           type="text"
           class="search-input"
           placeholder="Search by ref #, title, subject ID, or site..."
-        >
+        />
       </div>
 
       <div class="filter-group">
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select
-          v-model="filterCategory"
-          class="filter-select"
-        >
-          <option value="ALL">
-            All Categories
-          </option>
-          <option value="PROTOCOL_DEVIATION">
-            Protocol Deviation
-          </option>
-          <option value="DATA_QUERY">
-            Data Query / Discrepancy
-          </option>
-          <option value="SAFETY_ADVERSE_EVENT">
-            Safety &amp; SAE
-          </option>
-          <option value="SUPPLY_EXCURSION">
-            Supply &amp; Temperature
-          </option>
-          <option value="SITE_OPERATIONS">
-            Site Operations
-          </option>
-          <option value="MONITORING_FINDING">
-            Monitoring Finding
-          </option>
-          <option value="TECHNICAL_SYSTEM">
-            Technical / Bug
-          </option>
+        <select v-model="filterCategory" class="filter-select">
+          <option value="ALL">All Categories</option>
+          <option value="PROTOCOL_DEVIATION">Protocol Deviation</option>
+          <option value="DATA_QUERY">Data Query / Discrepancy</option>
+          <option value="SAFETY_ADVERSE_EVENT">Safety &amp; SAE</option>
+          <option value="SUPPLY_EXCURSION">Supply &amp; Temperature</option>
+          <option value="SITE_OPERATIONS">Site Operations</option>
+          <option value="MONITORING_FINDING">Monitoring Finding</option>
+          <option value="TECHNICAL_SYSTEM">Technical / Bug</option>
         </select>
 
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select
-          v-model="filterSeverity"
-          class="filter-select"
-        >
-          <option value="ALL">
-            All Severities
-          </option>
-          <option value="CRITICAL">
-            Critical
-          </option>
-          <option value="MAJOR">
-            Major
-          </option>
-          <option value="MINOR">
-            Minor
-          </option>
+        <select v-model="filterSeverity" class="filter-select">
+          <option value="ALL">All Severities</option>
+          <option value="CRITICAL">Critical</option>
+          <option value="MAJOR">Major</option>
+          <option value="MINOR">Minor</option>
         </select>
 
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select
-          v-model="filterStatus"
-          class="filter-select"
-        >
-          <option value="ALL">
-            All Statuses
-          </option>
-          <option value="OPEN">
-            Open
-          </option>
-          <option value="IN_PROGRESS">
-            In Progress
-          </option>
-          <option value="WAITING_ON_SITE">
-            Waiting on Site
-          </option>
-          <option value="WAITING_ON_SPONSOR">
-            Waiting on Sponsor
-          </option>
-          <option value="RESOLVED">
-            Resolved
-          </option>
-          <option value="CLOSED">
-            Closed
-          </option>
+        <select v-model="filterStatus" class="filter-select">
+          <option value="ALL">All Statuses</option>
+          <option value="OPEN">Open</option>
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="WAITING_ON_SITE">Waiting on Site</option>
+          <option value="WAITING_ON_SPONSOR">Waiting on Sponsor</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CLOSED">Closed</option>
         </select>
       </div>
 
@@ -249,10 +165,7 @@
     </div>
 
     <!-- MAIN WORKSPACE: KANBAN VIEW -->
-    <div
-      v-if="viewMode === 'kanban'"
-      class="kanban-board"
-    >
+    <div v-if="viewMode === 'kanban'" class="kanban-board">
       <!-- Column 1: OPEN -->
       <div class="kanban-column">
         <div class="column-header">
@@ -280,7 +193,8 @@
               <span
                 class="badge"
                 :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
-              >{{ t.gxp_severity }}</span>
+                >{{ t.gxp_severity }}</span
+              >
             </div>
             <h4 class="card-ticket-title">
               {{ t.title }}
@@ -328,7 +242,8 @@
               <span
                 class="badge"
                 :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
-              >{{ t.gxp_severity }}</span>
+                >{{ t.gxp_severity }}</span
+              >
             </div>
             <h4 class="card-ticket-title">
               {{ t.title }}
@@ -392,9 +307,7 @@
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-              <div class="sla-mini-badge fill-paused">
-                ⏸ SLA Paused
-              </div>
+              <div class="sla-mini-badge fill-paused">⏸ SLA Paused</div>
             </div>
           </div>
         </div>
@@ -424,14 +337,12 @@
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
-              <span
-                v-if="t.signature_token"
-                class="badge badge-signed"
-              >✍️ eSigned</span>
-              <span
-                v-else
-                class="badge badge-pending-sign"
-              >Pending Sign-off</span>
+              <span v-if="t.signature_token" class="badge badge-signed"
+                >✍️ eSigned</span
+              >
+              <span v-else class="badge badge-pending-sign"
+                >Pending Sign-off</span
+              >
             </div>
             <h4 class="card-ticket-title">
               {{ t.title }}
@@ -488,10 +399,7 @@
     </div>
 
     <!-- MAIN WORKSPACE: TABLE VIEW -->
-    <div
-      v-else
-      class="table-card"
-    >
+    <div v-else class="table-card">
       <table class="clinical-table">
         <thead>
           <tr>
@@ -529,13 +437,15 @@
               <span
                 class="badge"
                 :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
-              >{{ t.gxp_severity }}</span>
+                >{{ t.gxp_severity }}</span
+              >
             </td>
             <td>
               <span
                 class="badge"
                 :class="`badge-status-${t.status?.toLowerCase()}`"
-              >{{ formatStatus(t.status) }}</span>
+                >{{ formatStatus(t.status) }}</span
+              >
             </td>
             <td class="context-cell">
               <span v-if="t.site_id">{{ t.site_id }}</span>
@@ -548,7 +458,8 @@
               <span
                 class="priority-tag"
                 :class="`priority-${t.priority?.toLowerCase()}`"
-              >{{ t.priority }}</span>
+                >{{ t.priority }}</span
+              >
             </td>
             <td>
               <div
@@ -561,14 +472,14 @@
               <span v-else>—</span>
             </td>
             <td>
-              <span
-                v-if="t.signature_token"
-                class="badge badge-signed"
-              >✍️ eSigned</span>
+              <span v-if="t.signature_token" class="badge badge-signed"
+                >✍️ eSigned</span
+              >
               <span
                 v-else-if="t.status === 'RESOLVED'"
                 class="badge badge-pending-sign"
-              >Needs Sign</span>
+                >Needs Sign</span
+              >
               <span v-else>—</span>
             </td>
             <td>
@@ -582,10 +493,7 @@
           </tr>
 
           <tr v-if="filteredTickets.length === 0">
-            <td
-              colspan="10"
-              class="empty-table-cell"
-            >
+            <td colspan="10" class="empty-table-cell">
               No clinical issues match the selected search and filter criteria.
             </td>
           </tr>

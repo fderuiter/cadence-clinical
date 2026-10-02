@@ -26,21 +26,16 @@
 
         <div class="header-meta-group">
           <div class="meta-item">
-            <label
-              for="csm-study-select"
-              class="meta-label"
-            >Active Study:</label>
+            <label for="csm-study-select" class="meta-label"
+              >Active Study:</label
+            >
             <select
               id="csm-study-select"
               v-model="selectedStudyId"
               class="csm-select"
               @change="onStudyChange"
             >
-              <option
-                v-for="s in availableStudies"
-                :key="s"
-                :value="s"
-              >
+              <option v-for="s in availableStudies" :key="s" :value="s">
                 {{ s }}
               </option>
             </select>
@@ -102,92 +97,60 @@
         :class="{ 'kpi-card-alert': anomalousSitesCount > 0 }"
         @click="activeSubTab = 'overview'"
       >
-        <div class="kpi-icon">
-          🚨
-        </div>
+        <div class="kpi-icon">🚨</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ anomalousSitesCount }} / {{ siteRecords.length || 0 }}
           </div>
-          <div class="kpi-label">
-            Anomalous Sites (P &lt; 0.001)
-          </div>
+          <div class="kpi-label">Anomalous Sites (P &lt; 0.001)</div>
         </div>
       </div>
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
-        class="kpi-card"
-        @click="activeSubTab = 'benford'"
-      >
-        <div class="kpi-icon">
-          📊
-        </div>
+      <div class="kpi-card" @click="activeSubTab = 'benford'">
+        <div class="kpi-icon">📊</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ benfordNonConformCount }}
           </div>
-          <div class="kpi-label">
-            Benford's Law Deviations
-          </div>
+          <div class="kpi-label">Benford's Law Deviations</div>
         </div>
       </div>
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
-        class="kpi-card"
-        @click="activeSubTab = 'rounding'"
-      >
-        <div class="kpi-icon">
-          🎯
-        </div>
+      <div class="kpi-card" @click="activeSubTab = 'rounding'">
+        <div class="kpi-icon">🎯</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ severeRoundingCount }}
           </div>
-          <div class="kpi-label">
-            Severe Rounding Bias Sites
-          </div>
+          <div class="kpi-label">Severe Rounding Bias Sites</div>
         </div>
       </div>
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
-        class="kpi-card"
-        @click="activeSubTab = 'variance'"
-      >
-        <div class="kpi-icon">
-          🔬
-        </div>
+      <div class="kpi-card" @click="activeSubTab = 'variance'">
+        <div class="kpi-icon">🔬</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ varianceShrunkCount }}
           </div>
-          <div class="kpi-label">
-            Variance Shrinkage / Clones
-          </div>
+          <div class="kpi-label">Variance Shrinkage / Clones</div>
         </div>
       </div>
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
-        class="kpi-card"
-        @click="activeSubTab = 'mahalanobis'"
-      >
-        <div class="kpi-icon">
-          🌐
-        </div>
+      <div class="kpi-card" @click="activeSubTab = 'mahalanobis'">
+        <div class="kpi-icon">🌐</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ maxMahalanobisDistance.toFixed(2) }}
           </div>
-          <div class="kpi-label">
-            Max Mahalanobis Distance (D_M)
-          </div>
+          <div class="kpi-label">Max Mahalanobis Distance (D_M)</div>
         </div>
       </div>
     </div>
@@ -275,25 +238,21 @@
     <!-- Main Content Area -->
     <div class="tab-pane-container">
       <!-- TAB 1: Surveillance Matrix -->
-      <section
-        v-if="activeSubTab === 'overview'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'overview'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Cross-Site Statistical Surveillance Heatmap
             </h3>
-            <span class="pane-caption">ICH E6(R2)/(R3) Risk-Based Centralized Monitoring Sentinel
-              Grid</span>
+            <span class="pane-caption"
+              >ICH E6(R2)/(R3) Risk-Based Centralized Monitoring Sentinel
+              Grid</span
+            >
           </div>
 
           <div class="filter-actions">
             <label class="checkbox-label">
-              <input
-                v-model="showOnlyOutliers"
-                type="checkbox"
-              >
+              <input v-model="showOnlyOutliers" type="checkbox" />
               Show Anomalies Only (P &lt; 0.001)
             </label>
             <button
@@ -389,7 +348,9 @@
                       :style="{ width: `${site.composite_risk_score}%` }"
                       :class="getScoreColorClass(site.composite_risk_score)"
                     />
-                    <span class="score-text">{{ site.composite_risk_score }} / 100</span>
+                    <span class="score-text"
+                      >{{ site.composite_risk_score }} / 100</span
+                    >
                   </div>
                 </td>
                 <td>
@@ -412,7 +373,8 @@
                     <span
                       v-if="site.flagged_anomaly_reasons.length === 0"
                       class="text-muted"
-                    >Nominal</span>
+                      >Nominal</span
+                    >
                   </div>
                 </td>
                 <td>
@@ -430,17 +392,16 @@
       </section>
 
       <!-- TAB 2: Benford's Law Drilldown -->
-      <section
-        v-if="activeSubTab === 'benford'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'benford'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Leading Digit Distribution against Benford's Law
             </h3>
-            <span class="pane-caption">P(d) = log10(1 + 1/d) with Chi-Square Goodness-of-Fit Testing (df
-              = 8)</span>
+            <span class="pane-caption"
+              >P(d) = log10(1 + 1/d) with Chi-Square Goodness-of-Fit Testing (df
+              = 8)</span
+            >
           </div>
 
           <div class="site-drilldown-selector">
@@ -461,10 +422,7 @@
           </div>
         </div>
 
-        <div
-          v-if="currentDrilldownSite"
-          class="drilldown-grid"
-        >
+        <div v-if="currentDrilldownSite" class="drilldown-grid">
           <!-- Chart Visualizer -->
           <div class="chart-card">
             <div class="chart-header">
@@ -482,20 +440,20 @@
                 >
                   {{ currentDrilldownSite.benford.conformity }}
                 </span>
-                <span class="stat-tag">MAD: {{ currentDrilldownSite.benford.mad }}</span>
-                <span class="stat-tag">Chi2: {{ currentDrilldownSite.benford.chi_square }} (p={{
-                  currentDrilldownSite.benford.p_value
-                }})</span>
+                <span class="stat-tag"
+                  >MAD: {{ currentDrilldownSite.benford.mad }}</span
+                >
+                <span class="stat-tag"
+                  >Chi2: {{ currentDrilldownSite.benford.chi_square }} (p={{
+                    currentDrilldownSite.benford.p_value
+                  }})</span
+                >
               </div>
             </div>
 
             <!-- Bar Chart (CSS-based) -->
             <div class="benford-bars-container">
-              <div
-                v-for="d in 9"
-                :key="d"
-                class="benford-col"
-              >
+              <div v-for="d in 9" :key="d" class="benford-col">
                 <div class="bars-pair">
                   <!-- Observed Bar -->
                   <div
@@ -506,7 +464,8 @@
                     <span
                       v-if="getObservedBenfordHeight(d) > 20"
                       class="bar-label"
-                    >{{ getObservedBenfordPct(d) }}%</span>
+                      >{{ getObservedBenfordPct(d) }}%</span
+                    >
                   </div>
                   <!-- Expected Benford Bar -->
                   <div
@@ -517,12 +476,11 @@
                     <span
                       v-if="getExpectedBenfordHeight(d) > 20"
                       class="bar-label"
-                    >{{ getExpectedBenfordPct(d) }}%</span>
+                      >{{ getExpectedBenfordPct(d) }}%</span
+                    >
                   </div>
                 </div>
-                <div class="digit-label">
-                  Digit {{ d }}
-                </div>
+                <div class="digit-label">Digit {{ d }}</div>
               </div>
             </div>
 
@@ -552,10 +510,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="d in 9"
-                  :key="d"
-                >
+                <tr v-for="d in 9" :key="d">
                   <td>
                     <strong>Digit {{ d }}</strong>
                   </td>
@@ -585,17 +540,16 @@
       </section>
 
       <!-- TAB 3: Rounding Bias Drilldown -->
-      <section
-        v-if="activeSubTab === 'rounding'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'rounding'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Terminal Digit Uniform Distribution &amp; Rounding Bias
             </h3>
-            <span class="pane-caption">Detection of Human Rounding Preferences on Blood Pressure &amp;
-              Vitals (0 &amp; 5 terminal digit clustering)</span>
+            <span class="pane-caption"
+              >Detection of Human Rounding Preferences on Blood Pressure &amp;
+              Vitals (0 &amp; 5 terminal digit clustering)</span
+            >
           </div>
 
           <div class="site-drilldown-selector">
@@ -616,10 +570,7 @@
           </div>
         </div>
 
-        <div
-          v-if="currentDrilldownSite"
-          class="drilldown-grid"
-        >
+        <div v-if="currentDrilldownSite" class="drilldown-grid">
           <!-- Terminal Digits Chart -->
           <div class="chart-card">
             <div class="chart-header">
@@ -635,26 +586,26 @@
                 >
                   {{ currentDrilldownSite.terminal_digit.rounding_bias_tier }}
                 </span>
-                <span class="stat-tag">0/5 Index:
+                <span class="stat-tag"
+                  >0/5 Index:
                   {{
                     (
                       currentDrilldownSite.terminal_digit.zero_five_index * 100
                     ).toFixed(1)
-                  }}% (Exp: 20%)</span>
-                <span class="stat-tag">Chi2:
+                  }}% (Exp: 20%)</span
+                >
+                <span class="stat-tag"
+                  >Chi2:
                   {{ currentDrilldownSite.terminal_digit.chi_square }} (p={{
                     currentDrilldownSite.terminal_digit.p_value
-                  }})</span>
+                  }})</span
+                >
               </div>
             </div>
 
             <!-- Terminal Bars -->
             <div class="terminal-bars-container">
-              <div
-                v-for="d in 10"
-                :key="d - 1"
-                class="terminal-col"
-              >
+              <div v-for="d in 10" :key="d - 1" class="terminal-col">
                 <div
                   class="terminal-bar"
                   :style="{ height: `${getTerminalDigitHeight(d - 1)}%` }"
@@ -663,7 +614,8 @@
                   <span
                     v-if="getTerminalDigitHeight(d - 1) > 20"
                     class="bar-label"
-                  >{{ getTerminalDigitPct(d - 1) }}%</span>
+                    >{{ getTerminalDigitPct(d - 1) }}%</span
+                  >
                 </div>
                 <div
                   class="digit-label"
@@ -730,10 +682,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="d in 10"
-                  :key="d - 1"
-                >
+                <tr v-for="d in 10" :key="d - 1">
                   <td>
                     <strong>Digit {{ d - 1 }}</strong>
                   </td>
@@ -754,17 +703,16 @@
       </section>
 
       <!-- TAB 4: Multivariate Mahalanobis & Correlation Matrices -->
-      <section
-        v-if="activeSubTab === 'mahalanobis'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'mahalanobis'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Multivariate Observation Clusters &amp; Mahalanobis Distance
             </h3>
-            <span class="pane-caption">Assessment of Inter-Variable Correlation Structures and Site
-              Centroid Distances</span>
+            <span class="pane-caption"
+              >Assessment of Inter-Variable Correlation Structures and Site
+              Centroid Distances</span
+            >
           </div>
 
           <div class="site-drilldown-selector">
@@ -785,10 +733,7 @@
           </div>
         </div>
 
-        <div
-          v-if="currentDrilldownSite"
-          class="drilldown-grid"
-        >
+        <div v-if="currentDrilldownSite" class="drilldown-grid">
           <div class="chart-card">
             <h4>Site Mean Vector vs Pooled Trial Population Centroid</h4>
             <table class="nested-table">
@@ -827,7 +772,7 @@
                   class="highlight-value"
                   :class="
                     currentDrilldownSite.multivariate.mahalanobis_p_value <
-                      0.001
+                    0.001
                       ? 'text-critical'
                       : ''
                   "
@@ -861,17 +806,16 @@
       </section>
 
       <!-- TAB 5: Variance Shrinkage & KL Divergence -->
-      <section
-        v-if="activeSubTab === 'variance'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'variance'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
               Variance Shrinkage &amp; Data Fabrication Sentinels
             </h3>
-            <span class="pane-caption">Kullback-Leibler (KL) Divergence and Low-Standard-Deviation
-              Fabrication Scanners</span>
+            <span class="pane-caption"
+              >Kullback-Leibler (KL) Divergence and Low-Standard-Deviation
+              Fabrication Scanners</span
+            >
           </div>
 
           <div class="site-drilldown-selector">
@@ -892,10 +836,7 @@
           </div>
         </div>
 
-        <div
-          v-if="currentDrilldownSite"
-          class="drilldown-grid"
-        >
+        <div v-if="currentDrilldownSite" class="drilldown-grid">
           <div class="chart-card">
             <h4>Site Variance vs Pooled Study Variance Ratio</h4>
             <div class="variance-gauge-box">
@@ -903,7 +844,9 @@
                 <span class="ratio-num">{{
                   currentDrilldownSite.variance_shrinkage.variance_ratio
                 }}</span>
-                <span class="ratio-desc">Variance Ratio (s_site^2 / sigma_pool^2)</span>
+                <span class="ratio-desc"
+                  >Variance Ratio (s_site^2 / sigma_pool^2)</span
+                >
               </div>
               <div
                 class="status-pill"
@@ -923,7 +866,9 @@
 
             <div class="metric-highlight-box mt-16">
               <div class="highlight-item">
-                <span class="highlight-label">One-Tailed Shrinkage p-value:</span>
+                <span class="highlight-label"
+                  >One-Tailed Shrinkage p-value:</span
+                >
                 <span
                   class="highlight-value"
                   :class="
@@ -940,7 +885,9 @@
                 </span>
               </div>
               <div class="highlight-item">
-                <span class="highlight-label">Kullback-Leibler Divergence (D_KL):</span>
+                <span class="highlight-label"
+                  >Kullback-Leibler Divergence (D_KL):</span
+                >
                 <span class="highlight-value">{{
                   currentDrilldownSite.variance_shrinkage.kl_divergence
                 }}</span>
@@ -976,7 +923,9 @@
               </div>
               <div class="dossier-row">
                 <strong>Composite Risk Score:</strong>
-                <span>{{ currentDrilldownSite.composite_risk_score }} / 100</span>
+                <span
+                  >{{ currentDrilldownSite.composite_risk_score }} / 100</span
+                >
               </div>
               <div class="dossier-row">
                 <strong>Risk Classification:</strong>
@@ -1002,10 +951,7 @@
       </section>
 
       <!-- TAB 6: Duplicate Patient Record Sentinel -->
-      <section
-        v-if="activeSubTab === 'duplicate-patients'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'duplicate-patients'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
@@ -1042,7 +988,9 @@
             <span class="metric-label">Cross-Site Duplications</span>
           </div>
           <div class="summary-metric">
-            <span class="metric-num text-warning">{{ (highestSimilarity * 100).toFixed(1) }}%</span>
+            <span class="metric-num text-warning"
+              >{{ (highestSimilarity * 100).toFixed(1) }}%</span
+            >
             <span class="metric-label">Max Vector Similarity</span>
           </div>
         </div>
@@ -1066,10 +1014,7 @@
                 >
                   {{ match.severity }}
                 </span>
-                <span
-                  v-if="match.is_cross_site"
-                  class="badge badge-danger"
-                >
+                <span v-if="match.is_cross_site" class="badge badge-danger">
                   CROSS-SITE MATCH
                 </span>
                 <span class="badge badge-standard">
@@ -1083,9 +1028,7 @@
 
             <div class="finding-subjects-comparison">
               <div class="subject-box">
-                <div class="subject-role">
-                  Primary Subject
-                </div>
+                <div class="subject-role">Primary Subject</div>
                 <div class="subject-id-val">
                   {{ match.primary_subject_id }}
                 </div>
@@ -1097,9 +1040,7 @@
                 ⮂ <span>VECTOR SIMILARITY</span> ⮃
               </div>
               <div class="subject-box">
-                <div class="subject-role">
-                  Matched Subject
-                </div>
+                <div class="subject-role">Matched Subject</div>
                 <div class="subject-id-val">
                   {{ match.matched_subject_id }}
                 </div>
@@ -1124,12 +1065,14 @@
                     }"
                   />
                 </div>
-                <span class="subscore-val">{{
-                  (
-                    (match.forensic_metadata?.sub_scores?.demographics || 1) *
-                    100
-                  ).toFixed(0)
-                }}%</span>
+                <span class="subscore-val"
+                  >{{
+                    (
+                      (match.forensic_metadata?.sub_scores?.demographics || 1) *
+                      100
+                    ).toFixed(0)
+                  }}%</span
+                >
               </div>
               <div class="subscore-item">
                 <span class="subscore-label">ECG Intervals</span>
@@ -1141,12 +1084,14 @@
                     }"
                   />
                 </div>
-                <span class="subscore-val">{{
-                  (
-                    (match.forensic_metadata?.sub_scores?.ecg_intervals ||
-                      1) * 100
-                  ).toFixed(0)
-                }}%</span>
+                <span class="subscore-val"
+                  >{{
+                    (
+                      (match.forensic_metadata?.sub_scores?.ecg_intervals ||
+                        1) * 100
+                    ).toFixed(0)
+                  }}%</span
+                >
               </div>
               <div class="subscore-item">
                 <span class="subscore-label">Lab Chemistry</span>
@@ -1158,12 +1103,14 @@
                     }"
                   />
                 </div>
-                <span class="subscore-val">{{
-                  (
-                    (match.forensic_metadata?.sub_scores?.lab_panel || 1) *
-                    100
-                  ).toFixed(0)
-                }}%</span>
+                <span class="subscore-val"
+                  >{{
+                    (
+                      (match.forensic_metadata?.sub_scores?.lab_panel || 1) *
+                      100
+                    ).toFixed(0)
+                  }}%</span
+                >
               </div>
             </div>
 
@@ -1180,10 +1127,7 @@
       </section>
 
       <!-- TAB 7: Temporal & Behavioral Anomaly Scanner -->
-      <section
-        v-if="activeSubTab === 'temporal'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'temporal'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
@@ -1240,8 +1184,10 @@
               {{ anom.evidence_summary }}
             </p>
             <div class="temporal-footer">
-              <span class="confidence-text">Confidence:
-                {{ (anom.confidence_score * 100).toFixed(0) }}%</span>
+              <span class="confidence-text"
+                >Confidence:
+                {{ (anom.confidence_score * 100).toFixed(0) }}%</span
+              >
               <button
                 class="csm-btn csm-btn-primary csm-btn-sm"
                 @click="dispatchInvestigationAlert(anom)"
@@ -1254,10 +1200,7 @@
       </section>
 
       <!-- TAB 8: Perceptual Image Hashing (pHash) Sentinel -->
-      <section
-        v-if="activeSubTab === 'phash'"
-        class="tab-pane"
-      >
+      <section v-if="activeSubTab === 'phash'" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
             <h3 class="pane-title">
@@ -1290,9 +1233,13 @@
             <div class="phash-card-header">
               <div class="badge-row">
                 <span class="badge badge-danger">IMAGE REUSE DETECTED</span>
-                <span class="badge badge-warning">Transformation:
-                  {{ imgMatch.transformation_type || "ROTATED_90" }}</span>
-                <span class="badge badge-standard">Hamming Distance: {{ imgMatch.hamming_distance }}</span>
+                <span class="badge badge-warning"
+                  >Transformation:
+                  {{ imgMatch.transformation_type || "ROTATED_90" }}</span
+                >
+                <span class="badge badge-standard"
+                  >Hamming Distance: {{ imgMatch.hamming_distance }}</span
+                >
               </div>
               <span class="similarity-score-pill">
                 {{ (imgMatch.similarity_score * 100).toFixed(1) }}% Match
@@ -1301,18 +1248,16 @@
 
             <div class="phash-comparison-view">
               <div class="image-preview-box">
-                <div class="image-mock-canvas">
-                  🩻 [CT Slice #101]
-                </div>
+                <div class="image-mock-canvas">🩻 [CT Slice #101]</div>
                 <div class="image-meta">
                   <strong>Subject:</strong>
                   {{ imgMatch.primary_subject_id }} ({{
                     imgMatch.primary_site_id
-                  }})<br>
+                  }})<br />
                   <strong>Hash:</strong>
                   <code>{{
                     imgMatch.forensic_metadata?.primary_phash ||
-                      "a3f01b92c4d5e678"
+                    "a3f01b92c4d5e678"
                   }}</code>
                 </div>
               </div>
@@ -1332,11 +1277,11 @@
                   <strong>Subject:</strong>
                   {{ imgMatch.matched_subject_id }} ({{
                     imgMatch.matched_site_id
-                  }})<br>
+                  }})<br />
                   <strong>Hash:</strong>
                   <code>{{
                     imgMatch.forensic_metadata?.matched_phash ||
-                      "a3f01b92c4d5e678"
+                    "a3f01b92c4d5e678"
                   }}</code>
                 </div>
               </div>
@@ -1360,20 +1305,11 @@
     </div>
 
     <!-- Forensics Dossier Modal -->
-    <div
-      v-if="showDossierModal"
-      class="modal-backdrop"
-    >
-      <div
-        class="dossier-modal"
-        role="dialog"
-      >
+    <div v-if="showDossierModal" class="modal-backdrop">
+      <div class="dossier-modal" role="dialog">
         <div class="modal-header">
           <h3>21 CFR Part 11 Centralized Monitoring Inspection Snapshot</h3>
-          <button
-            class="close-btn"
-            @click="showDossierModal = false"
-          >
+          <button class="close-btn" @click="showDossierModal = false">
             &times;
           </button>
         </div>
@@ -1397,9 +1333,7 @@
             {{ activeRun?.anomalous_sites_count }}
           </p>
 
-          <h4 class="mt-16">
-            Flagged Outlier Summary
-          </h4>
+          <h4 class="mt-16">Flagged Outlier Summary</h4>
           <ul class="dossier-list">
             <li
               v-for="site in siteRecords.filter((s) => s.is_anomalous_outlier)"

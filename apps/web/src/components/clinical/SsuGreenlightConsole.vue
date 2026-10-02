@@ -60,7 +60,7 @@
           class="text-input"
           placeholder="e.g. PROTOCOL-2026-01"
           @change="onScopeChange"
-        >
+        />
       </div>
 
       <div class="form-group-inline">
@@ -72,7 +72,7 @@
           class="text-input"
           placeholder="e.g. SITE-101"
           @change="onScopeChange"
-        >
+        />
       </div>
 
       <div class="form-group-inline">
@@ -83,42 +83,22 @@
           class="select-input"
           @change="onJurisdictionChange"
         >
-          <option value="US">
-            🇺🇸 United States (FDA 1572 + IRB)
-          </option>
-          <option value="EU">
-            🇪🇺 European Union (EU CTR Part I/II + EC)
-          </option>
-          <option value="JP">
-            🇯🇵 Japan (PMDA Notification + IRB)
-          </option>
-          <option value="GB">
-            🇬🇧 United Kingdom (MHRA + HRA REC)
-          </option>
-          <option value="GLOBAL">
-            🌐 Global Default (ICH GCP E6 R2)
-          </option>
+          <option value="US">🇺🇸 United States (FDA 1572 + IRB)</option>
+          <option value="EU">🇪🇺 European Union (EU CTR Part I/II + EC)</option>
+          <option value="JP">🇯🇵 Japan (PMDA Notification + IRB)</option>
+          <option value="GB">🇬🇧 United Kingdom (MHRA + HRA REC)</option>
+          <option value="GLOBAL">🌐 Global Default (ICH GCP E6 R2)</option>
         </select>
       </div>
 
-      <div
-        v-if="gateData?.greenlight_token"
-        class="token-status-pill"
-      >
+      <div v-if="gateData?.greenlight_token" class="token-status-pill">
         <span class="token-label">HMAC-SHA256 Token:</span>
-        <code
-          class="token-snip"
-          :title="gateData.greenlight_token"
-        >
+        <code class="token-snip" :title="gateData.greenlight_token">
           {{ gateData.greenlight_token.slice(0, 16) }}...{{
             gateData.greenlight_token.slice(-8)
           }}
         </code>
-        <button
-          class="btn-icon-only"
-          title="Copy Token"
-          @click="copyToken"
-        >
+        <button class="btn-icon-only" title="Copy Token" @click="copyToken">
           📋
         </button>
       </div>
@@ -127,9 +107,7 @@
     <!-- 6-Facet Greenlight Scorecard Grid -->
     <div class="scorecard-section">
       <div class="section-title-row">
-        <h3 class="section-title">
-          6-Facet Operational Readiness Scorecard
-        </h3>
+        <h3 class="section-title">6-Facet Operational Readiness Scorecard</h3>
         <div class="readiness-gauge">
           <div class="gauge-bar-outer">
             <div
@@ -140,10 +118,7 @@
               }"
             />
           </div>
-          <span
-            class="gauge-text"
-            :style="{ color: gaugeColor }"
-          >
+          <span class="gauge-text" :style="{ color: gaugeColor }">
             {{ readinessPercentage }}% Ready ({{ passedFacetsCount }}/6 Facets
             Passed)
           </span>
@@ -163,7 +138,9 @@
             <span class="facet-icon">⚖️</span>
             <div class="facet-titles">
               <span class="facet-name">Regulatory &amp; IRB / Ethics</span>
-              <span class="facet-rule-tag">{{ activeCountry }} Startup Rule</span>
+              <span class="facet-rule-tag"
+                >{{ activeCountry }} Startup Rule</span
+              >
             </div>
             <span
               class="facet-status-chip"
@@ -400,10 +377,7 @@
     </div>
 
     <!-- Tab 1: Essential Documents Queue -->
-    <div
-      v-if="currentTab === 'documents'"
-      class="tab-panel"
-    >
+    <div v-if="currentTab === 'documents'" class="tab-panel">
       <div class="panel-header">
         <h4>Essential Startup Documents &amp; Regulatory Binder</h4>
         <button
@@ -426,10 +400,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="doc in essentialDocuments"
-            :key="doc.id"
-          >
+          <tr v-for="doc in essentialDocuments" :key="doc.id">
             <td>
               <span class="doc-type-badge">{{ doc.document_type }}</span>
             </td>
@@ -449,10 +420,7 @@
             </td>
             <td>{{ doc.reviewed_by || "—" }}</td>
             <td>
-              <div
-                v-if="doc.status !== 'APPROVED'"
-                class="table-actions"
-              >
+              <div v-if="doc.status !== 'APPROVED'" class="table-actions">
                 <button
                   class="btn-action btn-approve"
                   title="Approve Document"
@@ -468,17 +436,11 @@
                   ✕ Reject
                 </button>
               </div>
-              <span
-                v-else
-                class="text-success font-semibold"
-              >✓ Verified</span>
+              <span v-else class="text-success font-semibold">✓ Verified</span>
             </td>
           </tr>
           <tr v-if="essentialDocuments.length === 0">
-            <td
-              colspan="6"
-              class="text-center empty-state"
-            >
+            <td colspan="6" class="text-center empty-state">
               No essential documents submitted yet for Site {{ activeSiteId }}.
             </td>
           </tr>
@@ -487,10 +449,7 @@
     </div>
 
     <!-- Tab 2: Country Rules Matrix -->
-    <div
-      v-if="currentTab === 'rules'"
-      class="tab-panel"
-    >
+    <div v-if="currentTab === 'rules'" class="tab-panel">
       <div class="panel-header">
         <h4>Statutory Prerequisite Matrix for {{ activeCountry }}</h4>
         <span class="badge badge-regulatory">Jurisdiction Engine</span>
@@ -533,10 +492,7 @@
             <td>{{ rule.description || "—" }}</td>
           </tr>
           <tr v-if="countryRules.length === 0">
-            <td
-              colspan="5"
-              class="text-center empty-state"
-            >
+            <td colspan="5" class="text-center empty-state">
               No rules configured for {{ activeCountry }}.
             </td>
           </tr>
@@ -545,10 +501,7 @@
     </div>
 
     <!-- Tab 3: Regulatory Milestones -->
-    <div
-      v-if="currentTab === 'milestones'"
-      class="tab-panel"
-    >
+    <div v-if="currentTab === 'milestones'" class="tab-panel">
       <div class="panel-header">
         <h4>National Regulatory Submissions Tracker</h4>
         <button
@@ -571,10 +524,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="ms in regulatoryMilestones"
-            :key="ms.id"
-          >
+          <tr v-for="ms in regulatoryMilestones" :key="ms.id">
             <td>
               <strong>{{ ms.country_code }}</strong>
             </td>
@@ -597,10 +547,7 @@
             </td>
           </tr>
           <tr v-if="regulatoryMilestones.length === 0">
-            <td
-              colspan="6"
-              class="text-center empty-state"
-            >
+            <td colspan="6" class="text-center empty-state">
               No regulatory milestones recorded yet for Study
               {{ activeStudyId }}.
             </td>
@@ -610,19 +557,11 @@
     </div>
 
     <!-- Certification Modal -->
-    <div
-      v-if="showCertifyModal"
-      class="modal-overlay"
-    >
+    <div v-if="showCertifyModal" class="modal-overlay">
       <div class="modal-card">
         <div class="modal-header">
           <h3>21 CFR Part 11 Greenlight Activation Certification</h3>
-          <button
-            class="btn-close"
-            @click="showCertifyModal = false"
-          >
-            ✕
-          </button>
+          <button class="btn-close" @click="showCertifyModal = false">✕</button>
         </div>
         <div class="modal-body">
           <p class="modal-intro">
@@ -643,7 +582,7 @@
                 type="text"
                 class="text-input"
                 placeholder="e.g. Dr. Jane Doe"
-              >
+              />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -654,7 +593,7 @@
                 type="text"
                 class="text-input"
                 placeholder="e.g. Regulatory Affairs Director"
-              >
+              />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -665,7 +604,7 @@
                 class="text-input"
                 disabled
                 value="I certify regulatory greenlight activation compliance and authorize trial execution."
-              >
+              />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -676,15 +615,12 @@
                 type="text"
                 class="text-input"
                 placeholder="e.g. All 6 startup facets verified and approved"
-              >
+              />
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="showCertifyModal = false"
-          >
+          <button class="btn btn-secondary" @click="showCertifyModal = false">
             Cancel
           </button>
           <button
@@ -699,17 +635,11 @@
     </div>
 
     <!-- Executive Dual-Signature Override Modal -->
-    <div
-      v-if="showOverrideModal"
-      class="modal-overlay"
-    >
+    <div v-if="showOverrideModal" class="modal-overlay">
       <div class="modal-card">
         <div class="modal-header">
           <h3>Executive Dual-Signature GxP Greenlight Override</h3>
-          <button
-            class="btn-close"
-            @click="showOverrideModal = false"
-          >
+          <button class="btn-close" @click="showOverrideModal = false">
             ✕
           </button>
         </div>
@@ -730,7 +660,7 @@
                 type="text"
                 class="text-input"
                 placeholder="e.g. sponsor-exec-01"
-              >
+              />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -741,7 +671,7 @@
                 type="text"
                 class="text-input"
                 placeholder="Cryptographic Sponsor Signature"
-              >
+              />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -752,7 +682,7 @@
                 type="text"
                 class="text-input"
                 placeholder="e.g. med-monitor-02"
-              >
+              />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -763,11 +693,13 @@
                 type="text"
                 class="text-input"
                 placeholder="Cryptographic Medical Signature"
-              >
+              />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Mandatory Regulatory Justification (Min 10 characters):</label>
+              <label
+                >Mandatory Regulatory Justification (Min 10 characters):</label
+              >
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
                 v-model="overrideForm.justification"
@@ -779,19 +711,16 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="showOverrideModal = false"
-          >
+          <button class="btn btn-secondary" @click="showOverrideModal = false">
             Cancel
           </button>
           <button
             class="btn btn-override"
             :disabled="
               !overrideForm.sponsorId ||
-                !overrideForm.medicalId ||
-                overrideForm.justification.length < 10 ||
-                isSubmitting
+              !overrideForm.medicalId ||
+              overrideForm.justification.length < 10 ||
+              isSubmitting
             "
             @click="executeExecutiveOverride"
           >
@@ -804,17 +733,11 @@
     </div>
 
     <!-- Submit Essential Document Modal -->
-    <div
-      v-if="showUploadDocModal"
-      class="modal-overlay"
-    >
+    <div v-if="showUploadDocModal" class="modal-overlay">
       <div class="modal-card">
         <div class="modal-header">
           <h3>Submit Essential Document</h3>
-          <button
-            class="btn-close"
-            @click="showUploadDocModal = false"
-          >
+          <button class="btn-close" @click="showUploadDocModal = false">
             ✕
           </button>
         </div>
@@ -824,10 +747,7 @@
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Document Type:</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select
-                v-model="docForm.type"
-                class="select-input"
-              >
+              <select v-model="docForm.type" class="select-input">
                 <option value="FDA_1572">
                   Form FDA 1572 Statement of Investigator
                 </option>
@@ -877,7 +797,7 @@
                 class="text-input"
                 data-testid="ssu-doc-file"
                 @change="onDocFileSelected"
-              >
+              />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -888,15 +808,12 @@
                 type="text"
                 class="text-input"
                 placeholder="e.g. FDA_1572_Signed_Site101.pdf"
-              >
+              />
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="showUploadDocModal = false"
-          >
+          <button class="btn btn-secondary" @click="showUploadDocModal = false">
             Cancel
           </button>
           <button

@@ -13,18 +13,9 @@
       @keydown.enter="onCanvasClick"
     >
       <div class="anatomical-silhouette">
-        <div
-          class="head-region"
-          title="Head / Neck"
-        />
-        <div
-          class="torso-region"
-          title="Chest / Abdomen"
-        />
-        <div
-          class="limbs-region"
-          title="Arms / Legs"
-        />
+        <div class="head-region" title="Head / Neck" />
+        <div class="torso-region" title="Chest / Abdomen" />
+        <div class="limbs-region" title="Arms / Legs" />
       </div>
 
       <!-- Placed Pin Markers -->
@@ -39,16 +30,9 @@
       </div>
     </div>
 
-    <div
-      v-if="pins.length > 0"
-      class="pins-summary"
-    >
+    <div v-if="pins.length > 0" class="pins-summary">
       <span class="pins-count">{{ pins.length }} location(s) recorded.</span>
-      <button
-        type="button"
-        class="btn-clear"
-        @click="clearPins"
-      >
+      <button type="button" class="btn-clear" @click="clearPins">
         Clear Pins
       </button>
     </div>

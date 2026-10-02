@@ -1,17 +1,12 @@
 <template>
   <div id="vue-app-root">
     <!-- Skip Link (WCAG 2.4.1 Bypass Blocks) -->
-    <a
-      href="#main-content"
-      class="skip-link"
-    >Skip to main content</a>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <!-- Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="brand-logo-mark">
-          ⚡
-        </div>
+        <div class="brand-logo-mark">⚡</div>
         <div class="header-title-area">
           <h1 class="brand-title">
             {{ brandNameFirst }}
@@ -30,10 +25,7 @@
           aria-label="Toggle navigation menu"
           @click="isMobileMenuOpen = !isMobileMenuOpen"
         >
-          <span
-            class="hamburger-icon"
-            aria-hidden="true"
-          >{{
+          <span class="hamburger-icon" aria-hidden="true">{{
             isMobileMenuOpen ? "✕" : "☰"
           }}</span>
         </button>
@@ -93,10 +85,9 @@
             v-if="authStore.availablePersonas.length > 1"
             class="persona-switcher-box"
           >
-            <label
-              for="persona-select"
-              class="sr-only"
-            >Switch workspace view</label>
+            <label for="persona-select" class="sr-only"
+              >Switch workspace view</label
+            >
             <select
               id="persona-select"
               v-model="activePersonaKey"
@@ -159,36 +150,24 @@
       <aside class="app-sidebar">
         <div class="sidebar-nav-scroll">
           <!-- Section 1: Study Design & MDR -->
-          <div
-            v-if="hasAvailableScreen(DESIGN_SCREENS)"
-            class="nav-category"
-          >
-            <div class="nav-category-title">
-              Design &amp; Metadata
-            </div>
+          <div v-if="hasAvailableScreen(DESIGN_SCREENS)" class="nav-category">
+            <div class="nav-category-title">Design &amp; Metadata</div>
             <ul class="nav-menu">
               <li
                 v-if="
                   isScreenAvailable('digitization') &&
-                    canAccess([
-                      'sponsor_designer',
-                      'data_manager',
-                      'sponsor_admin',
-                    ])
+                  canAccess([
+                    'sponsor_designer',
+                    'data_manager',
+                    'sponsor_admin',
+                  ])
                 "
                 id="tab-btn-digitization"
                 class="nav-item"
                 :class="{ active: $route.name === 'digitization' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/digitization"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/digitization" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">⚡</span>
                     <span class="nav-label">Protocol AI Digitizer</span>
                   </button>
@@ -197,11 +176,11 @@
               <li
                 v-if="
                   isScreenAvailable('mdr') &&
-                    canAccess([
-                      'sponsor_designer',
-                      'data_manager',
-                      'sponsor_admin',
-                    ])
+                  canAccess([
+                    'sponsor_designer',
+                    'data_manager',
+                    'sponsor_admin',
+                  ])
                 "
                 id="tab-btn-mdr"
                 class="nav-item"
@@ -210,15 +189,8 @@
                     $route.name === 'mdr' && $route.query.tab !== 'canvas',
                 }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/mdr"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/mdr" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">📋</span>
                     <span class="nav-label">Protocol &amp; SoA Designer</span>
                   </button>
@@ -227,11 +199,11 @@
               <li
                 v-if="
                   isScreenAvailable('mdr') &&
-                    canAccess([
-                      'sponsor_designer',
-                      'data_manager',
-                      'sponsor_admin',
-                    ])
+                  canAccess([
+                    'sponsor_designer',
+                    'data_manager',
+                    'sponsor_admin',
+                  ])
                 "
                 id="tab-btn-crf-designer"
                 class="nav-item"
@@ -240,15 +212,8 @@
                     $route.name === 'mdr' && $route.query.tab === 'canvas',
                 }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/mdr?tab=canvas"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/mdr?tab=canvas" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🎨</span>
                     <span class="nav-label">eCRF Visual Canvas</span>
                   </button>
@@ -257,11 +222,11 @@
               <li
                 v-if="
                   isScreenAvailable('icf-builder') &&
-                    canAccess([
-                      'sponsor_designer',
-                      'data_manager',
-                      'sponsor_admin',
-                    ])
+                  canAccess([
+                    'sponsor_designer',
+                    'data_manager',
+                    'sponsor_admin',
+                  ])
                 "
                 id="tab-btn-icf-builder"
                 class="nav-item"
@@ -271,15 +236,8 @@
                     $route.name === 'econsent-authoring',
                 }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/icf-builder"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/icf-builder" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">📝</span>
                     <span class="nav-label">eConsent &amp; ICF Builder</span>
                   </button>
@@ -288,25 +246,18 @@
               <li
                 v-if="
                   isScreenAvailable('rules') &&
-                    canAccess([
-                      'sponsor_designer',
-                      'data_manager',
-                      'sponsor_admin',
-                    ])
+                  canAccess([
+                    'sponsor_designer',
+                    'data_manager',
+                    'sponsor_admin',
+                  ])
                 "
                 id="tab-btn-rules"
                 class="nav-item"
                 :class="{ active: $route.name === 'rules' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/rules"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/rules" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">⚙️</span>
                     <span class="nav-label">Study Rules &amp; Queries</span>
                   </button>
@@ -315,29 +266,22 @@
               <li
                 v-if="
                   isScreenAvailable('amendment-diff') &&
-                    canAccess([
-                      'sponsor_designer',
-                      'data_manager',
-                      'sponsor_admin',
-                      'cra',
-                      'monitor',
-                      'site_investigator',
-                      'crc',
-                    ])
+                  canAccess([
+                    'sponsor_designer',
+                    'data_manager',
+                    'sponsor_admin',
+                    'cra',
+                    'monitor',
+                    'site_investigator',
+                    'crc',
+                  ])
                 "
                 id="tab-btn-amendment-diff"
                 class="nav-item"
                 :class="{ active: $route.name === 'amendment-diff' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/amendment-diff"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/amendment-diff" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🔀</span>
                     <span class="nav-label">Amendments &amp; Migration</span>
                   </button>
@@ -348,35 +292,26 @@
 
           <!-- Section 2: Study Execution & EDC -->
           <div class="nav-category">
-            <div class="nav-category-title">
-              Execution &amp; EDC
-            </div>
+            <div class="nav-category-title">Execution &amp; EDC</div>
             <ul class="nav-menu">
               <li
                 v-if="
                   isScreenAvailable('ecrf') &&
-                    canAccess([
-                      'site_investigator',
-                      'crc',
-                      'data_manager',
-                      'sponsor_admin',
-                      'cra',
-                      'monitor',
-                    ])
+                  canAccess([
+                    'site_investigator',
+                    'crc',
+                    'data_manager',
+                    'sponsor_admin',
+                    'cra',
+                    'monitor',
+                  ])
                 "
                 id="tab-btn-ecrf"
                 class="nav-item"
                 :class="{ active: $route.name === 'ecrf' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/ecrf"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/ecrf" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🩺</span>
                     <span class="nav-label">eCRF Data Capture</span>
                   </button>
@@ -385,29 +320,22 @@
               <li
                 v-if="
                   isScreenAvailable('imaging') &&
-                    canAccess([
-                      'site_investigator',
-                      'crc',
-                      'data_manager',
-                      'sponsor_admin',
-                      'cra',
-                      'monitor',
-                      'sponsor_designer',
-                    ])
+                  canAccess([
+                    'site_investigator',
+                    'crc',
+                    'data_manager',
+                    'sponsor_admin',
+                    'cra',
+                    'monitor',
+                    'sponsor_designer',
+                  ])
                 "
                 id="tab-btn-imaging"
                 class="nav-item"
                 :class="{ active: $route.name === 'imaging' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/imaging"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/imaging" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🔬</span>
                     <span class="nav-label">DICOM &amp; RECIST Viewer</span>
                   </button>
@@ -416,16 +344,16 @@
               <li
                 v-if="
                   isScreenAvailable('devices') &&
-                    canAccess([
-                      'site_investigator',
-                      'crc',
-                      'data_manager',
-                      'sponsor_admin',
-                      'cra',
-                      'monitor',
-                      'sponsor_designer',
-                      'auditor',
-                    ])
+                  canAccess([
+                    'site_investigator',
+                    'crc',
+                    'data_manager',
+                    'sponsor_admin',
+                    'cra',
+                    'monitor',
+                    'sponsor_designer',
+                    'auditor',
+                  ])
                 "
                 id="tab-btn-devices"
                 class="nav-item"
@@ -435,15 +363,8 @@
                     $route.name === 'device-investigation',
                 }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/devices"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/devices" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🩺</span>
                     <span class="nav-label">Device &amp; IVD Suite</span>
                   </button>
@@ -455,15 +376,8 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'sensors' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/sensors"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/sensors" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">⌚</span>
                     <span class="nav-label">Connected Sensors &amp; IoT</span>
                   </button>
@@ -475,42 +389,30 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'dct' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/dct"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/dct" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">📹</span>
-                    <span class="nav-label">Telehealth &amp; DTP Logistics</span>
+                    <span class="nav-label"
+                      >Telehealth &amp; DTP Logistics</span
+                    >
                   </button>
                 </router-link>
               </li>
               <li
                 v-if="
                   isScreenAvailable('coding') &&
-                    canAccess([
-                      'data_manager',
-                      'sponsor_designer',
-                      'sponsor_admin',
-                    ])
+                  canAccess([
+                    'data_manager',
+                    'sponsor_designer',
+                    'sponsor_admin',
+                  ])
                 "
                 id="tab-btn-coding"
                 class="nav-item"
                 :class="{ active: $route.name === 'coding' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/coding"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/coding" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🏷️</span>
                     <span class="nav-label">Medical Coding</span>
                   </button>
@@ -519,25 +421,18 @@
               <li
                 v-if="
                   isScreenAvailable('data-lock') &&
-                    canAccess([
-                      'data_manager',
-                      'sponsor_designer',
-                      'sponsor_admin',
-                    ])
+                  canAccess([
+                    'data_manager',
+                    'sponsor_designer',
+                    'sponsor_admin',
+                  ])
                 "
                 id="tab-btn-data-lock"
                 class="nav-item"
                 :class="{ active: $route.name === 'data-lock' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/data-lock"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/data-lock" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🔐</span>
                     <span class="nav-label">Data Lock Console</span>
                   </button>
@@ -546,21 +441,14 @@
               <li
                 v-if="
                   isScreenAvailable('ctms') &&
-                    canAccess(['cra', 'monitor', 'sponsor_admin'])
+                  canAccess(['cra', 'monitor', 'sponsor_admin'])
                 "
                 id="tab-btn-ctms"
                 class="nav-item"
                 :class="{ active: $route.name === 'ctms' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/ctms"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/ctms" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">📊</span>
                     <span class="nav-label">CTMS Operations</span>
                   </button>
@@ -577,10 +465,7 @@
                   to="/participant-wallet"
                   custom
                 >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">💳</span>
                     <span class="nav-label">Participant Financial Wallet</span>
                   </button>
@@ -592,15 +477,8 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'lay-summaries' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/lay-summaries"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/lay-summaries" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">📜</span>
                     <span class="nav-label">EU CTR Lay Summaries</span>
                   </button>
@@ -609,27 +487,20 @@
               <li
                 v-if="
                   isScreenAvailable('etmf') &&
-                    canAccess([
-                      'cra',
-                      'monitor',
-                      'auditor',
-                      'tmf_auditor',
-                      'sponsor_admin',
-                    ])
+                  canAccess([
+                    'cra',
+                    'monitor',
+                    'auditor',
+                    'tmf_auditor',
+                    'sponsor_admin',
+                  ])
                 "
                 id="tab-btn-etmf"
                 class="nav-item"
                 :class="{ active: $route.name === 'etmf' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/etmf"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/etmf" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">📁</span>
                     <span class="nav-label">eTMF Document Vault</span>
                   </button>
@@ -641,15 +512,8 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'documents' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/documents"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/documents" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🗂️</span>
                     <span class="nav-label">Documents Hub</span>
                   </button>
@@ -661,15 +525,8 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'safety' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/safety"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/safety" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🛡️</span>
                     <span class="nav-label">Safety &amp; DSUR Compiler</span>
                   </button>
@@ -681,15 +538,8 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'quality' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/quality"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/quality" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🎯</span>
                     <span class="nav-label">Quality &amp; RBQM Cockpit</span>
                   </button>
@@ -701,15 +551,8 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'tickets' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/tickets"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/tickets" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🎫</span>
                     <span class="nav-label">Clinical Issues &amp; Tickets</span>
                   </button>
@@ -721,15 +564,8 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'knowledge' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/knowledge"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/knowledge" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">📚</span>
                     <span class="nav-label">Knowledge &amp; SOP Hub</span>
                   </button>
@@ -741,15 +577,8 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'training' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/training"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/training" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🎓</span>
                     <span class="nav-label">Study Training &amp; Gating</span>
                   </button>
@@ -759,7 +588,7 @@
               <li
                 v-if="
                   isScreenAvailable('audit') &&
-                    canAccess(['auditor', 'tmf_auditor', 'sponsor_admin'])
+                  canAccess(['auditor', 'tmf_auditor', 'sponsor_admin'])
                 "
                 id="tab-btn-audit"
                 class="nav-item"
@@ -767,15 +596,8 @@
                   active: $route.name === 'audit' || $route.name === 'auditor',
                 }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/audit"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/audit" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🔒</span>
                     <span class="nav-label">Part 11 Audit Ledger</span>
                   </button>
@@ -784,25 +606,18 @@
               <li
                 v-if="
                   isScreenAvailable('exports') &&
-                    canAccess([
-                      'data_manager',
-                      'sponsor_designer',
-                      'sponsor_admin',
-                    ])
+                  canAccess([
+                    'data_manager',
+                    'sponsor_designer',
+                    'sponsor_admin',
+                  ])
                 "
                 id="tab-btn-exports"
                 class="nav-item"
                 :class="{ active: $route.name === 'exports' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/exports"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/exports" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">📤</span>
                     <span class="nav-label">Data Export Wizard</span>
                   </button>
@@ -814,15 +629,8 @@
                 class="nav-item"
                 :class="{ active: $route.name === 'notifications' }"
               >
-                <router-link
-                  v-slot="{ navigate }"
-                  to="/notifications"
-                  custom
-                >
-                  <button
-                    type="button"
-                    @click="navigate"
-                  >
+                <router-link v-slot="{ navigate }" to="/notifications" custom>
+                  <button type="button" @click="navigate">
                     <span class="nav-icon">🔔</span>
                     <span class="nav-label">Notifications</span>
                   </button>
@@ -833,9 +641,7 @@
 
           <!-- Section 3: Decentralized Patient Portals -->
           <div class="nav-category">
-            <div class="nav-category-title">
-              Decentralized &amp; ePRO
-            </div>
+            <div class="nav-category-title">Decentralized &amp; ePRO</div>
             <ul class="nav-menu">
               <li class="nav-item portal-nav-item">
                 <a
@@ -863,10 +669,7 @@
       </aside>
 
       <!-- Main Workspace -->
-      <main
-        id="main-content"
-        tabindex="-1"
-      >
+      <main id="main-content" tabindex="-1">
         <slot />
       </main>
     </div>
@@ -914,7 +717,9 @@
     >
       <div>
         <span>System Status: </span>
-        <span style="color: var(--accent-light); font-weight: 600">Active Sandbox Mode</span>
+        <span style="color: var(--accent-light); font-weight: 600"
+          >Active Sandbox Mode</span
+        >
       </div>
       <div>
         <button
@@ -1072,10 +877,7 @@
           >
             {{ ev.target }}
           </div>
-          <div
-            v-if="ev.details"
-            style="color: #475569; font-size: 0.7rem"
-          >
+          <div v-if="ev.details" style="color: #475569; font-size: 0.7rem">
             {{ ev.details }}
           </div>
         </div>

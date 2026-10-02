@@ -2,13 +2,16 @@
   <div class="soa-matrix-editor">
     <div class="matrix-toolbar">
       <div class="toolbar-stats">
-        <span class="stat-badge"><strong>{{ localActivities.length }}</strong> Procedures</span>
-        <span class="stat-badge"><strong>{{ visits.length }}</strong> Visits</span>
-        <span class="stat-badge highlight"><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span>
-        <span
-          v-if="selectedRangeCellCount > 0"
-          class="stat-badge range-badge"
+        <span class="stat-badge"
+          ><strong>{{ localActivities.length }}</strong> Procedures</span
         >
+        <span class="stat-badge"
+          ><strong>{{ visits.length }}</strong> Visits</span
+        >
+        <span class="stat-badge highlight"
+          ><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span
+        >
+        <span v-if="selectedRangeCellCount > 0" class="stat-badge range-badge">
           ⚡ <strong>{{ selectedRangeCellCount }}</strong> Cells Selected
         </span>
       </div>
@@ -48,10 +51,7 @@
     </div>
 
     <!-- Range Selection Bulk Actions Bar -->
-    <div
-      v-if="selectedRangeCellCount > 0"
-      class="range-action-banner"
-    >
+    <div v-if="selectedRangeCellCount > 0" class="range-action-banner">
       <div class="range-banner-title">
         Selected Multi-Cell Range ({{ selectedRangeCellCount }} cells)
       </div>
@@ -81,10 +81,7 @@
     </div>
 
     <!-- Inline Add Procedure Form -->
-    <div
-      v-if="showAddProcedure"
-      class="inline-add-box"
-    >
+    <div v-if="showAddProcedure" class="inline-add-box">
       <div class="inline-form-group">
         <label for="new-proc-name">Procedure Name</label>
         <input
@@ -92,7 +89,7 @@
           v-model="newProcedureName"
           placeholder="e.g. Pharmacokinetic Blood Sampling"
           class="input-text"
-        >
+        />
       </div>
       <div class="inline-form-group">
         <label for="new-proc-domain">CDASH Domain</label>
@@ -101,33 +98,15 @@
           v-model="newProcedureDomain"
           class="input-select"
         >
-          <option value="VS">
-            VS - Vital Signs
-          </option>
-          <option value="EG">
-            EG - ECG
-          </option>
-          <option value="LB">
-            LB - Laboratory
-          </option>
-          <option value="QS">
-            QS - Questionnaire / VAS
-          </option>
-          <option value="PE">
-            PE - Physical Exam / Body Map
-          </option>
-          <option value="AE">
-            AE - Adverse Events
-          </option>
-          <option value="CM">
-            CM - Concomitant Medications
-          </option>
-          <option value="DM">
-            DM - Demographics
-          </option>
-          <option value="EX">
-            EX - Exposure
-          </option>
+          <option value="VS">VS - Vital Signs</option>
+          <option value="EG">EG - ECG</option>
+          <option value="LB">LB - Laboratory</option>
+          <option value="QS">QS - Questionnaire / VAS</option>
+          <option value="PE">PE - Physical Exam / Body Map</option>
+          <option value="AE">AE - Adverse Events</option>
+          <option value="CM">CM - Concomitant Medications</option>
+          <option value="DM">DM - Demographics</option>
+          <option value="EX">EX - Exposure</option>
         </select>
       </div>
       <button
@@ -148,10 +127,7 @@
     </div>
 
     <!-- Inline Add Visit Form -->
-    <div
-      v-if="showAddVisit"
-      class="inline-add-box"
-    >
+    <div v-if="showAddVisit" class="inline-add-box">
       <div class="inline-form-group">
         <label for="new-visit-name">Visit Name</label>
         <input
@@ -159,7 +135,7 @@
           v-model="newVisitName"
           placeholder="e.g. Visit 4 / Week 8"
           class="input-text"
-        >
+        />
       </div>
       <div class="inline-form-group">
         <label for="new-visit-day">Target Day</label>
@@ -169,7 +145,7 @@
           type="number"
           class="input-text"
           style="width: 90px"
-        >
+        />
       </div>
       <button
         type="button"
@@ -189,10 +165,7 @@
     </div>
 
     <!-- Inline Clone Procedure Group Form -->
-    <div
-      v-if="showCloneGroup"
-      class="inline-add-box clone-group-box"
-    >
+    <div v-if="showCloneGroup" class="inline-add-box clone-group-box">
       <div class="inline-form-group">
         <label for="clone-domain-select">Source Procedure Group (Domain)</label>
         <select
@@ -200,23 +173,21 @@
           v-model="cloneSourceDomain"
           class="input-select"
         >
-          <option
-            v-for="d in availableDomains"
-            :key="d"
-            :value="d"
-          >
+          <option v-for="d in availableDomains" :key="d" :value="d">
             {{ d }} Domain
           </option>
         </select>
       </div>
       <div class="inline-form-group">
-        <label for="clone-suffix-input">Cloned Group Name Prefix / Suffix</label>
+        <label for="clone-suffix-input"
+          >Cloned Group Name Prefix / Suffix</label
+        >
         <input
           id="clone-suffix-input"
           v-model="cloneNameSuffix"
           placeholder="e.g. (Cohort B)"
           class="input-text"
-        >
+        />
       </div>
       <button
         type="button"
@@ -240,10 +211,7 @@
       <table class="soa-interactive-table">
         <thead>
           <tr>
-            <th
-              class="col-procedure-header"
-              scope="col"
-            >
+            <th class="col-procedure-header" scope="col">
               <div class="header-with-master">
                 <input
                   type="checkbox"
@@ -253,16 +221,11 @@
                   aria-label="Master select all matrix cells"
                   @change="toggleGrandMaster"
                   @click.stop="toggleGrandMaster"
-                >
+                />
                 <span>Clinical Procedure / Assessment</span>
               </div>
             </th>
-            <th
-              class="col-domain-header"
-              scope="col"
-            >
-              CDASH
-            </th>
+            <th class="col-domain-header" scope="col">CDASH</th>
             <th
               v-for="visit in visits"
               :key="visit.visit_name"
@@ -278,14 +241,12 @@
                   :aria-label="`Toggle all procedures for ${visit.visit_name}`"
                   @change="toggleColumnMaster(visit.visit_name)"
                   @click.stop="toggleColumnMaster(visit.visit_name)"
-                >
+                />
                 <div class="visit-header-title">
                   {{ visit.visit_name }}
                 </div>
               </div>
-              <div class="visit-header-meta">
-                Day {{ visit.target_day }}
-              </div>
+              <div class="visit-header-meta">Day {{ visit.target_day }}</div>
             </th>
           </tr>
         </thead>
@@ -305,7 +266,7 @@
                   :aria-label="`Toggle all visits for ${act.activity_name}`"
                   @change="toggleRowMaster(act)"
                   @click.stop="toggleRowMaster(act)"
-                >
+                />
                 <div>
                   <span class="procedure-label">{{ act.activity_name }}</span>
                   <span
@@ -354,7 +315,7 @@
                 @click.stop="
                   handleCellClick(act, visit.visit_name, rIdx, cIdx, $event)
                 "
-              >
+              />
             </td>
           </tr>
         </tbody>

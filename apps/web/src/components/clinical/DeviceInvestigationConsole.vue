@@ -33,7 +33,7 @@
               type="text"
               class="text-input text-input-sm"
               placeholder="e.g. STUDY-DEV-101"
-            >
+            />
           </div>
           <div class="control-item">
             <label for="site-selector">Site ID:</label>
@@ -43,12 +43,9 @@
               type="text"
               class="text-input text-input-sm"
               placeholder="e.g. SITE-101"
-            >
+            />
           </div>
-          <button
-            class="btn btn-secondary btn-sm"
-            @click="refreshData"
-          >
+          <button class="btn btn-secondary btn-sm" @click="refreshData">
             🔄 Refresh Hub
           </button>
         </div>
@@ -59,8 +56,10 @@
         <div class="metric-card">
           <span class="metric-label">Total Device Inventory</span>
           <span class="metric-value">{{ summary.total_devices }}</span>
-          <span class="metric-sub">{{ summary.available_devices }} Available |
-            {{ summary.dispensed_devices }} Dispensed</span>
+          <span class="metric-sub"
+            >{{ summary.available_devices }} Available |
+            {{ summary.dispensed_devices }} Dispensed</span
+          >
         </div>
         <div
           class="metric-card"
@@ -70,14 +69,18 @@
           <span class="metric-value text-danger">{{
             summary.quarantined_devices
           }}</span>
-          <span class="metric-sub">{{ summary.active_quarantines }} Active Lockdowns</span>
+          <span class="metric-sub"
+            >{{ summary.active_quarantines }} Active Lockdowns</span
+          >
         </div>
         <div class="metric-card">
           <span class="metric-label">Reported Deficiencies</span>
           <span class="metric-value text-warning">{{
             summary.total_deficiencies
           }}</span>
-          <span class="metric-sub">{{ summary.open_safety_cases }} Open Safety Inquiries</span>
+          <span class="metric-sub"
+            >{{ summary.open_safety_cases }} Open Safety Inquiries</span
+          >
         </div>
         <div
           class="metric-card"
@@ -144,11 +147,15 @@
             <h3 class="panel-title">
               📷 UDI Barcode Scanner &amp; Intake Engine
             </h3>
-            <span class="badge badge-outline">GS1-128 / GS1-DataMatrix / HIBCC</span>
+            <span class="badge badge-outline"
+              >GS1-128 / GS1-DataMatrix / HIBCC</span
+            >
           </div>
           <div class="scanner-grid">
             <div class="scanner-input-col">
-              <label for="barcode-scanner-input">Scan or Paste Physical Barcode:</label>
+              <label for="barcode-scanner-input"
+                >Scan or Paste Physical Barcode:</label
+              >
               <div class="input-with-action">
                 <input
                   id="barcode-scanner-input"
@@ -157,11 +164,8 @@
                   class="text-input code-font"
                   placeholder="(01)00840123456789(17)280630(10)LOT-99(21)SN-4410"
                   @input="handleBarcodeParse"
-                >
-                <button
-                  class="btn btn-secondary"
-                  @click="handleBarcodeParse"
-                >
+                />
+                <button class="btn btn-secondary" @click="handleBarcodeParse">
                   🔍 Parse UDI
                 </button>
               </div>
@@ -202,14 +206,12 @@
             <div class="parsed-udi-card">
               <div class="parsed-header">
                 <span class="parsed-title">Parsed UDI Attributes</span>
-                <span
-                  v-if="parsedUdi.is_valid"
-                  class="status-pill success"
-                >✓ Valid Checksum</span>
-                <span
-                  v-else
-                  class="status-pill danger"
-                >✗ Checksum Mismatch</span>
+                <span v-if="parsedUdi.is_valid" class="status-pill success"
+                  >✓ Valid Checksum</span
+                >
+                <span v-else class="status-pill danger"
+                  >✗ Checksum Mismatch</span
+                >
               </div>
               <div class="parsed-grid">
                 <div class="parsed-item">
@@ -266,9 +268,7 @@
         <div class="pane-card">
           <div class="panel-header">
             <div class="header-with-filters">
-              <h3 class="panel-title">
-                Serialized Device Inventory Ledger
-              </h3>
+              <h3 class="panel-title">Serialized Device Inventory Ledger</h3>
               <div class="filter-pills">
                 <button
                   :class="[
@@ -314,10 +314,7 @@
                 </button>
               </div>
             </div>
-            <button
-              class="btn btn-secondary btn-sm"
-              @click="openRegisterModal"
-            >
+            <button class="btn btn-secondary btn-sm" @click="openRegisterModal">
               ➕ Manual Intake
             </button>
           </div>
@@ -362,10 +359,9 @@
                   </td>
                   <td class="code-font">
                     <span>Lot: {{ item.lot_number }}</span>
-                    <span
-                      v-if="item.serial_number"
-                      class="serial-tag"
-                    >SN: {{ item.serial_number }}</span>
+                    <span v-if="item.serial_number" class="serial-tag"
+                      >SN: {{ item.serial_number }}</span
+                    >
                   </td>
                   <td>{{ formatDate(item.expiration_date) }}</td>
                   <td>
@@ -379,16 +375,13 @@
                     <span
                       v-if="
                         item.is_dispensation_blocked ||
-                          item.status === 'QUARANTINED'
+                        item.status === 'QUARANTINED'
                       "
                       class="lock-indicator text-danger"
                     >
                       🔒 BLOCKED
                     </span>
-                    <span
-                      v-else
-                      class="lock-indicator text-success"
-                    >
+                    <span v-else class="lock-indicator text-success">
                       🔓 UNLOCKED
                     </span>
                   </td>
@@ -398,7 +391,7 @@
                         class="btn btn-sm btn-primary"
                         :disabled="
                           item.status !== 'AVAILABLE' ||
-                            item.is_dispensation_blocked
+                          item.is_dispensation_blocked
                         "
                         @click="openDispenseModal(item)"
                       >
@@ -415,10 +408,7 @@
                   </td>
                 </tr>
                 <tr v-if="filteredDevices.length === 0">
-                  <td
-                    colspan="9"
-                    class="empty-cell"
-                  >
+                  <td colspan="9" class="empty-cell">
                     No investigational devices match the selected filters.
                   </td>
                 </tr>
@@ -445,7 +435,9 @@
                 classification.
               </p>
             </div>
-            <span class="badge badge-audit">Auto-Triggers Safety &amp; Quarantine</span>
+            <span class="badge badge-audit"
+              >Auto-Triggers Safety &amp; Quarantine</span
+            >
           </div>
 
           <form
@@ -454,7 +446,9 @@
           >
             <div class="form-grid-3">
               <div class="form-group">
-                <label for="defic-device-select">Select Investigational Device:</label>
+                <label for="defic-device-select"
+                  >Select Investigational Device:</label
+                >
                 <select
                   id="defic-device-select"
                   v-model="selectedDeviceForDefic"
@@ -462,17 +456,10 @@
                   required
                   @change="populateDeviceFields"
                 >
-                  <option
-                    value=""
-                    disabled
-                  >
+                  <option value="" disabled>
                     -- Select Device from RTSM Inventory --
                   </option>
-                  <option
-                    v-for="d in devices"
-                    :key="d.id"
-                    :value="d.id"
-                  >
+                  <option v-for="d in devices" :key="d.id" :value="d.id">
                     {{ d.brand_name }} (SN: {{ d.serial_number || "N/A" }}, Lot:
                     {{ d.lot_number }})
                   </option>
@@ -480,14 +467,16 @@
               </div>
 
               <div class="form-group">
-                <label for="defic-subject-input">Impacted Subject ID (Optional):</label>
+                <label for="defic-subject-input"
+                  >Impacted Subject ID (Optional):</label
+                >
                 <input
                   id="defic-subject-input"
                   v-model="deficForm.subject_id"
                   type="text"
                   class="text-input"
                   placeholder="e.g. SUBJ-101-0042"
-                >
+                />
               </div>
 
               <div class="form-group">
@@ -522,18 +511,22 @@
 
             <div class="form-grid-2">
               <div class="form-group">
-                <label for="defic-incident-date">Incident Date &amp; Time:</label>
+                <label for="defic-incident-date"
+                  >Incident Date &amp; Time:</label
+                >
                 <input
                   id="defic-incident-date"
                   v-model="deficForm.incident_date"
                   type="datetime-local"
                   class="text-input"
                   required
-                >
+                />
               </div>
 
               <div class="form-group">
-                <label for="defic-quar-scope">Automated RTSM Quarantine Scope:</label>
+                <label for="defic-quar-scope"
+                  >Automated RTSM Quarantine Scope:</label
+                >
                 <select
                   id="defic-quar-scope"
                   v-model="deficForm.quarantine_scope"
@@ -563,9 +556,11 @@
                   <input
                     v-model="deficForm.could_lead_to_sade"
                     type="checkbox"
+                  />
+                  <strong
+                    >Could this deficiency have led to a Serious Adverse Device
+                    Effect (SADE) if suitable action had not been taken?</strong
                   >
-                  <strong>Could this deficiency have led to a Serious Adverse Device
-                    Effect (SADE) if suitable action had not been taken?</strong>
                 </label>
               </div>
 
@@ -575,20 +570,20 @@
                     <input
                       v-model="deficForm.patient_involved"
                       type="checkbox"
-                    >
+                    />
                     <span>Participant / Patient Directly Involved</span>
                   </label>
                 </div>
                 <div class="form-group">
-                  <label for="defic-health-impact">Observed Patient Health Consequence:</label>
+                  <label for="defic-health-impact"
+                    >Observed Patient Health Consequence:</label
+                  >
                   <select
                     id="defic-health-impact"
                     v-model="deficForm.health_impact"
                     class="select-input"
                   >
-                    <option value="NONE">
-                      None (No patient impact)
-                    </option>
+                    <option value="NONE">None (No patient impact)</option>
                     <option value="MILD_TRANSIENT">
                       Mild Transient Discomfort
                     </option>
@@ -601,16 +596,16 @@
                     <option value="LIFE_THREATENING">
                       Life-Threatening Incident
                     </option>
-                    <option value="DEATH">
-                      Patient Death
-                    </option>
+                    <option value="DEATH">Patient Death</option>
                   </select>
                 </div>
               </div>
             </div>
 
             <div class="form-group">
-              <label for="defic-desc-input">Deficiency Verbatim Narrative &amp; Clinical Context:</label>
+              <label for="defic-desc-input"
+                >Deficiency Verbatim Narrative &amp; Clinical Context:</label
+              >
               <textarea
                 id="defic-desc-input"
                 v-model="deficForm.deficiency_description"
@@ -627,9 +622,11 @@
                   <input
                     v-model="deficForm.device_returned_to_sponsor"
                     type="checkbox"
+                  />
+                  <span
+                    >Device Impounded &amp; Returned to Sponsor for Technical
+                    Investigation</span
                   >
-                  <span>Device Impounded &amp; Returned to Sponsor for Technical
-                    Investigation</span>
                 </label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
@@ -638,11 +635,13 @@
                   type="text"
                   class="text-input text-input-sm mt-2"
                   placeholder="Carrier Tracking Number (e.g. 1Z99999999999)"
-                >
+                />
               </div>
 
               <div class="form-group">
-                <label for="defic-action-select">Action Taken with Device:</label>
+                <label for="defic-action-select"
+                  >Action Taken with Device:</label
+                >
                 <select
                   id="defic-action-select"
                   v-model="deficForm.action_taken_device"
@@ -660,19 +659,17 @@
                   <option value="DISPOSED">
                     Disposed per Biohazard Protocol
                   </option>
-                  <option value="REPAIRED">
-                    Repaired on Site
-                  </option>
-                  <option value="NONE">
-                    No Action Taken
-                  </option>
+                  <option value="REPAIRED">Repaired on Site</option>
+                  <option value="NONE">No Action Taken</option>
                 </select>
               </div>
             </div>
 
             <!-- 21 CFR Part 11 Audit Field -->
             <div class="form-group signature-box">
-              <label for="defic-reason-input">21 CFR Part 11 Audit Justification (Reason for Change):</label>
+              <label for="defic-reason-input"
+                >21 CFR Part 11 Audit Justification (Reason for Change):</label
+              >
               <input
                 id="defic-reason-input"
                 v-model="deficForm.reason_for_change"
@@ -680,7 +677,7 @@
                 class="text-input"
                 placeholder="e.g. Formal investigator report of device malfunction during Visit 4"
                 required
-              >
+              />
             </div>
 
             <div class="form-actions-bar">
@@ -697,9 +694,7 @@
 
         <!-- Deficiencies History Table -->
         <div class="pane-card mt-4">
-          <h3 class="panel-title">
-            Reported Device Deficiencies Log
-          </h3>
+          <h3 class="panel-title">Reported Device Deficiencies Log</h3>
           <div class="table-responsive">
             <table class="data-table">
               <thead>
@@ -715,10 +710,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="defic in deficiencies"
-                  :key="defic.id"
-                >
+                <tr v-for="defic in deficiencies" :key="defic.id">
                   <td class="code-font cell-bold">
                     {{ defic.id.substring(0, 8) }}...
                   </td>
@@ -741,34 +733,25 @@
                     <span
                       v-if="defic.could_lead_to_sade"
                       class="badge badge-danger"
-                    >POTENTIAL SADE</span>
-                    <span
-                      v-else
-                      class="badge badge-neutral"
-                    >NON-CRITICAL</span>
+                      >POTENTIAL SADE</span
+                    >
+                    <span v-else class="badge badge-neutral">NON-CRITICAL</span>
                   </td>
                   <td class="code-font">
-                    <span
-                      v-if="defic.safety_case_id"
-                      class="case-link"
-                    >{{
+                    <span v-if="defic.safety_case_id" class="case-link">{{
                       defic.safety_case_id
                     }}</span>
-                    <span
-                      v-else
-                      class="text-muted"
-                    >None</span>
+                    <span v-else class="text-muted">None</span>
                   </td>
                   <td>
-                    <span class="status-pill danger">🔒 {{ defic.quarantine_scope }}</span>
+                    <span class="status-pill danger"
+                      >🔒 {{ defic.quarantine_scope }}</span
+                    >
                   </td>
                   <td>{{ formatDate(defic.incident_date) }}</td>
                 </tr>
                 <tr v-if="deficiencies.length === 0">
-                  <td
-                    colspan="8"
-                    class="empty-cell"
-                  >
+                  <td colspan="8" class="empty-cell">
                     No device deficiencies reported for this study.
                   </td>
                 </tr>
@@ -796,10 +779,12 @@
                 compromised devices.
               </p>
             </div>
-            <span class="badge badge-danger">{{
-              quarantines.filter((q) => q.status === "ACTIVE").length
-            }}
-              Active Lockdowns</span>
+            <span class="badge badge-danger"
+              >{{
+                quarantines.filter((q) => q.status === "ACTIVE").length
+              }}
+              Active Lockdowns</span
+            >
           </div>
 
           <div class="table-responsive">
@@ -829,7 +814,9 @@
                     <span class="badge badge-scope">{{ q.scope }}</span>
                   </td>
                   <td class="code-font">
-                    <span v-if="q.serial_number">SN: {{ q.serial_number }}</span>
+                    <span v-if="q.serial_number"
+                      >SN: {{ q.serial_number }}</span
+                    >
                     <span v-if="q.lot_number">Lot: {{ q.lot_number }}</span>
                   </td>
                   <td class="reason-cell">
@@ -855,19 +842,13 @@
                     >
                       Release Quarantine
                     </button>
-                    <span
-                      v-else
-                      class="sub-text text-success"
-                    >
+                    <span v-else class="sub-text text-success">
                       ✓ Released by {{ q.released_by }}
                     </span>
                   </td>
                 </tr>
                 <tr v-if="quarantines.length === 0">
-                  <td
-                    colspan="8"
-                    class="empty-cell"
-                  >
+                  <td colspan="8" class="empty-cell">
                     No quarantine records found.
                   </td>
                 </tr>
@@ -888,7 +869,9 @@
                 Physician e-signature signoff.
               </p>
             </div>
-            <span class="badge badge-audit">Expedited Vigilance Clock Active</span>
+            <span class="badge badge-audit"
+              >Expedited Vigilance Clock Active</span
+            >
           </div>
 
           <div class="safety-cases-grid">
@@ -908,7 +891,8 @@
                   }}</span>
                   <span
                     :class="['badge', getSafetyBadgeClass(sc.classification)]"
-                  >{{ sc.classification }}</span>
+                    >{{ sc.classification }}</span
+                  >
                 </div>
                 <div
                   class="countdown-badge"
@@ -922,11 +906,15 @@
               <div class="sc-details">
                 <div class="sc-detail-row">
                   <span class="sc-k">Device:</span>
-                  <span class="sc-v"><strong>{{ sc.device_name }}</strong></span>
+                  <span class="sc-v"
+                    ><strong>{{ sc.device_name }}</strong></span
+                  >
                 </div>
                 <div class="sc-detail-row">
                   <span class="sc-k">UDI-DI / Lot:</span>
-                  <span class="sc-v code-font">{{ sc.device_udi_di }} | Lot {{ sc.lot_number }}</span>
+                  <span class="sc-v code-font"
+                    >{{ sc.device_udi_di }} | Lot {{ sc.lot_number }}</span
+                  >
                 </div>
                 <div class="sc-detail-row">
                   <span class="sc-k">Causality Assessment:</span>
@@ -934,9 +922,11 @@
                 </div>
                 <div class="sc-detail-row">
                   <span class="sc-k">Vigilance Deadline:</span>
-                  <span class="sc-v">{{ sc.vigilance_deadline_days }} calendar days ({{
-                    formatDate(sc.vigilance_due_date)
-                  }})</span>
+                  <span class="sc-v"
+                    >{{ sc.vigilance_deadline_days }} calendar days ({{
+                      formatDate(sc.vigilance_due_date)
+                    }})</span
+                  >
                 </div>
                 <div class="sc-detail-row">
                   <span class="sc-k">Status:</span>
@@ -945,7 +935,8 @@
                       'status-pill',
                       sc.status === 'RESOLVED' ? 'success' : 'warning',
                     ]"
-                  >{{ sc.status }}</span>
+                    >{{ sc.status }}</span
+                  >
                 </div>
               </div>
 
@@ -1006,13 +997,8 @@
             <!-- Left: SDTM DD Preview -->
             <div class="export-box">
               <div class="box-header">
-                <h4 class="box-title">
-                  CDISC SDTM DD (Device Deficiencies)
-                </h4>
-                <button
-                  class="btn btn-sm btn-secondary"
-                  @click="exportSdtmDD"
-                >
+                <h4 class="box-title">CDISC SDTM DD (Device Deficiencies)</h4>
+                <button class="btn btn-sm btn-secondary" @click="exportSdtmDD">
                   Export DD (.json)
                 </button>
               </div>
@@ -1027,10 +1013,7 @@
                 <h4 class="box-title">
                   CDISC SDTM DO (Device Tracking &amp; Operations)
                 </h4>
-                <button
-                  class="btn btn-sm btn-secondary"
-                  @click="exportSdtmDO"
-                >
+                <button class="btn btn-sm btn-secondary" @click="exportSdtmDO">
                   Export DO (.json)
                 </button>
               </div>
@@ -1046,10 +1029,7 @@
               <h4 class="panel-title">
                 🇪🇺 EU MDR 2017/745 Manufacturer Incident Report (MIR v7.2 XML)
               </h4>
-              <button
-                class="btn btn-sm btn-secondary"
-                @click="copyMirXml"
-              >
+              <button class="btn btn-sm btn-secondary" @click="copyMirXml">
                 📋 Copy XML
               </button>
             </div>
@@ -1069,9 +1049,7 @@
       aria-modal="true"
     >
       <div class="modal-card">
-        <h3 class="modal-title">
-          Dispense Investigational Device to Subject
-        </h3>
+        <h3 class="modal-title">Dispense Investigational Device to Subject</h3>
         <p class="modal-subtitle">
           Device: <strong>{{ activeModalDevice?.brand_name }}</strong> (SN:
           {{ activeModalDevice?.serial_number }})
@@ -1086,32 +1064,28 @@
             class="text-input"
             placeholder="e.g. SUBJ-101-0042"
             required
-          >
+          />
         </div>
 
         <div class="form-group">
-          <label for="modal-dispense-reason">Reason for Change (21 CFR Part 11):</label>
+          <label for="modal-dispense-reason"
+            >Reason for Change (21 CFR Part 11):</label
+          >
           <input
             id="modal-dispense-reason"
             v-model="dispenseForm.reason_for_change"
             type="text"
             class="text-input"
             required
-          >
+          />
         </div>
 
-        <div
-          v-if="dispenseError"
-          class="alert-danger-box"
-        >
+        <div v-if="dispenseError" class="alert-danger-box">
           ⚠️ {{ dispenseError }}
         </div>
 
         <div class="modal-actions">
-          <button
-            class="btn btn-secondary"
-            @click="showDispenseModal = false"
-          >
+          <button class="btn btn-secondary" @click="showDispenseModal = false">
             Cancel
           </button>
           <button
@@ -1133,9 +1107,7 @@
       aria-modal="true"
     >
       <div class="modal-card">
-        <h3 class="modal-title text-danger">
-          ⚠️ Initiate Device Quarantine
-        </h3>
+        <h3 class="modal-title text-danger">⚠️ Initiate Device Quarantine</h3>
         <p class="modal-subtitle">
           Target: <strong>{{ activeModalDevice?.brand_name }}</strong> (Lot:
           {{ activeModalDevice?.lot_number }})
@@ -1154,14 +1126,14 @@
             <option value="SITE_LOT">
               All Devices in Lot at This Site ({{ siteId || "SITE-101" }})
             </option>
-            <option value="STUDY_GLOBAL_LOT">
-              Global Study Lot Lockdown
-            </option>
+            <option value="STUDY_GLOBAL_LOT">Global Study Lot Lockdown</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label for="modal-quar-reason">Quarantine Justification &amp; Failure Mode:</label>
+          <label for="modal-quar-reason"
+            >Quarantine Justification &amp; Failure Mode:</label
+          >
           <textarea
             id="modal-quar-reason"
             v-model="quarForm.reason"
@@ -1198,15 +1170,15 @@
       aria-modal="true"
     >
       <div class="modal-card">
-        <h3 class="modal-title">
-          🔓 Release Device Quarantine
-        </h3>
+        <h3 class="modal-title">🔓 Release Device Quarantine</h3>
         <p class="modal-subtitle">
           Quarantine ID: {{ activeModalQuarantine?.id }}
         </p>
 
         <div class="form-group mt-3">
-          <label for="modal-rel-just">Engineering / QA Release Justification:</label>
+          <label for="modal-rel-just"
+            >Engineering / QA Release Justification:</label
+          >
           <textarea
             id="modal-rel-just"
             v-model="releaseForm.justification"
@@ -1218,7 +1190,9 @@
         </div>
 
         <div class="form-group">
-          <label for="modal-rel-sig">21 CFR Part 11 Electronic Signature Token:</label>
+          <label for="modal-rel-sig"
+            >21 CFR Part 11 Electronic Signature Token:</label
+          >
           <input
             id="modal-rel-sig"
             v-model="releaseForm.signature_token"
@@ -1226,22 +1200,19 @@
             class="text-input"
             placeholder="Enter authorized signature key / token..."
             required
-          >
+          />
         </div>
 
         <div class="modal-actions">
-          <button
-            class="btn btn-secondary"
-            @click="showReleaseModal = false"
-          >
+          <button class="btn btn-secondary" @click="showReleaseModal = false">
             Cancel
           </button>
           <button
             class="btn btn-primary"
             :disabled="
               !releaseForm.justification ||
-                !releaseForm.signature_token ||
-                isSubmitting
+              !releaseForm.signature_token ||
+              isSubmitting
             "
             @click="executeReleaseQuarantine"
           >
@@ -1259,9 +1230,7 @@
       aria-modal="true"
     >
       <div class="modal-card">
-        <h3 class="modal-title">
-          ✍️ Safety Physician Formal Adjudication
-        </h3>
+        <h3 class="modal-title">✍️ Safety Physician Formal Adjudication</h3>
         <p class="modal-subtitle">
           Case: {{ activeModalCase?.case_number }} | Device:
           {{ activeModalCase?.device_name }}
@@ -1278,9 +1247,7 @@
               <option value="ADE">
                 Adverse Device Effect (ADE - Non-Serious)
               </option>
-              <option value="SADE">
-                Serious Adverse Device Effect (SADE)
-              </option>
+              <option value="SADE">Serious Adverse Device Effect (SADE)</option>
               <option value="USADE">
                 Unanticipated Serious Adverse Device Effect (USADE)
               </option>
@@ -1291,36 +1258,28 @@
           </div>
 
           <div class="form-group">
-            <label for="modal-adj-causality">Causal Relationship Assessment:</label>
+            <label for="modal-adj-causality"
+              >Causal Relationship Assessment:</label
+            >
             <select
               id="modal-adj-causality"
               v-model="adjudicateForm.causality"
               class="select-input"
             >
-              <option value="CERTAIN">
-                Certain
-              </option>
-              <option value="PROBABLE">
-                Probable
-              </option>
-              <option value="POSSIBLE">
-                Possible
-              </option>
-              <option value="UNLIKELY">
-                Unlikely
-              </option>
-              <option value="NOT_RELATED">
-                Not Related
-              </option>
-              <option value="UNASSESSABLE">
-                Unassessable
-              </option>
+              <option value="CERTAIN">Certain</option>
+              <option value="PROBABLE">Probable</option>
+              <option value="POSSIBLE">Possible</option>
+              <option value="UNLIKELY">Unlikely</option>
+              <option value="NOT_RELATED">Not Related</option>
+              <option value="UNASSESSABLE">Unassessable</option>
             </select>
           </div>
         </div>
 
         <div class="form-group">
-          <label for="modal-adj-notes">Safety Physician Assessment Notes:</label>
+          <label for="modal-adj-notes"
+            >Safety Physician Assessment Notes:</label
+          >
           <textarea
             id="modal-adj-notes"
             v-model="adjudicateForm.notes"
@@ -1332,23 +1291,19 @@
 
         <div class="form-grid-2">
           <label class="checkbox-label">
-            <input
-              v-model="adjudicateForm.capa_required"
-              type="checkbox"
-            >
+            <input v-model="adjudicateForm.capa_required" type="checkbox" />
             <span>CAPA Initiation Required</span>
           </label>
           <label class="checkbox-label">
-            <input
-              v-model="adjudicateForm.fsca_required"
-              type="checkbox"
-            >
+            <input v-model="adjudicateForm.fsca_required" type="checkbox" />
             <span>Field Safety Corrective Action (FSCA)</span>
           </label>
         </div>
 
         <div class="form-group mt-3">
-          <label for="modal-adj-sig">Safety Physician Electronic Signature:</label>
+          <label for="modal-adj-sig"
+            >Safety Physician Electronic Signature:</label
+          >
           <input
             id="modal-adj-sig"
             v-model="adjudicateForm.signature_token"
@@ -1356,7 +1311,7 @@
             class="text-input"
             placeholder="Enter e-signature credential..."
             required
-          >
+          />
         </div>
 
         <div class="modal-actions">

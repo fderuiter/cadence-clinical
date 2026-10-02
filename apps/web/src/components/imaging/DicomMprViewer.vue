@@ -3,36 +3,24 @@
     <!-- Viewer Toolbar -->
     <div class="mpr-toolbar">
       <div class="toolbar-group">
-        <label
-          for="layout-mode-select"
-          class="toolbar-label"
-        >Layout:</label>
+        <label for="layout-mode-select" class="toolbar-label">Layout:</label>
         <select
           id="layout-mode-select"
           v-model="layoutMode"
           class="toolbar-select"
           aria-label="Viewport Layout Mode"
         >
-          <option value="mpr-tri-view">
-            MPR Tri-View (Axial / Sag / Cor)
-          </option>
-          <option value="axial-only">
-            Axial View Only
-          </option>
-          <option value="sagittal-only">
-            Sagittal View Only
-          </option>
-          <option value="coronal-only">
-            Coronal View Only
-          </option>
+          <option value="mpr-tri-view">MPR Tri-View (Axial / Sag / Cor)</option>
+          <option value="axial-only">Axial View Only</option>
+          <option value="sagittal-only">Sagittal View Only</option>
+          <option value="coronal-only">Coronal View Only</option>
         </select>
       </div>
 
       <div class="toolbar-group">
-        <label
-          for="window-preset-select"
-          class="toolbar-label"
-        >W/L Preset:</label>
+        <label for="window-preset-select" class="toolbar-label"
+          >W/L Preset:</label
+        >
         <select
           id="window-preset-select"
           v-model="selectedPreset"
@@ -40,24 +28,12 @@
           aria-label="Window Level Preset"
           @change="applyWindowPreset"
         >
-          <option value="SOFT_TISSUE">
-            Soft Tissue (W:350 L:40)
-          </option>
-          <option value="LUNG">
-            Lung (W:1500 L:-600)
-          </option>
-          <option value="BONE">
-            Bone (W:2000 L:400)
-          </option>
-          <option value="BRAIN">
-            Brain (W:80 L:40)
-          </option>
-          <option value="LIVER">
-            Liver (W:150 L:30)
-          </option>
-          <option value="CUSTOM">
-            Custom
-          </option>
+          <option value="SOFT_TISSUE">Soft Tissue (W:350 L:40)</option>
+          <option value="LUNG">Lung (W:1500 L:-600)</option>
+          <option value="BONE">Bone (W:2000 L:400)</option>
+          <option value="BRAIN">Brain (W:80 L:40)</option>
+          <option value="LIVER">Liver (W:150 L:30)</option>
+          <option value="CUSTOM">Custom</option>
         </select>
       </div>
 
@@ -107,18 +83,19 @@
     </div>
 
     <!-- Viewports Canvas Grid -->
-    <div
-      class="viewports-grid"
-      :class="layoutMode"
-    >
+    <div class="viewports-grid" :class="layoutMode">
       <!-- Axial Viewport -->
       <div
         v-if="layoutMode === 'mpr-tri-view' || layoutMode === 'axial-only'"
         class="viewport-card axial-card"
       >
         <div class="viewport-header">
-          <span class="plane-badge axial-badge">AXIAL (Z: {{ axialSlice + 1 }} / {{ maxSlices }})</span>
-          <span class="slice-loc-label">Loc: {{ (axialSlice * 2.5).toFixed(1) }} mm</span>
+          <span class="plane-badge axial-badge"
+            >AXIAL (Z: {{ axialSlice + 1 }} / {{ maxSlices }})</span
+          >
+          <span class="slice-loc-label"
+            >Loc: {{ (axialSlice * 2.5).toFixed(1) }} mm</span
+          >
         </div>
         <div class="canvas-wrapper">
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -144,7 +121,7 @@
             :max="maxSlices - 1"
             class="slice-slider"
             aria-label="Axial Slice Navigator"
-          >
+          />
         </div>
       </div>
 
@@ -154,7 +131,9 @@
         class="viewport-card sagittal-card"
       >
         <div class="viewport-header">
-          <span class="plane-badge sagittal-badge">SAGITTAL (X: {{ sagittalSlice + 1 }} / 512)</span>
+          <span class="plane-badge sagittal-badge"
+            >SAGITTAL (X: {{ sagittalSlice + 1 }} / 512)</span
+          >
           <span class="slice-loc-label">Reconstructed</span>
         </div>
         <div class="canvas-wrapper">
@@ -181,7 +160,7 @@
             max="511"
             class="slice-slider"
             aria-label="Sagittal Slice Navigator"
-          >
+          />
         </div>
       </div>
 
@@ -191,7 +170,9 @@
         class="viewport-card coronal-card"
       >
         <div class="viewport-header">
-          <span class="plane-badge coronal-badge">CORONAL (Y: {{ coronalSlice + 1 }} / 512)</span>
+          <span class="plane-badge coronal-badge"
+            >CORONAL (Y: {{ coronalSlice + 1 }} / 512)</span
+          >
           <span class="slice-loc-label">Reconstructed</span>
         </div>
         <div class="canvas-wrapper">
@@ -218,7 +199,7 @@
             max="511"
             class="slice-slider"
             aria-label="Coronal Slice Navigator"
-          >
+          />
         </div>
       </div>
     </div>

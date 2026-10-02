@@ -1,10 +1,7 @@
 <template>
   <div class="documents-hub-layout">
     <!-- Left Navigation Panel: Folder Tree -->
-    <aside
-      class="hub-sidebar"
-      aria-label="Clinical Folder Tree"
-    >
+    <aside class="hub-sidebar" aria-label="Clinical Folder Tree">
       <DocumentsFolderTree
         :studies-tree="fileshareStore.filteredStudiesTree"
         :initial-study-id="initialStudyId"
@@ -13,16 +10,11 @@
     </aside>
 
     <!-- Main Workspace: Search Bar, Toolbar & Documents Grid -->
-    <main
-      class="hub-content-area"
-      aria-label="Documents Grid Workspace"
-    >
+    <main class="hub-content-area" aria-label="Documents Grid Workspace">
       <!-- Top Action Bar -->
       <div class="hub-header-bar">
         <div class="header-left-col">
-          <h2 class="hub-page-title">
-            Documents Hub
-          </h2>
+          <h2 class="hub-page-title">Documents Hub</h2>
           <p class="hub-page-subtitle">
             Cross-study unified clinical fileshare, protected media viewer &amp;
             permission delegation vault
@@ -58,7 +50,7 @@
               class="hub-search-input"
               aria-label="Search all documents"
               @input="onSearchInput"
-            >
+            />
             <button
               v-if="searchInput"
               class="clear-search-btn"
@@ -72,10 +64,7 @@
       </div>
 
       <!-- CRA Quality Control Review Queue Panel -->
-      <CraQcQueue
-        v-if="showQcQueue"
-        style="margin-bottom: 20px"
-      />
+      <CraQcQueue v-if="showQcQueue" style="margin-bottom: 20px" />
 
       <!-- Active Filters & Bulk Actions Ribbon -->
       <div class="hub-filter-ribbon">
@@ -85,10 +74,7 @@
             class="filter-pill study-pill"
           >
             Study: <strong>{{ fileshareStore.activeFilters.studyId }}</strong>
-            <button
-              class="remove-pill-btn"
-              @click="clearFilter('studyId')"
-            >
+            <button class="remove-pill-btn" @click="clearFilter('studyId')">
               ×
             </button>
           </span>
@@ -98,10 +84,7 @@
             class="filter-pill site-pill"
           >
             Site: <strong>{{ fileshareStore.activeFilters.siteId }}</strong>
-            <button
-              class="remove-pill-btn"
-              @click="clearFilter('siteId')"
-            >
+            <button class="remove-pill-btn" @click="clearFilter('siteId')">
               ×
             </button>
           </span>
@@ -111,10 +94,7 @@
             class="filter-pill zone-pill"
           >
             Zone: <strong>{{ fileshareStore.activeFilters.zoneCode }}</strong>
-            <button
-              class="remove-pill-btn"
-              @click="clearFilter('zoneCode')"
-            >
+            <button class="remove-pill-btn" @click="clearFilter('zoneCode')">
               ×
             </button>
           </span>
@@ -125,10 +105,7 @@
           >
             Section:
             <strong>{{ fileshareStore.activeFilters.sectionCode }}</strong>
-            <button
-              class="remove-pill-btn"
-              @click="clearFilter('sectionCode')"
-            >
+            <button class="remove-pill-btn" @click="clearFilter('sectionCode')">
               ×
             </button>
           </span>
@@ -143,10 +120,7 @@
         </div>
 
         <!-- Bulk Selection Action Ribbon -->
-        <div
-          v-if="selectedFiles.length > 0"
-          class="bulk-actions-toolbar"
-        >
+        <div v-if="selectedFiles.length > 0" class="bulk-actions-toolbar">
           <span class="selection-count-badge">
             ✓ {{ selectedFiles.length }} Selected
           </span>
@@ -177,74 +151,51 @@
                   :indeterminate="isPartiallySelected"
                   aria-label="Select all visible documents"
                   @change="toggleSelectAll"
-                >
+                />
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('filename')"
-              >
+              <th class="sortable-th" @click="setSort('filename')">
                 Name
                 <span class="sort-indicator">{{
                   getSortIndicator("filename")
                 }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('study_id')"
-              >
+              <th class="sortable-th" @click="setSort('study_id')">
                 Study
                 <span class="sort-indicator">{{
                   getSortIndicator("study_id")
                 }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('site_id')"
-              >
+              <th class="sortable-th" @click="setSort('site_id')">
                 Site
                 <span class="sort-indicator">{{
                   getSortIndicator("site_id")
                 }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('uploaded_by')"
-              >
+              <th class="sortable-th" @click="setSort('uploaded_by')">
                 Uploaded By
                 <span class="sort-indicator">{{
                   getSortIndicator("uploaded_by")
                 }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('uploaded_at')"
-              >
+              <th class="sortable-th" @click="setSort('uploaded_at')">
                 Last Modified
                 <span class="sort-indicator">{{
                   getSortIndicator("uploaded_at")
                 }}</span>
               </th>
-              <th
-                class="sortable-th"
-                @click="setSort('status')"
-              >
+              <th class="sortable-th" @click="setSort('status')">
                 Status
                 <span class="sort-indicator">{{
                   getSortIndicator("status")
                 }}</span>
               </th>
               <th>Shared</th>
-              <th class="actions-th">
-                Actions
-              </th>
+              <th class="actions-th">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="paginatedDocuments.length === 0">
-              <td
-                colspan="9"
-                class="empty-grid-cell"
-              >
+              <td colspan="9" class="empty-grid-cell">
                 <div class="empty-state-box">
                   <span class="empty-state-icon">📂</span>
                   <h4>
@@ -265,39 +216,26 @@
               :class="{ 'row-selected': isFileSelected(file.id) }"
             >
               <!-- Multi-select Checkbox -->
-              <td
-                class="checkbox-col"
-                @click.stop
-              >
+              <td class="checkbox-col" @click.stop>
                 <input
                   type="checkbox"
                   :checked="isFileSelected(file.id)"
                   :aria-label="'Select document ' + file.filename"
                   @change="fileshareStore.toggleFileSelection(file.id)"
-                >
+                />
               </td>
 
               <!-- File Name & MIME Icon -->
-              <td
-                class="filename-col"
-                @click="openPreview(file)"
-              >
-                <span
-                  class="mime-icon"
-                  :title="file.mime_type"
-                >{{
+              <td class="filename-col" @click="openPreview(file)">
+                <span class="mime-icon" :title="file.mime_type">{{
                   getMimeIcon(file)
                 }}</span>
-                <span
-                  class="filename-text"
-                  :title="file.filename"
-                >{{
+                <span class="filename-text" :title="file.filename">{{
                   file.filename
                 }}</span>
-                <span
-                  v-if="file.version_index > 1"
-                  class="version-pill"
-                >v{{ file.version_index }}.0</span>
+                <span v-if="file.version_index > 1" class="version-pill"
+                  >v{{ file.version_index }}.0</span
+                >
               </td>
 
               <!-- Study ID -->
@@ -307,16 +245,10 @@
 
               <!-- Site ID -->
               <td>
-                <span
-                  v-if="file.site_id"
-                  class="site-badge"
-                >{{
+                <span v-if="file.site_id" class="site-badge">{{
                   file.site_id
                 }}</span>
-                <span
-                  v-else
-                  class="text-muted"
-                >Global</span>
+                <span v-else class="text-muted">Global</span>
               </td>
 
               <!-- Uploaded By -->
@@ -373,10 +305,7 @@
               </td>
 
               <!-- Action Buttons -->
-              <td
-                class="actions-cell"
-                @click.stop
-              >
+              <td class="actions-cell" @click.stop>
                 <div class="action-btn-group">
                   <button
                     class="btn btn-sm btn-outline-primary btn-preview-action"
@@ -423,10 +352,7 @@
       </div>
 
       <!-- Pagination Footer -->
-      <div
-        v-if="totalItems > 0"
-        class="hub-pagination-bar"
-      >
+      <div v-if="totalItems > 0" class="hub-pagination-bar">
         <div class="pagination-info">
           Showing
           <span class="font-bold">{{

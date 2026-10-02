@@ -1,11 +1,7 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div
-    v-if="isOpen"
-    class="modal-backdrop"
-    @click.self="close"
-  >
+  <div v-if="isOpen" class="modal-backdrop" @click.self="close">
     <div
       class="modal-dialog ticket-sign-modal"
       role="dialog"
@@ -13,14 +9,9 @@
       aria-labelledby="sign-modal-title"
     >
       <div class="modal-header">
-        <div class="modal-header-icon">
-          ✍️
-        </div>
+        <div class="modal-header-icon">✍️</div>
         <div>
-          <h3
-            id="sign-modal-title"
-            class="modal-title"
-          >
+          <h3 id="sign-modal-title" class="modal-title">
             21 CFR Part 11 Electronic Signature
           </h3>
           <p class="modal-subtitle">
@@ -55,7 +46,7 @@
             :value="currentUser"
             readonly
             disabled
-          >
+          />
         </div>
 
         <div class="form-group">
@@ -68,20 +59,15 @@
             :value="currentRole"
             readonly
             disabled
-          >
+          />
         </div>
 
         <div class="form-group">
-          <label
-            for="signature-meaning"
-            class="form-label"
-          >Signature Meaning / Intent
-            <span class="text-danger">*</span></label>
-          <select
-            id="signature-meaning"
-            v-model="meaning"
-            class="form-control"
+          <label for="signature-meaning" class="form-label"
+            >Signature Meaning / Intent
+            <span class="text-danger">*</span></label
           >
+          <select id="signature-meaning" v-model="meaning" class="form-control">
             <option
               value="I approve the clinical assessment and corrective medical action."
             >
@@ -108,11 +94,10 @@
         </div>
 
         <div class="form-group">
-          <label
-            for="signature-password"
-            class="form-label"
-          >Re-Authenticate Password / Security Token
-            <span class="text-danger">*</span></label>
+          <label for="signature-password" class="form-label"
+            >Re-Authenticate Password / Security Token
+            <span class="text-danger">*</span></label
+          >
           <input
             id="signature-password"
             v-model="password"
@@ -121,13 +106,10 @@
             placeholder="Enter your user password to confirm identity"
             autocomplete="current-password"
             @keyup.enter="handleSign"
-          >
+          />
         </div>
 
-        <div
-          v-if="errorMessage"
-          class="error-banner"
-        >
+        <div v-if="errorMessage" class="error-banner">
           ⚠️ {{ errorMessage }}
         </div>
       </div>
@@ -147,10 +129,7 @@
           :disabled="loading || !password.trim()"
           @click="handleSign"
         >
-          <span
-            v-if="loading"
-            class="spinner"
-          />
+          <span v-if="loading" class="spinner" />
           <span v-else>✍️ Sign &amp; Authorize</span>
         </button>
       </div>

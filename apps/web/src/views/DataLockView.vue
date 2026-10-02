@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-datalock"
-    class="dashboard-section active"
-  >
+  <div id="section-datalock" class="dashboard-section active">
     <!-- Header -->
     <div class="section-header">
       <div class="header-content-group">
@@ -11,9 +8,7 @@
           <span class="badge badge-regulatory">GxP Lock Governance</span>
           <span class="badge badge-standard">6-Tier Hierarchical Gating</span>
         </div>
-        <h2 class="view-title">
-          Granular Data Lock &amp; Freeze Console
-        </h2>
+        <h2 class="view-title">Granular Data Lock &amp; Freeze Console</h2>
         <p class="view-subtitle">
           Manage regulatory lock governance across Study, Site, Subject, Visit,
           Form, and Field scopes. Enforces multi-tier hierarchical inheritance,
@@ -35,55 +30,37 @@
     <!-- Quick Stats Cards Grid -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon locked-icon">
-          🔒
-        </div>
+        <div class="stat-icon locked-icon">🔒</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ activeLocksCount }}
           </div>
-          <div class="stat-label">
-            Active Hard Locks
-          </div>
+          <div class="stat-label">Active Hard Locks</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon frozen-icon">
-          ❄️
-        </div>
+        <div class="stat-icon frozen-icon">❄️</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ frozenScopesCount }}
           </div>
-          <div class="stat-label">
-            Frozen Monitoring Scopes
-          </div>
+          <div class="stat-label">Frozen Monitoring Scopes</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon unlocked-icon">
-          🔓
-        </div>
+        <div class="stat-icon unlocked-icon">🔓</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ unlockedEventsCount }}
           </div>
-          <div class="stat-label">
-            Audit Unlock Overrides
-          </div>
+          <div class="stat-label">Audit Unlock Overrides</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon tree-icon">
-          🌳
-        </div>
+        <div class="stat-icon tree-icon">🌳</div>
         <div class="stat-details">
-          <div class="stat-value">
-            6 Tiers
-          </div>
-          <div class="stat-label">
-            Inheritance Depth
-          </div>
+          <div class="stat-value">6 Tiers</div>
+          <div class="stat-label">Inheritance Depth</div>
         </div>
       </div>
     </div>
@@ -103,23 +80,17 @@
               type="text"
               class="form-input search-tree-input"
               placeholder="Filter nodes..."
-            >
+            />
           </div>
         </div>
 
         <div class="tree-container">
-          <div
-            v-if="isLoading"
-            class="tree-loading-state"
-          >
+          <div v-if="isLoading" class="tree-loading-state">
             <div class="spinner" />
             <span>Loading lock hierarchy...</span>
           </div>
 
-          <div
-            v-else
-            class="tree-root"
-          >
+          <div v-else class="tree-root">
             <!-- Study Level Node -->
             <div class="tree-node study-node">
               <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -173,10 +144,7 @@
               </div>
 
               <!-- Sites List -->
-              <div
-                v-if="studyTree.expanded"
-                class="tree-children"
-              >
+              <div v-if="studyTree.expanded" class="tree-children">
                 <div
                   v-for="site in filteredSites"
                   :key="site.id"
@@ -233,10 +201,7 @@
                   </div>
 
                   <!-- Subjects List -->
-                  <div
-                    v-if="site.expanded"
-                    class="tree-children"
-                  >
+                  <div v-if="site.expanded" class="tree-children">
                     <div
                       v-for="subject in site.subjects"
                       :key="subject.id"
@@ -285,10 +250,7 @@
                       </div>
 
                       <!-- Visits List -->
-                      <div
-                        v-if="subject.expanded"
-                        class="tree-children"
-                      >
+                      <div v-if="subject.expanded" class="tree-children">
                         <div
                           v-for="visit in subject.visits"
                           :key="visit.id"
@@ -337,10 +299,7 @@
                           </div>
 
                           <!-- Forms List -->
-                          <div
-                            v-if="visit.expanded"
-                            class="tree-children"
-                          >
+                          <div v-if="visit.expanded" class="tree-children">
                             <div
                               v-for="form in visit.forms"
                               :key="form.id"
@@ -393,10 +352,7 @@
                               </div>
 
                               <!-- Fields List -->
-                              <div
-                                v-if="form.expanded"
-                                class="tree-children"
-                              >
+                              <div v-if="form.expanded" class="tree-children">
                                 <div
                                   v-for="field in form.fields"
                                   :key="field.id"
@@ -464,18 +420,12 @@
           <h3 class="card-title">
             <span class="title-icon">🔍</span> Scope Governance Inspector
           </h3>
-          <span
-            v-if="selectedNode"
-            class="scope-type-pill"
-          >
+          <span v-if="selectedNode" class="scope-type-pill">
             {{ selectedNode.type }} Level
           </span>
         </div>
 
-        <div
-          v-if="!selectedNode"
-          class="empty-selection-state"
-        >
+        <div v-if="!selectedNode" class="empty-selection-state">
           <span class="empty-icon">👈</span>
           <h4>Select a Node from Hierarchy</h4>
           <p>
@@ -484,10 +434,7 @@
           </p>
         </div>
 
-        <div
-          v-else
-          class="inspection-body"
-        >
+        <div v-else class="inspection-body">
           <div
             class="scope-summary-banner"
             :class="selectedNode.status.toLowerCase()"
@@ -495,7 +442,7 @@
             <div class="banner-status-icon">
               {{
                 selectedNode.status === "LOCKED" ||
-                  selectedNode.status === "HARD_LOCK"
+                selectedNode.status === "HARD_LOCK"
                   ? "🔒"
                   : selectedNode.status === "FROZEN"
                     ? "❄️"
@@ -515,25 +462,27 @@
 
           <!-- Hierarchy Inheritance Info -->
           <div class="info-group">
-            <h5 class="info-group-title">
-              Hierarchical Inheritance Chain
-            </h5>
+            <h5 class="info-group-title">Hierarchical Inheritance Chain</h5>
             <div class="inheritance-breadcrumbs">
               <span class="crumb">Study: {{ studyTree.id }}</span>
               <span class="crumb-arrow">&gt;</span>
-              <span class="crumb">Site: {{ selectedNode.site_id || "Inherited" }}</span>
+              <span class="crumb"
+                >Site: {{ selectedNode.site_id || "Inherited" }}</span
+              >
               <span class="crumb-arrow">&gt;</span>
-              <span class="crumb">Subject: {{ selectedNode.subject_id || "Inherited" }}</span>
+              <span class="crumb"
+                >Subject: {{ selectedNode.subject_id || "Inherited" }}</span
+              >
               <span class="crumb-arrow">&gt;</span>
-              <span class="crumb">Form: {{ selectedNode.form_id || "Inherited" }}</span>
+              <span class="crumb"
+                >Form: {{ selectedNode.form_id || "Inherited" }}</span
+              >
             </div>
           </div>
 
           <!-- Action Buttons Area -->
           <div class="action-panel">
-            <h5 class="info-group-title">
-              Governance Operations
-            </h5>
+            <h5 class="info-group-title">Governance Operations</h5>
             <div class="action-btn-row">
               <button
                 v-if="selectedNode.status === 'UNLOCKED'"
@@ -561,9 +510,7 @@
 
           <!-- Active Lock Records Table for this Scope -->
           <div class="active-records-section">
-            <h5 class="info-group-title">
-              Scope Audit Records
-            </h5>
+            <h5 class="info-group-title">Scope Audit Records</h5>
             <div class="table-responsive">
               <table class="table audit-table">
                 <thead>
@@ -577,10 +524,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
-                    v-for="rec in matchingRecords"
-                    :key="rec.lock_id"
-                  >
+                  <tr v-for="rec in matchingRecords" :key="rec.lock_id">
                     <td>
                       <code>{{ rec.lock_id }}</code>
                     </td>
@@ -600,10 +544,7 @@
                     <td>{{ formatDate(rec.created_at || rec.locked_at) }}</td>
                   </tr>
                   <tr v-if="matchingRecords.length === 0">
-                    <td
-                      colspan="6"
-                      class="text-center text-muted"
-                    >
+                    <td colspan="6" class="text-center text-muted">
                       No active data locks recorded for this specific scope
                       node.
                     </td>
@@ -633,10 +574,7 @@
                 : "🔒 Execute Cryptographic Hard Lock"
             }}
           </h3>
-          <button
-            class="modal-close-btn"
-            @click="isLockModalOpen = false"
-          >
+          <button class="modal-close-btn" @click="isLockModalOpen = false">
             &times;
           </button>
         </div>
@@ -645,7 +583,8 @@
             <p>
               <strong>Target Scope:</strong> {{ lockForm.scope_type }} (<code>{{
                 lockForm.scope_id
-              }}</code>)
+              }}</code
+              >)
             </p>
             <p><strong>Study ID:</strong> {{ lockForm.study_id }}</p>
           </div>
@@ -655,11 +594,7 @@
             <label class="form-label">Lock Mode:</label>
             <div class="radio-row">
               <label class="radio-label">
-                <input
-                  v-model="lockForm.action"
-                  type="radio"
-                  value="FREEZE"
-                >
+                <input v-model="lockForm.action" type="radio" value="FREEZE" />
                 <span>FREEZE (Monitoring Hold)</span>
               </label>
               <label class="radio-label">
@@ -667,25 +602,24 @@
                   v-model="lockForm.action"
                   type="radio"
                   value="HARD_LOCK"
-                >
+                />
                 <span>HARD_LOCK (21 CFR Part 11 Seal)</span>
               </label>
             </div>
           </div>
 
-          <div
-            v-if="lockForm.action === 'HARD_LOCK'"
-            class="form-group"
-          >
+          <div v-if="lockForm.action === 'HARD_LOCK'" class="form-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Step-Up Dual Signature Token (<code>X-Sig-Token</code>):</label>
+            <label class="form-label"
+              >Step-Up Dual Signature Token (<code>X-Sig-Token</code>):</label
+            >
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="lockForm.sig_token"
               type="password"
               class="form-input"
               placeholder="Enter re-authentication JWT or passkey token..."
-            >
+            />
             <small class="form-help">
               Required for Part 11 Hard Lock authorization.
             </small>
@@ -693,8 +627,10 @@
 
           <div class="form-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">GxP Reason for Change:
-              <span class="required-star">*</span></label>
+            <label class="form-label"
+              >GxP Reason for Change:
+              <span class="required-star">*</span></label
+            >
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="lockForm.reason"
@@ -705,10 +641,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="isLockModalOpen = false"
-          >
+          <button class="btn btn-secondary" @click="isLockModalOpen = false">
             Cancel
           </button>
           <button
@@ -733,10 +666,7 @@
       <div class="modal-card unlock-modal">
         <div class="modal-header">
           <h3>🔓 GxP Unlock Override Justification</h3>
-          <button
-            class="modal-close-btn"
-            @click="isUnlockModalOpen = false"
-          >
+          <button class="modal-close-btn" @click="isUnlockModalOpen = false">
             &times;
           </button>
         </div>
@@ -757,7 +687,8 @@
           <div class="modal-target-info">
             <p>
               <strong>Unlocking Scope:</strong>
-              {{ unlockForm.scope_type }} (<code>{{ unlockForm.scope_id }}</code>)
+              {{ unlockForm.scope_type }} (<code>{{ unlockForm.scope_id }}</code
+              >)
             </p>
           </div>
 
@@ -789,16 +720,10 @@
               >
                 {{ unlockForm.justification.length }} / 50 characters required
               </span>
-              <span
-                v-if="isJustificationValid"
-                class="counter-status valid"
-              >
+              <span v-if="isJustificationValid" class="counter-status valid">
                 ✓ Justification length criteria satisfied
               </span>
-              <span
-                v-else
-                class="counter-status invalid"
-              >
+              <span v-else class="counter-status invalid">
                 Minimum 50 characters required to unlock
               </span>
             </div>
@@ -808,10 +733,7 @@
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="form-label">GxP Reason for Change Code:</label>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select
-              v-model="unlockForm.reason_code"
-              class="form-select"
-            >
+            <select v-model="unlockForm.reason_code" class="form-select">
               <option value="CRA_QUERY_CORRECTION">
                 CRA Monitor Query Resolution
               </option>
@@ -828,10 +750,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="isUnlockModalOpen = false"
-          >
+          <button class="btn btn-secondary" @click="isUnlockModalOpen = false">
             Cancel
           </button>
           <button

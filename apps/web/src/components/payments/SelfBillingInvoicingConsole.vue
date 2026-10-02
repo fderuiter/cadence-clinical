@@ -40,48 +40,26 @@
     <!-- KPI Summary Cards -->
     <div class="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-label">
-          Total Invoices
-        </div>
+        <div class="kpi-label">Total Invoices</div>
         <div class="kpi-value">
           {{ invoices.length }}
         </div>
-        <div class="kpi-subtext">
-          Active Billing Records
-        </div>
+        <div class="kpi-subtext">Active Billing Records</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">
-          Total Gross Invoiced
-        </div>
-        <div class="kpi-value">
-          ${{ totalGrossSum.toFixed(2) }}
-        </div>
-        <div class="kpi-subtext">
-          Procedures &amp; Overheads
-        </div>
+        <div class="kpi-label">Total Gross Invoiced</div>
+        <div class="kpi-value">${{ totalGrossSum.toFixed(2) }}</div>
+        <div class="kpi-subtext">Procedures &amp; Overheads</div>
       </div>
       <div class="kpi-card kpi-warning">
-        <div class="kpi-label">
-          10% Holdback Reserves
-        </div>
-        <div class="kpi-value">
-          ${{ totalHoldbackSum.toFixed(2) }}
-        </div>
-        <div class="kpi-subtext">
-          Retained in Escrow
-        </div>
+        <div class="kpi-label">10% Holdback Reserves</div>
+        <div class="kpi-value">${{ totalHoldbackSum.toFixed(2) }}</div>
+        <div class="kpi-subtext">Retained in Escrow</div>
       </div>
       <div class="kpi-card kpi-success">
-        <div class="kpi-label">
-          Net Settlement Payable
-        </div>
-        <div class="kpi-value">
-          ${{ totalNetSum.toFixed(2) }}
-        </div>
-        <div class="kpi-subtext">
-          Disbursed / Reconciled
-        </div>
+        <div class="kpi-label">Net Settlement Payable</div>
+        <div class="kpi-value">${{ totalNetSum.toFixed(2) }}</div>
+        <div class="kpi-subtext">Disbursed / Reconciled</div>
       </div>
     </div>
 
@@ -95,7 +73,7 @@
           type="text"
           placeholder="e.g. STUDY-ONC-201"
           @input="onFilterChange"
-        >
+        />
       </div>
       <div class="filter-group">
         <label for="filter-site">Site ID</label>
@@ -105,7 +83,7 @@
           type="text"
           placeholder="e.g. SITE-101"
           @input="onFilterChange"
-        >
+        />
       </div>
       <div class="filter-group">
         <label for="filter-cycle">Cycle</label>
@@ -114,18 +92,10 @@
           v-model="filters.billingCycle"
           @change="onFilterChange"
         >
-          <option value="">
-            All Cycles
-          </option>
-          <option value="MONTHLY">
-            Monthly
-          </option>
-          <option value="QUARTERLY">
-            Quarterly
-          </option>
-          <option value="MANUAL">
-            Manual
-          </option>
+          <option value="">All Cycles</option>
+          <option value="MONTHLY">Monthly</option>
+          <option value="QUARTERLY">Quarterly</option>
+          <option value="MANUAL">Manual</option>
         </select>
       </div>
       <div class="filter-group">
@@ -135,21 +105,11 @@
           v-model="filters.status"
           @change="onFilterChange"
         >
-          <option value="">
-            All Statuses
-          </option>
-          <option value="DRAFT">
-            Draft
-          </option>
-          <option value="APPROVED">
-            Approved
-          </option>
-          <option value="PAID">
-            Paid
-          </option>
-          <option value="RECONCILED">
-            Reconciled
-          </option>
+          <option value="">All Statuses</option>
+          <option value="DRAFT">Draft</option>
+          <option value="APPROVED">Approved</option>
+          <option value="PAID">Paid</option>
+          <option value="RECONCILED">Reconciled</option>
         </select>
       </div>
       <div class="filter-actions">
@@ -165,16 +125,10 @@
 
     <!-- Invoices Table -->
     <main class="invoices-table-container card">
-      <div
-        v-if="isLoading"
-        class="loading-state"
-      >
+      <div v-if="isLoading" class="loading-state">
         <span class="spinner" /> Loading self-billing invoices...
       </div>
-      <div
-        v-else-if="invoices.length === 0"
-        class="empty-state"
-      >
+      <div v-else-if="invoices.length === 0" class="empty-state">
         <p>
           No self-billing invoices found matching the current filter criteria.
         </p>
@@ -186,38 +140,24 @@
           Compile First Billing Cycle
         </button>
       </div>
-      <div
-        v-else
-        class="table-responsive"
-      >
+      <div v-else class="table-responsive">
         <table class="data-table">
           <thead>
             <tr>
               <th>Invoice #</th>
               <th>Study / Site</th>
               <th>Cycle &amp; Period</th>
-              <th class="text-right">
-                Gross Total
-              </th>
-              <th class="text-right">
-                Holdback (10%)
-              </th>
-              <th class="text-right">
-                Net Payable
-              </th>
+              <th class="text-right">Gross Total</th>
+              <th class="text-right">Holdback (10%)</th>
+              <th class="text-right">Net Payable</th>
               <th>Status</th>
               <th>ERP Sync</th>
               <th>Remittance Advice</th>
-              <th class="text-center">
-                Actions
-              </th>
+              <th class="text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="inv in invoices"
-              :key="inv.id"
-            >
+            <tr v-for="inv in invoices" :key="inv.id">
               <td class="font-mono font-bold">
                 {{ inv.invoice_number }}
               </td>
@@ -266,15 +206,9 @@
                   >
                     ✓ Signed (SHA-256)
                   </span>
-                  <span
-                    v-else
-                    class="badge badge-pending"
-                  > Sealed Draft </span>
+                  <span v-else class="badge badge-pending"> Sealed Draft </span>
                 </div>
-                <span
-                  v-else
-                  class="text-muted"
-                >None</span>
+                <span v-else class="text-muted">None</span>
               </td>
               <td class="text-center actions-cell">
                 <button
@@ -324,23 +258,31 @@
           <div class="summary-cards-grid">
             <div class="mini-stat-card">
               <span class="stat-label">Base Procedures</span>
-              <span class="stat-value">{{ selectedInvoice.currency }}
-                {{ selectedInvoice.total_base_amount.toFixed(2) }}</span>
+              <span class="stat-value"
+                >{{ selectedInvoice.currency }}
+                {{ selectedInvoice.total_base_amount.toFixed(2) }}</span
+              >
             </div>
             <div class="mini-stat-card">
               <span class="stat-label">Institutional Overhead</span>
-              <span class="stat-value">{{ selectedInvoice.currency }}
-                {{ selectedInvoice.total_overhead_amount.toFixed(2) }}</span>
+              <span class="stat-value"
+                >{{ selectedInvoice.currency }}
+                {{ selectedInvoice.total_overhead_amount.toFixed(2) }}</span
+              >
             </div>
             <div class="mini-stat-card stat-danger">
               <span class="stat-label">10% Holdback Retention</span>
-              <span class="stat-value">-{{ selectedInvoice.currency }}
-                {{ selectedInvoice.total_holdback_amount.toFixed(2) }}</span>
+              <span class="stat-value"
+                >-{{ selectedInvoice.currency }}
+                {{ selectedInvoice.total_holdback_amount.toFixed(2) }}</span
+              >
             </div>
             <div class="mini-stat-card stat-success">
               <span class="stat-label">Net Disbursement Total</span>
-              <span class="stat-value">{{ selectedInvoice.currency }}
-                {{ selectedInvoice.total_net_amount.toFixed(2) }}</span>
+              <span class="stat-value"
+                >{{ selectedInvoice.currency }}
+                {{ selectedInvoice.total_net_amount.toFixed(2) }}</span
+              >
             </div>
           </div>
 
@@ -357,28 +299,15 @@
                   <th>Subject</th>
                   <th>Visit</th>
                   <th>Procedure</th>
-                  <th class="text-right">
-                    Base
-                  </th>
-                  <th class="text-right">
-                    Overhead
-                  </th>
-                  <th class="text-right">
-                    Gross
-                  </th>
-                  <th class="text-right">
-                    Holdback
-                  </th>
-                  <th class="text-right">
-                    Net
-                  </th>
+                  <th class="text-right">Base</th>
+                  <th class="text-right">Overhead</th>
+                  <th class="text-right">Gross</th>
+                  <th class="text-right">Holdback</th>
+                  <th class="text-right">Net</th>
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="item in selectedInvoice.line_items"
-                  :key="item.id"
-                >
+                <tr v-for="item in selectedInvoice.line_items" :key="item.id">
                   <td class="font-bold">
                     {{ item.subject_id }}
                   </td>
@@ -469,7 +398,7 @@
           <div
             v-if="
               selectedInvoice.status === 'RECONCILED' ||
-                selectedInvoice.reconciled_by
+              selectedInvoice.reconciled_by
             "
             class="reconciliation-card card"
           >
@@ -531,7 +460,7 @@
           <button
             v-if="
               selectedInvoice.remittance_advice &&
-                !selectedInvoice.remittance_advice.is_signed
+              !selectedInvoice.remittance_advice.is_signed
             "
             type="button"
             class="btn btn-success"
@@ -550,7 +479,7 @@
           <button
             v-if="
               selectedInvoice.status === 'APPROVED' ||
-                selectedInvoice.status === 'PAID'
+              selectedInvoice.status === 'PAID'
             "
             type="button"
             class="btn btn-warning"
@@ -590,7 +519,7 @@
               type="text"
               placeholder="e.g. STUDY-ONC-201"
               required
-            >
+            />
           </div>
           <div class="form-group">
             <label for="compile-site">Site ID *</label>
@@ -600,23 +529,14 @@
               type="text"
               placeholder="e.g. SITE-101"
               required
-            >
+            />
           </div>
           <div class="form-group">
             <label for="compile-cycle">Billing Cycle</label>
-            <select
-              id="compile-cycle"
-              v-model="compileForm.billingCycle"
-            >
-              <option value="MONTHLY">
-                Monthly
-              </option>
-              <option value="QUARTERLY">
-                Quarterly
-              </option>
-              <option value="MANUAL">
-                Manual Settlement
-              </option>
+            <select id="compile-cycle" v-model="compileForm.billingCycle">
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="MANUAL">Manual Settlement</option>
             </select>
           </div>
           <div class="form-row">
@@ -626,7 +546,7 @@
                 id="compile-start"
                 v-model="compileForm.periodStart"
                 type="date"
-              >
+              />
             </div>
             <div class="form-group">
               <label for="compile-end">Period End</label>
@@ -634,15 +554,12 @@
                 id="compile-end"
                 v-model="compileForm.periodEnd"
                 type="date"
-              >
+              />
             </div>
           </div>
           <div class="form-group checkbox-group">
             <label>
-              <input
-                v-model="compileForm.autoApprove"
-                type="checkbox"
-              >
+              <input v-model="compileForm.autoApprove" type="checkbox" />
               Auto-approve invoice upon compilation
             </label>
           </div>
@@ -699,7 +616,7 @@
               type="text"
               placeholder="e.g. Dr. Eleanor Vance"
               required
-            >
+            />
           </div>
           <div class="form-group">
             <label for="sign-role">Signer Role *</label>
@@ -709,7 +626,7 @@
               type="text"
               placeholder="e.g. Director of Clinical Grants"
               required
-            >
+            />
           </div>
           <div class="form-group">
             <label for="sign-reason">Signature Reason</label>
@@ -718,7 +635,7 @@
               v-model="signForm.signatureReason"
               type="text"
               placeholder="Authorized Self-Billing Remittance Statement"
-            >
+            />
           </div>
         </div>
         <footer class="modal-footer">
@@ -773,26 +690,15 @@
               type="text"
               placeholder="e.g. WIRE-FED-998822"
               required
-            >
+            />
           </div>
           <div class="form-group">
             <label for="recon-erp">ERP System</label>
-            <select
-              id="recon-erp"
-              v-model="reconcileForm.erpSystem"
-            >
-              <option value="SAP">
-                SAP S/4HANA
-              </option>
-              <option value="NETSUITE">
-                NetSuite SuiteTalk
-              </option>
-              <option value="ORACLE">
-                Oracle Financials
-              </option>
-              <option value="DIRECT_WIRE">
-                Direct Bank Settlement
-              </option>
+            <select id="recon-erp" v-model="reconcileForm.erpSystem">
+              <option value="SAP">SAP S/4HANA</option>
+              <option value="NETSUITE">NetSuite SuiteTalk</option>
+              <option value="ORACLE">Oracle Financials</option>
+              <option value="DIRECT_WIRE">Direct Bank Settlement</option>
             </select>
           </div>
           <div class="form-row">
@@ -803,7 +709,7 @@
                 v-model.number="reconcileForm.amountPaid"
                 type="number"
                 step="0.01"
-              >
+              />
             </div>
             <div class="form-group">
               <label for="recon-date">Payment Date</label>
@@ -811,7 +717,7 @@
                 id="recon-date"
                 v-model="reconcileForm.paymentDate"
                 type="date"
-              >
+              />
             </div>
           </div>
           <div class="form-group">

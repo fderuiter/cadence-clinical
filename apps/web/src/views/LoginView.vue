@@ -4,10 +4,7 @@
     class="dashboard-section active"
     style="max-width: 600px; margin: 40px auto; font-family: sans-serif"
   >
-    <div
-      class="section-header"
-      style="text-align: center; margin-bottom: 24px"
-    >
+    <div class="section-header" style="text-align: center; margin-bottom: 24px">
       <h2>Sign in</h2>
       <p style="color: #64748b">
         Access is governed by 21 CFR Part 11. Sign in with your Cadence account.
@@ -41,10 +38,7 @@
 
       <div style="padding: 24px; text-align: center">
         <!-- Signed in -->
-        <div
-          v-if="authStore.isAuthenticated"
-          class="auth-success-alert"
-        >
+        <div v-if="authStore.isAuthenticated" class="auth-success-alert">
           <p
             style="
               font-size: 1.1rem;

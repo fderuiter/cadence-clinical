@@ -13,12 +13,7 @@
         margin-bottom: 8px;
       "
     >
-      <h2
-        id="protocol-versions-title"
-        style="margin: 0"
-      >
-        Protocol versions
-      </h2>
+      <h2 id="protocol-versions-title" style="margin: 0">Protocol versions</h2>
       <button
         id="btn-generate-protocol-proposal"
         type="button"
@@ -29,35 +24,17 @@
         ⚡ Generate Protocol Proposal
       </button>
     </div>
-    <p
-      id="protocol-versions-status"
-      class="status-line"
-      role="status"
-    >
+    <p id="protocol-versions-status" class="status-line" role="status">
       {{ statusLine }}
     </p>
 
-    <table
-      v-if="versions.length"
-      class="versions-table"
-    >
+    <table v-if="versions.length" class="versions-table">
       <thead>
         <tr>
-          <th
-            scope="col"
-            class="numeric"
-          >
-            Version
-          </th>
-          <th scope="col">
-            Status
-          </th>
-          <th scope="col">
-            Amends
-          </th>
-          <th scope="col">
-            Amendment intent
-          </th>
+          <th scope="col" class="numeric">Version</th>
+          <th scope="col">Status</th>
+          <th scope="col">Amends</th>
+          <th scope="col">Amendment intent</th>
         </tr>
       </thead>
       <tbody>
@@ -69,10 +46,7 @@
           }"
         >
           <template v-if="version.ref !== null">
-            <th
-              scope="row"
-              class="numeric"
-            >
+            <th scope="row" class="numeric">
               <button
                 :id="`protocol-version-${version.number}`"
                 type="button"
@@ -87,11 +61,7 @@
             <td>{{ parentNumber(version) }}</td>
             <td>{{ version.amendment_intent || "None recorded" }}</td>
           </template>
-          <td
-            v-else
-            colspan="4"
-            class="masked-row"
-          >
+          <td v-else colspan="4" class="masked-row">
             A version you may not see ({{ maskWords(version.mask) }})
           </td>
         </tr>
@@ -161,7 +131,8 @@
           <label
             for="trial-brief-input"
             style="font-weight: 600; font-size: 0.85rem"
-          >Trial Brief Prompt:</label>
+            >Trial Brief Prompt:</label
+          >
           <textarea
             id="trial-brief-input"
             v-model="trialBrief"
@@ -254,7 +225,7 @@
           <div
             v-if="
               proposalResult.initial_gap_check &&
-                proposalResult.initial_gap_check.length
+              proposalResult.initial_gap_check.length
             "
           >
             <div
@@ -269,7 +240,8 @@
               "
             >
               [{{ gap.severity }}] {{ gap.kind }} -
-              {{ gap.description }} (<code>{{ gap.json_pointer_path }}</code>)
+              {{ gap.description }} (<code>{{ gap.json_pointer_path }}</code
+              >)
             </div>
           </div>
           <p
@@ -310,7 +282,9 @@
                 :key="step.step_number"
                 style="margin-bottom: 6px"
               >
-                <strong>Step {{ step.step_number }}: {{ step.step_type }}</strong>
+                <strong
+                  >Step {{ step.step_number }}: {{ step.step_type }}</strong
+                >
                 - {{ step.summary }}
                 <div style="color: #666; font-size: 0.75rem">
                   Rationale: {{ step.rationale }}

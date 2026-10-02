@@ -3,30 +3,16 @@
     <p class="explanation-claim">
       {{ explanation.claim }}
     </p>
-    <ol
-      v-if="explanation.steps.length"
-      class="explanation-steps"
-    >
-      <li
-        v-for="(step, index) in explanation.steps"
-        :key="`step-${index}`"
-      >
+    <ol v-if="explanation.steps.length" class="explanation-steps">
+      <li v-for="(step, index) in explanation.steps" :key="`step-${index}`">
         {{ step.claim }}
-        <span
-          v-if="step.evidence.length"
-          class="explanation-evidence"
-        >
-          <code
-            v-for="ref in step.evidence"
-            :key="ref"
-          >{{ ref }}</code>
+        <span v-if="step.evidence.length" class="explanation-evidence">
+          <code v-for="ref in step.evidence" :key="ref">{{ ref }}</code>
         </span>
       </li>
     </ol>
     <template v-if="explanation.conditions.length">
-      <h4 class="explanation-heading">
-        Conditions checked
-      </h4>
+      <h4 class="explanation-heading">Conditions checked</h4>
       <ul class="explanation-conditions">
         <li
           v-for="condition in explanation.conditions"
@@ -37,22 +23,14 @@
             condition.met ? "Met" : "Not met"
           }}</span>
           {{ condition.description }}
-          <span
-            v-if="condition.evidence.length"
-            class="explanation-evidence"
-          >
-            <code
-              v-for="ref in condition.evidence"
-              :key="ref"
-            >{{ ref }}</code>
+          <span v-if="condition.evidence.length" class="explanation-evidence">
+            <code v-for="ref in condition.evidence" :key="ref">{{ ref }}</code>
           </span>
         </li>
       </ul>
     </template>
     <template v-if="explanation.next_actions.length">
-      <h4 class="explanation-heading">
-        What would change this
-      </h4>
+      <h4 class="explanation-heading">What would change this</h4>
       <ul class="explanation-next">
         <li
           v-for="(action, index) in explanation.next_actions"

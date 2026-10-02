@@ -10,7 +10,9 @@
         <div class="badge-row">
           <span class="badge badge-gxp">21 CFR Part 11</span>
           <span class="badge badge-cdisc">CDISC SDTM v2.0 / ADaM v2.1</span>
-          <span class="badge badge-spec">Dataset-JSON 1.1 / Define-XML 2.1</span>
+          <span class="badge badge-spec"
+            >Dataset-JSON 1.1 / Define-XML 2.1</span
+          >
         </div>
         <h3 class="pipeline-title">
           Automated Continuous CDISC SDTM &amp; ADaM Pipeline
@@ -29,15 +31,9 @@
           class="version-select"
           aria-label="Dataset-JSON Version"
         >
-          <option value="1.1.0">
-            Dataset-JSON 1.1.0 (CDISC Official)
-          </option>
-          <option value="2.0.0">
-            Dataset-JSON 2.0.0 (Draft Standard)
-          </option>
-          <option value="1.0.0">
-            Dataset-JSON 1.0.0 (Legacy)
-          </option>
+          <option value="1.1.0">Dataset-JSON 1.1.0 (CDISC Official)</option>
+          <option value="2.0.0">Dataset-JSON 2.0.0 (Draft Standard)</option>
+          <option value="1.0.0">Dataset-JSON 1.0.0 (Legacy)</option>
         </select>
 
         <button
@@ -83,11 +79,12 @@
                 ? 'valid'
                 : 'invalid'
             "
-          >{{
-            lastExecutionResult.dataset_json_manifest.is_valid
-              ? "Valid"
-              : "Errors"
-          }}</span>
+            >{{
+              lastExecutionResult.dataset_json_manifest.is_valid
+                ? "Valid"
+                : "Errors"
+            }}</span
+          >
           | Define-XML 2.1 Conformance:
           <span
             class="badge-pill"
@@ -96,20 +93,18 @@
                 ? 'valid'
                 : 'invalid'
             "
-          >{{
-            lastExecutionResult.define_xml_summary.is_valid
-              ? "Valid"
-              : "Errors"
-          }}</span>
+            >{{
+              lastExecutionResult.define_xml_summary.is_valid
+                ? "Valid"
+                : "Errors"
+            }}</span
+          >
         </div>
       </div>
     </div>
 
     <!-- Sub-tabs for Pipeline Workspace -->
-    <div
-      class="workspace-tabs"
-      role="tablist"
-    >
+    <div class="workspace-tabs" role="tablist">
       <button
         role="tab"
         :aria-selected="currentSubTab === 'domains'"
@@ -137,16 +132,15 @@
     </div>
 
     <!-- SUB-TAB 1: SDTM & ADaM Domain Cards -->
-    <div
-      v-if="currentSubTab === 'domains'"
-      class="tab-content"
-    >
+    <div v-if="currentSubTab === 'domains'" class="tab-content">
       <!-- SDTM 10-Domain Section -->
       <div class="section-title-row">
         <h4 class="section-title">
           CDISC SDTM v1.7 / v2.0 Domains (10 Mapped Domains)
         </h4>
-        <span class="section-badge">{{ sdtmTotalRecords }} Tabulation Records</span>
+        <span class="section-badge"
+          >{{ sdtmTotalRecords }} Tabulation Records</span
+        >
       </div>
 
       <div class="domain-grid">
@@ -157,7 +151,9 @@
         >
           <div class="domain-card-header">
             <span class="domain-tag">{{ domain.code }}</span>
-            <span class="record-badge">{{ getSDTMCount(domain.code) }} records</span>
+            <span class="record-badge"
+              >{{ getSDTMCount(domain.code) }} records</span
+            >
           </div>
           <div class="domain-title">
             {{ domain.name }}
@@ -173,14 +169,11 @@
       </div>
 
       <!-- ADaM 4-Dataset Section -->
-      <div
-        class="section-title-row"
-        style="margin-top: 24px"
-      >
-        <h4 class="section-title">
-          CDISC ADaM v1.3 / v2.1 Analysis Datasets
-        </h4>
-        <span class="section-badge">{{ adamTotalRecords }} Derived Records</span>
+      <div class="section-title-row" style="margin-top: 24px">
+        <h4 class="section-title">CDISC ADaM v1.3 / v2.1 Analysis Datasets</h4>
+        <span class="section-badge"
+          >{{ adamTotalRecords }} Derived Records</span
+        >
       </div>
 
       <div class="domain-grid adam-grid">
@@ -191,7 +184,9 @@
         >
           <div class="domain-card-header">
             <span class="domain-tag adam-tag">{{ ds.code }}</span>
-            <span class="record-badge">{{ getADaMCount(ds.code) }} records</span>
+            <span class="record-badge"
+              >{{ getADaMCount(ds.code) }} records</span
+            >
           </div>
           <div class="domain-title">
             {{ ds.name }}
@@ -208,14 +203,13 @@
     </div>
 
     <!-- SUB-TAB 2: Dataset-JSON Viewer -->
-    <div
-      v-if="currentSubTab === 'dataset_json'"
-      class="tab-content"
-    >
+    <div v-if="currentSubTab === 'dataset_json'" class="tab-content">
       <div class="viewer-toolbar">
         <div class="toolbar-left">
-          <span class="spec-label">Specification: CDISC Dataset-JSON
-            {{ selectedDatasetJsonVersion }}</span>
+          <span class="spec-label"
+            >Specification: CDISC Dataset-JSON
+            {{ selectedDatasetJsonVersion }}</span
+          >
           <span class="status-indicator valid">Schema Conformance: Passed</span>
         </div>
         <div class="toolbar-right">
@@ -240,14 +234,15 @@
     </div>
 
     <!-- SUB-TAB 3: Define-XML 2.1 Compiler & VLM -->
-    <div
-      v-if="currentSubTab === 'define_xml'"
-      class="tab-content"
-    >
+    <div v-if="currentSubTab === 'define_xml'" class="tab-content">
       <div class="viewer-toolbar">
         <div class="toolbar-left">
-          <span class="spec-label">Specification: CDISC Define-XML v2.1.0 / ODM 1.3.2</span>
-          <span class="status-indicator valid">VLM &amp; WhereClauses Compiled</span>
+          <span class="spec-label"
+            >Specification: CDISC Define-XML v2.1.0 / ODM 1.3.2</span
+          >
+          <span class="status-indicator valid"
+            >VLM &amp; WhereClauses Compiled</span
+          >
         </div>
         <div class="toolbar-right">
           <button
@@ -275,20 +270,28 @@
         <div class="vlm-grid">
           <div class="vlm-item">
             <span class="vlm-label">LB.LBORRES:</span>
-            <span class="vlm-val">ALT, AST, BILI, GLUC, CREAT, HGB (WhereClause: EQ)</span>
+            <span class="vlm-val"
+              >ALT, AST, BILI, GLUC, CREAT, HGB (WhereClause: EQ)</span
+            >
           </div>
           <div class="vlm-item">
             <span class="vlm-label">VS.VSORRES:</span>
-            <span class="vlm-val">SYSBP, DIABP, PULSE, TEMP, WEIGHT, HEIGHT</span>
+            <span class="vlm-val"
+              >SYSBP, DIABP, PULSE, TEMP, WEIGHT, HEIGHT</span
+            >
           </div>
           <div class="vlm-item">
             <span class="vlm-label">BDS.AVAL:</span>
-            <span class="vlm-val">SYSBP, DIABP, ALT, AST (Continuous Analysis Values)</span>
+            <span class="vlm-val"
+              >SYSBP, DIABP, ALT, AST (Continuous Analysis Values)</span
+            >
           </div>
           <div class="vlm-item">
             <span class="vlm-label">Origins:</span>
-            <span class="vlm-val">Collected (EDC/Lab/IRC), Derived (MethodDef), Assigned,
-              Protocol</span>
+            <span class="vlm-val"
+              >Collected (EDC/Lab/IRC), Derived (MethodDef), Assigned,
+              Protocol</span
+            >
           </div>
         </div>
       </div>

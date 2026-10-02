@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="headless-form-renderer"
-    :class="[`viewport-${currentViewport}`]"
-  >
+  <div class="headless-form-renderer" :class="[`viewport-${currentViewport}`]">
     <!-- Omni-Channel Viewport Controls -->
     <div class="viewport-toolbar">
       <div class="form-title-badge">
@@ -40,10 +37,7 @@
 
     <!-- Active Form Viewport Frame -->
     <div class="form-canvas-frame">
-      <form
-        class="rendered-form"
-        @submit.prevent="handleSubmit"
-      >
+      <form class="rendered-form" @submit.prevent="handleSubmit">
         <!-- Render UI Schema Sections -->
         <div
           v-for="section in formDefinition.ui_schema.sections"
@@ -72,15 +66,13 @@
               }"
             >
               <!-- Field Label & Constraints -->
-              <label
-                class="field-label"
-                :for="'widget-' + widget.variable_id"
-              >
+              <label class="field-label" :for="'widget-' + widget.variable_id">
                 {{ getVariable(widget.variable_id)?.name }}
                 <span
                   v-if="getVariable(widget.variable_id)?.constraints?.required"
                   class="required-star"
-                >*</span>
+                  >*</span
+                >
               </label>
 
               <!-- Widget Rendering -->
@@ -92,7 +84,7 @@
                   class="form-input"
                   :placeholder="widget.placeholder || ''"
                   @input="evaluateRules"
-                >
+                />
               </template>
 
               <template v-else-if="widget.widget === 'medical_autocode'">
@@ -125,7 +117,7 @@
                   class="form-input"
                   :placeholder="widget.placeholder || ''"
                   @input="evaluateRules"
-                >
+                />
               </template>
 
               <!-- Inline AST Validation Queries / Errors -->
@@ -141,11 +133,7 @@
 
         <!-- Form Submission Actions -->
         <div class="form-actions-bar">
-          <button
-            type="submit"
-            class="btn-submit"
-            :disabled="hasHardErrors"
-          >
+          <button type="submit" class="btn-submit" :disabled="hasHardErrors">
             Save & Submit eCRF
           </button>
         </div>

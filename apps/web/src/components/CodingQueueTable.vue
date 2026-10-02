@@ -77,10 +77,7 @@
     </div>
 
     <!-- Loading State -->
-    <div
-      v-if="codingStore.isLoading"
-      class="table-loading-state"
-    >
+    <div v-if="codingStore.isLoading" class="table-loading-state">
       <div class="spinner" />
       <p>Loading medical coding queue...</p>
     </div>
@@ -94,9 +91,7 @@
       "
       class="table-empty-state"
     >
-      <div class="empty-icon">
-        🩺
-      </div>
+      <div class="empty-icon">🩺</div>
       <h3>No Coding Assignments Found</h3>
       <p>
         No adverse events or concomitant medications match the active filters or
@@ -121,10 +116,7 @@
       >
         <thead>
           <tr>
-            <th
-              scope="col"
-              class="col-checkbox"
-            >
+            <th scope="col" class="col-checkbox">
               <input
                 type="checkbox"
                 :checked="isAllClustersSelected"
@@ -132,29 +124,14 @@
                 title="Select all filtered clusters"
                 aria-label="Select all filtered clusters"
                 @change="toggleSelectAllClusters"
-              >
+              />
             </th>
-            <th scope="col">
-              Cluster Status
-            </th>
-            <th scope="col">
-              Normalized Verbatim Term
-            </th>
-            <th scope="col">
-              Dictionary
-            </th>
-            <th scope="col">
-              Suggested Code &amp; Preferred Term
-            </th>
-            <th scope="col">
-              AI Confidence Score
-            </th>
-            <th
-              scope="col"
-              class="col-actions"
-            >
-              Batch Actions
-            </th>
+            <th scope="col">Cluster Status</th>
+            <th scope="col">Normalized Verbatim Term</th>
+            <th scope="col">Dictionary</th>
+            <th scope="col">Suggested Code &amp; Preferred Term</th>
+            <th scope="col">AI Confidence Score</th>
+            <th scope="col" class="col-actions">Batch Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -167,16 +144,13 @@
               :class="{ 'row-selected': isClusterSelected(cluster.id) }"
             >
               <!-- Checkbox -->
-              <td
-                role="gridcell"
-                class="col-checkbox"
-              >
+              <td role="gridcell" class="col-checkbox">
                 <input
                   type="checkbox"
                   :checked="isClusterSelected(cluster.id)"
                   aria-label="Select verbatim cluster"
                   @change="codingStore.toggleClusterSelect(cluster.id)"
-                >
+                />
               </td>
 
               <!-- Status Badge -->
@@ -239,10 +213,7 @@
               </td>
 
               <!-- Actions -->
-              <td
-                role="gridcell"
-                class="col-actions"
-              >
+              <td role="gridcell" class="col-actions">
                 <div class="action-buttons-group">
                   <button
                     type="button"
@@ -286,10 +257,7 @@
               :key="cluster.id + '-expanded'"
               class="cluster-instances-drawer-row"
             >
-              <td
-                colspan="7"
-                class="drawer-cell"
-              >
+              <td colspan="7" class="drawer-cell">
                 <div class="instances-drawer-container">
                   <div class="drawer-header">
                     <h4>
@@ -330,20 +298,20 @@
                           </span>
                         </td>
                         <td>
-                          <code>{{
-                            (inst.observation_id || inst.id).substring(0, 12)
-                          }}...</code>
+                          <code
+                            >{{
+                              (inst.observation_id || inst.id).substring(0, 12)
+                            }}...</code
+                          >
                         </td>
                         <td>
                           <span v-if="inst.coded_code">
                             {{ inst.coded_term }} (<code>{{
                               inst.coded_code
-                            }}</code>)
+                            }}</code
+                            >)
                           </span>
-                          <span
-                            v-else
-                            class="text-muted"
-                          >— Uncoded —</span>
+                          <span v-else class="text-muted">— Uncoded —</span>
                         </td>
                         <td>
                           <div class="subtable-actions">
@@ -377,11 +345,7 @@
     <!-- ==================================================================== -->
     <!-- INDIVIDUAL ASSIGNMENTS TABLE -->
     <!-- ==================================================================== -->
-    <div
-      v-else
-      ref="containerRef"
-      class="table-responsive"
-    >
+    <div v-else ref="containerRef" class="table-responsive">
       <table
         class="data-table coding-table"
         role="grid"
@@ -391,10 +355,7 @@
       >
         <thead>
           <tr>
-            <th
-              scope="col"
-              class="col-checkbox"
-            >
+            <th scope="col" class="col-checkbox">
               <input
                 type="checkbox"
                 :checked="isAllSelected"
@@ -402,29 +363,14 @@
                 title="Select all filtered items"
                 aria-label="Select all filtered items"
                 @change="toggleSelectAll"
-              >
+              />
             </th>
-            <th scope="col">
-              Status
-            </th>
-            <th scope="col">
-              Verbatim Term &amp; Source
-            </th>
-            <th scope="col">
-              Dictionary
-            </th>
-            <th scope="col">
-              Coded Code &amp; Term
-            </th>
-            <th scope="col">
-              Match / Suggestions
-            </th>
-            <th
-              scope="col"
-              class="col-actions"
-            >
-              Actions
-            </th>
+            <th scope="col">Status</th>
+            <th scope="col">Verbatim Term &amp; Source</th>
+            <th scope="col">Dictionary</th>
+            <th scope="col">Coded Code &amp; Term</th>
+            <th scope="col">Match / Suggestions</th>
+            <th scope="col" class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -451,7 +397,7 @@
                 aria-label="Select assignment"
                 tabindex="-1"
                 @change="codingStore.toggleSelect(item.id)"
-              >
+              />
             </td>
 
             <!-- Status Badge -->
@@ -483,22 +429,15 @@
                 {{ item.verbatim_text }}
               </div>
               <div class="verbatim-meta">
-                <span
-                  v-if="item.source_field"
-                  class="meta-tag"
-                >{{
+                <span v-if="item.source_field" class="meta-tag">{{
                   item.source_field
                 }}</span>
-                <span
-                  v-if="item.domain"
-                  class="meta-tag domain-tag"
-                >{{
+                <span v-if="item.domain" class="meta-tag domain-tag">{{
                   item.domain
                 }}</span>
-                <span
-                  v-if="item.observation_id"
-                  class="meta-obs"
-                >Obs: {{ item.observation_id.substring(0, 8) }}...</span>
+                <span v-if="item.observation_id" class="meta-obs"
+                  >Obs: {{ item.observation_id.substring(0, 8) }}...</span
+                >
               </div>
             </td>
 
@@ -515,9 +454,7 @@
               <div class="dict-label">
                 {{ item.dictionary_type }}
               </div>
-              <div class="dict-version">
-                v{{ item.dictionary_version }}
-              </div>
+              <div class="dict-version">v{{ item.dictionary_version }}</div>
             </td>
 
             <!-- Coded Term & Code -->
@@ -530,29 +467,20 @@
               @click="selectCell(rIndex, 4)"
               @keydown="handleCellKeyDown($event, rIndex, 4, item)"
             >
-              <div
-                v-if="item.coded_code"
-                class="coded-result-box"
-              >
+              <div v-if="item.coded_code" class="coded-result-box">
                 <div class="coded-term">
                   {{ item.coded_term }}
                 </div>
                 <div class="coded-code-badge">
                   <code>{{ item.coded_code }}</code>
                 </div>
-                <div
-                  v-if="hasHierarchy(item)"
-                  class="hierarchy-preview"
-                >
+                <div v-if="hasHierarchy(item)" class="hierarchy-preview">
                   <span class="hierarchy-breadcrumb">{{
                     getHierarchySummary(item)
                   }}</span>
                 </div>
               </div>
-              <span
-                v-else
-                class="uncoded-placeholder"
-              >— Uncoded —</span>
+              <span v-else class="uncoded-placeholder">— Uncoded —</span>
             </td>
 
             <!-- Match / Suggestions -->
@@ -569,8 +497,8 @@
               <div
                 v-if="
                   item.suggestions &&
-                    Array.isArray(item.suggestions) &&
-                    item.suggestions.length > 0
+                  Array.isArray(item.suggestions) &&
+                  item.suggestions.length > 0
                 "
                 class="suggestions-container"
               >
@@ -604,18 +532,10 @@
                   </div>
                 </div>
               </div>
-              <div
-                v-else-if="item.score"
-                class="score-display"
-              >
+              <div v-else-if="item.score" class="score-display">
                 Score: {{ Math.round(item.score * 100) }}%
               </div>
-              <div
-                v-else
-                class="no-suggestions-text"
-              >
-                No auto-suggestions
-              </div>
+              <div v-else class="no-suggestions-text">No auto-suggestions</div>
             </td>
 
             <!-- Actions -->
@@ -701,14 +621,16 @@
           </div>
 
           <div class="form-group">
-            <label for="cluster-approve-reason">GxP Reason for Change * (21 CFR Part 11 Audit Trail)</label>
+            <label for="cluster-approve-reason"
+              >GxP Reason for Change * (21 CFR Part 11 Audit Trail)</label
+            >
             <input
               id="cluster-approve-reason"
               v-model="clusterApproveReason"
               type="text"
               class="form-control"
               placeholder="e.g. Batch approve verbatim cluster high-confidence match"
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">
@@ -772,12 +694,8 @@
               v-model="batchClusterDictType"
               class="form-control"
             >
-              <option value="MEDDRA">
-                MedDRA
-              </option>
-              <option value="WHODRUG">
-                WHODrug
-              </option>
+              <option value="MEDDRA">MedDRA</option>
+              <option value="WHODRUG">WHODrug</option>
             </select>
           </div>
           <div class="form-group">
@@ -788,17 +706,19 @@
               type="text"
               class="form-control"
               placeholder="e.g. 10019211"
-            >
+            />
           </div>
           <div class="form-group">
-            <label for="batch-cluster-term">Target Preferred Term / Drug Name *</label>
+            <label for="batch-cluster-term"
+              >Target Preferred Term / Drug Name *</label
+            >
             <input
               id="batch-cluster-term"
               v-model="batchClusterTerm"
               type="text"
               class="form-control"
               placeholder="e.g. Headache"
-            >
+            />
           </div>
           <div class="form-group">
             <label for="batch-cluster-reason">GxP Reason for Change *</label>
@@ -808,7 +728,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Multi-cluster medical coding review and synonym propagation"
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">
@@ -824,9 +744,9 @@
             class="btn btn-primary"
             :disabled="
               !batchClusterCode.trim() ||
-                !batchClusterTerm.trim() ||
-                !batchClusterReason.trim() ||
-                isSubmittingClusterCode
+              !batchClusterTerm.trim() ||
+              !batchClusterReason.trim() ||
+              isSubmittingClusterCode
             "
             @click="submitBatchCodeClusters"
           >
@@ -887,7 +807,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Uncodable verbatim clarification request"
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">
@@ -946,12 +866,8 @@
               v-model="batchDictType"
               class="form-control"
             >
-              <option value="MEDDRA">
-                MedDRA
-              </option>
-              <option value="WHODRUG">
-                WHODrug
-              </option>
+              <option value="MEDDRA">MedDRA</option>
+              <option value="WHODRUG">WHODrug</option>
             </select>
           </div>
           <div class="form-group">
@@ -962,7 +878,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. 10019211"
-            >
+            />
           </div>
           <div class="form-group">
             <label for="batch-term">Preferred Term / Drug Name</label>
@@ -972,7 +888,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Headache"
-            >
+            />
           </div>
           <div class="form-group">
             <label for="batch-reason">GxP Reason for Change *</label>
@@ -982,7 +898,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Batch coding consensus review"
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">

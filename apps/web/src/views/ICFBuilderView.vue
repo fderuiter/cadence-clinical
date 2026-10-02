@@ -4,10 +4,16 @@
     <header class="builder-header">
       <div class="header-left">
         <h2>ICF Authoring: {{ econsentStore.currentIcf?.title }}</h2>
-        <span class="study-tag">Study: {{ econsentStore.currentIcf?.studyId || "CADENCE-101" }}</span>
-        <span class="version-tag">ICF Version: {{ econsentStore.currentIcf?.version }}</span>
-        <span class="protocol-tag">Protocol:
-          {{ econsentStore.currentIcf?.protocolVersion || "v1.0" }}</span>
+        <span class="study-tag"
+          >Study: {{ econsentStore.currentIcf?.studyId || "CADENCE-101" }}</span
+        >
+        <span class="version-tag"
+          >ICF Version: {{ econsentStore.currentIcf?.version }}</span
+        >
+        <span class="protocol-tag"
+          >Protocol:
+          {{ econsentStore.currentIcf?.protocolVersion || "v1.0" }}</span
+        >
       </div>
       <div class="header-right">
         <button
@@ -89,10 +95,7 @@
               <span class="item-icon">📄</span>
               <span class="item-title">{{ sec.title }}</span>
 
-              <div
-                class="clause-controls"
-                @click.stop
-              >
+              <div class="clause-controls" @click.stop>
                 <button
                   type="button"
                   class="btn-clause-ctrl btn-move-up"
@@ -132,7 +135,7 @@
               placeholder="New Section Title..."
               class="form-control inline-input"
               @keyup.enter="handleCreateSection"
-            >
+            />
             <button
               type="button"
               class="btn btn-secondary btn-small"
@@ -173,9 +176,7 @@
                   formatTime(hist.timestamp)
                 }}</span>
               </div>
-              <p class="history-reason">
-                "{{ hist.reason }}"
-              </p>
+              <p class="history-reason">"{{ hist.reason }}"</p>
             </div>
           </div>
         </div>
@@ -192,10 +193,7 @@
         <div v-else-if="showQuiz">
           <ComprehensionQuizBuilder @proceed-to-sign="openSignatureModal" />
         </div>
-        <div
-          v-else
-          class="no-selection-pane"
-        >
+        <div v-else class="no-selection-pane">
           <p>
             Please select a Consent Section or the Comprehension Quiz from the
             left outline to start editing.
@@ -218,19 +216,11 @@
     />
 
     <!-- Publish Version GxP Modal -->
-    <div
-      v-if="showPublishModal"
-      class="publish-modal-overlay"
-    >
+    <div v-if="showPublishModal" class="publish-modal-overlay">
       <div class="publish-modal card">
         <div class="modal-header">
           <h3>21 CFR Part 11 Change Reason Capture</h3>
-          <button
-            class="close-btn"
-            @click="showPublishModal = false"
-          >
-            ✕
-          </button>
+          <button class="close-btn" @click="showPublishModal = false">✕</button>
         </div>
         <div class="modal-body">
           <p class="warning-text">
@@ -239,7 +229,9 @@
             re-consents will bind to the new version index.
           </p>
           <div class="form-group">
-            <label for="publish-reason">Mandatory Change Justification / Audit Reason:</label>
+            <label for="publish-reason"
+              >Mandatory Change Justification / Audit Reason:</label
+            >
             <textarea
               id="publish-reason"
               v-model="publishReason"
@@ -247,10 +239,7 @@
               rows="4"
               class="form-control"
             />
-            <span
-              v-if="publishError"
-              class="error-text"
-            >{{
+            <span v-if="publishError" class="error-text">{{
               publishError
             }}</span>
           </div>
@@ -263,11 +252,7 @@
           >
             Cancel
           </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            @click="handlePublish"
-          >
+          <button type="button" class="btn btn-primary" @click="handlePublish">
             Confirm & Publish
           </button>
         </div>

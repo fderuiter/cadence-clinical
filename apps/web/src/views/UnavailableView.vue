@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-unavailable"
-    class="dashboard-section active unavailable"
-  >
+  <div id="section-unavailable" class="dashboard-section active unavailable">
     <div class="card unavailable-card">
       <h2>{{ heading }}</h2>
       <p>
@@ -10,11 +7,7 @@
         need. Each one is waiting on a module of the clinical kernel.
       </p>
       <p>
-        <a
-          :href="UNAVAILABLE_SCREENS_ISSUE"
-          target="_blank"
-          rel="noopener"
-        >
+        <a :href="UNAVAILABLE_SCREENS_ISSUE" target="_blank" rel="noopener">
           See which screens are waiting and on what
         </a>
       </p>

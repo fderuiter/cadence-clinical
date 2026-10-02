@@ -6,9 +6,7 @@
     :aria-busy="loading"
   >
     <div class="activity-header">
-      <h2 id="study-activity-title">
-        Recent activity
-      </h2>
+      <h2 id="study-activity-title">Recent activity</h2>
       <label class="activity-filter">
         <span>Show</span>
         <select
@@ -18,11 +16,7 @@
           @change="reload"
         >
           <option value="">Everything</option>
-          <option
-            v-for="option in FAMILIES"
-            :key="option"
-            :value="option"
-          >
+          <option v-for="option in FAMILIES" :key="option" :value="option">
             {{ option }}
           </option>
         </select>
@@ -38,28 +32,18 @@
       {{ statusLine }}
     </p>
 
-    <ol
-      v-if="entries.length"
-      id="activity-list"
-      class="activity-list"
-    >
+    <ol v-if="entries.length" id="activity-list" class="activity-list">
       <li
         v-for="entry in entries"
         :key="entry.event_id"
         class="activity-entry"
         :data-family="entry.family"
       >
-        <time
-          class="activity-time"
-          :datetime="entry.recorded"
-        >{{
+        <time class="activity-time" :datetime="entry.recorded">{{
           when(entry.recorded)
         }}</time>
         <span class="activity-what">{{ words(entry.type) }}</span>
-        <span
-          v-if="isMasked(entry)"
-          class="activity-subject masked"
-        >
+        <span v-if="isMasked(entry)" class="activity-subject masked">
           {{ hiddenLabel(entry) }}
         </span>
         <router-link
@@ -69,10 +53,7 @@
         >
           {{ subjectLabel(entry) }}
         </router-link>
-        <span
-          v-else-if="entry.subject"
-          class="activity-subject"
-        >{{
+        <span v-else-if="entry.subject" class="activity-subject">{{
           subjectLabel(entry)
         }}</span>
         <span class="activity-actor">by {{ entry.actor_id }}</span>

@@ -8,48 +8,48 @@
     <header class="console-header">
       <div class="header-main">
         <div class="title-group">
-          <span class="badge badge-regulatory">CDISC LAB v1.0.1 / NCI-CTCAE v5.0 / DAIDS / CLIA</span>
+          <span class="badge badge-regulatory"
+            >CDISC LAB v1.0.1 / NCI-CTCAE v5.0 / DAIDS / CLIA</span
+          >
           <h2 class="console-title">
             Lab Reference Range Governance & Toxicity Grading Console
           </h2>
         </div>
         <div class="header-metadata">
-          <span class="meta-item"><strong>Study:</strong> {{ currentStudyId || "STUDY-101" }}</span>
-          <span class="meta-item"><strong>Active Ranges:</strong>
-            <span class="status-pill info">{{ ranges.length }}</span></span>
-          <span class="meta-item"><strong>Staged AE Triggers:</strong>
+          <span class="meta-item"
+            ><strong>Study:</strong> {{ currentStudyId || "STUDY-101" }}</span
+          >
+          <span class="meta-item"
+            ><strong>Active Ranges:</strong>
+            <span class="status-pill info">{{ ranges.length }}</span></span
+          >
+          <span class="meta-item"
+            ><strong>Staged AE Triggers:</strong>
             <span class="status-pill danger">{{
               stagedReviews.length
-            }}</span></span>
-          <span class="meta-item"><strong>Local Certifications:</strong>
+            }}</span></span
+          >
+          <span class="meta-item"
+            ><strong>Local Certifications:</strong>
             <span class="status-pill success">{{
               certifications.length
-            }}</span></span>
+            }}</span></span
+          >
         </div>
       </div>
 
       <div class="header-actions">
-        <button
-          class="btn btn-secondary"
-          @click="openIngestModal"
-        >
+        <button class="btn btn-secondary" @click="openIngestModal">
           <span class="icon">📥</span> Ingest Lab Feed (HL7 / CDISC / CSV)
         </button>
-        <button
-          class="btn btn-primary"
-          @click="openCreateRangeModal"
-        >
+        <button class="btn btn-primary" @click="openCreateRangeModal">
           <span class="icon">➕</span> New Reference Range
         </button>
       </div>
     </header>
 
     <!-- Navigation Tabs -->
-    <nav
-      class="nav-tabs"
-      role="tablist"
-      aria-label="Lab Console Views"
-    >
+    <nav class="nav-tabs" role="tablist" aria-label="Lab Console Views">
       <button
         role="tab"
         :aria-selected="activeTab === 'ranges'"
@@ -117,7 +117,7 @@
               type="text"
               placeholder="Search by code (e.g. ALT, CREAT) or name..."
               class="text-input"
-            >
+            />
           </div>
           <div class="filter-group">
             <label for="range-source-filter">Lab Source:</label>
@@ -126,15 +126,9 @@
               v-model="rangeSourceFilter"
               class="select-input"
             >
-              <option value="ALL">
-                All Sources (Central & Local)
-              </option>
-              <option value="CENTRAL">
-                Central Lab Only
-              </option>
-              <option value="LOCAL">
-                Local Lab Only
-              </option>
+              <option value="ALL">All Sources (Central & Local)</option>
+              <option value="CENTRAL">Central Lab Only</option>
+              <option value="LOCAL">Local Lab Only</option>
             </select>
           </div>
           <div class="filter-group">
@@ -144,15 +138,9 @@
               v-model="rangeSexFilter"
               class="select-input"
             >
-              <option value="ALL">
-                All Demographics
-              </option>
-              <option value="M">
-                Male (M)
-              </option>
-              <option value="F">
-                Female (F)
-              </option>
+              <option value="ALL">All Demographics</option>
+              <option value="M">Male (M)</option>
+              <option value="F">Female (F)</option>
             </select>
           </div>
         </div>
@@ -174,10 +162,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="r in filteredRanges"
-                :key="r.id"
-              >
+              <tr v-for="r in filteredRanges" :key="r.id">
                 <td>
                   <strong class="code-tag">{{ r.test_code }}</strong>
                 </td>
@@ -195,19 +180,24 @@
                 <td>{{ r.site_id || "All Sites (Global)" }}</td>
                 <td>
                   <div class="demographic-tags">
-                    <span class="mini-tag">Sex: {{ r.sex_applicability || "ALL" }}</span>
-                    <span class="mini-tag">Age: {{ formatAgeRange(r.age_low, r.age_high) }}</span>
-                    <span
-                      v-if="r.ethnicity_applicability"
-                      class="mini-tag"
-                    >Eth: {{ r.ethnicity_applicability }}</span>
+                    <span class="mini-tag"
+                      >Sex: {{ r.sex_applicability || "ALL" }}</span
+                    >
+                    <span class="mini-tag"
+                      >Age: {{ formatAgeRange(r.age_low, r.age_high) }}</span
+                    >
+                    <span v-if="r.ethnicity_applicability" class="mini-tag"
+                      >Eth: {{ r.ethnicity_applicability }}</span
+                    >
                   </div>
                 </td>
                 <td>
                   <code>{{ r.normalized_unit || r.unit }}</code>
                 </td>
                 <td>
-                  <span class="range-span">{{ r.low_bound ?? "—" }} – {{ r.high_bound ?? "—" }}</span>
+                  <span class="range-span"
+                    >{{ r.low_bound ?? "—" }} – {{ r.high_bound ?? "—" }}</span
+                  >
                 </td>
                 <td>
                   <span
@@ -218,26 +208,17 @@
                       r.critical_high ?? "—"
                     }}
                   </span>
-                  <span
-                    v-else
-                    class="text-muted"
-                  >None</span>
+                  <span v-else class="text-muted">None</span>
                 </td>
                 <td>v{{ r.version || 1 }}</td>
                 <td>
-                  <button
-                    class="btn btn-sm btn-outline"
-                    @click="editRange(r)"
-                  >
+                  <button class="btn btn-sm btn-outline" @click="editRange(r)">
                     Edit
                   </button>
                 </td>
               </tr>
               <tr v-if="filteredRanges.length === 0">
-                <td
-                  colspan="10"
-                  class="empty-state"
-                >
+                <td colspan="10" class="empty-state">
                   No laboratory reference ranges match the active filter
                   criteria.
                 </td>
@@ -277,18 +258,12 @@
               <option value="STAGED_FOR_INVESTIGATOR_REVIEW">
                 Staged for Review (Action Required)
               </option>
-              <option value="CONFIRMED_AS_AE">
-                Confirmed as AE
-              </option>
+              <option value="CONFIRMED_AS_AE">Confirmed as AE</option>
               <option value="DISMISSED_NOT_CLINICALLY_SIGNIFICANT">
                 Dismissed (Not Significant)
               </option>
-              <option value="ESCALATED_SAE">
-                Escalated to SAE
-              </option>
-              <option value="ALL">
-                All Items
-              </option>
+              <option value="ESCALATED_SAE">Escalated to SAE</option>
+              <option value="ALL">All Items</option>
             </select>
           </div>
         </div>
@@ -328,7 +303,9 @@
                   </div>
                 </td>
                 <td>
-                  <span class="value-highlight">{{ review.lab_value }} {{ review.unit }}</span>
+                  <span class="value-highlight"
+                    >{{ review.lab_value }} {{ review.unit }}</span
+                  >
                 </td>
                 <td>
                   <span :class="['grade-badge', 'grade-' + review.ctcae_grade]">
@@ -340,18 +317,21 @@
                     <span
                       v-if="review.is_hys_law_warning"
                       class="safety-tag hys-law"
-                    >🚨 Hy's Law DILI</span>
+                      >🚨 Hy's Law DILI</span
+                    >
                     <span
                       v-if="review.is_delta_check_alert"
                       class="safety-tag delta"
-                    >⚡ Delta Alert ({{ review.delta_percentage }}%)</span>
+                      >⚡ Delta Alert ({{ review.delta_percentage }}%)</span
+                    >
                     <span
                       v-if="
                         !review.is_hys_law_warning &&
-                          !review.is_delta_check_alert
+                        !review.is_delta_check_alert
                       "
                       class="text-muted"
-                    >Standard</span>
+                      >Standard</span
+                    >
                   </div>
                 </td>
                 <td class="clinical-desc-cell">
@@ -377,19 +357,13 @@
                   >
                     Investigator Sign-off
                   </button>
-                  <span
-                    v-else
-                    class="text-muted signed-tag"
-                  >
+                  <span v-else class="text-muted signed-tag">
                     Reviewed by {{ review.reviewed_by || "Investigator" }}
                   </span>
                 </td>
               </tr>
               <tr v-if="stagedReviews.length === 0">
-                <td
-                  colspan="9"
-                  class="empty-state"
-                >
+                <td colspan="9" class="empty-state">
                   No staged adverse event laboratory triggers pending
                   investigator review.
                 </td>
@@ -415,10 +389,7 @@
               uncalibrated range safeguards.
             </p>
           </div>
-          <button
-            class="btn btn-primary"
-            @click="openCreateCertModal"
-          >
+          <button class="btn btn-primary" @click="openCreateCertModal">
             <span class="icon">➕</span> Register Local Lab Certification
           </button>
         </div>
@@ -439,10 +410,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="cert in certifications"
-                :key="cert.id"
-              >
+              <tr v-for="cert in certifications" :key="cert.id">
                 <td>
                   <strong>{{ cert.site_id }}</strong>
                 </td>
@@ -472,10 +440,7 @@
                   >
                     ⚠️ Uncalibrated Range Safeguard Active
                   </span>
-                  <span
-                    v-else
-                    class="safeguard-badge normal"
-                  >
+                  <span v-else class="safeguard-badge normal">
                     ✅ Calibrated & Verified
                   </span>
                 </td>
@@ -489,10 +454,7 @@
                 </td>
               </tr>
               <tr v-if="certifications.length === 0">
-                <td
-                  colspan="9"
-                  class="empty-state"
-                >
+                <td colspan="9" class="empty-state">
                   No local laboratory certifications recorded. Register CLIA/CAP
                   credentials to enable local lab ingestion.
                 </td>
@@ -526,33 +488,17 @@
                 <option value="AST">
                   AST (Aspartate Aminotransferase) [LOINC: 1920-8]
                 </option>
-                <option value="BILI">
-                  Total Bilirubin [LOINC: 1975-2]
-                </option>
-                <option value="CREAT">
-                  Serum Creatinine [LOINC: 2160-0]
-                </option>
-                <option value="GLUCOSE">
-                  Fasting Glucose [LOINC: 2345-7]
-                </option>
-                <option value="HEMOGLOBIN">
-                  Hemoglobin [LOINC: 718-7]
-                </option>
-                <option value="PLATELETS">
-                  Platelets [LOINC: 777-3]
-                </option>
+                <option value="BILI">Total Bilirubin [LOINC: 1975-2]</option>
+                <option value="CREAT">Serum Creatinine [LOINC: 2160-0]</option>
+                <option value="GLUCOSE">Fasting Glucose [LOINC: 2345-7]</option>
+                <option value="HEMOGLOBIN">Hemoglobin [LOINC: 718-7]</option>
+                <option value="PLATELETS">Platelets [LOINC: 777-3]</option>
                 <option value="ANC">
                   Absolute Neutrophil Count [LOINC: 26499-4]
                 </option>
-                <option value="POTASSIUM">
-                  Potassium [LOINC: 2823-3]
-                </option>
-                <option value="SODIUM">
-                  Sodium [LOINC: 2951-2]
-                </option>
-                <option value="CALCIUM">
-                  Calcium [LOINC: 17861-6]
-                </option>
+                <option value="POTASSIUM">Potassium [LOINC: 2823-3]</option>
+                <option value="SODIUM">Sodium [LOINC: 2951-2]</option>
+                <option value="CALCIUM">Calcium [LOINC: 17861-6]</option>
                 <option value="CHOLESTEROL">
                   Total Cholesterol [LOINC: 2093-3]
                 </option>
@@ -571,7 +517,7 @@
                   type="number"
                   step="any"
                   class="text-input"
-                >
+                />
               </div>
               <div class="form-group">
                 <label for="conv-from">From Unit:</label>
@@ -580,7 +526,7 @@
                   v-model="conversionModel.from_unit"
                   type="text"
                   class="text-input"
-                >
+                />
               </div>
               <div class="form-group">
                 <label for="conv-to">To Unit (Standard SI):</label>
@@ -589,7 +535,7 @@
                   v-model="conversionModel.to_unit"
                   type="text"
                   class="text-input"
-                >
+                />
               </div>
             </div>
 
@@ -605,14 +551,13 @@
               }}
             </button>
 
-            <div
-              v-if="conversionResult"
-              class="conversion-output"
-            >
+            <div v-if="conversionResult" class="conversion-output">
               <div class="output-row">
                 <span>Converted Normalized Result:</span>
-                <strong>{{ conversionResult.converted_value }}
-                  {{ conversionResult.to_unit }}</strong>
+                <strong
+                  >{{ conversionResult.converted_value }}
+                  {{ conversionResult.to_unit }}</strong
+                >
               </div>
               <div class="output-row">
                 <span>Multiplication Factor:</span>
@@ -637,12 +582,8 @@
                 v-model="simModel.grading_scale"
                 class="select-input"
               >
-                <option value="CTCAE_V5">
-                  NCI-CTCAE v5.0
-                </option>
-                <option value="DAIDS_V2_1">
-                  DAIDS v2.1 Severity Table
-                </option>
+                <option value="CTCAE_V5">NCI-CTCAE v5.0</option>
+                <option value="DAIDS_V2_1">DAIDS v2.1 Severity Table</option>
               </select>
             </div>
 
@@ -654,7 +595,7 @@
                   v-model="simModel.test_code"
                   type="text"
                   class="text-input"
-                >
+                />
               </div>
               <div class="form-group">
                 <label for="sim-val">Observed Value:</label>
@@ -664,7 +605,7 @@
                   type="number"
                   step="any"
                   class="text-input"
-                >
+                />
               </div>
               <div class="form-group">
                 <label for="sim-unit">Unit:</label>
@@ -673,7 +614,7 @@
                   v-model="simModel.unit"
                   type="text"
                   class="text-input"
-                >
+                />
               </div>
             </div>
 
@@ -686,7 +627,7 @@
                   type="number"
                   step="any"
                   class="text-input"
-                >
+                />
               </div>
               <div class="form-group">
                 <label for="sim-lln">Demographic LLN:</label>
@@ -696,7 +637,7 @@
                   type="number"
                   step="any"
                   class="text-input"
-                >
+                />
               </div>
               <div class="form-group">
                 <label for="sim-base">Subject Baseline:</label>
@@ -706,7 +647,7 @@
                   type="number"
                   step="any"
                   class="text-input"
-                >
+                />
               </div>
             </div>
 
@@ -727,7 +668,7 @@
                     type="number"
                     step="any"
                     class="text-input"
-                  >
+                  />
                 </div>
                 <div class="form-group">
                   <label for="sim-alkp">ALKP (U/L):</label>
@@ -737,25 +678,21 @@
                     type="number"
                     step="any"
                     class="text-input"
-                  >
+                  />
                 </div>
               </div>
             </div>
 
-            <button
-              class="btn btn-secondary"
-              @click="runToxicitySimulation"
-            >
+            <button class="btn btn-secondary" @click="runToxicitySimulation">
               Simulate Toxicity Grading
             </button>
 
-            <div
-              v-if="simResult"
-              class="conversion-output"
-            >
+            <div v-if="simResult" class="conversion-output">
               <div class="output-row">
                 <span>Calculated Toxicity Grade:</span>
-                <span :class="['grade-badge', 'grade-' + simResult.ctcae_grade]">Grade {{ simResult.ctcae_grade }}</span>
+                <span :class="['grade-badge', 'grade-' + simResult.ctcae_grade]"
+                  >Grade {{ simResult.ctcae_grade }}</span
+                >
               </div>
               <div class="output-row">
                 <span>Clinical Severity:</span>
@@ -774,7 +711,9 @@
                 class="output-row alert-row"
               >
                 <span>Hy's Law DILI Alert:</span>
-                <strong class="text-danger">CRITICAL DRUG-INDUCED LIVER INJURY WARNING</strong>
+                <strong class="text-danger"
+                  >CRITICAL DRUG-INDUCED LIVER INJURY WARNING</strong
+                >
               </div>
             </div>
           </div>
@@ -796,10 +735,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr
-                  v-for="item in loincCatalog"
-                  :key="item.loinc_code"
-                >
+                <tr v-for="item in loincCatalog" :key="item.loinc_code">
                   <td>
                     <strong>{{ item.test_code }}</strong>
                   </td>
@@ -835,10 +771,7 @@
               CSV/sFTP, and Local Lab batch entry.
             </p>
           </div>
-          <button
-            class="btn btn-secondary"
-            @click="fetchBatchStatuses"
-          >
+          <button class="btn btn-secondary" @click="fetchBatchStatuses">
             <span class="icon">🔄</span> Refresh Feeds
           </button>
         </div>
@@ -860,10 +793,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="b in batches"
-                :key="b.batch_id"
-              >
+              <tr v-for="b in batches" :key="b.batch_id">
                 <td>
                   <code>{{ b.batch_id.slice(0, 8) }}...</code>
                 </td>
@@ -901,10 +831,7 @@
                 <td>{{ formatDate(b.created_at) }}</td>
               </tr>
               <tr v-if="batches.length === 0">
-                <td
-                  colspan="10"
-                  class="empty-state"
-                >
+                <td colspan="10" class="empty-state">
                   No laboratory feed batches processed yet.
                 </td>
               </tr>
@@ -933,9 +860,7 @@
               <option value="SUBJ-202">
                 SUBJ-202 (Cohort A - Renal Function)
               </option>
-              <option value="SUBJ-303">
-                SUBJ-303 (Cohort B - Hematology)
-              </option>
+              <option value="SUBJ-303">SUBJ-303 (Cohort B - Hematology)</option>
               <option value="SUBJ-TOX-99">
                 SUBJ-TOX-99 (Severe Toxicities)
               </option>
@@ -943,29 +868,17 @@
           </div>
           <div class="filter-group">
             <label for="trend-test">Analyte:</label>
-            <select
-              id="trend-test"
-              v-model="trendTest"
-              class="select-input"
-            >
-              <option value="ALT">
-                ALT - Alanine Aminotransferase (U/L)
-              </option>
+            <select id="trend-test" v-model="trendTest" class="select-input">
+              <option value="ALT">ALT - Alanine Aminotransferase (U/L)</option>
               <option value="AST">
                 AST - Aspartate Aminotransferase (U/L)
               </option>
-              <option value="CREAT">
-                CREAT - Serum Creatinine (mg/dL)
-              </option>
+              <option value="CREAT">CREAT - Serum Creatinine (mg/dL)</option>
               <option value="POTASSIUM">
                 POTASSIUM - Serum Potassium (mmol/L)
               </option>
-              <option value="HGB">
-                HGB - Hemoglobin (g/dL)
-              </option>
-              <option value="PLT">
-                PLT - Platelet Count (10^9/L)
-              </option>
+              <option value="HGB">HGB - Hemoglobin (g/dL)</option>
+              <option value="PLT">PLT - Platelet Count (10^9/L)</option>
             </select>
           </div>
           <div class="filter-group">
@@ -978,12 +891,18 @@
         <div class="trend-kpis">
           <div class="kpi-card">
             <span class="kpi-label">Baseline Value</span>
-            <span class="kpi-value">{{ trendSummary.baseline }} {{ trendSummary.unit }}</span>
-            <span class="kpi-sub">Ref: [{{ trendSummary.lln }} - {{ trendSummary.uln }}]</span>
+            <span class="kpi-value"
+              >{{ trendSummary.baseline }} {{ trendSummary.unit }}</span
+            >
+            <span class="kpi-sub"
+              >Ref: [{{ trendSummary.lln }} - {{ trendSummary.uln }}]</span
+            >
           </div>
           <div class="kpi-card">
             <span class="kpi-label">Peak Value (Cmax)</span>
-            <span class="kpi-value text-danger">{{ trendSummary.peakValue }} {{ trendSummary.unit }}</span>
+            <span class="kpi-value text-danger"
+              >{{ trendSummary.peakValue }} {{ trendSummary.unit }}</span
+            >
             <span class="kpi-sub">Visit: {{ trendSummary.peakVisit }}</span>
           </div>
           <div class="kpi-card">
@@ -1004,14 +923,10 @@
               {{ trendSummary.maxDeltaPct > 0 ? "+" : ""
               }}{{ trendSummary.maxDeltaPct }}%
             </span>
-            <span
-              v-if="trendSummary.maxDeltaPct >= 50"
-              class="safety-tag delta"
-            >⚡ Acute Shift Alert</span>
-            <span
-              v-else
-              class="kpi-sub"
-            >Within Normal Variance</span>
+            <span v-if="trendSummary.maxDeltaPct >= 50" class="safety-tag delta"
+              >⚡ Acute Shift Alert</span
+            >
+            <span v-else class="kpi-sub">Within Normal Variance</span>
           </div>
         </div>
 
@@ -1020,12 +935,18 @@
           <div class="chart-header">
             <h4>Longitudinal Lab Trajectory & Reference Band Shading</h4>
             <div class="chart-legend">
-              <span class="legend-item"><span class="legend-box normal-band" /> Normal Limits [LLN -
-                ULN]</span>
-              <span class="legend-item"><span class="legend-line uln-line" /> Upper Limit of Normal
-                (ULN: {{ trendSummary.uln }})</span>
-              <span class="legend-item"><span class="legend-line delta-line" /> Acute Shift Trigger
-                (+50%)</span>
+              <span class="legend-item"
+                ><span class="legend-box normal-band" /> Normal Limits [LLN -
+                ULN]</span
+              >
+              <span class="legend-item"
+                ><span class="legend-line uln-line" /> Upper Limit of Normal
+                (ULN: {{ trendSummary.uln }})</span
+              >
+              <span class="legend-item"
+                ><span class="legend-line delta-line" /> Acute Shift Trigger
+                (+50%)</span
+              >
             </div>
           </div>
 
@@ -1111,10 +1032,7 @@
               />
 
               <!-- Plotted Points & Tooltip Labels -->
-              <g
-                v-for="(pt, idx) in trendPlotPoints"
-                :key="idx"
-              >
+              <g v-for="(pt, idx) in trendPlotPoints" :key="idx">
                 <circle
                   :cx="pt.x"
                   :cy="pt.y"
@@ -1196,11 +1114,15 @@
                   </span>
                 </td>
                 <td>
-                  <strong class="value-highlight">{{ obs.value }} {{ trendSummary.unit }}</strong>
+                  <strong class="value-highlight"
+                    >{{ obs.value }} {{ trendSummary.unit }}</strong
+                  >
                 </td>
                 <td>
-                  <code>{{ obs.normalizedValue }}
-                    {{ trendSummary.normalizedUnit }}</code>
+                  <code
+                    >{{ obs.normalizedValue }}
+                    {{ trendSummary.normalizedUnit }}</code
+                  >
                 </td>
                 <td>
                   <span
@@ -1220,10 +1142,9 @@
                   <span :class="['grade-badge', 'grade-' + obs.grade]">
                     Grade {{ obs.grade }}
                   </span>
-                  <span
-                    v-if="obs.grade >= 3"
-                    class="sub-text text-danger"
-                  >Severe AE</span>
+                  <span v-if="obs.grade >= 3" class="sub-text text-danger"
+                    >Severe AE</span
+                  >
                 </td>
                 <td>
                   <span
@@ -1232,10 +1153,7 @@
                   >
                     {{ obs.deltaPct > 0 ? "+" : "" }}{{ obs.deltaPct }}%
                   </span>
-                  <span
-                    v-else
-                    class="text-muted"
-                  >Baseline</span>
+                  <span v-else class="text-muted">Baseline</span>
                 </td>
                 <td>
                   <span
@@ -1264,10 +1182,7 @@
       <div class="modal-box modal-lg">
         <div class="modal-header">
           <h3>Ingest Laboratory Batch Feed</h3>
-          <button
-            class="close-btn"
-            @click="showIngestModal = false"
-          >
+          <button class="close-btn" @click="showIngestModal = false">
             &times;
           </button>
         </div>
@@ -1282,18 +1197,10 @@
               <option value="cdisc_lab">
                 CDISC LAB Standard v1.0.1 (XML ODM / JSON)
               </option>
-              <option value="csv">
-                Delimited CSV / TSV / sFTP
-              </option>
-              <option value="hl7">
-                HL7 v2.x (ORU^R01)
-              </option>
-              <option value="fhir">
-                HL7 FHIR Observation JSON
-              </option>
-              <option value="local_manual">
-                Manual Local Lab Batch Entry
-              </option>
+              <option value="csv">Delimited CSV / TSV / sFTP</option>
+              <option value="hl7">HL7 v2.x (ORU^R01)</option>
+              <option value="fhir">HL7 FHIR Observation JSON</option>
+              <option value="local_manual">Manual Local Lab Batch Entry</option>
             </select>
           </div>
 
@@ -1306,7 +1213,7 @@
                 type="text"
                 class="text-input"
                 placeholder="e.g. STUDY-101"
-              >
+              />
             </div>
             <div class="form-group">
               <label for="ingest-site">Site Identifier (for Local Lab):</label>
@@ -1316,7 +1223,7 @@
                 type="text"
                 class="text-input"
                 placeholder="e.g. SITE-001"
-              >
+              />
             </div>
             <div class="form-group">
               <label for="ingest-source">Laboratory Source:</label>
@@ -1325,18 +1232,16 @@
                 v-model="ingestForm.lab_source"
                 class="select-input"
               >
-                <option value="CENTRAL">
-                  CENTRAL
-                </option>
-                <option value="LOCAL">
-                  LOCAL
-                </option>
+                <option value="CENTRAL">CENTRAL</option>
+                <option value="LOCAL">LOCAL</option>
               </select>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="ingest-payload">Raw Feed Content / XML / JSON / Delimited Payload:</label>
+            <label for="ingest-payload"
+              >Raw Feed Content / XML / JSON / Delimited Payload:</label
+            >
             <textarea
               id="ingest-payload"
               v-model="ingestForm.payload"
@@ -1353,14 +1258,11 @@
               v-model="ingestForm.reason_for_change"
               type="text"
               class="text-input"
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="showIngestModal = false"
-          >
+          <button class="btn btn-secondary" @click="showIngestModal = false">
             Cancel
           </button>
           <button
@@ -1391,10 +1293,7 @@
             Investigator Sign-off: Grade
             {{ selectedReview.ctcae_grade }} Toxicity
           </h3>
-          <button
-            class="close-btn"
-            @click="showActionModal = false"
-          >
+          <button class="close-btn" @click="showActionModal = false">
             &times;
           </button>
         </div>
@@ -1417,7 +1316,9 @@
           </div>
 
           <div class="form-group">
-            <label for="action-select">Investigator Clinical Determination:</label>
+            <label for="action-select"
+              >Investigator Clinical Determination:</label
+            >
             <select
               id="action-select"
               v-model="actionForm.action"
@@ -1447,21 +1348,20 @@
           </div>
 
           <div class="form-group">
-            <label for="action-reason">21 CFR Part 11 Reason for Determination:</label>
+            <label for="action-reason"
+              >21 CFR Part 11 Reason for Determination:</label
+            >
             <input
               id="action-reason"
               v-model="actionForm.reason_for_change"
               type="text"
               class="text-input"
               placeholder="Mandatory Part 11 audit justification"
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            class="btn btn-secondary"
-            @click="showActionModal = false"
-          >
+          <button class="btn btn-secondary" @click="showActionModal = false">
             Cancel
           </button>
           <button

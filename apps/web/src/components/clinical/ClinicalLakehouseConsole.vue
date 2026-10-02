@@ -26,10 +26,7 @@
       <div class="header-actions">
         <!-- Blinded Partitioning Role Toggle -->
         <div class="blinding-toggle-box">
-          <label
-            class="toggle-label"
-            for="unblinded-toggle"
-          >
+          <label class="toggle-label" for="unblinded-toggle">
             <span class="toggle-icon">{{ isUnblindedRole ? "🔓" : "🔒" }}</span>
             <span class="toggle-text">{{
               isUnblindedRole
@@ -43,7 +40,7 @@
             type="checkbox"
             class="toggle-checkbox"
             @change="handleBlindingToggle"
-          >
+          />
         </div>
 
         <button
@@ -66,19 +63,13 @@
     </header>
 
     <!-- Multi-Stream Metrics Cards Grid -->
-    <section
-      class="metrics-grid"
-      aria-label="Ingestion Stream Metrics"
-    >
+    <section class="metrics-grid" aria-label="Ingestion Stream Metrics">
       <div
         v-for="stream in streamDefinitions"
         :key="stream.type"
         class="metric-card"
       >
-        <div
-          class="stream-icon-col"
-          :style="{ backgroundColor: stream.bgCol }"
-        >
+        <div class="stream-icon-col" :style="{ backgroundColor: stream.bgCol }">
           <span class="stream-icon">{{ stream.icon }}</span>
         </div>
         <div class="stream-details">
@@ -93,11 +84,7 @@
     </section>
 
     <!-- Workspace Tabs -->
-    <nav
-      class="nav-tabs"
-      role="tablist"
-      aria-label="Lakehouse Navigation Tabs"
-    >
+    <nav class="nav-tabs" role="tablist" aria-label="Lakehouse Navigation Tabs">
       <button
         role="tab"
         :aria-selected="activeTab === 'snapshots'"
@@ -141,18 +128,14 @@
     </nav>
 
     <!-- TAB 1: Version-Pinned Snapshots -->
-    <div
-      v-if="activeTab === 'snapshots'"
-      class="tab-panel"
-      role="tabpanel"
-    >
+    <div v-if="activeTab === 'snapshots'" class="tab-panel" role="tabpanel">
       <div class="card table-card">
         <div class="card-header">
-          <h3 class="card-title">
-            Immutable Clinical Snapshot Pools
-          </h3>
+          <h3 class="card-title">Immutable Clinical Snapshot Pools</h3>
           <div class="card-meta">
-            <span class="total-badge">Total Sealed Snapshots: {{ snapshots.length }}</span>
+            <span class="total-badge"
+              >Total Sealed Snapshots: {{ snapshots.length }}</span
+            >
           </div>
         </div>
 
@@ -195,34 +178,33 @@
                   </span>
                 </td>
                 <td>
-                  <span
-                    v-if="snap.lock_id"
-                    class="lock-ref"
-                  >🔒 {{ snap.lock_id }}</span>
-                  <span
-                    v-else
-                    class="text-muted"
-                  >—</span>
+                  <span v-if="snap.lock_id" class="lock-ref"
+                    >🔒 {{ snap.lock_id }}</span
+                  >
+                  <span v-else class="text-muted">—</span>
                 </td>
                 <td class="cell-num">
                   {{ snap.record_count.toLocaleString() }}
                 </td>
                 <td>
                   <div class="partition-ratio">
-                    <span class="part-blinded">{{ snap.blinded_record_count }} Blinded</span>
+                    <span class="part-blinded"
+                      >{{ snap.blinded_record_count }} Blinded</span
+                    >
                     <span class="part-separator">/</span>
-                    <span class="part-unblinded">{{ snap.unblinded_record_count }} Unblinded</span>
+                    <span class="part-unblinded"
+                      >{{ snap.unblinded_record_count }} Unblinded</span
+                    >
                   </div>
                 </td>
                 <td class="cell-digest">
-                  <div
-                    class="digest-pill"
-                    :title="snap.sha256_digest"
-                  >
+                  <div class="digest-pill" :title="snap.sha256_digest">
                     <span class="digest-icon">🛡️</span>
-                    <code>{{ snap.sha256_digest.slice(0, 12) }}...{{
-                      snap.sha256_digest.slice(-8)
-                    }}</code>
+                    <code
+                      >{{ snap.sha256_digest.slice(0, 12) }}...{{
+                        snap.sha256_digest.slice(-8)
+                      }}</code
+                    >
                   </div>
                 </td>
                 <td class="cell-date">
@@ -256,10 +238,7 @@
                 </td>
               </tr>
               <tr v-if="snapshots.length === 0">
-                <td
-                  colspan="9"
-                  class="empty-cell"
-                >
+                <td colspan="9" class="empty-cell">
                   No version-pinned snapshots created yet. Click "Create
                   Version-Pinned Snapshot" to pool multi-stream observations.
                 </td>
@@ -306,100 +285,53 @@
     </div>
 
     <!-- TAB 2: Pooled Data Explorer -->
-    <div
-      v-if="activeTab === 'pool_data'"
-      class="tab-panel"
-      role="tabpanel"
-    >
+    <div v-if="activeTab === 'pool_data'" class="tab-panel" role="tabpanel">
       <div class="card explorer-card">
         <div class="card-header">
           <div class="header-left">
             <h3 class="card-title">
               Pooled Observations
-              <span
-                v-if="selectedSnapshot"
-                class="snap-badge"
-              >Snapshot: {{ selectedSnapshot.version_tag }}</span>
+              <span v-if="selectedSnapshot" class="snap-badge"
+                >Snapshot: {{ selectedSnapshot.version_tag }}</span
+              >
             </h3>
             <p class="card-sub">
               Showing harmonized observations from all ingested data streams.
-              <span
-                v-if="!isUnblindedRole"
-                class="blind-notice"
-              >⚠️ Blinded Mode Active: Sensitive treatment records and
-                randomized allocations are masked per GxP blinding policy.</span>
-              <span
-                v-else
-                class="unblind-notice"
-              >🔓 Unblinded Access Verified: Viewing unmasked treatment
-                allocations.</span>
+              <span v-if="!isUnblindedRole" class="blind-notice"
+                >⚠️ Blinded Mode Active: Sensitive treatment records and
+                randomized allocations are masked per GxP blinding policy.</span
+              >
+              <span v-else class="unblind-notice"
+                >🔓 Unblinded Access Verified: Viewing unmasked treatment
+                allocations.</span
+              >
             </p>
           </div>
 
           <div class="filter-controls">
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select
-              v-model="filterDomain"
-              class="form-select"
-            >
-              <option value="">
-                All Domains
-              </option>
-              <option value="VS">
-                VS - Vital Signs
-              </option>
-              <option value="LB">
-                LB - Laboratory
-              </option>
-              <option value="QS">
-                QS - Questionnaires / ePRO
-              </option>
-              <option value="AE">
-                AE - Adverse Events
-              </option>
-              <option value="TR">
-                TR - Tumor / Lesion
-              </option>
-              <option value="RS">
-                RS - RECIST Response
-              </option>
-              <option value="DM">
-                DM - Demographics
-              </option>
-              <option value="EX">
-                EX - Exposure
-              </option>
+            <select v-model="filterDomain" class="form-select">
+              <option value="">All Domains</option>
+              <option value="VS">VS - Vital Signs</option>
+              <option value="LB">LB - Laboratory</option>
+              <option value="QS">QS - Questionnaires / ePRO</option>
+              <option value="AE">AE - Adverse Events</option>
+              <option value="TR">TR - Tumor / Lesion</option>
+              <option value="RS">RS - RECIST Response</option>
+              <option value="DM">DM - Demographics</option>
+              <option value="EX">EX - Exposure</option>
             </select>
 
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select
-              v-model="filterStream"
-              class="form-select"
-            >
-              <option value="">
-                All Streams
-              </option>
-              <option value="EDC_ECRF">
-                EDC eCRFs
-              </option>
-              <option value="EPRO_ECOA">
-                ePRO / eCOA
-              </option>
-              <option value="CENTRAL_LAB">
-                Central Labs
-              </option>
-              <option value="LOCAL_LAB">
-                Local Labs
-              </option>
-              <option value="IOT_WEARABLE">
-                IoT Wearables
-              </option>
-              <option value="EHR_FHIR">
-                EHR FHIR
-              </option>
-              <option value="MEDICAL_IMAGING">
-                Medical Imaging
-              </option>
+            <select v-model="filterStream" class="form-select">
+              <option value="">All Streams</option>
+              <option value="EDC_ECRF">EDC eCRFs</option>
+              <option value="EPRO_ECOA">ePRO / eCOA</option>
+              <option value="CENTRAL_LAB">Central Labs</option>
+              <option value="LOCAL_LAB">Local Labs</option>
+              <option value="IOT_WEARABLE">IoT Wearables</option>
+              <option value="EHR_FHIR">EHR FHIR</option>
+              <option value="MEDICAL_IMAGING">Medical Imaging</option>
             </select>
 
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -408,7 +340,7 @@
               type="text"
               class="form-input search-input"
               placeholder="Filter by Subject ID..."
-            >
+            />
           </div>
         </div>
 
@@ -460,15 +392,14 @@
                   <span
                     v-if="rec.text_value === '[BLINDED]'"
                     class="badge-blinded"
-                  >[BLINDED]</span>
+                    >[BLINDED]</span
+                  >
                   <span
                     v-else-if="rec.numeric_value !== null"
                     class="cell-val-num"
-                  >{{ rec.numeric_value }}</span>
-                  <span
-                    v-else
-                    class="cell-val-text"
-                  >{{
+                    >{{ rec.numeric_value }}</span
+                  >
+                  <span v-else class="cell-val-text">{{
                     rec.text_value || "—"
                   }}</span>
                 </td>
@@ -483,10 +414,7 @@
                     {{ rec.reference_low ?? "—" }} -
                     {{ rec.reference_high ?? "—" }}
                   </span>
-                  <span
-                    v-else
-                    class="text-muted"
-                  >—</span>
+                  <span v-else class="text-muted">—</span>
                 </td>
                 <td>
                   <span
@@ -496,32 +424,20 @@
                   >
                     {{ rec.abnormal_flag }}
                   </span>
-                  <span
-                    v-else
-                    class="text-muted"
-                  >—</span>
+                  <span v-else class="text-muted">—</span>
                 </td>
                 <td>
-                  <span
-                    v-if="rec.is_unblinded"
-                    class="badge-unblind-tag"
-                  >
+                  <span v-if="rec.is_unblinded" class="badge-unblind-tag">
                     {{ isUnblindedRole ? "🔓 UNBLINDED" : "🔒 MASKED" }}
                   </span>
-                  <span
-                    v-else
-                    class="badge-blinded-tag"
-                  >BLINDED</span>
+                  <span v-else class="badge-blinded-tag">BLINDED</span>
                 </td>
                 <td class="cell-date">
                   {{ formatDate(rec.observation_datetime) }}
                 </td>
               </tr>
               <tr v-if="filteredRecords.length === 0">
-                <td
-                  colspan="10"
-                  class="empty-cell"
-                >
+                <td colspan="10" class="empty-cell">
                   No records match current filters or no snapshot selected.
                 </td>
               </tr>
@@ -532,11 +448,7 @@
     </div>
 
     <!-- TAB 3: 21 CFR Part 11 Audit Trail -->
-    <div
-      v-if="activeTab === 'audit_log'"
-      class="tab-panel"
-      role="tabpanel"
-    >
+    <div v-if="activeTab === 'audit_log'" class="tab-panel" role="tabpanel">
       <div class="card audit-card">
         <div class="card-header">
           <h3 class="card-title">
@@ -559,10 +471,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="log in auditLogs"
-                :key="log.id"
-              >
+              <tr v-for="log in auditLogs" :key="log.id">
                 <td class="cell-date">
                   {{ formatDate(log.timestamp) }}
                 </td>
@@ -584,19 +493,15 @@
                   <code>{{ log.snapshot_id || log.study_id }}</code>
                 </td>
                 <td class="details-cell">
-                  <span
-                    v-if="log.reason_for_change"
-                    class="reason-text"
-                  ><strong>Reason:</strong> {{ log.reason_for_change }}</span>
+                  <span v-if="log.reason_for_change" class="reason-text"
+                    ><strong>Reason:</strong> {{ log.reason_for_change }}</span
+                  >
                   <pre class="details-json">{{
                     JSON.stringify(log.details)
                   }}</pre>
                 </td>
                 <td>
-                  <code
-                    class="seal-code"
-                    :title="log.sha256_seal"
-                  >
+                  <code class="seal-code" :title="log.sha256_seal">
                     {{ log.sha256_seal.slice(0, 10) }}...{{
                       log.sha256_seal.slice(-6)
                     }}
@@ -604,10 +509,7 @@
                 </td>
               </tr>
               <tr v-if="auditLogs.length === 0">
-                <td
-                  colspan="7"
-                  class="empty-cell"
-                >
+                <td colspan="7" class="empty-cell">
                   No audit log records available.
                 </td>
               </tr>
@@ -618,11 +520,7 @@
     </div>
 
     <!-- TAB 4: Statistical Computing Environment -->
-    <div
-      v-if="activeTab === 'sce'"
-      class="tab-panel"
-      role="tabpanel"
-    >
+    <div v-if="activeTab === 'sce'" class="tab-panel" role="tabpanel">
       <StatisticalComputingConsole
         :study-id="studyId"
         :initial-unblinded="isUnblindedRole"
@@ -663,92 +561,77 @@
 
         <div class="modal-body">
           <div class="form-group">
-            <label
-              class="form-label"
-              for="snap-study"
-            >Study Identifier <span class="required">*</span></label>
+            <label class="form-label" for="snap-study"
+              >Study Identifier <span class="required">*</span></label
+            >
             <input
               id="snap-study"
               v-model="createForm.study_id"
               type="text"
               class="form-input"
               placeholder="e.g. STUDY-901"
-            >
+            />
           </div>
 
           <div class="form-group">
-            <label
-              class="form-label"
-              for="snap-tag"
-            >Version Tag <span class="required">*</span></label>
+            <label class="form-label" for="snap-tag"
+              >Version Tag <span class="required">*</span></label
+            >
             <input
               id="snap-tag"
               v-model="createForm.version_tag"
               type="text"
               class="form-input"
               placeholder="e.g. v1.0.0-INTERIM-1"
+            />
+            <small class="form-help"
+              >Immutable version identifier. Once sealed, this snapshot pool
+              cannot be modified.</small
             >
-            <small class="form-help">Immutable version identifier. Once sealed, this snapshot pool
-              cannot be modified.</small>
           </div>
 
           <div class="form-group">
-            <label
-              class="form-label"
-              for="snap-milestone"
-            >Lock Milestone <span class="required">*</span></label>
+            <label class="form-label" for="snap-milestone"
+              >Lock Milestone <span class="required">*</span></label
+            >
             <select
               id="snap-milestone"
               v-model="createForm.milestone"
               class="form-select"
             >
-              <option value="INTERIM_ANALYSIS_1">
-                Interim Analysis 1
-              </option>
-              <option value="INTERIM_ANALYSIS_2">
-                Interim Analysis 2
-              </option>
-              <option value="DATABASE_LOCK">
-                Final Database Lock
-              </option>
-              <option value="SAFETY_REVIEW">
-                Periodic Safety Review
-              </option>
+              <option value="INTERIM_ANALYSIS_1">Interim Analysis 1</option>
+              <option value="INTERIM_ANALYSIS_2">Interim Analysis 2</option>
+              <option value="DATABASE_LOCK">Final Database Lock</option>
+              <option value="SAFETY_REVIEW">Periodic Safety Review</option>
               <option value="REGULATORY_SUBMISSION">
                 Regulatory Submission
               </option>
-              <option value="PROTOCOL_FREEZE">
-                Protocol Freeze
-              </option>
+              <option value="PROTOCOL_FREEZE">Protocol Freeze</option>
               <option value="ADJUDICATION_MILESTONE">
                 BICR Adjudication Milestone
               </option>
-              <option value="CUSTOM">
-                Custom Milestone
-              </option>
+              <option value="CUSTOM">Custom Milestone</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label
-              class="form-label"
-              for="snap-lock-id"
-            >Associated Relational DataLock ID</label>
+            <label class="form-label" for="snap-lock-id"
+              >Associated Relational DataLock ID</label
+            >
             <input
               id="snap-lock-id"
               v-model="createForm.lock_id"
               type="text"
               class="form-input"
               placeholder="e.g. LOCK-STUDY-901-FINAL"
-            >
+            />
           </div>
 
           <div class="form-group">
-            <label
-              class="form-label"
-              for="snap-reason"
-            >GxP Rationale / Reason for Snapshot
-              <span class="required">*</span></label>
+            <label class="form-label" for="snap-reason"
+              >GxP Rationale / Reason for Snapshot
+              <span class="required">*</span></label
+            >
             <textarea
               id="snap-reason"
               v-model="createForm.reason_for_snapshot"

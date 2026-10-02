@@ -26,21 +26,16 @@
 
         <div class="header-meta-group">
           <div class="meta-item">
-            <label
-              for="ract-study-select"
-              class="meta-label"
-            >Active Study:</label>
+            <label for="ract-study-select" class="meta-label"
+              >Active Study:</label
+            >
             <select
               id="ract-study-select"
               v-model="selectedStudyId"
               class="ract-select"
               @change="fetchRactData"
             >
-              <option
-                v-for="s in availableStudies"
-                :key="s"
-                :value="s"
-              >
+              <option v-for="s in availableStudies" :key="s" :value="s">
                 {{ s }}
               </option>
             </select>
@@ -108,72 +103,50 @@
         :class="{ 'kpi-card-active': selectedCategory === 'ALL' }"
         @click="selectedCategory = 'ALL'"
       >
-        <div class="kpi-icon icon-total">
-          📊
-        </div>
+        <div class="kpi-icon icon-total">📊</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ totalRiskFactors }}
           </div>
-          <div class="kpi-label">
-            Total Protocol Risks
-          </div>
+          <div class="kpi-label">Total Protocol Risks</div>
         </div>
       </div>
 
       <div class="kpi-card kpi-card-danger">
-        <div class="kpi-icon icon-high">
-          🚨
-        </div>
+        <div class="kpi-icon icon-high">🚨</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ highRiskCount }}
           </div>
-          <div class="kpi-label">
-            High Risk Factors (Score &ge; 15)
-          </div>
+          <div class="kpi-label">High Risk Factors (Score &ge; 15)</div>
         </div>
       </div>
 
       <div class="kpi-card kpi-card-warning">
-        <div class="kpi-icon icon-med">
-          ⚠️
-        </div>
+        <div class="kpi-icon icon-med">⚠️</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ mediumRiskCount }}
           </div>
-          <div class="kpi-label">
-            Medium Risk Factors (7 - 14)
-          </div>
+          <div class="kpi-label">Medium Risk Factors (7 - 14)</div>
         </div>
       </div>
 
       <div class="kpi-card kpi-card-success">
-        <div class="kpi-icon icon-low">
-          ✅
-        </div>
+        <div class="kpi-icon icon-low">✅</div>
         <div class="kpi-content">
           <div class="kpi-value">
             {{ lowRiskCount }}
           </div>
-          <div class="kpi-label">
-            Low Risk Factors (&le; 6)
-          </div>
+          <div class="kpi-label">Low Risk Factors (&le; 6)</div>
         </div>
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-icon icon-kri">
-          🔗
-        </div>
+        <div class="kpi-icon icon-kri">🔗</div>
         <div class="kpi-content">
-          <div class="kpi-value">
-            {{ linkedKriCoverage }}%
-          </div>
-          <div class="kpi-label">
-            Automated KRI Coverage
-          </div>
+          <div class="kpi-value">{{ linkedKriCoverage }}%</div>
+          <div class="kpi-label">Automated KRI Coverage</div>
         </div>
       </div>
     </div>
@@ -234,39 +207,25 @@
           type="text"
           class="ract-search-input"
           placeholder="Filter risk factors, topics, or KRIs..."
-        >
+        />
       </div>
     </div>
 
     <!-- MODE 1: Interactive RACT Risk Matrix Grid -->
-    <section
-      v-if="activeViewMode === 'matrix'"
-      class="matrix-section"
-    >
-      <div
-        v-if="filteredFactors.length === 0"
-        class="empty-state-card"
-      >
-        <div class="empty-icon">
-          📋
-        </div>
+    <section v-if="activeViewMode === 'matrix'" class="matrix-section">
+      <div v-if="filteredFactors.length === 0" class="empty-state-card">
+        <div class="empty-icon">📋</div>
         <h3>No Protocol Risk Factors Found</h3>
         <p>
           No risk factors match the current filter or category. Seed standard
           TransCelerate defaults to initialize the matrix.
         </p>
-        <button
-          class="ract-btn ract-btn-primary"
-          @click="seedDefaults"
-        >
+        <button class="ract-btn ract-btn-primary" @click="seedDefaults">
           ⚡ Seed Standard TransCelerate RACT Defaults
         </button>
       </div>
 
-      <div
-        v-else
-        class="table-container"
-      >
+      <div v-else class="table-container">
         <table class="ract-table">
           <thead>
             <tr>
@@ -296,14 +255,10 @@
               >
                 Total Score
               </th>
-              <th class="text-center">
-                Risk Tier
-              </th>
+              <th class="text-center">Risk Tier</th>
               <th>Mitigation Controls</th>
               <th>Linked KRI</th>
-              <th class="text-right">
-                Actions
-              </th>
+              <th class="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -356,16 +311,10 @@
                 </div>
               </td>
               <td>
-                <div
-                  v-if="factor.linked_kri_code"
-                  class="kri-link-pill"
-                >
+                <div v-if="factor.linked_kri_code" class="kri-link-pill">
                   <span class="kri-code">{{ factor.linked_kri_code }}</span>
                 </div>
-                <span
-                  v-else
-                  class="text-muted"
-                >— Unlinked —</span>
+                <span v-else class="text-muted">— Unlinked —</span>
               </td>
               <td class="text-right table-actions">
                 <button
@@ -390,10 +339,7 @@
     </section>
 
     <!-- MODE 2: Site Risk Index (SRI) & Percentile Ranking League Table -->
-    <section
-      v-if="activeViewMode === 'sri'"
-      class="sri-section"
-    >
+    <section v-if="activeViewMode === 'sri'" class="sri-section">
       <div class="panel-card">
         <div class="panel-header">
           <div>
@@ -414,13 +360,8 @@
           </button>
         </div>
 
-        <div
-          v-if="siteProfiles.length === 0"
-          class="empty-state-card"
-        >
-          <div class="empty-icon">
-            🎯
-          </div>
+        <div v-if="siteProfiles.length === 0" class="empty-state-card">
+          <div class="empty-icon">🎯</div>
           <h3>No Site Risk Profiles Computed</h3>
           <p>
             Execute batch SRI calculation to rank clinical investigational sites
@@ -434,30 +375,17 @@
           </button>
         </div>
 
-        <div
-          v-else
-          class="table-container"
-        >
+        <div v-else class="table-container">
           <table class="ract-table">
             <thead>
               <tr>
-                <th class="text-center">
-                  Rank
-                </th>
+                <th class="text-center">Rank</th>
                 <th>Investigational Site</th>
-                <th class="text-center">
-                  Composite SRI Score
-                </th>
+                <th class="text-center">Composite SRI Score</th>
                 <th>Cohort Percentile Rank</th>
-                <th class="text-center">
-                  Risk Classification
-                </th>
-                <th class="text-center">
-                  High-Risk KRI Breaches
-                </th>
-                <th class="text-center">
-                  Active Deviations
-                </th>
+                <th class="text-center">Risk Classification</th>
+                <th class="text-center">High-Risk KRI Breaches</th>
+                <th class="text-center">Active Deviations</th>
                 <th>Last Evaluated</th>
               </tr>
             </thead>
@@ -538,22 +466,19 @@
     </section>
 
     <!-- MODE 3: KRI Definitions & Formulas -->
-    <section
-      v-if="activeViewMode === 'kri'"
-      class="kri-section"
-    >
+    <section v-if="activeViewMode === 'kri'" class="kri-section">
       <div class="panel-card">
         <div class="panel-header">
           <div>
-            <h3 class="panel-title">
-              Automated Key Risk Indicators (KRIs)
-            </h3>
+            <h3 class="panel-title">Automated Key Risk Indicators (KRIs)</h3>
             <p class="panel-subtitle">
               Pre-defined dynamic surveillance thresholds across TransCelerate
               protocol risk categories.
             </p>
           </div>
-          <span class="badge badge-gxp">{{ kriDefinitions.length }} Defined KRIs</span>
+          <span class="badge badge-gxp"
+            >{{ kriDefinitions.length }} Defined KRIs</span
+          >
         </div>
 
         <div class="kri-grid-cards">
@@ -591,9 +516,7 @@
               <div class="threshold-pill pill-red">
                 <span class="th-label">Red:</span> &ge; {{ kri.red_threshold }}
               </div>
-              <div class="weight-tag">
-                Weight: {{ kri.weight }}x
-              </div>
+              <div class="weight-tag">Weight: {{ kri.weight }}x</div>
             </div>
           </div>
         </div>
@@ -601,10 +524,7 @@
     </section>
 
     <!-- MODAL 1: Add / Edit Risk Factor Modal -->
-    <div
-      v-if="isRiskModalOpen"
-      class="modal-backdrop"
-    >
+    <div v-if="isRiskModalOpen" class="modal-backdrop">
       <div class="modal-card modal-lg">
         <div class="modal-header">
           <h3 class="modal-title">
@@ -614,10 +534,7 @@
                 : "Define TransCelerate Protocol Risk Factor"
             }}
           </h3>
-          <button
-            class="modal-close-btn"
-            @click="isRiskModalOpen = false"
-          >
+          <button class="modal-close-btn" @click="isRiskModalOpen = false">
             ✕
           </button>
         </div>
@@ -663,7 +580,7 @@
                 type="text"
                 class="form-control"
                 placeholder="e.g. Ultra-Cold Chain Temperature Excursions"
-              >
+              />
             </div>
           </div>
 
@@ -694,15 +611,9 @@
                   v-model.number="riskForm.probability_score"
                   class="form-control"
                 >
-                  <option :value="1">
-                    1 - Low / Rare
-                  </option>
-                  <option :value="2">
-                    2 - Medium / Possible
-                  </option>
-                  <option :value="3">
-                    3 - High / Likely
-                  </option>
+                  <option :value="1">1 - Low / Rare</option>
+                  <option :value="2">2 - Medium / Possible</option>
+                  <option :value="3">3 - High / Likely</option>
                 </select>
               </div>
 
@@ -714,15 +625,9 @@
                   v-model.number="riskForm.impact_score"
                   class="form-control"
                 >
-                  <option :value="1">
-                    1 - Low / Minor
-                  </option>
-                  <option :value="2">
-                    2 - Medium / Moderate
-                  </option>
-                  <option :value="3">
-                    3 - High / Critical
-                  </option>
+                  <option :value="1">1 - Low / Minor</option>
+                  <option :value="2">2 - Medium / Moderate</option>
+                  <option :value="3">3 - High / Critical</option>
                 </select>
               </div>
 
@@ -734,15 +639,11 @@
                   v-model.number="riskForm.detectability_score"
                   class="form-control"
                 >
-                  <option :value="1">
-                    1 - High / Readily Detectable
-                  </option>
+                  <option :value="1">1 - High / Readily Detectable</option>
                   <option :value="2">
                     2 - Moderate / Detectable with Effort
                   </option>
-                  <option :value="3">
-                    3 - Low / Difficult to Detect
-                  </option>
+                  <option :value="3">3 - Low / Difficult to Detect</option>
                 </select>
               </div>
 
@@ -762,7 +663,9 @@
 
           <div class="form-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Mitigation Controls &amp; Operational Strategy *</label>
+            <label class="form-label"
+              >Mitigation Controls &amp; Operational Strategy *</label
+            >
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="riskForm.mitigation_strategy"
@@ -776,13 +679,8 @@
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="form-label">Link Directly to Automated KRI</label>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select
-              v-model="riskForm.linked_kri_code"
-              class="form-control"
-            >
-              <option :value="null">
-                — None / Manual Monitoring —
-              </option>
+            <select v-model="riskForm.linked_kri_code" class="form-control">
+              <option :value="null">— None / Manual Monitoring —</option>
               <option
                 v-for="kri in kriDefinitions"
                 :key="kri.code"
@@ -803,7 +701,7 @@
               type="text"
               class="form-control"
               placeholder="e.g. Protocol amendment 3.0 risk calibration"
-            >
+            />
           </div>
         </div>
 
@@ -826,31 +724,24 @@
     </div>
 
     <!-- MODAL 2: 1-Click Centralized Monitoring Inspection Dossier (21 CFR Part 11) -->
-    <div
-      v-if="isDossierModalOpen"
-      class="modal-backdrop"
-    >
+    <div v-if="isDossierModalOpen" class="modal-backdrop">
       <div class="modal-card modal-xl">
         <div class="modal-header">
           <div>
             <h3 class="modal-title">
               Centralized Monitoring Inspection Dossier Compilation
             </h3>
-            <span class="badge badge-gxp">21 CFR Part 11 Cryptographically Sealed Dossier</span>
+            <span class="badge badge-gxp"
+              >21 CFR Part 11 Cryptographically Sealed Dossier</span
+            >
           </div>
-          <button
-            class="modal-close-btn"
-            @click="isDossierModalOpen = false"
-          >
+          <button class="modal-close-btn" @click="isDossierModalOpen = false">
             ✕
           </button>
         </div>
 
         <div class="modal-body">
-          <div
-            v-if="!compiledDossier"
-            class="dossier-sign-form"
-          >
+          <div v-if="!compiledDossier" class="dossier-sign-form">
             <div class="dossier-intro-box">
               <h4>Inspection Snapshot Generator</h4>
               <p>
@@ -871,7 +762,7 @@
                   type="text"
                   class="form-control"
                   placeholder="e.g. Dr. Eleanor Vance, MD"
-                >
+                />
               </div>
               <div class="form-group flex-1">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -882,7 +773,7 @@
                   type="text"
                   class="form-control"
                   placeholder="e.g. Head of Quality Assurance / Lead Monitor"
-                >
+                />
               </div>
             </div>
 
@@ -895,7 +786,7 @@
                 type="text"
                 class="form-control"
                 placeholder="e.g. CSM-Inspection-Dossier-Q3-2026"
-              >
+              />
             </div>
 
             <div class="signature-intent-box">
@@ -923,14 +814,9 @@
           </div>
 
           <!-- Compiled Dossier Preview -->
-          <div
-            v-else
-            class="dossier-view"
-          >
+          <div v-else class="dossier-view">
             <div class="dossier-seal-banner">
-              <div class="seal-icon">
-                🛡️
-              </div>
+              <div class="seal-icon">🛡️</div>
               <div class="seal-details">
                 <div class="seal-title">
                   {{ compiledDossier.dossier_name }}
@@ -956,10 +842,12 @@
                 </p>
                 <p>
                   KRI Linkage Coverage:
-                  <strong>{{
-                    compiledDossier.ract_summary
-                      ?.linked_kri_coverage_percentage
-                  }}%</strong>
+                  <strong
+                    >{{
+                      compiledDossier.ract_summary
+                        ?.linked_kri_coverage_percentage
+                    }}%</strong
+                  >
                 </p>
               </div>
 

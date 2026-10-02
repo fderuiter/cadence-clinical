@@ -4,9 +4,7 @@
     <div class="tree-header">
       <div class="tree-title-row">
         <span class="tree-title-icon">🗂️</span>
-        <h3 class="tree-title">
-          Clinical Document Tree
-        </h3>
+        <h3 class="tree-title">Clinical Document Tree</h3>
       </div>
       <div class="tree-search-bar">
         <input
@@ -15,7 +13,7 @@
           placeholder="Filter studies, sites, zones..."
           class="search-input"
           aria-label="Filter document folder hierarchy"
-        >
+        />
       </div>
       <div class="tree-quick-filters">
         <select
@@ -24,9 +22,7 @@
           aria-label="Filter study scope"
           @change="onStudySelectChange"
         >
-          <option value="">
-            All Studies
-          </option>
+          <option value="">All Studies</option>
           <option
             v-for="study in studiesTree"
             :key="study.id"
@@ -61,10 +57,7 @@
         </div>
       </div>
 
-      <div
-        v-if="filteredStudies.length === 0"
-        class="empty-tree-message"
-      >
+      <div v-if="filteredStudies.length === 0" class="empty-tree-message">
         No matching studies or folders found.
       </div>
 
@@ -92,10 +85,7 @@
           }}</span>
           <span class="folder-icon">🏥</span>
           <span class="study-code">[{{ study.code }}]</span>
-          <span
-            class="node-name"
-            :title="study.title"
-          >{{ study.id }}</span>
+          <span class="node-name" :title="study.title">{{ study.id }}</span>
         </div>
 
         <!-- Sites Loop -->

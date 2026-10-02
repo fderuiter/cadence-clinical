@@ -3,9 +3,7 @@
     <!-- Header Banner -->
     <header class="wizard-header">
       <div class="wizard-title-group">
-        <div class="wizard-icon-box">
-          📊
-        </div>
+        <div class="wizard-icon-box">📊</div>
         <div>
           <h1 class="wizard-main-title">
             Regulatory Biostatistical Export Wizard
@@ -70,7 +68,8 @@
         >
           <span
             style="font-size: 11px; font-weight: 600; color: var(--text-muted)"
-          >Record Scope:</span>
+            >Record Scope:</span
+          >
           <div
             class="btn-group-toggle"
             style="
@@ -186,10 +185,7 @@
     </div>
 
     <!-- Stepper Navigation -->
-    <nav
-      class="stepper-nav"
-      aria-label="Export Wizard Steps"
-    >
+    <nav class="stepper-nav" aria-label="Export Wizard Steps">
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
@@ -216,13 +212,8 @@
     <!-- Wizard Body Panes -->
     <main class="wizard-card-body">
       <!-- Step 1: Format Selection -->
-      <section
-        v-if="currentStep === 1"
-        class="step-pane"
-      >
-        <h2 class="pane-title">
-          Step 1: Choose Regulatory Target Format
-        </h2>
+      <section v-if="currentStep === 1" class="step-pane">
+        <h2 class="pane-title">Step 1: Choose Regulatory Target Format</h2>
         <p class="pane-description">
           Select the biostatistical or regulatory submission format required by
           the statistical analysis plan (SAP) or health authority (FDA / EMA /
@@ -258,10 +249,7 @@
       </section>
 
       <!-- Step 2: SDTM & ADaM Domain Selection -->
-      <section
-        v-if="currentStep === 2"
-        class="step-pane"
-      >
+      <section v-if="currentStep === 2" class="step-pane">
         <div class="pane-header-actions">
           <div>
             <h2 class="pane-title">
@@ -273,25 +261,13 @@
             </p>
           </div>
           <div class="domain-quick-actions">
-            <button
-              type="button"
-              class="btn btn-sm"
-              @click="selectAllDomains"
-            >
+            <button type="button" class="btn btn-sm" @click="selectAllDomains">
               Select All
             </button>
-            <button
-              type="button"
-              class="btn btn-sm"
-              @click="selectSdtmOnly"
-            >
+            <button type="button" class="btn btn-sm" @click="selectSdtmOnly">
               SDTM Only
             </button>
-            <button
-              type="button"
-              class="btn btn-sm"
-              @click="selectAdamOnly"
-            >
+            <button type="button" class="btn btn-sm" @click="selectAdamOnly">
               ADaM Only
             </button>
             <button
@@ -309,8 +285,10 @@
           <div class="domain-group">
             <h3 class="domain-group-title">
               <span>📋 SDTM Tabulation Domains (v2.0)</span>
-              <span class="count-pill">{{ selectedSdtmCount }} /
-                {{ SDTM_DOMAINS.length }} selected</span>
+              <span class="count-pill"
+                >{{ selectedSdtmCount }} /
+                {{ SDTM_DOMAINS.length }} selected</span
+              >
             </h3>
             <div class="domain-card-list">
               <label
@@ -323,7 +301,7 @@
                   v-model="selectedDomains"
                   type="checkbox"
                   :value="dom.id"
-                >
+                />
                 <div class="domain-info">
                   <div class="domain-code">{{ dom.id }}</div>
                   <div class="domain-label">{{ dom.label }}</div>
@@ -337,8 +315,10 @@
           <div class="domain-group">
             <h3 class="domain-group-title">
               <span>🔬 ADaM Analysis Datasets (v1.3)</span>
-              <span class="count-pill">{{ selectedAdamCount }} /
-                {{ ADAM_DATASETS.length }} selected</span>
+              <span class="count-pill"
+                >{{ selectedAdamCount }} /
+                {{ ADAM_DATASETS.length }} selected</span
+              >
             </h3>
             <div class="domain-card-list">
               <label
@@ -351,7 +331,7 @@
                   v-model="selectedDatasets"
                   type="checkbox"
                   :value="ds.id"
-                >
+                />
                 <div class="domain-info">
                   <div class="domain-code">{{ ds.id }}</div>
                   <div class="domain-label">{{ ds.label }}</div>
@@ -364,13 +344,8 @@
       </section>
 
       <!-- Step 3: Cohort & Site Filtering -->
-      <section
-        v-if="currentStep === 3"
-        class="step-pane"
-      >
-        <h2 class="pane-title">
-          Step 3: Cohort &amp; Site Population Filters
-        </h2>
+      <section v-if="currentStep === 3" class="step-pane">
+        <h2 class="pane-title">Step 3: Cohort &amp; Site Population Filters</h2>
         <p class="pane-description">
           Filter data extracts by clinical investigative site, treatment
           cohort/arm, and visit milestone scope.
@@ -378,17 +353,16 @@
 
         <div class="filter-form-grid">
           <div class="form-group">
-            <label
-              class="form-label"
-              for="study-id-input"
-            >Study Identifier *</label>
+            <label class="form-label" for="study-id-input"
+              >Study Identifier *</label
+            >
             <input
               id="study-id-input"
               v-model="studyId"
               type="text"
               class="form-input"
               placeholder="e.g. STUDY-001"
-            >
+            />
           </div>
 
           <div class="form-group">
@@ -439,11 +413,7 @@
                   font-size: 13px;
                 "
               >
-                <input
-                  v-model="recordLockFilter"
-                  type="radio"
-                  value="all"
-                >
+                <input v-model="recordLockFilter" type="radio" value="all" />
                 <span>All Clinical Records</span>
               </label>
               <label
@@ -460,7 +430,7 @@
                   v-model="recordLockFilter"
                   type="radio"
                   value="locked_only"
-                >
+                />
                 <span>🔒 Locked Only (Audit-Signed / Frozen)</span>
               </label>
               <label
@@ -477,7 +447,7 @@
                   v-model="recordLockFilter"
                   type="radio"
                   value="unlocked_only"
-                >
+                />
                 <span>🔓 Unlocked Only (In-Progress / Draft)</span>
               </label>
             </div>
@@ -485,14 +455,15 @@
 
           <div class="form-group full-width">
             <label class="toggle-control">
-              <input
-                v-model="includeUnmapped"
-                type="checkbox"
-              >
+              <input v-model="includeUnmapped" type="checkbox" />
               <span class="toggle-label">
-                <strong>Include Supplemental Qualifiers (SUPP-- records)</strong>
-                <span class="toggle-sub">Capture non-standard custom CRF variables in normalized SDTM
-                  supplemental structures.</span>
+                <strong
+                  >Include Supplemental Qualifiers (SUPP-- records)</strong
+                >
+                <span class="toggle-sub"
+                  >Capture non-standard custom CRF variables in normalized SDTM
+                  supplemental structures.</span
+                >
               </span>
             </label>
           </div>
@@ -500,10 +471,7 @@
       </section>
 
       <!-- Step 4: Privacy & Governance Profile -->
-      <section
-        v-if="currentStep === 4"
-        class="step-pane"
-      >
+      <section v-if="currentStep === 4" class="step-pane">
         <h2 class="pane-title">
           Step 4: Privacy &amp; De-Identification Profile
         </h2>
@@ -530,29 +498,23 @@
               {{ p.description }}
             </p>
             <ul class="privacy-rules-list">
-              <li
-                v-for="(rule, idx) in p.rules"
-                :key="idx"
-              >
-                ✓ {{ rule }}
-              </li>
+              <li v-for="(rule, idx) in p.rules" :key="idx">✓ {{ rule }}</li>
             </ul>
           </div>
         </div>
 
         <div class="salt-config-panel">
           <div class="form-group">
-            <label
-              class="form-label"
-              for="salt-key-input"
-            >Deterministic HMAC Salt Key (Reversible Governance Hash)</label>
+            <label class="form-label" for="salt-key-input"
+              >Deterministic HMAC Salt Key (Reversible Governance Hash)</label
+            >
             <input
               id="salt-key-input"
               v-model="hmacSalt"
               type="text"
               class="form-input font-mono"
               placeholder="e.g. secure-clinical-salt-98765"
-            >
+            />
             <span class="form-hint">
               Same salt reproduces identical subject pseudonyms and
               deterministic date-shift intervals for cross-domain linkability.
@@ -560,25 +522,23 @@
           </div>
 
           <label class="toggle-control mt-4">
-            <input
-              v-model="includeAuditTrail"
-              type="checkbox"
-            >
+            <input v-model="includeAuditTrail" type="checkbox" />
             <span class="toggle-label">
-              <strong>Embed Part 11 Audit Trail Metadata (&lt;AuditRecord&gt; / CSV
-                stamps)</strong>
-              <span class="toggle-sub">Include author user ID, ISO timestamp, and GxP
-                reason-for-change logs in the serialized package.</span>
+              <strong
+                >Embed Part 11 Audit Trail Metadata (&lt;AuditRecord&gt; / CSV
+                stamps)</strong
+              >
+              <span class="toggle-sub"
+                >Include author user ID, ISO timestamp, and GxP
+                reason-for-change logs in the serialized package.</span
+              >
             </span>
           </label>
         </div>
       </section>
 
       <!-- Step 5: Review & Asynchronous Download Handling -->
-      <section
-        v-if="currentStep === 5"
-        class="step-pane"
-      >
+      <section v-if="currentStep === 5" class="step-pane">
         <h2 class="pane-title">
           Step 5: Review Export Manifest &amp; Download
         </h2>
@@ -588,9 +548,7 @@
         </p>
 
         <div class="manifest-summary-card">
-          <h3 class="summary-header">
-            Export Configuration Manifest
-          </h3>
+          <h3 class="summary-header">Export Configuration Manifest</h3>
           <div class="summary-grid">
             <div class="summary-item">
               <span class="summary-label">Target Study:</span>
@@ -637,10 +595,7 @@
 
         <!-- Progress & Download Execution -->
         <div class="execution-box">
-          <div
-            v-if="exportStatus === 'idle'"
-            class="execution-idle"
-          >
+          <div v-if="exportStatus === 'idle'" class="execution-idle">
             <button
               type="button"
               class="btn btn-primary btn-lg"
@@ -649,21 +604,13 @@
             >
               🚀 Generate &amp; Download Export Package
             </button>
-            <p
-              v-if="totalSelectedCount === 0"
-              class="text-warning mt-2"
-            >
+            <p v-if="totalSelectedCount === 0" class="text-warning mt-2">
               Please select at least one SDTM domain or ADaM dataset in Step 2.
             </p>
           </div>
 
-          <div
-            v-if="exportStatus === 'processing'"
-            class="execution-progress"
-          >
-            <div class="progress-spinner">
-              ⏳
-            </div>
+          <div v-if="exportStatus === 'processing'" class="execution-progress">
+            <div class="progress-spinner">⏳</div>
             <h4 class="progress-title">
               Executing Biostatistical Serializer Pipeline...
             </h4>
@@ -676,16 +623,13 @@
                 :style="{ width: progressPercent + '%' }"
               />
             </div>
-            <span class="progress-percent-label">{{ progressPercent }}% Completed</span>
+            <span class="progress-percent-label"
+              >{{ progressPercent }}% Completed</span
+            >
           </div>
 
-          <div
-            v-if="exportStatus === 'success'"
-            class="execution-success"
-          >
-            <div class="success-icon">
-              ✅
-            </div>
+          <div v-if="exportStatus === 'success'" class="execution-success">
+            <div class="success-icon">✅</div>
             <h4 class="success-title">
               Export Package Generated Successfully!
             </h4>
@@ -711,16 +655,9 @@
             </div>
           </div>
 
-          <div
-            v-if="exportStatus === 'error'"
-            class="execution-error"
-          >
-            <div class="error-icon">
-              ❌
-            </div>
-            <h4 class="error-title">
-              Export Pipeline Execution Failed
-            </h4>
+          <div v-if="exportStatus === 'error'" class="execution-error">
+            <div class="error-icon">❌</div>
+            <h4 class="error-title">Export Pipeline Execution Failed</h4>
             <p class="error-msg">
               {{ errorMessage }}
             </p>

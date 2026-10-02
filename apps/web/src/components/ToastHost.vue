@@ -14,10 +14,7 @@
     >
       <div class="toast-body">
         <strong class="toast-title">{{ toast.title }}</strong>
-        <span
-          v-if="toast.message"
-          class="toast-message"
-        >{{
+        <span v-if="toast.message" class="toast-message">{{
           toast.message
         }}</span>
       </div>

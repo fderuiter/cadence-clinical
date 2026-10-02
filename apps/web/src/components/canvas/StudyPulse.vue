@@ -5,18 +5,9 @@
     aria-labelledby="study-pulse-title"
     :aria-busy="canvas.pulseLoading"
   >
-    <h2
-      id="study-pulse-title"
-      class="pulse-title"
-    >
-      Participants
-    </h2>
+    <h2 id="study-pulse-title" class="pulse-title">Participants</h2>
 
-    <p
-      v-if="canvas.pulseError"
-      class="pulse-status"
-      role="status"
-    >
+    <p v-if="canvas.pulseError" class="pulse-status" role="status">
       The participant counts couldn't be loaded.
       <button
         id="btn-retry-pulse"
@@ -27,11 +18,7 @@
         Try again
       </button>
     </p>
-    <p
-      v-else-if="!canvas.pulse"
-      class="pulse-status"
-      role="status"
-    >
+    <p v-else-if="!canvas.pulse" class="pulse-status" role="status">
       Counting participants...
     </p>
     <p
@@ -52,14 +39,8 @@
         <span class="pulse-value">{{ canvas.pulse.total }}</span>
         <span class="pulse-label">in the study</span>
       </button>
-      <ul
-        class="pulse-states"
-        aria-label="Participants by state"
-      >
-        <li
-          v-for="state in shownStates"
-          :key="state.code"
-        >
+      <ul class="pulse-states" aria-label="Participants by state">
+        <li v-for="state in shownStates" :key="state.code">
           <button
             :id="`pulse-${state.code.toLowerCase()}`"
             type="button"

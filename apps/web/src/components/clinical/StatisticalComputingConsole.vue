@@ -9,8 +9,12 @@
       <div class="header-main">
         <div class="badge-row">
           <span class="badge badge-gxp">21 CFR Part 11</span>
-          <span class="badge badge-reproducible">100% Bit-for-Bit Reproducible</span>
-          <span class="badge badge-sandbox">Air-Gapped Sandbox (R &amp; Python)</span>
+          <span class="badge badge-reproducible"
+            >100% Bit-for-Bit Reproducible</span
+          >
+          <span class="badge badge-sandbox"
+            >Air-Gapped Sandbox (R &amp; Python)</span
+          >
         </div>
         <h2 class="sce-title">
           Validated Statistical Computing Environment (SCE)
@@ -104,19 +108,16 @@
     </nav>
 
     <!-- TAB 1: Editor & Sandbox Runner -->
-    <div
-      v-if="activeTab === 'editor'"
-      class="tab-panel"
-    >
+    <div v-if="activeTab === 'editor'" class="tab-panel">
       <div class="workspace-grid">
         <!-- Left Panel: Program Selection & Editor -->
         <div class="card editor-card">
           <div class="card-header">
             <div class="header-left">
-              <h3 class="card-title">
-                Analysis Program Authoring
-              </h3>
-              <span class="version-tag">Version: {{ selectedProgram?.version || "1.0.0" }}</span>
+              <h3 class="card-title">Analysis Program Authoring</h3>
+              <span class="version-tag"
+                >Version: {{ selectedProgram?.version || "1.0.0" }}</span
+              >
             </div>
             <div class="header-right">
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -125,9 +126,7 @@
                 class="form-select program-selector"
                 @change="onProgramSelected"
               >
-                <option value="">
-                  -- Select or Template Program --
-                </option>
+                <option value="">-- Select or Template Program --</option>
                 <option
                   v-for="prog in programs"
                   :key="prog.program_id"
@@ -185,54 +184,48 @@
 
           <div class="meta-inputs-grid">
             <div class="form-group">
-              <label
-                class="form-label"
-                for="prog-name"
-              >Script Filename</label>
+              <label class="form-label" for="prog-name">Script Filename</label>
               <input
                 id="prog-name"
                 v-model="scriptName"
                 type="text"
                 class="form-input"
                 placeholder="t_14_1_demog.py"
-              >
+              />
             </div>
             <div class="form-group">
-              <label
-                class="form-label"
-                for="prog-title"
-              >Program Title</label>
+              <label class="form-label" for="prog-title">Program Title</label>
               <input
                 id="prog-title"
                 v-model="scriptTitle"
                 type="text"
                 class="form-input"
                 placeholder="Summary of Demographic Characteristics"
-              >
+              />
             </div>
             <div class="form-group">
-              <label
-                class="form-label"
-                for="prog-domain"
-              >Target CDISC Domain</label>
+              <label class="form-label" for="prog-domain"
+                >Target CDISC Domain</label
+              >
               <input
                 id="prog-domain"
                 v-model="targetDomain"
                 type="text"
                 class="form-input"
                 placeholder="ADSL / TLF-14.1"
-              >
+              />
             </div>
           </div>
 
           <div class="code-editor-wrapper">
             <div class="editor-toolbar">
-              <span class="editor-filename">📝 {{ scriptName || "untitled_analysis.py" }}</span>
-              <span
-                v-if="computedCodeHash"
-                class="code-digest-preview"
-              >SHA-256:
-                <code>{{ computedCodeHash.slice(0, 16) }}...</code></span>
+              <span class="editor-filename"
+                >📝 {{ scriptName || "untitled_analysis.py" }}</span
+              >
+              <span v-if="computedCodeHash" class="code-digest-preview"
+                >SHA-256:
+                <code>{{ computedCodeHash.slice(0, 16) }}...</code></span
+              >
             </div>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
@@ -253,34 +246,31 @@
             >
               💾 Save Program Definition
             </button>
-            <span class="text-muted text-xs">Immutable SHA-256 seal will be signed on execution dispatch</span>
+            <span class="text-muted text-xs"
+              >Immutable SHA-256 seal will be signed on execution dispatch</span
+            >
           </div>
         </div>
 
         <!-- Right Panel: Sandbox Execution Launcher & Status -->
         <div class="card runner-card">
           <div class="card-header">
-            <h3 class="card-title">
-              Sandbox Execution Controls
-            </h3>
+            <h3 class="card-title">Sandbox Execution Controls</h3>
             <span class="badge badge-sandbox">Air-Gapped Container</span>
           </div>
 
           <div class="runner-body">
             <!-- 1. Input Snapshot Selection -->
             <div class="form-group">
-              <label
-                class="form-label"
-                for="exec-snap"
-              >Input Version-Pinned Snapshot</label>
+              <label class="form-label" for="exec-snap"
+                >Input Version-Pinned Snapshot</label
+              >
               <select
                 id="exec-snap"
                 v-model="selectedSnapshotId"
                 class="form-select"
               >
-                <option value="">
-                  -- Choose Sealed Snapshot --
-                </option>
+                <option value="">-- Choose Sealed Snapshot --</option>
                 <option
                   v-for="snap in snapshots"
                   :key="snap.snapshot_id"
@@ -290,12 +280,11 @@
                   {{ snap.record_count }} records
                 </option>
               </select>
-              <span
-                v-if="selectedSnapshot"
-                class="field-hint"
-              >
+              <span v-if="selectedSnapshot" class="field-hint">
                 Digest:
-                <code>{{ selectedSnapshot.sha256_digest.slice(0, 20) }}...</code>
+                <code
+                  >{{ selectedSnapshot.sha256_digest.slice(0, 20) }}...</code
+                >
               </span>
             </div>
 
@@ -305,17 +294,16 @@
               :class="{ 'gating-active': requestUnblinded }"
             >
               <div class="toggle-row">
-                <label
-                  class="checkbox-label"
-                  for="unblind-req-checkbox"
-                >
+                <label class="checkbox-label" for="unblind-req-checkbox">
                   <input
                     id="unblind-req-checkbox"
                     v-model="requestUnblinded"
                     type="checkbox"
                     class="form-checkbox"
+                  />
+                  <span class="checkbox-text"
+                    >Request Unblinded Treatment Arms Access</span
                   >
-                  <span class="checkbox-text">Request Unblinded Treatment Arms Access</span>
                 </label>
                 <span
                   class="badge"
@@ -325,14 +313,10 @@
                 </span>
               </div>
 
-              <div
-                v-if="requestUnblinded"
-                class="token-selection-group"
-              >
-                <label
-                  class="form-label"
-                  for="db-token-select"
-                >Database Lock Authorization Token (Required)</label>
+              <div v-if="requestUnblinded" class="token-selection-group">
+                <label class="form-label" for="db-token-select"
+                  >Database Lock Authorization Token (Required)</label
+                >
                 <select
                   id="db-token-select"
                   v-model="selectedTokenId"
@@ -360,9 +344,7 @@
 
             <!-- 3. Resource Bounds & Configuration -->
             <div class="bounds-box">
-              <h4 class="bounds-title">
-                Sandbox Bounded Limits
-              </h4>
+              <h4 class="bounds-title">Sandbox Bounded Limits</h4>
               <div class="bounds-grid">
                 <div class="bound-item">
                   <span class="bound-name">Timeout Limit:</span>
@@ -374,7 +356,9 @@
                 </div>
                 <div class="bound-item">
                   <span class="bound-name">Network Egress:</span>
-                  <span class="bound-val badge-green">BLOCKED (Air-Gapped)</span>
+                  <span class="bound-val badge-green"
+                    >BLOCKED (Air-Gapped)</span
+                  >
                 </div>
                 <div class="bound-item">
                   <span class="bound-name">Filesystem:</span>
@@ -391,10 +375,9 @@
                 :disabled="isExecuting || !canExecute"
                 @click="dispatchExecution"
               >
-                <span
-                  v-if="isExecuting"
-                  class="spinner"
-                >⏳ Executing Sandbox Run...</span>
+                <span v-if="isExecuting" class="spinner"
+                  >⏳ Executing Sandbox Run...</span
+                >
                 <span v-else>🚀 Run Statistical Analysis in Sandbox</span>
               </button>
             </div>
@@ -406,7 +389,9 @@
               :class="`status-${latestRun.status.toLowerCase()}`"
             >
               <div class="run-header-row">
-                <span class="run-id-tag">Run: <code>{{ latestRun.run_id }}</code></span>
+                <span class="run-id-tag"
+                  >Run: <code>{{ latestRun.run_id }}</code></span
+                >
                 <span
                   class="status-pill"
                   :class="`pill-${latestRun.status.toLowerCase()}`"
@@ -423,8 +408,10 @@
               </div>
 
               <div class="artifacts-summary">
-                <span class="art-count">Generated Output Artifacts:
-                  {{ latestRun.output_artifacts.length }}</span>
+                <span class="art-count"
+                  >Generated Output Artifacts:
+                  {{ latestRun.output_artifacts.length }}</span
+                >
                 <button
                   type="button"
                   class="btn btn-xs btn-outline"
@@ -440,15 +427,10 @@
     </div>
 
     <!-- TAB 2: Historical Runs & Signed Manifests -->
-    <div
-      v-if="activeTab === 'runs'"
-      class="tab-panel"
-    >
+    <div v-if="activeTab === 'runs'" class="tab-panel">
       <div class="card table-card">
         <div class="card-header">
-          <h3 class="card-title">
-            21 CFR Part 11 Execution Run Manifests
-          </h3>
+          <h3 class="card-title">21 CFR Part 11 Execution Run Manifests</h3>
           <span class="total-badge">Total Sealed Runs: {{ runs.length }}</span>
         </div>
 
@@ -487,7 +469,8 @@
                   <span
                     class="lang-tag"
                     :class="`lang-${run.language.toLowerCase()}`"
-                  >{{ run.language }}</span>
+                    >{{ run.language }}</span
+                  >
                 </td>
                 <td>
                   <span class="version-pill">{{
@@ -495,32 +478,24 @@
                   }}</span>
                 </td>
                 <td>
-                  <span
-                    v-if="run.is_unblinded_run"
-                    class="badge-unblind-tag"
-                  >🔓 UNBLINDED</span>
-                  <span
-                    v-else
-                    class="badge-blinded-tag"
-                  >BLINDED</span>
+                  <span v-if="run.is_unblinded_run" class="badge-unblind-tag"
+                    >🔓 UNBLINDED</span
+                  >
+                  <span v-else class="badge-blinded-tag">BLINDED</span>
                 </td>
                 <td>
                   <span
                     class="status-pill"
                     :class="`pill-${run.status.toLowerCase()}`"
-                  >{{ run.status }}</span>
+                    >{{ run.status }}</span
+                  >
                 </td>
-                <td class="cell-num">
-                  {{ run.duration_ms }} ms
-                </td>
+                <td class="cell-num">{{ run.duration_ms }} ms</td>
                 <td class="cell-num">
                   {{ run.output_artifacts.length }} items
                 </td>
                 <td class="cell-digest">
-                  <span
-                    class="digest-pill"
-                    :title="run.manifest_sha256_seal"
-                  >
+                  <span class="digest-pill" :title="run.manifest_sha256_seal">
                     🛡️ {{ run.manifest_sha256_seal.slice(0, 14) }}...
                   </span>
                 </td>
@@ -547,10 +522,7 @@
                 </td>
               </tr>
               <tr v-if="runs.length === 0">
-                <td
-                  colspan="11"
-                  class="text-center text-muted empty-cell"
-                >
+                <td colspan="11" class="text-center text-muted empty-cell">
                   No statistical runs executed yet. Launch a program from the
                   Statistical Workspace.
                 </td>
@@ -561,10 +533,7 @@
       </div>
 
       <!-- Detailed Run Manifest Inspector Modal / Drawer -->
-      <div
-        v-if="selectedRunDetail"
-        class="detail-drawer card"
-      >
+      <div v-if="selectedRunDetail" class="detail-drawer card">
         <div class="card-header">
           <div class="header-left">
             <h3 class="card-title">
@@ -574,7 +543,8 @@
             <span
               class="status-pill"
               :class="`pill-${selectedRunDetail.status.toLowerCase()}`"
-            >{{ selectedRunDetail.status }}</span>
+              >{{ selectedRunDetail.status }}</span
+            >
           </div>
           <button
             type="button"
@@ -675,28 +645,21 @@
                   }}</span>
                   <div class="art-meta">
                     <span class="art-name">{{ art.name }}</span>
-                    <span class="art-sub">{{ art.artifact_type }} • {{ art.size_bytes }} bytes •
-                      {{ art.mime_type }}</span>
+                    <span class="art-sub"
+                      >{{ art.artifact_type }} • {{ art.size_bytes }} bytes •
+                      {{ art.mime_type }}</span
+                    >
                   </div>
-                  <span
-                    class="art-digest-pill"
-                    :title="art.sha256_digest"
-                  >
+                  <span class="art-digest-pill" :title="art.sha256_digest">
                     SHA-256: {{ art.sha256_digest.slice(0, 16) }}...
                   </span>
                 </div>
-                <div
-                  v-if="art.content_preview"
-                  class="art-preview-box"
-                >
+                <div v-if="art.content_preview" class="art-preview-box">
                   <pre class="preview-text">{{ art.content_preview }}</pre>
                 </div>
               </div>
             </div>
-            <div
-              v-else
-              class="text-muted text-xs"
-            >
+            <div v-else class="text-muted text-xs">
               No output artifacts produced by this run.
             </div>
           </div>
@@ -722,10 +685,7 @@
     </div>
 
     <!-- TAB 3: Package Lockfiles -->
-    <div
-      v-if="activeTab === 'lockfiles'"
-      class="tab-panel"
-    >
+    <div v-if="activeTab === 'lockfiles'" class="tab-panel">
       <div class="card lockfile-card">
         <div class="card-header">
           <h3 class="card-title">
@@ -744,21 +704,16 @@
 
           <div class="lock-test-grid">
             <div class="form-group">
-              <label
-                class="form-label"
-                for="lock-format-select"
-              >Lockfile Format</label>
+              <label class="form-label" for="lock-format-select"
+                >Lockfile Format</label
+              >
               <select
                 id="lock-format-select"
                 v-model="testLockType"
                 class="form-select"
               >
-                <option value="UV_LOCK">
-                  uv.lock (Python TOML)
-                </option>
-                <option value="RENV_LOCK">
-                  renv.lock (R JSON)
-                </option>
+                <option value="UV_LOCK">uv.lock (Python TOML)</option>
+                <option value="RENV_LOCK">renv.lock (R JSON)</option>
                 <option value="REQUIREMENTS_TXT">
                   requirements.txt (Hashes)
                 </option>
@@ -766,10 +721,9 @@
             </div>
 
             <div class="form-group">
-              <label
-                class="form-label"
-                for="lock-content-area"
-              >Lockfile Content</label>
+              <label class="form-label" for="lock-content-area"
+                >Lockfile Content</label
+              >
               <textarea
                 id="lock-content-area"
                 v-model="testLockContent"
@@ -807,8 +761,10 @@
                 <span class="res-status-pill">{{
                   lockValidationResult.status
                 }}</span>
-                <span class="res-count">{{ lockValidationResult.package_count }} Pinned
-                  Packages</span>
+                <span class="res-count"
+                  >{{ lockValidationResult.package_count }} Pinned
+                  Packages</span
+                >
               </div>
               <div class="res-digest">
                 <span class="digest-lbl">Canonical Lockfile Digest:</span>
@@ -851,16 +807,11 @@
     </div>
 
     <!-- TAB 4: Database Lock Authorization Tokens -->
-    <div
-      v-if="activeTab === 'tokens'"
-      class="tab-panel"
-    >
+    <div v-if="activeTab === 'tokens'" class="tab-panel">
       <div class="card table-card">
         <div class="card-header">
           <div class="header-left">
-            <h3 class="card-title">
-              Database Lock Authorization Tokens
-            </h3>
+            <h3 class="card-title">Database Lock Authorization Tokens</h3>
             <p class="card-sub">
               Formal cryptographic authorization tokens gating unblinded
               statistical analysis.
@@ -892,10 +843,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr
-                v-for="tok in lockTokens"
-                :key="tok.token_id"
-              >
+              <tr v-for="tok in lockTokens" :key="tok.token_id">
                 <td class="cell-id">
                   <code>{{ tok.token_id }}</code>
                 </td>
@@ -920,24 +868,18 @@
                   {{ formatDate(tok.expires_at) }}
                 </td>
                 <td>
-                  <span
-                    v-if="tok.is_revoked"
-                    class="badge-revoked"
-                  >REVOKED</span>
+                  <span v-if="tok.is_revoked" class="badge-revoked"
+                    >REVOKED</span
+                  >
                   <span
                     v-else-if="isTokenExpired(tok.expires_at)"
                     class="badge-expired"
-                  >EXPIRED</span>
-                  <span
-                    v-else
-                    class="badge-active"
-                  >ACTIVE</span>
+                    >EXPIRED</span
+                  >
+                  <span v-else class="badge-active">ACTIVE</span>
                 </td>
                 <td class="cell-digest">
-                  <span
-                    class="digest-pill"
-                    :title="tok.signature_hash"
-                  >
+                  <span class="digest-pill" :title="tok.signature_hash">
                     🔑 {{ tok.signature_hash.slice(0, 14) }}...
                   </span>
                 </td>
@@ -950,17 +892,11 @@
                   >
                     Revoke
                   </button>
-                  <span
-                    v-else
-                    class="text-muted"
-                  >—</span>
+                  <span v-else class="text-muted">—</span>
                 </td>
               </tr>
               <tr v-if="lockTokens.length === 0">
-                <td
-                  colspan="10"
-                  class="text-center text-muted empty-cell"
-                >
+                <td colspan="10" class="text-center text-muted empty-cell">
                   No database lock authorization tokens issued yet.
                 </td>
               </tr>
@@ -971,15 +907,10 @@
     </div>
 
     <!-- Issue Token Modal -->
-    <div
-      v-if="showIssueTokenModal"
-      class="modal-backdrop"
-    >
+    <div v-if="showIssueTokenModal" class="modal-backdrop">
       <div class="modal-dialog card">
         <div class="modal-header">
-          <h3 class="modal-title">
-            Issue Database Lock Authorization Token
-          </h3>
+          <h3 class="modal-title">Issue Database Lock Authorization Token</h3>
           <button
             type="button"
             class="btn-close"
@@ -990,63 +921,51 @@
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label
-              class="form-label"
-              for="new-lock-id"
-            >Database Lock Reference ID</label>
+            <label class="form-label" for="new-lock-id"
+              >Database Lock Reference ID</label
+            >
             <input
               id="new-lock-id"
               v-model="newTokenLockId"
               type="text"
               class="form-input"
               placeholder="LOCK-STUDY-901-FINAL"
-            >
+            />
           </div>
           <div class="form-group">
-            <label
-              class="form-label"
-              for="new-lock-milestone"
-            >Milestone Tier</label>
+            <label class="form-label" for="new-lock-milestone"
+              >Milestone Tier</label
+            >
             <select
               id="new-lock-milestone"
               v-model="newTokenMilestone"
               class="form-select"
             >
-              <option value="DATABASE_LOCK">
-                DATABASE_LOCK
-              </option>
-              <option value="INTERIM_ANALYSIS_1">
-                INTERIM_ANALYSIS_1
-              </option>
-              <option value="INTERIM_ANALYSIS_2">
-                INTERIM_ANALYSIS_2
-              </option>
-              <option value="SAFETY_REVIEW">
-                SAFETY_REVIEW
-              </option>
+              <option value="DATABASE_LOCK">DATABASE_LOCK</option>
+              <option value="INTERIM_ANALYSIS_1">INTERIM_ANALYSIS_1</option>
+              <option value="INTERIM_ANALYSIS_2">INTERIM_ANALYSIS_2</option>
+              <option value="SAFETY_REVIEW">SAFETY_REVIEW</option>
               <option value="REGULATORY_SUBMISSION">
                 REGULATORY_SUBMISSION
               </option>
             </select>
           </div>
           <div class="form-group">
-            <label
-              class="form-label"
-              for="new-token-user"
-            >Issued To (User ID)</label>
+            <label class="form-label" for="new-token-user"
+              >Issued To (User ID)</label
+            >
             <input
               id="new-token-user"
               v-model="newTokenIssuedTo"
               type="text"
               class="form-input"
               placeholder="lead_unblinded_statistician"
-            >
+            />
           </div>
           <div class="form-group">
-            <label
-              class="form-label"
-              for="new-token-hours"
-            >Validity Period (Hours)</label>
+            <label class="form-label" for="new-token-hours"
+              >Validity Period (Hours)</label
+            >
             <input
               id="new-token-hours"
               v-model.number="newTokenHours"
@@ -1054,13 +973,12 @@
               class="form-input"
               min="1"
               max="720"
-            >
+            />
           </div>
           <div class="form-group">
-            <label
-              class="form-label"
-              for="new-token-reason"
-            >Regulatory Justification (21 CFR Part 11)</label>
+            <label class="form-label" for="new-token-reason"
+              >Regulatory Justification (21 CFR Part 11)</label
+            >
             <textarea
               id="new-token-reason"
               v-model="newTokenReason"

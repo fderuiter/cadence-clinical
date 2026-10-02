@@ -5,11 +5,7 @@
         <h3 class="card-title">
           <span>🩺</span> Subject Registration &amp; Screening
         </h3>
-        <span
-          v-if="screeningStatus"
-          class="badge"
-          :class="screeningBadgeClass"
-        >
+        <span v-if="screeningStatus" class="badge" :class="screeningBadgeClass">
           {{ screeningStatus }}
         </span>
       </div>
@@ -19,10 +15,7 @@
       </p>
     </div>
 
-    <form
-      class="enrollment-form-body"
-      @submit.prevent="handleEnrollSubmit"
-    >
+    <form class="enrollment-form-body" @submit.prevent="handleEnrollSubmit">
       <div class="form-grid">
         <!-- Subject ID (Required) -->
         <div class="form-group col-6">
@@ -132,10 +125,7 @@
             <span class="outcome-icon">{{ outcomeIcon }}</span>
             <span class="outcome-text">{{ outcomeSummaryText }}</span>
           </div>
-          <span
-            class="badge"
-            :class="screeningBadgeClass"
-          >
+          <span class="badge" :class="screeningBadgeClass">
             {{ outcomeBadgeText }}
           </span>
         </div>
@@ -144,7 +134,7 @@
         <div
           v-if="
             screeningResult.failed_criteria &&
-              screeningResult.failed_criteria.length > 0
+            screeningResult.failed_criteria.length > 0
           "
           class="criteria-list-section failed-criteria"
         >
@@ -166,7 +156,7 @@
         <div
           v-if="
             screeningResult.indeterminate_criteria &&
-              screeningResult.indeterminate_criteria.length > 0
+            screeningResult.indeterminate_criteria.length > 0
           "
           class="criteria-list-section indeterminate-criteria"
         >

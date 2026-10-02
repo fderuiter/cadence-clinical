@@ -1,17 +1,13 @@
 <template>
   <div class="oncology-calipers-panel">
     <div class="panel-header">
-      <h3 class="panel-title">
-        Oncologic Calipers &amp; Response Engine
-      </h3>
+      <h3 class="panel-title">Oncologic Calipers &amp; Response Engine</h3>
       <span class="badge badge-gxp">21 CFR Part 11</span>
     </div>
 
     <!-- Active Measurement Tool Selection -->
     <div class="caliper-tools-section">
-      <div class="section-subtitle">
-        Active Caliper Tool
-      </div>
+      <div class="section-subtitle">Active Caliper Tool</div>
       <div class="tool-btn-grid">
         <button
           type="button"
@@ -57,119 +53,70 @@
 
     <!-- Lesion Classification & Metadata Input -->
     <div class="lesion-config-section">
-      <div class="section-subtitle">
-        Lesion Tagging &amp; Anatomical Site
-      </div>
+      <div class="section-subtitle">Lesion Tagging &amp; Anatomical Site</div>
       <div class="form-row">
         <div class="form-group">
-          <label
-            for="lesion-id-input"
-            class="field-label"
-          >Lesion ID:</label>
+          <label for="lesion-id-input" class="field-label">Lesion ID:</label>
           <input
             id="lesion-id-input"
             v-model="newLesionForm.lesionId"
             type="text"
             class="field-input"
             placeholder="e.g. TL1"
-          >
+          />
         </div>
 
         <div class="form-group">
-          <label
-            for="lesion-type-select"
-            class="field-label"
-          >Category:</label>
+          <label for="lesion-type-select" class="field-label">Category:</label>
           <select
             id="lesion-type-select"
             v-model="newLesionForm.lesionType"
             class="field-select"
           >
-            <option value="TARGET">
-              Target Lesion
-            </option>
-            <option value="NON_TARGET">
-              Non-Target Lesion
-            </option>
-            <option value="NEW_LESION">
-              New Malignant Lesion
-            </option>
+            <option value="TARGET">Target Lesion</option>
+            <option value="NON_TARGET">Non-Target Lesion</option>
+            <option value="NEW_LESION">New Malignant Lesion</option>
           </select>
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group">
-          <label
-            for="organ-site-select"
-            class="field-label"
-          >Organ Site:</label>
+          <label for="organ-site-select" class="field-label">Organ Site:</label>
           <select
             id="organ-site-select"
             v-model="newLesionForm.organSite"
             class="field-select"
           >
-            <option value="LIVER">
-              Liver
-            </option>
-            <option value="LUNG_RIGHT">
-              Right Lung
-            </option>
-            <option value="LUNG_LEFT">
-              Left Lung
-            </option>
+            <option value="LIVER">Liver</option>
+            <option value="LUNG_RIGHT">Right Lung</option>
+            <option value="LUNG_LEFT">Left Lung</option>
             <option value="LYMPH_NODE_MEDIASTINAL">
               Mediastinal Lymph Node
             </option>
-            <option value="LYMPH_NODE_CERVICAL">
-              Cervical Lymph Node
-            </option>
-            <option value="BRAIN">
-              Brain
-            </option>
-            <option value="BONE">
-              Bone
-            </option>
-            <option value="EXTRANODAL_SPLEEN">
-              Spleen (Extranodal)
-            </option>
-            <option value="OTHER">
-              Other Soft Tissue
-            </option>
+            <option value="LYMPH_NODE_CERVICAL">Cervical Lymph Node</option>
+            <option value="BRAIN">Brain</option>
+            <option value="BONE">Bone</option>
+            <option value="EXTRANODAL_SPLEEN">Spleen (Extranodal)</option>
+            <option value="OTHER">Other Soft Tissue</option>
           </select>
         </div>
 
-        <div
-          v-if="criteria === 'LUGANO_2014'"
-          class="form-group"
-        >
-          <label
-            for="deauville-select"
-            class="field-label"
-          >PET Deauville:</label>
+        <div v-if="criteria === 'LUGANO_2014'" class="form-group">
+          <label for="deauville-select" class="field-label"
+            >PET Deauville:</label
+          >
           <select
             id="deauville-select"
             v-model.number="newLesionForm.deauvilleScore"
             class="field-select"
           >
-            <option :value="null">
-              None
-            </option>
-            <option :value="1">
-              1: No uptake
-            </option>
-            <option :value="2">
-              2: &le; Mediastinum
-            </option>
-            <option :value="3">
-              3: &le; Liver
-            </option>
-            <option :value="4">
-              4: &gt; Liver
-            </option>
-            <option :value="5">
-              5: Markedly &gt; Liver
-            </option>
+            <option :value="null">None</option>
+            <option :value="1">1: No uptake</option>
+            <option :value="2">2: &le; Mediastinum</option>
+            <option :value="3">3: &le; Liver</option>
+            <option :value="4">4: &gt; Liver</option>
+            <option :value="5">5: Markedly &gt; Liver</option>
           </select>
         </div>
       </div>
@@ -178,7 +125,9 @@
     <!-- Active Annotations List -->
     <div class="annotations-list-section">
       <div class="section-header-row">
-        <span class="section-subtitle">Active Calipers ({{ annotations.length }})</span>
+        <span class="section-subtitle"
+          >Active Calipers ({{ annotations.length }})</span
+        >
         <button
           v-if="annotations.length > 0"
           type="button"
@@ -189,17 +138,11 @@
         </button>
       </div>
 
-      <div
-        v-if="annotations.length === 0"
-        class="empty-state"
-      >
+      <div v-if="annotations.length === 0" class="empty-state">
         Draw calipers directly on the MPR viewer canvas to measure lesions.
       </div>
 
-      <div
-        v-else
-        class="annotations-table-wrapper"
-      >
+      <div v-else class="annotations-table-wrapper">
         <table class="annotations-table">
           <thead>
             <tr>
@@ -222,10 +165,7 @@
               </td>
               <td>{{ a.organ_site }}</td>
               <td>
-                <span
-                  class="type-pill"
-                  :class="a.lesion_type.toLowerCase()"
-                >
+                <span class="type-pill" :class="a.lesion_type.toLowerCase()">
                   {{ a.lesion_type }}
                 </span>
               </td>
@@ -257,10 +197,7 @@
               : "Lugano 2014 Derivation"
           }}
         </span>
-        <span
-          class="response-pill"
-          :class="overallResponseClass"
-        >
+        <span class="response-pill" :class="overallResponseClass">
           {{ derivedResponse.overall_response || "SD" }}
         </span>
       </div>
@@ -309,8 +246,8 @@
           <span class="metric-label">Target Response</span>
           <span class="metric-value">{{
             derivedResponse.target_response ||
-              derivedResponse.ct_response ||
-              "SD"
+            derivedResponse.ct_response ||
+            "SD"
           }}</span>
         </div>
       </div>
@@ -340,11 +277,7 @@
           <h4 class="modal-title">
             Electronic Signature - Tumor Assessment Sign-off
           </h4>
-          <button
-            type="button"
-            class="btn-close"
-            @click="isModalOpen = false"
-          >
+          <button type="button" class="btn-close" @click="isModalOpen = false">
             ✕
           </button>
         </div>
@@ -355,30 +288,28 @@
             classification.
           </p>
           <div class="form-group">
-            <label
-              for="change-reason-input"
-              class="field-label"
-            >Reason for Assessment / Change:</label>
+            <label for="change-reason-input" class="field-label"
+              >Reason for Assessment / Change:</label
+            >
             <input
               id="change-reason-input"
               v-model="signoffReason"
               type="text"
               class="field-input"
               placeholder="e.g. Scheduled Cycle 2 Oncology Protocol Tumor Evaluation"
-            >
+            />
           </div>
           <div class="form-group">
-            <label
-              for="signature-input"
-              class="field-label"
-            >Electronic Signature (Full Name / PIN):</label>
+            <label for="signature-input" class="field-label"
+              >Electronic Signature (Full Name / PIN):</label
+            >
             <input
               id="signature-input"
               v-model="signaturePin"
               type="password"
               class="field-input"
               placeholder="Enter signature or password..."
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">

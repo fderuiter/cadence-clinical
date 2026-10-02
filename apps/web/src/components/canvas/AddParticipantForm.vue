@@ -5,9 +5,7 @@
     aria-labelledby="add-participant-title"
     @submit.prevent="submit"
   >
-    <h3 id="add-participant-title">
-      Add a participant
-    </h3>
+    <h3 id="add-participant-title">Add a participant</h3>
     <p class="hint">
       The participant starts in screening. No name, birth date or other identity
       details are recorded here.
@@ -20,7 +18,7 @@
       maxlength="255"
       autocomplete="off"
       required
-    >
+    />
     <label for="add-participant-site">Site (optional)</label>
     <input
       id="add-participant-site"
@@ -28,7 +26,7 @@
       type="text"
       maxlength="255"
       autocomplete="off"
-    >
+    />
     <label for="add-participant-reason">Reason</label>
     <textarea
       id="add-participant-reason"
@@ -46,11 +44,7 @@
       >
         Add participant
       </button>
-      <button
-        type="button"
-        class="btn btn-secondary"
-        @click="emit('close')"
-      >
+      <button type="button" class="btn btn-secondary" @click="emit('close')">
         Cancel
       </button>
     </div>

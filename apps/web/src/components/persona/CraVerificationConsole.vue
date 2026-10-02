@@ -56,7 +56,9 @@
           margin-bottom: 12px;
         "
       >
-        <span>CRA Verification Console &amp; Source Data Verification (SDV)</span>
+        <span
+          >CRA Verification Console &amp; Source Data Verification (SDV)</span
+        >
         <div style="display: flex; gap: 8px; align-items: center">
           <span
             class="badge"
@@ -87,14 +89,12 @@
           align-items: center;
         "
       >
-        <div
-          class="form-group"
-          style="margin: 0; min-width: 180px"
-        >
+        <div class="form-group" style="margin: 0; min-width: 180px">
           <label
             for="cra-subject-selector"
             style="font-weight: bold; font-size: 0.75rem"
-          >Subject ID</label>
+            >Subject ID</label
+          >
           <select
             id="cra-subject-selector"
             v-model="currentSubjectId"
@@ -115,14 +115,12 @@
           </select>
         </div>
 
-        <div
-          class="form-group"
-          style="margin: 0; min-width: 180px"
-        >
+        <div class="form-group" style="margin: 0; min-width: 180px">
           <label
             for="cra-visit-selector"
             style="font-weight: bold; font-size: 0.75rem"
-          >Encounter / Visit</label>
+            >Encounter / Visit</label
+          >
           <select
             id="cra-visit-selector"
             v-model="currentVisitId"
@@ -133,15 +131,9 @@
               border-radius: 4px;
             "
           >
-            <option value="Screening">
-              Screening / Day -7
-            </option>
-            <option value="Week2">
-              Week 2 Treatment
-            </option>
-            <option value="Week4">
-              Week 4 Treatment
-            </option>
+            <option value="Screening">Screening / Day -7</option>
+            <option value="Week2">Week 2 Treatment</option>
+            <option value="Week4">Week 4 Treatment</option>
           </select>
         </div>
 
@@ -157,7 +149,9 @@
         >
           <div>
             <strong>SDV Completion:</strong>
-            <span style="font-weight: 700; color: #166534; margin-left: 4px">{{ sdvCompletionRate }}%</span>
+            <span style="font-weight: 700; color: #166534; margin-left: 4px"
+              >{{ sdvCompletionRate }}%</span
+            >
           </div>
           <div>
             <strong>Open Queries:</strong>
@@ -176,48 +170,20 @@
         >
           <thead>
             <tr>
-              <th
-                scope="col"
-                style="width: 40px; text-align: center"
-              >
-                Batch
-              </th>
-              <th scope="col">
-                Field / Parameter
-              </th>
-              <th scope="col">
-                CDASH Variable
-              </th>
-              <th scope="col">
-                Reported eCRF Value
-              </th>
-              <th scope="col">
-                Source Record (EMR/Lab)
-              </th>
-              <th
-                scope="col"
-                style="text-align: center"
-              >
-                SDV Verified
-              </th>
-              <th scope="col">
-                Query Discrepancy Status
-              </th>
-              <th scope="col">
-                Monitoring Actions
-              </th>
+              <th scope="col" style="width: 40px; text-align: center">Batch</th>
+              <th scope="col">Field / Parameter</th>
+              <th scope="col">CDASH Variable</th>
+              <th scope="col">Reported eCRF Value</th>
+              <th scope="col">Source Record (EMR/Lab)</th>
+              <th scope="col" style="text-align: center">SDV Verified</th>
+              <th scope="col">Query Discrepancy Status</th>
+              <th scope="col">Monitoring Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="field in currentFields"
-              :key="field.id"
-            >
+            <tr v-for="field in currentFields" :key="field.id">
               <!-- Batch SDV Checkbox -->
-              <td
-                style="text-align: center"
-                class="batch-sdv-box"
-              >
+              <td style="text-align: center" class="batch-sdv-box">
                 <input
                   :id="`batch-sdv-${field.id}`"
                   type="checkbox"
@@ -227,7 +193,7 @@
                   :disabled="!isAuthorizedForBulkSdv"
                   style="cursor: pointer"
                   @change="toggleBatchField(field.id, $event.target.checked)"
-                >
+                />
               </td>
 
               <!-- Field Label -->
@@ -255,10 +221,7 @@
               </td>
 
               <!-- Single Field SDV Toggle Checkbox -->
-              <td
-                style="text-align: center"
-                class="sdv-box"
-              >
+              <td style="text-align: center" class="sdv-box">
                 <input
                   :id="`sdv-${field.id}`"
                   type="checkbox"
@@ -273,11 +236,10 @@
                   @change="
                     handleSingleSdvToggle(field.id, $event.target.checked)
                   "
+                />
+                <label :for="`sdv-${field.id}`" style="display: none"
+                  >SDV {{ field.label }}</label
                 >
-                <label
-                  :for="`sdv-${field.id}`"
-                  style="display: none"
-                >SDV {{ field.label }}</label>
               </td>
 
               <!-- Query Discrepancy Visual Badge & Info -->
@@ -296,26 +258,30 @@
                   >
                     {{
                       getFieldQuery(field.id).text ||
-                        getFieldQuery(field.id).query_text ||
-                        getFieldQuery(field.id).message
+                      getFieldQuery(field.id).query_text ||
+                      getFieldQuery(field.id).message
                     }}
                   </div>
                   <div
                     v-if="
                       getFieldQuery(field.id).response ||
-                        getFieldQuery(field.id).response_text
+                      getFieldQuery(field.id).response_text
                     "
                     style="font-size: 0.72rem; color: #1e40af; margin-top: 2px"
                   >
-                    <em>Ans:
+                    <em
+                      >Ans:
                       {{
                         getFieldQuery(field.id).response ||
-                          getFieldQuery(field.id).response_text
-                      }}</em>
+                        getFieldQuery(field.id).response_text
+                      }}</em
+                    >
                   </div>
                 </template>
                 <template v-else>
-                  <span style="color: #94a3b8; font-size: 0.8rem">— Clean —</span>
+                  <span style="color: #94a3b8; font-size: 0.8rem"
+                    >— Clean —</span
+                  >
                 </template>
               </td>
 
@@ -338,8 +304,8 @@
                   <button
                     v-if="
                       getFieldQuery(field.id) &&
-                        (getFieldQuery(field.id).status === 'OPEN' ||
-                          getFieldQuery(field.id).status === 'REOPENED')
+                      (getFieldQuery(field.id).status === 'OPEN' ||
+                        getFieldQuery(field.id).status === 'REOPENED')
                     "
                     :id="`btn-respond-query-${field.id}`"
                     type="button"
@@ -358,7 +324,7 @@
                   <button
                     v-if="
                       getFieldQuery(field.id) &&
-                        getFieldQuery(field.id).status !== 'CLOSED'
+                      getFieldQuery(field.id).status !== 'CLOSED'
                     "
                     :id="`btn-close-query-${field.id}`"
                     type="button"
@@ -382,28 +348,21 @@
     </div>
 
     <!-- Modal 1: Raise Discrepancy Query -->
-    <div
-      v-if="showRaiseModal"
-      class="modal-overlay"
-      style="display: flex"
-    >
-      <div
-        class="modal"
-        style="max-width: 480px"
-      >
-        <div
-          class="modal-header"
-          style="background-color: #b45309"
-        >
+    <div v-if="showRaiseModal" class="modal-overlay" style="display: flex">
+      <div class="modal" style="max-width: 480px">
+        <div class="modal-header" style="background-color: #b45309">
           ⚠️ Raise Clinical Discrepancy Query
         </div>
         <div class="modal-body">
           <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px">
             Issue a formal GCP data discrepancy query on
-            <strong>{{ activeModalField?.label }}</strong>. The field visual badge will update to yellow (OPEN).
+            <strong>{{ activeModalField?.label }}</strong
+            >. The field visual badge will update to yellow (OPEN).
           </p>
           <div class="form-group">
-            <label for="modal-query-reason">Discrepancy Query Reason / Message</label>
+            <label for="modal-query-reason"
+              >Discrepancy Query Reason / Message</label
+            >
             <textarea
               id="modal-query-reason"
               v-model="queryReasonText"
@@ -446,19 +405,9 @@
     </div>
 
     <!-- Modal 2: Submit Site CRC Response / Answer -->
-    <div
-      v-if="showAnswerModal"
-      class="modal-overlay"
-      style="display: flex"
-    >
-      <div
-        class="modal"
-        style="max-width: 480px"
-      >
-        <div
-          class="modal-header"
-          style="background-color: #1e40af"
-        >
+    <div v-if="showAnswerModal" class="modal-overlay" style="display: flex">
+      <div class="modal" style="max-width: 480px">
+        <div class="modal-header" style="background-color: #1e40af">
           💬 Site CRC Query Response
         </div>
         <div class="modal-body">
@@ -466,8 +415,8 @@
             <strong>Query:</strong>
             {{
               getFieldQuery(activeModalField?.id)?.text ||
-                getFieldQuery(activeModalField?.id)?.query_text ||
-                getFieldQuery(activeModalField?.id)?.message
+              getFieldQuery(activeModalField?.id)?.query_text ||
+              getFieldQuery(activeModalField?.id)?.message
             }}
           </p>
           <div class="form-group">
@@ -514,19 +463,9 @@
     </div>
 
     <!-- Modal 3: Close Discrepancy Query -->
-    <div
-      v-if="showCloseModal"
-      class="modal-overlay"
-      style="display: flex"
-    >
-      <div
-        class="modal"
-        style="max-width: 480px"
-      >
-        <div
-          class="modal-header"
-          style="background-color: #166534"
-        >
+    <div v-if="showCloseModal" class="modal-overlay" style="display: flex">
+      <div class="modal" style="max-width: 480px">
+        <div class="modal-header" style="background-color: #166534">
           ✅ CRA Monitor Close Query
         </div>
         <div class="modal-body">

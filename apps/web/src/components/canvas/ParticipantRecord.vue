@@ -15,11 +15,7 @@
       </span>
     </header>
 
-    <p
-      v-if="record.loading"
-      class="status-line"
-      role="status"
-    >
+    <p v-if="record.loading" class="status-line" role="status">
       Loading {{ participant.subject_id }}'s data...
     </p>
     <p
@@ -41,9 +37,7 @@
 
     <template v-else>
       <section aria-labelledby="record-observations-title">
-        <h3 id="record-observations-title">
-          Observations
-        </h3>
+        <h3 id="record-observations-title">Observations</h3>
         <p
           v-if="!record.observations.length"
           id="record-observations-empty"
@@ -51,32 +45,17 @@
         >
           No observations recorded for {{ participant.subject_id }} yet.
         </p>
-        <template
-          v-for="group in visitGroups"
-          v-else
-          :key="group.visit"
-        >
+        <template v-for="group in visitGroups" v-else :key="group.visit">
           <h4 class="visit-title">
             {{ group.visit }}
           </h4>
           <table class="record-table">
             <thead>
               <tr>
-                <th scope="col">
-                  Test
-                </th>
-                <th
-                  scope="col"
-                  class="numeric"
-                >
-                  Result
-                </th>
-                <th scope="col">
-                  Date
-                </th>
-                <th scope="col">
-                  Source verified
-                </th>
+                <th scope="col">Test</th>
+                <th scope="col" class="numeric">Result</th>
+                <th scope="col">Date</th>
+                <th scope="col">Source verified</th>
               </tr>
             </thead>
             <tbody>
@@ -102,7 +81,8 @@
                     v-if="observation.is_out_of_range"
                     class="flag"
                     title="Out of range"
-                  >Out of range</span>
+                    >Out of range</span
+                  >
                 </td>
                 <td>{{ observation.observation_date }}</td>
                 <td>
@@ -122,9 +102,7 @@
       />
 
       <section aria-labelledby="record-forms-title">
-        <h3 id="record-forms-title">
-          Forms
-        </h3>
+        <h3 id="record-forms-title">Forms</h3>
         <p
           v-if="!record.forms.length"
           id="record-forms-empty"
@@ -132,32 +110,17 @@
         >
           No forms submitted for {{ participant.subject_id }} yet.
         </p>
-        <table
-          v-else
-          id="record-forms"
-          class="record-table"
-        >
+        <table v-else id="record-forms" class="record-table">
           <thead>
             <tr>
-              <th scope="col">
-                Form
-              </th>
-              <th scope="col">
-                Visit
-              </th>
-              <th scope="col">
-                Status
-              </th>
-              <th scope="col">
-                Protocol version
-              </th>
+              <th scope="col">Form</th>
+              <th scope="col">Visit</th>
+              <th scope="col">Status</th>
+              <th scope="col">Protocol version</th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="form in record.forms"
-              :key="form.id"
-            >
+            <tr v-for="form in record.forms" :key="form.id">
               <th scope="row">
                 {{ form.form_id }}
               </th>

@@ -3,17 +3,11 @@
     <div class="grid-header">
       <div class="header-titles">
         <h2>Artifact Documents Registry</h2>
-        <p
-          v-if="selectedArtifactCode"
-          class="active-artifact-subtitle"
-        >
+        <p v-if="selectedArtifactCode" class="active-artifact-subtitle">
           Showing documents for Artifact:
           <strong>{{ selectedArtifactCode }}</strong>
         </p>
-        <p
-          v-else
-          class="active-artifact-subtitle"
-        >
+        <p v-else class="active-artifact-subtitle">
           Please select an artifact from the binder tree to view documents.
         </p>
       </div>
@@ -41,10 +35,7 @@
     </div>
 
     <!-- Documents Data Table -->
-    <div
-      ref="containerRef"
-      class="table-responsive"
-    >
+    <div ref="containerRef" class="table-responsive">
       <table
         class="documents-table"
         role="grid"
@@ -54,39 +45,18 @@
       >
         <thead>
           <tr>
-            <th scope="col">
-              Document Name
-            </th>
-            <th scope="col">
-              Taxonomy
-            </th>
-            <th scope="col">
-              Version
-            </th>
-            <th scope="col">
-              Status
-            </th>
-            <th scope="col">
-              Uploaded By
-            </th>
-            <th scope="col">
-              Uploaded At
-            </th>
-            <th
-              scope="col"
-              class="actions-column"
-            >
-              Actions
-            </th>
+            <th scope="col">Document Name</th>
+            <th scope="col">Taxonomy</th>
+            <th scope="col">Version</th>
+            <th scope="col">Status</th>
+            <th scope="col">Uploaded By</th>
+            <th scope="col">Uploaded At</th>
+            <th scope="col" class="actions-column">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="paginatedDocuments.length === 0">
-            <td
-              colspan="7"
-              role="gridcell"
-              class="empty-table-cell"
-            >
+            <td colspan="7" role="gridcell" class="empty-table-cell">
               No documents have been uploaded for this artifact yet.
             </td>
           </tr>
@@ -108,17 +78,15 @@
               @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
             >
               <span class="file-icon">📄</span>
-              <span
-                class="filename"
-                :title="doc.filename"
-              >{{
+              <span class="filename" :title="doc.filename">{{
                 doc.filename
               }}</span>
               <span
                 v-if="doc.is_redacted"
                 class="compliance-badge-pill"
                 title="HIPAA/GDPR Compliant Redacted Copy"
-              >🛡️ Compliant</span>
+                >🛡️ Compliant</span
+              >
             </td>
             <td
               role="gridcell"
@@ -161,10 +129,7 @@
                   </option>
                 </select>
               </div>
-              <span
-                v-else
-                class="taxonomy-pill"
-              >
+              <span v-else class="taxonomy-pill">
                 Z{{ doc.zone }} - S{{ doc.section }} [{{ doc.artifact_code }}]
               </span>
             </td>
@@ -192,10 +157,7 @@
               @click="selectCell(rIndex, 3)"
               @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
             >
-              <span
-                class="status-badge"
-                :class="getStatusClass(doc.status)"
-              >
+              <span class="status-badge" :class="getStatusClass(doc.status)">
                 {{ formatStatus(doc.status) }}
               </span>
             </td>
@@ -267,10 +229,7 @@
     </div>
 
     <!-- Pagination Controls -->
-    <div
-      v-if="totalItems > 0"
-      class="pagination-controls"
-    >
+    <div v-if="totalItems > 0" class="pagination-controls">
       <div class="pagination-info">
         Showing
         <span class="font-semibold">{{
@@ -370,26 +329,15 @@
               class="hidden-file-input"
               accept=".pdf"
               @change="onFileSelected"
-            >
-            <div
-              class="drop-prompt-content"
-              aria-hidden="true"
-            >
+            />
+            <div class="drop-prompt-content" aria-hidden="true">
               <span class="upload-cloud-icon">☁️</span>
-              <p
-                v-if="!selectedFile"
-                class="drop-text"
-              >
+              <p v-if="!selectedFile" class="drop-text">
                 Drag and drop your regulated PDF here, or
                 <span class="highlight">browse</span>
               </p>
-              <div
-                v-else
-                class="selected-file-details"
-              >
-                <p class="file-name-success">
-                  🎉 {{ selectedFile.name }}
-                </p>
+              <div v-else class="selected-file-details">
+                <p class="file-name-success">🎉 {{ selectedFile.name }}</p>
                 <p class="file-size-meta">
                   Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
                   {{ selectedFile.type || "application/pdf" }}
@@ -399,10 +347,7 @@
           </div>
 
           <!-- Upload Metadata Form -->
-          <form
-            class="upload-meta-form"
-            @submit.prevent="submitUpload"
-          >
+          <form class="upload-meta-form" @submit.prevent="submitUpload">
             <div class="form-group-row">
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -413,7 +358,7 @@
                   type="text"
                   class="form-control"
                   readonly
-                >
+                />
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -424,7 +369,7 @@
                   type="text"
                   placeholder="e.g. SITE-01"
                   class="form-control"
-                >
+                />
               </div>
             </div>
 
@@ -438,7 +383,7 @@
                   type="text"
                   class="form-control"
                   readonly
-                >
+                />
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -449,7 +394,7 @@
                   type="text"
                   class="form-control"
                   readonly
-                >
+                />
               </div>
             </div>
 
@@ -469,10 +414,7 @@
               />
             </div>
 
-            <div
-              v-if="uploadError"
-              class="upload-error-banner"
-            >
+            <div v-if="uploadError" class="upload-error-banner">
               ❌ {{ uploadError }}
             </div>
 

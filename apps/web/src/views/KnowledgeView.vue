@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-knowledge-hub"
-    class="dashboard-section active"
-  >
+  <div id="section-knowledge-hub" class="dashboard-section active">
     <!-- Header -->
     <div class="section-header">
       <div class="header-content-group">
@@ -12,9 +9,7 @@
           <span class="badge badge-standard">GxP Controlled Documents</span>
           <span class="badge badge-standard">Tamper-Evident Ledger</span>
         </div>
-        <h2 class="view-title">
-          Knowledge &amp; Support Hub
-        </h2>
+        <h2 class="view-title">Knowledge &amp; Support Hub</h2>
         <p class="view-subtitle">
           Centralized, role-aware clinical standard operating procedure (SOP)
           repository, regulatory guidance, and contextual platform documentation
@@ -54,16 +49,12 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'ALL' }"
         @click="setStatusFilter('ALL')"
       >
-        <div class="stat-icon alert-icon">
-          📚
-        </div>
+        <div class="stat-icon alert-icon">📚</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ totalArticlesCount }}
           </div>
-          <div class="stat-label">
-            Total SOPs &amp; Guides
-          </div>
+          <div class="stat-label">Total SOPs &amp; Guides</div>
         </div>
       </div>
 
@@ -74,16 +65,12 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'PUBLISHED' }"
         @click="setStatusFilter('PUBLISHED')"
       >
-        <div class="stat-icon capa-icon">
-          ✅
-        </div>
+        <div class="stat-icon capa-icon">✅</div>
         <div class="stat-details">
           <div class="stat-value text-success">
             {{ publishedArticlesCount }}
           </div>
-          <div class="stat-label">
-            Active Published SOPs
-          </div>
+          <div class="stat-label">Active Published SOPs</div>
         </div>
       </div>
 
@@ -94,16 +81,12 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'IN_REVIEW' }"
         @click="setStatusFilter('IN_REVIEW')"
       >
-        <div class="stat-icon rbqm-icon">
-          🔍
-        </div>
+        <div class="stat-icon rbqm-icon">🔍</div>
         <div class="stat-details">
           <div class="stat-value text-warning">
             {{ inReviewArticlesCount }}
           </div>
-          <div class="stat-label">
-            Under Four-Eyes Review
-          </div>
+          <div class="stat-label">Under Four-Eyes Review</div>
         </div>
       </div>
 
@@ -114,16 +97,12 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'DRAFT' }"
         @click="setStatusFilter('DRAFT')"
       >
-        <div class="stat-icon breach-icon">
-          📝
-        </div>
+        <div class="stat-icon breach-icon">📝</div>
         <div class="stat-details">
           <div class="stat-value">
             {{ draftArticlesCount }}
           </div>
-          <div class="stat-label">
-            Working Draft Revisions
-          </div>
+          <div class="stat-label">Working Draft Revisions</div>
         </div>
       </div>
     </div>
@@ -131,10 +110,7 @@
     <!-- Main 3-Column Knowledge Workspace -->
     <div class="knowledge-layout">
       <!-- Column 1: Categories & Taxonomy Sidebar -->
-      <aside
-        id="knowledge-sidebar"
-        class="knowledge-sidebar"
-      >
+      <aside id="knowledge-sidebar" class="knowledge-sidebar">
         <div class="sidebar-box-header">
           <h4 class="sidebar-heading">
             <span class="heading-icon">🗂️</span> Categories
@@ -173,10 +149,7 @@
             <span class="category-icon">{{ getCategoryIcon(cat.slug) }}</span>
             <div class="category-text-block">
               <span class="category-title">{{ cat.name }}</span>
-              <span
-                v-if="cat.description"
-                class="category-desc"
-              >{{
+              <span v-if="cat.description" class="category-desc">{{
                 cat.description
               }}</span>
             </div>
@@ -188,10 +161,7 @@
 
         <!-- Filter by Status Selector -->
         <div class="sidebar-filter-section">
-          <label
-            for="status-filter-select"
-            class="filter-label"
-          >
+          <label for="status-filter-select" class="filter-label">
             Lifecycle Status Filter
           </label>
           <select
@@ -199,39 +169,20 @@
             v-model="activeStatusFilter"
             class="form-control form-select-sm"
           >
-            <option value="ALL">
-              All Lifecycle States
-            </option>
-            <option value="PUBLISHED">
-              Published Only
-            </option>
-            <option value="IN_REVIEW">
-              In Review
-            </option>
-            <option value="APPROVED">
-              Approved
-            </option>
-            <option value="DRAFT">
-              Working Drafts
-            </option>
-            <option value="REJECTED">
-              Rejected
-            </option>
-            <option value="SUPERSEDED">
-              Superseded
-            </option>
-            <option value="ARCHIVED">
-              Archived
-            </option>
+            <option value="ALL">All Lifecycle States</option>
+            <option value="PUBLISHED">Published Only</option>
+            <option value="IN_REVIEW">In Review</option>
+            <option value="APPROVED">Approved</option>
+            <option value="DRAFT">Working Drafts</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="SUPERSEDED">Superseded</option>
+            <option value="ARCHIVED">Archived</option>
           </select>
         </div>
       </aside>
 
       <!-- Column 2: Article Directory & Search List -->
-      <section
-        id="knowledge-article-list-panel"
-        class="article-list-panel"
-      >
+      <section id="knowledge-article-list-panel" class="article-list-panel">
         <!-- Search and Tag Bar -->
         <div class="list-search-bar">
           <div class="search-input-wrapper">
@@ -243,7 +194,7 @@
               class="knowledge-search-input"
               placeholder="Search SOPs by title, tag, or content..."
               @input="onSearchInput"
-            >
+            />
             <button
               v-if="searchQuery"
               type="button"
@@ -256,10 +207,7 @@
           </div>
 
           <!-- Quick Tag Filter Chips -->
-          <div
-            v-if="availableTags.length > 0"
-            class="tag-chips-scroll"
-          >
+          <div v-if="availableTags.length > 0" class="tag-chips-scroll">
             <button
               v-for="tag in availableTags"
               :key="tag"
@@ -274,10 +222,7 @@
         </div>
 
         <!-- Articles Stream -->
-        <div
-          v-if="loading"
-          class="articles-loading-state"
-        >
+        <div v-if="loading" class="articles-loading-state">
           <div class="spinner" />
           <p>Loading clinical SOP repository...</p>
         </div>
@@ -286,16 +231,12 @@
           v-else-if="displayArticles.length === 0"
           class="articles-empty-state"
         >
-          <div class="empty-icon">
-            📄
-          </div>
+          <div class="empty-icon">📄</div>
           <h4>No SOPs Found</h4>
           <p v-if="searchQuery || selectedTag || activeStatusFilter !== 'ALL'">
             No articles match your current search or status filters.
           </p>
-          <p v-else>
-            No SOPs are currently visible for the active persona.
-          </p>
+          <p v-else>No SOPs are currently visible for the active persona.</p>
           <button
             v-if="searchQuery || selectedTag || activeStatusFilter !== 'ALL'"
             type="button"
@@ -306,10 +247,7 @@
           </button>
         </div>
 
-        <div
-          v-else
-          class="articles-stream"
-        >
+        <div v-else class="articles-stream">
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
@@ -320,16 +258,10 @@
             @click="selectArticle(art)"
           >
             <div class="article-card-header">
-              <span
-                class="status-pill"
-                :class="getStatusPillClass(art.status)"
-              >
+              <span class="status-pill" :class="getStatusPillClass(art.status)">
                 {{ art.status }}
               </span>
-              <span
-                v-if="art.version_label"
-                class="badge badge-version"
-              >
+              <span v-if="art.version_label" class="badge badge-version">
                 v{{ art.version_label }}
               </span>
             </div>
@@ -339,22 +271,19 @@
             </h4>
 
             <div class="article-card-meta">
-              <span class="meta-category">📁 {{ art.category_name || "General" }}</span>
-              <span
-                v-if="art.updated_at"
-                class="meta-date"
-              >📅 {{ formatDate(art.updated_at) }}</span>
+              <span class="meta-category"
+                >📁 {{ art.category_name || "General" }}</span
+              >
+              <span v-if="art.updated_at" class="meta-date"
+                >📅 {{ formatDate(art.updated_at) }}</span
+              >
             </div>
 
             <div
               v-if="art.tags && art.tags.length > 0"
               class="article-card-tags"
             >
-              <span
-                v-for="t in getTagList(art.tags)"
-                :key="t"
-                class="mini-tag"
-              >
+              <span v-for="t in getTagList(art.tags)" :key="t" class="mini-tag">
                 #{{ t }}
               </span>
             </div>
@@ -363,17 +292,9 @@
       </section>
 
       <!-- Column 3: Article Reader & GxP Inspection Pane -->
-      <main
-        id="knowledge-reader-pane"
-        class="article-reader-pane"
-      >
-        <div
-          v-if="!selectedArticle"
-          class="reader-empty-state"
-        >
-          <div class="empty-icon">
-            📖
-          </div>
+      <main id="knowledge-reader-pane" class="article-reader-pane">
+        <div v-if="!selectedArticle" class="reader-empty-state">
+          <div class="empty-icon">📖</div>
           <h3>Select an SOP or Guideline</h3>
           <p>
             Choose an article from the directory on the left to read guidance,
@@ -382,16 +303,15 @@
           </p>
         </div>
 
-        <div
-          v-else
-          class="reader-content-wrap"
-        >
+        <div v-else class="reader-content-wrap">
           <!-- Article Top Title & Metadata Bar -->
           <div class="reader-header-card">
             <div class="reader-meta-top">
               <div class="breadcrumbs">
-                <span class="crumb-category">📁
-                  {{ selectedArticle.category_name || "General SOPs" }}</span>
+                <span class="crumb-category"
+                  >📁
+                  {{ selectedArticle.category_name || "General SOPs" }}</span
+                >
                 <span class="crumb-separator">/</span>
                 <span class="crumb-slug">{{ selectedArticle.slug }}</span>
               </div>
@@ -422,26 +342,19 @@
                   selectedArticle.author_user_id || "system"
                 }}</span>
               </div>
-              <div
-                v-if="selectedArticle.last_edited_by"
-                class="author-item"
-              >
+              <div v-if="selectedArticle.last_edited_by" class="author-item">
                 <span class="author-label">Last Edited By:</span>
                 <span class="author-value">{{
                   selectedArticle.last_edited_by
                 }}</span>
               </div>
-              <div
-                v-if="selectedArticle.approved_by"
-                class="author-item"
-              >
+              <div v-if="selectedArticle.approved_by" class="author-item">
                 <span class="author-label">Approved By:</span>
-                <span class="author-value text-success">✓ {{ selectedArticle.approved_by }}</span>
+                <span class="author-value text-success"
+                  >✓ {{ selectedArticle.approved_by }}</span
+                >
               </div>
-              <div
-                v-if="selectedArticle.updated_at"
-                class="author-item"
-              >
+              <div v-if="selectedArticle.updated_at" class="author-item">
                 <span class="author-label">Last Revised:</span>
                 <span class="author-value">{{
                   formatDate(selectedArticle.updated_at)
@@ -475,7 +388,7 @@
               <template
                 v-if="
                   selectedArticle.status === 'DRAFT' ||
-                    selectedArticle.status === 'REJECTED'
+                  selectedArticle.status === 'REJECTED'
                 "
               >
                 <button
@@ -609,10 +522,7 @@
             >
               <pre>{{ selectedArticle.body_markdown }}</pre>
             </div>
-            <div
-              v-else
-              class="prose-empty"
-            >
+            <div v-else class="prose-empty">
               <p>No content has been authored for this SOP draft.</p>
             </div>
           </div>
@@ -631,25 +541,16 @@
               </p>
             </div>
 
-            <div
-              v-if="versionsLoading"
-              class="loading-box"
-            >
+            <div v-if="versionsLoading" class="loading-box">
               <div class="spinner" />
               <p>Loading version snapshots...</p>
             </div>
 
-            <div
-              v-else-if="versionsList.length === 0"
-              class="empty-box"
-            >
+            <div v-else-if="versionsList.length === 0" class="empty-box">
               <p>No snapshot versions recorded for this document.</p>
             </div>
 
-            <div
-              v-else
-              class="versions-table-wrap"
-            >
+            <div v-else class="versions-table-wrap">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -663,12 +564,11 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
-                    v-for="ver in versionsList"
-                    :key="ver.id"
-                  >
+                  <tr v-for="ver in versionsList" :key="ver.id">
                     <td>
-                      <span class="badge badge-version">v{{ ver.version_label }}</span>
+                      <span class="badge badge-version"
+                        >v{{ ver.version_label }}</span
+                      >
                     </td>
                     <td>#{{ ver.version_index }}</td>
                     <td>
@@ -714,25 +614,16 @@
               </p>
             </div>
 
-            <div
-              v-if="auditLoading"
-              class="loading-box"
-            >
+            <div v-if="auditLoading" class="loading-box">
               <div class="spinner" />
               <p>Fetching immutable audit trail...</p>
             </div>
 
-            <div
-              v-else-if="auditLogList.length === 0"
-              class="empty-box"
-            >
+            <div v-else-if="auditLogList.length === 0" class="empty-box">
               <p>No audit trail logs recorded yet.</p>
             </div>
 
-            <div
-              v-else
-              class="audit-table-wrap"
-            >
+            <div v-else class="audit-table-wrap">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -746,10 +637,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr
-                    v-for="log in auditLogList"
-                    :key="log.id"
-                  >
+                  <tr v-for="log in auditLogList" :key="log.id">
                     <td>
                       <span class="badge badge-standard">{{
                         log.event_type
@@ -773,10 +661,7 @@
                       {{ log.reason_for_change || "Document lifecycle update" }}
                     </td>
                     <td>
-                      <code
-                        class="hash-code"
-                        :title="log.sha256_hash"
-                      >
+                      <code class="hash-code" :title="log.sha256_hash">
                         {{
                           (log.sha256_hash || "sha256:e3b0c442").substring(
                             0,
@@ -834,7 +719,7 @@
                 placeholder="e.g. SOP-ECRF-301: Adverse Event Severity Grading"
                 required
                 @input="autoGenerateSlug"
-              >
+              />
             </div>
 
             <div class="form-row">
@@ -847,7 +732,7 @@
                   class="form-control"
                   placeholder="sop-ecrf-301-adverse-events"
                   required
-                >
+                />
               </div>
               <div class="form-group col">
                 <label for="new-art-category">Category *</label>
@@ -877,7 +762,7 @@
                   type="text"
                   class="form-control"
                   placeholder="0.1"
-                >
+                />
               </div>
               <div class="form-group col">
                 <label for="new-art-tags">Tags (comma-separated)</label>
@@ -887,7 +772,7 @@
                   type="text"
                   class="form-control"
                   placeholder="ecrf, safety, adverse-events"
-                >
+                />
               </div>
             </div>
 
@@ -912,7 +797,7 @@
                 class="form-control"
                 placeholder="Initial authoring of standard operating procedure"
                 required
-              >
+              />
             </div>
           </div>
 
@@ -924,10 +809,7 @@
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-            >
+            <button type="submit" class="btn btn-primary">
               Save Working Draft
             </button>
           </div>
@@ -950,9 +832,7 @@
         aria-labelledby="edit-draft-modal-title"
       >
         <div class="modal-header">
-          <h3 id="edit-draft-modal-title">
-            ✏️ Edit Working Draft SOP
-          </h3>
+          <h3 id="edit-draft-modal-title">✏️ Edit Working Draft SOP</h3>
           <button
             type="button"
             class="modal-close-btn"
@@ -972,7 +852,7 @@
                 type="text"
                 class="form-control"
                 required
-              >
+              />
             </div>
 
             <div class="form-row">
@@ -999,7 +879,7 @@
                   v-model="editDraftForm.tagsInput"
                   type="text"
                   class="form-control"
-                >
+                />
               </div>
             </div>
 
@@ -1043,7 +923,7 @@
                 class="form-control"
                 placeholder="Updated procedural guidelines and regulatory notes"
                 required
-              >
+              />
             </div>
           </div>
 
@@ -1055,10 +935,7 @@
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-            >
+            <button type="submit" class="btn btn-primary">
               Save Draft Changes
             </button>
           </div>
@@ -1099,11 +976,10 @@
               {{ actionModalIntro }}
             </p>
 
-            <div
-              v-if="actionModalType === 'publish'"
-              class="form-group"
-            >
-              <label for="action-version-label">Published Version Label *</label>
+            <div v-if="actionModalType === 'publish'" class="form-group">
+              <label for="action-version-label"
+                >Published Version Label *</label
+              >
               <input
                 id="action-version-label"
                 v-model="actionVersionLabel"
@@ -1111,11 +987,13 @@
                 class="form-control"
                 placeholder="e.g. 1.0 or 2.0"
                 required
-              >
+              />
             </div>
 
             <div class="form-group">
-              <label for="action-reason-input">21 CFR Part 11 Reason for Change *</label>
+              <label for="action-reason-input"
+                >21 CFR Part 11 Reason for Change *</label
+              >
               <textarea
                 id="action-reason-input"
                 v-model="actionReason"
@@ -1135,11 +1013,7 @@
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn"
-              :class="actionButtonClass"
-            >
+            <button type="submit" class="btn" :class="actionButtonClass">
               {{ actionButtonLabel }}
             </button>
           </div>
@@ -1162,9 +1036,7 @@
         aria-labelledby="create-cat-modal-title"
       >
         <div class="modal-header">
-          <h3 id="create-cat-modal-title">
-            📁 Create Knowledge Category
-          </h3>
+          <h3 id="create-cat-modal-title">📁 Create Knowledge Category</h3>
           <button
             type="button"
             class="modal-close-btn"
@@ -1186,7 +1058,7 @@
                 placeholder="e.g. Safety & Pharmacovigilance"
                 required
                 @input="autoGenerateCategorySlug"
-              >
+              />
             </div>
 
             <div class="form-group">
@@ -1198,7 +1070,7 @@
                 class="form-control"
                 placeholder="safety-pharmacovigilance"
                 required
-              >
+              />
             </div>
 
             <div class="form-group">
@@ -1209,12 +1081,14 @@
                 type="text"
                 class="form-control"
                 placeholder="Guidelines for safety event intake, triage, and expedited reporting."
-              >
+              />
             </div>
 
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Persona Visibility (All by default if empty)</label>
+              <label class="form-label"
+                >Persona Visibility (All by default if empty)</label
+              >
               <div class="persona-checkbox-grid">
                 <label
                   v-for="p in PERSONA_PRESETS"
@@ -1225,7 +1099,7 @@
                     v-model="newCategoryForm.persona_visibility"
                     type="checkbox"
                     :value="p.key"
-                  >
+                  />
                   <span>{{ p.label }}</span>
                 </label>
               </div>
@@ -1240,10 +1114,7 @@
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-            >
+            <button type="submit" class="btn btn-primary">
               Create Category
             </button>
           </div>

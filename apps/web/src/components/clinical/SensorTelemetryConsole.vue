@@ -52,10 +52,7 @@
     </header>
 
     <!-- Top KPI Metrics Banner -->
-    <section
-      class="metrics-grid"
-      aria-label="Sensor Telemetry Summary Metrics"
-    >
+    <section class="metrics-grid" aria-label="Sensor Telemetry Summary Metrics">
       <div class="metric-card">
         <div class="metric-icon-box bg-blue">
           <span class="metric-icon">📊</span>
@@ -64,11 +61,13 @@
           <span class="metric-label">Ingested Readings</span>
           <span class="metric-value">{{
             metrics.total_readings_ingested !== null &&
-              metrics.total_readings_ingested !== undefined
+            metrics.total_readings_ingested !== undefined
               ? metrics.total_readings_ingested.toLocaleString()
               : "0"
           }}</span>
-          <span class="metric-sub">{{ metrics.total_streams_ingested }} batches processed</span>
+          <span class="metric-sub"
+            >{{ metrics.total_streams_ingested }} batches processed</span
+          >
         </div>
       </div>
 
@@ -98,7 +97,9 @@
               ? metrics.mean_daily_steps.toLocaleString()
               : "8,420"
           }}</span>
-          <span class="metric-sub">Resting HR: {{ metrics.mean_resting_hr_bpm || 64 }} bpm</span>
+          <span class="metric-sub"
+            >Resting HR: {{ metrics.mean_resting_hr_bpm || 64 }} bpm</span
+          >
         </div>
       </div>
 
@@ -111,17 +112,15 @@
           <span class="metric-value text-danger">{{
             safetyAlerts.filter((a) => !a.is_acknowledged).length
           }}</span>
-          <span class="metric-sub">{{ safetyAlerts.length }} total triggered</span>
+          <span class="metric-sub"
+            >{{ safetyAlerts.length }} total triggered</span
+          >
         </div>
       </div>
     </section>
 
     <!-- Navigation Tabs -->
-    <nav
-      class="nav-tabs"
-      role="tablist"
-      aria-label="Sensor Console Tabs"
-    >
+    <nav class="nav-tabs" role="tablist" aria-label="Sensor Console Tabs">
       <button
         role="tab"
         :aria-selected="activeTab === 'telemetry'"
@@ -137,10 +136,7 @@
         @click="activeTab = 'alerts'"
       >
         🚨 Automated Safety Alerts ({{ safetyAlerts.length }})
-        <span
-          v-if="unacknowledgedCount > 0"
-          class="badge-count"
-        >{{
+        <span v-if="unacknowledgedCount > 0" class="badge-count">{{
           unacknowledgedCount
         }}</span>
       </button>
@@ -163,11 +159,7 @@
     </nav>
 
     <!-- TAB 1: Biometric Endpoints & TIR -->
-    <div
-      v-if="activeTab === 'telemetry'"
-      class="tab-panel"
-      role="tabpanel"
-    >
+    <div v-if="activeTab === 'telemetry'" class="tab-panel" role="tabpanel">
       <div class="endpoints-layout">
         <!-- CGM Time in Range Card -->
         <div class="card summary-card">
@@ -207,12 +199,22 @@
                 />
               </div>
               <div class="tir-legend">
-                <span class="legend-item"><span class="legend-dot dot-tbr2" /> &lt;54 mg/dL (5%)</span>
-                <span class="legend-item"><span class="legend-dot dot-tbr1" /> 54–69 mg/dL (5%)</span>
-                <span class="legend-item font-bold"><span class="legend-dot dot-target" /> 70–180 mg/dL (78%
-                  TIR)</span>
-                <span class="legend-item"><span class="legend-dot dot-tar1" /> 181–250 mg/dL (9%)</span>
-                <span class="legend-item"><span class="legend-dot dot-tar2" /> &gt;250 mg/dL (3%)</span>
+                <span class="legend-item"
+                  ><span class="legend-dot dot-tbr2" /> &lt;54 mg/dL (5%)</span
+                >
+                <span class="legend-item"
+                  ><span class="legend-dot dot-tbr1" /> 54–69 mg/dL (5%)</span
+                >
+                <span class="legend-item font-bold"
+                  ><span class="legend-dot dot-target" /> 70–180 mg/dL (78%
+                  TIR)</span
+                >
+                <span class="legend-item"
+                  ><span class="legend-dot dot-tar1" /> 181–250 mg/dL (9%)</span
+                >
+                <span class="legend-item"
+                  ><span class="legend-dot dot-tar2" /> &gt;250 mg/dL (3%)</span
+                >
               </div>
             </div>
 
@@ -240,10 +242,10 @@
         <!-- Daily Summaries Table -->
         <div class="card table-card">
           <div class="card-header">
-            <h3 class="card-title">
-              Daily Aggregate Endpoints Ledger
-            </h3>
-            <span class="badge badge-muted">{{ dailySummaries.length }} days</span>
+            <h3 class="card-title">Daily Aggregate Endpoints Ledger</h3>
+            <span class="badge badge-muted"
+              >{{ dailySummaries.length }} days</span
+            >
           </div>
           <div class="table-container">
             <table class="data-table">
@@ -260,18 +262,12 @@
               </thead>
               <tbody>
                 <tr v-if="dailySummaries.length === 0">
-                  <td
-                    colspan="7"
-                    class="empty-state"
-                  >
+                  <td colspan="7" class="empty-state">
                     No daily summary endpoints recorded yet. Ingest telemetry
                     stream batches to compute endpoints.
                   </td>
                 </tr>
-                <tr
-                  v-for="sum in dailySummaries"
-                  :key="sum.summary_id"
-                >
+                <tr v-for="sum in dailySummaries" :key="sum.summary_id">
                   <td>
                     <code>{{ sum.subject_id }}</code>
                   </td>
@@ -283,23 +279,33 @@
                     <code>{{ sum.device_token }}</code>
                   </td>
                   <td>
-                    <span v-if="sum.cgm">TIR:
+                    <span v-if="sum.cgm"
+                      >TIR:
                       <strong>{{ sum.cgm.tir_percentage }}%</strong> (Mean:
-                      {{ sum.cgm.mean_glucose_mg_dl }} mg/dL)</span>
-                    <span v-else-if="sum.actigraphy">Steps:
+                      {{ sum.cgm.mean_glucose_mg_dl }} mg/dL)</span
+                    >
+                    <span v-else-if="sum.actigraphy"
+                      >Steps:
                       <strong>{{
                         sum.actigraphy.total_steps.toLocaleString()
                       }}</strong>
                       (RHR:
-                      {{ sum.actigraphy.resting_heart_rate_bpm }} bpm)</span>
-                    <span v-else-if="sum.spirometry">FEV1:
+                      {{ sum.actigraphy.resting_heart_rate_bpm }} bpm)</span
+                    >
+                    <span v-else-if="sum.spirometry"
+                      >FEV1:
                       <strong>{{ sum.spirometry.best_fev1_liters }} L</strong>
-                      ({{ sum.spirometry.fev1_percent_predicted }}% pred)</span>
-                    <span v-else-if="sum.blood_pressure">BP:
-                      <strong>{{ sum.blood_pressure.mean_systolic_mmhg }}/{{
-                        sum.blood_pressure.mean_diastolic_mmhg
-                      }}</strong>
-                      mmHg</span>
+                      ({{ sum.spirometry.fev1_percent_predicted }}% pred)</span
+                    >
+                    <span v-else-if="sum.blood_pressure"
+                      >BP:
+                      <strong
+                        >{{ sum.blood_pressure.mean_systolic_mmhg }}/{{
+                          sum.blood_pressure.mean_diastolic_mmhg
+                        }}</strong
+                      >
+                      mmHg</span
+                    >
                     <span v-else>—</span>
                   </td>
                   <td><span class="badge badge-success">Valid GxP</span></td>
@@ -315,11 +321,7 @@
     </div>
 
     <!-- TAB 2: Automated Safety Alerts -->
-    <div
-      v-if="activeTab === 'alerts'"
-      class="tab-panel"
-      role="tabpanel"
-    >
+    <div v-if="activeTab === 'alerts'" class="tab-panel" role="tabpanel">
       <div
         v-if="domainErrors.alerts"
         class="error-banner alerts-warning-banner"
@@ -331,7 +333,9 @@
           <h3 class="card-title">
             Automated Safety Threshold Alerts &amp; Clinical Gating
           </h3>
-          <span class="badge badge-danger">{{ unacknowledgedCount }} Unacknowledged</span>
+          <span class="badge badge-danger"
+            >{{ unacknowledgedCount }} Unacknowledged</span
+          >
         </div>
         <div class="table-container">
           <table class="data-table">
@@ -349,10 +353,7 @@
             </thead>
             <tbody>
               <tr v-if="safetyAlerts.length === 0">
-                <td
-                  colspan="8"
-                  class="empty-state"
-                >
+                <td colspan="8" class="empty-state">
                   No safety threshold alerts triggered. All sensor streams
                   within nominal protocol bounds.
                 </td>
@@ -368,17 +369,23 @@
                 <td>
                   <span
                     :class="['severity-badge', alert.severity.toLowerCase()]"
-                  >{{ alert.severity }}</span>
+                    >{{ alert.severity }}</span
+                  >
                 </td>
                 <td>
                   <code>{{ alert.subject_id }}</code>
                 </td>
                 <td>{{ alert.device_type }}</td>
                 <td>
-                  <strong>{{ alert.parameter_name }}</strong>:
-                  <span class="text-danger font-bold">{{ alert.observed_value }} {{ alert.unit }}</span>
-                  <span class="threshold-sub">(Threshold: {{ alert.threshold_value }}
-                    {{ alert.unit }})</span>
+                  <strong>{{ alert.parameter_name }}</strong
+                  >:
+                  <span class="text-danger font-bold"
+                    >{{ alert.observed_value }} {{ alert.unit }}</span
+                  >
+                  <span class="threshold-sub"
+                    >(Threshold: {{ alert.threshold_value }}
+                    {{ alert.unit }})</span
+                  >
                 </td>
                 <td>{{ formatDate(alert.triggered_at) }}</td>
                 <td>
@@ -388,10 +395,7 @@
                   >
                     ✔ Acknowledged by {{ alert.acknowledged_by }}
                   </span>
-                  <span
-                    v-else
-                    class="badge badge-danger"
-                  >
+                  <span v-else class="badge badge-danger">
                     ⏳ Pending Review
                   </span>
                 </td>
@@ -404,10 +408,7 @@
                   >
                     ✍ Acknowledge Alert
                   </button>
-                  <span
-                    v-else
-                    class="text-muted text-sm"
-                  >{{
+                  <span v-else class="text-muted text-sm">{{
                     alert.acknowledgment_notes
                   }}</span>
                 </td>
@@ -419,11 +420,7 @@
     </div>
 
     <!-- TAB 3: Medical Device Registry -->
-    <div
-      v-if="activeTab === 'devices'"
-      class="tab-panel"
-      role="tabpanel"
-    >
+    <div v-if="activeTab === 'devices'" class="tab-panel" role="tabpanel">
       <div class="card table-card">
         <div class="card-header">
           <h3 class="card-title">
@@ -453,18 +450,12 @@
             </thead>
             <tbody>
               <tr v-if="devices.length === 0">
-                <td
-                  colspan="8"
-                  class="empty-state"
-                >
+                <td colspan="8" class="empty-state">
                   No medical IoT devices registered yet. Click '+ Register
                   Device' to pair an approved sensor.
                 </td>
               </tr>
-              <tr
-                v-for="dev in devices"
-                :key="dev.device_id"
-              >
+              <tr v-for="dev in devices" :key="dev.device_id">
                 <td>
                   <code>{{ dev.device_token }}</code>
                 </td>
@@ -499,11 +490,7 @@
     </div>
 
     <!-- TAB 4: Open mHealth & FHIR Inspector -->
-    <div
-      v-if="activeTab === 'standards'"
-      class="tab-panel"
-      role="tabpanel"
-    >
+    <div v-if="activeTab === 'standards'" class="tab-panel" role="tabpanel">
       <div class="standards-inspector">
         <div class="card">
           <div class="card-header">
@@ -553,10 +540,7 @@
           </button>
         </div>
         <div class="modal-body">
-          <div
-            v-if="ackError"
-            class="error-banner modal-error-banner"
-          >
+          <div v-if="ackError" class="error-banner modal-error-banner">
             {{ ackError }}
           </div>
           <div class="alert-detail-box">
@@ -566,8 +550,10 @@
             </p>
             <p>
               <strong>Parameter:</strong> {{ selectedAlert.parameter_name }} =
-              <span class="text-danger">{{ selectedAlert.observed_value }}
-                {{ selectedAlert.unit }}</span>
+              <span class="text-danger"
+                >{{ selectedAlert.observed_value }}
+                {{ selectedAlert.unit }}</span
+              >
             </p>
             <p>
               <strong>Threshold Breached:</strong>
@@ -580,10 +566,9 @@
           </div>
 
           <div class="form-group">
-            <label
-              class="form-label"
-              for="ack-notes"
-            >Clinical Justification &amp; Action Notes *</label>
+            <label class="form-label" for="ack-notes"
+              >Clinical Justification &amp; Action Notes *</label
+            >
             <textarea
               id="ack-notes"
               v-model="ackNotes"
@@ -625,9 +610,7 @@
     >
       <div class="modal-dialog">
         <div class="modal-header">
-          <h3 class="modal-title">
-            Register Medical IoT Device
-          </h3>
+          <h3 class="modal-title">Register Medical IoT Device</h3>
           <button
             type="button"
             class="modal-close"
@@ -637,32 +620,24 @@
           </button>
         </div>
         <div class="modal-body">
-          <div
-            v-if="registerError"
-            class="error-banner modal-error-banner"
-          >
+          <div v-if="registerError" class="error-banner modal-error-banner">
             {{ registerError }}
           </div>
           <div class="form-grid">
             <div class="form-group">
-              <label
-                class="form-label"
-                for="dev-category"
-              >Device Category *</label>
+              <label class="form-label" for="dev-category"
+                >Device Category *</label
+              >
               <select
                 id="dev-category"
                 v-model="registerForm.device_type"
                 class="form-control"
               >
-                <option value="CGM">
-                  Continuous Glucose Monitor (CGM)
-                </option>
+                <option value="CGM">Continuous Glucose Monitor (CGM)</option>
                 <option value="ACTIGRAPHY">
                   Actigraphy / Sleep &amp; Steps Tracker
                 </option>
-                <option value="SPIROMETRY">
-                  Digital Spirometer (FEV1)
-                </option>
+                <option value="SPIROMETRY">Digital Spirometer (FEV1)</option>
                 <option value="BLOOD_PRESSURE">
                   Bluetooth Blood Pressure Cuff
                 </option>
@@ -670,73 +645,66 @@
             </div>
 
             <div class="form-group">
-              <label
-                class="form-label"
-                for="dev-vendor"
-              >Manufacturer / Vendor *</label>
+              <label class="form-label" for="dev-vendor"
+                >Manufacturer / Vendor *</label
+              >
               <input
                 id="dev-vendor"
                 v-model="registerForm.vendor"
                 type="text"
                 class="form-control"
                 placeholder="e.g. Dexcom, Abbott, ActiGraph"
-              >
+              />
             </div>
 
             <div class="form-group">
-              <label
-                class="form-label"
-                for="dev-model"
-              >Model Name *</label>
+              <label class="form-label" for="dev-model">Model Name *</label>
               <input
                 id="dev-model"
                 v-model="registerForm.model_name"
                 type="text"
                 class="form-control"
                 placeholder="e.g. G7, FreeStyle Libre 3, wGT3X-BT"
-              >
+              />
             </div>
 
             <div class="form-group">
-              <label
-                class="form-label"
-                for="dev-subject"
-              >Assigned Subject ID *</label>
+              <label class="form-label" for="dev-subject"
+                >Assigned Subject ID *</label
+              >
               <input
                 id="dev-subject"
                 v-model="registerForm.subject_id"
                 type="text"
                 class="form-control"
                 placeholder="e.g. SUBJ-101"
-              >
+              />
             </div>
 
             <div class="form-group">
-              <label
-                class="form-label"
-                for="dev-mac"
-              >Bluetooth MAC Address</label>
+              <label class="form-label" for="dev-mac"
+                >Bluetooth MAC Address</label
+              >
               <input
                 id="dev-mac"
                 v-model="registerForm.mac_address"
                 type="text"
                 class="form-control"
                 placeholder="00:1A:7D:DA:71:13"
-              >
+              />
             </div>
 
             <div class="form-group">
-              <label
-                class="form-label"
-                for="dev-udi"
-              >FDA UDI Barcode / DI</label>
+              <label class="form-label" for="dev-udi"
+                >FDA UDI Barcode / DI</label
+              >
               <input
                 id="dev-udi"
                 v-model="registerForm.device_udi"
                 type="text"
                 class="form-control"
                 placeholder="(01)00850012345678(21)SN123"
-              >
+              />
             </div>
           </div>
         </div>
@@ -753,9 +721,9 @@
             class="btn btn-primary"
             :disabled="
               !registerForm.vendor ||
-                !registerForm.model_name ||
-                !registerForm.subject_id ||
-                isSubmitting
+              !registerForm.model_name ||
+              !registerForm.subject_id ||
+              isSubmitting
             "
             @click="submitDeviceRegistration"
           >
@@ -775,9 +743,7 @@
     >
       <div class="modal-dialog">
         <div class="modal-header">
-          <h3 class="modal-title">
-            Simulate Biometric Telemetry Ingestion
-          </h3>
+          <h3 class="modal-title">Simulate Biometric Telemetry Ingestion</h3>
           <button
             type="button"
             class="modal-close"
@@ -787,69 +753,52 @@
           </button>
         </div>
         <div class="modal-body">
-          <div
-            v-if="simulateError"
-            class="error-banner modal-error-banner"
-          >
+          <div v-if="simulateError" class="error-banner modal-error-banner">
             {{ simulateError }}
           </div>
           <div class="form-grid">
             <div class="form-group">
-              <label
-                class="form-label"
-                for="sim-dev-type"
-              >Stream Category *</label>
+              <label class="form-label" for="sim-dev-type"
+                >Stream Category *</label
+              >
               <select
                 id="sim-dev-type"
                 v-model="simulateForm.device_type"
                 class="form-control"
               >
-                <option value="CGM">
-                  Continuous Glucose Monitor (CGM)
-                </option>
-                <option value="ACTIGRAPHY">
-                  Actigraphy &amp; Heart Rate
-                </option>
-                <option value="SPIROMETRY">
-                  Digital Spirometry
-                </option>
-                <option value="BLOOD_PRESSURE">
-                  Blood Pressure Cuff
-                </option>
+                <option value="CGM">Continuous Glucose Monitor (CGM)</option>
+                <option value="ACTIGRAPHY">Actigraphy &amp; Heart Rate</option>
+                <option value="SPIROMETRY">Digital Spirometry</option>
+                <option value="BLOOD_PRESSURE">Blood Pressure Cuff</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label
-                class="form-label"
-                for="sim-subject"
-              >Subject ID *</label>
+              <label class="form-label" for="sim-subject">Subject ID *</label>
               <input
                 id="sim-subject"
                 v-model="simulateForm.subject_id"
                 type="text"
                 class="form-control"
-              >
+              />
             </div>
 
             <div class="form-group">
-              <label
-                class="form-label"
-                for="sim-drift"
-              >Simulated Clock Drift (ms)</label>
+              <label class="form-label" for="sim-drift"
+                >Simulated Clock Drift (ms)</label
+              >
               <input
                 id="sim-drift"
                 v-model.number="simulateForm.drift_ms"
                 type="number"
                 class="form-control"
-              >
+              />
             </div>
 
             <div class="form-group">
-              <label
-                class="form-label"
-                for="sim-samples"
-              >Number of Samples</label>
+              <label class="form-label" for="sim-samples"
+                >Number of Samples</label
+              >
               <input
                 id="sim-samples"
                 v-model.number="simulateForm.sample_count"
@@ -857,7 +806,7 @@
                 class="form-control"
                 min="1"
                 max="288"
-              >
+              />
             </div>
           </div>
         </div>
