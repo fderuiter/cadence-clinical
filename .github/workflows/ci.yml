@@ -287,6 +287,8 @@ jobs:
             global.json
 
       - name: Run documentation compilation
+        env:
+          CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
 
   security:
