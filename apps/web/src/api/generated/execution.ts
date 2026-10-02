@@ -1261,6 +1261,9 @@ export interface components {
       protocol_version_tag?: null | string;
       /** Format: int32 */
       protocol_version_index?: null | number | string;
+      form_submission_id?: null | string;
+      /** @default true */
+      is_active: boolean;
     };
     Execution_OperationEnvelopeResponse: {
       status: string;
@@ -1877,7 +1880,9 @@ export interface operations {
   };
   GetObservationById: {
     parameters: {
-      query?: never;
+      query?: {
+        include_inactive?: boolean;
+      };
       header?: never;
       path: {
         id: string;
@@ -1908,7 +1913,9 @@ export interface operations {
   };
   ListObservationsBySubject: {
     parameters: {
-      query?: never;
+      query?: {
+        include_inactive?: boolean;
+      };
       header?: never;
       path: {
         studyId: string;

@@ -41,7 +41,7 @@ public sealed class CgtVialReturnReconciliation : AggregateRoot<Guid>
         DateTimeOffset loggedAt,
         string? certificateId = null,
         string? notes = null,
-        string createdBy = "system",
+        string createdBy = "svc:execution",
         string reasonForChange = "Vial return reconciliation logged")
         : base(id)
     {

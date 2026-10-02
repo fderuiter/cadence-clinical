@@ -32,7 +32,7 @@ public sealed class CgtChainOfCustody : AggregateRoot<Guid>
         string din,
         string? collectionSiteId = null,
         DateTimeOffset? harvestedAt = null,
-        string createdBy = "system",
+        string createdBy = "svc:execution",
         string reasonForChange = "Apheresis harvest initialized")
         : base(id)
     {

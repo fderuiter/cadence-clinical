@@ -83,9 +83,9 @@ public static class ObservationEndpoints
 
     public static async Task<IResult> GetObservationByIdAsync(
         string id,
-        [FromQuery(Name = "include_inactive")] bool includeInactive,
         IObservationApplicationService svc,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "include_inactive")] bool includeInactive = false)
     {
         var result = await svc.GetByIdAsync(id, includeInactive, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
@@ -94,9 +94,9 @@ public static class ObservationEndpoints
     public static async Task<IResult> ListObservationsBySubjectAsync(
         string studyId,
         string subjectId,
-        [FromQuery(Name = "include_inactive")] bool includeInactive,
         IObservationApplicationService svc,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery(Name = "include_inactive")] bool includeInactive = false)
     {
         var result = await svc.ListBySubjectAsync(studyId, subjectId, includeInactive, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());

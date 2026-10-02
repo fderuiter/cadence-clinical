@@ -51,7 +51,7 @@ public sealed class CgtMilestoneEvent : AggregateRoot<Guid>
         string? sealId = null,
         string? dryShipperId = null,
         string? notes = null,
-        string createdBy = "system",
+        string createdBy = "svc:execution",
         string reasonForChange = "Milestone logged")
         : base(id)
     {
