@@ -28,25 +28,11 @@ jobs:
       - name: Verify third-party action SHA pinning
         run: python3 scripts/check-action-pinning.py
 
-  style:
-    name: Style and Lint Verification
+  lint-and-static:
+    name: Lint and Static Verification
     runs-on: ubuntu-latest
-    env:
-      RTM_DRAFT: "true"
     permissions:
       contents: read
-    outputs:
-      cadence_outcome: ${{ steps.run_cadence_check.outcome }}
-      contracts_outcome: ${{ steps.run_contracts.outcome }}
-      linting_outcome: ${{ steps.run_linting.outcome }}
-      frontend_outcome: ${{ steps.run_frontend.outcome }}
-      adr_outcome: ${{ steps.run_adr.outcome }}
-      duplication_outcome: ${{ steps.run_duplication.outcome }}
-      traceability_outcome: ${{ steps.run_traceability.outcome }}
-      openapi_drift_outcome: ${{ steps.run_openapi_drift.outcome }}
-      markdown_outcome: ${{ steps.run_markdown.outcome }}
-      architecture_outcome: ${{ steps.run_architecture.outcome }}
-      cli_aot_outcome: ${{ steps.run_cli_aot.outcome }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -72,45 +58,9 @@ jobs:
         run: pnpm --filter ui build
 
       - name: Run frontend style and lint
-        id: run_frontend
-        if: always()
         run: |
           pnpm --filter web --filter subject-portal --filter ui exec prettier --check .
           pnpm -r lint
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
-        with:
-          global-json-file: global.json
-
-      - name: Build .NET solution
-        run: dotnet build Cadence.sln
-
-      - name: Verify .NET C# code formatting (.editorconfig)
-        id: run_linting
-        if: always()
-        run: dotnet format Cadence.sln --verify-no-changes --no-restore
-
-      - name: Run Cadence quality sentinels
-        id: run_cadence_check
-        if: always()
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check
-
-      - name: Run architecture tests
-        id: run_architecture
-        if: always()
-        run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
-
-      # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2496).
-      - name: Publish the CLI as Native AOT
-        id: run_cli_aot
-        if: always()
-        run: dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -o "$RUNNER_TEMP/cadence-cli"
-
-      - name: Run hexagonal contract verification
-        id: run_contracts
-        if: always()
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check contracts
 
       - name: Run Hadolint on Dockerfiles
         run: |
@@ -169,44 +119,72 @@ jobs:
             exit 1
           fi
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+
+      - name: Run Markdown validation
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check markdown
+
+  dotnet-quality:
+    name: .NET Quality & Sentinel Checks
+    runs-on: ubuntu-latest
+    env:
+      RTM_DRAFT: "true"
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+
+      - name: Build .NET solution
+        run: dotnet build Cadence.sln
+
+      - name: Verify .NET C# code formatting (.editorconfig)
+        run: dotnet format Cadence.sln --verify-no-changes --no-restore
+
+      - name: Run Cadence quality sentinels
+        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check
+
+      - name: Run architecture tests
+        run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
+
+      - name: Run hexagonal contract verification
+        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check contracts
+
       - name: Run ADR validation
-        id: run_adr
-        if: always()
         run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check adrs
 
       - name: Run CODEOWNERS coverage validation
-        id: run_codeowners
-        if: always()
         run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- validate-codeowners
 
-      - name: Run Markdown validation
-        id: run_markdown
-        if: always()
-        run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check markdown
-
-      - name: Run documentation compilation
-        id: run_docs_build
-        if: always()
-        run: pnpm docs:build
-
       - name: Verify schema documentation freshness
-        id: run_schema_drift
-        if: always()
         run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check schema-doc
 
       - name: Verify OpenAPI specification drift
-        id: run_openapi_drift
-        if: always()
         run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check openapi
 
       - name: Run requirements traceability validation
-        id: run_traceability
-        if: always()
         run: dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check rtm
 
       - name: Run code duplication verification
-        id: run_duplication
-        if: always()
         run: |
           git fetch origin main --depth=1 || true
           CHANGED_FILES=""
@@ -236,6 +214,69 @@ jobs:
           name: duplication-summary
           path: duplication_summary.json
 
+  native-aot-build:
+    name: Native AOT Compilation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+
+      # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2496).
+      - name: Publish the CLI as Native AOT
+        run: dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -o "$RUNNER_TEMP/cadence-cli"
+
+  docs-build:
+    name: Documentation Compilation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
+
+      - name: Run documentation compilation
+        run: pnpm docs:build
+
   security:
     name: Security and Vulnerability Audit
     runs-on: ubuntu-latest
@@ -260,6 +301,10 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
 
       - name: Install pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
@@ -270,6 +315,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "20"
+          cache: "pnpm"
 
       - name: Run static analysis
         id: run_static
@@ -379,6 +425,10 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
 
       - name: Build UI package
         run: pnpm --filter ui build
@@ -425,6 +475,10 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
 
       - name: Restore NuGet Packages
         run: dotnet restore Cadence.sln
@@ -446,8 +500,7 @@ jobs:
 
   accessibility-e2e:
     name: Parallel E2E Accessibility Testing
-    # Playwright browser installs are the most expensive job; run on main only.
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -526,6 +579,10 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            Directory.Packages.props
+            global.json
 
       - name: Install pnpm
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
@@ -607,7 +664,7 @@ jobs:
   automerge:
     name: Approve and Automerge
     needs:
-      [classify, actionlint, style, security, unit-tests, dotnet-tests, compliance]
+      [classify, actionlint, lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, compliance]
     if: github.event_name == 'pull_request' && needs.classify.outputs.is_safe == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -636,7 +693,7 @@ jobs:
 
   release-and-archive:
     name: Call Production Pipeline
-    needs: [style, security, compliance]
+    needs: [dotnet-quality, security, compliance]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/production-pipeline.yml
 
