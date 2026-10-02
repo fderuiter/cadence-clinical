@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
+import { useOnboardingStore } from "../stores/onboarding.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
 /**
@@ -41,6 +42,10 @@ const routes = [
       if (!authStore.isAuthenticated) {
         return "/login";
       }
+      const onboardingStore = useOnboardingStore();
+      if (!onboardingStore.bypassOverview) {
+        return { name: "overview" };
+      }
       const roles = authStore.normalizedRoles || [];
       const preferred = landingRouteFor(roles);
       if (isScreenAvailable(preferred)) {
@@ -58,6 +63,12 @@ const routes = [
       );
       return fallback ? { name: fallback.name } : { name: "unavailable" };
     },
+  },
+  {
+    path: "/overview",
+    name: "overview",
+    component: () => import("../views/OverviewView.vue"),
+    meta: { requiresAuth: true },
   },
   {
     path: "/login",
