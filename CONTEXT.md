@@ -137,6 +137,20 @@ the items a registered source reports as due that the evaluator permits them to 
 grants and delegations. Read without a scope, it is the portfolio queue across the tenant's studies (ADR-2486).
 _Avoid_: role strings as authority, delegation tables separate from grants, queues per role
 
+### AutomationAgent and Proposal
+
+An **AutomationAgent** is an AI or rules agent acting through the Intelligence engine, an actor whose id starts
+with `agent:` (`Actor.AutomationAgent`). It reads through the same authorization and visibility as a person and may
+propose, but it can never execute or approve, sign an attestation, or decide a proposal (K-AI-1, K-AI-3).
+
+A **Proposal** is a suggested change to a study, by an agent or a person: an intent, the artifact version holding
+the plan, the objects it would change or depends on, an optional simulation result hash, the capabilities a person
+would use to execute it, and an expiry. It changes nothing in the kernel. Its content is fixed under a content hash.
+It is `Open` until a person approves it with an Attestation over that hash, a person rejects it, or its proposer
+withdraws it. The proposer can never approve it. An open proposal past its expiry reads as **Expired**. An agent's
+proposal names the model that produced it (K-PROV-3, ADR-2489).
+_Avoid_: AI draft statuses on regulated records (`DRAFT_AI`), "approved" to mean "executed"
+
 ### Tenant
 
 The top-level isolation boundary. Every kernel row carries `tenant_id`, enforced by PostgreSQL
@@ -1066,7 +1080,7 @@ _Avoid_: Static hardcoded visit day lists or scattered calendar date math across
 
 ### Derived Variable Math Engine
 
-A standardized medical equation and biostatistical derivation evaluator built on pure UREE AST execution, compiling validated clinical formulas (eGFR CKD-EPI 2021 race-free, BSA Mosteller/DuBois, BMI, QTcF Fridericia, Mean Arterial Pressure, Cockcroft-Gault) with automated unit conversion and range gating.
+A pure evaluator of standard clinical formulas (BMI, BSA Mosteller/DuBois, eGFR CKD-EPI 2021 race-free and MDRD, QTc Fridericia/Bazett, Mean Arterial Pressure, Cockcroft-Gault) with unit conversion and range gating: `DerivedVariableEngine` in `Cadence.Core.Domain.Derived` (ADR-2522). Custom formulas are written in the one rule language (`Cadence.Rules`, K-RULE-3), and a stored derived value is a derived Observation with provenance (K-FACT-2).
 _Avoid_: Ad-hoc procedural calculations embedded directly in API route handlers
 
 ### Declarative CTCAE & DAIDS Lab Toxicity Grading Engine

@@ -1076,6 +1076,16 @@ approval and read-only display are application workflow over it.
 - Analytics, forecasting and statistical outputs are **projections** with provenance; they never write
   clinical truth.
 
+Proposals are implemented by #4783 (ADR-2489, K033). `Propose` records the intent, the plan artifact version, the
+affected NodeRefs, an optional simulation result hash, the requested Execute or Approve capabilities and an expiry of at
+most 90 days, under a content hash the database keeps fixed; an automation agent must name its model (K-PROV-3). A
+proposal is `Open` until a person approves it with an `Approved` attestation over that hash (never its own proposer),
+rejects it, or its proposer withdraws it; an open proposal past its expiry reads as `Expired`. It sits on its study's
+scope path, derives from its plan in lineage and is defined by each versioned affected object. `Actor.AutomationAgent`
+builds agent actors, and the existing `actor.agent_verb` rule is K-AI-1 for now: an agent can never execute or approve.
+The K-AI-2 execution link, standing grants (b), grants scoped to the requesting human, the `QueryStatus.DraftAi`
+migration and a proposals work-queue source follow in later slices.
+
 ### 11.1 Simulation (ADR-2480)
 
 Simulation answers "what happens if I change this?" (Clinical Canvas Simulate verb) by **evaluating, never
@@ -1245,6 +1255,7 @@ kernel, is merged into another, or is retired.
 | K029 | IdentityVault | Direct identifiers sealed per record (AES-256-GCM data keys wrapped by a per-tenant key) in the `identity_vault` schema, reached only through its functions; record, reveal, erase and cross-study link are audited kernel commands; residency is a tenant property | ADR-2458 |
 | K031 | Qualifications | Actor prerequisites are bitemporal Qualifications with artifact evidence; QualificationRequirements name the qualification a capability needs within a scope; the evaluator denies naming what to obtain or renew (K-AUTH-5, K-AUTH-6) | ADR-2459 |
 | K032 | Visit timing, anchors and cycles | `ExpectedSchedule.Assess` measures an actual date against the window with no built-in severity; visits anchored on another visit's actual date; repeating cycles as numbered occurrences | ADR-2507 |
+| K033 | AI proposals and automation agents | A Proposal with a content hash and no effect on kernel state; approval is an attested, separation-of-duties decision by a person; agents read and propose only; expiry derived on read | ADR-2489 |
 
 ---
 

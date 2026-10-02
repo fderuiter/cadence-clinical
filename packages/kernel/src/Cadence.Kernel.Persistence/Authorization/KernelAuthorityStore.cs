@@ -192,6 +192,14 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     _ => await StudyPathAsync(db, tenant, effectivity.StudyId, effectivity.ScopeCountry, ct).ConfigureAwait(false),
                 };
 
+            case NodeKinds.Proposal:
+                // A proposal is a study object (ADR-2489 §4.2): readers and deciders are authorized on its study (K-AI-3).
+                var proposalId = ProposalId.FromGuid(id);
+                var proposalStudy = await db.Proposals.AsNoTracking()
+                    .Where(p => p.TenantId == tenant && p.Id == proposalId).Select(p => (StudyId?)p.StudyId)
+                    .SingleOrDefaultAsync(ct).ConfigureAwait(false);
+                return proposalStudy is { } proposedIn ? await StudyPathAsync(db, tenant, proposedIn, country: null, ct).ConfigureAwait(false) : null;
+
             default:
                 // Tenants, participants (who may be in several studies), roles, qualifications (held by a person across
                 // studies), attestations and reference data belong to no organization or study.
