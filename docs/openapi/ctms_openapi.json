@@ -207,6 +207,207 @@
           }
         }
       }
+    },
+    "/api/v1/ctms/startup/sites/{siteId}/greenlight": {
+      "get": {
+        "tags": [
+          "StartupGreenlightEndpoints"
+        ],
+        "summary": "Evaluates 6-facet greenlight readiness for a single trial site.",
+        "operationId": "EvaluateSiteGreenlight",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "countryCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponseDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/sites/{siteId}/greenlight/certify": {
+      "post": {
+        "tags": [
+          "StartupGreenlightEndpoints"
+        ],
+        "summary": "Certifies greenlight activation for a single trial site, issuing an HMAC-SHA256 token.",
+        "operationId": "CertifySiteGreenlight",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "countryCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/matrix": {
+      "get": {
+        "tags": [
+          "StartupGreenlightEndpoints"
+        ],
+        "summary": "Displays country-level matrix showing 6-facet greenlight readiness for all sites in a selected country.",
+        "operationId": "GetCountryGreenlightMatrix",
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "countryCode",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/startup/matrix/batch-certify": {
+      "post": {
+        "tags": [
+          "StartupGreenlightEndpoints"
+        ],
+        "summary": "Batch-certifies all selected 100% compliant sites in a target country with a single e-signature.",
+        "operationId": "BatchCertifyCountrySites",
+        "parameters": [
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ctms_BatchCertifyRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_BatchCertifyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -229,6 +430,119 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Ctms_BatchCertifyRequestDto": {
+        "required": [
+          "studyId",
+          "countryCode",
+          "siteIds",
+          "signerName",
+          "signerRole",
+          "meaning"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "siteIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "signerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signerRole": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Ctms_BatchCertifyResponseDto": {
+        "required": [
+          "success",
+          "certifiedCount",
+          "studyId",
+          "countryCode",
+          "certifiedSites",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "certifiedCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "certifiedSites": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Ctms_CertifiedSiteItemDto"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Ctms_CertifiedSiteItemDto": {
+        "required": [
+          "siteId",
+          "siteName",
+          "greenlightToken",
+          "certifiedAt",
+          "certifiedBy",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string"
+          },
+          "siteName": {
+            "type": "string"
+          },
+          "greenlightToken": {
+            "type": "string"
+          },
+          "certifiedAt": {
+            "type": "string"
+          },
+          "certifiedBy": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
           }
         }
       },
@@ -267,6 +581,109 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Ctms_SiteGreenlightGateResponseDto": {
+        "required": [
+          "id",
+          "studyId",
+          "siteId",
+          "siteName",
+          "countryCode",
+          "overallStatus",
+          "readinessPercentage",
+          "facetRegulatoryIrb",
+          "facetCtaBudget",
+          "facetEisfBaseline",
+          "facetDoaLog",
+          "facetStaffTraining",
+          "facetIpRelease",
+          "isCompliant",
+          "greenlightToken",
+          "greenlightCertifiedBy",
+          "greenlightCertifiedAt",
+          "isOverridden",
+          "unfulfilledReasons"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "siteName": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "overallStatus": {
+            "type": "string"
+          },
+          "readinessPercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "facetRegulatoryIrb": {
+            "type": "boolean"
+          },
+          "facetCtaBudget": {
+            "type": "boolean"
+          },
+          "facetEisfBaseline": {
+            "type": "boolean"
+          },
+          "facetDoaLog": {
+            "type": "boolean"
+          },
+          "facetStaffTraining": {
+            "type": "boolean"
+          },
+          "facetIpRelease": {
+            "type": "boolean"
+          },
+          "isCompliant": {
+            "type": "boolean"
+          },
+          "greenlightToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "greenlightCertifiedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "greenlightCertifiedAt": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isOverridden": {
+            "type": "boolean"
+          },
+          "unfulfilledReasons": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -441,6 +858,9 @@
     },
     {
       "name": "LetterTemplateEndpoints"
+    },
+    {
+      "name": "StartupGreenlightEndpoints"
     }
   ]
 }
