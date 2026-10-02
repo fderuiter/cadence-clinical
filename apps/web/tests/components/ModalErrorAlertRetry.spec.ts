@@ -25,7 +25,9 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
       });
 
       const mockSignatureService = {
-        verifySignature: vi.fn(async () => ({ sig_token: "mock-sig-token-123" })),
+        verifySignature: vi.fn(async () => ({
+          sig_token: "mock-sig-token-123",
+        })),
       };
 
       const wrapper = mount(SignatureCaptureModal, {
@@ -52,7 +54,9 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
 
       expect(mockOnSign).toHaveBeenCalledTimes(1);
       expect(wrapper.find("#sig-error-msg").exists()).toBe(true);
-      expect(wrapper.text()).toContain("Signing failed: Network timeout during signature verification");
+      expect(wrapper.text()).toContain(
+        "Signing failed: Network timeout during signature verification"
+      );
 
       // Re-enter password for GxP safety check
       wrapper.vm.password = "Secret123!";
@@ -71,14 +75,19 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
     it("displays ModalErrorAlert when analysis fails and re-triggers delta engine on Retry click", async () => {
       const codingStore = useCodingStore();
       codingStore.impactAnalysis.isOpen = true;
-      codingStore.impactAnalysis.error = "Upversioning Delta Engine API unreachable";
+      codingStore.impactAnalysis.error =
+        "Upversioning Delta Engine API unreachable";
 
-      const runAnalysisSpy = vi.spyOn(codingStore, "runImpactAnalysis").mockResolvedValue();
+      const runAnalysisSpy = vi
+        .spyOn(codingStore, "runImpactAnalysis")
+        .mockResolvedValue();
 
       const wrapper = mount(UpversioningImpactDrawer);
 
       expect(wrapper.find(".modal-error-alert").exists()).toBe(true);
-      expect(wrapper.text()).toContain("Upversioning Delta Engine API unreachable");
+      expect(wrapper.text()).toContain(
+        "Upversioning Delta Engine API unreachable"
+      );
 
       runAnalysisSpy.mockClear();
 
@@ -102,7 +111,9 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
       });
 
       expect(wrapper.find(".modal-error-alert").exists()).toBe(true);
-      expect(wrapper.text()).toContain("Re-authentication failed: Invalid password");
+      expect(wrapper.text()).toContain(
+        "Re-authentication failed: Invalid password"
+      );
 
       // Set credential
       wrapper.vm.credentialVal = "ValidPass123";
@@ -129,7 +140,9 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
         attachTo: document.body,
       });
 
-      const testFile = new File(["dummy data"], "consent_v2.pdf", { type: "application/pdf" });
+      const testFile = new File(["dummy data"], "consent_v2.pdf", {
+        type: "application/pdf",
+      });
       wrapper.vm.selectedFile = testFile;
       wrapper.vm.reasonForChange = "Updated ICF document protocol amendment";
       wrapper.vm.errorMessage = "Presigned S3 URL allocation timeout";
@@ -137,22 +150,32 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
 
       const alertEl = document.body.querySelector(".modal-error-alert");
       expect(alertEl).not.toBeNull();
-      expect(alertEl?.textContent).toContain("Presigned S3 URL allocation timeout");
+      expect(alertEl?.textContent).toContain(
+        "Presigned S3 URL allocation timeout"
+      );
 
       // Mock fetch for upload
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ file_id: "file-123", upload_url: "https://s3.amazonaws.com/upload" }),
+        json: async () => ({
+          file_id: "file-123",
+          upload_url: "https://s3.amazonaws.com/upload",
+        }),
       });
 
-      const retryBtn = document.body.querySelector('[data-testid="modal-error-retry-btn"]');
+      const retryBtn = document.body.querySelector(
+        '[data-testid="modal-error-retry-btn"]'
+      );
       expect(retryBtn).not.toBeNull();
       expect(retryBtn?.textContent?.trim()).toBe("Retry Upload");
 
       (retryBtn as HTMLButtonElement).click();
       await wrapper.vm.$nextTick();
 
-      expect(global.fetch).toHaveBeenCalledWith("/api/v1/files/upload/presigned-url", expect.anything());
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/v1/files/upload/presigned-url",
+        expect.anything()
+      );
       wrapper.unmount();
     });
 
@@ -165,7 +188,9 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
         attachTo: document.body,
       });
 
-      const testFile = new File(["dummy data"], "consent_v2.pdf", { type: "application/pdf" });
+      const testFile = new File(["dummy data"], "consent_v2.pdf", {
+        type: "application/pdf",
+      });
       wrapper.vm.selectedFile = testFile;
       wrapper.vm.errorMessage = "Invalid file type";
       await wrapper.vm.$nextTick();
@@ -173,7 +198,9 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
       const alertEl = document.body.querySelector(".modal-error-alert");
       expect(alertEl).not.toBeNull();
 
-      const dismissBtn = document.body.querySelector('[data-testid="modal-error-dismiss-btn"]');
+      const dismissBtn = document.body.querySelector(
+        '[data-testid="modal-error-dismiss-btn"]'
+      );
       expect(dismissBtn).not.toBeNull();
 
       (dismissBtn as HTMLButtonElement).click();

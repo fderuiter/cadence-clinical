@@ -2,11 +2,20 @@ import { describe, it, expect, vi } from "vitest";
 import fs from "fs";
 import path from "path";
 import { ModalErrorAlert, useAsyncRetry } from "../src/index.js";
-import { ModalErrorAlert as RootModalErrorAlert, useAsyncRetry as RootUseAsyncRetry } from "../index.js";
+import {
+  ModalErrorAlert as RootModalErrorAlert,
+  useAsyncRetry as RootUseAsyncRetry,
+} from "../index.js";
 
 describe("ModalErrorAlert & useAsyncRetry (#4523)", () => {
-  const alertPath = path.resolve(__dirname, "../src/components/ModalErrorAlert.vue");
-  const composablePath = path.resolve(__dirname, "../src/composables/useAsyncRetry.js");
+  const alertPath = path.resolve(
+    __dirname,
+    "../src/components/ModalErrorAlert.vue"
+  );
+  const composablePath = path.resolve(
+    __dirname,
+    "../src/composables/useAsyncRetry.js"
+  );
 
   it("exports ModalErrorAlert and useAsyncRetry from package entry points", () => {
     expect(ModalErrorAlert).toBeDefined();
@@ -40,7 +49,8 @@ describe("ModalErrorAlert & useAsyncRetry (#4523)", () => {
       return `Success on call ${callCount}`;
     });
 
-    const { isLoading, error, execute, retry, clearError } = useAsyncRetry(asyncOperation);
+    const { isLoading, error, execute, retry, clearError } =
+      useAsyncRetry(asyncOperation);
 
     expect(isLoading.value).toBe(false);
     expect(error.value).toBe(null);

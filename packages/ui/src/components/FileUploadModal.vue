@@ -273,7 +273,11 @@ defineExpose({
             retry-label="Retry Upload"
             dismiss-label="Clear Error"
             @retry="startUpload"
-            @dismiss="errorMessage = ''; status = 'idle'; selectedFile = null;"
+            @dismiss="
+              errorMessage = '';
+              status = 'idle';
+              selectedFile = null;
+            "
           />
 
           <!-- Dropzone -->
