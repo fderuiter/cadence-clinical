@@ -149,11 +149,24 @@ public sealed class UcumNormalizationService : IUcumNormalizationService
         throw new ArgumentException($"Unrecognized or unsupported conversion from '{fromUnit}' to '{toUnit}'");
     }
 
-    public (double? NormalizedValue, string? NormalizedUnit) GetNormalizedRepresentation(double? value, string? unit)
+    public UcumNormalizationResult GetNormalizedRepresentation(double? value, string? unit)
     {
-        if (value is null || string.IsNullOrWhiteSpace(unit))
+        if (value is null)
         {
-            return (value, unit);
+            return new UcumNormalizationResult(
+                IsNormalized: true,
+                NormalizedValue: null,
+                NormalizedUnit: string.IsNullOrWhiteSpace(unit) ? null : NormalizeUnitName(unit),
+                StatusCode: "NORMALIZED");
+        }
+
+        if (string.IsNullOrWhiteSpace(unit))
+        {
+            return new UcumNormalizationResult(
+                IsNormalized: true,
+                NormalizedValue: value,
+                NormalizedUnit: null,
+                StatusCode: "NORMALIZED");
         }
 
         string normUnit = NormalizeUnitName(unit);
@@ -164,20 +177,36 @@ public sealed class UcumNormalizationService : IUcumNormalizationService
             try
             {
                 double valCel = ConvertUnit(value.Value, normUnit, "Cel");
-                return (valCel, "Cel");
+                return new UcumNormalizationResult(
+                    IsNormalized: true,
+                    NormalizedValue: valCel,
+                    NormalizedUnit: "Cel",
+                    StatusCode: "NORMALIZED");
             }
             catch
             {
-                return (value, unit);
+                return new UcumNormalizationResult(
+                    IsNormalized: false,
+                    NormalizedValue: null,
+                    NormalizedUnit: null,
+                    StatusCode: "UNMAPPED");
             }
         }
 
         // Multiplicative base
         if (Conversions.TryGetValue(normUnit, out var conv))
         {
-            return (value.Value * conv.Factor, conv.BaseUnit);
+            return new UcumNormalizationResult(
+                IsNormalized: true,
+                NormalizedValue: value.Value * conv.Factor,
+                NormalizedUnit: conv.BaseUnit,
+                StatusCode: "NORMALIZED");
         }
 
-        return (value, unit);
+        return new UcumNormalizationResult(
+            IsNormalized: false,
+            NormalizedValue: null,
+            NormalizedUnit: null,
+            StatusCode: "UNMAPPED");
     }
 }

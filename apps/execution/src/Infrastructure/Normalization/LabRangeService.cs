@@ -49,16 +49,23 @@ public sealed class LabRangeService : ILabRangeService
         double? value,
         int? ageYears = null,
         string? sex = null,
-        string? labSource = null) =>
-        Evaluate(new TestCode(testCode), value, sex, ageYears, labSource);
+        string? labSource = null,
+        bool isNormalized = true) =>
+        Evaluate(new TestCode(testCode), value, sex, ageYears, labSource, isNormalized);
 
     public LabAssessmentResult Evaluate(
         TestCode testCode,
         double? value,
         string? sex = null,
         int? ageYears = null,
-        string? labSource = null)
+        string? labSource = null,
+        bool isNormalized = true)
     {
+        if (!isNormalized)
+        {
+            return new LabAssessmentResult("UNNORMALIZED_UNIT", false, null, null, null);
+        }
+
         if (value is null)
         {
             return new LabAssessmentResult("NORMAL", false, null, null, null);

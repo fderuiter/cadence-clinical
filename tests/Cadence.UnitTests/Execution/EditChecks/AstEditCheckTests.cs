@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -329,5 +330,34 @@ public sealed class AstEditCheckTests
         var nanJson = "{\"op\": \"+\", \"args\": [{\"var\": \"nan_val\"}, 5]}";
         var nanNode = JsonSerializer.Deserialize<JsonElement>(nanJson);
         engine.EvaluateAst(nanNode, context).Should().BeNull();
+    }
+
+    /// <summary>
+    /// Validates that AstEditCheckEngine does not throw FATAL_TEMP_RANGE violations when body temperature
+    /// observations have unmapped unit strings.
+    /// @req:SRS-EDC-002
+    /// </summary>
+    [Fact]
+    public void EvaluateInlineConstraints_UnmappedTemperatureUnit_BypassesFatalTempRangeViolation()
+    {
+        var engine = new AstEditCheckEngine();
+        var unmappedProps = new ObservationAdditionalProperties { UnitNormalizationStatus = "UNMAPPED" };
+
+        var observation = ClinicalObservation.Create(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-001"),
+            domain: new DomainCode("VS"),
+            testCode: new TestCode("TEMP"),
+            testName: "Body Temperature",
+            observationDate: FakeClock.DefaultStart.UtcDateTime,
+            value: 98.6,
+            unit: "UNMAPPED_TEMP_UNIT",
+            normalizedValue: null,
+            normalizedUnit: null,
+            additionalProperties: unmappedProps).Value!;
+
+        var violations = engine.EvaluateInlineConstraints(observation);
+
+        violations.Should().NotContain(v => v.RuleId == "FATAL_TEMP_RANGE");
     }
 }

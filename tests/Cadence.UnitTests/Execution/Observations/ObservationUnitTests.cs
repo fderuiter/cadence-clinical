@@ -257,4 +257,119 @@ public sealed class ObservationUnitTests
         persisted.Should().NotBeNull();
         persisted!.NormalizedValue.Should().NotBeNull();
     }
+
+    /// <summary>
+    /// Validates that UCUM normalization returns IsNormalized = false, NormalizedValue = null, NormalizedUnit = null,
+    /// and StatusCode = "UNMAPPED" for unrecognized unit strings.
+    /// @req:SRS-EDC-001
+    /// </summary>
+    [Fact]
+    public void UcumNormalization_UnmappedUnit_ReturnsUnmappedResult()
+    {
+        var ucum = new UcumNormalizationService();
+
+        var result = ucum.GetNormalizedRepresentation(100.0, "INVALID_LOCAL_UNIT");
+
+        result.IsNormalized.Should().BeFalse();
+        result.NormalizedValue.Should().BeNull();
+        result.NormalizedUnit.Should().BeNull();
+        result.StatusCode.Should().Be("UNMAPPED");
+    }
+
+    /// <summary>
+    /// Validates that LabRangeService sets Indicator = "UNNORMALIZED_UNIT" and OutOfRange = false
+    /// when given an observation with an unmapped or unnormalized unit.
+    /// @req:SRS-EDC-001
+    /// </summary>
+    [Fact]
+    public void LabRangeService_UnmappedUnit_ReturnsUnnormalizedIndicatorAndNoRangeWarning()
+    {
+        var labRange = new LabRangeService();
+
+        var result = labRange.EvaluateRange("GLUC", 150.0, 35, "M", isNormalized: false);
+
+        result.Indicator.Should().Be("UNNORMALIZED_UNIT");
+        result.IsOutOfRange.Should().BeFalse();
+        result.MatchedBoundsJson.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Validates that OutlierDetectionService excludes observations with IsNormalized = false or NormalizedValue = null
+    /// from statistical cohort distributions.
+    /// @req:SRS-EDC-001
+    /// </summary>
+    [Fact]
+    public void OutlierDetection_UnmappedUnit_ExcludesFromCohortDistribution()
+    {
+        var outlierService = new OutlierDetectionService();
+
+        var validObs1 = ClinicalObservation.Create(new StudyCode("S1"), new SubjectCode("SUBJ-1"), new DomainCode("VS"), new TestCode("WT"), "Weight", FakeClock.DefaultStart.UtcDateTime, 70.0, normalizedValue: 70.0, normalizedUnit: "kg").Value!;
+        var validObs2 = ClinicalObservation.Create(new StudyCode("S1"), new SubjectCode("SUBJ-2"), new DomainCode("VS"), new TestCode("WT"), "Weight", FakeClock.DefaultStart.UtcDateTime, 72.0, normalizedValue: 72.0, normalizedUnit: "kg").Value!;
+        var validObs3 = ClinicalObservation.Create(new StudyCode("S1"), new SubjectCode("SUBJ-3"), new DomainCode("VS"), new TestCode("WT"), "Weight", FakeClock.DefaultStart.UtcDateTime, 71.0, normalizedValue: 71.0, normalizedUnit: "kg").Value!;
+        var validObs4 = ClinicalObservation.Create(new StudyCode("S1"), new SubjectCode("SUBJ-4"), new DomainCode("VS"), new TestCode("WT"), "Weight", FakeClock.DefaultStart.UtcDateTime, 69.0, normalizedValue: 69.0, normalizedUnit: "kg").Value!;
+
+        // Unmapped unit observation submitted with raw value 500 in unknown unit "stones_x"
+        var unmappedProps = new ObservationAdditionalProperties { UnitNormalizationStatus = "UNMAPPED" };
+        var unmappedObs = ClinicalObservation.Create(new StudyCode("S1"), new SubjectCode("SUBJ-5"), new DomainCode("VS"), new TestCode("WT"), "Weight", FakeClock.DefaultStart.UtcDateTime, 500.0, unit: "stones_x", normalizedValue: null, normalizedUnit: null, additionalProperties: unmappedProps).Value!;
+
+        var cohort = new List<ClinicalObservation> { validObs1, validObs2, validObs3, validObs4, unmappedObs };
+
+        int outlierCount = outlierService.RecalculateOutliers(cohort);
+
+        unmappedObs.IsOutlier.Should().BeFalse();
+        outlierCount.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Validates ingestion of observation with unmapped local unit: sets NormalizedValue and NormalizedUnit to null,
+    /// persists unit_normalization_status = "UNMAPPED", sets LabIndicator = "UNNORMALIZED_UNIT", and prevents false range warnings.
+    /// @req:SRS-EDC-001
+    /// </summary>
+    [Fact]
+    public async Task ObservationApplicationService_UnmappedUnit_IngestsObservationWithNullNormalizedProjectionsAndUnmappedStatus()
+    {
+        var repo = new InMemoryObservationRepository();
+        var subjectRepo = new InMemorySubjectRepository();
+        var ucum = new UcumNormalizationService();
+        var labRange = new LabRangeService();
+        var editChecks = new AstEditCheckEngine();
+        var clock = new FakeClock();
+        var audit = new FakeCurrentAuditContextAccessor();
+
+        var service = new ObservationApplicationService(
+            repo,
+            subjectRepo,
+            ucum,
+            labRange,
+            editChecks,
+            clock,
+            audit);
+
+        var request = new ObservationCreateRequest(
+            StudyId: "STUDY-101",
+            SubjectId: "SUBJ-001",
+            Domain: "LB",
+            TestCode: "GLUC",
+            TestName: "Glucose",
+            ObservationDate: FakeClock.DefaultStart.UtcDateTime,
+            Value: 180.0,
+            Unit: "UNRECOGNIZED_LAB_UNIT");
+
+        var response = await service.CreateAsync(request, CancellationToken.None);
+
+        response.IsSuccess.Should().BeTrue();
+        var obs = response.Value!;
+        obs.Value.Should().Be(180.0);
+        obs.Unit.Should().Be("UNRECOGNIZED_LAB_UNIT");
+        obs.NormalizedValue.Should().BeNull();
+        obs.NormalizedUnit.Should().BeNull();
+
+        var persisted = await repo.GetByIdAsync(ObservationId.Parse(obs.Id), CancellationToken.None);
+        persisted.Should().NotBeNull();
+        persisted!.NormalizedValue.Should().BeNull();
+        persisted.NormalizedUnit.Should().BeNull();
+        persisted.AdditionalProperties.UnitNormalizationStatus.Should().Be("UNMAPPED");
+        persisted.LabIndicator.Should().Be("UNNORMALIZED_UNIT");
+        persisted.LabOutOfRange.Should().BeFalse();
+    }
 }

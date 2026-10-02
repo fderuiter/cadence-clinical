@@ -564,7 +564,11 @@ public sealed class FormSubmissionApplicationService(
         string? valueString,
         string? unit)
     {
-        var (normVal, normUnit) = ucumService.GetNormalizedRepresentation(value, unit);
+        var normResult = ucumService.GetNormalizedRepresentation(value, unit);
+        var additionalProps = new ObservationAdditionalProperties
+        {
+            UnitNormalizationStatus = normResult.StatusCode
+        };
         var obsResult = ClinicalObservation.Create(
             studyId: submission.StudyId,
             subjectId: submission.SubjectId,
@@ -579,8 +583,9 @@ public sealed class FormSubmissionApplicationService(
             visitId: submission.VisitId,
             protocolVersionTag: submission.ProtocolVersion,
             protocolVersionIndex: 1,
-            normalizedValue: normVal,
-            normalizedUnit: normUnit);
+            normalizedValue: normResult.NormalizedValue,
+            normalizedUnit: normResult.NormalizedUnit,
+            additionalProperties: additionalProps);
 
         if (obsResult.IsSuccess && obsResult.Value is not null)
         {

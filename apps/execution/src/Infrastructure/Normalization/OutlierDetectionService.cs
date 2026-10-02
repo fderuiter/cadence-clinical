@@ -44,7 +44,8 @@ public sealed class OutlierDetectionService : IOutlierDetectionService
     public int RecalculateOutliers(IList<ClinicalObservation> observations)
     {
         var numericObs = observations
-            .Where(o => (o.NormalizedValue ?? o.Value).HasValue)
+            .Where(o => o.NormalizedValue.HasValue &&
+                        !string.Equals(o.AdditionalProperties?.UnitNormalizationStatus, "UNMAPPED", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         if (numericObs.Count < 4)
@@ -56,13 +57,15 @@ public sealed class OutlierDetectionService : IOutlierDetectionService
             return 0;
         }
 
-        var values = numericObs.Select(o => (o.NormalizedValue ?? o.Value)!.Value).ToList();
+        var values = numericObs.Select(o => o.NormalizedValue!.Value).ToList();
         int outliersCount = 0;
 
         foreach (var obs in observations)
         {
-            double? val = obs.NormalizedValue ?? obs.Value;
-            if (val.HasValue && IsOutlier(val.Value, values))
+            bool isNormalized = obs.NormalizedValue.HasValue &&
+                                !string.Equals(obs.AdditionalProperties?.UnitNormalizationStatus, "UNMAPPED", StringComparison.OrdinalIgnoreCase);
+
+            if (isNormalized && IsOutlier(obs.NormalizedValue!.Value, values))
             {
                 obs.SetOutlier(true);
                 outliersCount++;

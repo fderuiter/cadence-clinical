@@ -66,7 +66,7 @@ public sealed class CgtDestructionCertificate : AggregateRoot<Guid>
         string cryptographicSeal,
         string status = "COMPLETED",
         string? reconciliationNotes = null,
-        string createdBy = "system",
+        string createdBy = "svc:execution",
         string reasonForChange = "Certificate of Destruction executed")
         : base(id)
     {

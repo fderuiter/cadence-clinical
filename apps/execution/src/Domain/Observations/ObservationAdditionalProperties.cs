@@ -37,6 +37,9 @@ public sealed class ObservationAdditionalProperties
     [JsonPropertyName("reference_range_high")]
     public double? ReferenceRangeHigh { get; set; }
 
+    [JsonPropertyName("unit_normalization_status")]
+    public string? UnitNormalizationStatus { get; set; }
+
     [JsonExtensionData]
     public Dictionary<string, object?> CustomProperties { get; set; } = new();
 
@@ -53,6 +56,7 @@ public sealed class ObservationAdditionalProperties
             IsOutOfRange = IsOutOfRange,
             ReferenceRangeLow = ReferenceRangeLow,
             ReferenceRangeHigh = ReferenceRangeHigh,
+            UnitNormalizationStatus = UnitNormalizationStatus,
         };
 
         foreach (var (k, v) in CustomProperties)

@@ -306,18 +306,24 @@ public sealed class AstEditCheckEngine : IEditCheckEngine
             }
             else if (testCode is "TEMP" or "VSTEMP")
             {
-                double tempCel = observation.NormalizedValue ??
-                    (string.Equals(observation.Unit, "[degF]", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(observation.Unit, "[Fahr]", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(observation.Unit, "degF", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(observation.Unit, "fahr", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(observation.Unit, "f", StringComparison.OrdinalIgnoreCase)
-                        ? (val.Value - 32.0) * 5.0 / 9.0
-                        : val.Value);
+                bool isUnmapped = string.Equals(observation.AdditionalProperties?.UnitNormalizationStatus, "UNMAPPED", StringComparison.OrdinalIgnoreCase) ||
+                                  (!string.IsNullOrWhiteSpace(observation.Unit) && observation.NormalizedValue is null);
 
-                if (tempCel < 25.0 || tempCel > 45.0)
+                if (!isUnmapped)
                 {
-                    violations.Add(new EditCheckViolation("FATAL_TEMP_RANGE", $"Body temperature {tempCel:F1} Cel is clinically implausible.", "FATAL", testCode, IsAutoDispatchEnabled: false));
+                    double tempCel = observation.NormalizedValue ??
+                        (string.Equals(observation.Unit, "[degF]", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(observation.Unit, "[Fahr]", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(observation.Unit, "degF", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(observation.Unit, "fahr", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(observation.Unit, "f", StringComparison.OrdinalIgnoreCase)
+                            ? (val.Value - 32.0) * 5.0 / 9.0
+                            : val.Value);
+
+                    if (tempCel < 25.0 || tempCel > 45.0)
+                    {
+                        violations.Add(new EditCheckViolation("FATAL_TEMP_RANGE", $"Body temperature {tempCel:F1} Cel is clinically implausible.", "FATAL", testCode, IsAutoDispatchEnabled: false));
+                    }
                 }
             }
 

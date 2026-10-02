@@ -109,15 +109,16 @@ public sealed class ObservationApplicationService(
         }
 
         // UCUM normalization
-        var (normVal, normUnit) = ucumService.GetNormalizedRepresentation(request.Value, request.Unit);
+        var normResult = ucumService.GetNormalizedRepresentation(request.Value, request.Unit);
 
         // Lab range evaluation
         var labResult = labRangeService.Evaluate(
             testCode,
-            normVal ?? request.Value,
+            normResult.NormalizedValue,
             sex: null,
             ageYears: null,
-            labSource: request.LabSource);
+            labSource: request.LabSource,
+            isNormalized: normResult.IsNormalized);
 
         var additionalProps = new ObservationAdditionalProperties
         {
@@ -129,7 +130,8 @@ public sealed class ObservationApplicationService(
             RangeIndicator = labResult.Indicator,
             IsOutOfRange = labResult.OutOfRange,
             ReferenceRangeLow = labResult.RangeLow,
-            ReferenceRangeHigh = labResult.RangeHigh
+            ReferenceRangeHigh = labResult.RangeHigh,
+            UnitNormalizationStatus = normResult.StatusCode
         };
 
         if (request.ObservationDate is not { } observationDate)
@@ -152,8 +154,8 @@ public sealed class ObservationApplicationService(
             pageId: request.PageId,
             protocolVersionTag: request.ProtocolVersionTag ?? subject?.ActiveProtocolVersion ?? "1.0.0",
             protocolVersionIndex: request.ProtocolVersionIndex ?? 1,
-            normalizedValue: normVal,
-            normalizedUnit: normUnit,
+            normalizedValue: normResult.NormalizedValue,
+            normalizedUnit: normResult.NormalizedUnit,
             additionalProperties: additionalProps);
 
         if (creationResult.IsFailure)
