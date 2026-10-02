@@ -4,9 +4,16 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   release-and-archive:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -58,6 +65,11 @@ jobs:
           done
           (cd tmp_etmf && sha256sum -- *.md > SHA256SUMS)
           cat tmp_etmf/SHA256SUMS
+
+      - name: Generate SLSA Build Provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: 'tmp_etmf/*'
 
       # No eTMF integration exists yet, so the release evidence is kept as a
       # workflow artifact with its checksum manifest.
