@@ -1,6 +1,9 @@
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div class="palette-backdrop" @click.self="emit('close')">
+  <div
+    class="palette-backdrop"
+    @click.self="emit('close')"
+  >
     <div
       id="canvas-palette"
       ref="dialogRef"
@@ -28,7 +31,7 @@
         "
         aria-label="Search"
         @keydown="onKeydown"
-      />
+      >
       <ul
         v-if="results.length"
         id="canvas-palette-list"
@@ -51,12 +54,20 @@
         >
           <span class="palette-group">{{ item.group }}</span>
           <span class="palette-label">{{ item.label }}</span>
-          <span v-if="item.detail" class="palette-detail">{{
+          <span
+            v-if="item.detail"
+            class="palette-detail"
+          >{{
             item.detail
           }}</span>
         </li>
       </ul>
-      <p v-else id="canvas-palette-empty" class="palette-empty" role="status">
+      <p
+        v-else
+        id="canvas-palette-empty"
+        class="palette-empty"
+        role="status"
+      >
         {{
           query.trim()
             ? "Nothing matches. Participants are found among those loaded in this study."

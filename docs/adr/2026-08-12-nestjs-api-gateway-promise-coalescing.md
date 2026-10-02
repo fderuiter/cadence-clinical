@@ -1,9 +1,9 @@
 # ADR-2367: NestJS API Gateway Promise Coalescing and Eager Key Prefetching
 
-* **Status:** Superseded by [ADR-2256](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)
-* **Date:** 2026-08-12
-* **Authors:** @jules
-* **Deciders:** @fderuiter
+- **Status:** Superseded by [ADR-2256](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)
+- **Date:** 2026-08-12
+- **Authors:** @jules
+- **Deciders:** @fderuiter
 
 > [!NOTE]
 > **Superseded Notice (2026-09-30):** The NestJS gateway implementation in `packages/gateway-rewrite` has been decommissioned and removed from the workspace. The API Gateway is implemented in C# YARP at `apps/gateway` with fail-closed identity handling per [ADR-2256](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
@@ -33,20 +33,20 @@ Implement a custom `JwksCoalescerService` using native `Map` collections:
 - `inFlightFetches` to track active HTTP promises for each Key ID.
   Use native `Promise` chaining to multiplex in-flight fetches, and `AbortController` to enforce timeouts.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ High performance: zero external cache/network overhead for local hits.
   - ✅ Complete multiplexing: identical Key ID requests resolve with the same network request promise.
   - ✅ Full control over timeouts, startup resilience, and dynamic error handling.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires custom in-memory implementation in TypeScript/Node.js.
 
 ### Option 2: Relying on Standard/Third-party JWKS Client Libraries
 
 Use standard libraries such as `jwks-rsa`.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Quick integration.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Limited control over startup non-blocking behaviors (startup resilience).
   - ❌ Harder to tune timeout settings dynamically or handle specific cache retention policies.
 

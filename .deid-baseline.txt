@@ -136,7 +136,7 @@ apps/web/src/components/clinical/StatisticalComputingConsole.vue|telephone_fax|8
 apps/web/src/components/clinical/StatisticalComputingConsole.vue|zip_geographic|4777f58bd433081f
 apps/web/src/components/clinical/TelehealthDtpConsole.vue|zip_geographic|9f53957d8044ffcb
 apps/web/src/components/econsent/IcfSectionEditor.vue|urls|504490bbe276ee29
-apps/web/src/components/etmf/PdfPreviewModal.vue|email|938a9a4080776dae
+apps/web/src/components/etmf/PdfPreviewModal.vue|email|1e64fba09cca5257
 apps/web/src/components/etmf/PdfPreviewModal.vue|ssn_national_id|be2c1c1457cc705e
 apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue|ip_mac_addresses|0fc09638c565f57f
 apps/web/src/components/payments/SelfBillingInvoicingConsole.vue|dates|20c04126f8b319c1

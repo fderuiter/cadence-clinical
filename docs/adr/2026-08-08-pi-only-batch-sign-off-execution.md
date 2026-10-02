@@ -78,15 +78,15 @@ The generated manifest is written to the updated record's `signature_manifest` J
 ### Option 1: Client-Side Iterative Approvals
 
 - **Overview:** The client-side application loops and calls individual `/approve` endpoints sequentially.
-- ***Pros:*** Reuses existing individual approval endpoints.
-- ***Cons:***
+- _**Pros:**_ Reuses existing individual approval endpoints.
+- _**Cons:**_
   - ❌ No batch transaction safety: if a failure or lock occurs halfway, some forms are approved while others remain completed, violating transactional atomicity.
   - ❌ Violates re-authentication requirements: the user would have to enter their password/signature token multiple times, or we would have to reuse the signature token, which violates single-use replay protections.
 
 ### Option 2: Server-Side Atomic Batch Sign-Off (Selected)
 
 - **Overview:** A dedicated server-side `/batch-sign-off` endpoint that processes the entire collection in a single transaction block.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Absolute transactional safety and database consistency.
   - ✅ Compliant re-authentication: a single valid signature token authorizes the entire batch transaction exactly once.
   - ✅ Distinct, record-bound Part 11 manifests generated and recorded in the audit trail per submission.

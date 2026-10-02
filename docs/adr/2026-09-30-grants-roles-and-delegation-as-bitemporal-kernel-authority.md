@@ -69,7 +69,7 @@ are later slices of #4781.
 - **Model.** `Role(id, tenant, code, name, capabilities[])` is insert-only. The code matches
   `^[A-Z0-9][A-Z0-9_-]{0,31}$`, capabilities are sorted and distinct, and a role refuses any unblinding capability
   (`Capability.IsUnblinding`, K-AUTH-4). `Grant(id, tenant, grantee, capability | role, scope, with_grant_option,
-  parent_grant_id?, issued_by)` carries its validity in `GrantPeriod` bitemporal rows.
+parent_grant_id?, issued_by)` carries its validity in `GrantPeriod` bitemporal rows.
 - **Scope.** `AuthorityScope(level, target?, country?)` has five levels: `Tenant`, `Organization`, `Study`,
   `StudyCountry` and `StudySite`. It covers a resource when the resource's `ScopePath` (organization, study,
   country, study site) matches its target. The kernel computes the path of organizations, sites, studies, study

@@ -9,13 +9,9 @@
       <div class="header-main">
         <div class="title-group">
           <div class="badge-row">
-            <span class="badge badge-regulatory"
-              >FDA ENDPOINTS GUIDANCE / 21 CFR PART 11 / CDISC SDTM CE</span
-            >
-            <span class="badge badge-charter"
-              >CHARTER:
-              {{ activeCharter.voting_rule || "CHAIR_TIE_BREAKER" }}</span
-            >
+            <span class="badge badge-regulatory">FDA ENDPOINTS GUIDANCE / 21 CFR PART 11 / CDISC SDTM CE</span>
+            <span class="badge badge-charter">CHARTER:
+              {{ activeCharter.voting_rule || "CHAIR_TIE_BREAKER" }}</span>
             <span
               class="badge badge-phi"
               :class="{ 'phi-active': phiMaskEnabled }"
@@ -39,35 +35,47 @@
         <div class="header-controls">
           <!-- Role Persona Switcher -->
           <div class="control-box">
-            <label for="cec-role-select" class="control-label"
-              >Adjudication Persona:</label
-            >
+            <label
+              for="cec-role-select"
+              class="control-label"
+            >Adjudication Persona:</label>
             <select
               id="cec-role-select"
               v-model="currentRole"
               class="select-input"
             >
-              <option value="READER_1">Dr. Reader 1 (Blinded)</option>
-              <option value="READER_2">Dr. Reader 2 (Blinded)</option>
+              <option value="READER_1">
+                Dr. Reader 1 (Blinded)
+              </option>
+              <option value="READER_2">
+                Dr. Reader 2 (Blinded)
+              </option>
               <option value="CHAIR">
                 Dr. Adjudication Chair (Tie-Breaker)
               </option>
-              <option value="DATA_MANAGER">Data Manager / Coordinator</option>
-              <option value="AUDITOR">TMF / GxP Auditor</option>
+              <option value="DATA_MANAGER">
+                Data Manager / Coordinator
+              </option>
+              <option value="AUDITOR">
+                TMF / GxP Auditor
+              </option>
             </select>
           </div>
 
           <!-- Study Selector -->
           <div class="control-box">
-            <label for="cec-study-select" class="control-label"
-              >Active Protocol:</label
-            >
+            <label
+              for="cec-study-select"
+              class="control-label"
+            >Active Protocol:</label>
             <select
               id="cec-study-select"
               v-model="selectedStudyId"
               class="select-input"
             >
-              <option value="STUDY-101">STUDY-101 (Cardiovascular MACE)</option>
+              <option value="STUDY-101">
+                STUDY-101 (Cardiovascular MACE)
+              </option>
               <option value="STUDY-202">
                 STUDY-202 (Neuro Stroke Registry)
               </option>
@@ -83,7 +91,7 @@
                 v-model="phiMaskEnabled"
                 type="checkbox"
                 class="toggle-checkbox"
-              />
+              >
               <span>PHI Mask</span>
             </label>
           </div>
@@ -147,7 +155,11 @@
     </header>
 
     <!-- Main Tab Navigation -->
-    <nav class="nav-tabs" role="tablist" aria-label="CEC Suite Workspaces">
+    <nav
+      class="nav-tabs"
+      role="tablist"
+      aria-label="CEC Suite Workspaces"
+    >
       <button
         role="tab"
         :aria-selected="activeMainTab === 'dossiers'"
@@ -163,7 +175,10 @@
         @click="activeMainTab = 'chair_tiebreaker'"
       >
         ⚖️ Chair Tie-Breaker &amp; Consensus Panel
-        <span v-if="discordantCount > 0" class="badge-count">{{
+        <span
+          v-if="discordantCount > 0"
+          class="badge-count"
+        >{{
           discordantCount
         }}</span>
       </button>
@@ -186,12 +201,17 @@
     </nav>
 
     <!-- TAB 1: Dossiers & Blinded Review Workspace -->
-    <section v-if="activeMainTab === 'dossiers'" class="tab-pane">
+    <section
+      v-if="activeMainTab === 'dossiers'"
+      class="tab-pane"
+    >
       <div class="split-layout">
         <!-- Left: Dossier Queue List -->
         <aside class="sidebar-pane">
           <div class="pane-header">
-            <h3 class="pane-title">Candidate Event Queue</h3>
+            <h3 class="pane-title">
+              Candidate Event Queue
+            </h3>
             <span class="pill-badge">{{ filteredDossiers.length }} Events</span>
           </div>
 
@@ -202,7 +222,7 @@
               type="text"
               placeholder="Search event, term, or subject..."
               class="text-input"
-            />
+            >
             <div class="filter-chips">
               <button
                 v-for="st in ['ALL', 'PENDING', 'DISCORDANT', 'FINALIZED']"
@@ -215,7 +235,10 @@
             </div>
           </div>
 
-          <div class="dossier-list" role="list">
+          <div
+            class="dossier-list"
+            role="list"
+          >
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
@@ -245,15 +268,11 @@
                 {{ item.reported_term }}
               </h4>
               <div class="card-meta">
-                <span
-                  ><strong>ID:</strong>
+                <span><strong>ID:</strong>
                   {{
                     phiMaskEnabled ? item.masked_subject_id : item.subject_id
-                  }}</span
-                >
-                <span
-                  ><strong>Onset:</strong> {{ item.reported_onset_date }}</span
-                >
+                  }}</span>
+                <span><strong>Onset:</strong> {{ item.reported_onset_date }}</span>
               </div>
               <div class="reader-progress-dots">
                 <span
@@ -262,38 +281,37 @@
                     { completed: item.reader_1_status === 'COMPLETED' },
                   ]"
                   title="Reader 1"
-                  >R1</span
-                >
+                >R1</span>
                 <span
                   :class="[
                     'dot',
                     { completed: item.reader_2_status === 'COMPLETED' },
                   ]"
                   title="Reader 2"
-                  >R2</span
-                >
+                >R2</span>
                 <span
                   v-if="item.is_discordant"
                   class="dot dot-alert"
                   title="Discordance Detected"
-                  >⚠️</span
-                >
+                >⚠️</span>
                 <span
                   v-if="
                     item.workflow_status === 'FINALIZED_CONCORDANT' ||
-                    item.workflow_status === 'FINALIZED_BY_CHAIR'
+                      item.workflow_status === 'FINALIZED_BY_CHAIR'
                   "
                   class="dot dot-check"
                   title="Finalized"
-                  >✓</span
-                >
+                >✓</span>
               </div>
             </div>
           </div>
         </aside>
 
         <!-- Right: Active Dossier Dossier Details & Adjudication View -->
-        <div v-if="activeDossier" class="content-pane">
+        <div
+          v-if="activeDossier"
+          class="content-pane"
+        >
           <!-- Event Summary Banner -->
           <div class="dossier-banner">
             <div class="banner-main">
@@ -336,11 +354,9 @@
                 </div>
                 <div>
                   <strong>Integrity Seal:</strong>
-                  <code class="hash-code"
-                    >{{
-                      activeDossier.dossier_digest?.substring(0, 12)
-                    }}...</code
-                  >
+                  <code class="hash-code">{{
+                    activeDossier.dossier_digest?.substring(0, 12)
+                  }}...</code>
                 </div>
               </div>
             </div>
@@ -360,7 +376,9 @@
             v-if="activeDossier.is_discordant"
             class="alert-banner alert-discordance"
           >
-            <div class="alert-icon">⚠️</div>
+            <div class="alert-icon">
+              ⚠️
+            </div>
             <div class="alert-content">
               <h4 class="alert-title">
                 DISCORDANCE DETECTED &mdash; Escalated to Committee Chair
@@ -380,13 +398,17 @@
           <div
             v-if="
               activeDossier.workflow_status === 'FINALIZED_CONCORDANT' ||
-              activeDossier.workflow_status === 'CONSENSUS_REACHED'
+                activeDossier.workflow_status === 'CONSENSUS_REACHED'
             "
             class="alert-banner alert-consensus"
           >
-            <div class="alert-icon">✅</div>
+            <div class="alert-icon">
+              ✅
+            </div>
             <div class="alert-content">
-              <h4 class="alert-title">CONCORDANT CONSENSUS FINALIZED</h4>
+              <h4 class="alert-title">
+                CONCORDANT CONSENSUS FINALIZED
+              </h4>
               <p class="alert-desc">
                 Reader 1 and Reader 2 independently achieved 100% concordance.
                 Final Classification:
@@ -394,8 +416,7 @@
                   activeDossier.final_consensus_classification
                 }}</strong>
                 <span v-if="activeDossier.final_consensus_subtype">
-                  ({{ activeDossier.final_consensus_subtype }})</span
-                >.
+                  ({{ activeDossier.final_consensus_subtype }})</span>.
               </p>
             </div>
           </div>
@@ -432,9 +453,7 @@
                 <h4 class="section-title">
                   🧪 Pertinent Laboratory Panels &amp; Biomarkers
                 </h4>
-                <span class="count-tag"
-                  >{{ activeDossier.lab_panels?.length || 0 }} Analytes</span
-                >
+                <span class="count-tag">{{ activeDossier.lab_panels?.length || 0 }} Analytes</span>
               </div>
               <div class="table-responsive">
                 <table class="data-table">
@@ -471,9 +490,11 @@
                         <span
                           v-if="lab.is_out_of_range"
                           class="status-pill danger"
-                          >ABNORMAL</span
-                        >
-                        <span v-else class="status-pill success">NORMAL</span>
+                        >ABNORMAL</span>
+                        <span
+                          v-else
+                          class="status-pill success"
+                        >NORMAL</span>
                       </td>
                       <td>
                         <span
@@ -489,7 +510,10 @@
                       </td>
                     </tr>
                     <tr v-if="!activeDossier.lab_panels?.length">
-                      <td colspan="6" class="text-center empty-cell">
+                      <td
+                        colspan="6"
+                        class="text-center empty-cell"
+                      >
                         No laboratory panels attached.
                       </td>
                     </tr>
@@ -504,9 +528,7 @@
                 <h4 class="section-title">
                   🫀 12-Lead Electrocardiogram (ECG) Findings
                 </h4>
-                <span class="count-tag"
-                  >{{ activeDossier.ecg_records?.length || 0 }} Tracings</span
-                >
+                <span class="count-tag">{{ activeDossier.ecg_records?.length || 0 }} Tracings</span>
               </div>
               <div class="ecg-grid">
                 <div
@@ -515,12 +537,11 @@
                   class="ecg-card"
                 >
                   <div class="ecg-header">
-                    <span class="ecg-rhythm"
-                      ><strong>Rhythm:</strong> {{ ecg.rhythm }}</span
-                    >
-                    <span v-if="ecg.qtcf_ms" class="ecg-qtc"
-                      ><strong>QTcF:</strong> {{ ecg.qtcf_ms }} ms</span
-                    >
+                    <span class="ecg-rhythm"><strong>Rhythm:</strong> {{ ecg.rhythm }}</span>
+                    <span
+                      v-if="ecg.qtcf_ms"
+                      class="ecg-qtc"
+                    ><strong>QTcF:</strong> {{ ecg.qtcf_ms }} ms</span>
                   </div>
                   <div class="ecg-leads-row">
                     <div
@@ -541,18 +562,27 @@
                         ecg.st_depression_leads.join(", ")
                       }}</span>
                     </div>
-                    <div v-if="ecg.q_wave_leads?.length" class="lead-group">
+                    <div
+                      v-if="ecg.q_wave_leads?.length"
+                      class="lead-group"
+                    >
                       <span class="lead-label">Pathological Q-Waves:</span>
                       <span class="lead-pills">{{
                         ecg.q_wave_leads.join(", ")
                       }}</span>
                     </div>
-                    <div v-if="ecg.lbbb_present" class="lead-group alert-leads">
+                    <div
+                      v-if="ecg.lbbb_present"
+                      class="lead-group alert-leads"
+                    >
                       <span class="lead-label">LBBB:</span>
                       <span class="lead-pills">Present (New onset)</span>
                     </div>
                   </div>
-                  <p v-if="ecg.interpretation" class="ecg-interp">
+                  <p
+                    v-if="ecg.interpretation"
+                    class="ecg-interp"
+                  >
                     <strong>Interpretation:</strong> {{ ecg.interpretation }}
                   </p>
                 </div>
@@ -571,12 +601,10 @@
                 <h4 class="section-title">
                   📁 Diagnostic Imaging &amp; Specialty Attachments
                 </h4>
-                <span class="count-tag"
-                  >{{
-                    activeDossier.diagnostic_attachments?.length || 0
-                  }}
-                  Files</span
-                >
+                <span class="count-tag">{{
+                  activeDossier.diagnostic_attachments?.length || 0
+                }}
+                  Files</span>
               </div>
               <div class="attachments-list">
                 <div
@@ -584,7 +612,9 @@
                   :key="att.attachment_id"
                   class="attachment-item"
                 >
-                  <div class="att-icon">📄</div>
+                  <div class="att-icon">
+                    📄
+                  </div>
                   <div class="att-info">
                     <h5 class="att-title">
                       {{ att.title }} ({{ att.document_type }})
@@ -592,10 +622,16 @@
                     <p class="att-summary">
                       {{ att.summary }}
                     </p>
-                    <div v-if="att.key_findings?.length" class="att-findings">
+                    <div
+                      v-if="att.key_findings?.length"
+                      class="att-findings"
+                    >
                       <strong>Key Findings:</strong>
                       <ul>
-                        <li v-for="(k, i) in att.key_findings" :key="i">
+                        <li
+                          v-for="(k, i) in att.key_findings"
+                          :key="i"
+                        >
                           {{ k }}
                         </li>
                       </ul>
@@ -648,11 +684,11 @@
                   <div
                     v-if="
                       currentRole === 'READER_1' ||
-                      currentRole === 'CHAIR' ||
-                      currentRole === 'DATA_MANAGER' ||
-                      activeDossier.workflow_status ===
+                        currentRole === 'CHAIR' ||
+                        currentRole === 'DATA_MANAGER' ||
+                        activeDossier.workflow_status ===
                         'FINALIZED_CONCORDANT' ||
-                      activeDossier.workflow_status === 'FINALIZED_BY_CHAIR'
+                        activeDossier.workflow_status === 'FINALIZED_BY_CHAIR'
                     "
                   >
                     <div
@@ -708,7 +744,10 @@
                         }}
                       </p>
                     </div>
-                    <div v-else class="pending-reader-box">
+                    <div
+                      v-else
+                      class="pending-reader-box"
+                    >
                       <p>Reader 1 assessment is pending.</p>
                       <button
                         v-if="currentRole === 'READER_1'"
@@ -719,7 +758,10 @@
                       </button>
                     </div>
                   </div>
-                  <div v-else class="blinded-placeholder">
+                  <div
+                    v-else
+                    class="blinded-placeholder"
+                  >
                     <span class="lock-icon">🔒</span>
                     <p>
                       Reader 1 assessment is blinded from peer reviewer until
@@ -747,11 +789,11 @@
                   <div
                     v-if="
                       currentRole === 'READER_2' ||
-                      currentRole === 'CHAIR' ||
-                      currentRole === 'DATA_MANAGER' ||
-                      activeDossier.workflow_status ===
+                        currentRole === 'CHAIR' ||
+                        currentRole === 'DATA_MANAGER' ||
+                        activeDossier.workflow_status ===
                         'FINALIZED_CONCORDANT' ||
-                      activeDossier.workflow_status === 'FINALIZED_BY_CHAIR'
+                        activeDossier.workflow_status === 'FINALIZED_BY_CHAIR'
                     "
                   >
                     <div
@@ -807,7 +849,10 @@
                         }}
                       </p>
                     </div>
-                    <div v-else class="pending-reader-box">
+                    <div
+                      v-else
+                      class="pending-reader-box"
+                    >
                       <p>Reader 2 assessment is pending.</p>
                       <button
                         v-if="currentRole === 'READER_2'"
@@ -818,7 +863,10 @@
                       </button>
                     </div>
                   </div>
-                  <div v-else class="blinded-placeholder">
+                  <div
+                    v-else
+                    class="blinded-placeholder"
+                  >
                     <span class="lock-icon">🔒</span>
                     <p>
                       Reader 2 assessment is blinded from peer reviewer until
@@ -831,7 +879,10 @@
           </div>
         </div>
 
-        <div v-else class="empty-pane">
+        <div
+          v-else
+          class="empty-pane"
+        >
           <p>
             Select a candidate event dossier from the queue to start blinded
             adjudication.
@@ -841,7 +892,10 @@
     </section>
 
     <!-- TAB 2: Chair Tie-Breaker & Committee Resolution Panel -->
-    <section v-if="activeMainTab === 'chair_tiebreaker'" class="tab-pane">
+    <section
+      v-if="activeMainTab === 'chair_tiebreaker'"
+      class="tab-pane"
+    >
       <div class="panel-container">
         <div class="pane-header">
           <h3 class="pane-title">
@@ -853,7 +907,10 @@
           </p>
         </div>
 
-        <div v-if="activeDossier" class="chair-adjudication-workspace">
+        <div
+          v-if="activeDossier"
+          class="chair-adjudication-workspace"
+        >
           <!-- Side by Side Review of Discordance -->
           <div class="discordance-comparison-grid">
             <div class="review-box">
@@ -876,10 +933,17 @@
                   {{ activeDossier.reader_1_assessment.clinical_rationale }}
                 </p>
               </div>
-              <div v-else class="text-muted">Pending Reader 1.</div>
+              <div
+                v-else
+                class="text-muted"
+              >
+                Pending Reader 1.
+              </div>
             </div>
 
-            <div class="vs-divider">VS</div>
+            <div class="vs-divider">
+              VS
+            </div>
 
             <div class="review-box">
               <h4>Reader 2 Finding</h4>
@@ -901,7 +965,12 @@
                   {{ activeDossier.reader_2_assessment.clinical_rationale }}
                 </p>
               </div>
-              <div v-else class="text-muted">Pending Reader 2.</div>
+              <div
+                v-else
+                class="text-muted"
+              >
+                Pending Reader 2.
+              </div>
             </div>
           </div>
 
@@ -911,9 +980,7 @@
 
             <div class="form-grid">
               <div class="form-group">
-                <label for="binding-source-select"
-                  >Binding Determination Source:</label
-                >
+                <label for="binding-source-select">Binding Determination Source:</label>
                 <select
                   id="binding-source-select"
                   v-model="chairForm.binding_reader"
@@ -932,9 +999,7 @@
               </div>
 
               <div class="form-group">
-                <label for="chair-class-select"
-                  >Final Adjudicated Classification:</label
-                >
+                <label for="chair-class-select">Final Adjudicated Classification:</label>
                 <select
                   id="chair-class-select"
                   v-model="chairForm.final_classification"
@@ -964,7 +1029,9 @@
                   <option value="NOT_AN_ENDPOINT">
                     NOT_AN_ENDPOINT (Refuted)
                   </option>
-                  <option value="INDETERMINATE">INDETERMINATE</option>
+                  <option value="INDETERMINATE">
+                    INDETERMINATE
+                  </option>
                 </select>
               </div>
 
@@ -976,7 +1043,7 @@
                   type="text"
                   class="text-input"
                   placeholder="e.g. Type 1 Spontaneous MI"
-                />
+                >
               </div>
 
               <div class="form-group">
@@ -986,7 +1053,7 @@
                   v-model="chairForm.final_adjudicated_onset_date"
                   type="date"
                   class="text-input"
-                />
+                >
               </div>
             </div>
 
@@ -1004,16 +1071,14 @@
                     v-model="chairForm.criteria_confirmed"
                     type="checkbox"
                     :value="crit"
-                  />
+                  >
                   <span>{{ crit }}</span>
                 </label>
               </div>
             </div>
 
             <div class="form-group">
-              <label for="chair-rationale-input"
-                >Adjudication Committee Chair Rationale:</label
-              >
+              <label for="chair-rationale-input">Adjudication Committee Chair Rationale:</label>
               <textarea
                 id="chair-rationale-input"
                 v-model="chairForm.adjudication_rationale"
@@ -1027,11 +1092,11 @@
             <div class="esign-block">
               <div class="esign-header">
                 <h5>🔐 21 CFR Part 11 Electronic Signature Authentication</h5>
-                <span class="badge badge-regulatory"
-                  >MANDATORY STEP-UP SIGN-OFF</span
-                >
+                <span class="badge badge-regulatory">MANDATORY STEP-UP SIGN-OFF</span>
               </div>
-              <p class="esign-manifest">"{{ chairForm.signature_meaning }}"</p>
+              <p class="esign-manifest">
+                "{{ chairForm.signature_meaning }}"
+              </p>
               <div class="esign-inputs">
                 <div class="form-group">
                   <label for="chair-signer-name">Signer Printed Name:</label>
@@ -1040,7 +1105,7 @@
                     v-model="chairForm.signer_name"
                     type="text"
                     class="text-input"
-                  />
+                  >
                 </div>
                 <div class="form-group">
                   <label for="chair-password">Signer Password / Token:</label>
@@ -1050,7 +1115,7 @@
                     type="password"
                     class="text-input"
                     placeholder="Confirm password to seal decision"
-                  />
+                  >
                 </div>
               </div>
               <button
@@ -1063,14 +1128,20 @@
             </div>
           </div>
         </div>
-        <div v-else class="empty-pane">
+        <div
+          v-else
+          class="empty-pane"
+        >
           <p>Please select a dossier to review.</p>
         </div>
       </div>
     </section>
 
     <!-- TAB 3: Charter Governance & Quorum Tracker -->
-    <section v-if="activeMainTab === 'charter_quorum'" class="tab-pane">
+    <section
+      v-if="activeMainTab === 'charter_quorum'"
+      class="tab-pane"
+    >
       <div class="panel-container">
         <div class="pane-header">
           <h3 class="pane-title">
@@ -1085,7 +1156,9 @@
         <div class="charter-grid">
           <!-- Charter Parameters Card -->
           <div class="section-card">
-            <h4 class="section-title">Charter Governance Rules</h4>
+            <h4 class="section-title">
+              Charter Governance Rules
+            </h4>
             <div class="charter-details">
               <p>
                 <strong>Committee:</strong>
@@ -1108,7 +1181,10 @@
               <div class="eligible-roster">
                 <strong>Committee Member Roster:</strong>
                 <ul>
-                  <li v-for="(m, i) in activeCharter.eligible_members" :key="i">
+                  <li
+                    v-for="(m, i) in activeCharter.eligible_members"
+                    :key="i"
+                  >
                     {{ m.member_name }} &mdash;
                     <em>{{ m.role }} ({{ m.specialty }})</em>
                   </li>
@@ -1130,7 +1206,7 @@
                   v-model="meetingForm.meeting_date"
                   type="datetime-local"
                   class="text-input"
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -1145,7 +1221,7 @@
                       v-model="meetingForm.selected_member_ids"
                       type="checkbox"
                       :value="mem.member_id"
-                    />
+                    >
                     <span>{{ mem.member_name }} ({{ mem.role }})</span>
                   </label>
                 </div>
@@ -1155,13 +1231,9 @@
             <!-- Live Quorum Badge -->
             <div class="quorum-indicator-box">
               <div class="quorum-stat">
-                <span
-                  >Attending: {{ meetingForm.selected_member_ids.length }} /
-                  {{ activeCharter.eligible_members?.length || 5 }}</span
-                >
-                <span class="pct-text"
-                  >({{ calculatedQuorumPercentage }}%)</span
-                >
+                <span>Attending: {{ meetingForm.selected_member_ids.length }} /
+                  {{ activeCharter.eligible_members?.length || 5 }}</span>
+                <span class="pct-text">({{ calculatedQuorumPercentage }}%)</span>
               </div>
               <div
                 :class="[
@@ -1178,9 +1250,7 @@
             </div>
 
             <div class="form-group">
-              <label for="meeting-minutes-input"
-                >Formal Meeting Minutes Narrative:</label
-              >
+              <label for="meeting-minutes-input">Formal Meeting Minutes Narrative:</label>
               <textarea
                 id="meeting-minutes-input"
                 v-model="meetingForm.meeting_minutes"
@@ -1203,7 +1273,10 @@
     </section>
 
     <!-- TAB 4: CDISC SDTM CE & EDC Casebook Sync -->
-    <section v-if="activeMainTab === 'sdtm_ce'" class="tab-pane">
+    <section
+      v-if="activeMainTab === 'sdtm_ce'"
+      class="tab-pane"
+    >
       <div class="panel-container">
         <div class="pane-header flex-between">
           <div>
@@ -1216,10 +1289,16 @@
             </p>
           </div>
           <div class="header-actions">
-            <button class="btn btn-secondary" @click="compileSdtmCe">
+            <button
+              class="btn btn-secondary"
+              @click="compileSdtmCe"
+            >
               🔄 Re-Compile SDTM CE
             </button>
-            <button class="btn btn-primary" @click="exportSdtmJson">
+            <button
+              class="btn btn-primary"
+              @click="exportSdtmJson"
+            >
               💾 Export Dataset-JSON
             </button>
           </div>
@@ -1244,7 +1323,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="ce in sdtmCeRecords" :key="ce.USUBJID + ce.CESEQ">
+              <tr
+                v-for="ce in sdtmCeRecords"
+                :key="ce.USUBJID + ce.CESEQ"
+              >
                 <td>{{ ce.STUDYID }}</td>
                 <td>
                   <span class="badge-domain">{{ ce.DOMAIN }}</span>
@@ -1265,8 +1347,7 @@
                       'status-pill',
                       ce.CEOCCUR === 'Y' ? 'success' : 'info',
                     ]"
-                    >{{ ce.CEOCCUR }}</span
-                  >
+                  >{{ ce.CEOCCUR }}</span>
                 </td>
                 <td>{{ ce.CESTDTC }}</td>
                 <td><span class="status-pill success">FINALIZED</span></td>
@@ -1275,7 +1356,10 @@
                 </td>
               </tr>
               <tr v-if="!sdtmCeRecords.length">
-                <td colspan="12" class="text-center empty-cell">
+                <td
+                  colspan="12"
+                  class="text-center empty-cell"
+                >
                   No finalized endpoint records compiled yet.
                 </td>
               </tr>
@@ -1298,7 +1382,10 @@
           <h4 class="modal-title">
             Submit {{ activeReaderTarget }} Blinded Assessment
           </h4>
-          <button class="btn-close" @click="showReaderModal = false">
+          <button
+            class="btn-close"
+            @click="showReaderModal = false"
+          >
             &times;
           </button>
         </div>
@@ -1319,15 +1406,21 @@
               <option value="CONFIRMED_HEMORRHAGIC_STROKE">
                 CONFIRMED_HEMORRHAGIC_STROKE
               </option>
-              <option value="CONFIRMED_CV_DEATH">CONFIRMED_CV_DEATH</option>
+              <option value="CONFIRMED_CV_DEATH">
+                CONFIRMED_CV_DEATH
+              </option>
               <option value="CONFIRMED_HEART_FAILURE_HOSPITALIZATION">
                 CONFIRMED_HEART_FAILURE_HOSPITALIZATION
               </option>
               <option value="CONFIRMED_DISEASE_PROGRESSION">
                 CONFIRMED_DISEASE_PROGRESSION
               </option>
-              <option value="NOT_AN_ENDPOINT">NOT_AN_ENDPOINT</option>
-              <option value="INDETERMINATE">INDETERMINATE</option>
+              <option value="NOT_AN_ENDPOINT">
+                NOT_AN_ENDPOINT
+              </option>
+              <option value="INDETERMINATE">
+                INDETERMINATE
+              </option>
             </select>
           </div>
 
@@ -1338,7 +1431,7 @@
               v-model="readerForm.subtype"
               type="text"
               class="text-input"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -1348,7 +1441,7 @@
               v-model="readerForm.adjudicated_onset_date"
               type="date"
               class="text-input"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -1364,7 +1457,7 @@
                   v-model="readerForm.criteria_met"
                   type="checkbox"
                   :value="crit"
-                />
+                >
                 <span>{{ crit }}</span>
               </label>
             </div>
@@ -1379,7 +1472,7 @@
               min="1"
               max="5"
               class="text-input"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -1394,7 +1487,10 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showReaderModal = false">
+          <button
+            class="btn btn-secondary"
+            @click="showReaderModal = false"
+          >
             Cancel
           </button>
           <button

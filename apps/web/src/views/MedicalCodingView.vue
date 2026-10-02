@@ -1,5 +1,8 @@
 <template>
-  <div id="section-medical-coding" class="dashboard-section active">
+  <div
+    id="section-medical-coding"
+    class="dashboard-section active"
+  >
     <!-- View Header -->
     <div class="section-header">
       <div class="header-text-group">
@@ -79,7 +82,10 @@
     </div>
 
     <!-- 21 CFR Part 11 Role Gating Notice if unauthorized -->
-    <div v-if="!hasAccess" class="card gating-banner">
+    <div
+      v-if="!hasAccess"
+      class="card gating-banner"
+    >
       <div class="gating-content">
         <span class="gating-icon">🚫</span>
         <div>
@@ -94,7 +100,10 @@
     </div>
 
     <!-- Authorized Coding Workspace -->
-    <div v-else class="coding-workspace-container">
+    <div
+      v-else
+      class="coding-workspace-container"
+    >
       <!-- Summary Metric Cards (Adapted for View Mode) -->
       <div
         v-if="codingStore.viewMode === 'CLUSTERS'"
@@ -108,14 +117,18 @@
           <div class="stat-number">
             {{ codingStore.totalClustersCount }}
           </div>
-          <div class="stat-title">Verbatim Clusters</div>
+          <div class="stat-title">
+            Verbatim Clusters
+          </div>
         </div>
 
         <div class="stat-card stat-instances">
           <div class="stat-number">
             {{ codingStore.totalClusterInstancesCount }}
           </div>
-          <div class="stat-title">Subject Instances</div>
+          <div class="stat-title">
+            Subject Instances
+          </div>
         </div>
 
         <div
@@ -126,7 +139,9 @@
           <div class="stat-number">
             {{ codingStore.highConfidenceClustersCount }}
           </div>
-          <div class="stat-title">High Conf. Clusters (≥90%)</div>
+          <div class="stat-title">
+            High Conf. Clusters (≥90%)
+          </div>
         </div>
 
         <div
@@ -137,7 +152,9 @@
           <div class="stat-number">
             {{ codingStore.autoCodingProgressPct }}%
           </div>
-          <div class="stat-title">Auto-Coded Progress</div>
+          <div class="stat-title">
+            Auto-Coded Progress
+          </div>
         </div>
 
         <div
@@ -150,12 +167,17 @@
           <div class="stat-number">
             {{ codingStore.queryPendingCount }}
           </div>
-          <div class="stat-title">Query Pending</div>
+          <div class="stat-title">
+            Query Pending
+          </div>
         </div>
       </div>
 
       <!-- Individual View Summary Cards -->
-      <div v-else class="stats-overview-grid">
+      <div
+        v-else
+        class="stats-overview-grid"
+      >
         <div
           class="stat-card"
           :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
@@ -164,7 +186,9 @@
           <div class="stat-number">
             {{ codingStore.totalCount }}
           </div>
-          <div class="stat-title">Total Verbatims</div>
+          <div class="stat-title">
+            Total Verbatims
+          </div>
         </div>
 
         <div
@@ -175,7 +199,9 @@
           <div class="stat-number">
             {{ codingStore.uncodedCount }}
           </div>
-          <div class="stat-title">Uncoded</div>
+          <div class="stat-title">
+            Uncoded
+          </div>
         </div>
 
         <div
@@ -186,7 +212,9 @@
           <div class="stat-number">
             {{ codingStore.suggestedCount }}
           </div>
-          <div class="stat-title">Suggested Matches</div>
+          <div class="stat-title">
+            Suggested Matches
+          </div>
         </div>
 
         <div
@@ -197,7 +225,9 @@
           <div class="stat-number">
             {{ codingStore.codedCount }}
           </div>
-          <div class="stat-title">Coded</div>
+          <div class="stat-title">
+            Coded
+          </div>
         </div>
 
         <div
@@ -210,7 +240,9 @@
           <div class="stat-number">
             {{ codingStore.queryPendingCount }}
           </div>
-          <div class="stat-title">Query Pending</div>
+          <div class="stat-title">
+            Query Pending
+          </div>
         </div>
       </div>
 
@@ -271,9 +303,15 @@
               class="form-control-sm"
               title="Filter by dictionary system"
             >
-              <option value="ALL">All Dictionaries</option>
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
+              <option value="ALL">
+                All Dictionaries
+              </option>
+              <option value="MEDDRA">
+                MedDRA
+              </option>
+              <option value="WHODRUG">
+                WHODrug
+              </option>
             </select>
           </div>
 
@@ -285,10 +323,18 @@
               class="form-control-sm confidence-select"
               title="Filter by match confidence threshold"
             >
-              <option value="ALL">All Confidence Scores</option>
-              <option value="HIGH">≥ 90% High Confidence</option>
-              <option value="MEDIUM">70–89% Medium Confidence</option>
-              <option value="LOW">&lt; 70% Low Confidence</option>
+              <option value="ALL">
+                All Confidence Scores
+              </option>
+              <option value="HIGH">
+                ≥ 90% High Confidence
+              </option>
+              <option value="MEDIUM">
+                70–89% Medium Confidence
+              </option>
+              <option value="LOW">
+                &lt; 70% Low Confidence
+              </option>
             </select>
           </div>
         </div>
@@ -301,7 +347,7 @@
             type="text"
             class="form-control-sm search-input"
             placeholder="Search verbatim, code, or term..."
-          />
+          >
         </div>
       </div>
 

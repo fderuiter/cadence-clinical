@@ -27,27 +27,26 @@ This decision settles the notification delivery channels, frontend polling model
 ### Option 1: **Option A (Decoupled Multi-Channel Engine with Preference Matrix)**: Centralized async dispatch in `apps/notifications/` supporting In-App, Email, and Webhook transports with GxP non-opt-out overrides.
 
 - **Overview:** **Option A (Decoupled Multi-Channel Engine with Preference Matrix)**: Centralized async dispatch in `apps/notifications/` supporting In-App, Email, and Webhook transports with GxP non-opt-out overrides.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B (Direct Service SMTP Dispatch)**: Each microservice dispatches emails directly using independent SMTP configurations.
 
 - **Overview:** **Option B (Direct Service SMTP Dispatch)**: Each microservice dispatches emails directly using independent SMTP configurations.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Option C (Synchronous Webhook Calling)**: Invoke webhooks synchronously in the request path of mutating operations.
 
 - **Overview:** **Option C (Synchronous Webhook Calling)**: Invoke webhooks synchronously in the request path of mutating operations.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -57,16 +56,20 @@ This decision settles the notification delivery channels, frontend polling model
 ### Key Architectural Specifications:
 
 ### 1. Delivery Channels
+
 The system supports three delivery transports:
+
 - **In-App:** Delivered to the centralized in-app notification inbox.
 - **Email:** Dispatched asynchronously via `aiosmtplib` using dedicated Jinja2 templates in `apps/notifications/templates/` with 21 CFR Part 11 header metadata.
 - **Outbound Webhooks:** Dispatched to registered external endpoints with HMAC-SHA256 payload signatures (`X-Cadence-Signature`).
 
 ### 2. Frontend In-App Notification Model
+
 - The web client (`apps/web`) leverages `useNotificationsStore` with **interval polling at 30 seconds** plus immediate revalidation on route navigation.
 - Persistent top-bar notification bell displaying real-time unread count (red flashing indicator for `CRITICAL` / `SLA_BREACH`), quick-triage popover drawer, and link to full `/notifications` data view.
 
 ### 3. Triggering Event Catalog (10 Events)
+
 1. `knowledge.article.submitted_for_review`: To `super_admin` reviewers (`IN_APP`).
 2. `knowledge.article.approved` / `rejected`: To article author & last editor (`IN_APP`).
 3. `knowledge.article.published`: To all personas matching `KnowledgeCategory.persona_visibility` (`IN_APP` + `EMAIL`).
@@ -79,16 +82,19 @@ The system supports three delivery transports:
 10. `ticket.resolved` / `closed`: To ticket reporter with resolution code and change justification (`IN_APP` + `EMAIL`).
 
 ### 4. User Preference Matrix & Mandatory GxP Non-Opt-Out Policy
+
 - Stored centrally in `apps/notifications` in table `user_notification_preferences`.
 - Users can customize channels per category (e.g. disable email digests for general published articles).
 - **Mandatory GxP Policy:** `CRITICAL` priority tickets, `SLA_BREACH` alerts, and direct task assignments (`ACTION_ITEMS`) are enforced as mandatory and non-opt-outable in the domain dispatch engine.
 
 ### 5. Webhook Subscription & Security
+
 - Platform/tenant administrators manage webhook endpoints via table `notification_webhook_subscriptions` (`url`, `event_types`, `secret`, `is_active`, `created_by`, `reason_for_change`).
 - Outbound requests include `X-Cadence-Signature` computed via HMAC-SHA256 over canonical JSON.
 - Payloads adhere to the **De-identified Metadata + Deep Link** standard to prevent data leakage outside the GxP boundary.
 
 ### 6. Deduplication & Idempotency Key
+
 - Composite idempotency token format: `related_entity_id = f"{entity_type}:{entity_id}:{event_type}:{version_index}"`.
 - `apps/notifications` enforces a duplicate check on `(recipient_user_id, related_entity_id)` before queueing delivery tasks.
 
@@ -111,4 +117,3 @@ The system supports three delivery transports:
   - Unit and integration tests for multi-channel dispatch, webhook HMAC verification, and deduplication.
   - Verification of mandatory non-opt-out rules against user preferences.
   - Visual testing of top-bar notification drawer and `/notifications` view in `apps/web`.
-

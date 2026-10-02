@@ -58,7 +58,7 @@
             :checked="isAllSelected"
             :indeterminate="isPartiallySelected"
             @change="toggleSelectAll"
-          />
+          >
           Select All ({{ queueItems.length }})
         </label>
         <span
@@ -77,7 +77,7 @@
           class="form-control"
           placeholder="Filter by filename or code..."
           style="font-size: 12px; width: 220px; padding: 4px 8px"
-        />
+        >
       </div>
     </div>
 
@@ -97,16 +97,21 @@
         </p>
       </div>
 
-      <table v-else class="qc-table">
+      <table
+        v-else
+        class="qc-table"
+      >
         <thead>
           <tr>
-            <th style="width: 36px"></th>
+            <th style="width: 36px" />
             <th>Document File</th>
             <th>Staged At / By</th>
             <th>Predicted DIA Taxonomy</th>
             <th>AI Confidence</th>
             <th>Discrepancy Notes</th>
-            <th style="text-align: right">Adjudication</th>
+            <th style="text-align: right">
+              Adjudication
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -117,19 +122,23 @@
           >
             <td>
               <input
+                v-model="selectedItemIds"
                 type="checkbox"
                 :value="item.document_id"
-                v-model="selectedItemIds"
-              />
+              >
             </td>
             <td>
               <div style="display: flex; flex-direction: column">
-                <span class="font-mono font-bold" style="font-size: 12px">{{
+                <span
+                  class="font-mono font-bold"
+                  style="font-size: 12px"
+                >{{
                   item.filename
                 }}</span>
-                <span class="text-muted" style="font-size: 10px"
-                  >ID: {{ item.document_id }}</span
-                >
+                <span
+                  class="text-muted"
+                  style="font-size: 10px"
+                >ID: {{ item.document_id }}</span>
               </div>
             </td>
             <td>
@@ -151,14 +160,12 @@
                 <span>{{
                   item.intelligence_report.primary_classification.artifact_type
                 }}</span>
-                <span class="text-muted"
-                  >Zone
+                <span class="text-muted">Zone
                   {{ item.intelligence_report.primary_classification.zone }} -
                   Section
                   {{
                     item.intelligence_report.primary_classification.section
-                  }}</span
-                >
+                  }}</span>
               </div>
             </td>
             <td>
@@ -192,9 +199,11 @@
                   ⚠️ {{ note }}
                 </span>
               </div>
-              <span v-else class="text-muted" style="font-size: 11px"
-                >No discrepancies</span
-              >
+              <span
+                v-else
+                class="text-muted"
+                style="font-size: 11px"
+              >No discrepancies</span>
             </td>
             <td style="text-align: right">
               <button
@@ -226,7 +235,10 @@
           You are approving predicted DIA TMF taxonomy tags for
           <strong>{{ selectedItemIds.length }}</strong> staged documents.
         </p>
-        <div class="form-group" style="margin-bottom: 16px">
+        <div
+          class="form-group"
+          style="margin-bottom: 16px"
+        >
           <label
             for="batch-accept-reason"
             class="form-label"
@@ -241,7 +253,7 @@
             class="form-control"
             placeholder="e.g. Verified AI classifications against source regulatory document originals"
             style="font-size: 12px"
-          />
+          >
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px">
           <button
@@ -349,9 +361,10 @@
             >
               Override Taxonomy Tag
             </h5>
-            <label class="form-label" style="font-size: 11px"
-              >Artifact Code Override</label
-            >
+            <label
+              class="form-label"
+              style="font-size: 11px"
+            >Artifact Code Override</label>
             <select
               v-model="overrideArtifactCode"
               class="form-control"
@@ -375,13 +388,21 @@
               <option value="04.02.01">
                 04.02.01 - IRB/IEC Approval Notification
               </option>
-              <option value="05.02.01">05.02.01 - FDA Form 1572</option>
-              <option value="05.02.02">05.02.02 - Financial Disclosure</option>
-              <option value="05.02.03">05.02.03 - Investigator CV</option>
+              <option value="05.02.01">
+                05.02.01 - FDA Form 1572
+              </option>
+              <option value="05.02.02">
+                05.02.02 - Financial Disclosure
+              </option>
+              <option value="05.02.03">
+                05.02.03 - Investigator CV
+              </option>
               <option value="05.02.04">
                 05.02.04 - Delegation of Authority Log
               </option>
-              <option value="05.02.05">05.02.05 - Informed Consent Form</option>
+              <option value="05.02.05">
+                05.02.05 - Informed Consent Form
+              </option>
               <option value="07.01.01">
                 07.01.01 - Serious Adverse Event Report
               </option>
@@ -396,7 +417,10 @@
         </div>
 
         <!-- 21 CFR Part 11 Change Reason -->
-        <div class="form-group" style="margin-bottom: 16px">
+        <div
+          class="form-group"
+          style="margin-bottom: 16px"
+        >
           <label
             for="review-reason-input"
             class="form-label"
@@ -411,7 +435,7 @@
             class="form-control"
             placeholder="Mandatory Part 11 justification (min 10 chars)"
             style="font-size: 12px"
-          />
+          >
         </div>
 
         <!-- Action Buttons -->

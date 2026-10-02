@@ -25,20 +25,20 @@ This decision implements requirements under Trace-5.
 
 Define the DIA TMF Reference Model catalog in-memory as an immutable, database-free Pydantic v2 package (`packages/core-models/tmf_reference_model`).
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Extremely high lookup performance (no DB queries or disk IO).
   - ✅ Enforces strict runtime immutability (Pydantic frozen models) for catalog data (zones, sections, and artifacts).
   - ✅ Thread-safe and easily testable without external database fixtures.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Updating or adding new versions requires code changes and a new release cycle (though acceptable since official TMF Reference Model versions change very infrequently).
 
 ### Option 2: JSON/YAML Configuration Files
 
 Store catalog definitions in JSON or YAML configuration files loaded dynamically at runtime.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Separates configuration from codebase.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Risk of accidental modification or corrupted file formats.
   - ❌ Missing native static typing or schema-level constraints on load.
 
@@ -46,9 +46,9 @@ Store catalog definitions in JSON or YAML configuration files loaded dynamically
 
 Store all zones, sections, and artifacts in relational tables (PostgreSQL or Neo4j).
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Allows database queries for taxonomy relationships.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds significant latency and overhead to document ingestion.
   - ❌ Unnecessary schema and migration complexity for a standardized, mostly static dataset.
 

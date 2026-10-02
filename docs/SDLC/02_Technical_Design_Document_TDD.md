@@ -1173,7 +1173,6 @@ The Interoperability service exposes a secure, advisory endpoint allowing extern
 
 ---
 
-
 ### 6.5 Automated Site Financials & Trigger-to-Payable Engine Design
 
 To automate site grant disbursements, `apps/ctms` operates a declarative JSON-based formula calculation engine evaluating procedure fee schedules, institutional overhead markups, split payees, and withholding reserves upon EDC data entry and CRA monitoring sign-off.
@@ -1191,6 +1190,7 @@ flowchart LR
 ```
 
 #### 6.5.1 Mathematical Fee & Holdback Derivations
+
 For a given completed visit procedure $k$:
 $$	ext{Gross Procedure Fee} = 	ext{BaseRate}_k 	imes (1 + 	ext{OverheadRate})$$
 $$	ext{Net Payable} = 	ext{Gross Procedure Fee} 	imes (1 - 	ext{HoldbackRate})$$
@@ -1220,12 +1220,14 @@ flowchart TD
 ```
 
 #### 6.6.1 RECIST 1.1 Derivation Logic
+
 For target lesions $L_1, \dots, L_m$:
 $$	ext{Sum of Longest Diameters (SLD)}_t = \sum_{j=1}^m 	ext{Diameter}_{j,t}$$
 $$\%	ext{ Change from Baseline} = rac{	ext{SLD}_t - 	ext{SLD}_{	ext{baseline}}}{	ext{SLD}_{	ext{baseline}}} 	imes 100$$
 $$\%	ext{ Change from Nadir} = rac{	ext{SLD}_t - 	ext{SLD}_{	ext{nadir}}}{	ext{SLD}_{	ext{nadir}}} 	imes 100$$
 
 Response Categorization:
+
 - **Complete Response (CR):** Disappearance of all target lesions; all pathological lymph nodes $< 10	ext{ mm}$ short axis.
 - **Partial Response (PR):** $\ge 30\%$ decrease in SLD taking as reference the baseline SLD.
 - **Progressive Disease (PD):** $\ge 20\%$ increase in SLD taking as reference the smallest sum on study (nadir), with an absolute increase of at least $5	ext{ mm}$, or appearance of new lesions.
@@ -1250,11 +1252,11 @@ flowchart LR
 
 #### 6.7.1 Disproportionality Signal Calculations (2x2 Contingency Matrix)
 
-| Contingency Table | Target Event (+) | All Other Events (-) | Total |
-| :--- | :--- | :--- | :--- |
-| **Investigational Drug (+)** | $a$ | $b$ | $a+b$ |
-| **All Other Drugs / Control (-)** | $c$ | $d$ | $c+d$ |
-| **Total** | $a+c$ | $b+d$ | $N = a+b+c+d$ |
+| Contingency Table                 | Target Event (+) | All Other Events (-) | Total         |
+| :-------------------------------- | :--------------- | :------------------- | :------------ |
+| **Investigational Drug (+)**      | $a$              | $b$                  | $a+b$         |
+| **All Other Drugs / Control (-)** | $c$              | $d$                  | $c+d$         |
+| **Total**                         | $a+c$            | $b+d$                | $N = a+b+c+d$ |
 
 - **Proportional Reporting Ratio (PRR):**
   $$	ext{PRR} = rac{a / (a+b)}{c / (c+d)}, \quad \chi^2 = rac{N (|ad - bc| - N/2)^2}{(a+b)(c+d)(a+c)(b+d)}$$
@@ -1269,18 +1271,19 @@ flowchart LR
 `apps/execution` models multi-echelon supply chains, stochastic Monte Carlo resupply forecasting, Arrhenius Mean Kinetic Temperature (MKT) cold-chain excursion analytics, and adaptive oncology dose-escalation algorithms.
 
 #### 6.8.1 Mean Kinetic Temperature (Arrhenius Model)
-$$	ext{MKT} = rac{rac{\Delta H}{R}}{-\ln \left( rac{1}{n} \sum_{i=1}^n \exp\left( -rac{\Delta H / R}{T_i + 273.15} 
-ight) 
+
+$$ ext{MKT} = rac{rac{\Delta H}{R}}{-\ln \left( rac{1}{n} \sum_{i=1}^n \exp\left( -rac{\Delta H / R}{T_i + 273.15}
+ight)
 ight)} - 273.15$$
 where $\Delta H / R = 10000	ext{ K}$ is the standard universal activation energy / gas constant ratio, and $T_i$ is the temperature in degrees Celsius at timepoint $i$.
 
 #### 6.8.2 Bayesian Optimal Interval (BOIN) DLT Boundaries
 For target toxicity rate $\phi$ (e.g. 0.25):
-- **Escalation Boundary:** $\lambda_e = rac{\ln\left( rac{1 - \phi_1}{1 - \phi} 
-ight)}{\ln\left( rac{\phi (1 - \phi_1)}{\phi_1 (1 - \phi)} 
+- **Escalation Boundary:** $\lambda_e = rac{\ln\left( rac{1 - \phi_1}{1 - \phi}
+ight)}{\ln\left( rac{\phi (1 - \phi_1)}{\phi_1 (1 - \phi)}
 ight)}$
-- **De-escalation Boundary:** $\lambda_d = rac{\ln\left( rac{1 - \phi}{1 - \phi_2} 
-ight)}{\ln\left( rac{\phi_2 (1 - \phi)}{\phi (1 - \phi_2)} 
+- **De-escalation Boundary:** $\lambda_d = rac{\ln\left( rac{1 - \phi}{1 - \phi_2}
+ight)}{\ln\left( rac{\phi_2 (1 - \phi)}{\phi (1 - \phi_2)}
 ight)}$
 where $\phi_1 = 0.6\phi$ and $\phi_2 = 1.4\phi$. If observed DLT rate $\hat{p}_j \le \lambda_e$, escalate dose; if $\hat{p}_j \ge \lambda_d$, de-escalate dose; otherwise stay at current dose level.
 
@@ -1386,3 +1389,4 @@ _This section confirms the technical design meets all regulatory, safety, and pe
 - **Lead Architect Approval:** _Frederick de Ruiter (Lead Architect)_
 - **Compliance Auditor Sign-off:** _GxP Validation Specialist (Designated Placeholder)_
 - **Safety Officer Approval:** _ISO 14971 Safety Lead (Designated Placeholder)_
+$$

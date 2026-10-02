@@ -27,9 +27,9 @@ This decision implements requirements under Trace-1.
 ### Option 1: Static Image Exports (PNG/SVG) from External Design Tools
 
 - **Overview:** Maintain diagrams in external editors and export them as static SVGs/PNGs to include in Markdown files.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High visual design precision and zero build-time impact.
-- ***Cons:***
+- _**Cons:**_
   - ❌ No integration with dynamic theme switching (light/dark mode).
   - ❌ Heavy maintenance burden to keep diagrams in sync with active codebase changes.
   - ❌ Lacks interactive zooming/panning/resetting out of the box.
@@ -37,11 +37,11 @@ This decision implements requirements under Trace-1.
 ### Option 2: Build-Time Compilation with vitepress-plugin-mermaid & Custom Interactive Vue Wrapper
 
 - **Overview:** Utilize `vitepress-plugin-mermaid` to natively compile standard Markdown Mermaid code blocks into SVGs during the build phase. Supplement the output with custom Vue interactivity wrappers (`docs/.vitepress/theme/index.js` and CSS styles) to provide custom controls (+, -, ↺) along with drag-to-pan/touch interactions.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Build-time compilation ensures zero runtime performance penalty and keeps SEO fast.
   - ✅ Full CSS theme integration natively synchronizes light/dark modes.
   - ✅ Interactive controls prevent horizontal scrollbars and allow clear viewing on mobile viewports.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Introduces a build-time dependency on `mermaid` and `vitepress-plugin-mermaid`.
 
 ## 4. Decision Outcome

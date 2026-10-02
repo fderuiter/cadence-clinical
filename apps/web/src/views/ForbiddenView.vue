@@ -4,11 +4,16 @@
     class="dashboard-section active"
     style="max-width: 600px; margin: 40px auto; text-align: center"
   >
-    <div class="card" style="border-top: 4px solid var(--error); padding: 30px">
+    <div
+      class="card"
+      style="border-top: 4px solid var(--error); padding: 30px"
+    >
       <div style="font-size: 4rem; color: var(--error); margin-bottom: 16px">
         🛑
       </div>
-      <h2 style="color: #1e293b; margin-bottom: 8px">403 - Access Denied</h2>
+      <h2 style="color: #1e293b; margin-bottom: 8px">
+        403 - Access Denied
+      </h2>
       <p style="color: #64748b; font-size: 1.1rem; margin-bottom: 24px">
         Your security credentials do not authorize access to this specific GxP
         module.

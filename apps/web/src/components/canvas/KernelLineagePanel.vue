@@ -4,19 +4,37 @@
     class="lineage"
     :aria-labelledby="`kernel-${verb}-title`"
   >
-    <h3 :id="`kernel-${verb}-title`">{{ title }}</h3>
-    <p v-if="loading" class="lineage-note" role="status">
+    <h3 :id="`kernel-${verb}-title`">
+      {{ title }}
+    </h3>
+    <p
+      v-if="loading"
+      class="lineage-note"
+      role="status"
+    >
       Reading the kernel's lineage…
     </p>
-    <p v-else-if="error" class="lineage-note" role="alert">
+    <p
+      v-else-if="error"
+      class="lineage-note"
+      role="alert"
+    >
       The kernel couldn't answer: {{ error }}
     </p>
 
     <template v-else-if="mode === 'trace' && lineage">
-      <p v-if="!lineage.edges.length" class="lineage-note" role="status">
+      <p
+        v-if="!lineage.edges.length"
+        class="lineage-note"
+        role="status"
+      >
         The kernel records nothing this came from.
       </p>
-      <ol v-else :id="`kernel-${verb}-list`" class="lineage-list">
+      <ol
+        v-else
+        :id="`kernel-${verb}-list`"
+        class="lineage-list"
+      >
         <li
           v-for="(edge, index) in lineage.edges"
           :key="`edge-${index}`"
@@ -27,7 +45,10 @@
           <span class="lineage-object">{{ describe(edge.to) }}</span>
         </li>
       </ol>
-      <p v-if="lineage.truncated" class="lineage-note">
+      <p
+        v-if="lineage.truncated"
+        class="lineage-note"
+      >
         The lineage goes further than the {{ lineage.depth }} steps shown.
       </p>
     </template>
@@ -42,7 +63,11 @@
         >
           The kernel records no element this amendment changes.
         </p>
-        <ul v-else id="kernel-amendment-changes" class="lineage-list">
+        <ul
+          v-else
+          id="kernel-amendment-changes"
+          class="lineage-list"
+        >
           <li
             v-for="change in amendment.changed_elements"
             :key="change.element_id"
@@ -64,16 +89,26 @@
           What depends on the version it amends
         </h4>
       </template>
-      <p v-if="!dependents.groups.length" class="lineage-note" role="status">
+      <p
+        v-if="!dependents.groups.length"
+        class="lineage-note"
+        role="status"
+      >
         Nothing the kernel records depends on this.
       </p>
       <template v-else>
-        <p :id="`kernel-${verb}-total`" class="lineage-total">
+        <p
+          :id="`kernel-${verb}-total`"
+          class="lineage-total"
+        >
           {{ dependents.truncated ? "At least " : ""
           }}{{ dependents.total }} dependent
           {{ Number(dependents.total) === 1 ? "object" : "objects" }}
         </p>
-        <ul :id="`kernel-${verb}-list`" class="lineage-list">
+        <ul
+          :id="`kernel-${verb}-list`"
+          class="lineage-list"
+        >
           <li
             v-for="group in dependents.groups"
             :key="group.kind"
@@ -86,7 +121,10 @@
                 <span class="numeric">{{ group.count }}</span>
               </summary>
               <ul class="lineage-objects">
-                <li v-for="object in group.objects" :key="object.handle">
+                <li
+                  v-for="object in group.objects"
+                  :key="object.handle"
+                >
                   {{ label(object) }}
                 </li>
               </ul>

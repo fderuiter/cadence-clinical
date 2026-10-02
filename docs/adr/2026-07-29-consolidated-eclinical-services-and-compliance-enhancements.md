@@ -23,19 +23,18 @@ Fifteen distinct feature branches (PRs #782 through #796) introduced enhancement
 ### Option 1: Option A (Selected): Consolidate PRs #782 through #796 in a single topologically sequenced integration branch `feature/consolidate-prs-782-796`, resolving inter-PR conflicts, enforcing linting and GxP RTM generation.
 
 - **Overview:** Option A (Selected): Consolidate PRs #782 through #796 in a single topologically sequenced integration branch `feature/consolidate-prs-782-796`, resolving inter-PR conflicts, enforcing linting and GxP RTM generation.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Option B: Merge PRs individually without unified validation, risking inter-PR merge regressions and broken client boundaries.
 
 - **Overview:** Option B: Merge PRs individually without unified validation, risking inter-PR merge regressions and broken client boundaries.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

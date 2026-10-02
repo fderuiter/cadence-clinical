@@ -3,28 +3,28 @@
     <!-- Header / Summary -->
     <div class="visualizer-header">
       <div>
-        <h4 class="title">Clinical Study Arms &amp; Epoch Progression</h4>
+        <h4 class="title">
+          Clinical Study Arms &amp; Epoch Progression
+        </h4>
         <p class="subtitle">
           Timeline mapping of protocol epochs, crossover paths, and subject
           allocations.
         </p>
       </div>
       <div class="summary-stats">
-        <span class="pill"
-          ><strong>{{ arms.length }}</strong> Study Arms</span
-        >
-        <span class="pill"
-          ><strong>{{ epochs.length }}</strong> Protocol Epochs</span
-        >
-        <span class="pill highlight"
-          ><strong>{{ totalSampleSize }}</strong> Target Subjects</span
-        >
+        <span class="pill"><strong>{{ arms.length }}</strong> Study Arms</span>
+        <span class="pill"><strong>{{ epochs.length }}</strong> Protocol Epochs</span>
+        <span class="pill highlight"><strong>{{ totalSampleSize }}</strong> Target Subjects</span>
       </div>
     </div>
 
     <!-- Arms Grid -->
     <div class="arms-grid">
-      <div v-for="arm in arms" :key="arm.name" class="arm-card">
+      <div
+        v-for="arm in arms"
+        :key="arm.name"
+        class="arm-card"
+      >
         <div class="arm-card-top">
           <span
             class="arm-type-badge"
@@ -32,14 +32,20 @@
           >
             {{ formatArmType(arm.arm_type) }}
           </span>
-          <span v-if="arm.target_sample_size" class="sample-badge">
+          <span
+            v-if="arm.target_sample_size"
+            class="sample-badge"
+          >
             N = {{ arm.target_sample_size }}
           </span>
         </div>
         <h5 class="arm-name">
           {{ arm.name }}
         </h5>
-        <p v-if="arm.description" class="arm-desc">
+        <p
+          v-if="arm.description"
+          class="arm-desc"
+        >
           {{ arm.description }}
         </p>
 
@@ -51,7 +57,9 @@
             class="epoch-block"
             :class="`epoch-${ep.epoch_type.toLowerCase()}`"
           >
-            <div class="epoch-block-index">Epoch {{ ep.sequence_index }}</div>
+            <div class="epoch-block-index">
+              Epoch {{ ep.sequence_index }}
+            </div>
             <div class="epoch-block-name">
               {{ ep.name }}
             </div>
@@ -65,9 +73,14 @@
 
     <!-- Epoch Transition Map -->
     <div class="epoch-sequence-container">
-      <h5 class="sequence-title">Epoch Sequence &amp; Crossover Path</h5>
+      <h5 class="sequence-title">
+        Epoch Sequence &amp; Crossover Path
+      </h5>
       <div class="sequence-chain">
-        <template v-for="(ep, idx) in sortedEpochs" :key="ep.name">
+        <template
+          v-for="(ep, idx) in sortedEpochs"
+          :key="ep.name"
+        >
           <div class="sequence-step">
             <div
               class="step-badge"
@@ -84,7 +97,10 @@
               </div>
             </div>
           </div>
-          <div v-if="idx < sortedEpochs.length - 1" class="sequence-arrow">
+          <div
+            v-if="idx < sortedEpochs.length - 1"
+            class="sequence-arrow"
+          >
             ➜
           </div>
         </template>

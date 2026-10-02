@@ -14,42 +14,41 @@ In legacy systems (Veeva, Medidata), site activation is frequently tracked via s
 
 ## 2. Decision Drivers & Constraints
 
-* **Regulatory Gating & Non-Bypassability**: The system must cryptographically block RTSM randomization, drug shipment releases, and eCRF write permissions at un-activated sites.
-* **Country-Level Jurisdictional Flexibility**: Prerequisite checklists vary by country (e.g. EU Member State Part I/II authorizations vs US FDA 1572 forms).
-* **Multi-App Orchestration**: Prerequisites span multiple domain modules: `apps/ctms/` (CTA contract execution), `apps/etmf/` / `apps/eisf/` (IRB approval and site binders), `apps/org/` (staff qualifications), `apps/knowledge/` (curriculum completion), and `apps/execution/` (DOA log execution).
+- **Regulatory Gating & Non-Bypassability**: The system must cryptographically block RTSM randomization, drug shipment releases, and eCRF write permissions at un-activated sites.
+- **Country-Level Jurisdictional Flexibility**: Prerequisite checklists vary by country (e.g. EU Member State Part I/II authorizations vs US FDA 1572 forms).
+- **Multi-App Orchestration**: Prerequisites span multiple domain modules: `apps/ctms/` (CTA contract execution), `apps/etmf/` / `apps/eisf/` (IRB approval and site binders), `apps/org/` (staff qualifications), `apps/knowledge/` (curriculum completion), and `apps/execution/` (DOA log execution).
 
 ## 3. Options Considered
 
 ### Option 1: **Dynamic Country-Aware Prerequisite Rules Matrix & Cryptographic Token Gating (Selected)**: Study authors configure country-specific prerequisite criteria in `apps/designer/`. The `apps/ctms/` Greenlight Engine dynamically evaluates real-time readiness across 6 domain facets:
 
 - **Overview:** - Regulatory Authority & IRB/Ethics Committee Approval
-   - Fully Executed Clinical Trial Agreement (CTA) & Budget
-   - Complete Baseline eISF Essential Documents & Investigator CVs
-   - Principal Investigator Executed Delegation of Authority (DOA) Log
-   - Verified Protocol Amendment & SOP Training for PI and All Active Staff
-   - Investigational Product (IP) Depot Greenlight Release
-   Once all criteria are digitally certified with 21 CFR Part 11 electronic signatures, the Greenlight Engine issues an HMAC-signed activation certificate and emits `SiteGreenlightApproved` to un-gate RTSM and EDC.
-- ***Pros:***
+  - Fully Executed Clinical Trial Agreement (CTA) & Budget
+  - Complete Baseline eISF Essential Documents & Investigator CVs
+  - Principal Investigator Executed Delegation of Authority (DOA) Log
+  - Verified Protocol Amendment & SOP Training for PI and All Active Staff
+  - Investigational Product (IP) Depot Greenlight Release
+    Once all criteria are digitally certified with 21 CFR Part 11 electronic signatures, the Greenlight Engine issues an HMAC-signed activation certificate and emits `SiteGreenlightApproved` to un-gate RTSM and EDC.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Static Global Checklist**: A single hardcoded checklist for all sites with manual CRA sign-off.
 
 - **Overview:** **Static Global Checklist**: A single hardcoded checklist for all sites with manual CRA sign-off.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Advisory Warning Only**: Display a non-blocking UI badge without programmatically gating RTSM or EDC.
 
 - **Overview:** **Advisory Warning Only**: Display a non-blocking UI badge without programmatically gating RTSM or EDC.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -61,17 +60,16 @@ In legacy systems (Veeva, Medidata), site activation is frequently tracked via s
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**:
+- **Positive**:
   - Eliminates regulatory inspection findings related to unauthorized early site enrollment.
   - Full transparency for CRA and study startup teams on remaining activation blockers.
   - Automated cryptographic handshake between CTMS, RTSM, and EDC.
-* **Negative**:
+- **Negative**:
   - Requires all prerequisite upstream modules to expose certified completion status APIs.
   - Strict gating requires emergency override escalation protocols with executive Part 11 sign-off.
 
 ## 6. Implementation & Verification
 
-* Greenlight prerequisite rules matrix and certification evaluator within `apps/ctms/`.
-* Gating interceptors integrated with `apps/execution/` and `apps/gateway/`.
-* Traceable to requirement `PRD-SYS-121` and verified by site activation test suites.
-
+- Greenlight prerequisite rules matrix and certification evaluator within `apps/ctms/`.
+- Gating interceptors integrated with `apps/execution/` and `apps/gateway/`.
+- Traceable to requirement `PRD-SYS-121` and verified by site activation test suites.

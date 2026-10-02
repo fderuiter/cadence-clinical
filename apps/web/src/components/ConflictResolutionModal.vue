@@ -9,7 +9,10 @@
     aria-modal="true"
     aria-labelledby="conflict-modal-title"
   >
-    <div class="modal" style="max-width: 800px; width: 90%">
+    <div
+      class="modal"
+      style="max-width: 800px; width: 90%"
+    >
       <div
         id="conflict-modal-title"
         class="modal-header"
@@ -17,14 +20,15 @@
       >
         ⚠️ Conflict Detected during Synchronization
       </div>
-      <div class="modal-body" style="padding: 20px">
+      <div
+        class="modal-body"
+        style="padding: 20px"
+      >
         <p style="margin-bottom: 16px; font-weight: 500">
           The system detected a conflict while synchronizing your offline
           changes for entity
-          <strong style="color: #d97706"
-            >{{ conflict?.conflictItem?.entityType || "Form Item" }} (ID:
-            {{ conflict?.conflictItem?.entityId || "N/A" }})</strong
-          >. Please review the side-by-side comparison and choose a resolution
+          <strong style="color: #d97706">{{ conflict?.conflictItem?.entityType || "Form Item" }} (ID:
+            {{ conflict?.conflictItem?.entityId || "N/A" }})</strong>. Please review the side-by-side comparison and choose a resolution
           strategy.
         </p>
 
@@ -59,7 +63,7 @@
                 font-family: monospace;
                 font-size: 13px;
               "
-              >{{ formatValue(conflict?.clientValue) }}</pre>
+            >{{ formatValue(conflict?.clientValue) }}</pre>
           </div>
 
           <!-- Server Record -->
@@ -88,16 +92,17 @@
                 font-family: monospace;
                 font-size: 13px;
               "
-              >{{ formatValue(conflict?.serverValue) }}</pre>
+            >{{ formatValue(conflict?.serverValue) }}</pre>
           </div>
         </div>
 
         <!-- Strategy Options Selection -->
-        <div class="form-group" style="margin-bottom: 16px">
+        <div
+          class="form-group"
+          style="margin-bottom: 16px"
+        >
           <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label style="font-weight: 600; display: block; margin-bottom: 8px"
-            >Select Resolution Strategy:</label
-          >
+          <label style="font-weight: 600; display: block; margin-bottom: 8px">Select Resolution Strategy:</label>
           <div style="display: flex; flex-direction: column; gap: 8px">
             <label
               class="touch-target-interactive"
@@ -118,7 +123,7 @@
                 name="strategy"
                 value="SERVER_WIN"
                 style="margin-top: 4px"
-              />
+              >
               <div>
                 <strong>SERVER_WIN (Default / Overwrite Local)</strong>
                 <span style="display: block; font-size: 12px; color: #64748b">
@@ -147,7 +152,7 @@
                 name="strategy"
                 value="CLIENT_WIN"
                 style="margin-top: 4px"
-              />
+              >
               <div>
                 <strong>CLIENT_WIN (Force Client Overwrite)</strong>
                 <span style="display: block; font-size: 12px; color: #64748b">
@@ -176,7 +181,7 @@
                 name="strategy"
                 value="MANUAL_REVIEW"
                 style="margin-top: 4px"
-              />
+              >
               <div>
                 <strong>MANUAL_REVIEW (Freeze & Query)</strong>
                 <span style="display: block; font-size: 12px; color: #64748b">
@@ -189,7 +194,10 @@
         </div>
 
         <!-- Part 11 Reason for Change Input -->
-        <div class="form-group" style="margin-bottom: 12px">
+        <div
+          class="form-group"
+          style="margin-bottom: 12px"
+        >
           <label
             for="conflict-reason-text"
             style="font-weight: 600; display: block; margin-bottom: 6px"

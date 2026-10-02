@@ -15,28 +15,27 @@ Reference requirement: PRD-SYS-001.
 
 ## 2. Decision Drivers & Constraints
 
-* Break cross-package packaging dependency loop between security and database packages during container sidecar builds.
-* Maintain microservice and package build isolation without requiring database package dependencies in lightweight sidecar containers.
-* GxP compliance for accurate UTC timestamp generation in security audit logs and cryptographic signature verifications.
+- Break cross-package packaging dependency loop between security and database packages during container sidecar builds.
+- Maintain microservice and package build isolation without requiring database package dependencies in lightweight sidecar containers.
+- GxP compliance for accurate UTC timestamp generation in security audit logs and cryptographic signature verifications.
 
 ## 3. Options Considered
 
 ### Option 1: Option A: Localize `get_utc_now()` and ISO datetime parsing/formatting helpers directly within `packages/security/datetime_helpers.py`. (Selected)
 
 - **Overview:** Option A: Localize `get_utc_now()` and ISO datetime parsing/formatting helpers directly within `packages/security/datetime_helpers.py`. (Selected)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Option B: Retain dependency on `packages/database` and pull database models and session dependencies into sidecar containers. (Rejected)
 
 - **Overview:** Option B: Retain dependency on `packages/database` and pull database models and session dependencies into sidecar containers. (Rejected)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -52,7 +51,6 @@ Reference requirement: PRD-SYS-001.
 
 ## 6. Implementation & Verification
 
-* Created `packages/security/datetime_helpers.py` containing ISO timestamp formatting and `get_utc_now()` utility functions.
-* Updated `packages/security/audit_logger.py`, `crypto_verifier.py`, and `signature.py` to import from local datetime helpers.
-* Verified via quality gates and unit tests (`uv run python scripts/validate_adrs.py` and `uv run cadence check --parallel`).
-
+- Created `packages/security/datetime_helpers.py` containing ISO timestamp formatting and `get_utc_now()` utility functions.
+- Updated `packages/security/audit_logger.py`, `crypto_verifier.py`, and `signature.py` to import from local datetime helpers.
+- Verified via quality gates and unit tests (`uv run python scripts/validate_adrs.py` and `uv run cadence check --parallel`).

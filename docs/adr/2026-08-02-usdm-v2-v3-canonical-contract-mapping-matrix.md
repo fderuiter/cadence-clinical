@@ -30,10 +30,10 @@ This decision implements requirements under PRD-MDR-001.
 
 Map incoming USDM v2/v3 structures directly to relational models dynamically using key-value JSON parsing and standard python dict manipulation, without defining a central canonical intermediary contract.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ High developer velocity and lower initial specification complexity.
   - ✅ Less rigid; handles unanticipated fields by dumping them into generic JSON columns.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Silent truncation or loss of structural relationships occurs without compile-time checks, leading to severe regulatory compliance and data integrity hazards.
   - ❌ Unpredictable behavior across study updates makes it impossible to guarantee reproducible behavior under 21 CFR § 11.10(a).
 
@@ -41,9 +41,9 @@ Map incoming USDM v2/v3 structures directly to relational models dynamically usi
 
 Create entirely separate, independent translation mappers for every incoming version (USDM v2 and USDM v3) to and from the internal graph/relational database schemas.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Highly optimized converters for specific target structures.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Maintenance overhead scales quadratically as new USDM versions (e.g., v4) are introduced.
   - ❌ Lack of a central canonical contract prevents universal round-trip validations, making bidirectional fidelity checks brittle.
 
@@ -51,11 +51,11 @@ Create entirely separate, independent translation mappers for every incoming ver
 
 Define a stable, version-controlled, and audited intermediate schema (the **Canonical Internal Contract**) as the universal representation. Implement mappers from USDM v2 and USDM v3 into this Canonical Shape, and serialize from this Canonical Shape back to compliant USDM structures.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Ensures highly deterministic, reproducible schema conversions.
   - ✅ Isolates the backend database layers from changing external CDISC standards. Adding a new USDM version only requires a single new mapper (Version -> Canonical) rather than rewriting core execution engines.
   - ✅ Enables clear isolation of Material vs. Non-Material fidelity differences, providing stable audit pathways and automated validation reports.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires upfront effort to document the extensive field-level mapping and build intermediate validation checks.
 
 ## 4. Decision Outcome

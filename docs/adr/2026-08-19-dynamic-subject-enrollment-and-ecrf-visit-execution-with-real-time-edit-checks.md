@@ -22,33 +22,32 @@ In clinical electronic data capture (EDC) systems under 21 CFR Part 11 and GxP s
 
 ## 2. Decision Drivers & Constraints
 
-* **GxP and 21 CFR Part 11 Compliance:** Complete audit trail tracking on all observation and form submission writes (`created_at`, `created_by`, `reason_for_change`, `version_index`).
-* **Dynamic Protocol Version Projection:** Dynamic schema projection of eCRF fields based on the subject's active protocol version tag and version index.
-* **Real-Time Edit Check Rule Evaluation:** Real-time evaluation of clinical boundary rules and cross-field constraints with distinct severity badges (`Warning` vs. `Discrepancy`) and direct query creation.
-* **Re-Consent Gating Enforcement:** Explicit blocking modal preventing data capture for subjects requiring amendment re-consent.
+- **GxP and 21 CFR Part 11 Compliance:** Complete audit trail tracking on all observation and form submission writes (`created_at`, `created_by`, `reason_for_change`, `version_index`).
+- **Dynamic Protocol Version Projection:** Dynamic schema projection of eCRF fields based on the subject's active protocol version tag and version index.
+- **Real-Time Edit Check Rule Evaluation:** Real-time evaluation of clinical boundary rules and cross-field constraints with distinct severity badges (`Warning` vs. `Discrepancy`) and direct query creation.
+- **Re-Consent Gating Enforcement:** Explicit blocking modal preventing data capture for subjects requiring amendment re-consent.
 
 ## 3. Options Considered
 
 ### Option 1: **Option 1: Dynamic Client & Server Schema Projection with Write-Time Observation Persistence (Selected)**
 
 - **Overview:** - Maintain protocol-version-aware dynamic projection in `CrcFormRenderer.vue` and `useClinicalStore`.
-   - Implement real-time edit check evaluation engine with Warning and Discrepancy badges.
-   - Automatically persist individual `ClinicalObservation` records with 21 CFR Part 11 audit fields during `FormSubmission` creation in `apps/execution/main.py`.
-   - Enforce explicit Re-Consent Gate blocking modal on the web client alongside the database flush listener.
-- ***Pros:***
+  - Implement real-time edit check evaluation engine with Warning and Discrepancy badges.
+  - Automatically persist individual `ClinicalObservation` records with 21 CFR Part 11 audit fields during `FormSubmission` creation in `apps/execution/main.py`.
+  - Enforce explicit Re-Consent Gate blocking modal on the web client alongside the database flush listener.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option 2: Static Form Schemas with Separate Observation Ingestion Endpoints**
 
 - **Overview:** - Require separate API calls for form submissions and individual observations without client-side dynamic projection.
-   - Disadvantage: Disconnected audit histories, slower CRC workflows, and risk of inconsistency between eCRF form submissions and clinical observations.
-- ***Pros:***
+  - Disadvantage: Disconnected audit histories, slower CRC workflows, and risk of inconsistency between eCRF form submissions and clinical observations.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -56,15 +55,15 @@ In clinical electronic data capture (EDC) systems under 21 CFR Part 11 and GxP s
 
 ## 5. Consequences & Trade-offs
 
-* **Positive:** Real-time feedback for site CRCs, robust GxP compliance, seamless protocol version migration, and immutable audit logs.
-* **Negative:** Requires ongoing synchronisation of clinical rules between client and server edit check engines.
+- **Positive:** Real-time feedback for site CRCs, robust GxP compliance, seamless protocol version migration, and immutable audit logs.
+- **Negative:** Requires ongoing synchronisation of clinical rules between client and server edit check engines.
 
 ## 6. Implementation & Verification
 
-* **Affected Repositories / Files:**
+- **Affected Repositories / Files:**
   - `apps/execution/main.py`: Subject creation schemas and form submission observation persistence with audit logging.
   - `apps/web/src/stores/clinical.ts`: `enrollSubject` action, `getEcrfFieldsForVersion`, and ledger tracking.
   - `apps/web/src/components/persona/CrcFormRenderer.vue`: Subject enrollment modal, dynamic form rendering, live edit checks with Warning vs. Discrepancy badges, and Re-Consent Gate blocking modal.
   - `apps/web/tests/test_ecrf_renderer.py`: Web contract and integration tests.
   - `apps/web/tests/components/CrcFormRenderer.spec.ts`: Component unit tests.
-* **Verification Tests:** Verified via `uv run pytest apps/web/tests/test_ecrf_renderer.py -o addopts=""` and `pnpm --filter web test`.
+- **Verification Tests:** Verified via `uv run pytest apps/web/tests/test_ecrf_renderer.py -o addopts=""` and `pnpm --filter web test`.

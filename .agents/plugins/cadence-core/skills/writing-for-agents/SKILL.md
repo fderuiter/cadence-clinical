@@ -13,15 +13,16 @@ Guidelines for authoring clear, deterministic, and token-efficient documentation
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Audit Existing Skills**| `view_file` | Read `SKILL.md` via `AbsolutePath` | Check frontmatter, length, and references |
-| **Skill/Rule Authoring**| `replace_file_content` / `write_to_file` | Target: `SKILL.md` or `AGENTS.md`, surgical edit | Apply progressive disclosure and clear constraints |
-| **Markdown Validation**| `run_command` | `CommandLine="dotnet cadence check"` | Verify relative links and format compliance |
+| Phase                     | Antigravity Tool                         | Invocation Pattern                               | Objective                                          |
+| :------------------------ | :--------------------------------------- | :----------------------------------------------- | :------------------------------------------------- |
+| **Audit Existing Skills** | `view_file`                              | Read `SKILL.md` via `AbsolutePath`               | Check frontmatter, length, and references          |
+| **Skill/Rule Authoring**  | `replace_file_content` / `write_to_file` | Target: `SKILL.md` or `AGENTS.md`, surgical edit | Apply progressive disclosure and clear constraints |
+| **Markdown Validation**   | `run_command`                            | `CommandLine="dotnet cadence check"`             | Verify relative links and format compliance        |
 
 ---
 
 ## 1. Antigravity Skill Frontmatter
+
 - **`name`**: Unique, lowercase, hyphenated identifier (`cadence-router`, `code-review`).
 - **`description`**: **The single most important field.** Antigravity loads only `name` and `description` into the agent's prompt during tool discovery. It must clearly state in 3rd person:
   - **What** the skill does.
@@ -30,6 +31,7 @@ Guidelines for authoring clear, deterministic, and token-efficient documentation
 ---
 
 ## 2. Progressive Disclosure Pattern
+
 - Keep `SKILL.md` concise (< 100 lines).
 - Offload long documentation, schemas, and extensive manuals to `references/` subdirectories and link using relative markdown links (`[schema guide](./references/schema.md)`).
 - Offload deterministic shell sequences to `scripts/` (`[prepare.sh](./scripts/prepare.sh)`).
@@ -37,7 +39,7 @@ Guidelines for authoring clear, deterministic, and token-efficient documentation
 ---
 
 ## 3. High-Leverage Prompting for Skills
+
 - State hard constraints and anti-patterns explicitly ("_Avoid_: raw SQL string interpolation, sibling database imports").
 - Provide concrete input/output code examples.
 - Include explicit verification and testing steps (`dotnet cadence test --fast`).
-

@@ -1,6 +1,9 @@
 <!-- apps/web/src/views/AuditorView.vue -->
 <template>
-  <div class="auditor-workspace" style="padding: 20px">
+  <div
+    class="auditor-workspace"
+    style="padding: 20px"
+  >
     <div
       class="inspection-banner"
       style="
@@ -24,11 +27,8 @@
           padding: 4px 8px;
           border-radius: 4px;
         "
-        >REGULATORY INSPECTION MODE</span
-      >
-      <span
-        >Session Expires: {{ auditorStore.inspectionSession?.expiresAt }}</span
-      >
+      >REGULATORY INSPECTION MODE</span>
+      <span>Session Expires: {{ auditorStore.inspectionSession?.expiresAt }}</span>
     </div>
     <header
       class="workspace-header"
@@ -42,7 +42,10 @@
       <h2 style="margin: 0; font-size: 20px; font-weight: 600">
         Regulatory Audit &amp; Inspection Trail
       </h2>
-      <button class="btn btn-secondary" @click="showExportModal = true">
+      <button
+        class="btn btn-secondary"
+        @click="showExportModal = true"
+      >
         Export Inspection Log
       </button>
     </header>

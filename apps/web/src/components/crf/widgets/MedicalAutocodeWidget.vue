@@ -1,8 +1,12 @@
 <template>
   <div class="medical-autocode-container">
-    <label class="widget-label" :for="inputId"
-      >{{ label }} <span v-if="required" class="required-star">*</span></label
-    >
+    <label
+      class="widget-label"
+      :for="inputId"
+    >{{ label }} <span
+      v-if="required"
+      class="required-star"
+    >*</span></label>
     <div class="input-wrapper">
       <input
         :id="inputId"
@@ -14,12 +18,20 @@
         "
         @input="onInput"
         @focus="isOpen = true"
-      />
-      <div v-if="loading" class="autocode-spinner">Searching...</div>
+      >
+      <div
+        v-if="loading"
+        class="autocode-spinner"
+      >
+        Searching...
+      </div>
     </div>
 
     <!-- Suggested Terms Dropdown -->
-    <ul v-if="isOpen && suggestions.length > 0" class="suggestions-dropdown">
+    <ul
+      v-if="isOpen && suggestions.length > 0"
+      class="suggestions-dropdown"
+    >
       <li
         v-for="term in suggestions"
         :key="term.code"
@@ -31,19 +43,18 @@
         @keydown.enter="selectTerm(term)"
       >
         <span class="term-name">{{ term.name }}</span>
-        <span class="term-badge"
-          >{{ term.dictionary }}: {{ term.code }} (PT: {{ term.pt }})</span
-        >
+        <span class="term-badge">{{ term.dictionary }}: {{ term.code }} (PT: {{ term.pt }})</span>
       </li>
     </ul>
 
-    <div v-if="selectedCoding" class="selected-coding-badge">
-      <span
-        >Auto-Coded: <strong>{{ selectedCoding.name }}</strong> [{{
-          selectedCoding.dictionary
-        }}
-        PT: {{ selectedCoding.pt }}, SOC: {{ selectedCoding.soc }}]</span
-      >
+    <div
+      v-if="selectedCoding"
+      class="selected-coding-badge"
+    >
+      <span>Auto-Coded: <strong>{{ selectedCoding.name }}</strong> [{{
+        selectedCoding.dictionary
+      }}
+        PT: {{ selectedCoding.pt }}, SOC: {{ selectedCoding.soc }}]</span>
     </div>
   </div>
 </template>

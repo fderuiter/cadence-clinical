@@ -24,20 +24,20 @@ This decision maps to compliance requirements under `PRD-QRY-005`.
 
 Directly map the physical database columns (`lab_source`, `sex`, `range_low`, `range_high`) on `LabReferenceRange`, while using `sqlalchemy.orm.synonym` to define backwards-compatible properties. Upgrade `ClinicalObservation` with additive columns via `migrate.py`.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Full backward compatibility for existing application code and tests.
   - ✅ Clean physical database schema aligned with standards.
   - ✅ Automatically picked up by the pre-boot database migration engine.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires managing synonyms explicitly in the SQLAlchemy model layer.
 
 ### Option 2: Retain Old Column Names and Use Views/Adapters
 
 Keep physical column names legacy and write mapping adaptors in the API layer.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ No changes needed in the relational schema.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Schema remains unclean and diverges from expected platform-wide naming conventions.
 
 ## 4. Decision Outcome

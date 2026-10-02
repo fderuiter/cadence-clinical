@@ -25,19 +25,18 @@ The platform is transitioning to a modern, unified architectural approach for cl
 ### Option 1: **Option A (Selected)**: Decommission legacy V1 pathways completely, delete `index.js` under `apps/web/`, consolidate helpers into `apps/web/src/evaluator.js`, and perform linter cleanup on centralized security policies in `packages/security/rbac.py`.
 
 - **Overview:** **Option A (Selected)**: Decommission legacy V1 pathways completely, delete `index.js` under `apps/web/`, consolidate helpers into `apps/web/src/evaluator.js`, and perform linter cleanup on centralized security policies in `packages/security/rbac.py`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B (Alternative)**: Retain legacy pathways as compatibility shims, increasing technical debt and maintenance complexity across the gateway and frontend assets.
 
 - **Overview:** **Option B (Alternative)**: Retain legacy pathways as compatibility shims, increasing technical debt and maintenance complexity across the gateway and frontend assets.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

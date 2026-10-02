@@ -1,7 +1,10 @@
 <template>
   <div class="audit-trail-viewer">
     <!-- Filter Panel -->
-    <div class="card" style="padding: 16px; margin-bottom: 20px">
+    <div
+      class="card"
+      style="padding: 16px; margin-bottom: 20px"
+    >
       <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 15px">
         Search &amp; Filter Logs
       </h3>
@@ -20,8 +23,7 @@
               margin-bottom: 4px;
               display: block;
             "
-            >User ID</label
-          >
+          >User ID</label>
           <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
             v-model="userIdInput"
@@ -37,7 +39,7 @@
               color: var(--text);
             "
             @input="onFilterChange"
-          />
+          >
         </div>
 
         <div
@@ -52,8 +54,7 @@
               margin-bottom: 4px;
               display: block;
             "
-            >Action Type</label
-          >
+          >Action Type</label>
           <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <select
             v-model="actionInput"
@@ -68,12 +69,24 @@
             "
             @change="onFilterChange"
           >
-            <option value="">All Actions</option>
-            <option value="UPDATE">UPDATE</option>
-            <option value="SIGN_OFF">SIGN_OFF</option>
-            <option value="QUERY_RAISED">QUERY_RAISED</option>
-            <option value="INGEST">INGEST</option>
-            <option value="VIEW">VIEW</option>
+            <option value="">
+              All Actions
+            </option>
+            <option value="UPDATE">
+              UPDATE
+            </option>
+            <option value="SIGN_OFF">
+              SIGN_OFF
+            </option>
+            <option value="QUERY_RAISED">
+              QUERY_RAISED
+            </option>
+            <option value="INGEST">
+              INGEST
+            </option>
+            <option value="VIEW">
+              VIEW
+            </option>
           </select>
         </div>
 
@@ -89,8 +102,7 @@
               margin-bottom: 4px;
               display: block;
             "
-            >Start Date</label
-          >
+          >Start Date</label>
           <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
             v-model="startDateInput"
@@ -105,7 +117,7 @@
               color: var(--text);
             "
             @change="onDateChange"
-          />
+          >
         </div>
 
         <div
@@ -120,8 +132,7 @@
               margin-bottom: 4px;
               display: block;
             "
-            >End Date</label
-          >
+          >End Date</label>
           <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
             v-model="endDateInput"
@@ -136,13 +147,16 @@
               color: var(--text);
             "
             @change="onDateChange"
-          />
+          >
         </div>
       </div>
     </div>
 
     <!-- Events Table -->
-    <div class="card" style="padding: 0; overflow-x: auto">
+    <div
+      class="card"
+      style="padding: 0; overflow-x: auto"
+    >
       <table
         class="clinical-table"
         style="width: 100%; border-collapse: collapse; font-size: 13px"
@@ -155,10 +169,18 @@
               text-align: left;
             "
           >
-            <th style="padding: 12px 16px; font-weight: 600">Timestamp</th>
-            <th style="padding: 12px 16px; font-weight: 600">User</th>
-            <th style="padding: 12px 16px; font-weight: 600">Action</th>
-            <th style="padding: 12px 16px; font-weight: 600">Details</th>
+            <th style="padding: 12px 16px; font-weight: 600">
+              Timestamp
+            </th>
+            <th style="padding: 12px 16px; font-weight: 600">
+              User
+            </th>
+            <th style="padding: 12px 16px; font-weight: 600">
+              Action
+            </th>
+            <th style="padding: 12px 16px; font-weight: 600">
+              Details
+            </th>
             <th style="padding: 12px 16px; font-weight: 600; width: 220px">
               21 CFR Part 11 Audit fields
             </th>
@@ -229,7 +251,7 @@
               <div
                 v-if="
                   event.version_index !== undefined ||
-                  event.versionIndex !== undefined
+                    event.versionIndex !== undefined
                 "
                 class="part11-version"
               >

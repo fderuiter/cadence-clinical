@@ -25,9 +25,9 @@ To achieve secure key-wrapping, key derivation, and multi-user isolation on shar
 
 Store the derived AES-GCM session key directly in local storage.
 
-- ***Pros:***
+- _**Pros:**_
   - Simple to implement and requires no PIN interaction.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Fails to satisfy security requirements under GxP / Part 11.
   - ❌ Allows any unauthorized user or extension with local storage access to decrypt patient records.
 
@@ -35,11 +35,11 @@ Store the derived AES-GCM session key directly in local storage.
 
 Leverage a 4-digit user PIN to wrap the cryptographic master key, storing only the wrapped key and verification salt in browser persistent storage.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Securely derives the decryption key from PIN on-demand.
   - ✅ Eliminates the risk of plain-text cryptographic keys being exposed in persistent storage.
   - ✅ Correctly implements local IndexedDB security in alignment with **PRD-EDC-007**.
-- ***Cons:***
+- _**Cons:**_
   - Requires user interaction to supply the PIN to unlock the sync queue.
 
 ## 4. Decision Outcome

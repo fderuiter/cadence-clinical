@@ -3,6 +3,7 @@
 These guidelines are automatically applied when the `cadence-core` plugin is active.
 
 ## Stack & Standards (.NET 10 Target Architecture)
+
 - C# 14 / .NET 10 (`net10.0`) with strict nullable types (`<Nullable>enable</Nullable>`) and Native AOT readiness.
 - ASP.NET Core 10 Minimal APIs with Endpoint Filters (`IEndpointFilter`) and HMAC gateway signatures (`Cadence.Security.Signing`).
 - Single-Assembly Clean Architecture per microservice (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`).

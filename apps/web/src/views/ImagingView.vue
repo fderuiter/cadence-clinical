@@ -1,5 +1,8 @@
 <template>
-  <div id="section-imaging-viewer" class="dashboard-section active">
+  <div
+    id="section-imaging-viewer"
+    class="dashboard-section active"
+  >
     <!-- Header -->
     <div class="section-header">
       <div class="header-content-group">
@@ -23,7 +26,10 @@
       <div class="header-action-group">
         <!-- Subject Selector -->
         <div class="selector-box">
-          <label for="subject-select" class="sr-only">Select Subject</label>
+          <label
+            for="subject-select"
+            class="sr-only"
+          >Select Subject</label>
           <select
             id="subject-select"
             v-model="selectedSubjectId"
@@ -44,31 +50,49 @@
 
         <!-- Timepoint Selector -->
         <div class="selector-box">
-          <label for="timepoint-select" class="sr-only">Select Timepoint</label>
+          <label
+            for="timepoint-select"
+            class="sr-only"
+          >Select Timepoint</label>
           <select
             id="timepoint-select"
             v-model="selectedTimepoint"
             class="header-select"
             @change="onTimepointChange"
           >
-            <option value="BASELINE">Baseline Screening (Day -7)</option>
-            <option value="CYCLE_2_DAY_1">Cycle 2 Day 1 (Week 6)</option>
-            <option value="CYCLE_4_DAY_1">Cycle 4 Day 1 (Week 12)</option>
-            <option value="END_OF_TREATMENT">End of Treatment (Week 24)</option>
+            <option value="BASELINE">
+              Baseline Screening (Day -7)
+            </option>
+            <option value="CYCLE_2_DAY_1">
+              Cycle 2 Day 1 (Week 6)
+            </option>
+            <option value="CYCLE_4_DAY_1">
+              Cycle 4 Day 1 (Week 12)
+            </option>
+            <option value="END_OF_TREATMENT">
+              End of Treatment (Week 24)
+            </option>
           </select>
         </div>
 
         <!-- Criteria Selector -->
         <div class="selector-box">
-          <label for="criteria-select" class="sr-only">Criteria</label>
+          <label
+            for="criteria-select"
+            class="sr-only"
+          >Criteria</label>
           <select
             id="criteria-select"
             v-model="selectedCriteria"
             class="header-select"
             @change="recalculateResponse"
           >
-            <option value="RECIST_1_1">RECIST 1.1 (Solid Tumors)</option>
-            <option value="LUGANO_2014">Lugano 2014 (Lymphoma)</option>
+            <option value="RECIST_1_1">
+              RECIST 1.1 (Solid Tumors)
+            </option>
+            <option value="LUGANO_2014">
+              Lugano 2014 (Lymphoma)
+            </option>
           </select>
         </div>
       </div>
@@ -91,7 +115,9 @@
             :class="{ active: activeSeriesUid === s.seriesUid }"
             @click="activeSeriesUid = s.seriesUid"
           >
-            <div class="series-thumb">🖼️</div>
+            <div class="series-thumb">
+              🖼️
+            </div>
             <div class="series-meta">
               <div class="series-title">
                 {{ s.description }}
@@ -157,10 +183,10 @@
     <!-- Bottom: Longitudinal Tumor Trajectory Table -->
     <section class="trajectory-section">
       <div class="trajectory-header">
-        <h3 class="trajectory-title">Longitudinal Tumor Response Trajectory</h3>
-        <span class="trajectory-count"
-          >{{ trajectoryHistory.length }} Locked Timepoint Assessments</span
-        >
+        <h3 class="trajectory-title">
+          Longitudinal Tumor Response Trajectory
+        </h3>
+        <span class="trajectory-count">{{ trajectoryHistory.length }} Locked Timepoint Assessments</span>
       </div>
 
       <div class="trajectory-table-wrapper">
@@ -180,7 +206,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="t in trajectoryHistory" :key="t.id">
+            <tr
+              v-for="t in trajectoryHistory"
+              :key="t.id"
+            >
               <td class="font-bold">
                 {{ t.timepoint_name }}
               </td>
@@ -218,7 +247,9 @@
                   {{ t.overall_response }}
                 </span>
               </td>
-              <td class="font-mono text-xs">🔒 Sealed</td>
+              <td class="font-mono text-xs">
+                🔒 Sealed
+              </td>
               <td>{{ t.reader_id }}</td>
               <td>{{ t.created_at || "2026-08-23 04:15 UTC" }}</td>
             </tr>

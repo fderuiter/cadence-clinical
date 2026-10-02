@@ -22,12 +22,14 @@ All 14 tracer-bullet development tickets (`MIG-OBS-001` through `MIG-OBS-014`) a
 ## Ticket Implementation Ledger
 
 ### Phase 1: Domain Modeling & Value Objects
+
 - **`MIG-OBS-001`**: Strongly-Typed Domain Identifiers & Enums
   - **Status:** COMPLETED & VERIFIED
   - **Components:** `ObservationId`, `DomainCode`, `TestCode`, `FormSubmissionId`, `FormId`, `FormSubmissionStatus` (`Draft`, `Completed`, `Approved`), `QueryId`, `QueryStatus` (`Candidate`, `Open`, `Answered`, `Closed`, `Reopened`, `Cancelled`).
   - **Serializers:** Native AOT custom converters (`ValueObjectJsonConverters.cs`, `ExecutionJsonContext`).
 
 ### Phase 2: Domain Aggregates & Invariant Enforcers
+
 - **`MIG-OBS-002`**: ClinicalObservation Aggregate Root & JSONB Projection
   - **Status:** COMPLETED & VERIFIED
   - **Components:** `ClinicalObservation` (`AggregateRoot<ObservationId>`, `IGxPAuditable`), `ObservationAdditionalProperties` (mapped to PostgreSQL JSONB), `ObservationErrors`.
@@ -42,6 +44,7 @@ All 14 tracer-bullet development tickets (`MIG-OBS-001` through `MIG-OBS-014`) a
   - **Invariants:** 6-state discrepancy machine (`Candidate` -> `Open` -> `Answered` -> `Closed` / `Reopened` / `Cancelled`); role verification (CRA/DM close permission); audit trails for responder/closer.
 
 ### Phase 3: Ports & Persistence Infrastructure
+
 - **`MIG-OBS-005`**: Entity Framework Core 10 JSONB Configurations
   - **Status:** COMPLETED & VERIFIED
   - **Components:** `ClinicalObservationConfiguration`, `FormSubmissionConfiguration`, `ClinicalQueryConfiguration`.
@@ -52,6 +55,7 @@ All 14 tracer-bullet development tickets (`MIG-OBS-001` through `MIG-OBS-014`) a
   - **Invariants:** All read queries enforce `.AsNoTracking()`.
 
 ### Phase 4: Application Services & Edit Check Engine
+
 - **`MIG-OBS-007`**: UCUM Normalization & Reference Range Engine
   - **Status:** COMPLETED & VERIFIED
   - **Components:** `IUcumNormalizationService` (`UcumNormalizationService`), `ILabRangeService` (`LabRangeService`), `IOutlierDetectionService` (`OutlierDetectionService`).
@@ -72,12 +76,14 @@ All 14 tracer-bullet development tickets (`MIG-OBS-001` through `MIG-OBS-014`) a
   - **Components:** `QueryCreateRequest`, `QueryRespondRequest`, `QueryCloseRequest`, `QueryReopenRequest`, `QueryCancelRequest`, `ClinicalQueryResponse`, `IClinicalQueryApplicationService`, `ClinicalQueryApplicationService`.
 
 ### Phase 5: Presentation & Endpoints
+
 - **`MIG-OBS-012`**: Minimal API Routes & GxP Endpoint Filters
   - **Status:** COMPLETED & VERIFIED
   - **Components:** `ObservationEndpoints`, `FormEndpoints`, `QueryEndpoints`, `DomainErrorHttpMapping` (mapping `FORM_LOCKED` to 423, `ACTIVE_QUERY_EXISTS` to 409, `UNAUTHORIZED_QUERY_ROLE` to 403), `Program.cs` DI composition root.
   - **Routing:** Primary routes (`/api/v1/execution/observations`, `/api/v1/execution/forms`, `/api/v1/execution/queries`) and legacy backward-compatible aliases (`/api/v1/observations`, `/api/v1/forms`, `/api/v1/queries`).
 
 ### Phase 6: Verification & Regulatory Sign-Off
+
 - **`MIG-OBS-013`**: Golden Master Fixtures & Cross-Stack Parity
   - **Status:** COMPLETED & VERIFIED
   - **Components:**

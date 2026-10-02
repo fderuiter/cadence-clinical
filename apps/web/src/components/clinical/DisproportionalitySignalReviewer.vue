@@ -8,28 +8,20 @@
     <header class="signal-header">
       <div class="header-main">
         <div class="title-group">
-          <span class="badge badge-regulatory"
-            >CIOMS VIII / ICH E2F / FDA MGPS</span
-          >
+          <span class="badge badge-regulatory">CIOMS VIII / ICH E2F / FDA MGPS</span>
           <h2 class="signal-title">
             Safety Signal Detection Engine & Periodic Reports
           </h2>
         </div>
         <div class="header-metadata">
-          <span class="meta-item"
-            ><strong>Target Drug:</strong> {{ targetDrug }}</span
-          >
-          <span class="meta-item"
-            ><strong>Study:</strong> {{ studyId || "Global Safety Pool" }}</span
-          >
-          <span class="meta-item"
-            ><strong>Signals Detected:</strong>
+          <span class="meta-item"><strong>Target Drug:</strong> {{ targetDrug }}</span>
+          <span class="meta-item"><strong>Study:</strong> {{ studyId || "Global Safety Pool" }}</span>
+          <span class="meta-item"><strong>Signals Detected:</strong>
             <span class="status-pill signal-count">{{
               activeSignalsCount
             }}</span>
           </span>
-          <span class="meta-item"
-            ><strong>Alerts Under Review:</strong>
+          <span class="meta-item"><strong>Alerts Under Review:</strong>
             <span class="status-pill alert-count">{{
               pendingAlertsCount
             }}</span>
@@ -61,7 +53,11 @@
     </header>
 
     <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist" aria-label="Safety Signal Views">
+    <nav
+      class="nav-tabs"
+      role="tablist"
+      aria-label="Safety Signal Views"
+    >
       <button
         role="tab"
         :aria-selected="activeTab === 'signals'"
@@ -104,9 +100,15 @@
               v-model="selectedLevel"
               class="select-input"
             >
-              <option value="ALL">All (PT & SOC)</option>
-              <option value="PT">Preferred Term (PT)</option>
-              <option value="SOC">System Organ Class (SOC)</option>
+              <option value="ALL">
+                All (PT & SOC)
+              </option>
+              <option value="PT">
+                Preferred Term (PT)
+              </option>
+              <option value="SOC">
+                System Organ Class (SOC)
+              </option>
             </select>
           </div>
 
@@ -118,12 +120,15 @@
               type="text"
               placeholder="Filter by PT or SOC name..."
               class="text-input"
-            />
+            >
           </div>
 
           <div class="filter-group toggle-group">
             <label>
-              <input v-model="showOnlySignals" type="checkbox" />
+              <input
+                v-model="showOnlySignals"
+                type="checkbox"
+              >
               Show Threshold Breaches Only (Evans / ROR / EB05)
             </label>
           </div>
@@ -171,10 +176,8 @@
                   <span :class="{ 'metric-alert': item.is_prr_signal }">
                     {{ item.prr.toFixed(2) }}
                   </span>
-                  <span class="ci-bounds"
-                    >[{{ item.prr_ci_lower.toFixed(2) }},
-                    {{ item.prr_ci_upper.toFixed(2) }}]</span
-                  >
+                  <span class="ci-bounds">[{{ item.prr_ci_lower.toFixed(2) }},
+                    {{ item.prr_ci_upper.toFixed(2) }}]</span>
                 </td>
                 <td>
                   <span
@@ -187,19 +190,15 @@
                   <span :class="{ 'metric-alert': item.is_ror_signal }">
                     {{ item.ror.toFixed(2) }}
                   </span>
-                  <span class="ci-bounds"
-                    >[{{ item.ror_ci_lower.toFixed(2) }},
-                    {{ item.ror_ci_upper.toFixed(2) }}]</span
-                  >
+                  <span class="ci-bounds">[{{ item.ror_ci_lower.toFixed(2) }},
+                    {{ item.ror_ci_upper.toFixed(2) }}]</span>
                 </td>
                 <td>
                   <span :class="{ 'metric-alert': item.is_ebgm_signal }">
                     {{ item.ebgm.toFixed(2) }}
                   </span>
-                  <span class="ci-bounds"
-                    >({{ item.eb05.toFixed(2) }} -
-                    {{ item.eb95.toFixed(2) }})</span
-                  >
+                  <span class="ci-bounds">({{ item.eb05.toFixed(2) }} -
+                    {{ item.eb95.toFixed(2) }})</span>
                 </td>
                 <td>
                   <span
@@ -219,11 +218,17 @@
                   >
                     Review Alert
                   </button>
-                  <span v-else class="text-muted">Nominal</span>
+                  <span
+                    v-else
+                    class="text-muted"
+                  >Nominal</span>
                 </td>
               </tr>
               <tr v-if="filteredMetrics.length === 0">
-                <td colspan="11" class="empty-state">
+                <td
+                  colspan="11"
+                  class="empty-state"
+                >
                   No disproportionality metrics match the active filters.
                 </td>
               </tr>
@@ -239,7 +244,10 @@
         aria-labelledby="alerts-tab-heading"
       >
         <div class="table-container">
-          <table class="data-table" aria-label="Signal Review Alerts Queue">
+          <table
+            class="data-table"
+            aria-label="Signal Review Alerts Queue"
+          >
             <thead>
               <tr>
                 <th>Alert ID</th>
@@ -271,8 +279,7 @@
                 <td>
                   <span
                     :class="['severity-pill', alert.severity.toLowerCase()]"
-                    >{{ alert.severity }}</span
-                  >
+                  >{{ alert.severity }}</span>
                 </td>
                 <td>
                   <span :class="['status-pill', alert.status.toLowerCase()]">{{
@@ -291,20 +298,26 @@
                   <button
                     v-if="
                       alert.status === 'TRIGGERED' ||
-                      alert.status === 'UNDER_REVIEW'
+                        alert.status === 'UNDER_REVIEW'
                     "
                     class="btn btn-sm btn-primary"
                     @click="openAlertSignModal(alert)"
                   >
                     ✍️ Sign & Decide
                   </button>
-                  <span v-else class="signed-tag">
+                  <span
+                    v-else
+                    class="signed-tag"
+                  >
                     Approved ({{ alert.review_decision }})
                   </span>
                 </td>
               </tr>
               <tr v-if="alertsList.length === 0">
-                <td colspan="9" class="empty-state">
+                <td
+                  colspan="9"
+                  class="empty-state"
+                >
                   No safety signal alerts currently triggered.
                 </td>
               </tr>
@@ -328,7 +341,10 @@
         </div>
 
         <div class="table-container">
-          <table class="data-table" aria-label="Periodic Safety Reports Table">
+          <table
+            class="data-table"
+            aria-label="Periodic Safety Reports Table"
+          >
             <thead>
               <tr>
                 <th>Report ID</th>
@@ -342,7 +358,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="report in periodicReportsList" :key="report.id">
+              <tr
+                v-for="report in periodicReportsList"
+                :key="report.id"
+              >
                 <td>
                   <code>{{ report.id }}</code>
                 </td>
@@ -370,7 +389,10 @@
                   {{ report.total_saes }} SAEs
                 </td>
                 <td>
-                  <span v-if="report.approved_by_user_id" class="signed-tag">
+                  <span
+                    v-if="report.approved_by_user_id"
+                    class="signed-tag"
+                  >
                     Signed by {{ report.approved_by_user_id }}
                   </span>
                   <button
@@ -392,7 +414,10 @@
                 </td>
               </tr>
               <tr v-if="periodicReportsList.length === 0">
-                <td colspan="8" class="empty-state">
+                <td
+                  colspan="8"
+                  class="empty-state"
+                >
                   No periodic safety reports compiled yet. Click 'Compile DSUR /
                   PSUR' to generate one.
                 </td>
@@ -413,7 +438,10 @@
       <div class="modal-box">
         <header class="modal-header">
           <h3>21 CFR Part 11 Signal Review Disposition Signature</h3>
-          <button class="close-btn" @click="selectedAlertForSigning = null">
+          <button
+            class="close-btn"
+            @click="selectedAlertForSigning = null"
+          >
             ✕
           </button>
         </header>
@@ -448,7 +476,9 @@
               <option value="REQUEST_SAFETY_INQUIRY">
                 REQUEST_SAFETY_INQUIRY (Request CRA / Site Query)
               </option>
-              <option value="CLOSE_ALERT">CLOSE_ALERT (Triage Complete)</option>
+              <option value="CLOSE_ALERT">
+                CLOSE_ALERT (Triage Complete)
+              </option>
             </select>
           </div>
 
@@ -463,16 +493,14 @@
           </div>
 
           <div class="form-group">
-            <label for="sign-secret"
-              >Safety Physician Signing Key / Secret *</label
-            >
+            <label for="sign-secret">Safety Physician Signing Key / Secret *</label>
             <input
               id="sign-secret"
               v-model="signForm.signature_secret"
               type="password"
               class="text-input"
               placeholder="Enter cryptographic signing credential"
-            />
+            >
           </div>
         </div>
 

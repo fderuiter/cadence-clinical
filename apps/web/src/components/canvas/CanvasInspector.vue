@@ -5,35 +5,66 @@
     aria-labelledby="canvas-inspector-title"
   >
     <template v-if="observation || participant || protocolVersion">
-      <header v-if="observation" class="inspector-header">
+      <header
+        v-if="observation"
+        class="inspector-header"
+      >
         <span class="inspector-kind">Observation</span>
-        <h2 id="canvas-inspector-title" class="inspector-title">
+        <h2
+          id="canvas-inspector-title"
+          class="inspector-title"
+        >
           {{ observation.test_name }}
         </h2>
-        <span id="canvas-inspector-ref" class="inspector-ref">
+        <span
+          id="canvas-inspector-ref"
+          class="inspector-ref"
+        >
           Execution id {{ observation.id }} (no kernel reference yet)
         </span>
       </header>
-      <header v-else-if="participant" class="inspector-header">
+      <header
+        v-else-if="participant"
+        class="inspector-header"
+      >
         <span class="inspector-kind">Participant</span>
-        <h2 id="canvas-inspector-title" class="inspector-title">
+        <h2
+          id="canvas-inspector-title"
+          class="inspector-title"
+        >
           {{ participant.subject_id }}
         </h2>
-        <code id="canvas-inspector-ref" class="inspector-ref">{{
+        <code
+          id="canvas-inspector-ref"
+          class="inspector-ref"
+        >{{
           nodeRef
         }}</code>
       </header>
-      <header v-else-if="protocolVersion" class="inspector-header">
+      <header
+        v-else-if="protocolVersion"
+        class="inspector-header"
+      >
         <span class="inspector-kind">Protocol version</span>
-        <h2 id="canvas-inspector-title" class="inspector-title">
+        <h2
+          id="canvas-inspector-title"
+          class="inspector-title"
+        >
           Version {{ protocolVersion.number }}
         </h2>
-        <code id="canvas-inspector-ref" class="inspector-ref">{{
+        <code
+          id="canvas-inspector-ref"
+          class="inspector-ref"
+        >{{
           protocolVersion.ref
         }}</code>
       </header>
 
-      <div class="verbs" role="toolbar" aria-label="Verbs">
+      <div
+        class="verbs"
+        role="toolbar"
+        aria-label="Verbs"
+      >
         <button
           id="verb-details"
           type="button"
@@ -44,7 +75,10 @@
         >
           Details
         </button>
-        <template v-for="verb in verbs" :key="verb.id">
+        <template
+          v-for="verb in verbs"
+          :key="verb.id"
+        >
           <button
             v-if="verb.live"
             :id="`verb-${verb.id}`"
@@ -69,7 +103,12 @@
           </button>
         </template>
       </div>
-      <p v-if="shownVerbNote" id="verb-note" class="verb-note" role="status">
+      <p
+        v-if="shownVerbNote"
+        id="verb-note"
+        class="verb-note"
+        role="status"
+      >
         {{ shownVerbNote }}
       </p>
 
@@ -100,7 +139,11 @@
           v-if="explained"
           :explanation="explained.decision.explanation"
         />
-        <p v-else id="kernel-explain-empty" class="inspector-empty">
+        <p
+          v-else
+          id="kernel-explain-empty"
+          class="inspector-empty"
+        >
           Choose Explain beside a command under Act to see the kernel's reasons
           for its decision.
         </p>
@@ -112,8 +155,13 @@
         class="sdv"
         aria-labelledby="kernel-simulate-title"
       >
-        <h3 id="kernel-simulate-title">Simulation & Matrix Gap Analysis</h3>
-        <p v-if="simulationLoading" class="inspector-empty">
+        <h3 id="kernel-simulate-title">
+          Simulation & Matrix Gap Analysis
+        </h3>
+        <p
+          v-if="simulationLoading"
+          class="inspector-empty"
+        >
           Running pure in-memory evaluation and matrix gap analysis...
         </p>
         <p
@@ -123,7 +171,10 @@
         >
           {{ simulationError }}
         </p>
-        <div v-else-if="simulationResult" class="simulation-details">
+        <div
+          v-else-if="simulationResult"
+          class="simulation-details"
+        >
           <div
             class="seal-container"
             style="
@@ -150,7 +201,7 @@
           <div
             v-if="
               simulationResult.matrix_gaps &&
-              simulationResult.matrix_gaps.length
+                simulationResult.matrix_gaps.length
             "
             class="gaps-list"
           >
@@ -167,8 +218,7 @@
             >
               <div style="font-weight: 600; font-size: 0.85rem">
                 <span class="gap-badge">{{ gap.severity }}</span>
-                {{ gap.kind }} (<code>{{ gap.json_pointer_path }}</code
-                >)
+                {{ gap.kind }} (<code>{{ gap.json_pointer_path }}</code>)
               </div>
               <div style="font-size: 0.8rem; margin-top: 2px">
                 {{ gap.description }}
@@ -181,7 +231,10 @@
               </div>
             </div>
           </div>
-          <p v-else style="font-size: 0.85rem; color: #28a745">
+          <p
+            v-else
+            style="font-size: 0.85rem; color: #28a745"
+          >
             ✓ No schedule matrix gaps detected.
           </p>
 
@@ -244,7 +297,10 @@
       <template v-else-if="observation">
         <dl class="details">
           <dt>Result</dt>
-          <dd id="inspector-result" class="numeric">
+          <dd
+            id="inspector-result"
+            class="numeric"
+          >
             {{ observationValue(observation) }}
           </dd>
           <template v-if="observation.normalized_value != null">
@@ -263,7 +319,7 @@
           <template
             v-if="
               observation.reference_range_low != null ||
-              observation.reference_range_high != null
+                observation.reference_range_high != null
             "
           >
             <dt>Reference range</dt>
@@ -289,8 +345,13 @@
           class="sdv"
           aria-labelledby="inspector-sdv-title"
         >
-          <h3 id="inspector-sdv-title">Source data verification</h3>
-          <p id="inspector-sdv-status" class="sdv-status">
+          <h3 id="inspector-sdv-title">
+            Source data verification
+          </h3>
+          <p
+            id="inspector-sdv-status"
+            class="sdv-status"
+          >
             {{
               observation.is_sdv_verified
                 ? `Verified by ${observation.sdv_verified_by || "an unrecorded user"}${observation.sdv_verified_at ? ` on ${observation.sdv_verified_at}` : ""}.`
@@ -325,7 +386,11 @@
               Flag for re-verification
             </button>
           </template>
-          <p v-else id="inspector-sdv-note" class="inspector-empty">
+          <p
+            v-else
+            id="inspector-sdv-note"
+            class="inspector-empty"
+          >
             Source data is verified by a monitor or data manager.
           </p>
         </section>
@@ -335,8 +400,13 @@
           class="sdv"
           aria-labelledby="inspector-queries-title"
         >
-          <h3 id="inspector-queries-title">Queries</h3>
-          <p id="inspector-queries-status" class="sdv-status">
+          <h3 id="inspector-queries-title">
+            Queries
+          </h3>
+          <p
+            id="inspector-queries-status"
+            class="sdv-status"
+          >
             {{ queriesSummary }}
           </p>
           <template v-if="canManage">
@@ -360,9 +430,15 @@
         </section>
       </template>
 
-      <dl v-else-if="protocolVersion" id="inspector-version" class="details">
+      <dl
+        v-else-if="protocolVersion"
+        id="inspector-version"
+        class="details"
+      >
         <dt>Status</dt>
-        <dd id="inspector-version-status">{{ protocolVersion.status }}</dd>
+        <dd id="inspector-version-status">
+          {{ protocolVersion.status }}
+        </dd>
         <dt>Amends</dt>
         <dd>
           {{
@@ -404,7 +480,9 @@
           <dt>Protocol version</dt>
           <dd>{{ participant.active_protocol_version || "Not recorded" }}</dd>
           <dt>Enrollment number</dt>
-          <dd class="numeric">{{ participant.enrollment_index }}</dd>
+          <dd class="numeric">
+            {{ participant.enrollment_index }}
+          </dd>
         </dl>
 
         <ParticipantStateChange
@@ -437,16 +515,26 @@
     </template>
 
     <template v-else-if="protocolVersionError">
-      <h2 id="canvas-inspector-title" class="inspector-title">
+      <h2
+        id="canvas-inspector-title"
+        class="inspector-title"
+      >
         Protocol version
       </h2>
-      <p id="inspector-version-error" class="inspector-empty" role="alert">
+      <p
+        id="inspector-version-error"
+        class="inspector-empty"
+        role="alert"
+      >
         The kernel couldn't answer: {{ protocolVersionError }}
       </p>
     </template>
 
     <template v-else-if="missing">
-      <h2 id="canvas-inspector-title" class="inspector-title">
+      <h2
+        id="canvas-inspector-title"
+        class="inspector-title"
+      >
         Participant not loaded
       </h2>
       <p class="inspector-empty">
@@ -456,7 +544,12 @@
     </template>
 
     <template v-else>
-      <h2 id="canvas-inspector-title" class="inspector-title">Inspector</h2>
+      <h2
+        id="canvas-inspector-title"
+        class="inspector-title"
+      >
+        Inspector
+      </h2>
       <p class="inspector-empty">
         Select a participant or an observation to see its details here.
       </p>

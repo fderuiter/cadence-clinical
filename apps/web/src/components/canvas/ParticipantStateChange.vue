@@ -4,15 +4,33 @@
     class="state-change"
     aria-labelledby="inspector-state-change-title"
   >
-    <h3 id="inspector-state-change-title">Change state</h3>
-    <p v-if="!changes.targets.length" id="state-change-final" class="note">
+    <h3 id="inspector-state-change-title">
+      Change state
+    </h3>
+    <p
+      v-if="!changes.targets.length"
+      id="state-change-final"
+      class="note"
+    >
       {{ finalNote }}
     </p>
     <template v-else>
       <label for="state-change-target">New state</label>
-      <select id="state-change-target" v-model="target">
-        <option value="" disabled>Choose a state</option>
-        <option v-for="code in changes.targets" :key="code" :value="code">
+      <select
+        id="state-change-target"
+        v-model="target"
+      >
+        <option
+          value=""
+          disabled
+        >
+          Choose a state
+        </option>
+        <option
+          v-for="code in changes.targets"
+          :key="code"
+          :value="code"
+        >
           {{ participantStateLabel(code) }}
         </option>
       </select>
@@ -36,7 +54,11 @@
             : "Move"
         }}
       </button>
-      <p v-if="target === 'ENROLLED'" id="state-change-enrol-note" class="note">
+      <p
+        v-if="target === 'ENROLLED'"
+        id="state-change-enrol-note"
+        class="note"
+      >
         Execution enrols a participant only at a site whose activation documents
         are complete.
       </p>

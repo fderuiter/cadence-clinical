@@ -12,7 +12,10 @@
 
       <div class="header-actions">
         <!-- Mode Tabs -->
-        <div class="mode-tabs" role="tablist">
+        <div
+          class="mode-tabs"
+          role="tablist"
+        >
           <button
             type="button"
             role="tab"
@@ -44,7 +47,7 @@
               max="100"
               step="5"
               class="form-control threshold-input"
-            />
+            >
             <span class="percentage-symbol">%</span>
           </div>
         </div>
@@ -52,7 +55,10 @@
     </div>
 
     <!-- ==================== AUTHORING MODE ==================== -->
-    <div v-if="activeMode === 'authoring'" class="authoring-view">
+    <div
+      v-if="activeMode === 'authoring'"
+      class="authoring-view"
+    >
       <div class="questions-list">
         <div
           v-if="econsentStore.quizQuestions.length === 0"
@@ -90,16 +96,14 @@
               placeholder="e.g. What is the main benefit of participating?"
               class="form-control"
               @input="updateTranslation(q)"
-            />
+            >
           </div>
 
           <!-- Choices/Options Builder -->
           <div class="options-builder">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label
-              >Answer Choices (Select the radio button for the correct
-              choice):</label
-            >
+            <label>Answer Choices (Select the radio button for the correct
+              choice):</label>
             <div
               v-for="(opt, optIndex) in q.options"
               :key="optIndex"
@@ -112,7 +116,7 @@
                 :checked="q.correctAnswerIndex === optIndex"
                 title="Mark as correct answer"
                 @change="q.correctAnswerIndex = optIndex"
-              />
+              >
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="q.options[optIndex]"
@@ -120,7 +124,7 @@
                 :placeholder="'Option ' + (optIndex + 1)"
                 class="form-control option-input"
                 @input="updateTranslation(q)"
-              />
+              >
               <button
                 type="button"
                 class="btn-remove-opt"
@@ -150,7 +154,7 @@
               placeholder="e.g. Hint: Refer to Section 2 of the consent document."
               class="form-control"
               @input="updateTranslation(q)"
-            />
+            >
           </div>
         </div>
       </div>
@@ -165,7 +169,10 @@
     </div>
 
     <!-- ==================== INTERACTIVE ASSESSMENT MODE ==================== -->
-    <div v-else class="interactive-view">
+    <div
+      v-else
+      class="interactive-view"
+    >
       <div class="assessment-instructions">
         <p>
           Answer the questions below to verify your comprehension of the
@@ -202,11 +209,17 @@
             }}/{{ evaluationResult.total }} correct). Required passing
             threshold: <strong>{{ econsentStore.passingThreshold }}%</strong>.
           </p>
-          <p v-if="evaluationResult.passed" class="result-message">
+          <p
+            v-if="evaluationResult.passed"
+            class="result-message"
+          >
             Congratulations! You have satisfied the comprehension requirements
             and may proceed to dual-credential signature capture.
           </p>
-          <p v-else class="result-message">
+          <p
+            v-else
+            class="result-message"
+          >
             Please review the highlighted hints below and retry the
             comprehension assessment.
           </p>
@@ -226,7 +239,10 @@
               <span class="q-text">{{ q.text }}</span>
             </legend>
 
-            <div class="assessment-options-list" role="radiogroup">
+            <div
+              class="assessment-options-list"
+              role="radiogroup"
+            >
               <label
                 v-for="(opt, optIndex) in q.options"
                 :key="optIndex"
@@ -249,24 +265,22 @@
                   :value="optIndex"
                   :checked="selectedAnswers[q.id] === optIndex"
                   @change="selectAnswer(q.id, optIndex)"
-                />
+                >
                 <span class="option-text">{{ opt }}</span>
                 <span
                   v-if="
                     assessmentSubmitted && optIndex === q.correctAnswerIndex
                   "
                   class="feedback-badge correct-badge"
-                  >✓ Correct</span
-                >
+                >✓ Correct</span>
                 <span
                   v-else-if="
                     assessmentSubmitted &&
-                    selectedAnswers[q.id] === optIndex &&
-                    optIndex !== q.correctAnswerIndex
+                      selectedAnswers[q.id] === optIndex &&
+                      optIndex !== q.correctAnswerIndex
                   "
                   class="feedback-badge incorrect-badge"
-                  >✕ Incorrect</span
-                >
+                >✕ Incorrect</span>
               </label>
             </div>
 
@@ -274,16 +288,14 @@
             <div
               v-if="
                 assessmentSubmitted &&
-                selectedAnswers[q.id] !== undefined &&
-                selectedAnswers[q.id] !== q.correctAnswerIndex &&
-                q.hint
+                  selectedAnswers[q.id] !== undefined &&
+                  selectedAnswers[q.id] !== q.correctAnswerIndex &&
+                  q.hint
               "
               class="instant-hint-box"
             >
               <span class="hint-icon">💡</span>
-              <span class="hint-text"
-                ><strong>Feedback Hint:</strong> {{ q.hint }}</span
-              >
+              <span class="hint-text"><strong>Feedback Hint:</strong> {{ q.hint }}</span>
             </div>
           </fieldset>
         </div>

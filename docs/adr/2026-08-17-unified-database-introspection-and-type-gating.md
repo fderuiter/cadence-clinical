@@ -33,9 +33,9 @@ This decision addresses requirements under Trace-8 and PRD-SYS-001.
 ### Option 1: On-demand Frontend Compilation with Live Database (Legacy)
 
 - **Overview:** Rely on developers to manually run introspection against a local running database during development and update typescript files when needed.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simple structure.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Lacks enforcement: developers frequently forget to commit updated TypeScript files, leading to runtime failures on staging.
   - ❌ Demands a running PG instance in CI.
 
@@ -45,11 +45,11 @@ This decision addresses requirements under Trace-8 and PRD-SYS-001.
   1. Extend the offline introspection generator (`scripts/introspect_pg_schema.py`) to parse, compile, and output a single consolidated `db_schemas.ts` representing CTMS, eISF, and core execution databases.
   2. Implement collision-resolution mappings (e.g., mapping duplicate structures to specific legacy variants).
   3. Introduce a robust CI integration test (`test_committed_typescript_schema_is_up_to_date`) in `tests/validation/test_offline_schema_drift.py` that compares the committed `db_schemas.ts` file against a freshly generated on-the-fly instance.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Zero manual tracking needed: CI automatically catches and blocks out-of-sync schemas.
   - ✅ High collision resilience through mapping tables.
   - ✅ Safe and fast run time, running instantly under standard unit/validation pytest.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires importing all service modules into the script context, which must be kept mock-friendly.
 
 ## 4. Decision Outcome

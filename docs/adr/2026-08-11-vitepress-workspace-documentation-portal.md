@@ -25,13 +25,13 @@ This decision implements requirements under Trace-8.
 
 ### Option 1: Separate Docsy/Hugo Portal
 
-- ***Pros:*** Standard documentation setup.
-- ***Cons:*** Introduces redundant runtime environments (Go, Hugo) and misses out on JS workspace integration.
+- _**Pros:**_ Standard documentation setup.
+- _**Cons:**_ Introduces redundant runtime environments (Go, Hugo) and misses out on JS workspace integration.
 
 ### Option 2: VitePress Workspace Documentation Portal
 
-- ***Pros:*** Highly performant, uses Vite under the hood, registers cleanly as a workspace dependency, has native client-side search, compiles directly to static assets, and integrates seamlessly with Vite's route structure.
-- ***Cons:*** Requires explicit configuration of VitePress base path and post-build directory structure.
+- _**Pros:**_ Highly performant, uses Vite under the hood, registers cleanly as a workspace dependency, has native client-side search, compiles directly to static assets, and integrates seamlessly with Vite's route structure.
+- _**Cons:**_ Requires explicit configuration of VitePress base path and post-build directory structure.
 
 ## 4. Decision Outcome
 

@@ -9,9 +9,7 @@
       <div class="header-main">
         <div class="badge-row">
           <span class="badge badge-gxp">21 CFR Part 11</span>
-          <span class="badge badge-standard"
-            >WebRTC DTLS-SRTP &amp; USP &lt;1079&gt;</span
-          >
+          <span class="badge badge-standard">WebRTC DTLS-SRTP &amp; USP &lt;1079&gt;</span>
           <span class="badge badge-stream">Decentralized Clinical Trials</span>
         </div>
         <h2 class="console-title">
@@ -54,7 +52,10 @@
     </header>
 
     <!-- Top KPI Metrics Banner -->
-    <section class="metrics-grid" aria-label="DCT Overview Metrics">
+    <section
+      class="metrics-grid"
+      aria-label="DCT Overview Metrics"
+    >
       <div class="metric-card">
         <div class="metric-icon-box bg-blue">
           <span class="metric-icon">📹</span>
@@ -64,9 +65,7 @@
           <span class="metric-value">{{
             metrics.total_telehealth_sessions
           }}</span>
-          <span class="metric-sub"
-            >{{ metrics.active_video_rooms }} rooms active</span
-          >
+          <span class="metric-sub">{{ metrics.active_video_rooms }} rooms active</span>
         </div>
       </div>
 
@@ -90,9 +89,7 @@
         <div class="metric-content">
           <span class="metric-label">DTP Courier Shipments</span>
           <span class="metric-value">{{ metrics.total_dtp_shipments }}</span>
-          <span class="metric-sub"
-            >{{ metrics.active_cold_chain_shipments }} in transit</span
-          >
+          <span class="metric-sub">{{ metrics.active_cold_chain_shipments }} in transit</span>
         </div>
       </div>
 
@@ -119,7 +116,11 @@
     </section>
 
     <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist" aria-label="DCT Console Modules">
+    <nav
+      class="nav-tabs"
+      role="tablist"
+      aria-label="DCT Console Modules"
+    >
       <button
         role="tab"
         :aria-selected="activeTab === 'telehealth'"
@@ -160,13 +161,19 @@
     <!-- Main Workspace Content -->
     <main class="console-body">
       <!-- Loading State -->
-      <div v-if="isLoading" class="loading-state">
+      <div
+        v-if="isLoading"
+        class="loading-state"
+      >
         <div class="spinner" />
         <p>Loading DCT clinical data &amp; telemetry...</p>
       </div>
 
       <!-- Tab 1: Telehealth Video Consultations -->
-      <section v-else-if="activeTab === 'telehealth'" class="tab-panel">
+      <section
+        v-else-if="activeTab === 'telehealth'"
+        class="tab-panel"
+      >
         <div class="panel-header">
           <div>
             <h3 class="panel-title">
@@ -188,7 +195,10 @@
         </div>
 
         <div class="table-container">
-          <table class="data-table" aria-label="Telehealth Sessions Table">
+          <table
+            class="data-table"
+            aria-label="Telehealth Sessions Table"
+          >
             <thead>
               <tr>
                 <th>Room ID</th>
@@ -202,7 +212,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="s in sessions" :key="s.id">
+              <tr
+                v-for="s in sessions"
+                :key="s.id"
+              >
                 <td>
                   <span class="mono-badge font-bold">{{ s.room_id }}</span>
                 </td>
@@ -212,17 +225,18 @@
                 <td>{{ s.title }}</td>
                 <td>{{ formatDateTime(s.scheduled_start_utc) }}</td>
                 <td>
-                  <span class="status-chip" :class="getStatusClass(s.status)">
+                  <span
+                    class="status-chip"
+                    :class="getStatusClass(s.status)"
+                  >
                     {{ s.status }}
                   </span>
                 </td>
                 <td>
-                  <span class="badge badge-participant"
-                    >{{
-                      s.participant_records ? s.participant_records.length : 0
-                    }}
-                    joined</span
-                  >
+                  <span class="badge badge-participant">{{
+                    s.participant_records ? s.participant_records.length : 0
+                  }}
+                    joined</span>
                 </td>
                 <td>
                   <span
@@ -234,7 +248,10 @@
                   >
                     🔒 Sealed (SHA-256)
                   </span>
-                  <span v-else class="text-muted text-sm">Not archived</span>
+                  <span
+                    v-else
+                    class="text-muted text-sm"
+                  >Not archived</span>
                 </td>
                 <td class="actions-cell">
                   <button
@@ -254,7 +271,10 @@
                 </td>
               </tr>
               <tr v-if="sessions.length === 0">
-                <td colspan="8" class="empty-cell">
+                <td
+                  colspan="8"
+                  class="empty-cell"
+                >
                   No telehealth video visits scheduled. Click 'Schedule Video
                   Visit' to create one.
                 </td>
@@ -264,7 +284,10 @@
         </div>
 
         <!-- Live Telehealth Room Simulator Drawer -->
-        <div v-if="activeRoomSession" class="room-simulation-box">
+        <div
+          v-if="activeRoomSession"
+          class="room-simulation-box"
+        >
           <div class="room-sim-header">
             <div>
               <span class="badge badge-gxp">LIVE WebRTC Session</span>
@@ -284,10 +307,8 @@
           <div class="video-grid">
             <div class="video-card remote-video">
               <div class="video-overlay-top">
-                <span class="video-label"
-                  >Remote Participant:
-                  {{ activeRoomSession.subject_id }} (Subject)</span
-                >
+                <span class="video-label">Remote Participant:
+                  {{ activeRoomSession.subject_id }} (Subject)</span>
                 <span class="badge badge-stream">DTLS-SRTP Encrypted</span>
               </div>
               <div class="video-placeholder">
@@ -302,19 +323,25 @@
 
             <div class="video-card local-video">
               <div class="video-overlay-top">
-                <span class="video-label"
-                  >Local Stream: Dr. Investigator (Host)</span
-                >
+                <span class="video-label">Local Stream: Dr. Investigator (Host)</span>
               </div>
               <div class="video-placeholder small-avatar">
                 <span class="avatar-small">🩺</span>
                 <p>Local Camera Active</p>
               </div>
               <div class="video-controls">
-                <button type="button" class="btn-icon" title="Toggle Mic">
+                <button
+                  type="button"
+                  class="btn-icon"
+                  title="Toggle Mic"
+                >
                   🎤
                 </button>
-                <button type="button" class="btn-icon" title="Toggle Cam">
+                <button
+                  type="button"
+                  class="btn-icon"
+                  title="Toggle Cam"
+                >
                   📹
                 </button>
                 <button
@@ -349,7 +376,10 @@
       </section>
 
       <!-- Tab 2: Synchronized eConsent Co-Viewing & Tiered Pediatric Assent -->
-      <section v-else-if="activeTab === 'assent'" class="tab-panel">
+      <section
+        v-else-if="activeTab === 'assent'"
+        class="tab-panel"
+      >
         <div class="panel-header">
           <div>
             <h3 class="panel-title">
@@ -375,12 +405,8 @@
           <div class="coview-card">
             <div class="coview-header">
               <div>
-                <span class="badge badge-standard"
-                  >Synchronized eConsent Co-Viewer</span
-                >
-                <span class="text-sm font-bold"
-                  >Protocol Amendment v3.2 Informed Consent Form</span
-                >
+                <span class="badge badge-standard">Synchronized eConsent Co-Viewer</span>
+                <span class="text-sm font-bold">Protocol Amendment v3.2 Informed Consent Form</span>
               </div>
               <div class="coview-actions">
                 <button
@@ -397,9 +423,7 @@
                 >
                   ▼ Scroll Down
                 </button>
-                <span class="badge badge-participant"
-                  >Sync {{ currentScrollPercent }}%</span
-                >
+                <span class="badge badge-participant">Sync {{ currentScrollPercent }}%</span>
               </div>
             </div>
 
@@ -464,7 +488,10 @@
               Executed Pediatric Assent &amp; LAR Bundles
             </h4>
             <div class="table-container">
-              <table class="data-table" aria-label="Pediatric Assents Table">
+              <table
+                class="data-table"
+                aria-label="Pediatric Assents Table"
+              >
                 <thead>
                   <tr>
                     <th>Assent ID</th>
@@ -477,7 +504,10 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="a in assents" :key="a.assent_id">
+                  <tr
+                    v-for="a in assents"
+                    :key="a.assent_id"
+                  >
                     <td>
                       <span class="mono-badge">{{ a.assent_id }}</span>
                     </td>
@@ -485,7 +515,10 @@
                       <span class="badge badge-subj">{{ a.subject_id }}</span>
                     </td>
                     <td>
-                      <span class="badge" :class="getTierClass(a.tier)">
+                      <span
+                        class="badge"
+                        :class="getTierClass(a.tier)"
+                      >
                         {{ a.tier }} (Age {{ a.minor_age }})
                       </span>
                     </td>
@@ -528,7 +561,10 @@
                     </td>
                   </tr>
                   <tr v-if="assents.length === 0">
-                    <td colspan="7" class="empty-cell">
+                    <td
+                      colspan="7"
+                      class="empty-cell"
+                    >
                       No pediatric assent bundles recorded. Click 'Execute
                       Pediatric Assent' to create one.
                     </td>
@@ -541,7 +577,10 @@
       </section>
 
       <!-- Tab 3: Direct-to-Patient (DTP) Logistics & Cold Chain -->
-      <section v-else-if="activeTab === 'dtp'" class="tab-panel">
+      <section
+        v-else-if="activeTab === 'dtp'"
+        class="tab-panel"
+      >
         <div class="panel-header">
           <div>
             <h3 class="panel-title">
@@ -563,7 +602,10 @@
         </div>
 
         <div class="table-container">
-          <table class="data-table" aria-label="DTP Shipments Table">
+          <table
+            class="data-table"
+            aria-label="DTP Shipments Table"
+          >
             <thead>
               <tr>
                 <th>Tracking #</th>
@@ -578,7 +620,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="sh in shipments" :key="sh.shipment_id">
+              <tr
+                v-for="sh in shipments"
+                :key="sh.shipment_id"
+              >
                 <td>
                   <span class="mono-badge font-bold">{{
                     sh.tracking_number
@@ -594,7 +639,9 @@
                     sh.temperature_zone
                   }}</span>
                 </td>
-                <td class="font-bold">{{ sh.current_temp_celsius }}°C</td>
+                <td class="font-bold">
+                  {{ sh.current_temp_celsius }}°C
+                </td>
                 <td>{{ sh.mkt_celsius }}°C</td>
                 <td>
                   <span
@@ -642,7 +689,10 @@
                 </td>
               </tr>
               <tr v-if="shipments.length === 0">
-                <td colspan="9" class="empty-cell">
+                <td
+                  colspan="9"
+                  class="empty-cell"
+                >
                   No DTP courier shipments dispatched yet. Click 'Dispatch DTP
                   Courier Kit' to create one.
                 </td>
@@ -653,7 +703,10 @@
       </section>
 
       <!-- Tab 4: In-Home Healthcare Nurse Visits & Offline eCRF Sync -->
-      <section v-else-if="activeTab === 'home_health'" class="tab-panel">
+      <section
+        v-else-if="activeTab === 'home_health'"
+        class="tab-panel"
+      >
         <div class="panel-header">
           <div>
             <h3 class="panel-title">
@@ -675,7 +728,10 @@
         </div>
 
         <div class="table-container">
-          <table class="data-table" aria-label="In-Home Visits Table">
+          <table
+            class="data-table"
+            aria-label="In-Home Visits Table"
+          >
             <thead>
               <tr>
                 <th>Visit ID</th>
@@ -690,7 +746,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="v in visits" :key="v.visit_id">
+              <tr
+                v-for="v in visits"
+                :key="v.visit_id"
+              >
                 <td>
                   <span class="mono-badge">{{ v.visit_id }}</span>
                 </td>
@@ -702,9 +761,7 @@
                   <div>
                     <strong>{{ v.nurse_name }}</strong>
                   </div>
-                  <span class="text-sm text-muted"
-                    >License: {{ v.nurse_license_number }}</span
-                  >
+                  <span class="text-sm text-muted">License: {{ v.nurse_license_number }}</span>
                 </td>
                 <td>{{ formatDateTime(v.scheduled_start_utc) }}</td>
                 <td>
@@ -755,7 +812,10 @@
                 </td>
               </tr>
               <tr v-if="visits.length === 0">
-                <td colspan="9" class="empty-cell">
+                <td
+                  colspan="9"
+                  class="empty-cell"
+                >
                   No in-home visiting nurse appointments scheduled. Click
                   'Schedule In-Home Visit' to add one.
                 </td>
@@ -785,7 +845,10 @@
           </button>
         </div>
         <div class="modal-body">
-          <form class="form-grid" @submit.prevent="submitScheduleSession">
+          <form
+            class="form-grid"
+            @submit.prevent="submitScheduleSession"
+          >
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Study ID *</label>
@@ -793,7 +856,7 @@
                 v-model="newSessionForm.study_id"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -802,7 +865,7 @@
                 v-model="newSessionForm.subject_id"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="form-group span-2">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -811,7 +874,7 @@
                 v-model="newSessionForm.title"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="form-group span-2">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -822,7 +885,7 @@
                 type="datetime-local"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="modal-footer span-2">
               <button
@@ -832,7 +895,10 @@
               >
                 Cancel
               </button>
-              <button type="submit" class="btn btn-primary">
+              <button
+                type="submit"
+                class="btn btn-primary"
+              >
                 Schedule Session
               </button>
             </div>
@@ -860,7 +926,10 @@
           </button>
         </div>
         <div class="modal-body">
-          <form class="form-grid" @submit.prevent="submitDispatchDtp">
+          <form
+            class="form-grid"
+            @submit.prevent="submitDispatchDtp"
+          >
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label">Study ID *</label>
@@ -868,7 +937,7 @@
                 v-model="newShipmentForm.study_id"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -877,7 +946,7 @@
                 v-model="newShipmentForm.site_id"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -886,7 +955,7 @@
                 v-model="newShipmentForm.subject_pseudonym_id"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -895,7 +964,7 @@
                 v-model="newShipmentForm.destination_address_pseudonym"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -904,7 +973,7 @@
                 v-model="newShipmentForm.courier_name"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -915,13 +984,21 @@
                 class="form-control"
                 required
               >
-                <option value="REFRIGERATED">REFRIGERATED (2°C to 8°C)</option>
+                <option value="REFRIGERATED">
+                  REFRIGERATED (2°C to 8°C)
+                </option>
                 <option value="CONTROLLED_AMBIENT">
                   CONTROLLED_AMBIENT (15°C to 25°C)
                 </option>
-                <option value="FROZEN">FROZEN (-25°C to -15°C)</option>
-                <option value="ULTRA_COLD">ULTRA_COLD (-80°C to -60°C)</option>
-                <option value="CRYOGENIC">CRYOGENIC (-196°C to -150°C)</option>
+                <option value="FROZEN">
+                  FROZEN (-25°C to -15°C)
+                </option>
+                <option value="ULTRA_COLD">
+                  ULTRA_COLD (-80°C to -60°C)
+                </option>
+                <option value="CRYOGENIC">
+                  CRYOGENIC (-196°C to -150°C)
+                </option>
               </select>
             </div>
             <div class="form-group span-2">
@@ -932,7 +1009,7 @@
                 class="form-control"
                 required
                 placeholder="KIT-LOT99-001, KIT-LOT99-002"
-              />
+              >
             </div>
             <div class="form-group span-2">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -941,7 +1018,7 @@
                 v-model="newShipmentForm.tamper_seal_id"
                 class="form-control"
                 required
-              />
+              >
             </div>
             <div class="modal-footer span-2">
               <button
@@ -951,7 +1028,10 @@
               >
                 Cancel
               </button>
-              <button type="submit" class="btn btn-accent">
+              <button
+                type="submit"
+                class="btn btn-accent"
+              >
                 Dispatch Shipment
               </button>
             </div>

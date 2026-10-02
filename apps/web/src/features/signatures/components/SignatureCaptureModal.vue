@@ -29,19 +29,37 @@
             placeholder="e.g. John Doe"
             :disabled="busy"
             class="form-control"
-          />
+          >
         </div>
 
         <div class="form-group">
           <label for="sig-role">Signer Role</label>
-          <select id="sig-role" v-model="signerRoleVal" :disabled="busy">
-            <option value="Subject">Subject / Participant</option>
-            <option value="PI">PI / Principal Investigator</option>
-            <option value="Site CRC">Site CRC</option>
-            <option value="Investigator">Investigator</option>
-            <option value="Sponsor Designer">Sponsor Designer</option>
-            <option value="Data Manager">Data Manager</option>
-            <option value="Auditor">Auditor</option>
+          <select
+            id="sig-role"
+            v-model="signerRoleVal"
+            :disabled="busy"
+          >
+            <option value="Subject">
+              Subject / Participant
+            </option>
+            <option value="PI">
+              PI / Principal Investigator
+            </option>
+            <option value="Site CRC">
+              Site CRC
+            </option>
+            <option value="Investigator">
+              Investigator
+            </option>
+            <option value="Sponsor Designer">
+              Sponsor Designer
+            </option>
+            <option value="Data Manager">
+              Data Manager
+            </option>
+            <option value="Auditor">
+              Auditor
+            </option>
           </select>
         </div>
 
@@ -53,7 +71,8 @@
           v-model:totp="totp"
           data-pragma="pragma: allowlist secret"
           :disabled="busy"
-          @keyup-enter="confirm"/><!-- pragma: allowlist secret -->
+          @keyup-enter="confirm"
+        /><!-- pragma: allowlist secret -->
 
         <div class="form-group last-group">
           <label for="sig-reason">Meaning of Signing / Signing Reason</label>
@@ -63,14 +82,27 @@
             data-testid="sig-meaning-select"
             :disabled="busy"
           >
-            <option value="" disabled>-- Select Meaning / Reason --</option>
-            <option v-for="r in reasons" :key="r" :value="r">
+            <option
+              value=""
+              disabled
+            >
+              -- Select Meaning / Reason --
+            </option>
+            <option
+              v-for="r in reasons"
+              :key="r"
+              :value="r"
+            >
               {{ r }}
             </option>
           </select>
         </div>
 
-        <div v-if="error" id="sig-error-msg" class="error-msg">
+        <div
+          v-if="error"
+          id="sig-error-msg"
+          class="error-msg"
+        >
           {{ error }}
         </div>
       </div>

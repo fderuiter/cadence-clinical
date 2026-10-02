@@ -40,8 +40,8 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 
 ## Configuration and secrets at rest
 
-| Setting | Purpose |
-| --- | --- |
+| Setting                | Purpose                                                                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FIELD_ENCRYPTION_KEY` | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts payment processor references. The service refuses to start without a valid key; there is no default. |
 
 Participant wallets (`payments_participant_wallets`, #4770) never store card numbers, raw card tokens or bank

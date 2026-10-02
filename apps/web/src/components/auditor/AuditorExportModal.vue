@@ -36,7 +36,9 @@
           margin-bottom: 20px;
         "
       >
-        <h3 style="margin: 0; font-size: 16px">Export Inspection Log</h3>
+        <h3 style="margin: 0; font-size: 16px">
+          Export Inspection Log
+        </h3>
         <button
           class="btn-close"
           style="
@@ -52,7 +54,10 @@
         </button>
       </header>
 
-      <div class="form-group" style="margin-bottom: 16px">
+      <div
+        class="form-group"
+        style="margin-bottom: 16px"
+      >
         <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
         <label
           style="
@@ -61,8 +66,7 @@
             margin-bottom: 6px;
             display: block;
           "
-          >Export Format</label
-        >
+        >Export Format</label>
         <div style="display: flex; gap: 16px; margin-top: 8px">
           <label
             class="touch-target-interactive"
@@ -74,7 +78,11 @@
               font-size: 13px;
             "
           >
-            <input v-model="exportFormat" type="radio" value="CSV" /> CSV
+            <input
+              v-model="exportFormat"
+              type="radio"
+              value="CSV"
+            > CSV
           </label>
           <label
             class="touch-target-interactive"
@@ -86,7 +94,11 @@
               font-size: 13px;
             "
           >
-            <input v-model="exportFormat" type="radio" value="PDF" /> PDF
+            <input
+              v-model="exportFormat"
+              type="radio"
+              value="PDF"
+            > PDF
           </label>
           <label
             class="touch-target-interactive"
@@ -98,12 +110,19 @@
               font-size: 13px;
             "
           >
-            <input v-model="exportFormat" type="radio" value="JSON" /> JSON
+            <input
+              v-model="exportFormat"
+              type="radio"
+              value="JSON"
+            > JSON
           </label>
         </div>
       </div>
 
-      <div class="form-group" style="margin-bottom: 16px">
+      <div
+        class="form-group"
+        style="margin-bottom: 16px"
+      >
         <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
         <label
           style="
@@ -112,9 +131,11 @@
             margin-bottom: 6px;
             display: block;
           "
-          >Date Range Bounds</label
+        >Date Range Bounds</label>
+        <div
+          class="grid-2-responsive"
+          style="margin-top: 8px"
         >
-        <div class="grid-2-responsive" style="margin-top: 8px">
           <div>
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
@@ -124,8 +145,7 @@
                 display: block;
                 margin-bottom: 4px;
               "
-              >Start Date</label
-            >
+            >Start Date</label>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="startDate"
@@ -140,7 +160,7 @@
                 color: var(--text);
                 font-size: 13px;
               "
-            />
+            >
           </div>
           <div>
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -151,8 +171,7 @@
                 display: block;
                 margin-bottom: 4px;
               "
-              >End Date</label
-            >
+            >End Date</label>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
               v-model="endDate"
@@ -167,7 +186,7 @@
                 color: var(--text);
                 font-size: 13px;
               "
-            />
+            >
           </div>
         </div>
       </div>

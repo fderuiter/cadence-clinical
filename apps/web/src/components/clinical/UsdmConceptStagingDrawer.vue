@@ -1,5 +1,9 @@
 <template>
-  <div v-if="isOpen" class="drawer-backdrop" @click.self="closeDrawer">
+  <div
+    v-if="isOpen"
+    class="drawer-backdrop"
+    @click.self="closeDrawer"
+  >
     <div
       class="usdm-concept-staging-drawer card"
       role="dialog"
@@ -9,7 +13,10 @@
       <!-- Drawer Header -->
       <div class="drawer-header">
         <div class="header-text">
-          <h3 id="drawer-title" class="drawer-title">
+          <h3
+            id="drawer-title"
+            class="drawer-title"
+          >
             📥 USDM Biomedical Concept Staging &amp; Mapping Drawer
           </h3>
           <p class="drawer-subtitle">
@@ -52,7 +59,10 @@
           bindings or explicit design finding exemptions prior to protocol
           version commit.
         </div>
-        <div v-else class="alert alert-success-inline">
+        <div
+          v-else
+          class="alert alert-success-inline"
+        >
           ✅ All unmapped USDM concept tokens resolved. Ready to hydrate
           protocol design lineage nodes.
         </div>
@@ -65,7 +75,7 @@
           type="text"
           class="form-control input-search"
           placeholder="🔍 Filter unmapped concept tokens by code, name, or node ID..."
-        />
+        >
       </div>
 
       <!-- Unmapped Tokens List -->
@@ -86,10 +96,16 @@
               <span class="token-name">{{ item.name || item.code }}</span>
             </div>
             <div class="token-status">
-              <span v-if="isItemResolved(item)" class="badge badge-success">
+              <span
+                v-if="isItemResolved(item)"
+                class="badge badge-success"
+              >
                 {{ getResolutionBadge(item) }}
               </span>
-              <span v-else class="badge badge-danger">UNMAPPED</span>
+              <span
+                v-else
+                class="badge badge-danger"
+              >UNMAPPED</span>
             </div>
           </div>
 
@@ -123,8 +139,14 @@
             </div>
 
             <!-- Tab 1: Concept Binding -->
-            <div v-if="item.action === 'bind'" class="action-panel">
-              <label class="form-label" :for="`concept-select-${idx}`">
+            <div
+              v-if="item.action === 'bind'"
+              class="action-panel"
+            >
+              <label
+                class="form-label"
+                :for="`concept-select-${idx}`"
+              >
                 Select NCIt / CDISC Concept from Concept Registry:
               </label>
               <div class="binding-input-row">
@@ -134,7 +156,9 @@
                   class="form-control select-concept"
                   @change="onConceptSelect(item)"
                 >
-                  <option value="">-- Choose Candidate Match --</option>
+                  <option value="">
+                    -- Choose Candidate Match --
+                  </option>
                   <option
                     v-for="cand in candidateConcepts"
                     :key="cand.code"
@@ -155,31 +179,36 @@
             </div>
 
             <!-- Tab 2: Tenant Alias Creation -->
-            <div v-if="item.action === 'alias'" class="action-panel">
+            <div
+              v-if="item.action === 'alias'"
+              class="action-panel"
+            >
               <div class="alias-grid">
                 <div class="form-group">
-                  <label class="form-label" :for="`alias-code-${idx}`"
-                    >Tenant Alias Code *</label
-                  >
+                  <label
+                    class="form-label"
+                    :for="`alias-code-${idx}`"
+                  >Tenant Alias Code *</label>
                   <input
                     :id="`alias-code-${idx}`"
                     v-model="item.aliasCode"
                     type="text"
                     class="form-control input-alias-code"
                     placeholder="e.g. ALIAS-SPONSOR-01"
-                  />
+                  >
                 </div>
                 <div class="form-group">
-                  <label class="form-label" :for="`alias-name-${idx}`"
-                    >Custom Concept Name *</label
-                  >
+                  <label
+                    class="form-label"
+                    :for="`alias-name-${idx}`"
+                  >Custom Concept Name *</label>
                   <input
                     :id="`alias-name-${idx}`"
                     v-model="item.aliasName"
                     type="text"
                     class="form-control input-alias-name"
                     placeholder="Custom Variable Name"
-                  />
+                  >
                 </div>
               </div>
               <button
@@ -193,8 +222,14 @@
             </div>
 
             <!-- Tab 3: Design Finding Exemption -->
-            <div v-if="item.action === 'finding'" class="action-panel">
-              <label class="form-label" :for="`finding-note-${idx}`">
+            <div
+              v-if="item.action === 'finding'"
+              class="action-panel"
+            >
+              <label
+                class="form-label"
+                :for="`finding-note-${idx}`"
+              >
                 GxP Design Finding Exemption Justification *:
               </label>
               <textarea
@@ -209,7 +244,7 @@
                 class="btn btn-sm btn-warning btn-accept-finding"
                 :disabled="
                   !item.findingJustification ||
-                  !item.findingJustification.trim()
+                    !item.findingJustification.trim()
                 "
                 @click="acceptFinding(item)"
               >
@@ -227,28 +262,30 @@
         </h5>
         <div class="audit-grid">
           <div class="form-group">
-            <label class="form-label" for="signer-username"
-              >Signer Username / ID *</label
-            >
+            <label
+              class="form-label"
+              for="signer-username"
+            >Signer Username / ID *</label>
             <input
               id="signer-username"
               v-model="signerUsername"
               type="text"
               class="form-control input-signer-id"
               placeholder="e.g. designer_lead_01"
-            />
+            >
           </div>
           <div class="form-group">
-            <label class="form-label" for="change-reason"
-              >GxP Change Justification Reason *</label
-            >
+            <label
+              class="form-label"
+              for="change-reason"
+            >GxP Change Justification Reason *</label>
             <input
               id="change-reason"
               v-model="changeReason"
               type="text"
               class="form-control input-change-reason"
               placeholder="e.g. USDM Concept Staging & Mapping Resolution for Protocol Import"
-            />
+            >
           </div>
         </div>
       </div>
