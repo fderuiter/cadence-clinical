@@ -14,6 +14,8 @@ K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsRecruitmentRecord.SiteId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsRecruitmentRecord.StudyId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsRegulatoryForm.SiteId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsRegulatoryForm.StudyId
+K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate.SiteId
+K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate.StudyId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.SiteId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.StudyId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.DoaDelegationRecord.SiteId
@@ -129,11 +131,18 @@ K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsRecruitmentRecord.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsRecruitmentRecord.StudyId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsRegulatoryForm.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsRegulatoryForm.StudyId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate.SiteId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate.StudyId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.StudyId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.DoaDelegationRecord.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.SiteVisitLetterModel.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.SiteVisitLetterModel.StudyId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.BatchCertifyRequestDto.StudyId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.BatchCertifyResponseDto.StudyId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.CertifiedSiteItemDto.SiteId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteGreenlightGateResponseDto.SiteId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteGreenlightGateResponseDto.StudyId
 K-XS-1|Cadence.Apps.Designer|Cadence.Apps.Designer.CompileProtocolRequest.StudyId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentAuditLog
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentClause.StudyId
