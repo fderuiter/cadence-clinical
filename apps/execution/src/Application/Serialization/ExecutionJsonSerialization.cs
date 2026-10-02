@@ -32,7 +32,6 @@ public static class ExecutionJsonSerialization
         options.Converters.Add(new StudyCodeJsonConverter());
         options.Converters.Add(new SiteCodeJsonConverter());
 
-        options.Converters.Add(new ObservationIdJsonConverter());
         options.Converters.Add(new DomainCodeJsonConverter());
         options.Converters.Add(new TestCodeJsonConverter());
         options.Converters.Add(new FormSubmissionIdJsonConverter());

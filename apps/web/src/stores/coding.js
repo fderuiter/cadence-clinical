@@ -44,7 +44,11 @@ export const useCodingStore = defineStore("coding", {
 
   getters: {
     getItemConfidenceScore: () => (item) => {
-      if (item.suggestions && Array.isArray(item.suggestions) && item.suggestions.length > 0) {
+      if (
+        item.suggestions &&
+        Array.isArray(item.suggestions) &&
+        item.suggestions.length > 0
+      ) {
         const topSug = item.suggestions[0];
         const score = topSug.score ?? topSug.confidence ?? item.score ?? 0.85;
         return score > 1 ? score / 100 : score;
@@ -61,7 +65,10 @@ export const useCodingStore = defineStore("coding", {
     },
 
     filteredAssignments(state) {
-      const activeThreshold = state.confidenceThreshold !== "ALL" ? state.confidenceThreshold : state.filters.confidenceThreshold;
+      const activeThreshold =
+        state.confidenceThreshold !== "ALL"
+          ? state.confidenceThreshold
+          : state.filters.confidenceThreshold;
 
       return state.assignments.filter((item) => {
         // Filter by Status
@@ -89,16 +96,13 @@ export const useCodingStore = defineStore("coding", {
         if (activeThreshold && activeThreshold !== "ALL") {
           const score = this.getItemConfidenceScore(item);
 
-          if (activeThreshold === "HIGH" && score < 0.90) {
+          if (activeThreshold === "HIGH" && score < 0.9) {
             return false;
           }
-          if (
-            activeThreshold === "MEDIUM" &&
-            (score < 0.70 || score >= 0.90)
-          ) {
+          if (activeThreshold === "MEDIUM" && (score < 0.7 || score >= 0.9)) {
             return false;
           }
-          if (activeThreshold === "LOW" && score >= 0.70) {
+          if (activeThreshold === "LOW" && score >= 0.7) {
             return false;
           }
         }
@@ -117,11 +121,15 @@ export const useCodingStore = defineStore("coding", {
           const matchObs = (item.observation_id || "")
             .toLowerCase()
             .includes(q);
-          const matchSug = item.suggestions && item.suggestions.some(
-            (s) =>
-              (s.term || s.pt_name || s.preferred_term || s.drug_name || "").toLowerCase().includes(q) ||
-              (s.code || s.drug_code || "").toLowerCase().includes(q)
-          );
+          const matchSug =
+            item.suggestions &&
+            item.suggestions.some(
+              (s) =>
+                (s.term || s.pt_name || s.preferred_term || s.drug_name || "")
+                  .toLowerCase()
+                  .includes(q) ||
+                (s.code || s.drug_code || "").toLowerCase().includes(q)
+            );
           if (
             !matchVerbatim &&
             !matchCode &&
@@ -138,7 +146,7 @@ export const useCodingStore = defineStore("coding", {
       });
     },
 
-    verbatimClusters(state) {
+    verbatimClusters() {
       const clusterMap = new Map();
 
       for (const item of this.filteredAssignments) {
@@ -154,17 +162,27 @@ export const useCodingStore = defineStore("coding", {
 
         if (item.suggestions && item.suggestions.length > 0) {
           const sug = item.suggestions[0];
-          topCode = topCode || sug.code || sug.drug_code || sug.pt_code || "10019211";
-          topTerm = topTerm || sug.pt_name || sug.preferred_term || sug.term || sug.drug_name || "Headache";
+          topCode =
+            topCode || sug.code || sug.drug_code || sug.pt_code || "10019211";
+          topTerm =
+            topTerm ||
+            sug.pt_name ||
+            sug.preferred_term ||
+            sug.term ||
+            sug.drug_name ||
+            "Headache";
           topLlt = sug.llt_name || sug.llt || sug.lowest_level_term || "";
-          if (typeof sug.score === "number") score = sug.score > 1 ? sug.score / 100 : sug.score;
+          if (typeof sug.score === "number")
+            score = sug.score > 1 ? sug.score / 100 : sug.score;
           else if (typeof sug.confidence === "number") score = sug.confidence;
         } else if (typeof item.score === "number") {
           score = item.score > 1 ? item.score / 100 : item.score;
         }
 
         const clusterId = `cluster-${dictType.toLowerCase()}-${normVerbatim.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
-        const sugKey = topCode ? `${topCode}:${topTerm.toLowerCase()}` : "uncoded";
+        const sugKey = topCode
+          ? `${topCode}:${topTerm.toLowerCase()}`
+          : "uncoded";
         const clusterKey = `${dictType}:${normVerbatim.toLowerCase()}:${sugKey}`;
 
         if (!clusterMap.has(clusterKey)) {
@@ -178,14 +196,15 @@ export const useCodingStore = defineStore("coding", {
             dictionary_version: item.dictionary_version || "26.0",
             top_suggested_code: topCode || "10019211",
             top_suggested_term: topTerm || "Headache",
-            top_suggestion: (topCode || topTerm)
-              ? {
-                  code: topCode || "10019211",
-                  term: topTerm || "Headache",
-                  llt_name: topLlt,
-                  score: score,
-                }
-              : null,
+            top_suggestion:
+              topCode || topTerm
+                ? {
+                    code: topCode || "10019211",
+                    term: topTerm || "Headache",
+                    llt_name: topLlt,
+                    score: score,
+                  }
+                : null,
             score: score,
             max_score: score,
             model_id: item.model_id || "cadence-meddra-ai-v2.1",
@@ -225,10 +244,18 @@ export const useCodingStore = defineStore("coding", {
         cluster.instance_count = total;
 
         const blocked_items = cluster.instances.filter(
-          (inst) => inst.status === "QUERY_PENDING" || inst.has_query || inst.is_locked || inst.is_blocked
+          (inst) =>
+            inst.status === "QUERY_PENDING" ||
+            inst.has_query ||
+            inst.is_locked ||
+            inst.is_blocked
         );
         const unblocked_items = cluster.instances.filter(
-          (inst) => inst.status !== "QUERY_PENDING" && !inst.has_query && !inst.is_locked && !inst.is_blocked
+          (inst) =>
+            inst.status !== "QUERY_PENDING" &&
+            !inst.has_query &&
+            !inst.is_locked &&
+            !inst.is_blocked
         );
 
         cluster.blocked_items = blocked_items;
@@ -239,17 +266,23 @@ export const useCodingStore = defineStore("coding", {
         cluster.unblocked_count = unblocked_items.length;
 
         let confidence_category = "LOW";
-        if (cluster.score >= 0.90) {
+        if (cluster.score >= 0.9) {
           confidence_category = "HIGH";
-        } else if (cluster.score >= 0.70) {
+        } else if (cluster.score >= 0.7) {
           confidence_category = "MEDIUM";
         }
         cluster.confidence_category = confidence_category;
 
-        if (cluster.status_counts.QUERY_PENDING > 0 && cluster.status_counts.QUERY_PENDING === total) {
+        if (
+          cluster.status_counts.QUERY_PENDING > 0 &&
+          cluster.status_counts.QUERY_PENDING === total
+        ) {
           cluster.cluster_status = "QUERY_PENDING";
           cluster.status = "QUERY_PENDING";
-        } else if ((cluster.status_counts.CODED + cluster.status_counts.AUTO_CODED) === total) {
+        } else if (
+          cluster.status_counts.CODED + cluster.status_counts.AUTO_CODED ===
+          total
+        ) {
           cluster.cluster_status = "CODED";
           cluster.status = "CODED";
         } else if (cluster.status_counts.SUGGESTED === total) {
@@ -268,7 +301,10 @@ export const useCodingStore = defineStore("coding", {
     },
 
     filteredClusters(state) {
-      const activeThreshold = state.confidenceThreshold !== "ALL" ? state.confidenceThreshold : state.filters.confidenceThreshold;
+      const activeThreshold =
+        state.confidenceThreshold !== "ALL"
+          ? state.confidenceThreshold
+          : state.filters.confidenceThreshold;
 
       return this.verbatimClusters.filter((cluster) => {
         // Filter by Status
@@ -276,7 +312,8 @@ export const useCodingStore = defineStore("coding", {
           if (state.filters.status === "CODED_ALL") {
             if (
               cluster.cluster_status !== "CODED" &&
-              cluster.status_counts.CODED + cluster.status_counts.AUTO_CODED === 0
+              cluster.status_counts.CODED + cluster.status_counts.AUTO_CODED ===
+                0
             ) {
               return false;
             }
@@ -290,7 +327,10 @@ export const useCodingStore = defineStore("coding", {
 
         // Filter by Dictionary Type
         if (state.filters.dictionaryType !== "ALL") {
-          if (cluster.dictionary_type !== state.filters.dictionaryType.toUpperCase()) {
+          if (
+            cluster.dictionary_type !==
+            state.filters.dictionaryType.toUpperCase()
+          ) {
             return false;
           }
         }
@@ -299,8 +339,12 @@ export const useCodingStore = defineStore("coding", {
         if (state.filters.search && state.filters.search.trim()) {
           const q = state.filters.search.toLowerCase().trim();
           const matchVerbatim = cluster.verbatim_text.toLowerCase().includes(q);
-          const matchCode = cluster.top_suggested_code.toLowerCase().includes(q);
-          const matchTerm = cluster.top_suggested_term.toLowerCase().includes(q);
+          const matchCode = cluster.top_suggested_code
+            .toLowerCase()
+            .includes(q);
+          const matchTerm = cluster.top_suggested_term
+            .toLowerCase()
+            .includes(q);
           if (!matchVerbatim && !matchCode && !matchTerm) {
             return false;
           }
@@ -310,10 +354,7 @@ export const useCodingStore = defineStore("coding", {
         if (activeThreshold && activeThreshold !== "ALL") {
           const score = cluster.score;
           if (activeThreshold === "HIGH" && score < 0.9) return false;
-          if (
-            activeThreshold === "MEDIUM" &&
-            (score < 0.7 || score >= 0.9)
-          )
+          if (activeThreshold === "MEDIUM" && (score < 0.7 || score >= 0.9))
             return false;
           if (activeThreshold === "LOW" && score >= 0.7) return false;
         }
@@ -331,7 +372,10 @@ export const useCodingStore = defineStore("coding", {
     },
 
     totalClusterInstancesCount() {
-      return this.verbatimClusters.reduce((sum, c) => sum + c.instance_count, 0);
+      return this.verbatimClusters.reduce(
+        (sum, c) => sum + c.instance_count,
+        0
+      );
     },
 
     totalInstanceCount() {
@@ -370,7 +414,8 @@ export const useCodingStore = defineStore("coding", {
     },
 
     queryPendingCount(state) {
-      return state.assignments.filter((a) => a.status === "QUERY_PENDING").length;
+      return state.assignments.filter((a) => a.status === "QUERY_PENDING")
+        .length;
     },
 
     totalCount(state) {
@@ -379,12 +424,14 @@ export const useCodingStore = defineStore("coding", {
 
     selectedCount(state) {
       return state.viewMode === "CLUSTERS"
-        ? (state.selectedClusterIds.length || state.selectedClusterKeys.length)
+        ? state.selectedClusterIds.length || state.selectedClusterKeys.length
         : state.selectedAssignmentIds.length;
     },
 
     selectedClusterCount(state) {
-      return state.selectedClusterIds.length || state.selectedClusterKeys.length;
+      return (
+        state.selectedClusterIds.length || state.selectedClusterKeys.length
+      );
     },
   },
 
@@ -433,7 +480,7 @@ export const useCodingStore = defineStore("coding", {
         } else {
           this.assignments = [];
         }
-      } catch (err) {
+      } catch {
         this.error = err.message || "Failed to load medical coding queue";
       } finally {
         this.isLoading = false;
@@ -516,7 +563,7 @@ export const useCodingStore = defineStore("coding", {
 
         this.searchStatus = res.status || "UNCODABLE";
         this.dictionarySearchResults = res.matches || [];
-      } catch (err) {
+      } catch {
         this.error = err.message || "Dictionary lookup failed";
         this.dictionarySearchResults = [];
         this.searchStatus = "ERROR";
@@ -574,14 +621,15 @@ export const useCodingStore = defineStore("coding", {
             action: action,
             reason_for_change: payload.reason_for_change,
             reviewer_identity: reviewerId || "Data Manager",
-            ai_model_identity: this.assignments[idx].model_id || "cadence-meddra-ai-v2.1",
+            ai_model_identity:
+              this.assignments[idx].model_id || "cadence-meddra-ai-v2.1",
             timestamp: new Date().toISOString(),
             compliance_standard: "21 CFR Part 11 Dual-Attribution",
           });
         }
 
         return updated;
-      } catch (err) {
+      } catch {
         // Fallback local update if mocked
         const idx = this.assignments.findIndex((a) => a.id === assignmentId);
         if (idx !== -1) {
@@ -596,7 +644,8 @@ export const useCodingStore = defineStore("coding", {
             coded_code: code || item.coded_code,
             coded_term: term || item.coded_term,
             action: action,
-            reason_for_change: reasonForChange || `Applied coding decision: ${action}`,
+            reason_for_change:
+              reasonForChange || `Applied coding decision: ${action}`,
             reviewer_identity: reviewerId || "Data Manager",
             ai_model_identity: item.model_id || "cadence-meddra-ai-v2.1",
             timestamp: new Date().toISOString(),
@@ -653,8 +702,21 @@ export const useCodingStore = defineStore("coding", {
           const item = this.assignments.find((a) => a.id === id);
           if (item) {
             item.status = action === "ACCEPT" ? "AUTO_CODED" : "CODED";
-            const targetCode = code || item.suggestions?.[0]?.code || item.suggestions?.[0]?.drug_code || item.suggestions?.[0]?.pt_code || item.suggestions?.[0]?.llt_code || item.coded_code || "10019211";
-            const targetTerm = term || item.suggestions?.[0]?.term || item.suggestions?.[0]?.pt_name || item.suggestions?.[0]?.preferred_term || item.suggestions?.[0]?.drug_name || item.suggestions?.[0]?.llt_name || item.coded_term || "Headache";
+            const targetCode = 
+                  code || 
+                  item.suggestions?.[0]?.code ||
+                  item.suggestions?.[0]?.drug_code ||
+                  item.suggestions?.[0]?.pt_code ||
+                  item.suggestions?.[0]?.llt_code ||
+                  item.coded_code || "10019211";
+            const targetTerm = 
+                  term ||
+                  item.suggestions?.[0]?.term ||
+                  item.suggestions?.[0]?.pt_name ||
+                  item.suggestions?.[0]?.preferred_term ||
+                  item.suggestions?.[0]?.drug_name ||
+                  item.suggestions?.[0]?.llt_name ||
+                  item.coded_term || "Headache";
             item.coded_code = targetCode;
             item.coded_term = targetTerm;
 
@@ -677,7 +739,7 @@ export const useCodingStore = defineStore("coding", {
         // Clear selections
         this.selectedAssignmentIds = [];
         return res;
-      } catch (err) {
+      } catch {
         this.error = err.message || "Batch assignment failed";
         throw err;
       } finally {
@@ -687,7 +749,8 @@ export const useCodingStore = defineStore("coding", {
 
     // Batch Approve Verbatim Cluster(s)
     async batchApproveClusters(options = {}) {
-      const { clusterId, clusterIds, clusterKeys, reason, reviewerId } = options;
+      const { clusterId, clusterIds, clusterKeys, reason, reviewerId } =
+        options;
       const targetIds = clusterIds || (clusterId ? [clusterId] : null);
       const targetKeys = clusterKeys || null;
 
@@ -716,7 +779,12 @@ export const useCodingStore = defineStore("coding", {
           let clusterUnblockedCount = 0;
           for (const inst of cluster.instances) {
             // Guardrail check: exclude active query or locked items
-            if (inst.status === "QUERY_PENDING" || inst.has_query || inst.is_locked || inst.is_blocked) {
+            if (
+              inst.status === "QUERY_PENDING" ||
+              inst.has_query ||
+              inst.is_locked ||
+              inst.is_blocked
+            ) {
               blockedInstances++;
             } else {
               unblockedAssignmentIds.push(inst.id);
@@ -761,7 +829,8 @@ export const useCodingStore = defineStore("coding", {
         await this.batchAssign({
           assignmentIds: unblockedAssignmentIds,
           action: "ACCEPT",
-          reason: reason || "Batch approve verbatim cluster high-confidence match",
+          reason:
+            reason || "Batch approve verbatim cluster high-confidence match",
           reviewerId: reviewerId || "Data Manager",
         });
 
@@ -779,7 +848,7 @@ export const useCodingStore = defineStore("coding", {
 
         this.selectedClusterIds = [];
         this.selectedClusterKeys = [];
-      } catch (err) {
+      } catch {
         this.error = err.message || "Failed to batch approve verbatim clusters";
         throw err;
       } finally {
@@ -831,7 +900,12 @@ export const useCodingStore = defineStore("coding", {
           totalInstances += cluster.instance_count;
           let clusterUnblockedCount = 0;
           for (const inst of cluster.instances) {
-            if (inst.status === "QUERY_PENDING" || inst.has_query || inst.is_locked || inst.is_blocked) {
+            if (
+              inst.status === "QUERY_PENDING" ||
+              inst.has_query ||
+              inst.is_locked ||
+              inst.is_blocked
+            ) {
               blockedInstances++;
             } else {
               unblockedAssignmentIds.push(inst.id);
@@ -895,7 +969,7 @@ export const useCodingStore = defineStore("coding", {
 
         this.selectedClusterIds = [];
         this.selectedClusterKeys = [];
-      } catch (err) {
+      } catch {
         this.error = err.message || "Failed to batch code verbatim clusters";
         throw err;
       } finally {
@@ -927,7 +1001,7 @@ export const useCodingStore = defineStore("coding", {
         }
 
         return res;
-      } catch (err) {
+      } catch {
         const item = this.assignments.find((a) => a.id === assignmentId);
         if (item) {
           item.status = "QUERY_PENDING";
@@ -957,7 +1031,7 @@ export const useCodingStore = defineStore("coding", {
 
         this.impactAnalysis.results = res.metrics || res;
         return res;
-      } catch (err) {
+      } catch {
         this.impactAnalysis.error =
           err.message || "Failed to run up-versioning impact analysis";
         throw err;
@@ -1011,7 +1085,10 @@ export const useCodingStore = defineStore("coding", {
         this.selectedClusterKeys = [];
         return;
       }
-      if (this.selectedClusterIds.length === idsOrKeys.length || this.selectedClusterKeys.length === idsOrKeys.length) {
+      if (
+        this.selectedClusterIds.length === idsOrKeys.length ||
+        this.selectedClusterKeys.length === idsOrKeys.length
+      ) {
         this.selectedClusterIds = [];
         this.selectedClusterKeys = [];
       } else {

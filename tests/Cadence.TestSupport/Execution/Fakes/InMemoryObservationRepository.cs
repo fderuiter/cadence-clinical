@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Kernel;
 
 namespace Cadence.TestSupport.Execution.Fakes;
 

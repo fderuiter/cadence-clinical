@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  isGatewayApiCall,
   validateGatewayRequest,
   generateGatewaySignature,
   isWhitelistedSubjectRoute,
@@ -211,5 +212,28 @@ describe("Mock Gateway Simulator Unit Tests", () => {
       expect(isWhitelistedSubjectRoute("designer/studies", "GET")).toBe(false);
       expect(isWhitelistedSubjectRoute("", "GET")).toBe(false);
     });
+  });
+});
+
+describe("isGatewayApiCall", () => {
+  it("intercepts the gateway port and service paths", () => {
+    expect(isGatewayApiCall(new URL("http://localhost:8000/anything"))).toBe(
+      true
+    );
+    expect(
+      isGatewayApiCall(new URL("http://localhost:5173/api/v1/studies"))
+    ).toBe(true);
+    expect(
+      isGatewayApiCall(new URL("http://localhost:5173/execution/forms"))
+    ).toBe(true);
+  });
+
+  it("passes through assets and app routes", () => {
+    expect(isGatewayApiCall(new URL("http://localhost:5173/src/main.js"))).toBe(
+      false
+    );
+    expect(isGatewayApiCall(new URL("http://localhost:5173/studies/1"))).toBe(
+      false
+    );
   });
 });

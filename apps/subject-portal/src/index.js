@@ -691,14 +691,7 @@ async function startQuestionnaire(assignmentId) {
       field.type === "range";
 
     if (isSlider) {
-      formHtml += createClinicalSlider(
-        id,
-        field.label,
-        "",
-        null,
-        12,
-        field
-      );
+      formHtml += createClinicalSlider(id, field.label, "", null, 12, field);
     } else if (field.type === "choice_single") {
       formHtml += createClinicalRadioGrid(
         id,
@@ -2005,30 +1998,7 @@ async function renderSyncQueueList() {
       if (item.status === "QUEUED") {
         badgeClass = "pending";
         statusLabel = "QUEUED";
-        if (
-          state.syncRetryInfo &&
-          state.syncRetryInfo.isRetrying &&
-          (state.syncRetryInfo.sequenceNumber === null ||
-            state.syncRetryInfo.sequenceNumber === undefined ||
-            state.syncRetryInfo.sequenceNumber === item.sequence_number)
-        ) {
-          if (
-            state.syncRetryInfo.nextRetryDelay > 0 &&
-            state.syncRetryInfo.nextRetryTimestamp
-          ) {
-            const delaySec = Math.max(
-              1,
-              Math.ceil(
-                (state.syncRetryInfo.nextRetryTimestamp - Date.now()) / 1000
-              )
-            );
-            statusDesc = `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries} (Next retry in ${delaySec}s)`;
-          } else {
-            statusDesc = `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries}`;
-          }
-        } else {
-          statusDesc = "Waiting for network connection...";
-        }
+        statusDesc = describeQueuedSync(state.syncRetryInfo, item);
       } else if (
         item.status === "CREATED" ||
         item.status === "UPDATED_CLIENT_WINS"
@@ -2267,7 +2237,11 @@ async function syncOfflineQueue(isManual = false, options = {}) {
       }
 
       // Automatic Stipend Wallet Disbursement upon successful ePRO sync
-      if (validSubmissions.length > 0 && options.autoDisburse === true) {
+      if (
+        validSubmissions.length > 0 &&
+        typeof options.autoDisburse === "boolean" &&
+        options.autoDisburse
+      ) {
         for (const sub of validSubmissions) {
           try {
             const targetSubjectId = sub.subject_id || state.session.userId;
@@ -2291,7 +2265,10 @@ async function syncOfflineQueue(isManual = false, options = {}) {
 
             if (disburseRes && typeof disburseRes.new_balance === "number") {
               state.walletBalance = disburseRes.new_balance;
-            } else if (disburseRes && typeof disburseRes.NewBalance === "number") {
+            } else if (
+              disburseRes &&
+              typeof disburseRes.NewBalance === "number"
+            ) {
               state.walletBalance = disburseRes.NewBalance;
             }
 
@@ -2300,13 +2277,17 @@ async function syncOfflineQueue(isManual = false, options = {}) {
               {
                 subject_id: targetSubjectId,
                 sequence_number: sub.sequence_number,
-                stipend_amount: disburseRes?.amount ?? disburseRes?.Amount ?? 25.0,
+                stipend_amount:
+                  disburseRes?.amount ?? disburseRes?.Amount ?? 25.0,
                 new_balance: state.walletBalance,
               },
               "Instant ePRO survey auto-disbursement"
             );
           } catch (disburseErr) {
-            console.warn("Auto-disbursement payment call warning:", disburseErr);
+            console.warn(
+              "Auto-disbursement payment call warning:",
+              disburseErr
+            );
           }
         }
       }
@@ -3463,4 +3444,29 @@ export function unmountApp() {
     }
     mountedApp = null;
   }
+}
+
+/**
+ * Describes a queued submission's sync state: the retry attempt (and the wait
+ * before the next one) when the sync worker is retrying this item, otherwise
+ * that it is waiting for the network.
+ */
+export function describeQueuedSync(syncRetryInfo, item) {
+  if (
+    syncRetryInfo &&
+    syncRetryInfo.isRetrying &&
+    (syncRetryInfo.sequenceNumber === null ||
+      syncRetryInfo.sequenceNumber === undefined ||
+      syncRetryInfo.sequenceNumber === item.sequence_number)
+  ) {
+    if (syncRetryInfo.nextRetryDelay > 0 && syncRetryInfo.nextRetryTimestamp) {
+      const delaySec = Math.max(
+        1,
+        Math.ceil((syncRetryInfo.nextRetryTimestamp - Date.now()) / 1000)
+      );
+      return `Retrying... Attempt ${syncRetryInfo.attempt} of ${syncRetryInfo.maxRetries} (Next retry in ${delaySec}s)`;
+    }
+    return `Retrying... Attempt ${syncRetryInfo.attempt} of ${syncRetryInfo.maxRetries}`;
+  }
+  return "Waiting for network connection...";
 }

@@ -58,3 +58,7 @@ Prior to this change, client-side MSW mock handlers lacked centralized browser-c
 
 - **Affected Repositories / Services:** `packages/ui`
 - **Verification Plan:** `pnpm --filter @cadence/ui test` and `uv run python scripts/validate_adrs.py`.
+
+## 7. Amendment (2026-10-02): which requests the mock gateway intercepts
+
+The web app and the subject portal each kept their own copy of the list of gateway paths their MSW handlers intercept, which the duplication gate flagged (#5164). That check now lives with the rest of the gateway simulation, as `isGatewayApiCall(url)` in `packages/ui/mockGateway.js`: a request is intercepted when it targets port 8000 or starts with one of the service prefixes. Both apps' handlers call it, and `packages/ui/tests/mockGateway.test.js` covers it.

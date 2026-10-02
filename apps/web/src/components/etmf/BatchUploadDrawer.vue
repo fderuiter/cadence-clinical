@@ -1,5 +1,6 @@
 <!-- apps/web/src/components/etmf/BatchUploadDrawer.vue -->
 <template>
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
   <div v-if="isOpen" class="batch-drawer-overlay" @click.self="handleClose">
     <div class="batch-drawer">
       <div class="drawer-header">
@@ -48,10 +49,16 @@
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="handleDrop"
+          role="button"
+          tabindex="0"
+          aria-label="Choose files to upload"
           @click="triggerFileInput"
+          @keydown.enter.prevent="triggerFileInput"
+          @keydown.space.prevent="triggerFileInput"
         >
           <input
             ref="fileInputRef"
+            aria-label="Files to upload"
             type="file"
             multiple
             accept=".pdf,.doc,.docx,.txt"
@@ -266,6 +273,7 @@
     </div>
 
     <!-- Inspection Modal Drawer for Individual Batch Item -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="inspectedItem"
       class="item-inspection-overlay"
@@ -452,7 +460,6 @@ function addFilesToQueue(files) {
     currentBatchSize += file.size;
 
     // Run quick local prediction preview
-    const report = etmfStore.classifyIntelligence ? null : null;
 
     queue.value.push({
       file,
