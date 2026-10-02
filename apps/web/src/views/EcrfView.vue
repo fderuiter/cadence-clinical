@@ -1,10 +1,9 @@
 <template>
   <div id="section-ecrf" class="dashboard-section active">
     <div class="section-header">
-      <h2>eCRF Runtime Renderer</h2>
+      <h2>{{ $t('ecrf.title') }}</h2>
       <p>
-        Live, dynamic data entry form populated from CDASH metadata with
-        client-side field validation and real-time query management.
+        {{ $t('ecrf.description') }}
       </p>
     </div>
 
@@ -24,7 +23,7 @@
       "
     >
       <div style="font-size: 0.9rem">
-        Active Role:
+        {{ $t('ecrf.activeRole') }}
         <span
           class="badge"
           style="
@@ -63,13 +62,13 @@
           "
           @click="showEhrReconciliationDrawer = true"
         >
-          🏥 EHR Source Reconciliation
+          🏥 {{ $t('ecrf.ehrReconciliation') }}
         </button>
 
         <label
           for="role-tester-select"
           style="font-size: 0.8rem; font-weight: bold"
-          >Demo Role Toggle:</label
+          >{{ $t('ecrf.demoRoleToggle') }}</label
         >
         <select
           id="role-tester-select"
@@ -80,8 +79,8 @@
             border: 1px solid var(--border);
           "
         >
-          <option value="site_investigator">Site Coordinator / CRC</option>
-          <option value="cra">CRA Monitor (SDV Enabled)</option>
+          <option value="site_investigator">{{ $t('ecrf.roleCrc') }}</option>
+          <option value="cra">{{ $t('ecrf.roleCra') }}</option>
         </select>
       </div>
     </div>
@@ -191,11 +190,9 @@
           style="display: flex; flex-direction: column; gap: 16px"
         >
           <div>
-            <div class="card-title">CDASH Metadata Specification</div>
+            <div class="card-title">{{ $t('ecrf.cdashTitle') }}</div>
             <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
-              The fields on the left are dynamically rendered using structural
-              CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
-              <code>VS.VSSBP</code>).
+              {{ $t('ecrf.cdashDesc') }}
             </p>
           </div>
 
@@ -215,7 +212,7 @@
                 color: var(--primary);
               "
             >
-              Real-time Field Validation Rules:
+              {{ $t('ecrf.validationRulesTitle') }}
             </h3>
             <ul
               style="
@@ -228,19 +225,16 @@
               "
             >
               <li>
-                <strong>Birth Date:</strong> Must match YYYY-MM-DD pattern.
+                {{ $t('ecrf.birthDateRule') }}
               </li>
               <li>
-                <strong>Systolic BP:</strong> Numeric value between 50 and 250
-                mmHg.
+                {{ $t('ecrf.systolicBpRule') }}
               </li>
               <li>
-                <strong>Diastolic BP:</strong> Numeric value between 30 and 150
-                mmHg.
+                {{ $t('ecrf.diastolicBpRule') }}
               </li>
               <li>
-                <strong>Pulse Rate:</strong> Numeric value between 30 and 200
-                bpm.
+                {{ $t('ecrf.pulseRateRule') }}
               </li>
             </ul>
           </div>
@@ -261,12 +255,10 @@
                 color: var(--primary);
               "
             >
-              Query Management Actions:
+              {{ $t('ecrf.queryManagementTitle') }}
             </h3>
             <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
-              Click the 💬 / ⚠️ flags next to input fields to raise, answer,
-              close, or reopen discrepancy notes. All query transitions are
-              audit-logged in real-time.
+              {{ $t('ecrf.queryManagementDesc') }}
             </p>
           </div>
         </div>
