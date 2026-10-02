@@ -7,6 +7,7 @@ import App from "./App.vue";
 import { installAuthorizedFetch } from "./api/authorization.js";
 import { initKeycloakAuth } from "./auth/bootstrap.js";
 import { vKeyboardClick } from "./directives/keyboardClick";
+import { i18n } from "./i18n/index.js";
 import { router } from "./router";
 import { useAuthStore } from "./stores/auth";
 import { stateTrackingPlugin } from "./stores/plugins.js";
@@ -14,6 +15,7 @@ import { isDemoBuild } from "./utils/demoMode";
 
 const app = createApp(App);
 app.directive("keyboard-click", vKeyboardClick);
+app.use(i18n);
 
 const pinia = createPinia();
 pinia.use(stateTrackingPlugin);
