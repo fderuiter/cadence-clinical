@@ -81,6 +81,8 @@ function readStorageForPersona(personaKey) {
   let currentStep = 1;
   let isActive = true;
   let disabled = false;
+  let bypassOverview = false;
+  let completedTasks = [];
   let events = [];
 
   if (typeof window !== "undefined" && window.localStorage) {
@@ -90,6 +92,8 @@ function readStorageForPersona(personaKey) {
       const stepKey = `onboarding_${personaKey}_current_step`;
       const activeKey = `onboarding_${personaKey}_is_active`;
       const disabledKey = `onboarding_${personaKey}_disabled`;
+      const bypassKey = `onboarding_${personaKey}_bypass_overview`;
+      const tasksKey = `onboarding_${personaKey}_completed_tasks`;
       const eventsKey = `onboarding_${personaKey}_events`;
 
       const storedStep = window.localStorage.getItem(stepKey);
@@ -103,6 +107,9 @@ function readStorageForPersona(personaKey) {
       const storedDisabled = window.localStorage.getItem(disabledKey);
       disabled = storedDisabled === "true";
 
+      const storedBypass = window.localStorage.getItem(bypassKey);
+      bypassOverview = storedBypass === "true";
+
       const storedIsActive = window.localStorage.getItem(activeKey);
       if (disabled) {
         isActive = false;
@@ -110,6 +117,21 @@ function readStorageForPersona(personaKey) {
         isActive = storedIsActive === "true";
       } else {
         isActive = true;
+      }
+
+      const storedTasks = window.localStorage.getItem(tasksKey);
+      if (storedTasks !== null) {
+        try {
+          const parsedTasks = JSON.parse(storedTasks);
+          if (Array.isArray(parsedTasks)) {
+            completedTasks = parsedTasks;
+          }
+        } catch (e) {
+          console.error(
+            "Failed to parse onboarding tasks from localStorage",
+            e
+          );
+        }
       }
 
       const storedEvents = window.localStorage.getItem(eventsKey);
@@ -131,7 +153,14 @@ function readStorageForPersona(personaKey) {
     }
   }
 
-  return { currentStep, isActive, disabled, events };
+  return {
+    currentStep,
+    isActive,
+    disabled,
+    bypassOverview,
+    completedTasks,
+    events,
+  };
 }
 
 export const useOnboardingStore = defineStore("onboarding", {
@@ -144,6 +173,8 @@ export const useOnboardingStore = defineStore("onboarding", {
       currentStep: initial.currentStep,
       isActive: initial.isActive,
       disabled: initial.disabled,
+      bypassOverview: initial.bypassOverview,
+      completedTasks: initial.completedTasks,
       events: initial.events,
     };
   },
@@ -155,6 +186,8 @@ export const useOnboardingStore = defineStore("onboarding", {
       this.currentStep = loaded.currentStep;
       this.isActive = loaded.isActive;
       this.disabled = loaded.disabled;
+      this.bypassOverview = loaded.bypassOverview;
+      this.completedTasks = loaded.completedTasks;
       this.events = loaded.events;
     },
     persist() {
@@ -174,6 +207,14 @@ export const useOnboardingStore = defineStore("onboarding", {
             this.disabled
           );
           window.localStorage.setItem(
+            `onboarding_${targetPersona}_bypass_overview`,
+            this.bypassOverview
+          );
+          window.localStorage.setItem(
+            `onboarding_${targetPersona}_completed_tasks`,
+            JSON.stringify(this.completedTasks)
+          );
+          window.localStorage.setItem(
             `onboarding_${targetPersona}_events`,
             JSON.stringify(this.events)
           );
@@ -184,6 +225,35 @@ export const useOnboardingStore = defineStore("onboarding", {
           );
         }
       }
+    },
+    setBypassOverview(value) {
+      this.bypassOverview = Boolean(value);
+      this.addEvent(
+        "preference_changed",
+        "Bypass Overview Landing Preference",
+        this.bypassOverview ? "Enabled bypass" : "Disabled bypass"
+      );
+      this.persist();
+    },
+    toggleTaskCompletion(taskId) {
+      if (!taskId) return;
+      const index = this.completedTasks.indexOf(taskId);
+      if (index > -1) {
+        this.completedTasks.splice(index, 1);
+        this.addEvent(
+          "task_uncompleted",
+          taskId,
+          `Marked task ${taskId} as incomplete`
+        );
+      } else {
+        this.completedTasks.push(taskId);
+        this.addEvent(
+          "task_completed",
+          taskId,
+          `Marked task ${taskId} as completed`
+        );
+      }
+      this.persist();
     },
     addEvent(type, target, details = "") {
       const event = {
@@ -256,9 +326,25 @@ export const useOnboardingStore = defineStore("onboarding", {
       this.persist();
     },
     resetTour() {
+      if (typeof window !== "undefined" && window.localStorage) {
+        try {
+          const keysToRemove = [];
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const key = window.localStorage.key(i);
+            if (key && key.startsWith("onboarding_")) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+        } catch (e) {
+          console.error("Failed to purge onboarding storage keys", e);
+        }
+      }
+
       this.currentStep = 1;
       this.isActive = true;
       this.disabled = false;
+      this.events = [];
       this.addEvent(
         "tour_reset",
         "Onboarding Tour Reset",

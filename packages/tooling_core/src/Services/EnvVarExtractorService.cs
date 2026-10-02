@@ -73,6 +73,8 @@ public static partial class EnvVarExtractorService
             return 1;
         }
 
+        bool hasError = false;
+
         if (checkOnly)
         {
             string exampleContent = File.ReadAllText(envExamplePath);
@@ -80,11 +82,12 @@ public static partial class EnvVarExtractorService
 
             if (missingInExample.Count > 0)
             {
-                Console.WriteLine($"[WARNING] {missingInExample.Count} environment variables found in code are missing from .env.example:");
+                Console.WriteLine($"[ERROR] {missingInExample.Count} environment variables found in code are missing from .env.example:");
                 foreach (var missing in missingInExample)
                 {
                     Console.WriteLine($"  - {missing}");
                 }
+                hasError = true;
             }
 
             var exampleVars = ExtractVarsFromEnvFile(envExamplePath);
@@ -95,10 +98,22 @@ public static partial class EnvVarExtractorService
                 {
                     if (!docText.Contains(v))
                     {
-                        Console.WriteLine($"[WARNING] Environment variable '{v}' in .env.example missing from docs/ENVIRONMENT_VARIABLES.md");
+                        Console.WriteLine($"[ERROR] Environment variable '{v}' in .env.example missing from docs/ENVIRONMENT_VARIABLES.md");
+                        hasError = true;
                     }
                 }
             }
+            else
+            {
+                Console.WriteLine($"[ERROR] Documentation file not found at {envDocPath}");
+                hasError = true;
+            }
+        }
+
+        if (hasError)
+        {
+            Console.WriteLine("❌ Environment variable verification failed with discrepancies.");
+            return 1;
         }
 
         Console.WriteLine("✔ Environment variable extraction and verification complete.");

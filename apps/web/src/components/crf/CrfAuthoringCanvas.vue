@@ -112,8 +112,8 @@
             v-for="warning in layoutWarnings"
             :key="warning.fieldId"
             style="
-              border: 1px solid #fef08a;
-              background-color: #fefce8;
+              border: 1px solid var(--semantic-color-warning-border);
+              background-color: var(--semantic-color-warning-bg-light);
               border-radius: 6px;
               padding: 8px;
               cursor: pointer;
@@ -126,7 +126,7 @@
                 justify-content: space-between;
                 font-weight: 700;
                 font-size: 0.75rem;
-                color: #854d0e;
+                color: var(--semantic-color-warning-text);
                 margin-bottom: 2px;
               "
             >
@@ -135,7 +135,7 @@
                 style="
                   font-family: monospace;
                   font-size: 0.7rem;
-                  background: #fef3c7;
+                  background: var(--semantic-color-warning-bg-badge);
                   padding: 1px 4px;
                   border-radius: 4px;
                 "
@@ -145,7 +145,7 @@
             <p
               style="
                 font-size: 0.72rem;
-                color: #a16207;
+                color: var(--semantic-color-warning-action-border);
                 margin: 0;
                 line-height: 1.3;
               "
@@ -155,7 +155,7 @@
             <div
               style="
                 font-size: 0.68rem;
-                color: #94a3b8;
+                color: var(--semantic-color-text-subtle);
                 margin-top: 4px;
                 font-style: italic;
               "
@@ -167,17 +167,22 @@
       </div>
 
       <!-- 2. Properties Inspector Section -->
-      <div style="border-top: 1px solid #e2e8f0; padding-top: 16px">
+      <div
+        style="
+          border-top: 1px solid var(--semantic-color-border);
+          padding-top: 16px;
+        "
+      >
         <div class="inspector-section-title">Properties Inspector</div>
 
         <div
           v-if="!selectedField"
           style="
             font-size: 0.78rem;
-            color: #64748b;
+            color: var(--semantic-color-text-secondary);
             font-style: italic;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background-color: var(--semantic-color-surface-muted);
+            border: 1px solid var(--semantic-color-border);
             border-radius: 8px;
             padding: 12px;
             text-align: center;
@@ -193,8 +198,8 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background-color: var(--semantic-color-surface-muted);
+            border: 1px solid var(--semantic-color-border);
             border-radius: 8px;
             padding: 14px;
           "
@@ -204,22 +209,26 @@
               display: flex;
               justify-content: space-between;
               align-items: center;
-              border-bottom: 1px solid #e2e8f0;
+              border-bottom: 1px solid var(--semantic-color-border);
               padding-bottom: 8px;
             "
           >
             <span
-              style="font-weight: 700; font-size: 0.85rem; color: #1e293b"
+              style="
+                font-weight: 700;
+                font-size: 0.85rem;
+                color: var(--semantic-color-text-dark);
+              "
               >{{ selectedField.label }}</span
             >
             <span
               style="
                 font-family: monospace;
                 font-size: 0.72rem;
-                background-color: #e2e8f0;
+                background-color: var(--semantic-color-border);
                 padding: 2px 6px;
                 border-radius: 4px;
-                color: #475569;
+                color: var(--semantic-color-text-muted);
               "
               >{{ selectedField.id }}</span
             >
@@ -288,7 +297,7 @@
                 width: 16px;
                 height: 16px;
                 cursor: pointer;
-                accent-color: #026597;
+                accent-color: var(--semantic-color-interactive-brand);
               "
             />
             <label
@@ -296,7 +305,7 @@
               style="
                 font-size: 0.8rem;
                 font-weight: 600;
-                color: #334155;
+                color: var(--semantic-color-text-body);
                 cursor: pointer;
               "
             >
@@ -307,7 +316,12 @@
       </div>
 
       <!-- 3. Form Compiler Section -->
-      <div style="border-top: 1px solid #e2e8f0; padding-top: 16px">
+      <div
+        style="
+          border-top: 1px solid var(--semantic-color-border);
+          padding-top: 16px;
+        "
+      >
         <div class="inspector-section-title">Form Compiler</div>
 
         <div
@@ -315,8 +329,8 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background-color: var(--semantic-color-surface-muted);
+            border: 1px solid var(--semantic-color-border);
             border-radius: 8px;
             padding: 14px;
           "
@@ -330,7 +344,7 @@
                 width: 16px;
                 height: 16px;
                 cursor: pointer;
-                accent-color: #026597;
+                accent-color: var(--semantic-color-interactive-brand);
               "
             />
             <label
@@ -338,7 +352,7 @@
               style="
                 font-size: 0.8rem;
                 font-weight: 600;
-                color: #334155;
+                color: var(--semantic-color-text-body);
                 cursor: pointer;
               "
             >
@@ -355,7 +369,7 @@
               style="
                 font-size: 0.72rem;
                 font-weight: 700;
-                color: #64748b;
+                color: var(--semantic-color-text-secondary);
                 text-transform: uppercase;
                 display: block;
                 margin-bottom: 4px;
@@ -371,7 +385,7 @@
                 width: 100%;
                 font-size: 0.8rem;
                 padding: 8px;
-                border: 1px solid #cbd5e1;
+                border: 1px solid var(--semantic-color-border-muted);
                 border-radius: 6px;
                 box-sizing: border-box;
               "
@@ -388,9 +402,9 @@
             v-if="compilationStatus === 'blocked'"
             class="compilation-error"
             style="
-              color: #b91c1c;
-              background-color: #fee2e2;
-              border: 1px solid #fca5a5;
+              color: var(--semantic-color-error);
+              background-color: var(--semantic-color-error-bg);
+              border: 1px solid var(--semantic-color-error-border);
               padding: 10px;
               border-radius: 6px;
               font-size: 0.78rem;
@@ -404,9 +418,9 @@
             v-if="compilationStatus === 'success'"
             class="compilation-success"
             style="
-              color: #15803d;
-              background-color: #dcfce7;
-              border: 1px solid #86efac;
+              color: var(--semantic-color-success);
+              background-color: var(--semantic-color-success-bg);
+              border: 1px solid var(--semantic-color-success-border);
               padding: 10px;
               border-radius: 6px;
               font-size: 0.78rem;

@@ -26,6 +26,7 @@ export const AVAILABLE_SCREENS = new Set([
 /** Routes that are not screens over the API (sign-in, error pages). */
 const ALWAYS_AVAILABLE = new Set([
   "landing",
+  "overview",
   "login",
   "forbidden",
   "unavailable",
@@ -36,6 +37,7 @@ export const UNAVAILABLE_SCREENS_ISSUE =
   "https://github.com/fderuiter/cadence-clinical/issues/4829";
 
 const SCREEN_TITLES = {
+  overview: "Overview & Orientation Hub",
   mdr: "Protocol & SoA Designer",
   digitization: "Protocol AI Digitizer",
   "icf-builder": "eConsent & ICF Builder",
