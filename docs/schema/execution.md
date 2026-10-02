@@ -12,6 +12,11 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.OutboxState`](#edcoutboxstate) | `OutboxState` | 6 |
 | [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 17 |
 | [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 26 |
+| [`edc.cgt_bedside_verifications`](#edccgt_bedside_verifications) | `CgtBedsideVerification` | 23 |
+| [`edc.cgt_chains_of_custody`](#edccgt_chains_of_custody) | `CgtChainOfCustody` | 20 |
+| [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 32 |
+| [`edc.cgt_milestone_events`](#edccgt_milestone_events) | `CgtMilestoneEvent` | 25 |
+| [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 20 |
 | [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 38 |
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
@@ -182,6 +187,186 @@ Indexes:
 
 - `ix_cec_dossiers_study_id`: (`StudyId`)
 - `ix_cec_dossiers_workflow_status`: (`WorkflowStatus`)
+
+## edc.cgt_bedside_verifications
+
+Entity: `CgtBedsideVerification`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `BatchId` | `character varying(255)` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `Din` | `character varying(255)` | no |  |  |
+| `IsMatch` | `boolean` | no |  |  |
+| `Notes` | `text` | yes |  |  |
+| `PatientWristbandId` | `character varying(255)` | no |  |  |
+| `PrimarySignatureToken` | `character varying(512)` | no |  |  |
+| `PrimaryVerifierId` | `character varying(255)` | no |  |  |
+| `PrimaryVerifierName` | `character varying(255)` | yes |  |  |
+| `PrimaryVerifierRole` | `character varying(128)` | yes |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `SecondarySignatureToken` | `character varying(512)` | no |  |  |
+| `SecondaryVerifierId` | `character varying(255)` | no |  |  |
+| `SecondaryVerifierName` | `character varying(255)` | yes |  |  |
+| `SecondaryVerifierRole` | `character varying(128)` | yes |  |  |
+| `SiteId` | `character varying(255)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+| `UnlockToken` | `character varying(512)` | no |  |  |
+| `VerifiedAt` | `timestamp with time zone` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_cgt_bedside_verifications_StudyId_SubjectId`: (`StudyId`, `SubjectId`)
+- `IX_cgt_bedside_verifications_UnlockToken`: (`UnlockToken`)
+
+## edc.cgt_chains_of_custody
+
+Entity: `CgtChainOfCustody`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `BatchId` | `character varying(255)` | yes |  |  |
+| `CollectionSiteId` | `character varying(255)` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `CryoTempExcursionCount` | `integer` | no |  |  |
+| `CurrentStage` | `character varying(64)` | no |  |  |
+| `Din` | `character varying(255)` | no |  |  |
+| `HarvestedAt` | `timestamp with time zone` | yes |  |  |
+| `InfusedAt` | `timestamp with time zone` | yes |  |  |
+| `LowestTempCelsius` | `double precision` | yes |  |  |
+| `ManufacturingFacilityId` | `character varying(255)` | yes |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `ReconciledAt` | `timestamp with time zone` | yes |  |  |
+| `SiteId` | `character varying(255)` | no |  |  |
+| `Status` | `character varying(64)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+| `UnlockToken` | `character varying(512)` | yes |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_cgt_chains_of_custody_Din`: (`Din`)
+- `IX_cgt_chains_of_custody_StudyId_SubjectId`: unique (`StudyId`, `SubjectId`)
+
+## edc.cgt_destruction_certificates
+
+Entity: `CgtDestructionCertificate`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `CertificateNumber` | `character varying(255)` | no |  |  |
+| `ChainOfCustodyId` | `uuid` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `CryptographicSeal` | `character varying(512)` | no |  |  |
+| `DestructionFacility` | `character varying(255)` | no |  |  |
+| `DestructionMethod` | `character varying(255)` | no |  |  |
+| `DestructionReason` | `character varying(512)` | no |  |  |
+| `DestructionTimestamp` | `timestamp with time zone` | no |  |  |
+| `Din` | `character varying(255)` | yes |  |  |
+| `KitNumbersJson` | `text` | no |  |  |
+| `LotNumber` | `character varying(255)` | no |  |  |
+| `QuantityDestroyed` | `integer` | no |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `ReconciliationNotes` | `text` | yes |  |  |
+| `ResidualVolumeMl` | `double precision` | yes |  |  |
+| `SiteId` | `character varying(255)` | no |  |  |
+| `Status` | `character varying(64)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectId` | `character varying(255)` | yes |  |  |
+| `UnitOfMeasure` | `character varying(64)` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+| `VialIdentifiersJson` | `text` | no |  |  |
+| `Witness1Id` | `character varying(255)` | no |  |  |
+| `Witness1Name` | `character varying(255)` | yes |  |  |
+| `Witness1Role` | `character varying(128)` | yes |  |  |
+| `Witness1SignatureToken` | `character varying(512)` | no |  |  |
+| `Witness2Id` | `character varying(255)` | no |  |  |
+| `Witness2Name` | `character varying(255)` | yes |  |  |
+| `Witness2Role` | `character varying(128)` | yes |  |  |
+| `Witness2SignatureToken` | `character varying(512)` | no |  |  |
+
+Indexes:
+
+- `IX_cgt_destruction_certificates_CertificateNumber`: unique (`CertificateNumber`)
+- `IX_cgt_destruction_certificates_StudyId`: (`StudyId`)
+
+## edc.cgt_milestone_events
+
+Entity: `CgtMilestoneEvent`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `Carrier` | `character varying(255)` | yes |  |  |
+| `ChainOfCustodyId` | `uuid` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `CustodianId` | `character varying(255)` | yes |  |  |
+| `CustodianName` | `character varying(255)` | yes |  |  |
+| `CustodianRole` | `character varying(128)` | yes |  |  |
+| `DryShipperId` | `character varying(255)` | yes |  |  |
+| `FacilityId` | `character varying(255)` | yes |  |  |
+| `Latitude` | `double precision` | yes |  |  |
+| `LocationName` | `character varying(255)` | yes |  |  |
+| `Longitude` | `double precision` | yes |  |  |
+| `MilestoneType` | `character varying(128)` | no |  |  |
+| `Notes` | `text` | yes |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `SealId` | `character varying(255)` | yes |  |  |
+| `SealIntact` | `boolean` | no |  |  |
+| `Stage` | `character varying(64)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `TemperatureCelsius` | `double precision` | yes |  |  |
+| `TemperatureStatus` | `character varying(64)` | yes |  |  |
+| `Timestamp` | `timestamp with time zone` | no |  |  |
+| `TrackingNumber` | `character varying(255)` | yes |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_cgt_milestone_events_ChainOfCustodyId`: (`ChainOfCustodyId`)
+- `IX_cgt_milestone_events_StudyId`: (`StudyId`)
+
+## edc.cgt_vial_return_reconciliations
+
+Entity: `CgtVialReturnReconciliation`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AdherencePercentage` | `double precision` | no |  |  |
+| `CertificateId` | `character varying(255)` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `Disposition` | `character varying(64)` | no |  |  |
+| `IntactVials` | `integer` | no |  |  |
+| `KitNumber` | `character varying(255)` | no |  |  |
+| `LoggedAt` | `timestamp with time zone` | no |  |  |
+| `LoggedBy` | `character varying(255)` | no |  |  |
+| `Notes` | `text` | yes |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `ResidualVolumeMl` | `double precision` | yes |  |  |
+| `ReturnedQuantity` | `integer` | no |  |  |
+| `SiteId` | `character varying(255)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+| `UsedVials` | `integer` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+| `VialIdentifier` | `character varying(255)` | no |  |  |
+
+Indexes:
+
+- `IX_cgt_vial_return_reconciliations_StudyId`: (`StudyId`)
+- `IX_cgt_vial_return_reconciliations_VialIdentifier`: (`VialIdentifier`)
 
 ## edc.clinical_observations
 

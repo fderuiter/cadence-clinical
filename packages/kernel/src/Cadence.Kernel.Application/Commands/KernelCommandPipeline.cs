@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Application.Execution;
+using Cadence.Kernel.Application.Intelligence;
 using Cadence.Kernel.Application.Knowledge;
 using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Application.Trust;
@@ -210,6 +211,7 @@ public static class KernelApplicationServiceCollectionExtensions
         services.AddKernelAuthorityHandlers();
         services.AddKernelWorkQueueHandlers();
         services.AddKernelEffectivityHandlers();
+        services.AddKernelProposalHandlers();
         return services;
     }
 }
