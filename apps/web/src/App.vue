@@ -6,6 +6,7 @@
   </AppShell>
   <ContextualHelpDrawer />
   <ToastHost />
+  <ConfirmationDialogHost />
 </template>
 
 <script setup>
@@ -15,6 +16,7 @@ import { useClinicalStore } from "./stores/clinical";
 import AppShell from "./components/AppShell.vue";
 import ContextualHelpDrawer from "./components/ContextualHelpDrawer.vue";
 import ToastHost from "./components/ToastHost.vue";
+import ConfirmationDialogHost from "./components/ConfirmationDialogHost.vue";
 import "./style.css";
 
 const store = useClinicalStore();

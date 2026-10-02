@@ -445,6 +445,7 @@ import ActivityFeed from "../components/fileshare/ActivityFeed.vue";
 import MediaPreviewModal from "../components/fileshare/MediaPreviewModal.vue";
 import BatchUploadDrawer from "../components/etmf/BatchUploadDrawer.vue";
 import CraQcQueue from "../components/etmf/CraQcQueue.vue";
+import { useConfirmDialog } from "../composables/useConfirmDialog.js";
 
 const props = defineProps({
   initialStudyId: {
@@ -454,6 +455,7 @@ const props = defineProps({
 });
 
 const fileshareStore = useFileshareStore();
+const { confirmDialog } = useConfirmDialog();
 
 // Batch Ingestion and CRA QC state
 const isBatchDrawerOpen = ref(false);
@@ -698,9 +700,13 @@ function getStatusClass(status) {
 
 async function handleDeleteFile(file) {
   if (file.is_on_hold) return;
-  const confirmed = window.confirm(
-    `Are you sure you want to delete ${file.filename}?`
-  );
+  const confirmed = await confirmDialog({
+    title: "Delete Document",
+    message: `Are you sure you want to delete ${file.filename}?`,
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+    variant: "danger",
+  });
   if (confirmed) {
     await fileshareStore.deleteFile(
       file.id,

@@ -14,6 +14,10 @@ const props = defineProps({
     type: String,
     default: "md", // sm, md, lg, xl
   },
+  role: {
+    type: String,
+    default: "dialog",
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "close", "confirm"]);
@@ -67,7 +71,7 @@ onUnmounted(() => {
       <div
         ref="dialogRef"
         :class="['clinical-modal-dialog', `size-${size}`]"
-        role="dialog"
+        :role="role"
         aria-modal="true"
         :aria-label="title"
         tabindex="-1"
