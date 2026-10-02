@@ -84,6 +84,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<EffectivityStatusPeriod> EffectivityStatusPeriods => Set<EffectivityStatusPeriod>();
 
+    public DbSet<Proposal> Proposals => Set<Proposal>();
+
     public DbSet<ProvenanceActivityRecord> ProvenanceActivities => Set<ProvenanceActivityRecord>();
 
     public DbSet<DomainEventRecord> DomainEvents => Set<DomainEventRecord>();

@@ -33,6 +33,8 @@ namespace Cadence.Kernel.Persistence.Navigation;
 /// </summary>
 internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : IKernelScopeGraph
 {
+    private const int ProposalLabelLength = 80;
+
     public async Task<ScopeNode?> FindAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -155,6 +157,20 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                 return run is null
                     ? null
                     : new ScopeNode(new NodeSummary(NodeRef.For(runId, run.VersionIndex), $"{run.Stage} validation run", Code: null), NodeRef.For(run.StudyId));
+
+            case NodeKinds.Proposal:
+                // A proposal sits under its study (ADR-2489 §4.2), so the study's activity and navigation include it. The status
+                // shown is the stored one: expiry is derived by readers that hold a clock.
+                var proposalId = ProposalId.FromGuid(node.Id);
+                var proposal = await db.Proposals.AsNoTracking()
+                    .Where(p => p.TenantId == tenant && p.Id == proposalId)
+                    .Select(p => new { p.StudyId, p.Intent, p.Status, p.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return proposal is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(proposalId, proposal.VersionIndex), ProposalLabel(proposal.Intent), Code: null, proposal.Status.ToString()),
+                        NodeRef.For(proposal.StudyId));
 
             case NodeKinds.ValidationFinding:
                 var findingId = ValidationFindingId.FromGuid(node.Id);
@@ -292,6 +308,13 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         return new ScopeNode(
             new NodeSummary(NodeRef.For(id, latest.Value), elementId is null ? "Protocol element" : $"Protocol element {elementId}", elementId),
             NodeRef.For(versionId));
+    }
+
+    /// <summary>A proposal's label: the start of its intent, on one line.</summary>
+    private static string ProposalLabel(string intent)
+    {
+        var line = intent.ReplaceLineEndings(" ").Trim();
+        return line.Length <= ProposalLabelLength ? $"Proposal: {line}" : $"Proposal: {line[..(ProposalLabelLength - 1)]}…";
     }
 
     private static IQueryable<StudySiteRow> StudySitesWithSites(KernelDbContext db, TenantId tenant) =>

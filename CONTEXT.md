@@ -137,6 +137,20 @@ the items a registered source reports as due that the evaluator permits them to 
 grants and delegations. Read without a scope, it is the portfolio queue across the tenant's studies (ADR-2486).
 _Avoid_: role strings as authority, delegation tables separate from grants, queues per role
 
+### AutomationAgent and Proposal
+
+An **AutomationAgent** is an AI or rules agent acting through the Intelligence engine, an actor whose id starts
+with `agent:` (`Actor.AutomationAgent`). It reads through the same authorization and visibility as a person and may
+propose, but it can never execute or approve, sign an attestation, or decide a proposal (K-AI-1, K-AI-3).
+
+A **Proposal** is a suggested change to a study, by an agent or a person: an intent, the artifact version holding
+the plan, the objects it would change or depends on, an optional simulation result hash, the capabilities a person
+would use to execute it, and an expiry. It changes nothing in the kernel. Its content is fixed under a content hash.
+It is `Open` until a person approves it with an Attestation over that hash, a person rejects it, or its proposer
+withdraws it. The proposer can never approve it. An open proposal past its expiry reads as **Expired**. An agent's
+proposal names the model that produced it (K-PROV-3, ADR-2489).
+_Avoid_: AI draft statuses on regulated records (`DRAFT_AI`), "approved" to mean "executed"
+
 ### Tenant
 
 The top-level isolation boundary. Every kernel row carries `tenant_id`, enforced by PostgreSQL

@@ -81,6 +81,10 @@ public static class KernelEventFamilies
         ["FindingAccepted"] = EventFamily.Quality,
         ["FindingExplained"] = EventFamily.Quality,
         ["FindingReopened"] = EventFamily.Quality,
+        ["ProposalCreated"] = EventFamily.Intelligence,
+        ["ProposalApproved"] = EventFamily.Intelligence,
+        ["ProposalRejected"] = EventFamily.Intelligence,
+        ["ProposalWithdrawn"] = EventFamily.Intelligence,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>Every classified event type.</summary>
