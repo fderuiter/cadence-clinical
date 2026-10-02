@@ -11,6 +11,7 @@ using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Queries.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Queries;
@@ -89,7 +90,7 @@ public sealed class ClinicalQueryApplicationService(
         ObservationId? observationId = null;
         if (!string.IsNullOrWhiteSpace(request.ObservationId))
         {
-            if (!ObservationId.TryParse(request.ObservationId, out var parsedObsId))
+            if (!ObservationId.TryParse(request.ObservationId, out var parsedObsId) || parsedObsId.IsEmpty)
             {
                 return DomainError.Validation("INVALID_OBSERVATION_ID", $"Observation ID '{request.ObservationId}' is not a valid GUID.");
             }

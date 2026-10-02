@@ -3,6 +3,7 @@ using System;
 using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel;
 
 namespace Cadence.Apps.Execution.Domain.Observations;
 

@@ -10,6 +10,7 @@ using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Queries;
