@@ -58,6 +58,26 @@
             <span class="search-placeholder">Studies</span>
           </router-link>
 
+          <!-- Onboarding Setup Checklist Trigger Badge -->
+          <button
+            id="btn-onboarding-checklist-trigger"
+            class="cmd-palette-trigger btn-setup-trigger"
+            :title="`Open Setup Checklist (${onboardingStore.completedTasksCount}/${onboardingStore.totalTasksCount} tasks completed)`"
+            :aria-expanded="onboardingStore.isDrawerOpen"
+            aria-controls="onboarding-checklist-drawer"
+            @click="onboardingStore.toggleDrawer()"
+          >
+            <span class="search-icon">🚀</span>
+            <span class="search-placeholder">
+              Setup {{ onboardingStore.completedTasksCount }}/{{
+                onboardingStore.totalTasksCount
+              }}
+            </span>
+            <kbd class="shortcut-badge"
+              >{{ onboardingStore.progressPercentage }}%</kbd
+            >
+          </button>
+
           <!-- Contextual Help Trigger Button -->
           <button
             id="btn-contextual-help-trigger"
@@ -720,6 +740,9 @@
       @close="isCommandPaletteOpen = false"
     />
 
+    <!-- Onboarding Checklist Drawer Overlay -->
+    <OnboardingChecklistDrawer />
+
     <!-- Localized Shell Footer & Onboarding Telemetry Diagnostic Panel -->
     <footer
       style="
@@ -915,6 +938,7 @@ import { useKnowledgeStore } from "../stores/knowledge";
 import { hasRequiredRole } from "../router";
 import { isScreenAvailable } from "../router/availability";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 
 const authStore = useAuthStore();
 const notificationsStore = useNotificationsStore();
