@@ -836,7 +836,8 @@ export const useFileshareStore = defineStore("fileshare", {
 
       // Synchronously update local document states
       const idsToUpdate = payload.documentIds || [];
-      const updatedRemoteDocs = response?.updated_documents || response?.updatedDocuments || [];
+      const updatedRemoteDocs =
+        response?.updated_documents || response?.updatedDocuments || [];
 
       this.files = this.files.map((file) => {
         if (!idsToUpdate.includes(file.id)) {

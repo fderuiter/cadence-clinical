@@ -326,7 +326,7 @@ public static class StartupGreenlightEndpoints
                 FacetDoaLog = true,
                 FacetStaffTraining = true,
                 FacetIpRelease = true,
-                CreatedBy = "system",
+                CreatedBy = "svc:ctms",
                 ReasonForChange = "Initial greenlight gate creation"
             };
             db.CtmsSiteGreenlightGates.Add(gate);
@@ -368,7 +368,7 @@ public static class StartupGreenlightEndpoints
                 FacetDoaLog = isCompliant,
                 FacetStaffTraining = true,
                 FacetIpRelease = isCompliant,
-                CreatedBy = "system",
+                CreatedBy = "svc:ctms",
                 ReasonForChange = "Seed country matrix sites"
             });
         }

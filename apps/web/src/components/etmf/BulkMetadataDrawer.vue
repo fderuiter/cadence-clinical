@@ -1,4 +1,5 @@
 <template>
+  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
   <div
     v-if="isOpen"
     class="drawer-backdrop"
@@ -11,9 +12,12 @@
       <!-- Header -->
       <div class="drawer-header">
         <div class="header-content">
-          <h3 id="bulk-drawer-title" class="drawer-title">🏷️ Bulk Edit Document Metadata</h3>
+          <h3 id="bulk-drawer-title" class="drawer-title">
+            🏷️ Bulk Edit Document Metadata
+          </h3>
           <p class="drawer-subtitle">
-            Update DIA TMF Reference Model taxonomy and site tags across selected documents.
+            Update DIA TMF Reference Model taxonomy and site tags across
+            selected documents.
           </p>
         </div>
         <button
@@ -42,13 +46,15 @@
       </div>
 
       <div v-if="holdCount > 0" class="alert alert-warning hold-warning">
-        ⚠️ {{ holdCount }} document(s) on retention hold will be preserved and excluded from bulk edits.
+        ⚠️ {{ holdCount }} document(s) on retention hold will be preserved and
+        excluded from bulk edits.
       </div>
 
       <!-- Drawer Form -->
       <form class="drawer-body" @submit.prevent="handleSubmit">
         <p class="form-instruction">
-          Check the fields you wish to modify. Non-selected fields will preserve their existing values.
+          Check the fields you wish to modify. Non-selected fields will preserve
+          their existing values.
         </p>
 
         <!-- Field 1: Zone -->
@@ -191,7 +197,8 @@
         <!-- 21 CFR Part 11 Change Reason -->
         <div class="reason-box">
           <label for="bulk-change-reason" class="reason-label">
-            Reason for Change <span class="required-star">*</span> (21 CFR Part 11)
+            Reason for Change <span class="required-star">*</span> (21 CFR Part
+            11)
           </label>
           <textarea
             id="bulk-change-reason"
@@ -241,7 +248,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useFileshareStore, TMF_TAXONOMY_SECTIONS, DEFAULT_STUDIES } from "../../stores/fileshare";
+import { useFileshareStore, DEFAULT_STUDIES } from "../../stores/fileshare";
 
 const props = defineProps({
   isOpen: {
@@ -260,8 +267,10 @@ const fileshareStore = useFileshareStore();
 
 // Counts
 const totalCount = computed(() => props.selectedFiles.length);
-const holdCount = computed(() =>
-  props.selectedFiles.filter((f) => f.is_on_hold || f.status === "ON_HOLD").length
+const holdCount = computed(
+  () =>
+    props.selectedFiles.filter((f) => f.is_on_hold || f.status === "ON_HOLD")
+      .length
 );
 const editableCount = computed(() => totalCount.value - holdCount.value);
 
@@ -333,7 +342,9 @@ const artifactsList = [
 ];
 
 function onArtifactChange() {
-  const found = artifactsList.find((a) => a.code === selectedArtifactCode.value);
+  const found = artifactsList.find(
+    (a) => a.code === selectedArtifactCode.value
+  );
   if (found) {
     selectedArtifactType.value = found.name;
   }

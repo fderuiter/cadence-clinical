@@ -22,6 +22,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
+using HmacSigner = Cadence.Security.HmacSigner;
+
 namespace Cadence.IntegrationTests.Execution;
 
 /// <summary>

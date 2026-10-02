@@ -349,7 +349,9 @@ export const etmfService = {
   ) {
     const headers: Record<string, string> = {};
     if (payload.reason_for_change) {
-      headers["X-Change-Reason"] = encodeChangeReason(payload.reason_for_change);
+      headers["X-Change-Reason"] = encodeChangeReason(
+        payload.reason_for_change
+      );
     }
     return unwrapResponse(
       openApiClient.POST("/api/v1/etmf/documents/bulk-tag" as any, {

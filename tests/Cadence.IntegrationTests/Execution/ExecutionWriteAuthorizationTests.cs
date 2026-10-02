@@ -18,6 +18,8 @@ using FluentAssertions;
 
 using Xunit;
 
+using HmacSigner = Cadence.Security.HmacSigner;
+
 namespace Cadence.IntegrationTests.Execution;
 
 /// <summary>
