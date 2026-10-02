@@ -937,7 +937,7 @@ const startExtraction = () => {
   }, 400);
 };
 
-const _triggerConceptStaging = (tokens = []) => {
+const triggerConceptStaging = (tokens = []) => {
   if (tokens && tokens.length > 0) {
     unmappedConceptTokens.value = tokens;
   } else {
@@ -956,6 +956,7 @@ const _triggerConceptStaging = (tokens = []) => {
   }
   isConceptStagingOpen.value = true;
 };
+const _triggerConceptStaging = triggerConceptStaging;
 
 const handleConceptMappingsConfirmed = ({
   resolvedMappings,
@@ -979,7 +980,7 @@ const handleConceptMappingsConfirmed = ({
   isConceptStagingOpen.value = false;
 };
 
-const _triggerEscalation = (jobData = {}) => {
+const triggerEscalation = (jobData = {}) => {
   dagJobStatus.value = "PENDING_REVIEW";
   isPendingReview.value = true;
   failedStageName.value = jobData.current_stage || "SOA_EXTRACTION";
@@ -999,6 +1000,7 @@ const _triggerEscalation = (jobData = {}) => {
       rawExtractionData.value.therapeutic_area || "Oncology";
   }
 };
+const _triggerEscalation = triggerEscalation;
 
 const submitCorrectionAndResume = async () => {
   correctionError.value = "";
@@ -1216,6 +1218,14 @@ const commitAndActivateEDC = async () => {
     isCommitting.value = false;
   }
 };
+
+defineExpose({
+  triggerConceptStaging,
+  _triggerConceptStaging,
+  triggerEscalation,
+  _triggerEscalation,
+  handleConceptMappingsConfirmed,
+});
 </script>
 
 <style scoped>
