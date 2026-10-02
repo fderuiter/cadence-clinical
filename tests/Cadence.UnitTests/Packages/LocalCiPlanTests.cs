@@ -156,14 +156,14 @@ public partial class LocalCiPlanTests
     [Fact]
     public void Select_WithoutJobs_RunsEveryJobThatIsNotOnRequestOnly()
     {
-        CiPlan.Select([]).Select(j => j.Key).Should().Equal("style", "security", "unit-tests", "dotnet-tests", "compliance");
+        CiPlan.Select([]).Select(j => j.Key).Should().Equal("lint-and-static", "dotnet-quality", "native-aot-build", "docs-build", "security", "unit-tests", "dotnet-tests", "compliance");
     }
 
     [Fact]
     public void Select_AddsTheJobsANamedJobNeeds_InPlanOrder()
     {
         CiPlan.Select(["compliance"]).Select(j => j.Key).Should().Equal("unit-tests", "dotnet-tests", "compliance");
-        CiPlan.Select(["accessibility-e2e", "style"]).Select(j => j.Key).Should().Equal("style", "accessibility-e2e");
+        CiPlan.Select(["accessibility-e2e", "dotnet-quality"]).Select(j => j.Key).Should().Equal("dotnet-quality", "accessibility-e2e");
     }
 
     [Theory]

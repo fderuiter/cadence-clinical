@@ -21,7 +21,7 @@ public class CliCommandLineTests
     [InlineData("check", "markdown", "docs/cli.md", "README.md")]
     [InlineData("test", "--fast")]
     [InlineData("ci")]
-    [InlineData("ci", "--job", "style", "--job", "security")]
+    [InlineData("ci", "--job", "dotnet-quality", "--job", "security")]
     [InlineData("ci", "-j", "dotnet-tests", "--allow-skip", "--base", "main", "--list")]
     [InlineData("gxp", "sync", "--dry-run", "--commit")]
     [InlineData("gxp", "validate")]

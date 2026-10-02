@@ -110,7 +110,7 @@ Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Acti
 repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
 
 ```bash
-pnpm cadence ci                         # style, security, unit-tests, dotnet-tests and compliance
+pnpm cadence ci                         # lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests and compliance
 pnpm cadence ci --job dotnet-tests      # one job (repeat --job for more)
 pnpm cadence ci --job compliance        # a job and the jobs it needs (unit-tests, dotnet-tests)
 pnpm cadence ci --job accessibility-e2e # the Playwright job, which CI runs only on a push to main
@@ -119,7 +119,7 @@ pnpm cadence ci --list                  # what each step runs locally, without r
 
 | Option            | Description                                                                                                                      |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `style`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`. |
+| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`. |
 | `--allow-skip`    | Runs the .NET tests without PostgreSQL, so the database tests report as skipped instead of failing the run.                      |
 | `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.        |
 | `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                       |
@@ -137,7 +137,7 @@ Where it differs from CI:
 - **Checks already run once are not repeated.** A step that runs one gate of `cadence check` (ADRs, Markdown, schema
   doc, OpenAPI, contracts, duplication, the security audit, vulnerabilities, secrets and DEID) is reported as
   *covered* when the full `Run Cadence quality sentinels` step passed. If that step failed, each of them runs on its own
-  so the summary shows which gate failed. The Node install and UI build in later jobs are covered by the style job's.
+  so the summary shows which gate failed. The Node install and UI build in later jobs are covered by earlier jobs.
   The documentation build (`pnpm docs:build`) also starts with `cadence check` and Markdown validation; after that step
   passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips them and saves about two and a half minutes.
 - **The docs build leaves the reports alone.** `pnpm docs:build` regenerates the RTM and IQ/OQ/PQ report as drafts;

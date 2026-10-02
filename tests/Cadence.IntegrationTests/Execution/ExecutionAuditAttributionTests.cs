@@ -139,7 +139,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
                     signer_role = "Site Investigator",
                     signing_reason = "PI approval and sign-off.",
                     payload_hash = JsonCanonicalization.Sha256Hex(payload),
-                    hmac_signature = HmacSigner.ComputeSignature(JsonCanonicalization.Sha256Hex(payload), TestSecurityContext.GatewaySecret),
+                    hmac_signature = Cadence.Security.Authentication.HmacSigner.ComputeSignature(JsonCanonicalization.Sha256Hex(payload), TestSecurityContext.GatewaySecret),
                     signed_at = FakeClock.DefaultStart.UtcDateTime,
                 },
             },

@@ -12,7 +12,9 @@
         <thead>
           <tr>
             <th style="width: 40px">#</th>
-            <th v-for="col in columns" :key="col.id">{{ col.label }}</th>
+            <th v-for="col in columns" :key="col.id">
+              {{ col.label }}
+            </th>
             <th style="width: 50px">Action</th>
           </tr>
         </thead>
@@ -23,7 +25,9 @@
             </td>
           </tr>
           <tr v-for="(row, rIdx) in rows" :key="rIdx">
-            <td class="row-num">{{ rIdx + 1 }}</td>
+            <td class="row-num">
+              {{ rIdx + 1 }}
+            </td>
             <td v-for="col in columns" :key="col.id">
               <input
                 v-if="col.type === 'number'"
@@ -46,8 +50,8 @@
               <button
                 type="button"
                 class="btn-delete-row"
-                @click="deleteRow(rIdx)"
                 title="Delete Row"
+                @click="deleteRow(rIdx)"
               >
                 ×
               </button>
@@ -64,7 +68,7 @@
                 {{ calculateSum(col.id) }}
               </span>
             </td>
-            <td></td>
+            <td />
           </tr>
         </tfoot>
       </table>

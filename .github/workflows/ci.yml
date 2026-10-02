@@ -500,7 +500,8 @@ jobs:
 
   accessibility-e2e:
     name: Parallel E2E Accessibility Testing
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    # Playwright browser installs are the most expensive job; run on main only.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
