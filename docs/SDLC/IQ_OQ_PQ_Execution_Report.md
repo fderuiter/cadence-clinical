@@ -16,8 +16,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Counts cover the requirement-tagged test methods in section 3. Whole-suite totals are in the TRX files under
 `TestResults/gxp/`, so this report only changes when a tagged test or its result changes.
 
-- **Requirement-Tagged Test Methods:** 167
-- **Passed:** 167 🟢
+- **Requirement-Tagged Test Methods:** 185
+- **Passed:** 185 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Not Run:** 0
@@ -88,6 +88,13 @@ out so the report only changes when results change; they are in the TRX files un
 | `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
 | `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `CompileEndpoint_FinalizesAndFilesToEtmf_AndDispatchesEmail` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | 🟢 PASSED |
+| `ConfirmationLetter_RendersHtmlTemplate_AndCompilesDraftPdf` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | 🟢 PASSED |
+| `FinalizedLetter_AppliesPart11Pkcs7Signature_AndPassesVerification` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | 🟢 PASSED |
+| `FollowUpLetter_WithFindings_RendersHtmlTable` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | 🟢 PASSED |
+| `SigTokenVerifier_ReusedTokenForEconsent_FailsClosedWithReauthenticationRequired` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | 🟢 PASSED |
+| `SigTokenVerifier_TokenForDifferentActionUrl_FailsClosedWithReauthenticationRequired` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | 🟢 PASSED |
+| `SigTokenVerifier_ValidTokenForEconsent_VerifiesAndConsumesSuccessfully` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | 🟢 PASSED |
 | `ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
@@ -175,6 +182,13 @@ out so the report only changes when results change; they are in the TRX files un
 | `SignatureVerification_WithoutABoundAction_Returns400` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
 | `SignatureVerification_WithoutSignIn_Returns401` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
 | `TokenEndpoint_IsDerivedFromTheOidcSettings` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
+| `AcceptCandidate_CommitsValueAndWritesGxPAuditAndESignature` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-SYS-001 | 🟢 PASSED |
+| `GenerateAndVerifySmartAssertion_ValidatesOAuth2AssertionToken` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
+| `GetProvenanceAudit_ReturnsRawFhirPayloadAndAuditTrail` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
+| `PollHospitalEhr_IngestsCandidatesWithDiscrepancyClassification` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
+| `RaiseClinicalQuery_RegistersQueryAndUpdatesCandidateStatus` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | 🟢 PASSED |
+| `RegisterAndListEndpoints_SuccessfullyManagesEhrEndpoints` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
+| `RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
 | `EveryRead_IsRefused_WhenTheSignedTenantIsNotAKernelTenant` | `Cadence.UnitTests.Kernel.Api.KernelApiHostTests` | PRD-CRF-013 | 🟢 PASSED |
 | `Navigation_ReadsInTheCallersTenant` | `Cadence.UnitTests.Kernel.Api.KernelApiHostTests` | PRD-CRF-013 | 🟢 PASSED |
 | `EnrollmentTransitionsFollowTheLifecycle` | `Cadence.UnitTests.Kernel.EnrollmentTests` | PRD-SUB-001 | 🟢 PASSED |
@@ -200,11 +214,15 @@ out so the report only changes when results change; they are in the TRX files un
 | `Verify_TokenSignedWithAnotherSecret_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Verify_TokensOutsideTheV3Contract_AreRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Verify_WithAnotherSignerActionOrBatch_IsRejectedWithoutConsumingTheToken` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `ApproveDsur_AppliesPart11SignatureBlock_AndLocksRecord` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-008 | 🟢 PASSED |
+| `CompileDsur_CalculatesPatientYearsExposureAndMedDraCrossTabulation` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-004 | 🟢 PASSED |
+| `Endpoints_CompileAndApprove_ReturnCreatedAndOkWithValidSignature` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-004 | 🟢 PASSED |
+| `UpdateDsur_GivenLockedRecord_Returns409Conflict` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-004 | 🟢 PASSED |
 | `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | PRD-SYS-001 | 🟢 PASSED |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
-Qualified Requirements: 13 of 195
+Qualified Requirements: 19 of 195
 
 ## 5. Qualification Review & Authorization
 
@@ -218,4 +236,4 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** 5ee47de13ae1f520d063359aa5c19fa5032b9b65b322c2f7230254fb3a92bde7
+- **Content Hash (SHA-256):** 80c80fff7f7ccdc1723ce0b6c6948f6fba62bbf8cef84ba3b34be674fa8c5fef

@@ -1414,6 +1414,7 @@
 import { ref, computed, onMounted } from "vue";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
+import { apiClient } from "../../api/apiClient";
 
 const currentRole = ref("READER_1");
 const selectedStudyId = ref("STUDY-101");
@@ -1924,38 +1925,91 @@ function submitReaderForm() {
   }, 400);
 }
 
-function submitChairAdjudication() {
+async function submitChairAdjudication() {
   if (!chairForm.value.password) {
     alert(
       "Please enter your re-authentication password for 21 CFR Part 11 electronic sign-off."
     );
     return;
   }
-  // #4827: the chair's adjudication and sign-off are recorded nowhere yet.
-  if (!allowUnbackedAction("Chair adjudication sign-off")) return;
   isSubmitting.value = true;
-  setTimeout(() => {
+  try {
+    const dossierId = activeDossier.value?.dossier_id || "DOSSIER-101";
+    const actionUrl = `/api/v1/execution/cec/dossiers/${dossierId}/chair-adjudicate`;
+    const semanticAction = "execution.cec.chair_adjudicate";
+
+    const reauthRes = await apiClient.post(
+      "/api/v1/auth/signature-verification",
+      {
+        username: chairForm.value.signer_name || "chair_adjudicator",
+        password: chairForm.value.password,
+        action: actionUrl,
+        semantic_action: semanticAction,
+      }
+    );
+
+    const sigToken = reauthRes?.sig_token;
+    if (!sigToken) {
+      throw new Error("Re-authentication failed: missing signature token");
+    }
+
+    const payload = {
+      final_classification: chairForm.value.final_classification,
+      final_subtype: chairForm.value.final_subtype,
+      final_adjudicated_onset_date:
+        chairForm.value.final_adjudicated_onset_date,
+      binding_reader: chairForm.value.binding_reader,
+      criteria_confirmed: chairForm.value.criteria_confirmed,
+      adjudication_rationale: chairForm.value.adjudication_rationale,
+      signature_token: sigToken,
+      signer_name: chairForm.value.signer_name,
+      password: chairForm.value.password,
+      signature_meaning: chairForm.value.signature_meaning,
+    };
+
+    const res = await apiClient.post(actionUrl, payload, {
+      headers: {
+        "X-Sig-Token": sigToken,
+      },
+    });
+
     if (activeDossier.value) {
       activeDossier.value.workflow_status = "FINALIZED_BY_CHAIR";
       activeDossier.value.is_discordant = false;
       activeDossier.value.final_consensus_classification =
-        chairForm.value.final_classification;
+        res?.final_classification || chairForm.value.final_classification;
       activeDossier.value.final_consensus_subtype =
-        chairForm.value.final_subtype;
+        res?.final_subtype || chairForm.value.final_subtype;
       activeDossier.value.final_adjudicated_onset_date =
+        res?.final_adjudicated_onset_date ||
         chairForm.value.final_adjudicated_onset_date;
       activeDossier.value.adjudication_rationale =
-        chairForm.value.adjudication_rationale;
-      activeDossier.value.electronic_signature = {
-        signature_id: "SIG-CEC-" + Math.floor(Math.random() * 100000),
+        res?.adjudication_rationale || chairForm.value.adjudication_rationale;
+      activeDossier.value.electronic_signature = res?.electronic_signature || {
+        signer_id: res?.chair_id || "chair_user",
         signer_name: chairForm.value.signer_name,
-        timestamp: new Date().toISOString(),
+        signer_role: "CEC_CHAIR",
+        signing_reason: chairForm.value.signature_meaning,
+        signed_at: res?.finalized_at || new Date().toISOString(),
       };
       compileSdtmCe();
     }
-    isSubmitting.value = false;
     activeMainTab.value = "dossiers";
-  }, 500);
+  } catch (err) {
+    const errCode = err?.data?.code || err?.response?.data?.code || err?.code;
+    if (errCode === "REAUTHENTICATION_REQUIRED" || err?.status === 401) {
+      alert(
+        "21 CFR Part 11 re-authentication failed: Invalid password or expired token."
+      );
+    } else {
+      alert(
+        "Chair adjudication submission failed: " +
+          (err?.message || err?.data?.detail || "Unknown error")
+      );
+    }
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 function recordMeetingSession() {

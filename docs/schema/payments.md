@@ -13,7 +13,11 @@ Generated from the EF Core model of `Cadence.Apps.Payments.Infrastructure.Persis
 | [`payments.payments_fee_schedules`](#paymentspayments_fee_schedules) | `FeeSchedule` | 19 |
 | [`payments.payments_holdback_reserves`](#paymentspayments_holdback_reserves) | `HoldbackReserve` | 20 |
 | [`payments.payments_invoice_line_items`](#paymentspayments_invoice_line_items) | `InvoiceLineItem` | 21 |
-| [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 31 |
+| [`payments.payments_participant_disbursements`](#paymentspayments_participant_disbursements) | `ParticipantDisbursement` | 10 |
+| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 22 |
+| [`payments.payments_participant_stipend_rules`](#paymentspayments_participant_stipend_rules) | `ParticipantStipendRule` | 19 |
+| [`payments.payments_participant_transactions`](#paymentspayments_participant_transactions) | `ParticipantTransaction` | 12 |
+| [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 32 |
 | [`payments.payments_payable_allocations`](#paymentspayments_payable_allocations) | `PayableAllocation` | 16 |
 | [`payments.payments_payables`](#paymentspayments_payables) | `Payable` | 30 |
 | [`payments.payments_remittance_advices`](#paymentspayments_remittance_advices) | `RemittanceAdvice` | 26 |
@@ -229,6 +233,125 @@ Indexes:
 - `IX_payments_invoice_line_items_SubjectId`: (`SubjectId`)
 - `IX_payments_invoice_line_items_VisitCode`: (`VisitCode`)
 
+## payments.payments_participant_disbursements
+
+Entity: `ParticipantDisbursement`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `Amount` | `numeric(18,4)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `DisbursementType` | `character varying(50)` | no |  |  |
+| `ReferenceNumber` | `character varying(100)` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+| `WalletId` | `character varying(36)` | no |  |  |
+
+Indexes:
+
+- `IX_payments_participant_disbursements_ReferenceNumber`: unique (`ReferenceNumber`)
+- `IX_payments_participant_disbursements_Status`: (`Status`)
+- `IX_payments_participant_disbursements_SubjectId`: (`SubjectId`)
+- `IX_payments_participant_disbursements_WalletId`: (`WalletId`)
+
+## payments.payments_participant_expense_claims
+
+Entity: `ParticipantExpenseClaim`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `Category` | `character varying(50)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `ExpenseDate` | `character varying(50)` | no |  |  |
+| `GrossAmount` | `numeric(18,4)` | no |  |  |
+| `MerchantName` | `character varying(255)` | no |  |  |
+| `NetAmount` | `numeric(18,4)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | yes |  |  |
+| `ReceiptImageName` | `character varying(255)` | yes |  |  |
+| `ReceiptOcrDataJson` | `jsonb` | yes |  |  |
+| `ReviewNotes` | `character varying(1000)` | yes |  |  |
+| `ReviewedAt` | `timestamp with time zone` | yes |  |  |
+| `ReviewedBy` | `character varying(255)` | yes |  |  |
+| `SiteId` | `character varying(255)` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+| `TaxDeduction` | `numeric(18,4)` | no |  |  |
+| `UpdatedAt` | `timestamp with time zone` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+| `WalletId` | `character varying(36)` | no |  |  |
+
+Indexes:
+
+- `IX_payments_participant_expense_claims_SiteId`: (`SiteId`)
+- `IX_payments_participant_expense_claims_Status`: (`Status`)
+- `IX_payments_participant_expense_claims_StudyId`: (`StudyId`)
+- `IX_payments_participant_expense_claims_SubjectId`: (`SubjectId`)
+- `IX_payments_participant_expense_claims_WalletId`: (`WalletId`)
+
+## payments.payments_participant_stipend_rules
+
+Entity: `ParticipantStipendRule`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `Amount` | `numeric(18,4)` | no |  |  |
+| `AntiCoercionCap` | `numeric(18,4)` | yes |  |  |
+| `AutoDisbursementThreshold` | `numeric(18,4)` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `Currency` | `character varying(10)` | no |  |  |
+| `IsActive` | `boolean` | no |  |  |
+| `IsMilestone` | `boolean` | no |  |  |
+| `MilestoneCode` | `character varying(100)` | yes |  |  |
+| `ProcedureCode` | `character varying(100)` | yes |  |  |
+| `ReasonForChange` | `character varying(1000)` | yes |  |  |
+| `RequiresVerification` | `boolean` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `Taxable` | `boolean` | no |  |  |
+| `UpdatedAt` | `timestamp with time zone` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+| `VisitCode` | `character varying(100)` | no |  |  |
+| `VisitName` | `character varying(255)` | no |  |  |
+
+Indexes:
+
+- `IX_payments_participant_stipend_rules_StudyId`: (`StudyId`)
+- `IX_payments_participant_stipend_rules_VisitCode`: (`VisitCode`)
+
+## payments.payments_participant_transactions
+
+Entity: `ParticipantTransaction`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `Amount` | `numeric(18,4)` | no |  |  |
+| `BalanceAfter` | `numeric(18,4)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `Description` | `character varying(500)` | no |  |  |
+| `ReferenceId` | `character varying(255)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+| `TransactionType` | `character varying(50)` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+| `WalletId` | `character varying(36)` | no |  |  |
+
+Indexes:
+
+- `IX_payments_participant_transactions_ReferenceId`: (`ReferenceId`)
+- `IX_payments_participant_transactions_StudyId`: (`StudyId`)
+- `IX_payments_participant_transactions_SubjectId`: (`SubjectId`)
+- `IX_payments_participant_transactions_TransactionType`: (`TransactionType`)
+- `IX_payments_participant_transactions_WalletId`: (`WalletId`)
+
 ## payments.payments_participant_wallets
 
 Entity: `ParticipantWallet`
@@ -241,6 +364,7 @@ Entity: `ParticipantWallet`
 | `AchProcessorReference` | `character varying(1424)` | yes |  |  |
 | `AchRoutingMask` | `character varying(20)` | yes |  |  |
 | `AntiCoercionCap` | `numeric(18,4)` | yes |  |  |
+| `AutoDisbursementThreshold` | `numeric(18,4)` | yes |  |  |
 | `CardStatus` | `character varying(50)` | no |  |  |
 | `CardType` | `character varying(50)` | no |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |

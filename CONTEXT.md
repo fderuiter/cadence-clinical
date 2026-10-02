@@ -44,6 +44,13 @@ activity is a planned visit on a **study day**, where day 1 is the reference sta
 is no day 0 (the SDTM `--DY` convention), with a window of days before and after.
 _Avoid_: stored visit schedules, day 0
 
+The **Schedule of Activities** (SoA) is compiled from the design too, never stored (ADR-2475): planned activities are
+its columns (visits, grouped by epoch), collection specifications its rows, a cell marks that a visit collects a
+specification, and footnotes are generated from windows, locations and purposes. A **schedule directive** is one typed
+change an amendment makes to it or to eligibility (a visit moved, an activity collected less often, a criterion
+added), with the elements and concepts it touches.
+_Avoid_: hand-maintained SoA grids, "SoA activity" to mean a visit (a USDM Activity is a row, an encounter a column)
+
 ### Participant
 
 The pseudonymous kernel identity of a person taking part in a study. EDC "subject", eCOA "user" and
@@ -120,10 +127,29 @@ the moment any grant above it ends. Revoking a grant supersedes its validity row
 past decisions stay explainable (ADR-2455). What a reader may **see** follows the same grants: what they cover,
 the study and organization above them, and participants and sites through their study sites. Everything else comes
 back masked (ADR-2457).
+A **Qualification** is evidence about an actor (training, protocol training on one protocol version, a credential
+or a certificate) with a code, a bitemporal validity and the training record or credential artifact version that
+proves it. A **qualification requirement** says a capability within a scope needs a current qualification of a code,
+and of a protocol version when it names one. The evaluator applies every requirement in effect over the resource
+after a grant permits, and a denial names what to obtain, or what to renew and when it expired (ADR-2459).
 A **work queue** is a versioned definition keyed by one capability, never a role name. A person's queue holds
 the items a registered source reports as due that the evaluator permits them to act on now, so it follows their
 grants and delegations. Read without a scope, it is the portfolio queue across the tenant's studies (ADR-2486).
 _Avoid_: role strings as authority, delegation tables separate from grants, queues per role
+
+### AutomationAgent and Proposal
+
+An **AutomationAgent** is an AI or rules agent acting through the Intelligence engine, an actor whose id starts
+with `agent:` (`Actor.AutomationAgent`). It reads through the same authorization and visibility as a person and may
+propose, but it can never execute or approve, sign an attestation, or decide a proposal (K-AI-1, K-AI-3).
+
+A **Proposal** is a suggested change to a study, by an agent or a person: an intent, the artifact version holding
+the plan, the objects it would change or depends on, an optional simulation result hash, the capabilities a person
+would use to execute it, and an expiry. It changes nothing in the kernel. Its content is fixed under a content hash.
+It is `Open` until a person approves it with an Attestation over that hash, a person rejects it, or its proposer
+withdraws it. The proposer can never approve it. An open proposal past its expiry reads as **Expired**. An agent's
+proposal names the model that produced it (K-PROV-3, ADR-2489).
+_Avoid_: AI draft statuses on regulated records (`DRAFT_AI`), "approved" to mean "executed"
 
 ### Tenant
 
@@ -531,7 +557,7 @@ An asynchronous multi-stage directed acyclic graph workflow in `apps/designer` t
 
 ### Protocol Amendment Impact Assessment
 
-An automated analysis engine evaluating graph and narrative deltas between protocol revisions to quantify operational scope changes, calculate subject re-consent requirements, and generate domain-routed operational tickets.
+An automated analysis engine evaluating graph and narrative deltas between protocol revisions to quantify operational scope changes, calculate subject re-consent requirements, and generate domain-routed operational tickets. In the kernel it is `IAmendmentImpact` (K-PROT-2): the dependents of the changed elements (ADR-2474) and the schedule directives (ADR-2475).
 
 ### Generative Pharmacovigilance Narrative
 
@@ -1071,6 +1097,8 @@ _Avoid_: Disconnected single-analyte lab flags missing multi-parameter DILI tria
 
 A structured temporal boundary model defining permissible before ($w_b$) and after ($w_a$) calendar day offsets around a target protocol visit day (e.g. Day $28 [-3, +5]$ days), outputting deterministic deviation classifications (`WITHIN_WINDOW`, `EARLY_VISIT`, `LATE_VISIT`, `OUT_OF_WINDOW_MAJOR`, `MISSED_VISIT`).
 _Avoid_: Symmetric window approximations or untracked protocol visit deviations
+
+> Replaced by ADR-2507. `ExpectedSchedule.Assess` measures an actual visit as early, in window or late, with the days outside the window; how important a deviation is, is a Quality rule, and a missed visit is a closed window with no actual date.
 
 ### Cycle-Based Template Expansion
 

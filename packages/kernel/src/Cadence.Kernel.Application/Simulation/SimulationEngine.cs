@@ -89,6 +89,12 @@ public sealed class SimulationEngine(
     /// <summary>The section the schedule changes are reported in, and masked as.</summary>
     public const string ScheduleChangesPart = "schedule_changes";
 
+    /// <summary>The engine version recorded for matrix gap analysis; bump it when its output changes.</summary>
+    public static readonly EngineVersion MatrixGapEngine = new("protocol.matrix_gap", "1");
+
+    /// <summary>The section the matrix gaps are reported in, and masked as.</summary>
+    public const string MatrixGapsPart = "matrix_gaps";
+
     /// <summary>The engine version recorded for the expected schedule (K-TIME-7); bump it when its output changes.</summary>
     public static readonly EngineVersion ScheduleEngine = new("protocol.expected_schedule", "1");
 
@@ -145,6 +151,7 @@ public sealed class SimulationEngine(
         CandidateSummary summary;
         IReadOnlyList<ElementChange> diff;
         IReadOnlyList<ScheduleChange> schedule;
+        IReadOnlyList<MatrixGapFinding> matrixGaps;
         IReadOnlyList<MaskedPart> masked;
         DependentsReport? dependents = null;
         if (mask is { } reason)
@@ -153,6 +160,7 @@ public sealed class SimulationEngine(
             summary = new CandidateSummary(CandidateKind.ProtocolVersion, null, null, null, null);
             diff = [];
             schedule = [];
+            matrixGaps = [];
             masked =
             [
                 new MaskedPart(DependentsPart, reason),
@@ -172,6 +180,11 @@ public sealed class SimulationEngine(
                 CandidateKind.ProtocolVersion, versionRef, baseRef, candidate.ContentHash, baseVersion?.ContentHash);
             diff = compared.Value!;
             schedule = ScheduleChanges(baseVersion?.Content, candidate.Content);
+            matrixGaps = EvaluateMatrixGaps(candidate.Content);
+            if (matrixGaps.Any(g => g.Kind != MatrixGapKind.IchM11Violation))
+            {
+                engines.Add(MatrixGapEngine);
+            }
             masked = [];
             if (diff.Count > 0 && baseVersion is not null)
             {
@@ -185,9 +198,9 @@ public sealed class SimulationEngine(
         engines.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
         var inputHash = ContentHash.Compute(InputDocument(asOf, summary, engines, masked).ToJsonString());
         var resultHash = ContentHash.Compute(
-            ResultDocument(scope, asOf, summary, engines, inputHash, diff, schedule, masked, dependents).ToJsonString());
+            ResultDocument(scope, asOf, summary, engines, inputHash, diff, schedule, matrixGaps, masked, dependents).ToJsonString());
         return CommandResult<SimulationResult>.Success(
-            new SimulationResult(scope, asOf, summary, engines, inputHash, resultHash, diff, schedule, masked, dependents));
+            new SimulationResult(scope, asOf, summary, engines, inputHash, resultHash, diff, schedule, masked, dependents, matrixGaps));
     }
 
     /// <summary>
@@ -289,6 +302,12 @@ public sealed class SimulationEngine(
             ["masked"] = MaskedNode(masked),
         };
 
+    private static IReadOnlyList<MatrixGapFinding> EvaluateMatrixGaps(string content)
+    {
+        var read = ProtocolDesignDocument.Read(content);
+        return read.Design is { } design ? MatrixGapAnalyzer.Analyze(design) : [];
+    }
+
     private static JsonObject ResultDocument(
         NodeRef scope,
         SimulationAsOf asOf,
@@ -297,6 +316,7 @@ public sealed class SimulationEngine(
         string inputHash,
         IReadOnlyList<ElementChange> diff,
         IReadOnlyList<ScheduleChange> schedule,
+        IReadOnlyList<MatrixGapFinding> matrixGaps,
         IReadOnlyList<MaskedPart> masked,
         DependentsReport? dependents)
     {
@@ -316,6 +336,15 @@ public sealed class SimulationEngine(
             ["change"] = change.Change.ToString(),
             ["before"] = PlannedVisitNode(change.Before),
             ["after"] = PlannedVisitNode(change.After),
+        })]);
+        document["matrix_gaps"] = new JsonArray([.. matrixGaps.Select(gap => (JsonNode)new JsonObject
+        {
+            ["element_id"] = gap.ElementId,
+            ["kind"] = gap.Kind.ToString(),
+            ["severity"] = gap.Severity.ToString(),
+            ["json_pointer_path"] = gap.JsonPointerPath,
+            ["description"] = gap.Description,
+            ["recommendation"] = gap.Recommendation,
         })]);
         document["dependents"] = dependents is null ? null : new JsonObject
         {

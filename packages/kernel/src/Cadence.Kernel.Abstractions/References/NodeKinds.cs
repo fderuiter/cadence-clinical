@@ -29,6 +29,8 @@ public static class NodeKinds
     public const string ArtifactVersion = "artifact_version";
     public const string Role = "role";
     public const string Grant = "grant";
+    public const string Qualification = "qualification";
+    public const string QualificationRequirement = "qualification_requirement";
     public const string Effectivity = "effectivity";
     public const string TenantMembership = "tenant_membership";
     public const string CodeSystem = "code_system";
@@ -42,6 +44,7 @@ public static class NodeKinds
     public const string ValidationRun = "validation_run";
     public const string ValidationFinding = "validation_finding";
     public const string ProtocolElement = "protocol_element";
+    public const string Proposal = "proposal";
 
     private static readonly FrozenDictionary<Type, string> ByIdType = new Dictionary<Type, string>
     {
@@ -60,6 +63,8 @@ public static class NodeKinds
         [typeof(ArtifactVersionId)] = ArtifactVersion,
         [typeof(RoleId)] = Role,
         [typeof(GrantId)] = Grant,
+        [typeof(QualificationId)] = Qualification,
+        [typeof(QualificationRequirementId)] = QualificationRequirement,
         [typeof(EffectivityId)] = Effectivity,
         [typeof(TenantMembershipId)] = TenantMembership,
         [typeof(CodeSystemId)] = CodeSystem,
@@ -73,6 +78,7 @@ public static class NodeKinds
         [typeof(ValidationRunId)] = ValidationRun,
         [typeof(ValidationFindingId)] = ValidationFinding,
         [typeof(ProtocolElementId)] = ProtocolElement,
+        [typeof(ProposalId)] = Proposal,
     }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, Type> ByKind =

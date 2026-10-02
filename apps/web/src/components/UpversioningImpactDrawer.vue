@@ -300,8 +300,11 @@ function close() {
 
 .drawer-panel {
   background-color: white;
-  width: 100%;
-  max-width: 640px;
+  width: var(
+    --semantic-drawer-width-lg,
+    var(--drawer-width-lg, min(100vw, 640px))
+  );
+  max-width: 100vw;
   height: 100vh;
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
   display: flex;

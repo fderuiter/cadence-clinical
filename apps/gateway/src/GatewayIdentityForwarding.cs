@@ -94,7 +94,8 @@ public static class GatewayIdentityForwarding
             .Where(s => !string.IsNullOrWhiteSpace(s) && !s.Contains(','))
             .Distinct(StringComparer.Ordinal)
             .ToList();
-        string tenant = user.FindFirst(CadenceClaimTypes.TenantId)?.Value is { Length: > 0 } t ? t : GatewayIdentity.DefaultTenantId;
+        // The tenant comes from the sign-in token alone; a token without one forwards no tenant (#5038).
+        string? tenant = user.FindFirst(CadenceClaimTypes.TenantId)?.Value is { } t && !string.IsNullOrWhiteSpace(t) ? t : null;
         bool unblinded = string.Equals(user.FindFirst(CadenceClaimTypes.UnblindedAccess)?.Value, "true", StringComparison.OrdinalIgnoreCase);
 
         string? changeReason = ChangeReasonHeaders

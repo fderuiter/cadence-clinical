@@ -279,6 +279,7 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     const wrapper = mount(AmendmentDiffView, {
       global: { plugins: [pinia] },
     });
+    await flushPromises();
 
     // Switch to graph diff tab
     const tabs = wrapper.findAll(".tab-btn");

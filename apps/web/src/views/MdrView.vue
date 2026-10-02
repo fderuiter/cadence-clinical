@@ -1158,7 +1158,14 @@
 
     <!-- TAB: eCRF VISUAL CANVAS DESIGNER -->
     <div v-else-if="activeTab === 'canvas'">
-      <div id="crf-canvas-container">
+      <div
+        id="crf-canvas-container"
+        class="crf-canvas-touch-container"
+        @pointerdown="handleCanvasPointerDown"
+        @pointermove="handleCanvasPointerMove"
+        @pointerup="handleCanvasPointerUp"
+        @pointercancel="handleCanvasPointerCancel"
+      >
         <CrfAuthoringCanvas
           :form-schema="formSchema"
           :selected-field-id="selectedFieldId"
@@ -1914,6 +1921,36 @@ function onSelectField(fieldId) {
 
 function onUpdateSchema(newSchema) {
   designerStore.activeForm = newSchema;
+}
+
+const isPointerDraggingField = ref(false);
+const activePointerPosition = reactive({ x: 0, y: 0 });
+
+function handleCanvasPointerDown(e) {
+  if (
+    e.target &&
+    e.target.closest &&
+    e.target.closest(".field-drag-handle, .section-drag-handle")
+  ) {
+    isPointerDraggingField.value = true;
+    activePointerPosition.x = e.clientX;
+    activePointerPosition.y = e.clientY;
+  }
+}
+
+function handleCanvasPointerMove(e) {
+  if (isPointerDraggingField.value) {
+    activePointerPosition.x = e.clientX;
+    activePointerPosition.y = e.clientY;
+  }
+}
+
+function handleCanvasPointerUp() {
+  isPointerDraggingField.value = false;
+}
+
+function handleCanvasPointerCancel() {
+  isPointerDraggingField.value = false;
 }
 
 // Sub-Issue 8 States
@@ -3399,6 +3436,11 @@ function navigateToSoa() {
 .dropzone-area.dragging {
   border-color: var(--primary) !important;
   background-color: #eff6ff !important;
+}
+
+.crf-canvas-touch-container {
+  touch-action: pan-y;
+  width: 100%;
 }
 
 .metric-panel {

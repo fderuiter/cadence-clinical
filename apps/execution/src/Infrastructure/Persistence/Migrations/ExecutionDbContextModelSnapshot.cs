@@ -23,6 +23,753 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Cec.CecChairAdjudication", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("AdjudicationRationale")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BindingReader")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ChairId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ChairName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriteriaConfirmed")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("criteria_confirmed");
+
+                    b.Property<string>("DossierId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FinalAdjudicatedOnsetDate")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("FinalClassification")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FinalSubtype")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("FinalizedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignatureManifest")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("signature_manifest");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("_version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DossierId")
+                        .HasDatabaseName("ix_cec_chair_adjudications_dossier_id");
+
+                    b.ToTable("cec_chair_adjudications", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Cec.CecDossier", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("AdjudicationRationale")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CandidateEventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DiscordanceReasons")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("discordance_reasons");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FinalAdjudicatedOnsetDate")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FinalConsensusClassification")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FinalConsensusSubtype")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("FinalizedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDiscordant")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("MaskedSiteId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("MaskedSubjectId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Reader1Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reader2Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReportedOnsetDate")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ReportedTerm")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SignatureManifest")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("signature_manifest");
+
+                    b.Property<string>("SiteId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("WorkflowStatus")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L)
+                        .HasColumnName("_version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudyId")
+                        .HasDatabaseName("ix_cec_dossiers_study_id");
+
+                    b.HasIndex("WorkflowStatus")
+                        .HasDatabaseName("ix_cec_dossiers_workflow_status");
+
+                    b.ToTable("cec_dossiers", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Cgt.CgtBedsideVerification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BatchId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Din")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("IsMatch")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PatientWristbandId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("PrimarySignatureToken")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("PrimaryVerifierId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("PrimaryVerifierName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("PrimaryVerifierRole")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SecondarySignatureToken")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("SecondaryVerifierId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SecondaryVerifierName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SecondaryVerifierRole")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("SiteId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("UnlockToken")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTimeOffset>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UnlockToken");
+
+                    b.HasIndex("StudyId", "SubjectId");
+
+                    b.ToTable("cgt_bedside_verifications", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Cgt.CgtChainOfCustody", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BatchId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("CollectionSiteId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("CryoTempExcursionCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CurrentStage")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Din")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTimeOffset?>("HarvestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("InfusedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("LowestTempCelsius")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ManufacturingFacilityId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("ReconciledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SiteId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("UnlockToken")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Din");
+
+                    b.HasIndex("StudyId", "SubjectId")
+                        .IsUnique();
+
+                    b.ToTable("cgt_chains_of_custody", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Cgt.CgtDestructionCertificate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CertificateNumber")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid?>("ChainOfCustodyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CryptographicSeal")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("DestructionFacility")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("DestructionMethod")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("DestructionReason")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTimeOffset>("DestructionTimestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Din")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("KitNumbersJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LotNumber")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("QuantityDestroyed")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReconciliationNotes")
+                        .HasColumnType("text");
+
+                    b.Property<double?>("ResidualVolumeMl")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("SiteId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SubjectId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("UnitOfMeasure")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("VialIdentifiersJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Witness1Id")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Witness1Name")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Witness1Role")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Witness1SignatureToken")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Witness2Id")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Witness2Name")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Witness2Role")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Witness2SignatureToken")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CertificateNumber")
+                        .IsUnique();
+
+                    b.HasIndex("StudyId");
+
+                    b.ToTable("cgt_destruction_certificates", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Cgt.CgtMilestoneEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Carrier")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("ChainOfCustodyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CustodianId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("CustodianName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("CustodianRole")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("DryShipperId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FacilityId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("LocationName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("MilestoneType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SealId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("SealIntact")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<double?>("TemperatureCelsius")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("TemperatureStatus")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TrackingNumber")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChainOfCustodyId");
+
+                    b.HasIndex("StudyId");
+
+                    b.ToTable("cgt_milestone_events", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("AdherencePercentage")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("CertificateId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Disposition")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("IntactVials")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("KitNumber")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTimeOffset>("LoggedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LoggedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<double?>("ResidualVolumeMl")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("ReturnedQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SiteId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("UsedVials")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("VialIdentifier")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudyId");
+
+                    b.HasIndex("VialIdentifier");
+
+                    b.ToTable("cgt_vial_return_reconciliations", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Apps.Execution.Domain.Compliance.SiteComplianceCache", b =>
                 {
                     b.Property<Guid>("Id")
@@ -258,7 +1005,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<DateTime?>("SdvVerifiedAt")
+                    b.Property<DateTimeOffset?>("SdvVerifiedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SdvVerifiedBy")
@@ -351,7 +1098,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<DateTime?>("EscalatedAt")
+                    b.Property<DateTimeOffset?>("EscalatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Explanation")
@@ -394,7 +1141,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("ResolvedAt")
+                    b.Property<DateTimeOffset?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Resolver")
@@ -561,6 +1308,12 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("StudyCode", "EnrollmentIndex")
                         .IsUnique();
+
+                    b.HasIndex("StudyCode", "Status", "EnrollmentIndex")
+                        .HasDatabaseName("IX_clinical_subjects_StudyCode_Status_EnrollmentIndex");
+
+                    b.HasIndex("StudyCode", "SiteCode", "Status", "EnrollmentIndex")
+                        .HasDatabaseName("IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex");
 
                     b.ToTable("clinical_subjects", (string)null);
                 });

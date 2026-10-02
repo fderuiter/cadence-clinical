@@ -73,6 +73,14 @@ public sealed class CtmsGeneratedLetter : AggregateRoot<string>
     public string VisitId { get; set; } = string.Empty;
     public string LetterType { get; set; } = string.Empty;
     public string RenderedContent { get; set; } = string.Empty;
+    public string? PdfObjectKey { get; set; }
+    public string? PdfSha256Hash { get; set; }
+    public string Status { get; set; } = "DRAFT";
+    public bool IsSigned { get; set; }
+    public string? SignatureManifestation { get; set; }
+    public string? EtmfDocumentId { get; set; }
+    public DateTimeOffset? DispatchedAt { get; set; }
+    public string? RecipientEmail { get; set; }
 
     public CtmsGeneratedLetter() : base(Guid.NewGuid().ToString()) { }
     public CtmsGeneratedLetter(string id) : base(id) { }
@@ -232,5 +240,11 @@ public record SiteVisitLetterModel(
     string VisitType = "Monitoring",
     string? ScheduledDate = null,
     string? ActualDate = null,
-    IReadOnlyList<SiteVisitFindingModel>? Findings = null
+    IReadOnlyList<SiteVisitFindingModel>? Findings = null,
+    string? VisitId = null,
+    bool Finalize = false,
+    string? SignerName = null,
+    string? SigningPurpose = null,
+    string? InvestigatorEmail = null,
+    string? ReasonForChange = null
 );

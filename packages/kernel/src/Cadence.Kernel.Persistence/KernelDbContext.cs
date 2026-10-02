@@ -71,10 +71,20 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<GrantPeriod> GrantPeriods => Set<GrantPeriod>();
 
+    public DbSet<Qualification> Qualifications => Set<Qualification>();
+
+    public DbSet<QualificationPeriod> QualificationPeriods => Set<QualificationPeriod>();
+
+    public DbSet<QualificationRequirement> QualificationRequirements => Set<QualificationRequirement>();
+
+    public DbSet<QualificationRequirementPeriod> QualificationRequirementPeriods => Set<QualificationRequirementPeriod>();
+
     public DbSet<WorkQueueDefinition> WorkQueueDefinitions => Set<WorkQueueDefinition>();
     public DbSet<Effectivity> Effectivities => Set<Effectivity>();
 
     public DbSet<EffectivityStatusPeriod> EffectivityStatusPeriods => Set<EffectivityStatusPeriod>();
+
+    public DbSet<Proposal> Proposals => Set<Proposal>();
 
     public DbSet<ProvenanceActivityRecord> ProvenanceActivities => Set<ProvenanceActivityRecord>();
 

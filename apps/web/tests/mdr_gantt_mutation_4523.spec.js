@@ -127,6 +127,7 @@ describe("ClinicalGanttVisualizer saveTiming API failure handling (#4523)", () =
 
   async function editAndSave(wrapper) {
     await wrapper.find("circle").trigger("click");
+    await flushPromises();
     await wrapper.findAll("input")[0].setValue(12);
     await wrapper.findAll("input")[1].setValue(2);
     await wrapper.findAll("input")[2].setValue(4);

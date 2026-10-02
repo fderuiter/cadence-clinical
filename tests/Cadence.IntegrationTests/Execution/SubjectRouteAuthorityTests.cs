@@ -25,7 +25,7 @@ namespace Cadence.IntegrationTests.Execution;
 /// <summary>
 /// #4943 through the real composition root: only site roles change a participant's record (not data managers, #4981),
 /// only an unblinding authority breaks the blind, and nobody sees the treatment group without the gateway-signed
-/// unblinded-access claim.
+/// unblinded-access claim. A permitted caller asking for a forbidden transition is refused with 422 (PRD-SUB-001).
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory factory) : IClassFixture<ExecutionPostgresApiFactory>
@@ -90,6 +90,33 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Withdrawn);
     }
 
+    /// <summary>
+    /// A site coordinator may change state, but not along a path the transition matrix forbids: a randomized
+    /// participant cannot go back to screening, fail screening or skip to completion, and an unknown state name is
+    /// refused the same way.
+    /// The API answers 422 with the <c>INVALID_STATE_TRANSITION</c> code and the stored state does not move.
+    /// </summary>
+    [Theory]
+    [InlineData("SCREENING")]
+    [InlineData("SCREEN_FAILED")]
+    [InlineData("COMPLETED")]
+    [InlineData("ENROLED")]
+    [GxPRequirement("PRD-SUB-001")]
+    public async Task StateChange_AlongAForbiddenPath_Returns422_AndLeavesTheStateUnchanged(string target)
+    {
+        factory.SkipIfUnavailable();
+        string subject = await SeedAsync(SubjectState.Randomized);
+        using var client = factory.CreateSignedClient(Caller("crc-bypass", "Site Coordinator"));
+
+        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = target }, Ct);
+
+        string body = await state.Content.ReadAsStringAsync(Ct);
+        state.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity, body);
+        using var problem = JsonDocument.Parse(body);
+        problem.RootElement.GetProperty("code").GetString().Should().Be("INVALID_STATE_TRANSITION");
+        (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
+    }
+
     [Theory]
     [InlineData("Site Coordinator")]
     [InlineData("Site Investigator")]
@@ -146,6 +173,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     [Fact]
     public async Task Unblinding_WithAReasonUnder50Characters_Returns400_AndTheParticipantStaysBlinded()
     {
+        factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
         using var client = factory.CreateSignedClient(Caller("unblinder-short", "Principal Investigator") with { ChangeReason = "SAE" });
 

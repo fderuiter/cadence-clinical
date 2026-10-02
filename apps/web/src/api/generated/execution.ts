@@ -422,6 +422,440 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["ChairAdjudicateDossier"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/cec/dossiers/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetCecDossierById"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/apheresis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_CgtApheresisCreateRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/milestone": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_CgtMilestoneCreateRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/manufacturing-bind": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_CgtManufacturingBindRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/bedside-verify": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_CgtBedsideVerificationRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/infuse": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_CgtInfusionExecuteRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/returns": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_CgtVialReturnReconciliationRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/destruction-certificate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_CgtDestructionCertificateCreateRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/verify-barcode": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_CgtBarcodeVerifyRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/chain-of-custody/{studyId}/{subjectId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          studyId: string;
+          subjectId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/certificates/{studyId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          studyId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/cgt/reconciliations/{studyId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          studyId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -430,6 +864,227 @@ export interface components {
       status: null | string;
       service: null | string;
       engine: null | string;
+    };
+    Execution_CecDossier: {
+      event_id?: string;
+      study_id?: string;
+      subject_id?: string;
+      masked_subject_id?: string;
+      site_id?: null | string;
+      masked_site_id?: null | string;
+      candidate_event_type?: string;
+      reported_term?: string;
+      reported_onset_date?: string;
+      workflow_status?: string;
+      is_discordant?: boolean;
+      discordance_reasons?: string[];
+      final_consensus_classification?: null | string;
+      final_consensus_subtype?: null | string;
+      final_adjudicated_onset_date?: null | string;
+      adjudication_rationale?: null | string;
+      reader1_status?: string;
+      reader2_status?: string;
+      signature_manifest?:
+        null | components["schemas"]["Execution_SignatureManifest"];
+      /** Format: date-time */
+      finalized_at?: null | string;
+      id?: null | string;
+      /** Format: date-time */
+      created_at?: string;
+      created_by?: string;
+      reason_for_change?: string;
+      /** Format: int64 */
+      version_index?: number | string;
+    };
+    Execution_CgtApheresisCreateRequest: {
+      study_id: string;
+      collection_site_id: string;
+      subject_id: string;
+      din?: null | string;
+      /** Format: date-time */
+      collection_timestamp?: null | string;
+      apheresis_bag_identifier?: null | string;
+      /** Format: double */
+      volume_ml?: null | number | string;
+      /** Format: double */
+      cell_count_billions?: null | number | string;
+      custodian_id?: null | string;
+      custodian_name?: null | string;
+      custodian_role?: null | string;
+      notes?: null | string;
+    };
+    Execution_CgtBarcodeVerifyRequest: {
+      barcode_payload: string;
+      expected_subject_id?: null | string;
+      expected_din?: null | string;
+      expected_batch_id?: null | string;
+    };
+    Execution_CgtBedsideVerificationRequest: {
+      study_id: string;
+      site_id: string;
+      subject_id: string;
+      din: string;
+      batch_id: null | string;
+      bag_barcode_payload: string;
+      patient_wristband_id: string;
+      primary_verifier_id: string;
+      primary_verifier_name?: null | string;
+      primary_verifier_role?: null | string;
+      /** @default  */
+      primary_signature_token: string;
+      /** @default  */
+      secondary_verifier_id: string;
+      secondary_verifier_name?: null | string;
+      secondary_verifier_role?: null | string;
+      /** @default  */
+      secondary_signature_token: string;
+      notes?: null | string;
+    };
+    Execution_CgtDestructionCertificateCreateRequest: {
+      study_id: string;
+      site_id: string;
+      lot_number: string;
+      kit_numbers: string[];
+      vial_identifiers: string[];
+      destruction_reason: string;
+      destruction_method: string;
+      destruction_facility: string;
+      witness_1_id: string;
+      witness_1_name?: null | string;
+      witness_1_role?: null | string;
+      /** @default  */
+      witness_1_signature_token: string;
+      /** @default  */
+      witness_2_id: string;
+      witness_2_name?: null | string;
+      witness_2_role?: null | string;
+      /** @default  */
+      witness_2_signature_token: string;
+      /**
+       * Format: int32
+       * @default 1
+       */
+      quantity_destroyed: number | string;
+      /** Format: double */
+      residual_volume_ml?: null | number | string;
+      subject_id?: null | string;
+      din?: null | string;
+      /** Format: uuid */
+      coc_id?: null | string;
+      notes?: null | string;
+    };
+    Execution_CgtInfusionExecuteRequest: {
+      study_id: string;
+      site_id: string;
+      subject_id: string;
+      /** Format: uuid */
+      chain_of_custody_id: string;
+      unlock_token: string;
+      primary_verifier_id: string;
+      /** Format: date-time */
+      infusion_start?: null | string;
+      /** Format: date-time */
+      infusion_end?: null | string;
+      /** Format: double */
+      volume_infused_ml?: null | number | string;
+      /** @default false */
+      adverse_event_observed: boolean;
+      notes?: null | string;
+    };
+    Execution_CgtManufacturingBindRequest: {
+      study_id: string;
+      /** Format: uuid */
+      chain_of_custody_id: string;
+      batch_id: string;
+      manufacturing_facility_id: string;
+      /** Format: date-time */
+      synthesis_start?: null | string;
+      /** Format: date-time */
+      synthesis_end?: null | string;
+      release_qc_status?: null | string;
+      qualified_person_signoff_id?: null | string;
+      notes?: null | string;
+    };
+    Execution_CgtMilestoneCreateRequest: {
+      study_id: string;
+      /** Format: uuid */
+      chain_of_custody_id: string;
+      stage: string;
+      milestone_type: string;
+      /** Format: date-time */
+      timestamp?: null | string;
+      location_name?: null | string;
+      facility_id?: null | string;
+      /** Format: double */
+      latitude?: null | number | string;
+      /** Format: double */
+      longitude?: null | number | string;
+      /** Format: double */
+      temperature_celsius?: null | number | string;
+      custodian_id?: null | string;
+      custodian_name?: null | string;
+      custodian_role?: null | string;
+      carrier?: null | string;
+      tracking_number?: null | string;
+      /** @default true */
+      seal_intact: boolean;
+      seal_id?: null | string;
+      dry_shipper_id?: null | string;
+      notes?: null | string;
+    };
+    Execution_CgtVialReturnReconciliationRequest: {
+      study_id: string;
+      site_id: string;
+      subject_id: string;
+      kit_number: string;
+      vial_identifier: string;
+      /**
+       * Format: int32
+       * @default 1
+       */
+      returned_quantity: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      intact_vials: number | string;
+      /**
+       * Format: int32
+       * @default 1
+       */
+      used_vials: number | string;
+      /** Format: double */
+      residual_volume_ml?: null | number | string;
+      logged_by?: null | string;
+      notes?: null | string;
+    };
+    Execution_ChairAdjudicateRequest: {
+      final_classification: string;
+      final_subtype: null | string;
+      final_adjudicated_onset_date: string;
+      /** @default CHAIR_CUSTOM_DETERMINATION */
+      binding_reader: null | string;
+      criteria_confirmed?: null | string[];
+      /** @default  */
+      adjudication_rationale: string;
+      signature_token?: null | string;
+      signer_name?: null | string;
+      password?: null | string;
+      signature_meaning?: null | string;
+    };
+    Execution_ChairAdjudicationResponse: {
+      determination_id: string;
+      dossier_id: string;
+      chair_id: string;
+      chair_name: string;
+      final_classification: string;
+      final_subtype: null | string;
+      final_adjudicated_onset_date: string;
+      binding_reader: string;
+      criteria_confirmed: string[];
+      adjudication_rationale: string;
+      electronic_signature: components["schemas"]["Execution_SignatureManifest"];
+      finalized_at: string;
     };
     Execution_ClinicalQueryResponse: {
       id: string;
@@ -1063,6 +1718,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
         headers: {
           [name: string]: unknown;
         };
@@ -1938,6 +2602,99 @@ export interface operations {
         };
         content: {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ChairAdjudicateDossier: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_ChairAdjudicateRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_ChairAdjudicationResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetCecDossierById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CecDossier"];
         };
       };
       /** @description Not Found */

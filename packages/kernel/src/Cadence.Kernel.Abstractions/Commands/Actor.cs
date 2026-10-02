@@ -70,5 +70,11 @@ public sealed record Actor
 
     public static Actor ServiceAccount(string name) => new(ActorKind.ServiceAccount, ServiceAccountPrefix + name);
 
+    /// <summary>
+    /// An AI or rules agent acting through the Intelligence engine (spec §11, ADR-2489): <c>agent:&lt;name&gt;</c>. An agent
+    /// may read and propose; the authorizer denies it every Execute and Approve command.
+    /// </summary>
+    public static Actor AutomationAgent(string name) => new(ActorKind.AutomationAgent, AutomationAgentPrefix + name);
+
     public override string ToString() => $"{Kind}:{Id}";
 }

@@ -70,6 +70,7 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
 
     wrapper.vm.selectAnswer(q1.id, q1.correctAnswerIndex);
     wrapper.vm.selectAnswer(q2.id, q2.correctAnswerIndex);
+    await wrapper.vm.$nextTick();
 
     // Submit / Check answers
     await wrapper.find(".btn-submit-answers").trigger("click");

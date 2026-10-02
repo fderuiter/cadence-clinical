@@ -116,6 +116,16 @@ public class GrantIdValueConverter() : ValueConverter<GrantId, Guid>(
     guid => new GrantId(guid)
 );
 
+public class QualificationIdValueConverter() : ValueConverter<QualificationId, Guid>(
+    id => id.Value,
+    guid => new QualificationId(guid)
+);
+
+public class QualificationRequirementIdValueConverter() : ValueConverter<QualificationRequirementId, Guid>(
+    id => id.Value,
+    guid => new QualificationRequirementId(guid)
+);
+
 public class WorkQueueDefinitionIdValueConverter() : ValueConverter<WorkQueueDefinitionId, Guid>(
     id => id.Value,
     guid => new WorkQueueDefinitionId(guid)
@@ -124,4 +134,9 @@ public class WorkQueueDefinitionIdValueConverter() : ValueConverter<WorkQueueDef
 public class EffectivityIdValueConverter() : ValueConverter<EffectivityId, Guid>(
     id => id.Value,
     guid => new EffectivityId(guid)
+);
+
+public class ProposalIdValueConverter() : ValueConverter<ProposalId, Guid>(
+    id => id.Value,
+    guid => new ProposalId(guid)
 );

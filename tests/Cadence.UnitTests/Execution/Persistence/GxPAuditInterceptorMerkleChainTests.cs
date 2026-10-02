@@ -115,13 +115,15 @@ public class GxPAuditInterceptorMerkleChainTests
     [GxPRequirement("PRD-SYS-001")]
     public async Task SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently()
     {
-        await using var context = CreateContext(Guid.NewGuid().ToString());
+        var clock = new FakeClock();
+        await using var context = CreateContext(Guid.NewGuid().ToString(), clock);
         var guidAggregate = new GuidKeyedAggregate(Guid.NewGuid(), "Alpha");
         var stringAggregate = new TestSubject(Guid.NewGuid().ToString(), "SITE-A");
         context.GuidAggregates.Add(guidAggregate);
         context.StringAggregates.Add(stringAggregate);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
+        clock.Advance(TimeSpan.FromSeconds(1));
         guidAggregate.Name = "Beta";
         stringAggregate.Status = "ENROLLED";
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);

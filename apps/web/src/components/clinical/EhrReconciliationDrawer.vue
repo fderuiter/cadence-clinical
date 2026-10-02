@@ -859,6 +859,8 @@ function formatDiscrepancy(disc: string): string {
       return "⚠️ Value Conflict";
     case "UNIT_MISMATCH":
       return "🔄 Unit Mismatch";
+    case "DATE_MISMATCH":
+      return "📅 Date Mismatch";
     default:
       return disc;
   }
@@ -898,17 +900,23 @@ function formatResolutionAction(act?: string): string {
 .drawer-backdrop {
   position: fixed;
   inset: 0;
+  max-width: 100vw;
   background-color: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(3px);
   display: flex;
   justify-content: flex-end;
   z-index: 1050;
   animation: fadeIn 0.2s ease-out;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .ehr-reconciliation-drawer {
-  width: 920px;
-  max-width: 95vw;
+  width: var(
+    --semantic-drawer-width-xl,
+    var(--drawer-width-xl, min(100vw, 920px))
+  );
+  max-width: 100vw;
   height: 100vh;
   background-color: #ffffff;
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
@@ -916,6 +924,8 @@ function formatResolutionAction(act?: string): string {
   flex-direction: column;
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 /* Header */
@@ -989,6 +999,11 @@ function formatResolutionAction(act?: string): string {
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
     color 0.15s,
     background-color 0.15s;
@@ -1157,10 +1172,12 @@ function formatResolutionAction(act?: string): string {
   border-radius: 4px;
   background-color: #ffffff;
   color: #0f172a;
+  max-width: 100%;
 }
 
 .search-input {
   width: 280px;
+  max-width: 100%;
 }
 
 /* Body & Candidate List */
@@ -1169,6 +1186,8 @@ function formatResolutionAction(act?: string): string {
   overflow-y: auto;
   padding: 16px 24px;
   background-color: #f8fafc;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .state-container {
@@ -1304,6 +1323,11 @@ function formatResolutionAction(act?: string): string {
 .pill-unit_mismatch {
   background-color: #fef3c7;
   color: #b45309;
+}
+
+.pill-date_mismatch {
+  background-color: #ffedd5;
+  color: #c2410c;
 }
 
 .status-pill {
@@ -1743,6 +1767,100 @@ function formatResolutionAction(act?: string): string {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Mobile Breakpoint Overrides (max-width: 640px) */
+@media (max-width: 640px) {
+  .ehr-reconciliation-drawer {
+    width: 100vw;
+    max-width: 100vw;
+  }
+
+  .drawer-header,
+  .context-bar,
+  .toolbar,
+  .drawer-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 12px 16px;
+  }
+
+  .toolbar-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .filter-control {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .select-input,
+  .search-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .search-control {
+    width: 100%;
+  }
+
+  .split-screen-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ehr-pane {
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .card-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .action-btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .action-btn-group .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: var(--semantic-touch-target-min, 48px);
+  }
+
+  .btn-link-provenance {
+    width: 100%;
+    text-align: center;
+    padding: 8px 0;
+    min-height: var(--semantic-touch-target-min, 48px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: var(--semantic-touch-target-min, 48px);
+  }
+
+  .provenance-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

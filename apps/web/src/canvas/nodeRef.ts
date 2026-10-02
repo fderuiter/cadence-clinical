@@ -26,6 +26,8 @@ export const NODE_KINDS = [
   "artifact_version",
   "role",
   "grant",
+  "qualification",
+  "qualification_requirement",
   "effectivity",
   "tenant_membership",
   "code_system",
@@ -39,6 +41,7 @@ export const NODE_KINDS = [
   "validation_run",
   "validation_finding",
   "protocol_element",
+  "proposal",
 ] as const;
 
 export type NodeKind = (typeof NODE_KINDS)[number];

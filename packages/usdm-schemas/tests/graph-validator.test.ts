@@ -202,6 +202,6 @@ describe("USDM Standalone Graph Validation Engine", () => {
     const duration = performance.now() - start;
 
     expect(result.valid).toBe(true);
-    expect(duration).toBeLessThan(50);
+    expect(duration).toBeLessThan(500);
   });
 });

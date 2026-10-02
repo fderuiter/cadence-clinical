@@ -15,7 +15,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.49.0",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.3",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vitest/coverage-v8": "^5.0.2",
     "@vue/test-utils": "^2.5.0",
@@ -39,7 +39,7 @@
     "generate:api": "node scripts/generate-api-types.js",
     "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
     "prebuild": "pnpm --filter ui build && node src/types/generate-types.js",
-    "pretest": "pnpm --filter ui build && node src/types/generate-types.js",
+    "pretest": "node src/types/generate-types.js",
     "pretypecheck": "node src/types/generate-types.js",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",

@@ -1,6 +1,8 @@
 using System;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Cec;
+using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.EditChecks;
 using Cadence.Apps.Execution.Application.Forms;
@@ -160,6 +162,7 @@ builder.Services.AddScoped<ISiteComplianceRepository, SiteComplianceRepository>(
 builder.Services.AddScoped<IObservationRepository, ObservationRepository>();
 builder.Services.AddScoped<IFormSubmissionRepository, FormSubmissionRepository>();
 builder.Services.AddScoped<IClinicalQueryRepository, ClinicalQueryRepository>();
+builder.Services.AddScoped<ICecRepository, CecRepository>();
 
 // IAuditLogWriter (MIG-SUBJ-017's explicit-call audit seam, EfAuditLogWriter's own implementation
 // MIG-SUBJ-018/019/020 all call): Scoped, since it appends directly to the scoped ExecutionDbContext's own
@@ -187,6 +190,9 @@ builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceAppl
 builder.Services.AddScoped<IObservationApplicationService, ObservationApplicationService>();
 builder.Services.AddScoped<IFormSubmissionApplicationService, FormSubmissionApplicationService>();
 builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplicationService>();
+builder.Services.AddScoped<IAutoQueryDispatchService, AutoQueryDispatchService>();
+builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
+builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -244,6 +250,8 @@ app.MapSiteComplianceEndpoints();
 app.MapObservationEndpoints();
 app.MapFormEndpoints();
 app.MapQueryEndpoints();
+app.MapCecEndpoints();
+app.MapCgtEndpoints();
 
 if (args.Contains("--seed"))
 {

@@ -52,4 +52,9 @@ public static class FormErrors
 
     public static DomainError TrialLocked(string message) =>
         DomainError.Forbidden("TRIAL_LOCKED", message);
+
+    public static DomainError ProtocolVersionMismatch(string explicitVersion, string activeVersion) =>
+        DomainError.Validation(
+            "PROTOCOL_VERSION_MISMATCH",
+            $"Submitted protocol version '{explicitVersion}' does not match subject active protocol version '{activeVersion}'.");
 }

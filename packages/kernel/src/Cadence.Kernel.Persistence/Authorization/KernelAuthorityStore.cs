@@ -48,6 +48,23 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
             .ToListAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyList<Qualification>> QualificationsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        await using var db = contexts.Create(tenant);
+        return await db.Qualifications.AsNoTracking()
+            .Where(q => q.TenantId == tenant && q.HolderKind == actor.Kind && q.HolderId == actor.Id)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        return await db.QualificationRequirements.AsNoTracking()
+            .Where(r => r.TenantId == tenant && r.Capability == capability)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(resource);
@@ -152,6 +169,16 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     .SingleOrDefaultAsync(ct).ConfigureAwait(false);
                 return scope is null ? null : await ScopePathAsync(db, tenant, new AuthorityScope(scope.ScopeLevel, scope.ScopeTargetId, scope.ScopeCountry), ct).ConfigureAwait(false);
 
+            case NodeKinds.QualificationRequirement:
+                var requirementId = QualificationRequirementId.FromGuid(id);
+                var requirementScope = await db.QualificationRequirements.AsNoTracking()
+                    .Where(r => r.TenantId == tenant && r.Id == requirementId)
+                    .Select(r => new { r.ScopeLevel, r.ScopeTargetId, r.ScopeCountry })
+                    .SingleOrDefaultAsync(ct).ConfigureAwait(false);
+                return requirementScope is null
+                    ? null
+                    : await ScopePathAsync(db, tenant, new AuthorityScope(requirementScope.ScopeLevel, requirementScope.ScopeTargetId, requirementScope.ScopeCountry), ct).ConfigureAwait(false);
+
             case NodeKinds.Effectivity:
                 var effectivityId = EffectivityId.FromGuid(id);
                 var effectivity = await db.Effectivities.AsNoTracking()
@@ -165,9 +192,17 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     _ => await StudyPathAsync(db, tenant, effectivity.StudyId, effectivity.ScopeCountry, ct).ConfigureAwait(false),
                 };
 
+            case NodeKinds.Proposal:
+                // A proposal is a study object (ADR-2489 §4.2): readers and deciders are authorized on its study (K-AI-3).
+                var proposalId = ProposalId.FromGuid(id);
+                var proposalStudy = await db.Proposals.AsNoTracking()
+                    .Where(p => p.TenantId == tenant && p.Id == proposalId).Select(p => (StudyId?)p.StudyId)
+                    .SingleOrDefaultAsync(ct).ConfigureAwait(false);
+                return proposalStudy is { } proposedIn ? await StudyPathAsync(db, tenant, proposedIn, country: null, ct).ConfigureAwait(false) : null;
+
             default:
-                // Tenants, participants (who may be in several studies), roles, attestations and reference data belong
-                // to no organization or study.
+                // Tenants, participants (who may be in several studies), roles, qualifications (held by a person across
+                // studies), attestations and reference data belong to no organization or study.
                 return null;
         }
     }

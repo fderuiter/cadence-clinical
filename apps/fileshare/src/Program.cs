@@ -1,4 +1,5 @@
 using Cadence.Apps.Fileshare.Infrastructure.Persistence;
+using Cadence.Apps.Fileshare.Workers;
 using Cadence.Database;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -10,6 +11,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
 builder.AddCadencePostgresDbContext<FileshareDbContext>();
+
+builder.Services.Configure<FileshareWorkerOptions>(builder.Configuration.GetSection("FileshareWorkers"));
+builder.Services.AddScoped<IMediaTranscoderProcessor, MediaTranscoderProcessor>();
+builder.Services.AddScoped<IDocumentConverterProcessor, DocumentConverterProcessor>();
+builder.Services.AddHostedService<MediaTranscoderWorker>();
+builder.Services.AddHostedService<DocumentConversionWorker>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();

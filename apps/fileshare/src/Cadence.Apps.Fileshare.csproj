@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\..\packages\telemetry\src\Cadence.Telemetry.csproj" />
     <ProjectReference Include="..\..\..\packages\contracts\src\Cadence.Contracts.csproj" />
     <ProjectReference Include="..\..\..\packages\database\src\Cadence.Database.csproj" />
+    <ProjectReference Include="..\..\..\packages\storage\src\Cadence.Storage.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,5 +20,6 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FFMpegCore" />
   </ItemGroup>
 </Project>

@@ -4,6 +4,8 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `GET` | `/api/v1/execution/cec/dossiers/{id}` | GetCecDossierById |  |
+| `POST` | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate` | ChairAdjudicateDossier |  |
 | `POST` | `/api/v1/execution/forms` | CreateFormSubmission |  |
 | `GET` | `/api/v1/execution/forms/subject/{studyId}/{subjectId}` | ListFormSubmissionsBySubject |  |
 | `GET` | `/api/v1/execution/forms/{id}` | GetFormSubmissionById |  |
@@ -23,6 +25,17 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/queries/{id}/close` | CloseClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/{id}/reopen` | ReopenClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/{id}/respond` | RespondClinicalQuery |  |
+| `POST` | `/api/v1/execution/rtsm/cgt/apheresis` |  |  |
+| `POST` | `/api/v1/execution/rtsm/cgt/bedside-verify` |  |  |
+| `GET` | `/api/v1/execution/rtsm/cgt/certificates/{studyId}` |  |  |
+| `GET` | `/api/v1/execution/rtsm/cgt/chain-of-custody/{studyId}/{subjectId}` |  |  |
+| `POST` | `/api/v1/execution/rtsm/cgt/destruction-certificate` |  |  |
+| `POST` | `/api/v1/execution/rtsm/cgt/infuse` |  |  |
+| `POST` | `/api/v1/execution/rtsm/cgt/manufacturing-bind` |  |  |
+| `POST` | `/api/v1/execution/rtsm/cgt/milestone` |  |  |
+| `GET` | `/api/v1/execution/rtsm/cgt/reconciliations/{studyId}` |  |  |
+| `POST` | `/api/v1/execution/rtsm/cgt/returns` |  |  |
+| `POST` | `/api/v1/execution/rtsm/cgt/verify-barcode` |  |  |
 | `POST` | `/api/v1/execution/sites/{siteId}/activate` | ActivateSite |  |
 | `GET` | `/api/v1/execution/sites/{siteId}/compliance-status` | GetSiteComplianceStatus |  |
 | `GET` | `/api/v1/execution/subjects` | ListSubjects | Lists one page of a study's subjects in enrollment order. |

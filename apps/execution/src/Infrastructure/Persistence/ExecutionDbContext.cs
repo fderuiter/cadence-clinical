@@ -1,3 +1,5 @@
+using Cadence.Apps.Execution.Domain.Cec;
+using Cadence.Apps.Execution.Domain.Cgt;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
@@ -14,12 +16,15 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 persistence gateway for the Execution bounded context.
-/// Exposes aggregates for subjects, observations, form submissions, and clinical queries.
+/// Exposes aggregates for subjects, observations, form submissions, clinical queries, CEC dossiers, and CGT chain of custody records.
 /// @req:PRD-SUB-001
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
 /// @req:PRD-SYS-007
 /// @req:PRD-SYS-053
+/// @req:PRD-CEC-001
+/// @req:PRD-CEC-002
+/// @req:PRD-SCM-005
 /// @req:SRS-EDC-001
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-004
@@ -38,6 +43,20 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<ClinicalQuery> ClinicalQueries => Set<ClinicalQuery>();
 
+    public DbSet<CecDossier> CecDossiers => Set<CecDossier>();
+
+    public DbSet<CecChairAdjudication> CecChairAdjudications => Set<CecChairAdjudication>();
+
+    public DbSet<CgtChainOfCustody> CGTChainsOfCustody => Set<CgtChainOfCustody>();
+
+    public DbSet<CgtMilestoneEvent> CGTMilestoneEvents => Set<CgtMilestoneEvent>();
+
+    public DbSet<CgtBedsideVerification> CGTBedsideVerifications => Set<CgtBedsideVerification>();
+
+    public DbSet<CgtDestructionCertificate> CGTDestructionCertificates => Set<CgtDestructionCertificate>();
+
+    public DbSet<CgtVialReturnReconciliation> CGTVialReturnReconciliations => Set<CgtVialReturnReconciliation>();
+
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -50,6 +69,13 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new ClinicalObservationConfiguration());
         modelBuilder.ApplyConfiguration(new FormSubmissionConfiguration());
         modelBuilder.ApplyConfiguration(new ClinicalQueryConfiguration());
+        modelBuilder.ApplyConfiguration(new CecDossierConfiguration());
+        modelBuilder.ApplyConfiguration(new CecChairAdjudicationConfiguration());
+        modelBuilder.ApplyConfiguration(new CgtChainOfCustodyConfiguration());
+        modelBuilder.ApplyConfiguration(new CgtMilestoneEventConfiguration());
+        modelBuilder.ApplyConfiguration(new CgtBedsideVerificationConfiguration());
+        modelBuilder.ApplyConfiguration(new CgtDestructionCertificateConfiguration());
+        modelBuilder.ApplyConfiguration(new CgtVialReturnReconciliationConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
     }

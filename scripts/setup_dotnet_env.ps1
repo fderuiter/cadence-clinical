@@ -59,10 +59,28 @@ if (-not $sdkInstalled -and -not $SkipSdkInstall) {
 
         Invoke-WebRequest -Uri $installScriptUrl -OutFile $tempScript
 
+        $pinnedSha256 = "e8b873e18a81e5c4cd8ab69d84dac8fead291d50b3c44633cd7fddad709a13d6"
+        $expectedHash = if ($env:DOTNET_INSTALL_PS1_SHA256) { $env:DOTNET_INSTALL_PS1_SHA256 } else { $pinnedSha256 }
+
+        Write-Host "  [ACTION] Verifying SHA256 checksum for dotnet-install.ps1..." -ForegroundColor Cyan
+        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash
+
+        if ($actualHash.Trim().ToLower() -ne $expectedHash.Trim().ToLower()) {
+            Remove-Item -Path $tempScript -ErrorAction SilentlyContinue
+            Write-Host "  [ERROR] Checksum verification failed for dotnet-install.ps1!" -ForegroundColor Red
+            Write-Host "    Expected: $($expectedHash.Trim().ToLower())" -ForegroundColor Red
+            Write-Host "    Actual:   $($actualHash.Trim().ToLower())" -ForegroundColor Red
+            Write-Host "    To override, set environment variable `$env:DOTNET_INSTALL_PS1_SHA256." -ForegroundColor Red
+            throw "SHA256 checksum verification failed for dotnet-install.ps1"
+        }
+
+        Write-Host "  [OK] SHA256 checksum verified ($($actualHash.Trim().ToLower()))." -ForegroundColor Green
+
         $installDir = [System.IO.Path]::Combine($env:LOCALAPPDATA, "Microsoft", "dotnet")
         Write-Host "  [ACTION] Installing .NET $TargetChannel SDK (GA) to $installDir..." -ForegroundColor Cyan
 
         & powershell.exe -ExecutionPolicy Bypass -File $tempScript -Channel $TargetChannel -InstallDir $installDir
+        Remove-Item -Path $tempScript -ErrorAction SilentlyContinue
 
         # Configure PATH for current session and persistent user environment
         if ($env:PATH -notlike "*$installDir*") {

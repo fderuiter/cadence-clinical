@@ -16,7 +16,7 @@ Reservation rule: a new ADR takes the next free number after the highest number 
 
 ## Clinical Kernel Decisions
 
-The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K029 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
+The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) records the kernel decisions K001–K033 (§17) and the ADRs they supersede (§16). The kernel ADRs themselves are listed under "0. Clinical Kernel" below.
 
 | Decision | Subject | ADR |
 | --- | --- | --- |
@@ -49,10 +49,13 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 | K027 | Grant-backed node visibility | [ADR-2457](2026-09-30-grant-backed-node-visibility.md) |
 | K028 | Mapping specifications as governed concept-to-variable maps | [ADR-2463](2026-09-30-mapping-specifications-as-governed-concept-to-variable-maps.md) |
 | K029 | IdentityVault | [ADR-2458](2026-09-30-identity-vault.md) |
+| K031 | Qualifications gate capabilities | [ADR-2459](2026-09-30-qualifications-gate-capabilities.md) |
+| K032 | Visit timing, anchored visits and cycles on the expected schedule | [ADR-2507](2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md) |
+| K033 | AI proposals and automation agents | [ADR-2489](2026-09-30-ai-proposals-and-automation-agents.md) |
 
 ## Domain-Based Decisions Log
 
-### 0. Clinical Kernel (K001–K029)
+### 0. Clinical Kernel (K001–K033)
 
 - [ADR-2244: Clinical Kernel Modular Monolith Architecture](2026-09-29-clinical-kernel-modular-monolith-architecture.md) (2026-09-29)
 - [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) (2026-09-29)
@@ -72,6 +75,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2456: Effectivity and Study-Site Activation](2026-09-30-effectivity-and-study-site-activation.md) (2026-09-30)
 - [ADR-2457: Grant-Backed Node Visibility](2026-09-30-grant-backed-node-visibility.md) (2026-09-30)
 - [ADR-2458: The IdentityVault](2026-09-30-identity-vault.md) (2026-09-30)
+- [ADR-2459: Qualifications Gate Capabilities](2026-09-30-qualifications-gate-capabilities.md) (2026-09-30)
 - [ADR-2460: Standards Registry and Metadata Registry as Governed, Tenant-Scoped Reference Data](2026-09-30-standards-registry-and-mdr-as-governed-tenant-reference-data.md) (2026-09-30)
 - [ADR-2461: Rule Expression Language, Rule-Pack Format and the IRuleEvaluator Port](2026-09-30-rule-expression-language-rule-pack-format-and-evaluator-port.md) (2026-09-30)
 - [ADR-2462: Validation Findings Derived from Immutable Runs and Attested Decisions](2026-09-30-validation-findings-derived-from-immutable-runs-and-attested-decisions.md) (2026-09-30)
@@ -81,6 +85,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2472: Executable Protocol Design Document with Stable Element IDs](2026-09-30-executable-protocol-design-document.md) (2026-09-30)
 - [ADR-2473: CDISC USDM 4 Import into the Protocol Design](2026-09-30-usdm-4-import-into-the-protocol-design.md) (2026-09-30)
 - [ADR-2474: Protocol Elements as Lineage Nodes](2026-09-30-protocol-elements-as-lineage-nodes.md) (2026-09-30)
+- [ADR-2475: Schedule of Activities as a Rendering, with Typed Amendment Directives](2026-09-30-schedule-of-activities-as-a-rendering-with-typed-amendment-directives.md) (2026-09-30)
 - [ADR-2480: Evaluate-Only Simulation over Candidate Versions](2026-09-30-evaluate-only-simulation-over-candidate-versions.md) (2026-09-30)
 - [ADR-2481: Public NodeRef and Kernel-Computed Zoom Path](2026-09-30-public-noderef-and-kernel-computed-zoom-path.md) (2026-09-30)
 - [ADR-2482: Explanation Model Produced by the Rule Owner](2026-09-30-explanation-model-produced-by-the-rule-owner.md) (2026-09-30)
@@ -90,6 +95,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2486: Work Queues as Capability-Keyed Definitions](2026-09-30-work-queues-as-capability-keyed-definitions.md) (2026-09-30)
 - [ADR-2487: Expected Schedule as a Pure Function of the Protocol Design](2026-09-30-expected-schedule-as-a-pure-function.md) (2026-09-30)
 - [ADR-2488: Study Pulse Metrics and Attention Rules as Versioned Indicators](2026-09-30-study-pulse-metrics-as-versioned-indicators.md) (2026-09-30)
+- [ADR-2489: AI Proposals and Automation Agents](2026-09-30-ai-proposals-and-automation-agents.md) (2026-09-30)
+- [ADR-2590: Counts Limited to the Reader's Visible Scope](2026-09-30-counts-limited-to-the-readers-visible-scope.md) (2026-09-30)
 - [ADR-2540: Kernel API Host and Read Endpoints for the Clinical Canvas](2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md) (2026-09-30)
 
 ### 1. Core Platform & Execution Engine
@@ -216,7 +223,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2357: Declarative Route Dependencies and Fallback Signature Verification](2026-08-11-declarative-dependencies-and-signature-verification-fallback.md) (2026-08-11)
 - [ADR-2358: Gateway Signature Legacy V2 Fallback](2026-08-11-gateway-signature-legacy-v2-fallback.md) (2026-08-11)
 - [ADR-2365: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling](2026-08-11-unified-ports-and-adapters-architecture-transaction-propagation-and-gateway-connection-pooling.md) (2026-08-11)
-- [ADR-2367: NestJS API Gateway Promise Coalescing and Eager Key Prefetching](2026-08-12-nestjs-api-gateway-promise-coalescing.md) (2026-08-12)
+- [ADR-2367: NestJS API Gateway Promise Coalescing and Eager Key Prefetching](2026-08-12-nestjs-api-gateway-promise-coalescing.md) (2026-08-12) *(Superseded by ADR-2256)*
 - [ADR-2369: Secure Unblinding Signature Fallback Restriction & Scope Normalization](2026-08-12-secure-unblinding-signature-fallback-restriction.md) (2026-08-12)
 - [ADR-2371: Unified Cryptographic Fingerprint Verification API](2026-08-12-unified-cryptographic-fingerprint-verification-api.md) (2026-08-12)
 - [ADR-2374: Standalone In-Application Ticketing Service and Platform Integration](2026-08-13-tickets-service-scaffold-and-gateway-integration.md) (2026-08-13)
@@ -313,6 +320,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2220: Site Greenlight Governance Regulatory Binders and DOA Signing](2026-08-28-site-greenlight-governance-regulatory-binders-and-doa-signing.md) (2026-08-28)
 - [ADR-2221: Discrepancy Event Outbox Clinical Issue Hub and Multi Channel Notifications](2026-08-28-discrepancy-event-outbox-clinical-issue-hub-and-multi-channel-notifications.md) (2026-08-28)
 - [ADR-2222: Real Time Payable Ledger Holdbacks and Patient Compensation Wallet](2026-08-28-real-time-payable-ledger-holdbacks-and-patient-compensation-wallet.md) (2026-08-28)
+- [ADR-2801: Automated Stipend Disbursement Threshold Rules for Participant Wallet](2026-10-01-automated-stipend-disbursement-threshold-rules.md) (2026-10-01)
 - [ADR-2232: Financial and Site Operations Engines Standard](2026-08-29-financial-and-site-operations-engines-standard.md) (2026-08-29)
 - [ADR-2425: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md) (2026-08-31)
 
@@ -343,6 +351,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2224: Multi Persona Golden Path Suite Video Capture and RTM Synchronization](2026-08-28-multi-persona-golden-path-suite-video-capture-and-rtm-synchronization.md) (2026-08-28)
 - [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](2026-09-06-gxp-compliance-reporting-ci-alignment.md) (2026-09-06)
 - [ADR-2261: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](2026-09-29-native-csharp-deid-engine-and-canonical-signing.md) (2026-09-29)
+- [ADR-2541: Consolidate GxPAuditInterceptor on Cadence.Database and Remove Obsolete Security Interceptor](2026-09-30-consolidate-gxp-audit-interceptor-on-database-package.md) (2026-09-30)
 
 ### 6. Frontend & Design System
 
@@ -504,11 +513,17 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2504: The Tripartite Form Definition Is Not Carried Forward](2026-09-30-the-tripartite-form-definition-is-not-carried-forward.md) (2026-09-30)
 - [ADR-2505: Recording Evidence Goes to Controlled Object Storage, Not Google Drive](2026-09-30-recording-evidence-goes-to-controlled-object-storage.md) (2026-09-30)
 - [ADR-2506: The engine_core Rule AST Is Superseded by the One Rule Language](2026-09-30-the-engine-core-rule-ast-is-superseded-by-the-one-rule-language.md) (2026-09-30)
+- [ADR-2507: Visit Timing, Anchored Visits and Cycles on the Expected Schedule](2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md) (2026-09-30)
 - [ADR-2510: Endpoint Permissions from the Permission Matrix](2026-09-30-endpoint-permissions-from-the-permission-matrix.md) (2026-09-30)
 - [ADR-2511: Template Render Routes Need a Permission](2026-09-30-template-render-routes-need-a-permission.md) (2026-09-30)
 - [ADR-2512: Security and Compliance Take Time From IClock](2026-09-30-security-and-compliance-take-time-from-iclock.md) (2026-09-30)
 - [ADR-2513: Form Approval Hashes the RFC 8785 Canonical Payload](2026-09-30-form-approval-hashes-the-rfc-8785-canonical-payload.md) (2026-09-30)
+- [ADR-2514: The Tenant Comes From Sign-In, With No Fallback](2026-09-30-the-tenant-comes-from-sign-in-with-no-fallback.md) (2026-09-30)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)
 - [ADR-2530: Measure Web Coverage over All Source with a Ratchet Floor](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) (2026-09-30)
+- [ADR-2591: Synchronous In-Process DSUR Compilation and Cryptographic Signing Engine](2026-09-30-synchronous-in-process-dsur-compilation-and-cryptographic-signing-engine.md) (2026-09-30)
+- [ADR-2592: Dual Ecosystem Vulnerability Auditor and CEC Chair Adjudications Persistence](2026-09-30-dual-ecosystem-vulnerability-auditor-and-cec-chair-adjudications-persistence.md) (2026-09-30)
+- [ADR-2802: CTMS Visit Letter PDF Compilation and Automated Dispatch Pipeline](2026-10-01-ctms-visit-letter-pdf-compilation-and-automated-dispatch-pipeline.md) (2026-10-01)
+- [ADR-2803: Cell and Gene Therapy (CGT) Domain Module Integration](2026-10-02-cell-and-gene-therapy-cgt-domain-module.md) (2026-10-02)

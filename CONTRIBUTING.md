@@ -62,14 +62,14 @@ To run the services locally, see [README: Running the services](README.md#runnin
 
 ## 3. Local checks
 
-The pre-commit hook (`.githooks/pre-commit`) runs `dotnet format --verify-no-changes` and
-`pnpm cadence check`. Before opening a PR also run the tests:
+The pre-commit hook (`.githooks/pre-commit` and `.pre-commit-config.yaml`) runs `dotnet format --verify-no-changes`, `pnpm cadence check`, and `python3 scripts/check-action-pinning.py`. Before opening a PR also run the tests:
 
 ```bash
 dotnet build Cadence.sln
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 dotnet format Cadence.sln --verify-no-changes
+python3 scripts/check-action-pinning.py
 pnpm cadence check
 ```
 

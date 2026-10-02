@@ -923,16 +923,22 @@ const onTicketSigned = (sigPayload) => {
   left: 0;
   width: 100vw;
   height: 100vh;
+  max-width: 100vw;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(3px);
   display: flex;
   justify-content: flex-end;
   z-index: 999;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .drawer-panel {
-  width: 100%;
-  max-width: 720px;
+  width: var(
+    --semantic-drawer-width-lg,
+    var(--drawer-width-lg, min(100vw, 640px))
+  );
+  max-width: 100vw;
   height: 100vh;
   background: #ffffff;
   display: flex;
@@ -940,6 +946,8 @@ const onTicketSigned = (sigPayload) => {
   box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.2);
   border-left: 1px solid #cbd5e1;
   animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 @keyframes slideLeft {
@@ -1048,6 +1056,11 @@ const onTicketSigned = (sigPayload) => {
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .drawer-close:hover {
@@ -1148,6 +1161,9 @@ const onTicketSigned = (sigPayload) => {
   color: #64748b;
   cursor: pointer;
   white-space: nowrap;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .tab-item.active {
@@ -1160,6 +1176,8 @@ const onTicketSigned = (sigPayload) => {
   overflow-y: auto;
   padding: 20px 24px;
   background: #f1f5f9;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .tab-pane {
@@ -1606,6 +1624,12 @@ const onTicketSigned = (sigPayload) => {
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.15s ease-in-out;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .btn-sm {

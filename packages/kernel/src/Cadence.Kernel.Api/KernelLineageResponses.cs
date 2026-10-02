@@ -122,12 +122,17 @@ public sealed record KernelDependentsResponse(
 /// counted the same way as Impact.
 /// </param>
 /// <param name="ChangedElements">The elements the amended content adds, changes or removes, by the structural diff.</param>
+/// <param name="Schedule">
+/// The typed Schedule of Activities and eligibility directives (ADR-2475), or null when the amended content is not a
+/// typed protocol design.
+/// </param>
 public sealed record KernelAmendmentImpactResponse(
     string Amended,
     string Parent,
     IReadOnlyList<string> ImpactedElements,
     KernelDependentsResponse Dependents,
-    IReadOnlyList<KernelElementChangeResponse> ChangedElements)
+    IReadOnlyList<KernelElementChangeResponse> ChangedElements,
+    KernelSoaAmendmentDiffResponse? Schedule)
 {
     internal static KernelAmendmentImpactResponse From(AmendmentImpact impact) =>
         new(
@@ -135,7 +140,8 @@ public sealed record KernelAmendmentImpactResponse(
             NodeRef.For(impact.Parent).ToString(),
             impact.ImpactedElements,
             KernelDependentsResponse.From(impact.Dependents),
-            [.. impact.ChangedElements.Select(c => new KernelElementChangeResponse(c.ElementId, c.InstanceType, c.Change.ToString(), c.Properties))]);
+            [.. impact.ChangedElements.Select(c => new KernelElementChangeResponse(c.ElementId, c.InstanceType, c.Change.ToString(), c.Properties))],
+            impact.Schedule is { } schedule ? KernelSoaAmendmentDiffResponse.From(schedule, impact.ImpactedElements) : null);
 }
 
 /// <summary>One element an amendment adds, changes or removes.</summary>

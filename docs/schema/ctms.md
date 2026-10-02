@@ -13,7 +13,7 @@ Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistenc
 | [`ctms.ctms_cra_allocations`](#ctmsctms_cra_allocations) | `CtmsCraAllocation` | 11 |
 | [`ctms.ctms_defeated_monitoring_visits`](#ctmsctms_defeated_monitoring_visits) | `CtmsDefeatedMonitoringVisit` | 11 |
 | [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 12 |
-| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 8 |
+| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 16 |
 | [`ctms.ctms_investigator_grants`](#ctmsctms_investigator_grants) | `CtmsInvestigatorGrant` | 10 |
 | [`ctms.ctms_investigator_payables`](#ctmsctms_investigator_payables) | `CtmsInvestigatorPayable` | 11 |
 | [`ctms.ctms_monitoring_visit_findings`](#ctmsctms_monitoring_visit_findings) | `CtmsMonitoringVisitFinding` | 11 |
@@ -194,9 +194,17 @@ Entity: `CtmsGeneratedLetter`
 | `Id` | `character varying(36)` | no |  | PK |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
+| `DispatchedAt` | `timestamp with time zone` | yes |  |  |
+| `EtmfDocumentId` | `character varying(100)` | yes |  |  |
+| `IsSigned` | `boolean` | no |  |  |
 | `LetterType` | `character varying(50)` | no |  |  |
+| `PdfObjectKey` | `character varying(1000)` | yes |  |  |
+| `PdfSha256Hash` | `character varying(64)` | yes |  |  |
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RecipientEmail` | `character varying(255)` | yes |  |  |
 | `RenderedContent` | `character varying(100000)` | no |  |  |
+| `SignatureManifestation` | `jsonb` | yes |  |  |
+| `Status` | `character varying(50)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `VisitId` | `character varying(36)` | no |  |  |
 

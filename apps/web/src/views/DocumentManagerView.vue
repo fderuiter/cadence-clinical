@@ -433,20 +433,29 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
+  max-width: 100vw;
   background: rgba(0, 0, 0, 0.35);
   z-index: 1000;
   display: flex;
   justify-content: flex-end;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .metadata-drawer {
-  width: 440px;
+  width: var(
+    --semantic-drawer-width-sm,
+    var(--drawer-width-sm, min(100vw, 440px))
+  );
+  max-width: 100vw;
   background: #ffffff;
   height: 100%;
   display: flex;
   flex-direction: column;
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
   animation: slideInRight 0.2s ease-out;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 @keyframes slideInRight {
@@ -473,6 +482,16 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.btn-close-drawer {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .drawer-section {

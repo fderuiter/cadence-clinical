@@ -173,6 +173,7 @@ public static class CiPlan
     /// <summary>Jobs of <c>ci.yml</c> that act on GitHub itself and have no local meaning, with the reason.</summary>
     public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>
     {
+        ["actionlint"] = "runs actionlint and workflow action pinning in GitHub Actions",
         ["classify"] = "labels the pull request through the GitHub API",
         ["automerge"] = "approves and merges the pull request through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on a push to main",
@@ -286,13 +287,18 @@ public static class CiPlan
             new("security", "Run static analysis") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(false, "check", "audit-security")] },
             new("security", "Build container image for security scan") { NotRunLocally = $"{PushOnly}, and it needs Docker" },
             new("security", "Run container vulnerability scan") { NotRunLocally = $"{PushOnly}, and it needs Docker and Trivy" },
+            new("security", "Upload Trivy scan results to GitHub Security tab") { NotRunLocally = $"{PushOnly}, and it needs GitHub SARIF upload" },
             new("security", "Run dependency audit") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(false, "check", "vulnerabilities")] },
             new("security", "Run secret detection")
             {
-                // CI also runs 'git add .secrets.baseline' first; the local run leaves the index alone.
                 Always = true,
                 CoveredBy = QualitySentinels,
-                Commands = [CadenceCli(false, "check", "clean-secrets"), CadenceCli(false, "check", "security")],
+                Commands =
+                [
+                    CadenceCli(false, "check", "clean-secrets"),
+                    new CiCommand("git", ["diff", "--exit-code", ".secrets.baseline"]),
+                    CadenceCli(false, "check", "security"),
+                ],
             },
             new("security", "Run detect-secrets against the baseline")
             {
@@ -301,7 +307,7 @@ public static class CiPlan
                 ToolHint = "pip install detect-secrets==1.5.0",
                 Files = CiFileSource.ChangedFilesAcmr,
                 NoFilesMessage = "No changed files to scan.",
-                Commands = [new CiCommand("detect-secrets-hook", ["--baseline", ".secrets.baseline"])],
+                Commands = [new CiCommand("detect-secrets-hook", ["--baseline", ".secrets.baseline", "--exclude-files", @"'(pnpm-lock\.yaml|package-lock\.json|yarn\.lock)'"])],
             },
             new("security", "Run DEID compliance scan")
             {

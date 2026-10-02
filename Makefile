@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format check verify ci test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format action-pinning check verify ci test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -56,6 +56,9 @@ lint: lint-paths typecheck ## Check lint (no auto-fix)
 
 format: ## Check formatting only (no auto-fix)
 	dotnet format Cadence.sln --verify-no-changes
+
+action-pinning: ## Validate GitHub Actions commit SHA pinning
+	python3 scripts/check-action-pinning.py
 
 check: $(CADENCE_CLI) ## Run all 21 quality gates (dotnet cadence check)
 	$(CADENCE_CLI) check

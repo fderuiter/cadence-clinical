@@ -96,6 +96,44 @@ public sealed class ExpectedScheduleTests
         ExpectedSchedule.Compute(design, Day1, asOf)[0].Status.Should().Be(VisitWindowStatus.Closed);
     }
 
+    /// <summary>
+    /// An actual date is measured in calendar days from the target, and the window's first and last days are in the
+    /// window; outside it, the days before it opened or after it closed are counted (ADR-2507).
+    /// </summary>
+    [Theory]
+    [InlineData("2026-10-19", -10, VisitTiming.Early, 8)]
+    [InlineData("2026-10-26", -3, VisitTiming.Early, 1)]
+    [InlineData("2026-10-27", -2, VisitTiming.InWindow, 0)]
+    [InlineData("2026-10-29", 0, VisitTiming.InWindow, 0)]
+    [InlineData("2026-10-31", 2, VisitTiming.InWindow, 0)]
+    [InlineData("2026-11-01", 3, VisitTiming.Late, 1)]
+    [InlineData("2026-11-12", 14, VisitTiming.Late, 12)]
+    public void Assess_MeasuresAnActualDateAgainstTheWindow(string actual, int fromTarget, VisitTiming timing, int outside)
+    {
+        var design = Design(Activity("act.week4", "ep.treatment", new ActivityTiming(29, 2, 2)));
+        var expected = ExpectedSchedule.Compute(design, Day1, Day1)[0];
+        var date = DateOnly.Parse(actual, CultureInfo.InvariantCulture);
+
+        ExpectedSchedule.Assess(expected, date).Should().Be(new VisitTimingAssessment(expected, date, fromTarget, timing, outside));
+    }
+
+    /// <summary>
+    /// A visit with no window is in its window only on the target date, and the assessment does not depend on the
+    /// as-of date the schedule was computed at.
+    /// </summary>
+    [Fact]
+    public void Assess_OfAVisitWithoutAWindow_IsInWindowOnlyOnTheTarget()
+    {
+        var design = Design(Activity("act.baseline", "ep.screening", new ActivityTiming(1)));
+        var early = ExpectedSchedule.Compute(design, Day1, Day1.AddDays(-30))[0];
+        var late = ExpectedSchedule.Compute(design, Day1, Day1.AddDays(30))[0];
+
+        ExpectedSchedule.Assess(early, Day1).Timing.Should().Be(VisitTiming.InWindow);
+        ExpectedSchedule.Assess(late, Day1).Should().Be(ExpectedSchedule.Assess(early, Day1) with { Expected = late });
+        ExpectedSchedule.Assess(early, Day1.AddDays(-1)).Should().Match<VisitTimingAssessment>(a => a.Timing == VisitTiming.Early && a.DaysFromTarget == -1 && a.DaysOutsideWindow == 1);
+        ExpectedSchedule.Assess(early, Day1.AddDays(1)).Should().Match<VisitTimingAssessment>(a => a.Timing == VisitTiming.Late && a.DaysFromTarget == 1 && a.DaysOutsideWindow == 1);
+    }
+
     private static ProtocolDesign Design(params PlannedActivity[] activities) => ProtocolDesignSamples.MinimalDesign() with
     {
         Epochs = [new Epoch("ep.treatment", "Treatment", 2), new Epoch("ep.screening", "Screening", 1)],

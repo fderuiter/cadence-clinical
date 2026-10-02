@@ -13,13 +13,14 @@ How CI is set up, which checks run where, and how to reproduce and fix each fail
 
 ### `ci.yml` jobs
 
-1. **Style and Lint Verification**: `dotnet format --verify-no-changes`, the Cadence quality gates, architecture tests (ArchUnitNET), a Native AOT publish of the CLI that fails on any trim or AOT warning, ADR, Markdown, OpenAPI, schema-doc and traceability checks, code duplication, Hadolint, ShellCheck, CODEOWNERS coverage, the docs build and frontend ESLint/Prettier.
-2. **Security and Vulnerability Audit**: static security audit, secret detection, DEID scan and NuGet/npm vulnerability audit.
-3. **.NET 10 C# xUnit Verification**: `dotnet build` (warnings are errors), then `dotnet test Cadence.sln`, which runs the unit, integration, architecture and E2E test projects against a `postgres:16` service container (`CADENCE_TEST_POSTGRES`), so the database tests run instead of skipping.
-4. **Frontend Unit Tests**: Vitest across the pnpm workspace.
-5. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `pnpm cadence gxp sync` and fails if they differ from the committed files.
+1. **Workflow Action Pinning & Actionlint Gate**: runs `rhysd/actionlint` and `python3 scripts/check-action-pinning.py` to enforce GitHub Actions supply-chain security (pinning third-party action usages to full 40-character commit SHAs) and workflow YAML syntax.
+2. **Style and Lint Verification**: `dotnet format --verify-no-changes`, the Cadence quality gates, architecture tests (ArchUnitNET), a Native AOT publish of the CLI that fails on any trim or AOT warning, ADR, Markdown, OpenAPI, schema-doc and traceability checks, code duplication, Hadolint, ShellCheck, CODEOWNERS coverage, the docs build and frontend ESLint/Prettier.
+3. **Security and Vulnerability Audit**: static security audit, secret baseline immutability verification (`git diff --exit-code .secrets.baseline`), secret detection, DEID scan and NuGet/npm vulnerability audit.
+4. **.NET 10 C# xUnit Verification**: `dotnet build` (warnings are errors), then `dotnet test Cadence.sln`, which runs the unit, integration, architecture and E2E test projects against a `postgres:16` service container (`CADENCE_TEST_POSTGRES`), so the database tests run instead of skipping.
+5. **Frontend Unit Tests**: Vitest across the pnpm workspace.
+6. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `pnpm cadence gxp sync` and fails if they differ from the committed files.
 
-Only on pushes to `main`: accessibility E2E tests, the container build and Trivy scan, the production pipeline and the docs deploy. They are kept off pull requests to save Actions minutes.
+Only on pushes to `main`: accessibility E2E tests, the container build and Trivy vulnerability scan (enforcing fail-closed exit code 1 with SARIF report upload to GitHub Security tab), the production pipeline and the docs deploy. They are kept off pull requests to save Actions minutes.
 
 > [!IMPORTANT]
 > GitHub Actions does not run jobs for this repository until 2027: every check on a pull request fails within seconds
@@ -32,29 +33,29 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 
 `pnpm cadence check` runs all 21 quality gates. The pre-commit hook runs a quicker variant (below), and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
 
-| Gate (short name)     | What it checks                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------ |
-| `dotnet-format`       | Whitespace formatting against `.editorconfig`                                              |
-| `dotnet-format-style` | Roslyn code-style rules                                                                    |
-| `clean-secrets`       | Normalizes `.secrets.baseline`                                                             |
-| `duplication`         | Duplicated code blocks over 15 normalized lines                                            |
-| `cli-docs`            | `docs/cli.md` matches the CLI's commands                                                   |
-| `adrs`                | ADR schema and `docs/adr/index.md` consistency                                             |
-| `arch-drift`          | Architecture diagrams match the solution                                                   |
-| `sanitizer`           | Requirement tag prefixes in tests                                                          |
-| `markdown`            | Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist |
-| `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md`                        |
-| `readmes`             | Each project has a README                                                                  |
-| `imports`             | No cross-service persistence references                                                    |
-| `security`            | Static security audit and secret patterns                                                  |
+| Gate (short name)     | What it checks                                                                                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dotnet-format`       | Whitespace formatting against `.editorconfig`                                                                                                                                                   |
+| `dotnet-format-style` | Roslyn code-style rules                                                                                                                                                                         |
+| `clean-secrets`       | Normalizes `.secrets.baseline` and enforces baseline immutability                                                                                                                               |
+| `duplication`         | Duplicated code blocks over 15 normalized lines                                                                                                                                                 |
+| `cli-docs`            | `docs/cli.md` matches the CLI's commands                                                                                                                                                        |
+| `adrs`                | ADR schema and `docs/adr/index.md` consistency                                                                                                                                                  |
+| `arch-drift`          | Architecture diagrams match the solution                                                                                                                                                        |
+| `sanitizer`           | Requirement tag prefixes in tests                                                                                                                                                               |
+| `markdown`            | Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist                                                                                    |
+| `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md`                                                                                                                             |
+| `readmes`             | Each project has a README                                                                                                                                                                       |
+| `imports`             | No cross-service persistence references                                                                                                                                                         |
+| `security`            | Static security audit and secret patterns                                                                                                                                                       |
 | `deid`                | PHI/PII in tracked files outside tests, docs, scripts and similar folders (all 14 detector categories), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment |
-| `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi` |
-| `api-clients`         | The web API clients typecheck against their generated OpenAPI types                        |
-| `schema-doc`          | `docs/schema` matches the EF Core models (skipped by the pre-commit hook)                   |
-| `path-patterns`       | Files live in allowed directories                                                          |
-| `contracts`           | Hexagonal port/adapter contracts                                                           |
-| `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`)                        |
-| `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)                                  |
+| `openapi`             | `docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`                                                                                                      |
+| `api-clients`         | The web API clients typecheck against their generated OpenAPI types                                                                                                                             |
+| `schema-doc`          | `docs/schema` matches the EF Core models (skipped by the pre-commit hook)                                                                                                                       |
+| `path-patterns`       | Files live in allowed directories                                                                                                                                                               |
+| `contracts`           | Hexagonal port/adapter contracts                                                                                                                                                                |
+| `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`)                                                                                                                             |
+| `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)                                                                                                                                       |
 
 `pnpm cadence check rtm` (not part of the 21) validates the traceability matrix without regenerating it.
 
@@ -65,12 +66,15 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 1. `dotnet format Cadence.sln --verify-no-changes --include <staged .cs files>`, skipped when no C# file is staged.
 2. `pnpm cadence check --pre-commit`: all 21 gates, with two shortcuts. The two format gates are skipped because step 1 covers the staged files. The `openapi` gate only checks `docs/api` against the committed `docs/openapi` specs, because exporting the specs from the services takes minutes. `pnpm cadence check`, `make verify` and CI run every gate in full.
 
+Additionally, `.pre-commit-config.yaml` configures `rhysd/actionlint` and local `action-pinning-check` (`scripts/check-action-pinning.py`) hooks to ensure all GitHub Actions references in `.github/workflows/` are syntax-checked and pinned to 40-character commit SHAs.
+
 There is no pre-push hook. The traceability matrix is checked in CI by the compliance job; run `pnpm cadence gxp sync` before pushing test changes.
 
 ```bash
 # Run the same checks without committing
 dotnet format Cadence.sln --verify-no-changes
 pnpm cadence check
+python3 scripts/check-action-pinning.py
 
 # Enable the hooks by hand if setup was skipped
 git config core.hooksPath .githooks
@@ -84,10 +88,11 @@ CI runs in `.github/workflows/ci.yml`. `pnpm cadence ci` reproduces the whole wo
 
 | Failing job or step                                          | Usual cause                                                                       | Reproduce and fix locally                                                                                        |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Workflow Action Pinning & Actionlint Gate                    | Third-party action not pinned to 40-char SHA or actionlint YAML error             | `python3 scripts/check-action-pinning.py` and `pre-commit run actionlint --all-files`                          |
 | Style › Verify .NET C# code formatting                       | Code doesn't match `.editorconfig` or analyzer style                              | `dotnet format Cadence.sln`, then commit                                                                         |
 | Style › Run frontend style and lint                          | ESLint or Prettier findings in `apps/web`, `apps/subject-portal` or `packages/ui` | `pnpm format` and `pnpm -r lint`                                                                                 |
 | Style › Run Cadence quality sentinels, or a single gate step | One of the 21 gates failed; the log names it                                      | `pnpm cadence check <gate>`                                                                                      |
-| Style › Run architecture tests                               | A layer dependency rule was broken                                                | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`                                                             |
+| Style › Run architecture tests                               | A layer dependency rule was broken                                                | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`                                   |
 | Style › Publish the CLI as Native AOT                        | The CLI, or code it calls, raised a trim or AOT warning (IL2xxx/IL3xxx)           | `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64`; fix the call, never add `NoWarn`   |
 | Style › Run Hadolint or ShellCheck                           | Dockerfile or shell script findings                                               | `hadolint <Dockerfile>`, `shellcheck <script>`                                                                   |
 | Style › Verify OpenAPI specification drift                   | An endpoint changed without regenerating the specs                                | `pnpm cadence sync-openapi-spec` and `pnpm cadence generate-api-docs`, then commit `docs/openapi` and `docs/api` |

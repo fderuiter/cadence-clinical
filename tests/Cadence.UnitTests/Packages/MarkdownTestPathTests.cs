@@ -62,6 +62,47 @@ public sealed class MarkdownTestPathTests : IDisposable
         MarkdownParser.ValidateTestProjectPaths(_root, new[] { papers, rtm }.ToList()).Should().BeEmpty();
     }
 
+    [Fact]
+    public void ValidateWorkspaceLinks_BrokenLinkInNonHistoricalDoc_IsReportedWithLineNumber()
+    {
+        var doc = Write("docs/guide.md", "Welcome\n- Read [Broken Link](nonexistent/path/file.md)\n");
+
+        var issue = MarkdownParser.ValidateWorkspaceLinks(_root, [doc]).Should().ContainSingle().Subject;
+
+        issue.TargetLink.Should().Be("nonexistent/path/file.md");
+        issue.LineNumber.Should().Be(2);
+        issue.FilePath.Should().Be("docs/guide.md");
+    }
+
+    [Fact]
+    public void ValidateWorkspaceLinks_RefactoredDirectoryReference_IsReported()
+    {
+        var doc = Write("README.md", "# Guide\nSee [Compliance App](apps/compliance/src) for details.\n");
+
+        var issue = MarkdownParser.ValidateWorkspaceLinks(_root, [doc]).Should().ContainSingle().Subject;
+
+        issue.TargetLink.Should().Be("apps/compliance/src");
+        issue.LineNumber.Should().Be(2);
+    }
+
+    [Fact]
+    public void ValidateWorkspaceLinks_HistoricalDocExclusionRules_AllowsPreMigrationTargets()
+    {
+        var doc = Write("docs/adr/0001-legacy.md", "Historic ADR.\n- [Old Python Service](legacy/old_service.py)\n- [Old ADR](0000-arch.md)\n");
+
+        MarkdownParser.ValidateWorkspaceLinks(_root, [doc]).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateMarkdown_HeadingFormatting_DetectsMissingSpace()
+    {
+        var doc = Write("docs/heading.md", "##HeadingWithoutSpace\nSome content.\n");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(1);
+    }
+
     private string Write(string relativePath, string content)
     {
         string path = Path.Combine(_root, relativePath);

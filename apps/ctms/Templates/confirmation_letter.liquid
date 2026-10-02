@@ -1,20 +1,72 @@
-CONFIRMATION OF CLINICAL MONITORING VISIT
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Confirmation of Clinical Monitoring Visit</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2d3748; margin: 0; padding: 30px; line-height: 1.6; }
+        .header { border-bottom: 2px solid #2b6cb0; padding-bottom: 12px; margin-bottom: 24px; }
+        .header h1 { color: #1a365d; margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .meta-table { width: 100%; margin-bottom: 24px; border-collapse: collapse; }
+        .meta-table td { padding: 6px 12px; font-size: 14px; }
+        .meta-table td.label { font-weight: bold; color: #4a5568; width: 180px; background-color: #f7fafc; }
+        .content { margin-bottom: 30px; font-size: 15px; }
+        .watermark { text-align: center; color: #c53030; font-weight: bold; font-size: 18px; border: 2px dashed #c53030; padding: 10px; margin: 20px 0; background-color: #fff5f5; }
+        .signature-manifestation { margin-top: 40px; border: 1px solid #cbd5e0; padding: 16px; background-color: #f8fafc; border-radius: 4px; }
+        .signature-manifestation h3 { margin-top: 0; color: #2b6cb0; font-size: 14px; text-transform: uppercase; }
+        .integrity-stamp { margin-top: 20px; font-family: monospace; font-size: 11px; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CONFIRMATION OF CLINICAL MONITORING VISIT</h1>
+    </div>
 
-To: CRA ({{ cra_id }})
-Date: {{ created_at }}
+    {% if is_signed == false or is_signed == null %}
+    <div class="watermark">DRAFT - UNSIGNED WORKING COPY</div>
+    {% endif %}
 
-Dear Investigator and Site Study Team,
+    <div class="meta">
+        <p><strong>To:</strong> CRA ({{ cra_id }})</p>
+        <p><strong>Date:</strong> {{ created_at }}</p>
+    </div>
 
-This letter is to confirm the scheduled clinical monitoring visit for Trial/Study {{ study_id }} at Site {{ site_id }}.
+    <table class="meta-table">
+        <tr><td class="label">Study Identifier:</td><td>{{ study_id }}</td></tr>
+        <tr><td class="label">Site Identifier:</td><td>{{ site_id }}</td></tr>
+        <tr><td class="label">Clinical Research Assoc:</td><td>{{ cra_id }}</td></tr>
+        <tr><td class="label">Visit Type:</td><td>{{ visit_type }}</td></tr>
+        <tr><td class="label">Scheduled Date:</td><td>{{ scheduled_date }}</td></tr>
+    </table>
 
-Visit Details:
-- Study: {{ study_id }}
-- Site: {{ site_id }}
-- CRA: {{ cra_id }}
-- Visit Type: {{ visit_type }}
-- Scheduled Date: {{ scheduled_date }}
+    <div class="content">
+        <p>Dear Investigator and Site Study Team,</p>
+        <p>This letter is to confirm the scheduled clinical monitoring visit for Trial/Study {{ study_id }} at Site {{ site_id }}.</p>
+        <p>Visit Details:</p>
+        <ul>
+            <li>Study: {{ study_id }}</li>
+            <li>Site: {{ site_id }}</li>
+            <li>CRA: {{ cra_id }}</li>
+            <li>Visit Type: {{ visit_type }}</li>
+            <li>Scheduled Date: {{ scheduled_date }}</li>
+        </ul>
+        <p>Please ensure all trial documentation, investigator site files, and source documents are available for review.</p>
+        <p>Sincerely,<br/>Clinical Operations Team</p>
+    </div>
 
-Please ensure all trial documentation, investigator site files, and source documents are available for review.
+    {% if is_signed and signer_name %}
+    <div class="signature-manifestation">
+        <h3>21 CFR Part 11 Electronic Signature Manifestation</h3>
+        <p><strong>Signer:</strong> {{ signer_name }}</p>
+        <p><strong>Timestamp (UTC):</strong> {{ signing_timestamp }}</p>
+        <p><strong>Reason/Purpose:</strong> {{ signing_purpose }}</p>
+    </div>
+    {% endif %}
 
-Sincerely,
-Clinical Operations Team
+    {% if integrity_hash %}
+    <div class="integrity-stamp">
+        <strong>Integrity Stamp (SHA-256):</strong> {{ integrity_hash }}
+    </div>
+    {% endif %}
+</body>
+</html>

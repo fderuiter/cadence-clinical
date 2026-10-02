@@ -1,26 +1,95 @@
-CLINICAL MONITORING VISIT FOLLOW-UP LETTER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clinical Monitoring Visit Follow-Up Letter</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2d3748; margin: 0; padding: 30px; line-height: 1.6; }
+        .header { border-bottom: 2px solid #2b6cb0; padding-bottom: 12px; margin-bottom: 24px; }
+        .header h1 { color: #1a365d; margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .meta-table { width: 100%; margin-bottom: 24px; border-collapse: collapse; }
+        .meta-table td { padding: 6px 12px; font-size: 14px; }
+        .meta-table td.label { font-weight: bold; color: #4a5568; width: 180px; background-color: #f7fafc; }
+        .content { margin-bottom: 24px; font-size: 15px; }
+        .findings-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+        .findings-table th { background-color: #2b6cb0; color: white; padding: 8px 12px; text-align: left; }
+        .findings-table td { border: 1px solid #cbd5e0; padding: 8px 12px; }
+        .findings-table tr:nth-child(even) { background-color: #f7fafc; }
+        .watermark { text-align: center; color: #c53030; font-weight: bold; font-size: 18px; border: 2px dashed #c53030; padding: 10px; margin: 20px 0; background-color: #fff5f5; }
+        .signature-manifestation { margin-top: 40px; border: 1px solid #cbd5e0; padding: 16px; background-color: #f8fafc; border-radius: 4px; }
+        .signature-manifestation h3 { margin-top: 0; color: #2b6cb0; font-size: 14px; text-transform: uppercase; }
+        .integrity-stamp { margin-top: 20px; font-family: monospace; font-size: 11px; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CLINICAL MONITORING VISIT FOLLOW-UP LETTER</h1>
+    </div>
 
-To: CRA ({{ cra_id }})
-Date: {{ created_at }}
+    {% if is_signed == false or is_signed == null %}
+    <div class="watermark">DRAFT - UNSIGNED WORKING COPY</div>
+    {% endif %}
 
-Dear Investigator and Site Study Team,
+    <div class="meta">
+        <p><strong>To:</strong> CRA ({{ cra_id }})</p>
+        <p><strong>Date:</strong> {{ created_at }}</p>
+    </div>
 
-Thank you for your cooperation during the clinical monitoring visit for Trial/Study {{ study_id }} at Site {{ site_id }} conducted on {{ actual_date }}.
+    <table class="meta-table">
+        <tr><td class="label">Study Identifier:</td><td>{{ study_id }}</td></tr>
+        <tr><td class="label">Site Identifier:</td><td>{{ site_id }}</td></tr>
+        <tr><td class="label">Clinical Research Assoc:</td><td>{{ cra_id }}</td></tr>
+        <tr><td class="label">Visit Type:</td><td>{{ visit_type }}</td></tr>
+        <tr><td class="label">Actual Visit Date:</td><td>{{ actual_date }}</td></tr>
+    </table>
 
-The following findings and action items were recorded during the visit:
+    <div class="content">
+        <p>Dear Investigator and Site Study Team,</p>
+        <p>Thank you for your cooperation during the clinical monitoring visit for Trial/Study {{ study_id }} at Site {{ site_id }} conducted on {{ actual_date }}.</p>
+        <p>The following findings and action items were recorded during the visit:</p>
 
-{% if findings != null and findings.size > 0 %}
-{% for finding in findings %}
-Finding {{ forloop.index }}:
-- Text: {{ finding.text }}
-- Severity: {{ finding.severity }}
-- Status: {{ finding.resolution_status }}
-{% endfor %}
-{% else %}
-No findings or outstanding action items were recorded during this visit.
-{% endif %}
+        {% if findings != null and findings.size > 0 %}
+        <table class="findings-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Finding Description</th>
+                    <th style="width: 120px;">Severity</th>
+                    <th style="width: 140px;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for finding in findings %}
+                <tr>
+                    <td>{{ forloop.index }}</td>
+                    <td>{{ finding.text }}</td>
+                    <td><strong>{{ finding.severity }}</strong></td>
+                    <td>{{ finding.resolution_status }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No findings or outstanding action items were recorded during this visit.</p>
+        {% endif %}
 
-If you have any questions or require further clarification, please contact us.
+        <p>If you have any questions or require further clarification, please contact us.</p>
+        <p>Sincerely,<br/>Clinical Operations Team</p>
+    </div>
 
-Sincerely,
-Clinical Operations Team
+    {% if is_signed and signer_name %}
+    <div class="signature-manifestation">
+        <h3>21 CFR Part 11 Electronic Signature Manifestation</h3>
+        <p><strong>Signer:</strong> {{ signer_name }}</p>
+        <p><strong>Timestamp (UTC):</strong> {{ signing_timestamp }}</p>
+        <p><strong>Reason/Purpose:</strong> {{ signing_purpose }}</p>
+    </div>
+    {% endif %}
+
+    {% if integrity_hash %}
+    <div class="integrity-stamp">
+        <strong>Integrity Stamp (SHA-256):</strong> {{ integrity_hash }}
+    </div>
+    {% endif %}
+</body>
+</html>

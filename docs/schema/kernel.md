@@ -34,8 +34,13 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
 | [`kernel.people`](#kernelpeople) | `Person` | 6 |
+| [`kernel.proposals`](#kernelproposals) | `Proposal` | 24 |
 | [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
 | [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 14 |
+| [`kernel.qualification_periods`](#kernelqualification_periods) | `QualificationPeriod` | 5 |
+| [`kernel.qualification_requirement_periods`](#kernelqualification_requirement_periods) | `QualificationRequirementPeriod` | 5 |
+| [`kernel.qualification_requirements`](#kernelqualification_requirements) | `QualificationRequirement` | 13 |
+| [`kernel.qualifications`](#kernelqualifications) | `Qualification` | 13 |
 | [`kernel.roles`](#kernelroles) | `Role` | 9 |
 | [`kernel.sites`](#kernelsites) | `Site` | 11 |
 | [`kernel.standard_datasets`](#kernelstandard_datasets) | `StandardDataset` | 7 |
@@ -782,6 +787,62 @@ Entity: `Person`
 | `reason_for_change` | `character varying(1000)` | no |  |  |
 | `version_index` | `bigint` | no |  |  |
 
+## kernel.proposals
+
+Entity: `Proposal`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `affected` | `text[]` | no |  |  |
+| `approval_attestation_id` | `uuid` | yes |  |  |
+| `content_hash` | `character varying(71)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `decided_at` | `timestamp with time zone` | yes |  |  |
+| `decided_by_id` | `character varying(256)` | yes |  |  |
+| `decided_by_kind` | `character varying(32)` | yes |  |  |
+| `decision_reason` | `character varying(1000)` | yes |  |  |
+| `expires_at` | `timestamp with time zone` | no |  |  |
+| `intent` | `character varying(2000)` | no |  |  |
+| `model_id` | `character varying(200)` | yes |  |  |
+| `plan_artifact_version_id` | `uuid` | no |  |  |
+| `proposed_at` | `timestamp with time zone` | no |  |  |
+| `proposed_by_id` | `character varying(256)` | no |  |  |
+| `proposed_by_kind` | `character varying(32)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `requested_capabilities` | `text[]` | no |  |  |
+| `simulated_impact` | `character varying(71)` | yes |  |  |
+| `status` | `character varying(16)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_proposals_artifact_versions_tenant_id_plan_artifact_version~`: (`tenant_id`, `plan_artifact_version_id`) references `kernel.artifact_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_proposals_attestations_tenant_id_approval_attestation_id`: (`tenant_id`, `approval_attestation_id`) references `kernel.attestations` (`tenant_id`, `id`), on delete restrict
+- `FK_proposals_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_proposals_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_proposals_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_proposals_tenant_id_approval_attestation_id`: (`tenant_id`, `approval_attestation_id`)
+- `IX_proposals_tenant_id_plan_artifact_version_id`: (`tenant_id`, `plan_artifact_version_id`)
+- `IX_proposals_tenant_id_study_id_status`: (`tenant_id`, `study_id`, `status`)
+
+Check constraints:
+
+- `ck_proposals_affected`: `cardinality(affected) <= 200`
+- `ck_proposals_content_hash`: `content_hash ~ '^sha256:[0-9a-f]{64}$'`
+- `ck_proposals_decision`: `(status = 'Open' AND decided_at IS NULL AND decided_by_id IS NULL AND decided_by_kind IS NULL AND approval_attestation_id IS NULL AND decision_reason IS NULL) OR (status = 'Approved' AND decided_at IS NOT NULL AND decided_by_id IS NOT NULL AND decided_by_kind = 'Person' AND approval_attestation_id IS NOT NULL) OR (status IN ('Rejected', 'Withdrawn') AND decided_at IS NOT NULL AND decided_by_id IS NOT NULL AND decided_by_kind IS NOT NULL AND approval_attestation_id IS NULL AND decision_reason IS NOT NULL)`
+- `ck_proposals_expiry`: `expires_at > proposed_at AND expires_at <= proposed_at + interval '90 days'`
+- `ck_proposals_intent`: `char_length(intent) BETWEEN 1 AND 2000`
+- `ck_proposals_model`: `(proposed_by_kind = 'AutomationAgent' AND model_id IS NOT NULL AND char_length(model_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND model_id IS NULL)`
+- `ck_proposals_requested_capabilities`: `cardinality(requested_capabilities) BETWEEN 1 AND 20`
+- `ck_proposals_simulated_impact`: `simulated_impact IS NULL OR simulated_impact ~ '^sha256:[0-9a-f]{64}$'`
+
 ## kernel.protocol_versions
 
 Entity: `ProtocolVersion`
@@ -851,6 +912,120 @@ Indexes:
 
 - `IX_provenance_activities_correlation_id`: (`correlation_id`)
 - `IX_provenance_activities_tenant_id_recorded_at`: (`tenant_id`, `recorded_at`)
+
+## kernel.qualification_periods
+
+Entity: `QualificationPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `qualification_id` | `uuid` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_qualification_periods_qualifications_tenant_id_qualificatio~`: (`tenant_id`, `qualification_id`) references `kernel.qualifications` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_qualification_periods_tenant_id_qualification_id`: (`tenant_id`, `qualification_id`)
+
+## kernel.qualification_requirement_periods
+
+Entity: `QualificationRequirementPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `requirement_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_qualification_requirement_periods_qualification_requirement~`: (`tenant_id`, `requirement_id`) references `kernel.qualification_requirements` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_qualification_requirement_periods_tenant_id_requirement_id`: (`tenant_id`, `requirement_id`)
+
+## kernel.qualification_requirements
+
+Entity: `QualificationRequirement`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `capability` | `character varying(96)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `defined_by` | `character varying(300)` | no |  |  |
+| `protocol_version_id` | `uuid` | yes |  |  |
+| `qualification_code` | `character varying(64)` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `scope_country` | `character varying(2)` | yes |  |  |
+| `scope_level` | `character varying(16)` | no |  |  |
+| `scope_target_id` | `uuid` | yes |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_qualification_requirements_protocol_versions_tenant_id_prot~`: (`tenant_id`, `protocol_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_qualification_requirements_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_qualification_requirements_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_qualification_requirements_tenant_id_capability`: (`tenant_id`, `capability`)
+- `IX_qualification_requirements_tenant_id_protocol_version_id`: (`tenant_id`, `protocol_version_id`)
+
+Check constraints:
+
+- `ck_qualification_requirements_code`: `qualification_code ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'`
+- `ck_qualification_requirements_scope`: `(scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL) OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL) OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')`
+
+## kernel.qualifications
+
+Entity: `Qualification`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `code` | `character varying(64)` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `evidence_artifact_version_id` | `uuid` | no |  |  |
+| `holder_id` | `character varying(256)` | no |  |  |
+| `holder_kind` | `character varying(32)` | no |  |  |
+| `kind` | `character varying(32)` | no |  |  |
+| `protocol_version_id` | `uuid` | yes |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `recorded_by` | `character varying(300)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_qualifications_artifact_versions_tenant_id_evidence_artifac~`: (`tenant_id`, `evidence_artifact_version_id`) references `kernel.artifact_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_qualifications_protocol_versions_tenant_id_protocol_version~`: (`tenant_id`, `protocol_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_qualifications_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_qualifications_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_qualifications_tenant_id_evidence_artifact_version_id`: (`tenant_id`, `evidence_artifact_version_id`)
+- `IX_qualifications_tenant_id_holder_kind_holder_id`: (`tenant_id`, `holder_kind`, `holder_id`)
+- `IX_qualifications_tenant_id_protocol_version_id`: (`tenant_id`, `protocol_version_id`)
+
+Check constraints:
+
+- `ck_qualifications_code`: `code ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'`
+- `ck_qualifications_protocol_version`: `(kind = 'ProtocolTraining') = (protocol_version_id IS NOT NULL)`
 
 ## kernel.roles
 

@@ -1,9 +1,12 @@
 # ADR-2367: NestJS API Gateway Promise Coalescing and Eager Key Prefetching
 
-- **Status:** Accepted
-- **Date:** 2026-08-12
-- **Authors:** @jules
-- **Deciders:** @fderuiter
+* **Status:** Superseded by [ADR-2256](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)
+* **Date:** 2026-08-12
+* **Authors:** @jules
+* **Deciders:** @fderuiter
+
+> [!NOTE]
+> **Superseded Notice (2026-09-30):** The NestJS gateway implementation in `packages/gateway-rewrite` has been decommissioned and removed from the workspace. The API Gateway is implemented in C# YARP at `apps/gateway` with fail-closed identity handling per [ADR-2256](2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
 ---
 
@@ -64,7 +67,7 @@ Use standard libraries such as `jwks-rsa`.
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:**
-  - `packages/gateway-rewrite`
+  - `packages/gateway-rewrite` (Decommissioned and removed from workspace)
 - **Verification Plan:**
   - Comprehensive unit testing suite (`jwks-coalescer.test.ts`) covering all requirements: eager prefetching, startup resilience, fast-path local bypass, cache stampede prevention, dynamic error key retention, and timeouts.
   - This architecture aligns with and supports Trace-17 (Gateway Step-Up Re-Authentication and Signature Token Issuance).

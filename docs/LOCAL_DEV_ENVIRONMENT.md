@@ -67,7 +67,7 @@ docker compose -f docker/docker-compose.yml ps     # every .NET service should b
 
 This starts PostgreSQL (one `cadence` database, a schema per service), Keycloak with the `cadence` realm
 imported from `docker/cadence-realm.json`, the gateway behind an nginx front proxy on port 8000, and
-every service. The compose file sets its own local `GATEWAY_SECRET` and OIDC settings, so no `.env` is
+every .NET microservice unprofiled by default. The compose file sets its own local `GATEWAY_SECRET` and OIDC settings, so no `.env` is
 needed; those values are for local use only.
 
 - **Migrations:** each service applies its own migrations when it starts (`Database__MigrateOnStartup=true`)
@@ -75,8 +75,8 @@ needed; those values are for local use only.
   ([database runbook](OPERATIONAL_DATABASE.md)).
 - **Tokens:** every endpoint except the health probes needs a Keycloak token. Sign in through the web
   app, or request one from `http://localhost:8080/realms/cadence/protocol/openid-connect/token`.
-- **Optional storage:** MinIO (`9000`, `9001`) and ClamAV (`3310`) run only with
-  `--profile storage`; no service reads them yet.
+- **Optional storage:** MinIO (`9000`, `9001`) and ClamAV (`3310`) run only when passing
+  `--profile storage` (for example, `docker compose -f docker/docker-compose.yml --profile storage up -d`); no primary core service requires them to boot.
 - **Pinned images:** `docker/Dockerfile.dotnet` and the compose file pin every image to a version and a
   `sha256` digest, so builds are reproducible. Dependabot (`.github/dependabot.yml`) opens weekly pull
   requests to update them, together with NuGet, npm and GitHub Actions dependencies. When updating the .NET

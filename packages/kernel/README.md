@@ -174,6 +174,14 @@ var outside = fork.Design().ExternalReferences();                   // ConceptRe
   per study and element id (`ProtocolElementId.For(study, elementId)`), versioned by the protocol version that last
   added or changed them. The approved version governs every element; changed elements supersede their previous
   version; the scientific chain and the concepts that define an element are edges. See [Lineage](#lineage-adr-2471).
+- **Schedule of Activities (ADR-2475).** `ScheduleOfActivities.Compile(design)` renders the design as a matrix:
+  planned activities are columns grouped by epoch and ordered by study day (event-driven ones last), collection
+  specifications are rows with the columns that collect them, and footnotes (windows, locations, event-driven visits,
+  operational needs, unscheduled specifications) are generated. `Write` and `Hash` give the same bytes and hash for the
+  same design. `ScheduleOfActivitiesDiff.Compare(parent, amended)` returns typed directives (`VisitMoved`,
+  `ActivityFrequencyChanged`, `CriterionAdded`, …) with the elements and concepts each touches, and whether the
+  schedule or eligibility changes. `IProtocolVersionReader.GetScheduleOfActivitiesAsync` compiles a stored version's
+  matrix; it is never stored.
 
 ## Participants and enrollment (ADR-2453)
 
@@ -469,7 +477,15 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
   `INodeVisibility`. A reader sees what a grant it holds in effect covers, the organization, study and country above
   that scope, participants and sites through the study sites they reach, and tenant reference data. Everything else
   is masked `NotPermitted`.
-- **Not yet:** qualifications, separation of duties, and StudySite, protocol or blinding conditions (rest of #4781).
+- **Qualifications (ADR-2459).** `RecordQualification` files a qualification held by an actor: `Training`,
+  `ProtocolTraining` (naming its protocol version), `Credential` or `Certificate`, with a lower snake_case code, a
+  validity period and a `TrainingRecord` or `Credential` artifact version as evidence. `RevokeQualification`
+  shortens it bitemporally. `DefineQualificationRequirement` says a capability within a scope needs a current
+  qualification of a code (and protocol version); `RetireQualificationRequirement` ends it. After a grant permits,
+  the evaluator adds one `qualification.current` condition per requirement in effect over the resource and denies
+  when one is unmet: "Obtain gcp", or "Renew protocol_training for protocol version …; it expired on …".
+  `qualification_periods` and `qualification_requirement_periods` carry the bitemporal guards.
+- **Not yet:** separation of duties, and StudySite, protocol or blinding conditions (rest of #4781).
 
 ## IdentityVault (ADR-2458)
 
@@ -605,7 +621,7 @@ grouped by kind with counts (Canvas D2). Counts are of objects, not versions. Ma
 other, so every screen and every reader gets the same number. `IAmendmentImpact.ComputeAsync(tenant, reader,
 amendedVersion)` is K-PROT-2 as one caller of it: the dependents of the parent version, not walking through the fork
 itself, and entering only the protocol elements the amendment changes or removes (ADR-2474). `ChangedElements` lists
-those elements from the structural diff. Forking a protocol version links the fork to its parent (`DerivedFrom`).
+those elements from the structural diff, and `Schedule` the Schedule of Activities directives (ADR-2475). Forking a protocol version links the fork to its parent (`DerivedFrom`).
 
 ## Activity stream (ADR-2485)
 
@@ -658,6 +674,9 @@ clock and stores nothing.
   `VisitWindowStatus` at `asOf`. Pass site-calendar dates.
 - `DateOfStudyDay(referenceStart, day)` uses the SDTM `--DY` convention: day 1 is the reference start, day -1 the
   day before, and a day-0 timing is day 1.
+- `Assess(expectedVisit, actualDate)` measures a visit that happened: calendar days from the target, `Early`,
+  `InWindow` or `Late`, and days outside the window (ADR-2507). It has no severity; the study's Quality rules decide
+  how important an out-of-window visit is.
 
 ## Indicators and the study Pulse (ADR-2488)
 
@@ -669,6 +688,39 @@ library items, evaluated in `Cadence.Rules` ([docs/kernel/INDICATORS.md](../../d
   `AddKernelValidationPersistence` registers `validation_findings`. Applications register their own the same way.
 - `StudyIndicators` (`Cadence.Rules`) reads a study's populations and leaves out the records the reader may not see
   (`INodeVisibility`) before counting; such a value is marked partial with the mask reasons and no hidden count.
+
+## Proposals and automation agents (ADR-2489)
+
+A `Proposal` is what an AI or a person suggests for a study. It has no effect on kernel state: nothing reads it to
+decide anything else, and approving it does not run its plan (K-SIM-5).
+
+- **Content.** `Propose` records the intent (1 to 2,000 characters), the plan (an `ArtifactVersionId` of the study or
+  tenant-wide), 0 to 200 distinct affected `NodeRef`s, an optional simulation result hash, 1 to 20 requested
+  capabilities (each an Execute or Approve command of `KernelCommandCatalog.Kernel`), and an expiry at most 90 days
+  out. The acting actor is the proposer. An automation agent must name its `ModelId`, and any other actor must not
+  (K-PROV-3). `ContentHash` covers all of it, and the database fixes those columns once written.
+- **Lifecycle.** `Open → Approved | Rejected | Withdrawn`. An open proposal past `ExpiresAt` reads as `Expired`
+  (`Proposal.StatusAt(now)`); nothing stores expiry, and an expired proposal can no longer be decided.
+  - `ApproveProposal` (`proposal.approve`, Approve) names an `Approved` attestation by the acting person over
+    `(proposal, id, ContentHash)`. The proposer cannot approve (`K.Proposal.SelfApproval`).
+  - `RejectProposal` (`proposal.reject`, Approve) takes its reason from the reason for change.
+  - `WithdrawProposal` (`proposal.withdraw`, Propose) is for the proposer only (`K.Proposal.NotProposer`).
+  - The events are `ProposalCreated`, `ProposalApproved`, `ProposalRejected` and `ProposalWithdrawn`, in the
+    Intelligence family.
+- **Agents (K-AI-1, K-AI-3).** `Actor.AutomationAgent("name")` builds an `agent:name` actor. The evaluator denies an
+  agent every Execute and Approve command (`actor.agent_verb`), including approving, rejecting and signing
+  attestations, so an agent can only read, propose and withdraw its own proposals. Proposing needs a grant of
+  `proposal.create` in the study, and the plan and every affected object must be visible to the proposer
+  (`K.Proposal.NotVisible`). A proposal is on its study's scope path, so reads, `INodeVisibility` and navigation
+  treat it as a study object.
+- **Provenance and lineage (K-PROV-3).** The pipeline records the agent as the actor of `Propose`, and the proposal
+  keeps the model and the plan. The approval keeps the person and the attestation. Lineage records the proposal as
+  `DerivedFrom` its plan version and `DefinedBy` each affected reference that names a version. An unversioned affected
+  reference is kept on the proposal only.
+- **Attestations.** `Attest` accepts target kind `proposal` through `ProposalAttestationCheck`: the proposal must exist
+  and the hash must be its content hash.
+- **Not yet:** the K-AI-2 execution link (`ProposalExecuted`), standing grants for agents, the `QueryStatus.DraftAi`
+  migration and a proposals work-queue source (ADR-2489 §4.5).
 
 ## Migrations
 

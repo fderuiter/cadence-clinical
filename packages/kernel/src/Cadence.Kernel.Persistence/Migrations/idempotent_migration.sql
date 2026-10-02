@@ -1,4 +1,4 @@
-DO $EF$
+﻿DO $EF$
 BEGIN
     IF NOT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = 'kernel') THEN
         CREATE SCHEMA kernel;
@@ -3335,6 +3335,318 @@ BEGIN
     IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930110610_IdentityVault') THEN
     INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
     VALUES ('20260930110610_IdentityVault', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE TABLE kernel.qualification_requirements (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        capability character varying(96) NOT NULL,
+        qualification_code character varying(64) NOT NULL,
+        protocol_version_id uuid,
+        scope_level character varying(16) NOT NULL,
+        scope_target_id uuid,
+        scope_country character varying(2),
+        defined_by character varying(300) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_qualification_requirements" PRIMARY KEY (id),
+        CONSTRAINT "AK_qualification_requirements_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_qualification_requirements_code CHECK (qualification_code ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'),
+        CONSTRAINT ck_qualification_requirements_scope CHECK ((scope_level = 'Tenant' AND scope_target_id IS NULL AND scope_country IS NULL) OR (scope_level IN ('Organization', 'Study', 'StudySite') AND scope_target_id IS NOT NULL AND scope_country IS NULL) OR (scope_level = 'StudyCountry' AND scope_target_id IS NOT NULL AND scope_country IS NOT NULL AND scope_country ~ '^[A-Z]{2}$')),
+        CONSTRAINT "FK_qualification_requirements_protocol_versions_tenant_id_prot~" FOREIGN KEY (tenant_id, protocol_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_qualification_requirements_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE TABLE kernel.qualifications (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        holder_kind character varying(32) NOT NULL,
+        holder_id character varying(256) NOT NULL,
+        kind character varying(32) NOT NULL,
+        code character varying(64) NOT NULL,
+        protocol_version_id uuid,
+        evidence_artifact_version_id uuid NOT NULL,
+        recorded_by character varying(300) NOT NULL,
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_qualifications" PRIMARY KEY (id),
+        CONSTRAINT "AK_qualifications_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_qualifications_code CHECK (code ~ '^[a-z][a-z0-9]*(_[a-z0-9]+)*$'),
+        CONSTRAINT ck_qualifications_protocol_version CHECK ((kind = 'ProtocolTraining') = (protocol_version_id IS NOT NULL)),
+        CONSTRAINT "FK_qualifications_artifact_versions_tenant_id_evidence_artifac~" FOREIGN KEY (tenant_id, evidence_artifact_version_id) REFERENCES kernel.artifact_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_qualifications_protocol_versions_tenant_id_protocol_version~" FOREIGN KEY (tenant_id, protocol_version_id) REFERENCES kernel.protocol_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_qualifications_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE TABLE kernel.qualification_requirement_periods (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        requirement_id uuid NOT NULL,
+        recorded_period tstzrange NOT NULL,
+        valid_period tstzrange NOT NULL,
+        CONSTRAINT "PK_qualification_requirement_periods" PRIMARY KEY (id),
+        CONSTRAINT "FK_qualification_requirement_periods_qualification_requirement~" FOREIGN KEY (tenant_id, requirement_id) REFERENCES kernel.qualification_requirements (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE TABLE kernel.qualification_periods (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        qualification_id uuid NOT NULL,
+        recorded_period tstzrange NOT NULL,
+        valid_period tstzrange NOT NULL,
+        CONSTRAINT "PK_qualification_periods" PRIMARY KEY (id),
+        CONSTRAINT "FK_qualification_periods_qualifications_tenant_id_qualificatio~" FOREIGN KEY (tenant_id, qualification_id) REFERENCES kernel.qualifications (tenant_id, id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE INDEX "IX_qualification_periods_tenant_id_qualification_id" ON kernel.qualification_periods (tenant_id, qualification_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE INDEX "IX_qualification_requirement_periods_tenant_id_requirement_id" ON kernel.qualification_requirement_periods (tenant_id, requirement_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE INDEX "IX_qualification_requirements_tenant_id_capability" ON kernel.qualification_requirements (tenant_id, capability);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE INDEX "IX_qualification_requirements_tenant_id_protocol_version_id" ON kernel.qualification_requirements (tenant_id, protocol_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE INDEX "IX_qualifications_tenant_id_evidence_artifact_version_id" ON kernel.qualifications (tenant_id, evidence_artifact_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE INDEX "IX_qualifications_tenant_id_holder_kind_holder_id" ON kernel.qualifications (tenant_id, holder_kind, holder_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    CREATE INDEX "IX_qualifications_tenant_id_protocol_version_id" ON kernel.qualifications (tenant_id, protocol_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    ALTER TABLE "kernel"."qualification_periods" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."qualification_periods" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."qualification_periods"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    ALTER TABLE "kernel"."qualification_requirement_periods" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."qualification_requirement_periods" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."qualification_requirement_periods"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    ALTER TABLE "kernel"."qualification_requirements" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."qualification_requirements" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."qualification_requirements"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    ALTER TABLE "kernel"."qualifications" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."qualifications" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."qualifications"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    ALTER TABLE "kernel"."qualification_periods" ADD CONSTRAINT "ex_qualification_periods_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "qualification_id" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_qualification_periods_append_only" BEFORE UPDATE OR DELETE ON "kernel"."qualification_periods"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_qualification_periods_no_truncate" BEFORE TRUNCATE ON "kernel"."qualification_periods"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    ALTER TABLE "kernel"."qualification_requirement_periods" ADD CONSTRAINT "ex_qualification_requirement_periods_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "requirement_id" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_qualification_requirement_periods_append_only" BEFORE UPDATE OR DELETE ON "kernel"."qualification_requirement_periods"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_qualification_requirement_periods_no_truncate" BEFORE TRUNCATE ON "kernel"."qualification_requirement_periods"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930133015_Qualifications') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930133015_Qualifications', '10.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE TABLE kernel.proposals (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        study_id uuid NOT NULL,
+        intent character varying(2000) NOT NULL,
+        plan_artifact_version_id uuid NOT NULL,
+        affected text[] NOT NULL,
+        simulated_impact character varying(71),
+        requested_capabilities text[] NOT NULL,
+        expires_at timestamp with time zone NOT NULL,
+        proposed_at timestamp with time zone NOT NULL,
+        proposed_by_id character varying(256) NOT NULL,
+        proposed_by_kind character varying(32) NOT NULL,
+        model_id character varying(200),
+        content_hash character varying(71) NOT NULL,
+        status character varying(16) NOT NULL,
+        decided_at timestamp with time zone,
+        decided_by_id character varying(256),
+        decided_by_kind character varying(32),
+        approval_attestation_id uuid,
+        decision_reason character varying(1000),
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index bigint NOT NULL,
+        CONSTRAINT "PK_proposals" PRIMARY KEY (id),
+        CONSTRAINT "AK_proposals_tenant_id_id" UNIQUE (tenant_id, id),
+        CONSTRAINT ck_proposals_affected CHECK (cardinality(affected) <= 200),
+        CONSTRAINT ck_proposals_content_hash CHECK (content_hash ~ '^sha256:[0-9a-f]{64}$'),
+        CONSTRAINT ck_proposals_decision CHECK ((status = 'Open' AND decided_at IS NULL AND decided_by_id IS NULL AND decided_by_kind IS NULL AND approval_attestation_id IS NULL AND decision_reason IS NULL) OR (status = 'Approved' AND decided_at IS NOT NULL AND decided_by_id IS NOT NULL AND decided_by_kind = 'Person' AND approval_attestation_id IS NOT NULL) OR (status IN ('Rejected', 'Withdrawn') AND decided_at IS NOT NULL AND decided_by_id IS NOT NULL AND decided_by_kind IS NOT NULL AND approval_attestation_id IS NULL AND decision_reason IS NOT NULL)),
+        CONSTRAINT ck_proposals_expiry CHECK (expires_at > proposed_at AND expires_at <= proposed_at + interval '90 days'),
+        CONSTRAINT ck_proposals_intent CHECK (char_length(intent) BETWEEN 1 AND 2000),
+        CONSTRAINT ck_proposals_model CHECK ((proposed_by_kind = 'AutomationAgent' AND model_id IS NOT NULL AND char_length(model_id) > 0) OR (proposed_by_kind <> 'AutomationAgent' AND model_id IS NULL)),
+        CONSTRAINT ck_proposals_requested_capabilities CHECK (cardinality(requested_capabilities) BETWEEN 1 AND 20),
+        CONSTRAINT ck_proposals_simulated_impact CHECK (simulated_impact IS NULL OR simulated_impact ~ '^sha256:[0-9a-f]{64}$'),
+        CONSTRAINT "FK_proposals_artifact_versions_tenant_id_plan_artifact_version~" FOREIGN KEY (tenant_id, plan_artifact_version_id) REFERENCES kernel.artifact_versions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_proposals_attestations_tenant_id_approval_attestation_id" FOREIGN KEY (tenant_id, approval_attestation_id) REFERENCES kernel.attestations (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_proposals_studies_tenant_id_study_id" FOREIGN KEY (tenant_id, study_id) REFERENCES kernel.studies (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_proposals_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE INDEX "IX_proposals_tenant_id_approval_attestation_id" ON kernel.proposals (tenant_id, approval_attestation_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE INDEX "IX_proposals_tenant_id_plan_artifact_version_id" ON kernel.proposals (tenant_id, plan_artifact_version_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE INDEX "IX_proposals_tenant_id_study_id_status" ON kernel.proposals (tenant_id, study_id, status);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    ALTER TABLE "kernel"."proposals" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."proposals" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."proposals"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    CREATE TRIGGER "trg_proposals_immutable" BEFORE UPDATE ON "kernel"."proposals"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_immutable_columns('id', 'tenant_id', 'study_id', 'intent', 'plan_artifact_version_id', 'affected', 'simulated_impact', 'requested_capabilities', 'expires_at', 'proposed_at', 'proposed_by_id', 'proposed_by_kind', 'model_id', 'content_hash', 'created_at', 'created_by');
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20260930142430_Proposals') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20260930142430_Proposals', '10.0.11');
     END IF;
 END $EF$;
 COMMIT;

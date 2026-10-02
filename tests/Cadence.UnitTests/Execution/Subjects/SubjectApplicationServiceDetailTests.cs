@@ -9,6 +9,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
@@ -24,29 +25,6 @@ namespace Cadence.UnitTests.Execution.Subjects;
 /// </summary>
 public class SubjectApplicationServiceDetailTests
 {
-    private sealed class FakeDemographicsEncryptionService : IDemographicsEncryptionService
-    {
-        public string Encrypt(IReadOnlyDictionary<string, object?> demographics) =>
-            throw new NotSupportedException("Not exercised by these tests.");
-
-        public IReadOnlyDictionary<string, object?> Decrypt(string ciphertext) =>
-            throw new NotSupportedException("Not exercised by these tests.");
-    }
-
-    private sealed class NoOpAuditLogWriter : IAuditLogWriter
-    {
-        public Task WriteAsync(string entityName, string recordId, string action, string userId, string changeReason,
-            IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues, CancellationToken ct) =>
-            Task.CompletedTask;
-    }
-
-    private sealed class FakeCurrentAuditContextAccessor : ICurrentAuditContextAccessor
-    {
-        public string UserId { get; init; } = "test-user";
-
-        public string ChangeReason { get; init; } = "test-reason";
-    }
-
     private sealed class Harness
     {
         public InMemorySubjectRepository Subjects { get; } = new();
@@ -59,7 +37,7 @@ public class SubjectApplicationServiceDetailTests
 
         public Harness() =>
             Service = new SubjectApplicationService(Subjects, Consents, Compliance, new FakeDemographicsEncryptionService(),
-                new NoOpAuditLogWriter(), new FakeCurrentAuditContextAccessor());
+                new RecordingAuditLogWriter(), new FakeCurrentAuditContextAccessor());
     }
 
     private static readonly StudyCode Study = new("STUDY-001");

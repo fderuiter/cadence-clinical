@@ -69,4 +69,92 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
       }),
     ]);
   });
+
+  it("scopes clinical store localStorage keys by active persona and rehydrates state on persona switch", async () => {
+    const authStore = useAuthStore();
+    authStore.rawRoles = ["Sponsor Admin", "CRA", "Monitor"];
+    authStore.currentPersona = "super_admin";
+
+    const clinicalStore = useClinicalStore();
+
+    // 1. Mutate formValues & ledger in super_admin persona
+    clinicalStore.formValues.pulse = "99";
+    await clinicalStore.addLedgerBlock(
+      "TEST_ACTION_SA",
+      { pulse: "99" },
+      "Super Admin Updated Pulse"
+    );
+
+    // Verify localStorage has persona-scoped keys for super_admin
+    const saFormValuesKey = "clinical_super_admin_formValues";
+    const saLedgerKey = "clinical_super_admin_ledgerBlocks";
+    expect(window.localStorage.getItem(saFormValuesKey)).not.toBeNull();
+    expect(window.localStorage.getItem(saLedgerKey)).not.toBeNull();
+
+    const saFormValues = JSON.parse(
+      window.localStorage.getItem(saFormValuesKey)!
+    );
+    expect(saFormValues.pulse).toBe("99");
+
+    // 2. Switch persona to cra_monitor
+    authStore.currentPersona = "cra_monitor";
+    clinicalStore.loadPersonaState("cra_monitor");
+
+    // Verify state rehydrated cleanly for cra_monitor (default fixtures, no cross-persona pollution)
+    expect(clinicalStore.formValues.pulse).toBe("72");
+    expect(clinicalStore.ledgerBlocks).toHaveLength(0);
+
+    // 3. Mutate formValues & ledger in cra_monitor persona
+    clinicalStore.formValues.pulse = "140";
+    await clinicalStore.addLedgerBlock(
+      "TEST_ACTION_CRA",
+      { pulse: "140" },
+      "CRA Monitor Updated Pulse"
+    );
+
+    const craFormValuesKey = "clinical_cra_monitor_formValues";
+    expect(window.localStorage.getItem(craFormValuesKey)).not.toBeNull();
+    const craFormValues = JSON.parse(
+      window.localStorage.getItem(craFormValuesKey)!
+    );
+    expect(craFormValues.pulse).toBe("140");
+
+    // 4. Switch back to super_admin persona
+    authStore.currentPersona = "super_admin";
+    clinicalStore.loadPersonaState("super_admin");
+
+    // Verify super_admin state was restored intact
+    expect(clinicalStore.formValues.pulse).toBe("99");
+    expect(
+      clinicalStore.ledgerBlocks.some((b) => b.action === "TEST_ACTION_SA")
+    ).toBe(true);
+    expect(
+      clinicalStore.ledgerBlocks.some((b) => b.action === "TEST_ACTION_CRA")
+    ).toBe(false);
+  });
+
+  it("automatically migrates un-scoped legacy localStorage entries to persona-scoped storage on load", () => {
+    const legacyFormValues = {
+      pulse: "115",
+      vssbp: "135",
+    };
+    window.localStorage.setItem("formValues", JSON.stringify(legacyFormValues));
+
+    const authStore = useAuthStore();
+    authStore.currentPersona = "super_admin";
+
+    const clinicalStore = useClinicalStore();
+    clinicalStore.loadPersonaState("super_admin");
+
+    expect(clinicalStore.formValues.pulse).toBe("115");
+    expect(clinicalStore.formValues.vssbp).toBe("135");
+
+    const scopedItem = window.localStorage.getItem(
+      "clinical_super_admin_formValues"
+    );
+    expect(scopedItem).not.toBeNull();
+    expect(JSON.parse(scopedItem!)).toEqual(
+      expect.objectContaining({ pulse: "115", vssbp: "135" })
+    );
+  });
 });

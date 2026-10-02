@@ -33,7 +33,7 @@ clinical truth (K-TRUTH-1).
   in `tests/Cadence.ArchitectureTests/Architecture`; existing violations sit in a baseline that may only shrink.
 - **K-XS-2:** applications reference `Cadence.Kernel.Abstractions` only, never kernel persistence.
 - **Time (K-TIME-3):** never call `DateTime.Now/UtcNow` or `DateTimeOffset.Now/UtcNow` (banned in
-  [`BannedSymbols.txt`](BannedSymbols.txt), enforced in `packages/kernel`, `apps/`, `tests/` and every shared package that sets `CadenceBanWallClock`). Inject
+  [`BannedSymbols.txt`](BannedSymbols.txt), enforced solution-wide across all C# projects in root `Directory.Build.props`). Inject
   `Cadence.Kernel.Time.IClock`; in tests use `FakeClock` from `Cadence.Testing.Time`, or `SystemClock.Instance`
   where the code under test checks the real clock ([docs/TESTING.md](docs/TESTING.md#time-in-tests)).
 - **Hold structural changes that contradict the spec.** If a change needs the spec to change, raise it
@@ -262,6 +262,7 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 | Integration tests only | `pnpm cadence test --integration` (`tests/Cadence.IntegrationTests`, needs PostgreSQL) |
 | Architecture tests | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
 | Formatting | `dotnet format Cadence.sln --verify-no-changes` |
+| Action pinning check | `python3 scripts/check-action-pinning.py` |
 | All quality gates (pre-commit) | `pnpm cadence check` |
 | Whole CI workflow locally (before merging; Actions is off until 2027) | `CADENCE_TEST_POSTGRES=<connection string> TERM=dumb pnpm cadence ci` (about 20 minutes; `TERM=dumb` or `script -qc "…" /dev/null` is needed in an agent shell, [docs/CI.md](docs/CI.md)) |
 | One gate | `pnpm cadence check <gate>` (for example `adrs`, `markdown`, `readmes`, `arch-drift`) |

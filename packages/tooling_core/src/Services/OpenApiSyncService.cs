@@ -16,21 +16,24 @@ public static class OpenApiSyncService
 {
     private const string ExporterProject = "packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj";
 
-    public static int SyncOpenApiSpec(bool validate = false, string? repoRoot = null)
+    public static int SyncOpenApiSpec(bool validate = false, string? repoRoot = null, IEnumerable<string>? targetServices = null)
     {
         repoRoot ??= FindRepoRoot();
         string specDir = Path.Combine(repoRoot, "docs", "openapi");
         string exportDir = Path.Combine(Path.GetTempPath(), "cadence-openapi-" + Guid.NewGuid().ToString("N"));
 
+        var serviceList = targetServices?.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        bool isTargeted = serviceList != null && serviceList.Count > 0;
+
         Console.WriteLine("Exporting OpenAPI specifications from the .NET services...");
         try
         {
-            if (!RunExporter(repoRoot, exportDir))
+            if (!RunExporter(repoRoot, exportDir, serviceList))
             {
                 return 1;
             }
 
-            var drift = FindDrift(exportDir, specDir);
+            var drift = FindDrift(exportDir, specDir, isTargeted);
             if (drift.Count == 0)
             {
                 Console.WriteLine("✔ docs/openapi matches the specifications the services serve.");
@@ -44,7 +47,7 @@ public static class OpenApiSyncService
                 {
                     Console.WriteLine($"  - {line}");
                 }
-                Console.WriteLine("Run 'pnpm cadence sync-openapi-spec' and commit docs/openapi and docs/api.");
+                Console.WriteLine("Run 'pnpm cadence sync-openapi-spec' to update docs/openapi, then 'pnpm --filter web generate:api' to update web API types.");
                 return 1;
             }
 
@@ -53,9 +56,12 @@ public static class OpenApiSyncService
             {
                 File.Copy(file, Path.Combine(specDir, Path.GetFileName(file)), overwrite: true);
             }
-            foreach (string stale in StaleSpecs(exportDir, specDir))
+            if (!isTargeted)
             {
-                File.Delete(Path.Combine(specDir, stale));
+                foreach (string stale in StaleSpecs(exportDir, specDir))
+                {
+                    File.Delete(Path.Combine(specDir, stale));
+                }
             }
             foreach (string line in drift)
             {
@@ -77,7 +83,7 @@ public static class OpenApiSyncService
     /// Compares freshly exported specs with the committed ones. Only top-level files are compared,
     /// so <c>docs/openapi/legacy/</c> is ignored. JSON is compared structurally, not textually.
     /// </summary>
-    public static IReadOnlyList<string> FindDrift(string exportedDir, string committedDir)
+    public static IReadOnlyList<string> FindDrift(string exportedDir, string committedDir, bool isTargetedExport = false)
     {
         var drift = new List<string>();
         foreach (string exported in Directory.GetFiles(exportedDir, "*.json").OrderBy(f => f, StringComparer.Ordinal))
@@ -94,7 +100,10 @@ public static class OpenApiSyncService
             }
         }
 
-        drift.AddRange(StaleSpecs(exportedDir, committedDir).Select(name => $"{name} (no service serves it)"));
+        if (!isTargetedExport)
+        {
+            drift.AddRange(StaleSpecs(exportedDir, committedDir).Select(name => $"{name} (no service serves it)"));
+        }
         return drift;
     }
 
@@ -125,7 +134,7 @@ public static class OpenApiSyncService
         }
     }
 
-    private static bool RunExporter(string repoRoot, string exportDir)
+    private static bool RunExporter(string repoRoot, string exportDir, IReadOnlyList<string>? targetServices = null)
     {
         var psi = new ProcessStartInfo("dotnet")
         {
@@ -134,9 +143,17 @@ public static class OpenApiSyncService
             RedirectStandardError = true,
             UseShellExecute = false
         };
-        foreach (string arg in new[] { "run", "--project", ExporterProject, "--", "--output-dir", exportDir })
+        psi.ArgumentList.Add("run");
+        psi.ArgumentList.Add("--project");
+        psi.ArgumentList.Add(ExporterProject);
+        psi.ArgumentList.Add("--");
+        psi.ArgumentList.Add("--output-dir");
+        psi.ArgumentList.Add(exportDir);
+
+        if (targetServices != null && targetServices.Count > 0)
         {
-            psi.ArgumentList.Add(arg);
+            psi.ArgumentList.Add("--services");
+            psi.ArgumentList.Add(string.Join(",", targetServices));
         }
 
         using var process = Process.Start(psi);

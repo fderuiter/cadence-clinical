@@ -100,14 +100,16 @@ function readStorageForPersona(personaKey) {
         }
       }
 
-      const storedIsActive = window.localStorage.getItem(activeKey);
-      if (storedIsActive !== null) {
-        isActive = storedIsActive === "true";
-      }
-
       const storedDisabled = window.localStorage.getItem(disabledKey);
-      if (storedDisabled !== null) {
-        disabled = storedDisabled === "true";
+      disabled = storedDisabled === "true";
+
+      const storedIsActive = window.localStorage.getItem(activeKey);
+      if (disabled) {
+        isActive = false;
+      } else if (storedIsActive !== null) {
+        isActive = storedIsActive === "true";
+      } else {
+        isActive = true;
       }
 
       const storedEvents = window.localStorage.getItem(eventsKey);

@@ -39,9 +39,12 @@ public static class KernelModelConfigurationBuilderExtensions
         configurationBuilder.Properties<StandardVersionId>().HaveConversion<StandardVersionIdValueConverter, EntityIdValueComparer<StandardVersionId>>();
         configurationBuilder.Properties<LibraryItemId>().HaveConversion<LibraryItemIdValueConverter, EntityIdValueComparer<LibraryItemId>>();
         configurationBuilder.Properties<StudyStandardsProfileId>().HaveConversion<StudyStandardsProfileIdValueConverter, EntityIdValueComparer<StudyStandardsProfileId>>();
+        configurationBuilder.Properties<QualificationId>().HaveConversion<QualificationIdValueConverter, EntityIdValueComparer<QualificationId>>();
+        configurationBuilder.Properties<QualificationRequirementId>().HaveConversion<QualificationRequirementIdValueConverter, EntityIdValueComparer<QualificationRequirementId>>();
         configurationBuilder.Properties<WorkQueueDefinitionId>().HaveConversion<WorkQueueDefinitionIdValueConverter, EntityIdValueComparer<WorkQueueDefinitionId>>();
         configurationBuilder.Properties<ValidationRunId>().HaveConversion<ValidationRunIdValueConverter, EntityIdValueComparer<ValidationRunId>>();
         configurationBuilder.Properties<ValidationFindingId>().HaveConversion<ValidationFindingIdValueConverter, EntityIdValueComparer<ValidationFindingId>>();
+        configurationBuilder.Properties<ProposalId>().HaveConversion<ProposalIdValueConverter, EntityIdValueComparer<ProposalId>>();
 
         return configurationBuilder;
     }
