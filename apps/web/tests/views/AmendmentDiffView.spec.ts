@@ -311,4 +311,18 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     expect(wrapper.vm.activeDiffLayer).toBe("ecrf");
     expect(wrapper.text()).toContain("eCRF Form Definitions");
   });
+
+  it("hides internal microservice names ('Designer service') in error alerts when diff load fails", async () => {
+    const wrapper = mount(AmendmentDiffView, {
+      global: { plugins: [pinia] },
+    });
+    wrapper.vm.activeTab = "graph";
+    wrapper.vm.diffLoadError = "HTTP 500 Internal Server Error in Designer service";
+    await wrapper.vm.$nextTick();
+
+    const errorAlert = wrapper.find('[data-testid="diff-load-error"]');
+    expect(errorAlert.exists()).toBe(true);
+    expect(errorAlert.text()).not.toContain("Designer service");
+    expect(errorAlert.text()).toContain("protocol design service");
+  });
 });
