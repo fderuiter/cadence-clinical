@@ -207,7 +207,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useAuthStore } from "../stores/auth";
 
@@ -286,17 +286,40 @@ const popoverStyle = ref({
   zIndex: 1000,
 });
 
+let currentRafId = null;
+
 const updatePosition = () => {
   if (!onboardingStore.isActive || onboardingStore.disabled) return;
 
-  const step = currentStep.value;
-  let selector = null;
-  if (step === 2) selector = ".tab-btn-soa";
-  else if (step === 3) selector = ".tab-btn-mdr";
-  else if (step === 4) selector = ".tab-btn-diff";
+  if (currentRafId !== null) {
+    cancelAnimationFrame(currentRafId);
+    currentRafId = null;
+  }
 
-  if (selector) {
-    requestAnimationFrame(() => {
+  nextTick(() => {
+    if (!onboardingStore.isActive || onboardingStore.disabled) return;
+
+    const step = currentStep.value;
+    let selector = null;
+    if (step === 2) selector = ".tab-btn-soa";
+    else if (step === 3) selector = ".tab-btn-mdr";
+    else if (step === 4) selector = ".tab-btn-diff";
+
+    if (!selector) {
+      popoverStyle.value = {
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        zIndex: 1000,
+      };
+      return;
+    }
+
+    const MAX_RETRIES = 5;
+    let attempts = 0;
+
+    const checkAndPosition = () => {
       const el = document.querySelector(selector);
       if (el) {
         const rect = el.getBoundingClientRect();
@@ -307,6 +330,10 @@ const updatePosition = () => {
           transform: "translateX(-50%)",
           zIndex: 1000,
         };
+        currentRafId = null;
+      } else if (attempts < MAX_RETRIES) {
+        attempts++;
+        currentRafId = requestAnimationFrame(checkAndPosition);
       } else {
         popoverStyle.value = {
           position: "fixed",
@@ -315,17 +342,12 @@ const updatePosition = () => {
           transform: "translate(-50%, -50%)",
           zIndex: 1000,
         };
+        currentRafId = null;
       }
-    });
-  } else {
-    popoverStyle.value = {
-      position: "fixed",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      zIndex: 1000,
     };
-  }
+
+    currentRafId = requestAnimationFrame(checkAndPosition);
+  });
 };
 
 const handleNext = () => {
@@ -449,5 +471,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("resize", updatePosition);
+  if (currentRafId !== null) {
+    cancelAnimationFrame(currentRafId);
+    currentRafId = null;
+  }
 });
 </script>

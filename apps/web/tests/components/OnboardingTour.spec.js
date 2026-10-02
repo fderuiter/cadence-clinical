@@ -431,6 +431,98 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.isActive).toBe(true);
       expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
     });
+
+    it("maintains popover coordinates during tab transitions when element query is delayed and retries across frames", async () => {
+      const store = useOnboardingStore();
+      store.currentStep = 2; // Step 2 targets .tab-btn-soa
+
+      // Mock element for step 2
+      const targetSoa = document.createElement("button");
+      targetSoa.className = "tab-btn-soa";
+      targetSoa.getBoundingClientRect = () => ({
+        top: 100,
+        bottom: 140,
+        left: 200,
+        right: 300,
+        width: 100,
+        height: 40,
+      });
+      document.body.appendChild(targetSoa);
+
+      const wrapper = mount(OnboardingTour, {
+        props: {
+          activeTab: "soa",
+        },
+        attachTo: document.body,
+      });
+
+      await wrapper.vm.$nextTick();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      const popoverCard = wrapper.find(".onboarding-popover-card");
+      expect(popoverCard.element.style.top).toBe("152px"); // 140 + 12
+      expect(popoverCard.element.style.left).toBe("250px"); // 200 + 50
+
+      // Remove step 2 target element to simulate transition
+      document.body.removeChild(targetSoa);
+
+      // Transition to step 3 (targets .tab-btn-mdr)
+      store.currentStep = 3;
+      await wrapper.vm.$nextTick();
+
+      // On intermediate frame before .tab-btn-mdr exists in DOM:
+      // popover retains step 2 position (top: 152px, left: 250px) rather than resetting to 50% / 50%
+      expect(popoverCard.element.style.top).toBe("152px");
+      expect(popoverCard.element.style.left).toBe("250px");
+
+      // Now append .tab-btn-mdr to simulate asynchronous mounting
+      const targetMdr = document.createElement("button");
+      targetMdr.className = "tab-btn-mdr";
+      targetMdr.getBoundingClientRect = () => ({
+        top: 100,
+        bottom: 140,
+        left: 400,
+        right: 500,
+        width: 100,
+        height: 40,
+      });
+      document.body.appendChild(targetMdr);
+
+      // Next RAF frame checks query again and finds .tab-btn-mdr
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      expect(popoverCard.element.style.top).toBe("152px");
+      expect(popoverCard.element.style.left).toBe("450px");
+
+      // Clean up
+      document.body.removeChild(targetMdr);
+      wrapper.unmount();
+    });
+
+    it("falls back to viewport center after retry attempts expire if target element never appears", async () => {
+      const store = useOnboardingStore();
+      store.currentStep = 2; // Targets .tab-btn-soa which doesn't exist
+
+      const wrapper = mount(OnboardingTour, {
+        props: {
+          activeTab: "soa",
+        },
+        attachTo: document.body,
+      });
+
+      await wrapper.vm.$nextTick();
+
+      // Run multiple RAF ticks until retries expire
+      for (let i = 0; i < 7; i++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+
+      const popoverCard = wrapper.find(".onboarding-popover-card");
+      expect(popoverCard.element.style.top).toBe("50%");
+      expect(popoverCard.element.style.left).toBe("50%");
+
+      wrapper.unmount();
+    });
   });
 
   describe("AppShell.vue footer and diagnostic integration", () => {
