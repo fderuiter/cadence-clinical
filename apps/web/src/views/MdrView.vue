@@ -1874,9 +1874,6 @@
       @confirm="confirmMutation"
       @cancel="cancelMutation"
     />
-
-    <!-- Guided Onboarding Tour -->
-    <OnboardingTour v-model:active-tab="activeTab" />
   </div>
 </template>
 
@@ -1892,7 +1889,6 @@ import { debounce } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
 import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
 import { useDesignerStore } from "../stores/designer.js";
-import OnboardingTour from "../components/OnboardingTour.vue";
 
 const route = useRoute();
 
@@ -1959,10 +1955,8 @@ const activeTab = ref(route?.query?.tab === "canvas" ? "canvas" : "soa"); // 'so
 watch(
   () => route?.query?.tab,
   (newTab) => {
-    if (newTab === "canvas") {
-      activeTab.value = "canvas";
-    } else if (newTab === "soa") {
-      activeTab.value = "soa";
+    if (["soa", "canvas", "mdr", "diff"].includes(newTab)) {
+      activeTab.value = newTab;
     }
   }
 );
