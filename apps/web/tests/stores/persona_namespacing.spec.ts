@@ -23,7 +23,10 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
 
   describe("Clinical Store Key Resolution & Fallback Removal", () => {
     it("strictly resolves getStorageKey to clinical_${persona}_${baseKey} even if unscoped key exists", () => {
-      window.localStorage.setItem("subjects", JSON.stringify([{ id: "UNSCOPED-1" }]));
+      window.localStorage.setItem(
+        "subjects",
+        JSON.stringify([{ id: "UNSCOPED-1" }])
+      );
       window.localStorage.setItem(
         "clinical_site_crc_subjects",
         JSON.stringify([{ id: "SCOPED-CRC-1" }])
@@ -34,12 +37,17 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
     });
 
     it("strictly reads from persona-scoped key and returns null if persona key is missing even if unscoped key exists", () => {
-      window.localStorage.setItem("formValues", JSON.stringify({ field1: "unscoped_value" }));
+      window.localStorage.setItem(
+        "formValues",
+        JSON.stringify({ field1: "unscoped_value" })
+      );
 
       // Does not fall back to unscoped baseKey or migrate it
       const val = readStorageItem("formValues", "auditor");
       expect(val).toBeNull();
-      expect(window.localStorage.getItem("clinical_auditor_formValues")).toBeNull();
+      expect(
+        window.localStorage.getItem("clinical_auditor_formValues")
+      ).toBeNull();
     });
 
     it("ensures coordinator state edits do not appear in auditor state store", () => {
@@ -84,11 +92,17 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
       onboardingStore.disableTour();
 
       // Verify no global keys were written
-      expect(window.localStorage.getItem("onboarding_global_disabled")).toBeNull();
-      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_global_disabled")
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_global_dismissed")
+      ).toBeNull();
 
       // Verify persona key WAS written
-      expect(window.localStorage.getItem("onboarding_site_crc_disabled")).toBe("true");
+      expect(window.localStorage.getItem("onboarding_site_crc_disabled")).toBe(
+        "true"
+      );
 
       // Switch to monitor persona
       authStore.switchPersona("cra_monitor");
@@ -128,11 +142,20 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
   describe("Bootstrap Legacy Unscoped Key Purging", () => {
     it("automatically purges legacy unscoped keys upon user sign-in while preserving persona-scoped keys", () => {
       // Seed legacy unscoped keys
-      window.localStorage.setItem("subjects", JSON.stringify([{ id: "LEGACY-1" }]));
-      window.localStorage.setItem("formValues", JSON.stringify({ old: "data" }));
+      window.localStorage.setItem(
+        "subjects",
+        JSON.stringify([{ id: "LEGACY-1" }])
+      );
+      window.localStorage.setItem(
+        "formValues",
+        JSON.stringify({ old: "data" })
+      );
       window.localStorage.setItem("onboarding_global_disabled", "true");
       window.localStorage.setItem("onboarding_global_dismissed", "true");
-      window.localStorage.setItem("cadence_clinical_subjects", JSON.stringify([]));
+      window.localStorage.setItem(
+        "cadence_clinical_subjects",
+        JSON.stringify([])
+      );
 
       // Seed valid persona-scoped key
       window.localStorage.setItem(
@@ -146,12 +169,20 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
       // Legacy unscoped keys must be purged
       expect(window.localStorage.getItem("subjects")).toBeNull();
       expect(window.localStorage.getItem("formValues")).toBeNull();
-      expect(window.localStorage.getItem("onboarding_global_disabled")).toBeNull();
-      expect(window.localStorage.getItem("onboarding_global_dismissed")).toBeNull();
-      expect(window.localStorage.getItem("cadence_clinical_subjects")).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_global_disabled")
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_global_dismissed")
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem("cadence_clinical_subjects")
+      ).toBeNull();
 
       // Valid persona-scoped key must remain intact
-      expect(window.localStorage.getItem("clinical_site_crc_subjects")).not.toBeNull();
+      expect(
+        window.localStorage.getItem("clinical_site_crc_subjects")
+      ).not.toBeNull();
       expect(
         JSON.parse(window.localStorage.getItem("clinical_site_crc_subjects")!)
       ).toEqual([{ id: "VALID-CRC-1" }]);

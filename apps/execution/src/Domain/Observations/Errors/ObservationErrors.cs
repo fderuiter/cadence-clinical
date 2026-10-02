@@ -1,4 +1,5 @@
 using Cadence.Core.Domain;
+using Cadence.Kernel;
 
 namespace Cadence.Apps.Execution.Domain.Observations.Errors;
 

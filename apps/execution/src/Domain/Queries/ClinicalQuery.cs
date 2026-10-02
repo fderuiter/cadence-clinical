@@ -4,6 +4,7 @@ using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel;
 
 namespace Cadence.Apps.Execution.Domain.Queries;
 

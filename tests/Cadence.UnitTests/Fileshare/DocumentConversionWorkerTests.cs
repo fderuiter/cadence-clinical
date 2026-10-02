@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Apps.Fileshare.Infrastructure.Persistence;
 using Cadence.Apps.Fileshare.Workers;
+using Cadence.Kernel.Time;
 
 using FluentAssertions;
 

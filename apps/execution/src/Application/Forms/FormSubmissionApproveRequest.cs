@@ -24,6 +24,7 @@ public sealed record FormSubmissionApproveRequest(
         string SigningReason,
         DateTime SignedAt,
         string PayloadHash,
-        string? SignerName = null) =>
-        new(SigningReason, SignatureManifest.Create(SignerId, SignerRole, SigningReason, SignedAt, PayloadHash, SignerName));
+        string? SignerName = null,
+        string? HmacSignature = null) =>
+        new(SigningReason, SignatureManifest.Create(SignerId, SignerRole, SigningReason, SignedAt, PayloadHash, SignerName, HmacSignature));
 }

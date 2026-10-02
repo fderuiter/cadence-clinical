@@ -74,6 +74,7 @@
         <input
           v-model="searchQuery"
           type="text"
+          aria-label="Filter by filename or code"
           class="form-control"
           placeholder="Filter by filename or code..."
           style="font-size: 12px; width: 220px; padding: 4px 8px"
@@ -118,6 +119,7 @@
             <td>
               <input
                 type="checkbox"
+                :aria-label="`Select ${item.filename || item.document_id}`"
                 :value="item.document_id"
                 v-model="selectedItemIds"
               />
@@ -211,6 +213,7 @@
     </div>
 
     <!-- Batch Accept Modal -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="showBatchModal"
       class="qc-modal-overlay"
@@ -264,6 +267,7 @@
     </div>
 
     <!-- Single Item Inspection & Override Modal Drawer -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -- backdrop click is a mouse shortcut; the dialog's own close control is the keyboard path -->
     <div
       v-if="inspectedItem"
       class="qc-modal-overlay"
@@ -349,10 +353,14 @@
             >
               Override Taxonomy Tag
             </h5>
-            <label class="form-label" style="font-size: 11px"
+            <label
+              class="form-label"
+              style="font-size: 11px"
+              for="qc-artifact-code-override"
               >Artifact Code Override</label
             >
             <select
+              id="qc-artifact-code-override"
               v-model="overrideArtifactCode"
               class="form-control"
               style="font-size: 12px; margin-bottom: 8px"

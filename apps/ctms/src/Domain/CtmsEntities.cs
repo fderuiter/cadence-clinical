@@ -226,6 +226,34 @@ public sealed class CtmsInvestigatorPayable : AggregateRoot<string>
     public CtmsInvestigatorPayable(string id) : base(id) { }
 }
 
+public sealed class CtmsSiteGreenlightGate : AggregateRoot<string>
+{
+    public string StudyId { get; set; } = string.Empty;
+    public string SiteId { get; set; } = string.Empty;
+    public string SiteName { get; set; } = string.Empty;
+    public string CountryCode { get; set; } = string.Empty;
+    public string OverallStatus { get; set; } = "PENDING";
+    public int ReadinessPercentage { get; set; }
+    public bool FacetRegulatoryIrb { get; set; }
+    public bool FacetCtaBudget { get; set; }
+    public bool FacetEisfBaseline { get; set; }
+    public bool FacetDoaLog { get; set; }
+    public bool FacetStaffTraining { get; set; }
+    public bool FacetIpRelease { get; set; }
+    public string? GreenlightToken { get; set; }
+    public string? GreenlightCertifiedBy { get; set; }
+    public DateTimeOffset? GreenlightCertifiedAt { get; set; }
+    public bool IsOverridden { get; set; }
+    public string? OverrideSponsorUserId { get; set; }
+    public string? OverrideMedicalUserId { get; set; }
+    public string? OverrideJustification { get; set; }
+    public DateTimeOffset? OverrideAuthorizedAt { get; set; }
+    public string? UnfulfilledReasons { get; set; }
+
+    public CtmsSiteGreenlightGate() : base(Guid.NewGuid().ToString()) { }
+    public CtmsSiteGreenlightGate(string id) : base(id) { }
+}
+
 public record SiteVisitFindingModel(
     string Text,
     string Severity,

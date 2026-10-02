@@ -265,7 +265,8 @@ export const kernelApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ trial_brief: trialBrief }),
     }).then((res) => {
-      if (!res.ok) throw new Error(`Proposal generation failed: ${res.statusText}`);
+      if (!res.ok)
+        throw new Error(`Proposal generation failed: ${res.statusText}`);
       return res.json();
     });
   },
@@ -277,7 +278,8 @@ export const kernelApi = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ protocol_content: protocolContent }),
     }).then((res) => {
-      if (!res.ok) throw new Error(`Matrix gap check failed: ${res.statusText}`);
+      if (!res.ok)
+        throw new Error(`Matrix gap check failed: ${res.statusText}`);
       return res.json();
     });
   },

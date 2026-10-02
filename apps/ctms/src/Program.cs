@@ -28,7 +28,9 @@ app.MapCadenceHealthAndStatusEndpoints(
     "CTMS operations health probe.",
     "Returns CTMS operational status.");
 
-app.MapGroup("/api/v1/ctms").MapLetterTemplateEndpoints();
+var ctmsApi = app.MapGroup("/api/v1/ctms");
+ctmsApi.MapLetterTemplateEndpoints();
+ctmsApi.MapStartupGreenlightEndpoints();
 
 await app.RunAsync();
 

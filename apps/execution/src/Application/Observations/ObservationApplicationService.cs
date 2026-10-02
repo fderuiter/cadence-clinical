@@ -12,6 +12,7 @@ using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 
 namespace Cadence.Apps.Execution.Application.Observations;
@@ -32,6 +33,7 @@ public sealed class ObservationApplicationService(
     IEditCheckEngine editCheckEngine,
     IClock clock,
     ICurrentAuditContextAccessor auditContextAccessor,
+    IDemographicsNormalizationService? demographicsNormalizationService = null,
     IAutoQueryDispatchService? autoQueryDispatchService = null) : IObservationApplicationService
 {
     public async Task<Result<ObservationResponse>> CreateAsync(
@@ -48,7 +50,8 @@ public sealed class ObservationApplicationService(
             return DomainError.Validation("INVALID_SUBJECT_CODE", ex.Message);
         }
 
-        ClinicalSubject? subject = await subjectRepository.GetByIdAsync(request.SubjectId, cancellationToken).ConfigureAwait(false);
+        ClinicalSubject? subject = await subjectRepository.GetByIdAsync(request.SubjectId, cancellationToken).ConfigureAwait(false)
+            ?? await subjectRepository.GetByCodeAsync(request.SubjectId, cancellationToken).ConfigureAwait(false);
 
         StudyCode studyCode;
         if (!string.IsNullOrWhiteSpace(request.StudyId))
@@ -111,12 +114,26 @@ public sealed class ObservationApplicationService(
         // UCUM normalization
         var normResult = ucumService.GetNormalizedRepresentation(request.Value, request.Unit);
 
+        // Resolve subject demographics for lab range evaluation
+        string? sex = null;
+        int? ageYears = null;
+
+        if (subject != null && demographicsNormalizationService != null)
+        {
+            var safeDemo = demographicsNormalizationService.GetSafeDemographics(subject);
+            sex = safeDemo.Gender;
+            if (safeDemo.Age is double decimalAge)
+            {
+                ageYears = (int)Math.Floor(decimalAge);
+            }
+        }
+
         // Lab range evaluation
         var labResult = labRangeService.Evaluate(
             testCode,
             normResult.NormalizedValue,
-            sex: null,
-            ageYears: null,
+            sex: sex,
+            ageYears: ageYears,
             labSource: request.LabSource,
             isNormalized: normResult.IsNormalized);
 
@@ -197,7 +214,7 @@ public sealed class ObservationApplicationService(
 
     public async Task<Result<ObservationResponse>> GetByIdAsync(string id, CancellationToken cancellationToken)
     {
-        if (!ObservationId.TryParse(id, out var observationId))
+        if (!ObservationId.TryParse(id, out var observationId) || observationId.IsEmpty)
         {
             return ObservationErrors.NotFound(id);
         }
@@ -230,7 +247,7 @@ public sealed class ObservationApplicationService(
             return ObservationErrors.UnauthorizedSdvRole(verifier is null ? string.Empty : string.Join(",", verifier.Roles));
         }
 
-        if (!ObservationId.TryParse(id, out var observationId))
+        if (!ObservationId.TryParse(id, out var observationId) || observationId.IsEmpty)
         {
             return ObservationErrors.NotFound(id);
         }
@@ -260,7 +277,7 @@ public sealed class ObservationApplicationService(
             return ObservationErrors.UnauthorizedSdvRole(verifier is null ? string.Empty : string.Join(",", verifier.Roles));
         }
 
-        if (!ObservationId.TryParse(id, out var observationId))
+        if (!ObservationId.TryParse(id, out var observationId) || observationId.IsEmpty)
         {
             return ObservationErrors.NotFound(id);
         }

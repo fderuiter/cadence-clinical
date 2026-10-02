@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Core.Domain;
-using Cadence.Security.Authentication;
 
 namespace Cadence.Apps.Execution.Application.Cec;
 

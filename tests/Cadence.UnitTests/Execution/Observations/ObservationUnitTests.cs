@@ -10,6 +10,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Core.Domain;
+using Cadence.Kernel;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;

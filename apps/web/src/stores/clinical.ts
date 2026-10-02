@@ -531,7 +531,10 @@ function readPersonaStorage(personaKey?: string) {
         const legacy = window.localStorage.getItem("formQueries");
         if (legacy) {
           storedFormQueries = legacy;
-          window.localStorage.setItem(`clinical_${persona}_formQueries`, legacy);
+          window.localStorage.setItem(
+            `clinical_${persona}_formQueries`,
+            legacy
+          );
         }
       }
       if (storedFormQueries) {
@@ -543,7 +546,10 @@ function readPersonaStorage(personaKey?: string) {
         const legacy = window.localStorage.getItem("ledgerBlocks");
         if (legacy) {
           storedLedgerBlocks = legacy;
-          window.localStorage.setItem(`clinical_${persona}_ledgerBlocks`, legacy);
+          window.localStorage.setItem(
+            `clinical_${persona}_ledgerBlocks`,
+            legacy
+          );
         }
       }
       if (storedLedgerBlocks) {
@@ -555,7 +561,10 @@ function readPersonaStorage(personaKey?: string) {
         const legacy = window.localStorage.getItem("currentUsdm");
         if (legacy) {
           storedUsdm = legacy;
-          window.localStorage.setItem(`clinical_${persona}_currentUsdm`, legacy);
+          window.localStorage.setItem(
+            `clinical_${persona}_currentUsdm`,
+            legacy
+          );
         }
       }
       if (storedUsdm) {
@@ -969,13 +978,15 @@ const useClinicalStoreInner = defineStore("clinical", {
         changed = false;
         passes++;
         for (const field of this.ecrfFields) {
-          const isRelevant = field.relevant
+          // Only an explicit false from the relevance rule hides a field.
+          const verdict = field.relevant
             ? evaluateAST(
                 field.relevant as Record<string, unknown>,
                 this.formValues as Record<string, unknown>
-              ) !== false
+              )
             : true;
-          const wasVisible = this.fieldVisibility[field.id] !== false;
+          const isRelevant = typeof verdict !== "boolean" || verdict;
+          const wasVisible = this.fieldVisibility[field.id] ?? true;
           if (
             isRelevant !== wasVisible ||
             this.fieldVisibility[field.id] === undefined

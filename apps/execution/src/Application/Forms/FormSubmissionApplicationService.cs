@@ -19,6 +19,9 @@ using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Trust;
+using Cadence.Security;
+
+using Microsoft.Extensions.Configuration;
 
 namespace Cadence.Apps.Execution.Application.Forms;
 
@@ -38,7 +41,8 @@ public sealed class FormSubmissionApplicationService(
     ICurrentAuditContextAccessor auditContextAccessor,
     ISubjectRepository? subjectRepository = null,
     IEditCheckEngine? editCheckEngine = null,
-    IAutoQueryDispatchService? autoQueryDispatchService = null) : IFormSubmissionApplicationService
+    IAutoQueryDispatchService? autoQueryDispatchService = null,
+    IConfiguration? configuration = null) : IFormSubmissionApplicationService
 {
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -375,6 +379,15 @@ public sealed class FormSubmissionApplicationService(
             !string.Equals(manifest.PayloadHash.Trim(), computedHash, StringComparison.OrdinalIgnoreCase))
         {
             return FormErrors.InvalidPayloadHash();
+        }
+
+        string secret = configuration?["GATEWAY_SECRET"]
+            ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET")
+            ?? string.Empty;
+
+        if (!HmacSigner.VerifySignature(computedHash, secret, manifest.HmacSignature ?? string.Empty))
+        {
+            return FormErrors.InvalidHmacSignature();
         }
 
         var normalizedManifest = manifest with

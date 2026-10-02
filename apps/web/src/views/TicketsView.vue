@@ -164,6 +164,58 @@
       </div>
     </div>
 
+    <!-- Bulk Action Toolbar -->
+    <div v-if="selectedTicketCount > 0" class="bulk-action-bar">
+      <div class="bulk-info">
+        <span class="bulk-count-badge"
+          >{{ selectedTicketCount }} ticket(s) selected</span
+        >
+      </div>
+
+      <div class="bulk-actions">
+        <div class="bulk-action-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <select v-model="batchStatus" class="filter-select batch-select">
+            <option value="" disabled>Change Status...</option>
+            <option value="OPEN">Open</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="WAITING_ON_SITE">Waiting on Site</option>
+            <option value="WAITING_ON_SPONSOR">Waiting on Sponsor</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="CLOSED">Closed</option>
+          </select>
+          <button
+            class="btn btn-sm btn-primary"
+            :disabled="!batchStatus"
+            @click="handleBatchTransition(batchStatus)"
+          >
+            Apply Status
+          </button>
+        </div>
+
+        <div class="bulk-action-group">
+          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <select v-model="batchSeverity" class="filter-select batch-select">
+            <option value="" disabled>Change Severity...</option>
+            <option value="CRITICAL">Critical</option>
+            <option value="MAJOR">Major</option>
+            <option value="MINOR">Minor</option>
+          </select>
+          <button
+            class="btn btn-sm btn-primary"
+            :disabled="!batchSeverity"
+            @click="handleBatchSeverityUpdate(batchSeverity)"
+          >
+            Apply Severity
+          </button>
+        </div>
+
+        <button class="btn btn-sm btn-secondary" @click="clearSelection">
+          Clear Selection
+        </button>
+      </div>
+    </div>
+
     <!-- MAIN WORKSPACE: KANBAN VIEW -->
     <div v-if="viewMode === 'kanban'" class="kanban-board">
       <!-- Column 1: OPEN -->
@@ -403,6 +455,16 @@
       <table class="clinical-table">
         <thead>
           <tr>
+            <th class="checkbox-cell">
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                type="checkbox"
+                class="ticket-checkbox"
+                :checked="isAllSelected"
+                :indeterminate="isSomeSelected"
+                @change="toggleSelectAll"
+              />
+            </th>
             <th>Reference</th>
             <th>Title</th>
             <th>Category</th>
@@ -420,8 +482,18 @@
             v-for="t in filteredTickets"
             :key="t.id"
             class="table-row"
+            :class="{ 'selected-row': selectedTicketIds.has(t.id) }"
             @click="openTicketDetail(t)"
           >
+            <td class="checkbox-cell" @click.stop>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                type="checkbox"
+                class="ticket-checkbox"
+                :checked="selectedTicketIds.has(t.id)"
+                @change="toggleSelectTicket(t.id)"
+              />
+            </td>
             <td class="ref-cell font-mono">
               {{ t.reference || `#${t.id?.substring(0, 8)}` }}
             </td>
@@ -493,7 +565,7 @@
           </tr>
 
           <tr v-if="filteredTickets.length === 0">
-            <td colspan="10" class="empty-table-cell">
+            <td colspan="11" class="empty-table-cell">
               No clinical issues match the selected search and filter criteria.
             </td>
           </tr>
@@ -547,6 +619,49 @@ const searchQuery = ref("");
 const filterCategory = ref("ALL");
 const filterSeverity = ref("ALL");
 const filterStatus = ref("ALL");
+
+// Selection & Batch Action State
+const selectedTicketIds = ref(new Set());
+const batchStatus = ref("");
+const batchSeverity = ref("");
+
+const selectedTicketCount = computed(() => selectedTicketIds.value.size);
+
+const isAllSelected = computed(() => {
+  if (filteredTickets.value.length === 0) return false;
+  return filteredTickets.value.every((t) => selectedTicketIds.value.has(t.id));
+});
+
+const isSomeSelected = computed(() => {
+  if (isAllSelected.value) return false;
+  return filteredTickets.value.some((t) => selectedTicketIds.value.has(t.id));
+});
+
+const toggleSelectAll = () => {
+  const newSet = new Set(selectedTicketIds.value);
+  if (isAllSelected.value) {
+    filteredTickets.value.forEach((t) => newSet.delete(t.id));
+  } else {
+    filteredTickets.value.forEach((t) => newSet.add(t.id));
+  }
+  selectedTicketIds.value = newSet;
+};
+
+const toggleSelectTicket = (ticketId) => {
+  const newSet = new Set(selectedTicketIds.value);
+  if (newSet.has(ticketId)) {
+    newSet.delete(ticketId);
+  } else {
+    newSet.add(ticketId);
+  }
+  selectedTicketIds.value = newSet;
+};
+
+const clearSelection = () => {
+  selectedTicketIds.value = new Set();
+  batchStatus.value = "";
+  batchSeverity.value = "";
+};
 
 // Modal & Drawer State
 const isDrawerOpen = ref(false);
@@ -825,6 +940,60 @@ const handleTicketTransition = async ({
     if (resolution_code) tickets.value[index].resolution_code = resolution_code;
     selectedTicket.value = { ...tickets.value[index] };
   }
+};
+
+const handleBatchTransition = (targetStatus) => {
+  const statusToApply = targetStatus || batchStatus.value;
+  if (!statusToApply) return;
+  if (selectedTicketIds.value.size === 0) return;
+  if (!allowUnbackedAction("Batch updating ticket status")) return;
+
+  const targetIds = Array.from(selectedTicketIds.value);
+  tickets.value.forEach((t) => {
+    if (targetIds.includes(t.id)) {
+      if (t.status === "CLOSED" || t.signature_token) {
+        return;
+      }
+      t.status = statusToApply;
+      t.version_index = (t.version_index || 1) + 1;
+      t.audit_logs = t.audit_logs || [];
+      t.audit_logs.push({
+        action: "BATCH_STATUS_UPDATE",
+        user_id: "active.user@cadence.io",
+        timestamp: new Date().toISOString(),
+        change_reason: `Batch status transition to ${statusToApply}`,
+      });
+    }
+  });
+
+  clearSelection();
+};
+
+const handleBatchSeverityUpdate = (targetSeverity) => {
+  const severityToApply = targetSeverity || batchSeverity.value;
+  if (!severityToApply) return;
+  if (selectedTicketIds.value.size === 0) return;
+  if (!allowUnbackedAction("Batch updating ticket severity")) return;
+
+  const targetIds = Array.from(selectedTicketIds.value);
+  tickets.value.forEach((t) => {
+    if (targetIds.includes(t.id)) {
+      if (t.status === "CLOSED") {
+        return;
+      }
+      t.gxp_severity = severityToApply;
+      t.version_index = (t.version_index || 1) + 1;
+      t.audit_logs = t.audit_logs || [];
+      t.audit_logs.push({
+        action: "BATCH_SEVERITY_UPDATE",
+        user_id: "active.user@cadence.io",
+        timestamp: new Date().toISOString(),
+        change_reason: `Batch severity update to ${severityToApply}`,
+      });
+    }
+  });
+
+  clearSelection();
 };
 
 const handleTicketComment = ({ content, visibility, reason_for_change }) => {
@@ -1412,6 +1581,73 @@ const exportAuditTrail = (format) => {
   border-color: #cbd5e1;
   color: #334155;
 }
+/* Bulk Action Toolbar */
+.bulk-action-bar {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.bulk-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bulk-count-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e40af;
+  background: #dbeafe;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.bulk-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-select {
+  font-size: 0.82rem;
+  padding: 5px 10px;
+}
+
+.checkbox-cell {
+  width: 36px;
+  text-align: center;
+}
+
+.ticket-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+.selected-row {
+  background-color: #f0f9ff !important;
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+}
+
 .btn-secondary:hover {
   background: #f1f5f9;
 }
