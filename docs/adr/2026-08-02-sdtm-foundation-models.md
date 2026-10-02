@@ -26,16 +26,16 @@ This decision implements requirements under PRD-MDR-001.
 ### Option 1: Inline Database Models
 
 - **Overview:** Build SDTM validation directly within SQLAlchemy database or serialization schemas of the clinical execution engine.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Less architectural separation; simpler initially.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates separation of concerns.
   - ❌ Core models cannot be shared cleanly with design or integration microservices.
 
 ### Option 2: Shared `sdtm` Core Model Package (Selected)
 
 - **Overview:** Create a modular, self-contained `sdtm` package within `packages/core-models/` that utilizes Pydantic v2 for data structures, enums, normalization, and auditing constraints.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Highly reusable across multiple microservices (Execution, Gateway, Interop, and Designer).
   - ✅ Purely Python-driven and database-agnostic.
   - ✅ Easily testable and validated prior to database persistence or serialization.

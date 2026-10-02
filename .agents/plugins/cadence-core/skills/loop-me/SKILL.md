@@ -13,11 +13,11 @@ Executes a focused grilling session specifically tailored to scoping and validat
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Workflow State Discovery**| `grep_search` / `view_file` | Read related domain models and services | Audit existing state machines and transition guards |
-| **State Machine Query** | `ask_question` | `questions=[{"question": "Define State Transition Guard", ...}]` | Interactively settle edge cases and unhandled transitions |
-| **Workflow Spec Artifact** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/workflow_spec.md` | Emit structured state transition table and audit rules |
+| Phase                        | Antigravity Tool            | Invocation Pattern                                               | Objective                                                 |
+| :--------------------------- | :-------------------------- | :--------------------------------------------------------------- | :-------------------------------------------------------- |
+| **Workflow State Discovery** | `grep_search` / `view_file` | Read related domain models and services                          | Audit existing state machines and transition guards       |
+| **State Machine Query**      | `ask_question`              | `questions=[{"question": "Define State Transition Guard", ...}]` | Interactively settle edge cases and unhandled transitions |
+| **Workflow Spec Artifact**   | `write_to_file`             | Target: `<appDataDir>/brain/<conversation-id>/workflow_spec.md`  | Emit structured state transition table and audit rules    |
 
 ### MANDATORY TOOL INVOCATION (`ask_question`)
 
@@ -39,5 +39,3 @@ You **MUST** call the `ask_question` tool to settle state machine transitions an
 ```
 
 Calls [`grill-with-docs`](../grill-with-docs/SKILL.md) to map out the complete workflow state machine, pre-conditions, error transitions, and 21 CFR Part 11 audit trails.
-
-

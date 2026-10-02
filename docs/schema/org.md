@@ -4,31 +4,31 @@
 
 Generated from the EF Core model of `Cadence.Apps.Org.Infrastructure.Persistence.OrgDbContext`, not from a live database. Unqualified tables live in the `org` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`org.audit_log_entries`](#orgaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`org.delegations_of_authority`](#orgdelegations_of_authority) | `DelegationOfAuthority` | 20 |
-| [`org.org_audit_logs`](#orgorg_audit_logs) | `OrgAuditLog` | 8 |
-| [`org.org_training_logs`](#orgorg_training_logs) | `TrainingLog` | 13 |
-| [`org.personnel_assignments`](#orgpersonnel_assignments) | `PersonnelAssignment` | 9 |
+| Table                                                          | Entity                  | Columns |
+| -------------------------------------------------------------- | ----------------------- | ------- |
+| [`org.audit_log_entries`](#orgaudit_log_entries)               | `AuditLogEntry`         | 11      |
+| [`org.delegations_of_authority`](#orgdelegations_of_authority) | `DelegationOfAuthority` | 20      |
+| [`org.org_audit_logs`](#orgorg_audit_logs)                     | `OrgAuditLog`           | 8       |
+| [`org.org_training_logs`](#orgorg_training_logs)               | `TrainingLog`           | 13      |
+| [`org.personnel_assignments`](#orgpersonnel_assignments)       | `PersonnelAssignment`   | 9       |
 
 ## org.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -38,28 +38,28 @@ Indexes:
 
 Entity: `DelegationOfAuthority`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DelegateeId` | `character varying(36)` | no |  |  |
-| `DelegatorId` | `character varying(36)` | no |  |  |
-| `DutiesJson` | `jsonb` | no |  |  |
-| `EndDate` | `timestamp with time zone` | yes |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RevocationReason` | `character varying(1000)` | yes |  |  |
-| `RevokedAt` | `timestamp with time zone` | yes |  |  |
-| `RevokedBy` | `character varying(255)` | yes |  |  |
-| `Signature` | `character varying(512)` | yes |  |  |
-| `SignedAt` | `timestamp with time zone` | yes |  |  |
-| `SignedBy` | `character varying(255)` | yes |  |  |
-| `SignedPayloadJson` | `jsonb` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `StartDate` | `timestamp with time zone` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`         | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`         | `character varying(255)`   | no   |         |     |
+| `DelegateeId`       | `character varying(36)`    | no   |         |     |
+| `DelegatorId`       | `character varying(36)`    | no   |         |     |
+| `DutiesJson`        | `jsonb`                    | no   |         |     |
+| `EndDate`           | `timestamp with time zone` | yes  |         |     |
+| `IsActive`          | `boolean`                  | no   |         |     |
+| `ReasonForChange`   | `character varying(1000)`  | no   |         |     |
+| `RevocationReason`  | `character varying(1000)`  | yes  |         |     |
+| `RevokedAt`         | `timestamp with time zone` | yes  |         |     |
+| `RevokedBy`         | `character varying(255)`   | yes  |         |     |
+| `Signature`         | `character varying(512)`   | yes  |         |     |
+| `SignedAt`          | `timestamp with time zone` | yes  |         |     |
+| `SignedBy`          | `character varying(255)`   | yes  |         |     |
+| `SignedPayloadJson` | `jsonb`                    | yes  |         |     |
+| `SiteId`            | `character varying(255)`   | no   |         |     |
+| `StartDate`         | `timestamp with time zone` | no   |         |     |
+| `StudyId`           | `character varying(255)`   | no   |         |     |
+| `VersionIndex`      | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -70,16 +70,16 @@ Indexes:
 
 Entity: `OrgAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `ActorId` | `character varying(255)` | no |  |  |
-| `ActorRole` | `character varying(255)` | no |  |  |
-| `Details` | `character varying(1000)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RecordId` | `character varying(255)` | yes |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `ActorId`         | `character varying(255)`   | no   |         |     |
+| `ActorRole`       | `character varying(255)`   | no   |         |     |
+| `Details`         | `character varying(1000)`  | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `RecordId`        | `character varying(255)`   | yes  |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
 
 Indexes:
 
@@ -91,21 +91,21 @@ Indexes:
 
 Entity: `TrainingLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CompletionDate` | `timestamp with time zone` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `PersonnelId` | `character varying(36)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SignatureManifestationJson` | `jsonb` | yes |  |  |
-| `Signer` | `character varying(255)` | yes |  |  |
-| `SigningTimestamp` | `timestamp with time zone` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TrainingTopic` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                       | Type                       | Null | Default | Key |
+| ---------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                         | `character varying(36)`    | no   |         | PK  |
+| `CompletionDate`             | `timestamp with time zone` | no   |         |     |
+| `CreatedAt`                  | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                  | `character varying(255)`   | no   |         |     |
+| `PersonnelId`                | `character varying(36)`    | no   |         |     |
+| `ReasonForChange`            | `character varying(1000)`  | no   |         |     |
+| `SignatureManifestationJson` | `jsonb`                    | yes  |         |     |
+| `Signer`                     | `character varying(255)`   | yes  |         |     |
+| `SigningTimestamp`           | `timestamp with time zone` | yes  |         |     |
+| `SiteId`                     | `character varying(255)`   | no   |         |     |
+| `StudyId`                    | `character varying(255)`   | no   |         |     |
+| `TrainingTopic`              | `character varying(255)`   | no   |         |     |
+| `VersionIndex`               | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -117,17 +117,17 @@ Indexes:
 
 Entity: `PersonnelAssignment`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `PersonnelId` | `character varying(36)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `IsActive`        | `boolean`                  | no   |         |     |
+| `PersonnelId`     | `character varying(36)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `SiteId`          | `character varying(255)`   | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 

@@ -98,7 +98,14 @@ export const useAuditorStore = defineStore("auditor", {
         this.loading = false;
       }
     },
-    async exportAuditTrail(format: "CSV" | "JSON" | "PDF") {
+    async exportAuditTrail(
+      format: "CSV" | "JSON" | "PDF",
+      options?: {
+        signal?: AbortSignal;
+        registerObjectUrl?: (url: string) => string;
+      }
+    ) {
+      if (options?.signal?.aborted) return;
       const filename = `audit_trail_export.${format.toLowerCase()}`;
       let content = "";
       const mimeType =
@@ -145,15 +152,22 @@ export const useAuditorStore = defineStore("auditor", {
         });
       }
 
+      if (options?.signal?.aborted) return;
+
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
+      if (options?.registerObjectUrl) {
+        options.registerObjectUrl(url);
+      }
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
     },
   },
 });

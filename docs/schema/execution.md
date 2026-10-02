@@ -4,61 +4,61 @@
 
 Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persistence.ExecutionDbContext`, not from a live database. Unqualified tables live in the `edc` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`edc.AuditLogEntries`](#edcauditlogentries) | `AuditLogEntry` | 11 |
-| [`edc.InboxState`](#edcinboxstate) | `InboxState` | 11 |
-| [`edc.OutboxMessage`](#edcoutboxmessage) | `OutboxMessage` | 21 |
-| [`edc.OutboxState`](#edcoutboxstate) | `OutboxState` | 6 |
-| [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 17 |
-| [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 26 |
-| [`edc.cgt_bedside_verifications`](#edccgt_bedside_verifications) | `CgtBedsideVerification` | 23 |
-| [`edc.cgt_chains_of_custody`](#edccgt_chains_of_custody) | `CgtChainOfCustody` | 20 |
-| [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 32 |
-| [`edc.cgt_milestone_events`](#edccgt_milestone_events) | `CgtMilestoneEvent` | 25 |
-| [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 20 |
-| [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 40 |
-| [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
-| [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
-| [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
-| [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
-| [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
+| Table                                                                        | Entity                        | Columns |
+| ---------------------------------------------------------------------------- | ----------------------------- | ------- |
+| [`edc.AuditLogEntries`](#edcauditlogentries)                                 | `AuditLogEntry`               | 11      |
+| [`edc.InboxState`](#edcinboxstate)                                           | `InboxState`                  | 11      |
+| [`edc.OutboxMessage`](#edcoutboxmessage)                                     | `OutboxMessage`               | 21      |
+| [`edc.OutboxState`](#edcoutboxstate)                                         | `OutboxState`                 | 6       |
+| [`edc.cec_chair_adjudications`](#edccec_chair_adjudications)                 | `CecChairAdjudication`        | 17      |
+| [`edc.cec_dossiers`](#edccec_dossiers)                                       | `CecDossier`                  | 26      |
+| [`edc.cgt_bedside_verifications`](#edccgt_bedside_verifications)             | `CgtBedsideVerification`      | 23      |
+| [`edc.cgt_chains_of_custody`](#edccgt_chains_of_custody)                     | `CgtChainOfCustody`           | 20      |
+| [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates)       | `CgtDestructionCertificate`   | 32      |
+| [`edc.cgt_milestone_events`](#edccgt_milestone_events)                       | `CgtMilestoneEvent`           | 25      |
+| [`edc.cgt_vial_return_reconciliations`](#edccgt_vial_return_reconciliations) | `CgtVialReturnReconciliation` | 20      |
+| [`edc.clinical_observations`](#edcclinical_observations)                     | `ClinicalObservation`         | 40      |
+| [`edc.clinical_queries`](#edcclinical_queries)                               | `ClinicalQuery`               | 30      |
+| [`edc.clinical_subjects`](#edcclinical_subjects)                             | `ClinicalSubject`             | 23      |
+| [`edc.form_submissions`](#edcform_submissions)                               | `FormSubmission`              | 18      |
+| [`edc.site_compliance_caches`](#edcsite_compliance_caches)                   | `SiteComplianceCache`         | 12      |
+| [`edc.subject_consents`](#edcsubject_consents)                               | `SubjectConsent`              | 14      |
 
 ## edc.AuditLogEntries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `text` | no |  |  |
-| `BlockHash` | `text` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `text` | no |  |  |
-| `EntityName` | `text` | no |  |  |
-| `PredecessorHash` | `text` | no |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `text` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `text`                     | no   |         |     |
+| `BlockHash`       | `text`                     | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `text`                     | no   |         |     |
+| `EntityName`      | `text`                     | no   |         |     |
+| `PredecessorHash` | `text`                     | no   |         |     |
+| `ReasonForChange` | `text`                     | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `text`                     | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 ## edc.InboxState
 
 Entity: `InboxState`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `bigint` | no |  | PK |
-| `Consumed` | `timestamp with time zone` | yes |  |  |
-| `ConsumerId` | `uuid` | no |  |  |
-| `Delivered` | `timestamp with time zone` | yes |  |  |
-| `ExpirationTime` | `timestamp with time zone` | yes |  |  |
-| `LastSequenceNumber` | `bigint` | yes |  |  |
-| `LockId` | `uuid` | no |  |  |
-| `MessageId` | `uuid` | no |  |  |
-| `ReceiveCount` | `integer` | no |  |  |
-| `Received` | `timestamp with time zone` | no |  |  |
-| `RowVersion` | `bytea` | yes |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `bigint`                   | no   |         | PK  |
+| `Consumed`           | `timestamp with time zone` | yes  |         |     |
+| `ConsumerId`         | `uuid`                     | no   |         |     |
+| `Delivered`          | `timestamp with time zone` | yes  |         |     |
+| `ExpirationTime`     | `timestamp with time zone` | yes  |         |     |
+| `LastSequenceNumber` | `bigint`                   | yes  |         |     |
+| `LockId`             | `uuid`                     | no   |         |     |
+| `MessageId`          | `uuid`                     | no   |         |     |
+| `ReceiveCount`       | `integer`                  | no   |         |     |
+| `Received`           | `timestamp with time zone` | no   |         |     |
+| `RowVersion`         | `bytea`                    | yes  |         |     |
 
 Indexes:
 
@@ -69,29 +69,29 @@ Indexes:
 
 Entity: `OutboxMessage`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `SequenceNumber` | `bigint` | no |  | PK |
-| `Body` | `text` | no |  |  |
-| `ContentType` | `character varying(256)` | no |  |  |
-| `ConversationId` | `uuid` | yes |  |  |
-| `CorrelationId` | `uuid` | yes |  |  |
-| `DestinationAddress` | `character varying(256)` | yes |  |  |
-| `EnqueueTime` | `timestamp with time zone` | yes |  |  |
-| `ExpirationTime` | `timestamp with time zone` | yes |  |  |
-| `FaultAddress` | `character varying(256)` | yes |  |  |
-| `Headers` | `text` | yes |  |  |
-| `InboxConsumerId` | `uuid` | yes |  |  |
-| `InboxMessageId` | `uuid` | yes |  |  |
-| `InitiatorId` | `uuid` | yes |  |  |
-| `MessageId` | `uuid` | no |  |  |
-| `MessageType` | `text` | no |  |  |
-| `OutboxId` | `uuid` | yes |  |  |
-| `Properties` | `text` | yes |  |  |
-| `RequestId` | `uuid` | yes |  |  |
-| `ResponseAddress` | `character varying(256)` | yes |  |  |
-| `SentTime` | `timestamp with time zone` | no |  |  |
-| `SourceAddress` | `character varying(256)` | yes |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `SequenceNumber`     | `bigint`                   | no   |         | PK  |
+| `Body`               | `text`                     | no   |         |     |
+| `ContentType`        | `character varying(256)`   | no   |         |     |
+| `ConversationId`     | `uuid`                     | yes  |         |     |
+| `CorrelationId`      | `uuid`                     | yes  |         |     |
+| `DestinationAddress` | `character varying(256)`   | yes  |         |     |
+| `EnqueueTime`        | `timestamp with time zone` | yes  |         |     |
+| `ExpirationTime`     | `timestamp with time zone` | yes  |         |     |
+| `FaultAddress`       | `character varying(256)`   | yes  |         |     |
+| `Headers`            | `text`                     | yes  |         |     |
+| `InboxConsumerId`    | `uuid`                     | yes  |         |     |
+| `InboxMessageId`     | `uuid`                     | yes  |         |     |
+| `InitiatorId`        | `uuid`                     | yes  |         |     |
+| `MessageId`          | `uuid`                     | no   |         |     |
+| `MessageType`        | `text`                     | no   |         |     |
+| `OutboxId`           | `uuid`                     | yes  |         |     |
+| `Properties`         | `text`                     | yes  |         |     |
+| `RequestId`          | `uuid`                     | yes  |         |     |
+| `ResponseAddress`    | `character varying(256)`   | yes  |         |     |
+| `SentTime`           | `timestamp with time zone` | no   |         |     |
+| `SourceAddress`      | `character varying(256)`   | yes  |         |     |
 
 Foreign keys:
 
@@ -109,14 +109,14 @@ Indexes:
 
 Entity: `OutboxState`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `OutboxId` | `uuid` | no |  | PK |
-| `Created` | `timestamp with time zone` | no |  |  |
-| `Delivered` | `timestamp with time zone` | yes |  |  |
-| `LastSequenceNumber` | `bigint` | yes |  |  |
-| `LockId` | `uuid` | no |  |  |
-| `RowVersion` | `bytea` | yes |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `OutboxId`           | `uuid`                     | no   |         | PK  |
+| `Created`            | `timestamp with time zone` | no   |         |     |
+| `Delivered`          | `timestamp with time zone` | yes  |         |     |
+| `LastSequenceNumber` | `bigint`                   | yes  |         |     |
+| `LockId`             | `uuid`                     | no   |         |     |
+| `RowVersion`         | `bytea`                    | yes  |         |     |
 
 Indexes:
 
@@ -126,25 +126,25 @@ Indexes:
 
 Entity: `CecChairAdjudication`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(255)` | no |  | PK |
-| `AdjudicationRationale` | `text` | no |  |  |
-| `BindingReader` | `character varying(100)` | no |  |  |
-| `ChairId` | `character varying(255)` | no |  |  |
-| `ChairName` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `DossierId` | `character varying(255)` | no |  |  |
-| `FinalAdjudicatedOnsetDate` | `character varying(50)` | no |  |  |
-| `FinalClassification` | `character varying(255)` | no |  |  |
-| `FinalSubtype` | `character varying(255)` | yes |  |  |
-| `FinalizedAt` | `timestamp with time zone` | no |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `criteria_confirmed` | `jsonb` | no |  |  |
-| `signature_manifest` | `jsonb` | no |  |  |
+| Column                      | Type                       | Null | Default | Key |
+| --------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                        | `character varying(255)`   | no   |         | PK  |
+| `AdjudicationRationale`     | `text`                     | no   |         |     |
+| `BindingReader`             | `character varying(100)`   | no   |         |     |
+| `ChairId`                   | `character varying(255)`   | no   |         |     |
+| `ChairName`                 | `character varying(255)`   | no   |         |     |
+| `CreatedAt`                 | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                 | `text`                     | no   |         |     |
+| `DossierId`                 | `character varying(255)`   | no   |         |     |
+| `FinalAdjudicatedOnsetDate` | `character varying(50)`    | no   |         |     |
+| `FinalClassification`       | `character varying(255)`   | no   |         |     |
+| `FinalSubtype`              | `character varying(255)`   | yes  |         |     |
+| `FinalizedAt`               | `timestamp with time zone` | no   |         |     |
+| `ReasonForChange`           | `text`                     | no   |         |     |
+| `VersionIndex`              | `bigint`                   | no   |         |     |
+| `_version`                  | `bigint`                   | no   | `0`     |     |
+| `criteria_confirmed`        | `jsonb`                    | no   |         |     |
+| `signature_manifest`        | `jsonb`                    | no   |         |     |
 
 Indexes:
 
@@ -154,34 +154,34 @@ Indexes:
 
 Entity: `CecDossier`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(255)` | no |  | PK |
-| `AdjudicationRationale` | `text` | yes |  |  |
-| `CandidateEventType` | `character varying(100)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `EventId` | `character varying(255)` | no |  |  |
-| `FinalAdjudicatedOnsetDate` | `text` | yes |  |  |
-| `FinalConsensusClassification` | `text` | yes |  |  |
-| `FinalConsensusSubtype` | `text` | yes |  |  |
-| `FinalizedAt` | `timestamp with time zone` | yes |  |  |
-| `IsDiscordant` | `boolean` | no |  |  |
-| `MaskedSiteId` | `character varying(255)` | yes |  |  |
-| `MaskedSubjectId` | `character varying(255)` | no |  |  |
-| `Reader1Status` | `text` | no |  |  |
-| `Reader2Status` | `text` | no |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `ReportedOnsetDate` | `character varying(50)` | no |  |  |
-| `ReportedTerm` | `character varying(500)` | no |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `WorkflowStatus` | `character varying(100)` | no |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `discordance_reasons` | `jsonb` | no |  |  |
-| `signature_manifest` | `jsonb` | yes |  |  |
+| Column                         | Type                       | Null | Default | Key |
+| ------------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                           | `character varying(255)`   | no   |         | PK  |
+| `AdjudicationRationale`        | `text`                     | yes  |         |     |
+| `CandidateEventType`           | `character varying(100)`   | no   |         |     |
+| `CreatedAt`                    | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                    | `text`                     | no   |         |     |
+| `EventId`                      | `character varying(255)`   | no   |         |     |
+| `FinalAdjudicatedOnsetDate`    | `text`                     | yes  |         |     |
+| `FinalConsensusClassification` | `text`                     | yes  |         |     |
+| `FinalConsensusSubtype`        | `text`                     | yes  |         |     |
+| `FinalizedAt`                  | `timestamp with time zone` | yes  |         |     |
+| `IsDiscordant`                 | `boolean`                  | no   |         |     |
+| `MaskedSiteId`                 | `character varying(255)`   | yes  |         |     |
+| `MaskedSubjectId`              | `character varying(255)`   | no   |         |     |
+| `Reader1Status`                | `text`                     | no   |         |     |
+| `Reader2Status`                | `text`                     | no   |         |     |
+| `ReasonForChange`              | `text`                     | no   |         |     |
+| `ReportedOnsetDate`            | `character varying(50)`    | no   |         |     |
+| `ReportedTerm`                 | `character varying(500)`   | no   |         |     |
+| `SiteId`                       | `character varying(255)`   | yes  |         |     |
+| `StudyId`                      | `character varying(255)`   | no   |         |     |
+| `SubjectId`                    | `character varying(255)`   | no   |         |     |
+| `VersionIndex`                 | `bigint`                   | no   |         |     |
+| `WorkflowStatus`               | `character varying(100)`   | no   |         |     |
+| `_version`                     | `bigint`                   | no   | `0`     |     |
+| `discordance_reasons`          | `jsonb`                    | no   |         |     |
+| `signature_manifest`           | `jsonb`                    | yes  |         |     |
 
 Indexes:
 
@@ -192,31 +192,31 @@ Indexes:
 
 Entity: `CgtBedsideVerification`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `BatchId` | `character varying(255)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Din` | `character varying(255)` | no |  |  |
-| `IsMatch` | `boolean` | no |  |  |
-| `Notes` | `text` | yes |  |  |
-| `PatientWristbandId` | `character varying(255)` | no |  |  |
-| `PrimarySignatureToken` | `character varying(512)` | no |  |  |
-| `PrimaryVerifierId` | `character varying(255)` | no |  |  |
-| `PrimaryVerifierName` | `character varying(255)` | yes |  |  |
-| `PrimaryVerifierRole` | `character varying(128)` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `SecondarySignatureToken` | `character varying(512)` | no |  |  |
-| `SecondaryVerifierId` | `character varying(255)` | no |  |  |
-| `SecondaryVerifierName` | `character varying(255)` | yes |  |  |
-| `SecondaryVerifierRole` | `character varying(128)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `UnlockToken` | `character varying(512)` | no |  |  |
-| `VerifiedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column                    | Type                       | Null | Default | Key |
+| ------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                      | `uuid`                     | no   |         | PK  |
+| `BatchId`                 | `character varying(255)`   | yes  |         |     |
+| `CreatedAt`               | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`               | `text`                     | no   |         |     |
+| `Din`                     | `character varying(255)`   | no   |         |     |
+| `IsMatch`                 | `boolean`                  | no   |         |     |
+| `Notes`                   | `text`                     | yes  |         |     |
+| `PatientWristbandId`      | `character varying(255)`   | no   |         |     |
+| `PrimarySignatureToken`   | `character varying(512)`   | no   |         |     |
+| `PrimaryVerifierId`       | `character varying(255)`   | no   |         |     |
+| `PrimaryVerifierName`     | `character varying(255)`   | yes  |         |     |
+| `PrimaryVerifierRole`     | `character varying(128)`   | yes  |         |     |
+| `ReasonForChange`         | `text`                     | no   |         |     |
+| `SecondarySignatureToken` | `character varying(512)`   | no   |         |     |
+| `SecondaryVerifierId`     | `character varying(255)`   | no   |         |     |
+| `SecondaryVerifierName`   | `character varying(255)`   | yes  |         |     |
+| `SecondaryVerifierRole`   | `character varying(128)`   | yes  |         |     |
+| `SiteId`                  | `character varying(255)`   | no   |         |     |
+| `StudyId`                 | `character varying(255)`   | no   |         |     |
+| `SubjectId`               | `character varying(255)`   | no   |         |     |
+| `UnlockToken`             | `character varying(512)`   | no   |         |     |
+| `VerifiedAt`              | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`            | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -227,28 +227,28 @@ Indexes:
 
 Entity: `CgtChainOfCustody`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `BatchId` | `character varying(255)` | yes |  |  |
-| `CollectionSiteId` | `character varying(255)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `CryoTempExcursionCount` | `integer` | no |  |  |
-| `CurrentStage` | `character varying(64)` | no |  |  |
-| `Din` | `character varying(255)` | no |  |  |
-| `HarvestedAt` | `timestamp with time zone` | yes |  |  |
-| `InfusedAt` | `timestamp with time zone` | yes |  |  |
-| `LowestTempCelsius` | `double precision` | yes |  |  |
-| `ManufacturingFacilityId` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `ReconciledAt` | `timestamp with time zone` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(64)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `UnlockToken` | `character varying(512)` | yes |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column                    | Type                       | Null | Default | Key |
+| ------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                      | `uuid`                     | no   |         | PK  |
+| `BatchId`                 | `character varying(255)`   | yes  |         |     |
+| `CollectionSiteId`        | `character varying(255)`   | yes  |         |     |
+| `CreatedAt`               | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`               | `text`                     | no   |         |     |
+| `CryoTempExcursionCount`  | `integer`                  | no   |         |     |
+| `CurrentStage`            | `character varying(64)`    | no   |         |     |
+| `Din`                     | `character varying(255)`   | no   |         |     |
+| `HarvestedAt`             | `timestamp with time zone` | yes  |         |     |
+| `InfusedAt`               | `timestamp with time zone` | yes  |         |     |
+| `LowestTempCelsius`       | `double precision`         | yes  |         |     |
+| `ManufacturingFacilityId` | `character varying(255)`   | yes  |         |     |
+| `ReasonForChange`         | `text`                     | no   |         |     |
+| `ReconciledAt`            | `timestamp with time zone` | yes  |         |     |
+| `SiteId`                  | `character varying(255)`   | no   |         |     |
+| `Status`                  | `character varying(64)`    | no   |         |     |
+| `StudyId`                 | `character varying(255)`   | no   |         |     |
+| `SubjectId`               | `character varying(255)`   | no   |         |     |
+| `UnlockToken`             | `character varying(512)`   | yes  |         |     |
+| `VersionIndex`            | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -259,40 +259,40 @@ Indexes:
 
 Entity: `CgtDestructionCertificate`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `CertificateNumber` | `character varying(255)` | no |  |  |
-| `ChainOfCustodyId` | `uuid` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `CryptographicSeal` | `character varying(512)` | no |  |  |
-| `DestructionFacility` | `character varying(255)` | no |  |  |
-| `DestructionMethod` | `character varying(255)` | no |  |  |
-| `DestructionReason` | `character varying(512)` | no |  |  |
-| `DestructionTimestamp` | `timestamp with time zone` | no |  |  |
-| `Din` | `character varying(255)` | yes |  |  |
-| `KitNumbersJson` | `text` | no |  |  |
-| `LotNumber` | `character varying(255)` | no |  |  |
-| `QuantityDestroyed` | `integer` | no |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `ReconciliationNotes` | `text` | yes |  |  |
-| `ResidualVolumeMl` | `double precision` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(64)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | yes |  |  |
-| `UnitOfMeasure` | `character varying(64)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VialIdentifiersJson` | `text` | no |  |  |
-| `Witness1Id` | `character varying(255)` | no |  |  |
-| `Witness1Name` | `character varying(255)` | yes |  |  |
-| `Witness1Role` | `character varying(128)` | yes |  |  |
-| `Witness1SignatureToken` | `character varying(512)` | no |  |  |
-| `Witness2Id` | `character varying(255)` | no |  |  |
-| `Witness2Name` | `character varying(255)` | yes |  |  |
-| `Witness2Role` | `character varying(128)` | yes |  |  |
-| `Witness2SignatureToken` | `character varying(512)` | no |  |  |
+| Column                   | Type                       | Null | Default | Key |
+| ------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                     | `uuid`                     | no   |         | PK  |
+| `CertificateNumber`      | `character varying(255)`   | no   |         |     |
+| `ChainOfCustodyId`       | `uuid`                     | yes  |         |     |
+| `CreatedAt`              | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`              | `text`                     | no   |         |     |
+| `CryptographicSeal`      | `character varying(512)`   | no   |         |     |
+| `DestructionFacility`    | `character varying(255)`   | no   |         |     |
+| `DestructionMethod`      | `character varying(255)`   | no   |         |     |
+| `DestructionReason`      | `character varying(512)`   | no   |         |     |
+| `DestructionTimestamp`   | `timestamp with time zone` | no   |         |     |
+| `Din`                    | `character varying(255)`   | yes  |         |     |
+| `KitNumbersJson`         | `text`                     | no   |         |     |
+| `LotNumber`              | `character varying(255)`   | no   |         |     |
+| `QuantityDestroyed`      | `integer`                  | no   |         |     |
+| `ReasonForChange`        | `text`                     | no   |         |     |
+| `ReconciliationNotes`    | `text`                     | yes  |         |     |
+| `ResidualVolumeMl`       | `double precision`         | yes  |         |     |
+| `SiteId`                 | `character varying(255)`   | no   |         |     |
+| `Status`                 | `character varying(64)`    | no   |         |     |
+| `StudyId`                | `character varying(255)`   | no   |         |     |
+| `SubjectId`              | `character varying(255)`   | yes  |         |     |
+| `UnitOfMeasure`          | `character varying(64)`    | no   |         |     |
+| `VersionIndex`           | `bigint`                   | no   |         |     |
+| `VialIdentifiersJson`    | `text`                     | no   |         |     |
+| `Witness1Id`             | `character varying(255)`   | no   |         |     |
+| `Witness1Name`           | `character varying(255)`   | yes  |         |     |
+| `Witness1Role`           | `character varying(128)`   | yes  |         |     |
+| `Witness1SignatureToken` | `character varying(512)`   | no   |         |     |
+| `Witness2Id`             | `character varying(255)`   | no   |         |     |
+| `Witness2Name`           | `character varying(255)`   | yes  |         |     |
+| `Witness2Role`           | `character varying(128)`   | yes  |         |     |
+| `Witness2SignatureToken` | `character varying(512)`   | no   |         |     |
 
 Indexes:
 
@@ -303,33 +303,33 @@ Indexes:
 
 Entity: `CgtMilestoneEvent`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Carrier` | `character varying(255)` | yes |  |  |
-| `ChainOfCustodyId` | `uuid` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `CustodianId` | `character varying(255)` | yes |  |  |
-| `CustodianName` | `character varying(255)` | yes |  |  |
-| `CustodianRole` | `character varying(128)` | yes |  |  |
-| `DryShipperId` | `character varying(255)` | yes |  |  |
-| `FacilityId` | `character varying(255)` | yes |  |  |
-| `Latitude` | `double precision` | yes |  |  |
-| `LocationName` | `character varying(255)` | yes |  |  |
-| `Longitude` | `double precision` | yes |  |  |
-| `MilestoneType` | `character varying(128)` | no |  |  |
-| `Notes` | `text` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `SealId` | `character varying(255)` | yes |  |  |
-| `SealIntact` | `boolean` | no |  |  |
-| `Stage` | `character varying(64)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TemperatureCelsius` | `double precision` | yes |  |  |
-| `TemperatureStatus` | `character varying(64)` | yes |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `TrackingNumber` | `character varying(255)` | yes |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `uuid`                     | no   |         | PK  |
+| `Carrier`            | `character varying(255)`   | yes  |         |     |
+| `ChainOfCustodyId`   | `uuid`                     | no   |         |     |
+| `CreatedAt`          | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`          | `text`                     | no   |         |     |
+| `CustodianId`        | `character varying(255)`   | yes  |         |     |
+| `CustodianName`      | `character varying(255)`   | yes  |         |     |
+| `CustodianRole`      | `character varying(128)`   | yes  |         |     |
+| `DryShipperId`       | `character varying(255)`   | yes  |         |     |
+| `FacilityId`         | `character varying(255)`   | yes  |         |     |
+| `Latitude`           | `double precision`         | yes  |         |     |
+| `LocationName`       | `character varying(255)`   | yes  |         |     |
+| `Longitude`          | `double precision`         | yes  |         |     |
+| `MilestoneType`      | `character varying(128)`   | no   |         |     |
+| `Notes`              | `text`                     | yes  |         |     |
+| `ReasonForChange`    | `text`                     | no   |         |     |
+| `SealId`             | `character varying(255)`   | yes  |         |     |
+| `SealIntact`         | `boolean`                  | no   |         |     |
+| `Stage`              | `character varying(64)`    | no   |         |     |
+| `StudyId`            | `character varying(255)`   | no   |         |     |
+| `TemperatureCelsius` | `double precision`         | yes  |         |     |
+| `TemperatureStatus`  | `character varying(64)`    | yes  |         |     |
+| `Timestamp`          | `timestamp with time zone` | no   |         |     |
+| `TrackingNumber`     | `character varying(255)`   | yes  |         |     |
+| `VersionIndex`       | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -340,28 +340,28 @@ Indexes:
 
 Entity: `CgtVialReturnReconciliation`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `AdherencePercentage` | `double precision` | no |  |  |
-| `CertificateId` | `character varying(255)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Disposition` | `character varying(64)` | no |  |  |
-| `IntactVials` | `integer` | no |  |  |
-| `KitNumber` | `character varying(255)` | no |  |  |
-| `LoggedAt` | `timestamp with time zone` | no |  |  |
-| `LoggedBy` | `character varying(255)` | no |  |  |
-| `Notes` | `text` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `ResidualVolumeMl` | `double precision` | yes |  |  |
-| `ReturnedQuantity` | `integer` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `UsedVials` | `integer` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VialIdentifier` | `character varying(255)` | no |  |  |
+| Column                | Type                       | Null | Default | Key |
+| --------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                  | `uuid`                     | no   |         | PK  |
+| `AdherencePercentage` | `double precision`         | no   |         |     |
+| `CertificateId`       | `character varying(255)`   | yes  |         |     |
+| `CreatedAt`           | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`           | `text`                     | no   |         |     |
+| `Disposition`         | `character varying(64)`    | no   |         |     |
+| `IntactVials`         | `integer`                  | no   |         |     |
+| `KitNumber`           | `character varying(255)`   | no   |         |     |
+| `LoggedAt`            | `timestamp with time zone` | no   |         |     |
+| `LoggedBy`            | `character varying(255)`   | no   |         |     |
+| `Notes`               | `text`                     | yes  |         |     |
+| `ReasonForChange`     | `text`                     | no   |         |     |
+| `ResidualVolumeMl`    | `double precision`         | yes  |         |     |
+| `ReturnedQuantity`    | `integer`                  | no   |         |     |
+| `SiteId`              | `character varying(255)`   | no   |         |     |
+| `StudyId`             | `character varying(255)`   | no   |         |     |
+| `SubjectId`           | `character varying(255)`   | no   |         |     |
+| `UsedVials`           | `integer`                  | no   |         |     |
+| `VersionIndex`        | `bigint`                   | no   |         |     |
+| `VialIdentifier`      | `character varying(255)`   | no   |         |     |
 
 Indexes:
 
@@ -372,48 +372,48 @@ Indexes:
 
 Entity: `ClinicalObservation`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Domain` | `character varying(50)` | no |  |  |
-| `IsOutOfRange` | `boolean` | yes |  |  |
-| `IsOutlier` | `boolean` | no |  |  |
-| `IsSdvFlagged` | `boolean` | no |  |  |
-| `IsSdvVerified` | `boolean` | no |  |  |
-| `LabIndicator` | `text` | yes |  |  |
-| `LabOutOfRange` | `boolean` | yes |  |  |
-| `LabSiteId` | `text` | yes |  |  |
-| `LabSource` | `text` | yes |  |  |
-| `MatchedNormalBounds` | `text` | yes |  |  |
-| `NormalizedUnit` | `character varying(50)` | yes |  |  |
-| `NormalizedValue` | `double precision` | yes |  |  |
-| `ObservationDate` | `timestamp with time zone` | no |  |  |
-| `PageId` | `character varying(255)` | yes |  |  |
-| `ProtocolVersionIndex` | `integer` | yes |  |  |
-| `ProtocolVersionTag` | `character varying(50)` | yes |  |  |
-| `RangeIndicator` | `text` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `ReferenceRangeHigh` | `double precision` | yes |  |  |
-| `ReferenceRangeLow` | `double precision` | yes |  |  |
-| `SdvFlagReason` | `character varying(1000)` | yes |  |  |
-| `SdvVerifiedAt` | `timestamp with time zone` | yes |  |  |
-| `SdvVerifiedBy` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TestCode` | `character varying(100)` | no |  |  |
-| `TestName` | `character varying(255)` | no |  |  |
-| `Unit` | `character varying(50)` | yes |  |  |
-| `Value` | `double precision` | yes |  |  |
-| `ValueString` | `text` | yes |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(255)` | yes |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `additional_properties` | `jsonb` | no |  |  |
-| `form_submission_id` | `uuid` | yes |  |  |
-| `is_active` | `boolean` | no | `True` |  |
+| Column                  | Type                       | Null | Default | Key |
+| ----------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                    | `uuid`                     | no   |         | PK  |
+| `CreatedAt`             | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`             | `text`                     | no   |         |     |
+| `Domain`                | `character varying(50)`    | no   |         |     |
+| `IsOutOfRange`          | `boolean`                  | yes  |         |     |
+| `IsOutlier`             | `boolean`                  | no   |         |     |
+| `IsSdvFlagged`          | `boolean`                  | no   |         |     |
+| `IsSdvVerified`         | `boolean`                  | no   |         |     |
+| `LabIndicator`          | `text`                     | yes  |         |     |
+| `LabOutOfRange`         | `boolean`                  | yes  |         |     |
+| `LabSiteId`             | `text`                     | yes  |         |     |
+| `LabSource`             | `text`                     | yes  |         |     |
+| `MatchedNormalBounds`   | `text`                     | yes  |         |     |
+| `NormalizedUnit`        | `character varying(50)`    | yes  |         |     |
+| `NormalizedValue`       | `double precision`         | yes  |         |     |
+| `ObservationDate`       | `timestamp with time zone` | no   |         |     |
+| `PageId`                | `character varying(255)`   | yes  |         |     |
+| `ProtocolVersionIndex`  | `integer`                  | yes  |         |     |
+| `ProtocolVersionTag`    | `character varying(50)`    | yes  |         |     |
+| `RangeIndicator`        | `text`                     | yes  |         |     |
+| `ReasonForChange`       | `text`                     | no   |         |     |
+| `ReferenceRangeHigh`    | `double precision`         | yes  |         |     |
+| `ReferenceRangeLow`     | `double precision`         | yes  |         |     |
+| `SdvFlagReason`         | `character varying(1000)`  | yes  |         |     |
+| `SdvVerifiedAt`         | `timestamp with time zone` | yes  |         |     |
+| `SdvVerifiedBy`         | `character varying(255)`   | yes  |         |     |
+| `SiteId`                | `character varying(255)`   | yes  |         |     |
+| `StudyId`               | `character varying(255)`   | no   |         |     |
+| `SubjectId`             | `character varying(255)`   | no   |         |     |
+| `TestCode`              | `character varying(100)`   | no   |         |     |
+| `TestName`              | `character varying(255)`   | no   |         |     |
+| `Unit`                  | `character varying(50)`    | yes  |         |     |
+| `Value`                 | `double precision`         | yes  |         |     |
+| `ValueString`           | `text`                     | yes  |         |     |
+| `VersionIndex`          | `bigint`                   | no   |         |     |
+| `VisitId`               | `character varying(255)`   | yes  |         |     |
+| `_version`              | `bigint`                   | no   | `0`     |     |
+| `additional_properties` | `jsonb`                    | no   |         |     |
+| `form_submission_id`    | `uuid`                     | yes  |         |     |
+| `is_active`             | `boolean`                  | no   | `True`  |     |
 
 Indexes:
 
@@ -428,38 +428,38 @@ Indexes:
 
 Entity: `ClinicalQuery`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `ActionRequired` | `character varying(255)` | yes |  |  |
-| `CancellationReason` | `character varying(1000)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Domain` | `character varying(50)` | yes |  |  |
-| `EscalatedAt` | `timestamp with time zone` | yes |  |  |
-| `Explanation` | `character varying(1000)` | yes |  |  |
-| `FieldId` | `character varying(255)` | yes |  |  |
-| `FieldLink` | `character varying(255)` | yes |  |  |
-| `FormId` | `character varying(255)` | yes |  |  |
-| `Message` | `character varying(1000)` | yes |  |  |
-| `ObservationId` | `character varying(255)` | yes |  |  |
-| `Origin` | `character varying(50)` | yes |  |  |
-| `Priority` | `character varying(50)` | yes |  |  |
-| `QueryType` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `ResolvedAt` | `timestamp with time zone` | yes |  |  |
-| `Resolver` | `character varying(255)` | yes |  |  |
-| `Responder` | `character varying(255)` | yes |  |  |
-| `Response` | `character varying(1000)` | yes |  |  |
-| `RuleId` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TestCode` | `character varying(100)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(255)` | yes |  |  |
-| `_version` | `bigint` | no | `0` |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `uuid`                     | no   |         | PK  |
+| `ActionRequired`     | `character varying(255)`   | yes  |         |     |
+| `CancellationReason` | `character varying(1000)`  | yes  |         |     |
+| `CreatedAt`          | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`          | `text`                     | no   |         |     |
+| `Domain`             | `character varying(50)`    | yes  |         |     |
+| `EscalatedAt`        | `timestamp with time zone` | yes  |         |     |
+| `Explanation`        | `character varying(1000)`  | yes  |         |     |
+| `FieldId`            | `character varying(255)`   | yes  |         |     |
+| `FieldLink`          | `character varying(255)`   | yes  |         |     |
+| `FormId`             | `character varying(255)`   | yes  |         |     |
+| `Message`            | `character varying(1000)`  | yes  |         |     |
+| `ObservationId`      | `character varying(255)`   | yes  |         |     |
+| `Origin`             | `character varying(50)`    | yes  |         |     |
+| `Priority`           | `character varying(50)`    | yes  |         |     |
+| `QueryType`          | `character varying(255)`   | yes  |         |     |
+| `ReasonForChange`    | `text`                     | no   |         |     |
+| `ResolvedAt`         | `timestamp with time zone` | yes  |         |     |
+| `Resolver`           | `character varying(255)`   | yes  |         |     |
+| `Responder`          | `character varying(255)`   | yes  |         |     |
+| `Response`           | `character varying(1000)`  | yes  |         |     |
+| `RuleId`             | `character varying(255)`   | yes  |         |     |
+| `SiteId`             | `character varying(255)`   | yes  |         |     |
+| `Status`             | `character varying(50)`    | no   |         |     |
+| `StudyId`            | `character varying(255)`   | no   |         |     |
+| `SubjectId`          | `character varying(255)`   | no   |         |     |
+| `TestCode`           | `character varying(100)`   | no   |         |     |
+| `VersionIndex`       | `bigint`                   | no   |         |     |
+| `VisitId`            | `character varying(255)`   | yes  |         |     |
+| `_version`           | `bigint`                   | no   | `0`     |     |
 
 Indexes:
 
@@ -472,31 +472,31 @@ Indexes:
 
 Entity: `ClinicalSubject`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `ActiveProtocolVersion` | `text` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `EncryptedDemographics` | `text` | yes |  |  |
-| `EnrollmentIndex` | `integer` | no |  |  |
-| `IsUnblinded` | `boolean` | no |  |  |
-| `KitReference` | `text` | yes |  |  |
-| `RandomizationId` | `uuid` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `SiteCode` | `text` | yes |  |  |
-| `Status` | `character varying(32)` | no |  |  |
-| `StudyCode` | `character varying(255)` | no |  |  |
-| `SubjectCode` | `character varying(255)` | no |  |  |
-| `TreatmentGroupCiphertext` | `text` | yes |  |  |
-| `UnblindedAt` | `timestamp with time zone` | yes |  |  |
-| `UnblindedBy` | `text` | yes |  |  |
-| `UnblindedReason` | `text` | yes |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `WithdrawalReason` | `text` | yes |  |  |
-| `WithdrawnAt` | `timestamp with time zone` | yes |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `strat_factors` | `jsonb` | no |  |  |
+| Column                     | Type                       | Null | Default | Key |
+| -------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                       | `uuid`                     | no   |         | PK  |
+| `ActiveProtocolVersion`    | `text`                     | no   |         |     |
+| `CreatedAt`                | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                | `text`                     | no   |         |     |
+| `EncryptedDemographics`    | `text`                     | yes  |         |     |
+| `EnrollmentIndex`          | `integer`                  | no   |         |     |
+| `IsUnblinded`              | `boolean`                  | no   |         |     |
+| `KitReference`             | `text`                     | yes  |         |     |
+| `RandomizationId`          | `uuid`                     | yes  |         |     |
+| `ReasonForChange`          | `text`                     | no   |         |     |
+| `SiteCode`                 | `text`                     | yes  |         |     |
+| `Status`                   | `character varying(32)`    | no   |         |     |
+| `StudyCode`                | `character varying(255)`   | no   |         |     |
+| `SubjectCode`              | `character varying(255)`   | no   |         |     |
+| `TreatmentGroupCiphertext` | `text`                     | yes  |         |     |
+| `UnblindedAt`              | `timestamp with time zone` | yes  |         |     |
+| `UnblindedBy`              | `text`                     | yes  |         |     |
+| `UnblindedReason`          | `text`                     | yes  |         |     |
+| `VersionIndex`             | `bigint`                   | no   |         |     |
+| `WithdrawalReason`         | `text`                     | yes  |         |     |
+| `WithdrawnAt`              | `timestamp with time zone` | yes  |         |     |
+| `_version`                 | `bigint`                   | no   | `0`     |     |
+| `strat_factors`            | `jsonb`                    | no   |         |     |
 
 Indexes:
 
@@ -509,26 +509,26 @@ Indexes:
 
 Entity: `FormSubmission`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `ClonedFromId` | `character varying(36)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `FormId` | `character varying(255)` | no |  |  |
-| `IsActive` | `boolean` | no | `True` |  |
-| `IsReadonly` | `boolean` | no | `False` |  |
-| `ProtocolVersion` | `character varying(50)` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(255)` | yes |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `payload` | `jsonb` | yes |  |  |
-| `signature_manifest` | `jsonb` | yes |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `uuid`                     | no   |         | PK  |
+| `ClonedFromId`       | `character varying(36)`    | yes  |         |     |
+| `CreatedAt`          | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`          | `text`                     | no   |         |     |
+| `FormId`             | `character varying(255)`   | no   |         |     |
+| `IsActive`           | `boolean`                  | no   | `True`  |     |
+| `IsReadonly`         | `boolean`                  | no   | `False` |     |
+| `ProtocolVersion`    | `character varying(50)`    | yes  |         |     |
+| `ReasonForChange`    | `text`                     | no   |         |     |
+| `SiteId`             | `character varying(255)`   | yes  |         |     |
+| `Status`             | `character varying(50)`    | no   |         |     |
+| `StudyId`            | `character varying(255)`   | no   |         |     |
+| `SubjectId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`       | `bigint`                   | no   |         |     |
+| `VisitId`            | `character varying(255)`   | yes  |         |     |
+| `_version`           | `bigint`                   | no   | `0`     |     |
+| `payload`            | `jsonb`                    | yes  |         |     |
+| `signature_manifest` | `jsonb`                    | yes  |         |     |
 
 Indexes:
 
@@ -539,38 +539,38 @@ Indexes:
 
 Entity: `SiteComplianceCache`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `IsComplete` | `boolean` | no |  |  |
-| `Milestone` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `SiteCode` | `character varying(255)` | no |  |  |
-| `StudyCode` | `character varying(255)` | no |  |  |
-| `Version` | `integer` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `_version` | `bigint` | no | `0` |  |
-| `missing_documents` | `text[]` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                | `uuid`                     | no   |         | PK  |
+| `CreatedAt`         | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`         | `text`                     | no   |         |     |
+| `IsComplete`        | `boolean`                  | no   |         |     |
+| `Milestone`         | `character varying(255)`   | no   |         |     |
+| `ReasonForChange`   | `text`                     | no   |         |     |
+| `SiteCode`          | `character varying(255)`   | no   |         |     |
+| `StudyCode`         | `character varying(255)`   | no   |         |     |
+| `Version`           | `integer`                  | no   |         |     |
+| `VersionIndex`      | `bigint`                   | no   |         |     |
+| `_version`          | `bigint`                   | no   | `0`     |     |
+| `missing_documents` | `text[]`                   | no   |         |     |
 
 ## edc.subject_consents
 
 Entity: `SubjectConsent`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `IcfSigned` | `boolean` | no |  |  |
-| `IcfSignedDate` | `timestamp with time zone` | yes |  |  |
-| `IsPaperOverride` | `boolean` | no |  |  |
-| `ProtocolVersion_StudyCode` | `character varying(255)` | no |  |  |
-| `ProtocolVersion_VersionIndex` | `integer` | no |  |  |
-| `ProtocolVersion_VersionTag` | `text` | no |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `RequiresReconsent` | `boolean` | no |  |  |
-| `SubjectCode` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `_version` | `bigint` | no | `0` |  |
+| Column                         | Type                       | Null | Default | Key |
+| ------------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                           | `uuid`                     | no   |         | PK  |
+| `CreatedAt`                    | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                    | `text`                     | no   |         |     |
+| `IcfSigned`                    | `boolean`                  | no   |         |     |
+| `IcfSignedDate`                | `timestamp with time zone` | yes  |         |     |
+| `IsPaperOverride`              | `boolean`                  | no   |         |     |
+| `ProtocolVersion_StudyCode`    | `character varying(255)`   | no   |         |     |
+| `ProtocolVersion_VersionIndex` | `integer`                  | no   |         |     |
+| `ProtocolVersion_VersionTag`   | `text`                     | no   |         |     |
+| `ReasonForChange`              | `text`                     | no   |         |     |
+| `RequiresReconsent`            | `boolean`                  | no   |         |     |
+| `SubjectCode`                  | `character varying(255)`   | no   |         |     |
+| `VersionIndex`                 | `bigint`                   | no   |         |     |
+| `_version`                     | `bigint`                   | no   | `0`     |     |

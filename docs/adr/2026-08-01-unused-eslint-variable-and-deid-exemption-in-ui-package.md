@@ -24,19 +24,18 @@ To satisfy PRD-SYS-001, we modified the shared frontend ui package in `packages/
 ### Option 1: **Inline Eslint bypass and HTML data-deid-ignore bypass (Selected)**: Highly specific, zero side-effects, and doesn't pollute the actual visual layout.
 
 - **Overview:** **Inline Eslint bypass and HTML data-deid-ignore bypass (Selected)**: Highly specific, zero side-effects, and doesn't pollute the actual visual layout.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Refactoring index.js structure**: Unnecessary complexity for a false-positive scanner match.
 
 - **Overview:** **Refactoring index.js structure**: Unnecessary complexity for a false-positive scanner match.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

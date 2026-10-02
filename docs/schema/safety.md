@@ -4,41 +4,41 @@
 
 Generated from the EF Core model of `Cadence.Apps.Safety.Infrastructure.Persistence.SafetyDbContext`, not from a live database. Unqualified tables live in the `safety` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`safety.audit_log_entries`](#safetyaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`safety.device_safety_investigations`](#safetydevice_safety_investigations) | `DeviceSafetyInvestigation` | 31 |
-| [`safety.periodic_safety_reports`](#safetyperiodic_safety_reports) | `PeriodicSafetyReportRecord` | 17 |
-| [`safety.sae_discrepancies`](#safetysae_discrepancies) | `SaeDiscrepancy` | 12 |
-| [`safety.sae_reconciliation_jobs`](#safetysae_reconciliation_jobs) | `SaeReconciliationJob` | 9 |
-| [`safety.sae_reconciliation_runs`](#safetysae_reconciliation_runs) | `SaeReconciliationRun` | 7 |
-| [`safety.safety_as2_transmission_audit_logs`](#safetysafety_as2_transmission_audit_logs) | `As2TransmissionAuditLog` | 10 |
-| [`safety.safety_as2_transmissions`](#safetysafety_as2_transmissions) | `As2Transmission` | 36 |
-| [`safety.safety_audit_logs`](#safetysafety_audit_logs) | `SafetyAuditLog` | 8 |
-| [`safety.safety_cases`](#safetysafety_cases) | `SafetyCaseIcsr` | 8 |
-| [`safety.safety_export_jobs`](#safetysafety_export_jobs) | `ExportJob` | 9 |
-| [`safety.safety_narratives`](#safetysafety_narratives) | `SafetyNarrative` | 21 |
-| [`safety.safety_reporting_evaluations`](#safetysafety_reporting_evaluations) | `IcsrReportingEvaluation` | 28 |
-| [`safety.safety_signal_alerts`](#safetysafety_signal_alerts) | `SafetySignalAlert` | 33 |
-| [`safety.safety_signal_detection_runs`](#safetysafety_signal_detection_runs) | `SafetySignalDetectionRun` | 11 |
+| Table                                                                                    | Entity                       | Columns |
+| ---------------------------------------------------------------------------------------- | ---------------------------- | ------- |
+| [`safety.audit_log_entries`](#safetyaudit_log_entries)                                   | `AuditLogEntry`              | 11      |
+| [`safety.device_safety_investigations`](#safetydevice_safety_investigations)             | `DeviceSafetyInvestigation`  | 31      |
+| [`safety.periodic_safety_reports`](#safetyperiodic_safety_reports)                       | `PeriodicSafetyReportRecord` | 17      |
+| [`safety.sae_discrepancies`](#safetysae_discrepancies)                                   | `SaeDiscrepancy`             | 12      |
+| [`safety.sae_reconciliation_jobs`](#safetysae_reconciliation_jobs)                       | `SaeReconciliationJob`       | 9       |
+| [`safety.sae_reconciliation_runs`](#safetysae_reconciliation_runs)                       | `SaeReconciliationRun`       | 7       |
+| [`safety.safety_as2_transmission_audit_logs`](#safetysafety_as2_transmission_audit_logs) | `As2TransmissionAuditLog`    | 10      |
+| [`safety.safety_as2_transmissions`](#safetysafety_as2_transmissions)                     | `As2Transmission`            | 36      |
+| [`safety.safety_audit_logs`](#safetysafety_audit_logs)                                   | `SafetyAuditLog`             | 8       |
+| [`safety.safety_cases`](#safetysafety_cases)                                             | `SafetyCaseIcsr`             | 8       |
+| [`safety.safety_export_jobs`](#safetysafety_export_jobs)                                 | `ExportJob`                  | 9       |
+| [`safety.safety_narratives`](#safetysafety_narratives)                                   | `SafetyNarrative`            | 21      |
+| [`safety.safety_reporting_evaluations`](#safetysafety_reporting_evaluations)             | `IcsrReportingEvaluation`    | 28      |
+| [`safety.safety_signal_alerts`](#safetysafety_signal_alerts)                             | `SafetySignalAlert`          | 33      |
+| [`safety.safety_signal_detection_runs`](#safetysafety_signal_detection_runs)             | `SafetySignalDetectionRun`   | 11      |
 
 ## safety.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -48,39 +48,39 @@ Indexes:
 
 Entity: `DeviceSafetyInvestigation`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AdjudicatedAt` | `timestamp with time zone` | yes |  |  |
-| `CapaReference` | `character varying(255)` | yes |  |  |
-| `CapaRequired` | `boolean` | no |  |  |
-| `CaseNumber` | `character varying(255)` | no |  |  |
-| `Causality` | `character varying(50)` | no |  |  |
-| `Classification` | `character varying(50)` | no |  |  |
-| `CompetentAuthorityNotified` | `boolean` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DeficiencyId` | `character varying(255)` | no |  |  |
-| `DeviceName` | `character varying(255)` | no |  |  |
-| `DeviceUdiDi` | `character varying(255)` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
-| `FscaRequired` | `boolean` | no |  |  |
-| `InvestigationNotes` | `character varying(4000)` | yes |  |  |
-| `IsUsade` | `boolean` | no |  |  |
-| `LotNumber` | `character varying(255)` | no |  |  |
-| `NotifiedBodyNotified` | `boolean` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RootCauseSummary` | `character varying(4000)` | yes |  |  |
-| `SafetyPhysicianUserId` | `character varying(255)` | yes |  |  |
-| `SerialNumber` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | yes |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VigilanceDeadlineDays` | `integer` | no |  |  |
-| `VigilanceDueDate` | `timestamp with time zone` | no |  |  |
-| `VigilanceReportingRequired` | `boolean` | no |  |  |
+| Column                       | Type                       | Null | Default | Key |
+| ---------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                         | `character varying(36)`    | no   |         | PK  |
+| `AdjudicatedAt`              | `timestamp with time zone` | yes  |         |     |
+| `CapaReference`              | `character varying(255)`   | yes  |         |     |
+| `CapaRequired`               | `boolean`                  | no   |         |     |
+| `CaseNumber`                 | `character varying(255)`   | no   |         |     |
+| `Causality`                  | `character varying(50)`    | no   |         |     |
+| `Classification`             | `character varying(50)`    | no   |         |     |
+| `CompetentAuthorityNotified` | `boolean`                  | no   |         |     |
+| `CreatedAt`                  | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                  | `character varying(255)`   | no   |         |     |
+| `DeficiencyId`               | `character varying(255)`   | no   |         |     |
+| `DeviceName`                 | `character varying(255)`   | no   |         |     |
+| `DeviceUdiDi`                | `character varying(255)`   | no   |         |     |
+| `EsignatureManifestId`       | `character varying(255)`   | yes  |         |     |
+| `FscaRequired`               | `boolean`                  | no   |         |     |
+| `InvestigationNotes`         | `character varying(4000)`  | yes  |         |     |
+| `IsUsade`                    | `boolean`                  | no   |         |     |
+| `LotNumber`                  | `character varying(255)`   | no   |         |     |
+| `NotifiedBodyNotified`       | `boolean`                  | no   |         |     |
+| `ReasonForChange`            | `character varying(1000)`  | no   |         |     |
+| `RootCauseSummary`           | `character varying(4000)`  | yes  |         |     |
+| `SafetyPhysicianUserId`      | `character varying(255)`   | yes  |         |     |
+| `SerialNumber`               | `character varying(255)`   | yes  |         |     |
+| `SiteId`                     | `character varying(255)`   | no   |         |     |
+| `Status`                     | `character varying(50)`    | no   |         |     |
+| `StudyId`                    | `character varying(255)`   | no   |         |     |
+| `SubjectId`                  | `character varying(255)`   | yes  |         |     |
+| `VersionIndex`               | `integer`                  | no   |         |     |
+| `VigilanceDeadlineDays`      | `integer`                  | no   |         |     |
+| `VigilanceDueDate`           | `timestamp with time zone` | no   |         |     |
+| `VigilanceReportingRequired` | `boolean`                  | no   |         |     |
 
 Indexes:
 
@@ -99,25 +99,25 @@ Indexes:
 
 Entity: `PeriodicSafetyReportRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `ApprovedByUserId` | `character varying(255)` | yes |  |  |
-| `CompoundName` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
-| `PeriodEnd` | `timestamp with time zone` | no |  |  |
-| `PeriodStart` | `timestamp with time zone` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ReportPayloadJson` | `jsonb` | no |  |  |
-| `ReportType` | `character varying(50)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TotalSaes` | `integer` | no |  |  |
-| `TotalSubjectExposure` | `integer` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                 | Type                       | Null | Default | Key |
+| ---------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                   | `character varying(36)`    | no   |         | PK  |
+| `ApprovedAt`           | `timestamp with time zone` | yes  |         |     |
+| `ApprovedByUserId`     | `character varying(255)`   | yes  |         |     |
+| `CompoundName`         | `character varying(255)`   | no   |         |     |
+| `CreatedAt`            | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`            | `character varying(255)`   | no   |         |     |
+| `EsignatureManifestId` | `character varying(255)`   | yes  |         |     |
+| `PeriodEnd`            | `timestamp with time zone` | no   |         |     |
+| `PeriodStart`          | `timestamp with time zone` | no   |         |     |
+| `ReasonForChange`      | `character varying(1000)`  | no   |         |     |
+| `ReportPayloadJson`    | `jsonb`                    | no   |         |     |
+| `ReportType`           | `character varying(50)`    | no   |         |     |
+| `Status`               | `character varying(50)`    | no   |         |     |
+| `StudyId`              | `character varying(255)`   | no   |         |     |
+| `TotalSaes`            | `integer`                  | no   |         |     |
+| `TotalSubjectExposure` | `integer`                  | no   |         |     |
+| `VersionIndex`         | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -130,20 +130,20 @@ Indexes:
 
 Entity: `SaeDiscrepancy`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ActualValue` | `character varying(1000)` | yes |  |  |
-| `CaseEventKey` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `ExpectedValue` | `character varying(1000)` | yes |  |  |
-| `FieldName` | `character varying(100)` | no |  |  |
-| `MeddraVersion` | `character varying(50)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RunId` | `character varying(36)` | no |  |  |
-| `Source` | `character varying(100)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `ActualValue`     | `character varying(1000)`  | yes  |         |     |
+| `CaseEventKey`    | `character varying(255)`   | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `ExpectedValue`   | `character varying(1000)`  | yes  |         |     |
+| `FieldName`       | `character varying(100)`   | no   |         |     |
+| `MeddraVersion`   | `character varying(50)`    | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `RunId`           | `character varying(36)`    | no   |         |     |
+| `Source`          | `character varying(100)`   | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -154,17 +154,17 @@ Indexes:
 
 Entity: `SaeReconciliationJob`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Error` | `text` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RunId` | `character varying(36)` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Error`           | `text`                     | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `RunId`           | `character varying(36)`    | yes  |         |     |
+| `Status`          | `character varying(50)`    | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -175,15 +175,15 @@ Indexes:
 
 Entity: `SaeReconciliationRun`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RunDate` | `timestamp with time zone` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `RunDate`         | `timestamp with time zone` | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -193,18 +193,18 @@ Indexes:
 
 Entity: `As2TransmissionAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(100)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Details` | `character varying(2000)` | no |  |  |
-| `FromStatus` | `character varying(50)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `ToStatus` | `character varying(50)` | yes |  |  |
-| `TransmissionId` | `character varying(36)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Action`          | `character varying(100)`   | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Details`         | `character varying(2000)`  | no   |         |     |
+| `FromStatus`      | `character varying(50)`    | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | yes  |         |     |
+| `ToStatus`        | `character varying(50)`    | yes  |         |     |
+| `TransmissionId`  | `character varying(36)`    | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -217,44 +217,44 @@ Indexes:
 
 Entity: `As2Transmission`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AckAReceivedAt` | `timestamp with time zone` | yes |  |  |
-| `AckAStatus` | `character varying(50)` | yes |  |  |
-| `AckBErrorsJson` | `jsonb` | no |  |  |
-| `AckBReceivedAt` | `timestamp with time zone` | yes |  |  |
-| `AckBStatus` | `character varying(50)` | yes |  |  |
-| `AckCDetailsJson` | `jsonb` | no |  |  |
-| `AckCReceivedAt` | `timestamp with time zone` | yes |  |  |
-| `AckCStatus` | `character varying(50)` | yes |  |  |
-| `As2From` | `character varying(255)` | no |  |  |
-| `As2To` | `character varying(255)` | no |  |  |
-| `CaseId` | `character varying(255)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `EncryptionAlgorithm` | `character varying(50)` | no |  |  |
-| `Environment` | `character varying(50)` | no |  |  |
-| `ErrorMessage` | `character varying(2000)` | yes |  |  |
-| `MdnDisposition` | `character varying(255)` | yes |  |  |
-| `MdnMessageId` | `character varying(255)` | yes |  |  |
-| `MdnMic` | `character varying(255)` | yes |  |  |
-| `MdnReceivedAt` | `timestamp with time zone` | yes |  |  |
-| `MdnStatus` | `character varying(50)` | yes |  |  |
-| `MessageId` | `character varying(255)` | no |  |  |
-| `Mic` | `character varying(255)` | no |  |  |
-| `OutboundPayloadSize` | `integer` | no |  |  |
-| `OutboundXml` | `text` | yes |  |  |
-| `PayloadDigestSha256` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RetryCount` | `integer` | no |  |  |
-| `SignatureAlgorithm` | `character varying(50)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | yes |  |  |
-| `TargetAuthority` | `character varying(100)` | no |  |  |
-| `TransmissionId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `WorldwideUniqueCaseId` | `character varying(255)` | yes |  |  |
+| Column                  | Type                       | Null | Default | Key |
+| ----------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                    | `character varying(36)`    | no   |         | PK  |
+| `AckAReceivedAt`        | `timestamp with time zone` | yes  |         |     |
+| `AckAStatus`            | `character varying(50)`    | yes  |         |     |
+| `AckBErrorsJson`        | `jsonb`                    | no   |         |     |
+| `AckBReceivedAt`        | `timestamp with time zone` | yes  |         |     |
+| `AckBStatus`            | `character varying(50)`    | yes  |         |     |
+| `AckCDetailsJson`       | `jsonb`                    | no   |         |     |
+| `AckCReceivedAt`        | `timestamp with time zone` | yes  |         |     |
+| `AckCStatus`            | `character varying(50)`    | yes  |         |     |
+| `As2From`               | `character varying(255)`   | no   |         |     |
+| `As2To`                 | `character varying(255)`   | no   |         |     |
+| `CaseId`                | `character varying(255)`   | yes  |         |     |
+| `CreatedAt`             | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`             | `character varying(255)`   | no   |         |     |
+| `EncryptionAlgorithm`   | `character varying(50)`    | no   |         |     |
+| `Environment`           | `character varying(50)`    | no   |         |     |
+| `ErrorMessage`          | `character varying(2000)`  | yes  |         |     |
+| `MdnDisposition`        | `character varying(255)`   | yes  |         |     |
+| `MdnMessageId`          | `character varying(255)`   | yes  |         |     |
+| `MdnMic`                | `character varying(255)`   | yes  |         |     |
+| `MdnReceivedAt`         | `timestamp with time zone` | yes  |         |     |
+| `MdnStatus`             | `character varying(50)`    | yes  |         |     |
+| `MessageId`             | `character varying(255)`   | no   |         |     |
+| `Mic`                   | `character varying(255)`   | no   |         |     |
+| `OutboundPayloadSize`   | `integer`                  | no   |         |     |
+| `OutboundXml`           | `text`                     | yes  |         |     |
+| `PayloadDigestSha256`   | `character varying(64)`    | no   |         |     |
+| `ReasonForChange`       | `character varying(1000)`  | no   |         |     |
+| `RetryCount`            | `integer`                  | no   |         |     |
+| `SignatureAlgorithm`    | `character varying(50)`    | no   |         |     |
+| `Status`                | `character varying(50)`    | no   |         |     |
+| `StudyId`               | `character varying(255)`   | yes  |         |     |
+| `TargetAuthority`       | `character varying(100)`   | no   |         |     |
+| `TransmissionId`        | `character varying(255)`   | no   |         |     |
+| `VersionIndex`          | `integer`                  | no   |         |     |
+| `WorldwideUniqueCaseId` | `character varying(255)`   | yes  |         |     |
 
 Indexes:
 
@@ -272,16 +272,16 @@ Indexes:
 
 Entity: `SafetyAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(100)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Details` | `character varying(1000)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `RecordId` | `character varying(255)` | yes |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Action`          | `character varying(100)`   | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Details`         | `character varying(1000)`  | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | yes  |         |     |
+| `RecordId`        | `character varying(255)`   | yes  |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -292,16 +292,16 @@ Indexes:
 
 Entity: `SafetyCaseIcsr`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CaseDataJson` | `jsonb` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `PatientId` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `WorldwideUniqueCaseId` | `character varying(255)` | no |  |  |
+| Column                  | Type                       | Null | Default | Key |
+| ----------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                    | `character varying(36)`    | no   |         | PK  |
+| `CaseDataJson`          | `jsonb`                    | no   |         |     |
+| `CreatedAt`             | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`             | `character varying(255)`   | no   |         |     |
+| `PatientId`             | `character varying(255)`   | no   |         |     |
+| `ReasonForChange`       | `character varying(1000)`  | no   |         |     |
+| `VersionIndex`          | `integer`                  | no   |         |     |
+| `WorldwideUniqueCaseId` | `character varying(255)`   | no   |         |     |
 
 Indexes:
 
@@ -312,45 +312,45 @@ Indexes:
 
 Entity: `ExportJob`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Error` | `text` | yes |  |  |
-| `JobName` | `character varying(255)` | no |  |  |
-| `Output` | `text` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Error`           | `text`                     | yes  |         |     |
+| `JobName`         | `character varying(255)`   | no   |         |     |
+| `Output`          | `text`                     | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Status`          | `character varying(50)`    | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 ## safety.safety_narratives
 
 Entity: `SafetyNarrative`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `ApprovedByUserId` | `character varying(255)` | yes |  |  |
-| `CaseId` | `character varying(255)` | no |  |  |
-| `ConfidenceScore` | `double precision` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
-| `GroundedClaimsJson` | `jsonb` | no |  |  |
-| `ModelIdentifier` | `character varying(255)` | no |  |  |
-| `PromptHash` | `character varying(64)` | no |  |  |
-| `RawNarrativeText` | `text` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ReviewStatus` | `character varying(50)` | no |  |  |
-| `SaeEventKey` | `character varying(255)` | no |  |  |
-| `SectionsJson` | `jsonb` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TimelineEventsJson` | `jsonb` | no |  |  |
-| `Title` | `character varying(500)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                 | Type                       | Null | Default | Key |
+| ---------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                   | `character varying(36)`    | no   |         | PK  |
+| `ApprovedAt`           | `timestamp with time zone` | yes  |         |     |
+| `ApprovedByUserId`     | `character varying(255)`   | yes  |         |     |
+| `CaseId`               | `character varying(255)`   | no   |         |     |
+| `ConfidenceScore`      | `double precision`         | no   |         |     |
+| `CreatedAt`            | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`            | `character varying(255)`   | no   |         |     |
+| `EsignatureManifestId` | `character varying(255)`   | yes  |         |     |
+| `GroundedClaimsJson`   | `jsonb`                    | no   |         |     |
+| `ModelIdentifier`      | `character varying(255)`   | no   |         |     |
+| `PromptHash`           | `character varying(64)`    | no   |         |     |
+| `RawNarrativeText`     | `text`                     | no   |         |     |
+| `ReasonForChange`      | `character varying(1000)`  | no   |         |     |
+| `ReviewStatus`         | `character varying(50)`    | no   |         |     |
+| `SaeEventKey`          | `character varying(255)`   | no   |         |     |
+| `SectionsJson`         | `jsonb`                    | no   |         |     |
+| `StudyId`              | `character varying(255)`   | no   |         |     |
+| `SubjectId`            | `character varying(255)`   | no   |         |     |
+| `TimelineEventsJson`   | `jsonb`                    | no   |         |     |
+| `Title`                | `character varying(500)`   | no   |         |     |
+| `VersionIndex`         | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -364,36 +364,36 @@ Indexes:
 
 Entity: `IcsrReportingEvaluation`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AnyExpedited` | `boolean` | no |  |  |
-| `ApprovalStatus` | `character varying(50)` | no |  |  |
-| `ApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `ApprovedByUserId` | `character varying(255)` | yes |  |  |
-| `CaseId` | `character varying(255)` | no |  |  |
-| `Causality` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
-| `EvaluationsJson` | `jsonb` | no |  |  |
-| `Expectedness` | `character varying(50)` | no |  |  |
-| `IsCausal` | `boolean` | no |  |  |
-| `IsSerious` | `boolean` | no |  |  |
-| `IsSusar` | `boolean` | no |  |  |
-| `IsUnexpected` | `boolean` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ReceiptDate` | `timestamp with time zone` | no |  |  |
-| `SeriousnessCongenitalAnomaly` | `boolean` | no |  |  |
-| `SeriousnessDeath` | `boolean` | no |  |  |
-| `SeriousnessDisability` | `boolean` | no |  |  |
-| `SeriousnessHospitalization` | `boolean` | no |  |  |
-| `SeriousnessLifeThreatening` | `boolean` | no |  |  |
-| `SeriousnessOther` | `boolean` | no |  |  |
-| `ShortestTimeframeDays` | `integer` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                         | Type                       | Null | Default | Key |
+| ------------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                           | `character varying(36)`    | no   |         | PK  |
+| `AnyExpedited`                 | `boolean`                  | no   |         |     |
+| `ApprovalStatus`               | `character varying(50)`    | no   |         |     |
+| `ApprovedAt`                   | `timestamp with time zone` | yes  |         |     |
+| `ApprovedByUserId`             | `character varying(255)`   | yes  |         |     |
+| `CaseId`                       | `character varying(255)`   | no   |         |     |
+| `Causality`                    | `character varying(50)`    | no   |         |     |
+| `CreatedAt`                    | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                    | `character varying(255)`   | no   |         |     |
+| `EsignatureManifestId`         | `character varying(255)`   | yes  |         |     |
+| `EvaluationsJson`              | `jsonb`                    | no   |         |     |
+| `Expectedness`                 | `character varying(50)`    | no   |         |     |
+| `IsCausal`                     | `boolean`                  | no   |         |     |
+| `IsSerious`                    | `boolean`                  | no   |         |     |
+| `IsSusar`                      | `boolean`                  | no   |         |     |
+| `IsUnexpected`                 | `boolean`                  | no   |         |     |
+| `ReasonForChange`              | `character varying(1000)`  | no   |         |     |
+| `ReceiptDate`                  | `timestamp with time zone` | no   |         |     |
+| `SeriousnessCongenitalAnomaly` | `boolean`                  | no   |         |     |
+| `SeriousnessDeath`             | `boolean`                  | no   |         |     |
+| `SeriousnessDisability`        | `boolean`                  | no   |         |     |
+| `SeriousnessHospitalization`   | `boolean`                  | no   |         |     |
+| `SeriousnessLifeThreatening`   | `boolean`                  | no   |         |     |
+| `SeriousnessOther`             | `boolean`                  | no   |         |     |
+| `ShortestTimeframeDays`        | `integer`                  | yes  |         |     |
+| `StudyId`                      | `character varying(255)`   | no   |         |     |
+| `SubjectId`                    | `character varying(255)`   | no   |         |     |
+| `VersionIndex`                 | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -407,41 +407,41 @@ Indexes:
 
 Entity: `SafetySignalAlert`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AssignedSafetyOfficer` | `character varying(255)` | yes |  |  |
-| `CaseCountA` | `integer` | no |  |  |
-| `ChiSquareYates` | `double precision` | no |  |  |
-| `ClinicalSummary` | `character varying(4000)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DetectionRunId` | `character varying(36)` | yes |  |  |
-| `Eb05` | `double precision` | no |  |  |
-| `Eb95` | `double precision` | no |  |  |
-| `Ebgm` | `double precision` | no |  |  |
-| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
-| `ExpectedCountE` | `double precision` | no |  |  |
-| `MeddraSoc` | `character varying(255)` | yes |  |  |
-| `MeddraTerm` | `character varying(255)` | no |  |  |
-| `Prr` | `double precision` | no |  |  |
-| `PrrCiLower` | `double precision` | no |  |  |
-| `PrrCiUpper` | `double precision` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ReviewDecision` | `character varying(100)` | yes |  |  |
-| `ReviewJustification` | `character varying(2000)` | yes |  |  |
-| `ReviewedAt` | `timestamp with time zone` | yes |  |  |
-| `ReviewedBy` | `character varying(255)` | yes |  |  |
-| `Ror` | `double precision` | no |  |  |
-| `RorCiLower` | `double precision` | no |  |  |
-| `RorCiUpper` | `double precision` | no |  |  |
-| `Severity` | `character varying(50)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | yes |  |  |
-| `TargetDrug` | `character varying(255)` | no |  |  |
-| `TermLevel` | `character varying(50)` | no |  |  |
-| `TriageSummary` | `character varying(2000)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                  | Type                       | Null | Default | Key |
+| ----------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                    | `character varying(36)`    | no   |         | PK  |
+| `AssignedSafetyOfficer` | `character varying(255)`   | yes  |         |     |
+| `CaseCountA`            | `integer`                  | no   |         |     |
+| `ChiSquareYates`        | `double precision`         | no   |         |     |
+| `ClinicalSummary`       | `character varying(4000)`  | yes  |         |     |
+| `CreatedAt`             | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`             | `character varying(255)`   | no   |         |     |
+| `DetectionRunId`        | `character varying(36)`    | yes  |         |     |
+| `Eb05`                  | `double precision`         | no   |         |     |
+| `Eb95`                  | `double precision`         | no   |         |     |
+| `Ebgm`                  | `double precision`         | no   |         |     |
+| `EsignatureManifestId`  | `character varying(255)`   | yes  |         |     |
+| `ExpectedCountE`        | `double precision`         | no   |         |     |
+| `MeddraSoc`             | `character varying(255)`   | yes  |         |     |
+| `MeddraTerm`            | `character varying(255)`   | no   |         |     |
+| `Prr`                   | `double precision`         | no   |         |     |
+| `PrrCiLower`            | `double precision`         | no   |         |     |
+| `PrrCiUpper`            | `double precision`         | no   |         |     |
+| `ReasonForChange`       | `character varying(1000)`  | no   |         |     |
+| `ReviewDecision`        | `character varying(100)`   | yes  |         |     |
+| `ReviewJustification`   | `character varying(2000)`  | yes  |         |     |
+| `ReviewedAt`            | `timestamp with time zone` | yes  |         |     |
+| `ReviewedBy`            | `character varying(255)`   | yes  |         |     |
+| `Ror`                   | `double precision`         | no   |         |     |
+| `RorCiLower`            | `double precision`         | no   |         |     |
+| `RorCiUpper`            | `double precision`         | no   |         |     |
+| `Severity`              | `character varying(50)`    | no   |         |     |
+| `Status`                | `character varying(50)`    | no   |         |     |
+| `StudyId`               | `character varying(255)`   | yes  |         |     |
+| `TargetDrug`            | `character varying(255)`   | no   |         |     |
+| `TermLevel`             | `character varying(50)`    | no   |         |     |
+| `TriageSummary`         | `character varying(2000)`  | no   |         |     |
+| `VersionIndex`          | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -457,19 +457,19 @@ Indexes:
 
 Entity: `SafetySignalDetectionRun`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `BenchmarkDataset` | `character varying(100)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SignalsDetectedCount` | `integer` | no |  |  |
-| `StudyId` | `character varying(255)` | yes |  |  |
-| `SummaryMetricsJson` | `jsonb` | no |  |  |
-| `TargetDrug` | `character varying(255)` | no |  |  |
-| `TotalCasesAnalyzed` | `integer` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                 | Type                       | Null | Default | Key |
+| ---------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                   | `character varying(36)`    | no   |         | PK  |
+| `BenchmarkDataset`     | `character varying(100)`   | no   |         |     |
+| `CreatedAt`            | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`            | `character varying(255)`   | no   |         |     |
+| `ReasonForChange`      | `character varying(1000)`  | no   |         |     |
+| `SignalsDetectedCount` | `integer`                  | no   |         |     |
+| `StudyId`              | `character varying(255)`   | yes  |         |     |
+| `SummaryMetricsJson`   | `jsonb`                    | no   |         |     |
+| `TargetDrug`           | `character varying(255)`   | no   |         |     |
+| `TotalCasesAnalyzed`   | `integer`                  | no   |         |     |
+| `VersionIndex`         | `integer`                  | no   |         |     |
 
 Indexes:
 

@@ -4,33 +4,33 @@
 
 Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persistence.KnowledgeDbContext`, not from a live database. Unqualified tables live in the `knowledge` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`knowledge.audit_log_entries`](#knowledgeaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`knowledge.knowledge_article_audit_logs`](#knowledgeknowledge_article_audit_logs) | `KnowledgeArticleAuditLog` | 12 |
-| [`knowledge.knowledge_article_versions`](#knowledgeknowledge_article_versions) | `KnowledgeArticleVersion` | 11 |
-| [`knowledge.knowledge_articles`](#knowledgeknowledge_articles) | `KnowledgeArticle` | 16 |
-| [`knowledge.knowledge_categories`](#knowledgeknowledge_categories) | `KnowledgeCategory` | 11 |
-| [`knowledge.knowledge_contextual_help_mappings`](#knowledgeknowledge_contextual_help_mappings) | `ContextualHelpMapping` | 11 |
-| [`knowledge.protocol_knowledge_chunks`](#knowledgeprotocol_knowledge_chunks) | `ProtocolKnowledgeChunk` | 17 |
+| Table                                                                                          | Entity                     | Columns |
+| ---------------------------------------------------------------------------------------------- | -------------------------- | ------- |
+| [`knowledge.audit_log_entries`](#knowledgeaudit_log_entries)                                   | `AuditLogEntry`            | 11      |
+| [`knowledge.knowledge_article_audit_logs`](#knowledgeknowledge_article_audit_logs)             | `KnowledgeArticleAuditLog` | 12      |
+| [`knowledge.knowledge_article_versions`](#knowledgeknowledge_article_versions)                 | `KnowledgeArticleVersion`  | 11      |
+| [`knowledge.knowledge_articles`](#knowledgeknowledge_articles)                                 | `KnowledgeArticle`         | 16      |
+| [`knowledge.knowledge_categories`](#knowledgeknowledge_categories)                             | `KnowledgeCategory`        | 11      |
+| [`knowledge.knowledge_contextual_help_mappings`](#knowledgeknowledge_contextual_help_mappings) | `ContextualHelpMapping`    | 11      |
+| [`knowledge.protocol_knowledge_chunks`](#knowledgeprotocol_knowledge_chunks)                   | `ProtocolKnowledgeChunk`   | 17      |
 
 ## knowledge.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -40,20 +40,20 @@ Indexes:
 
 Entity: `KnowledgeArticleAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(100)` | no |  |  |
-| `ArticleId` | `character varying(36)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Details` | `character varying(2000)` | yes |  |  |
-| `NewStatus` | `character varying(50)` | yes |  |  |
-| `PreviousDigest` | `character varying(128)` | yes |  |  |
-| `PreviousStatus` | `character varying(50)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `Sha256Digest` | `character varying(128)` | yes |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Action`          | `character varying(100)`   | no   |         |     |
+| `ArticleId`       | `character varying(36)`    | yes  |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Details`         | `character varying(2000)`  | yes  |         |     |
+| `NewStatus`       | `character varying(50)`    | yes  |         |     |
+| `PreviousDigest`  | `character varying(128)`   | yes  |         |     |
+| `PreviousStatus`  | `character varying(50)`    | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | yes  |         |     |
+| `Sha256Digest`    | `character varying(128)`   | yes  |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -66,19 +66,19 @@ Indexes:
 
 Entity: `KnowledgeArticleVersion`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ArticleId` | `character varying(36)` | no |  |  |
-| `BodyHtml` | `text` | yes |  |  |
-| `BodyMarkdown` | `text` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `IsLocked` | `boolean` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `StatusAtSnapshot` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VersionLabel` | `character varying(50)` | no |  |  |
+| Column             | Type                       | Null | Default | Key |
+| ------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`               | `character varying(36)`    | no   |         | PK  |
+| `ArticleId`        | `character varying(36)`    | no   |         |     |
+| `BodyHtml`         | `text`                     | yes  |         |     |
+| `BodyMarkdown`     | `text`                     | no   |         |     |
+| `CreatedAt`        | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`        | `character varying(255)`   | no   |         |     |
+| `IsLocked`         | `boolean`                  | no   |         |     |
+| `ReasonForChange`  | `character varying(1000)`  | no   |         |     |
+| `StatusAtSnapshot` | `character varying(50)`    | no   |         |     |
+| `VersionIndex`     | `integer`                  | no   |         |     |
+| `VersionLabel`     | `character varying(50)`    | no   |         |     |
 
 Indexes:
 
@@ -89,24 +89,24 @@ Indexes:
 
 Entity: `KnowledgeArticle`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ApprovedBy` | `character varying(255)` | yes |  |  |
-| `AuthorUserId` | `character varying(255)` | no |  |  |
-| `CategoryId` | `character varying(36)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `CurrentPublishedVersionId` | `character varying(36)` | yes |  |  |
-| `IsDeleted` | `boolean` | no |  |  |
-| `LastEditedBy` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Slug` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `Tags` | `text` | yes |  |  |
-| `Title` | `character varying(500)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VersionLabel` | `character varying(50)` | no |  |  |
+| Column                      | Type                       | Null | Default | Key |
+| --------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                        | `character varying(36)`    | no   |         | PK  |
+| `ApprovedBy`                | `character varying(255)`   | yes  |         |     |
+| `AuthorUserId`              | `character varying(255)`   | no   |         |     |
+| `CategoryId`                | `character varying(36)`    | no   |         |     |
+| `CreatedAt`                 | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                 | `character varying(255)`   | no   |         |     |
+| `CurrentPublishedVersionId` | `character varying(36)`    | yes  |         |     |
+| `IsDeleted`                 | `boolean`                  | no   |         |     |
+| `LastEditedBy`              | `character varying(255)`   | yes  |         |     |
+| `ReasonForChange`           | `character varying(1000)`  | no   |         |     |
+| `Slug`                      | `character varying(255)`   | no   |         |     |
+| `Status`                    | `character varying(50)`    | no   |         |     |
+| `Tags`                      | `text`                     | yes  |         |     |
+| `Title`                     | `character varying(500)`   | no   |         |     |
+| `VersionIndex`              | `integer`                  | no   |         |     |
+| `VersionLabel`              | `character varying(50)`    | no   |         |     |
 
 Indexes:
 
@@ -119,19 +119,19 @@ Indexes:
 
 Entity: `KnowledgeCategory`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Description` | `text` | yes |  |  |
-| `IsDeleted` | `boolean` | no |  |  |
-| `Name` | `character varying(255)` | no |  |  |
-| `ParentId` | `character varying(36)` | yes |  |  |
-| `PersonaVisibility` | `character varying(1000)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Slug` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`         | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`         | `character varying(255)`   | no   |         |     |
+| `Description`       | `text`                     | yes  |         |     |
+| `IsDeleted`         | `boolean`                  | no   |         |     |
+| `Name`              | `character varying(255)`   | no   |         |     |
+| `ParentId`          | `character varying(36)`    | yes  |         |     |
+| `PersonaVisibility` | `character varying(1000)`  | yes  |         |     |
+| `ReasonForChange`   | `character varying(1000)`  | no   |         |     |
+| `Slug`              | `character varying(255)`   | no   |         |     |
+| `VersionIndex`      | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -143,19 +143,19 @@ Indexes:
 
 Entity: `ContextualHelpMapping`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ArticleId` | `character varying(36)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `Persona` | `character varying(100)` | yes |  |  |
-| `Priority` | `integer` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RoutePattern` | `character varying(500)` | no |  |  |
-| `SectionAnchor` | `character varying(255)` | yes |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `ArticleId`       | `character varying(36)`    | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `IsActive`        | `boolean`                  | no   |         |     |
+| `Persona`         | `character varying(100)`   | yes  |         |     |
+| `Priority`        | `integer`                  | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `RoutePattern`    | `character varying(500)`   | no   |         |     |
+| `SectionAnchor`   | `character varying(255)`   | yes  |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -167,25 +167,25 @@ Indexes:
 
 Entity: `ProtocolKnowledgeChunk`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ChunkIndex` | `integer` | no |  |  |
-| `ChunkText` | `text` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DocumentId` | `character varying(255)` | no |  |  |
-| `DocumentType` | `character varying(50)` | no |  |  |
-| `EmbeddingJson` | `text` | yes |  |  |
-| `IsApproved` | `boolean` | no |  |  |
-| `PageNumber` | `integer` | no |  |  |
-| `ProtocolVersion` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SectionNumber` | `character varying(50)` | yes |  |  |
-| `SectionTitle` | `character varying(500)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TokenCount` | `integer` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `ChunkIndex`      | `integer`                  | no   |         |     |
+| `ChunkText`       | `text`                     | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `DocumentId`      | `character varying(255)`   | no   |         |     |
+| `DocumentType`    | `character varying(50)`    | no   |         |     |
+| `EmbeddingJson`   | `text`                     | yes  |         |     |
+| `IsApproved`      | `boolean`                  | no   |         |     |
+| `PageNumber`      | `integer`                  | no   |         |     |
+| `ProtocolVersion` | `character varying(50)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `SectionNumber`   | `character varying(50)`    | yes  |         |     |
+| `SectionTitle`    | `character varying(500)`   | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `TokenCount`      | `integer`                  | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 

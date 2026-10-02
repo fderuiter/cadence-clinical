@@ -4,33 +4,33 @@
 
 Generated from the EF Core model of `Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext`, not from a live database. Unqualified tables live in the `etmf` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`etmf.audit_log_entries`](#etmfaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`etmf.tmf_audit_ledger_seals`](#etmftmf_audit_ledger_seals) | `TmfAuditLedgerSeal` | 6 |
-| [`etmf.tmf_audit_logs`](#etmftmf_audit_logs) | `TmfAuditLog` | 12 |
-| [`etmf.tmf_document_expiration_alert_states`](#etmftmf_document_expiration_alert_states) | `TmfDocumentExpirationAlertState` | 12 |
-| [`etmf.tmf_document_qc_transitions`](#etmftmf_document_qc_transitions) | `TmfDocumentQcTransition` | 9 |
-| [`etmf.tmf_documents`](#etmftmf_documents) | `TmfDocument` | 37 |
-| [`etmf.tmf_expected_documents`](#etmftmf_expected_documents) | `TmfExpectedDocument` | 12 |
+| Table                                                                                    | Entity                            | Columns |
+| ---------------------------------------------------------------------------------------- | --------------------------------- | ------- |
+| [`etmf.audit_log_entries`](#etmfaudit_log_entries)                                       | `AuditLogEntry`                   | 11      |
+| [`etmf.tmf_audit_ledger_seals`](#etmftmf_audit_ledger_seals)                             | `TmfAuditLedgerSeal`              | 6       |
+| [`etmf.tmf_audit_logs`](#etmftmf_audit_logs)                                             | `TmfAuditLog`                     | 12      |
+| [`etmf.tmf_document_expiration_alert_states`](#etmftmf_document_expiration_alert_states) | `TmfDocumentExpirationAlertState` | 12      |
+| [`etmf.tmf_document_qc_transitions`](#etmftmf_document_qc_transitions)                   | `TmfDocumentQcTransition`         | 9       |
+| [`etmf.tmf_documents`](#etmftmf_documents)                                               | `TmfDocument`                     | 37      |
+| [`etmf.tmf_expected_documents`](#etmftmf_expected_documents)                             | `TmfExpectedDocument`             | 12      |
 
 ## etmf.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -40,33 +40,33 @@ Indexes:
 
 Entity: `TmfAuditLedgerSeal`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `BlockIndex` | `integer` | no |  | PK |
-| `CurrentBlockHash` | `character varying(64)` | no |  |  |
-| `MerkleRootHash` | `character varying(64)` | no |  |  |
-| `PreviousBlockHash` | `character varying(64)` | no |  |  |
-| `SealedRecordCount` | `integer` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `BlockIndex`        | `integer`                  | no   |         | PK  |
+| `CurrentBlockHash`  | `character varying(64)`    | no   |         |     |
+| `MerkleRootHash`    | `character varying(64)`    | no   |         |     |
+| `PreviousBlockHash` | `character varying(64)`    | no   |         |     |
+| `SealedRecordCount` | `integer`                  | no   |         |     |
+| `Timestamp`         | `timestamp with time zone` | no   |         |     |
 
 ## etmf.tmf_audit_logs
 
 Entity: `TmfAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `CryptographicSeal` | `character varying(64)` | yes |  |  |
-| `Details` | `character varying(1000)` | no |  |  |
-| `DocumentId` | `character varying(36)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `UserRole` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                | `character varying(36)`    | no   |         | PK  |
+| `Action`            | `character varying(50)`    | no   |         |     |
+| `CreatedAt`         | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`         | `text`                     | no   |         |     |
+| `CryptographicSeal` | `character varying(64)`    | yes  |         |     |
+| `Details`           | `character varying(1000)`  | no   |         |     |
+| `DocumentId`        | `character varying(36)`    | yes  |         |     |
+| `ReasonForChange`   | `character varying(1000)`  | no   |         |     |
+| `Timestamp`         | `timestamp with time zone` | no   |         |     |
+| `UserId`            | `character varying(255)`   | no   |         |     |
+| `UserRole`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`      | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -78,20 +78,20 @@ Indexes:
 
 Entity: `TmfDocumentExpirationAlertState`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AlertedAt` | `timestamp with time zone` | no |  |  |
-| `Attempts` | `integer` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Dispatched` | `boolean` | no |  |  |
-| `DocumentId` | `character varying(36)` | no |  |  |
-| `LastError` | `character varying(1000)` | yes |  |  |
-| `NotificationId` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `WarningWindow` | `character varying(50)` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `AlertedAt`       | `timestamp with time zone` | no   |         |     |
+| `Attempts`        | `integer`                  | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Dispatched`      | `boolean`                  | no   |         |     |
+| `DocumentId`      | `character varying(36)`    | no   |         |     |
+| `LastError`       | `character varying(1000)`  | yes  |         |     |
+| `NotificationId`  | `character varying(255)`   | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
+| `WarningWindow`   | `character varying(50)`    | no   |         |     |
 
 Foreign keys:
 
@@ -109,17 +109,17 @@ Indexes:
 
 Entity: `TmfDocumentQcTransition`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ActorId` | `character varying(255)` | no |  |  |
-| `ActorRole` | `character varying(255)` | no |  |  |
-| `DocumentId` | `character varying(36)` | no |  |  |
-| `FromStatus` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `ToStatus` | `character varying(50)` | no |  |  |
-| `TransitionSequence` | `integer` | no |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `character varying(36)`    | no   |         | PK  |
+| `ActorId`            | `character varying(255)`   | no   |         |     |
+| `ActorRole`          | `character varying(255)`   | no   |         |     |
+| `DocumentId`         | `character varying(36)`    | no   |         |     |
+| `FromStatus`         | `character varying(50)`    | no   |         |     |
+| `ReasonForChange`    | `character varying(1000)`  | no   |         |     |
+| `Timestamp`          | `timestamp with time zone` | no   |         |     |
+| `ToStatus`           | `character varying(50)`    | no   |         |     |
+| `TransitionSequence` | `integer`                  | no   |         |     |
 
 Foreign keys:
 
@@ -135,45 +135,45 @@ Indexes:
 
 Entity: `TmfDocument`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ApprovalStatus` | `character varying(50)` | no |  |  |
-| `ArtifactCode` | `character varying(50)` | no |  |  |
-| `ArtifactType` | `character varying(255)` | no |  |  |
-| `Content` | `text` | no |  |  |
-| `ContentChecksum` | `character varying(64)` | yes |  |  |
-| `CorrelationKey` | `character varying(255)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DocumentOwnerId` | `character varying(255)` | yes |  |  |
-| `DocumentType` | `character varying(50)` | yes |  |  |
-| `ExpirationDate` | `timestamp with time zone` | yes |  |  |
-| `Filename` | `character varying(255)` | no |  |  |
-| `IdempotencyKey` | `character varying(255)` | yes |  |  |
-| `IsRedacted` | `boolean` | no |  |  |
-| `IssueDate` | `timestamp with time zone` | yes |  |  |
-| `MetadataJson` | `jsonb` | yes |  |  |
-| `MimeType` | `character varying(100)` | no |  |  |
-| `ObjectKey` | `character varying(1000)` | yes |  |  |
-| `ProtocolVersionIndex` | `integer` | yes |  |  |
-| `ProtocolVersionStatus` | `character varying(50)` | yes |  |  |
-| `ProtocolVersionTag` | `character varying(50)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RedactionManifestJson` | `jsonb` | yes |  |  |
-| `RedactionSourceId` | `character varying(36)` | yes |  |  |
-| `Section` | `character varying(255)` | no |  |  |
-| `SignatureManifestation` | `jsonb` | yes |  |  |
-| `Signer` | `character varying(255)` | yes |  |  |
-| `SigningTimestamp` | `timestamp with time zone` | yes |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `SourceSystem` | `character varying(255)` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SyncStatus` | `character varying(50)` | yes |  |  |
-| `TaxonomyVersion` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `Zone` | `integer` | no |  |  |
+| Column                   | Type                       | Null | Default | Key |
+| ------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                     | `character varying(36)`    | no   |         | PK  |
+| `ApprovalStatus`         | `character varying(50)`    | no   |         |     |
+| `ArtifactCode`           | `character varying(50)`    | no   |         |     |
+| `ArtifactType`           | `character varying(255)`   | no   |         |     |
+| `Content`                | `text`                     | no   |         |     |
+| `ContentChecksum`        | `character varying(64)`    | yes  |         |     |
+| `CorrelationKey`         | `character varying(255)`   | yes  |         |     |
+| `CreatedAt`              | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`              | `character varying(255)`   | no   |         |     |
+| `DocumentOwnerId`        | `character varying(255)`   | yes  |         |     |
+| `DocumentType`           | `character varying(50)`    | yes  |         |     |
+| `ExpirationDate`         | `timestamp with time zone` | yes  |         |     |
+| `Filename`               | `character varying(255)`   | no   |         |     |
+| `IdempotencyKey`         | `character varying(255)`   | yes  |         |     |
+| `IsRedacted`             | `boolean`                  | no   |         |     |
+| `IssueDate`              | `timestamp with time zone` | yes  |         |     |
+| `MetadataJson`           | `jsonb`                    | yes  |         |     |
+| `MimeType`               | `character varying(100)`   | no   |         |     |
+| `ObjectKey`              | `character varying(1000)`  | yes  |         |     |
+| `ProtocolVersionIndex`   | `integer`                  | yes  |         |     |
+| `ProtocolVersionStatus`  | `character varying(50)`    | yes  |         |     |
+| `ProtocolVersionTag`     | `character varying(50)`    | yes  |         |     |
+| `ReasonForChange`        | `character varying(1000)`  | no   |         |     |
+| `RedactionManifestJson`  | `jsonb`                    | yes  |         |     |
+| `RedactionSourceId`      | `character varying(36)`    | yes  |         |     |
+| `Section`                | `character varying(255)`   | no   |         |     |
+| `SignatureManifestation` | `jsonb`                    | yes  |         |     |
+| `Signer`                 | `character varying(255)`   | yes  |         |     |
+| `SigningTimestamp`       | `timestamp with time zone` | yes  |         |     |
+| `SiteId`                 | `character varying(255)`   | yes  |         |     |
+| `SourceSystem`           | `character varying(255)`   | yes  |         |     |
+| `Status`                 | `character varying(50)`    | no   |         |     |
+| `StudyId`                | `character varying(255)`   | no   |         |     |
+| `SyncStatus`             | `character varying(50)`    | yes  |         |     |
+| `TaxonomyVersion`        | `character varying(50)`    | no   |         |     |
+| `VersionIndex`           | `bigint`                   | no   |         |     |
+| `Zone`                   | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -195,20 +195,20 @@ Indexes:
 
 Entity: `TmfExpectedDocument`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ArtifactType` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `MetadataJson` | `jsonb` | yes |  |  |
-| `Milestone` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Section` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `Zone` | `integer` | yes |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `ArtifactType`    | `character varying(255)`   | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `MetadataJson`    | `jsonb`                    | yes  |         |     |
+| `Milestone`       | `character varying(255)`   | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Section`         | `character varying(255)`   | yes  |         |     |
+| `SiteId`          | `character varying(255)`   | yes  |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
+| `Zone`            | `integer`                  | yes  |         |     |
 
 Indexes:
 

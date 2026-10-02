@@ -4,30 +4,30 @@
 
 Generated from the EF Core model of `Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext`, not from a live database. Unqualified tables live in the `notifications` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`notifications.audit_log_entries`](#notificationsaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`notifications.notification_audit_logs`](#notificationsnotification_audit_logs) | `NotificationAuditLog` | 6 |
-| [`notifications.notification_deliveries`](#notificationsnotification_deliveries) | `NotificationDelivery` | 9 |
-| [`notifications.notification_records`](#notificationsnotification_records) | `NotificationRecord` | 16 |
+| Table                                                                            | Entity                 | Columns |
+| -------------------------------------------------------------------------------- | ---------------------- | ------- |
+| [`notifications.audit_log_entries`](#notificationsaudit_log_entries)             | `AuditLogEntry`        | 11      |
+| [`notifications.notification_audit_logs`](#notificationsnotification_audit_logs) | `NotificationAuditLog` | 6       |
+| [`notifications.notification_deliveries`](#notificationsnotification_deliveries) | `NotificationDelivery` | 9       |
+| [`notifications.notification_records`](#notificationsnotification_records)       | `NotificationRecord`   | 16      |
 
 ## notifications.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -37,14 +37,14 @@ Indexes:
 
 Entity: `NotificationAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `Details` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `UserRole` | `character varying(255)` | no |  |  |
+| Column      | Type                       | Null | Default | Key |
+| ----------- | -------------------------- | ---- | ------- | --- |
+| `Id`        | `character varying(36)`    | no   |         | PK  |
+| `Action`    | `character varying(50)`    | no   |         |     |
+| `Details`   | `character varying(1000)`  | no   |         |     |
+| `Timestamp` | `timestamp with time zone` | no   |         |     |
+| `UserId`    | `character varying(255)`   | no   |         |     |
+| `UserRole`  | `character varying(255)`   | no   |         |     |
 
 Indexes:
 
@@ -55,17 +55,17 @@ Indexes:
 
 Entity: `NotificationDelivery`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Attempts` | `integer` | no |  |  |
-| `Channel` | `character varying(50)` | no |  |  |
-| `CompletedAt` | `timestamp with time zone` | yes |  |  |
-| `LastError` | `character varying(1000)` | yes |  |  |
-| `NextRetryAt` | `timestamp with time zone` | yes |  |  |
-| `NotificationId` | `character varying(36)` | no |  |  |
-| `RetryEligible` | `boolean` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
+| Column           | Type                       | Null | Default | Key |
+| ---------------- | -------------------------- | ---- | ------- | --- |
+| `Id`             | `character varying(36)`    | no   |         | PK  |
+| `Attempts`       | `integer`                  | no   |         |     |
+| `Channel`        | `character varying(50)`    | no   |         |     |
+| `CompletedAt`    | `timestamp with time zone` | yes  |         |     |
+| `LastError`      | `character varying(1000)`  | yes  |         |     |
+| `NextRetryAt`    | `timestamp with time zone` | yes  |         |     |
+| `NotificationId` | `character varying(36)`    | no   |         |     |
+| `RetryEligible`  | `boolean`                  | no   |         |     |
+| `Status`         | `character varying(50)`    | no   |         |     |
 
 Indexes:
 
@@ -75,24 +75,24 @@ Indexes:
 
 Entity: `NotificationRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Category` | `character varying(50)` | no |  |  |
-| `Channels` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DeliveryState` | `character varying(50)` | no |  |  |
-| `MessageContent` | `text` | no |  |  |
-| `Priority` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RecipientRoleId` | `character varying(255)` | yes |  |  |
-| `RecipientUserId` | `character varying(255)` | yes |  |  |
-| `RelatedEntityId` | `character varying(255)` | yes |  |  |
-| `RelatedEntityType` | `character varying(255)` | yes |  |  |
-| `Retries` | `integer` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                | `character varying(36)`    | no   |         | PK  |
+| `Category`          | `character varying(50)`    | no   |         |     |
+| `Channels`          | `character varying(255)`   | no   |         |     |
+| `CreatedAt`         | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`         | `character varying(255)`   | no   |         |     |
+| `DeliveryState`     | `character varying(50)`    | no   |         |     |
+| `MessageContent`    | `text`                     | no   |         |     |
+| `Priority`          | `character varying(50)`    | no   |         |     |
+| `ReasonForChange`   | `character varying(1000)`  | no   |         |     |
+| `RecipientRoleId`   | `character varying(255)`   | yes  |         |     |
+| `RecipientUserId`   | `character varying(255)`   | yes  |         |     |
+| `RelatedEntityId`   | `character varying(255)`   | yes  |         |     |
+| `RelatedEntityType` | `character varying(255)`   | yes  |         |     |
+| `Retries`           | `integer`                  | no   |         |     |
+| `Status`            | `character varying(50)`    | no   |         |     |
+| `VersionIndex`      | `integer`                  | no   |         |     |
 
 Indexes:
 

@@ -22,19 +22,18 @@ Under Targeted Source Data Verification (TSDV), selecting the "first N enrolled 
 ### Option 1: **Option A (Selected): Dedicated Persisted column `enrollment_index` on `ClinicalSubject`**
 
 - **Overview:** Add a nullable integer column `enrollment_index` to the `ClinicalSubject` table. The index is assigned dynamically during the creation transaction as `max(enrollment_index) + 1` for the study scope, making it permanent, immutable, and independent of alphabetical names or ID formats.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B (Alternative): Dynamic query from audit logs on every evaluation**
 
 - **Overview:** Dynamically fetch the subject's first insert event timestamp from `audit_logs` on every evaluation to compute the rank. This avoids schema changes but is highly non-performant and depends entirely on audit logs remaining present and untouched, which risks instability.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

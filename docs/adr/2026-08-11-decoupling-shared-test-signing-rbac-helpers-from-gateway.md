@@ -26,19 +26,19 @@ We need a clean, decoupled solution that isolates the shared test signing RBAC h
 ### Option 1: Inline Signature Generation in All Tests
 
 - **Overview:** Duplicate the header signing logic directly within every test suite or test file.
-- ***Pros:***
+- _**Pros:**_
   - Avoids package-level dependency issues entirely.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Massively violates DRY principles, introducing huge code duplication and maintaining/updating it would be highly error-prone.
 
 ### Option 2: Move RBAC Persona Helpers to `packages/security` (Selected)
 
 - **Overview:** Extract the signature construction and persona helpers into a new package module `packages/security/rbac_helpers.py` using the underlying `packages.security.signing` library directly. Refactor `tests/rbac_helpers.py` to re-export from this package-level helper.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Preserves absolute clean boundaries; packages import only from other packages.
   - ✅ Retains full backward compatibility with all existing test suites via re-export.
   - ✅ Resolves all import-boundary AST validation failures.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Slightly increases the surface area of the shared security package.
 
 ## 4. Decision Outcome

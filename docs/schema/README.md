@@ -4,21 +4,21 @@
 
 One document per module, rendered from each module's EF Core design-time model. All modules share the `cadence` database, each in its own schema ([ADR-2447](../adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). `pnpm cadence check schema-doc` fails when these files differ from the models, so a change to an entity or its configuration is committed together with its documentation.
 
-| Module | DbContext | Tables |
-| --- | --- | --- |
-| [ctms](ctms.md) | `CtmsDbContext` | 17 |
-| [econsent](econsent.md) | `EconsentDbContext` | 15 |
-| [eisf](eisf.md) | `EisfDbContext` | 5 |
-| [etmf](etmf.md) | `EtmfDbContext` | 7 |
-| [execution](execution.md) | `ExecutionDbContext` | 17 |
-| [fileshare](fileshare.md) | `FileshareDbContext` | 6 |
-| [imaging](imaging.md) | `ImagingDbContext` | 9 |
-| [interop](interop.md) | `InteropDbContext` | 15 |
-| [kernel](kernel.md) | `KernelDbContext` | 54 |
-| [knowledge](knowledge.md) | `KnowledgeDbContext` | 7 |
-| [notifications](notifications.md) | `NotificationsDbContext` | 4 |
-| [org](org.md) | `OrgDbContext` | 5 |
-| [payments](payments.md) | `PaymentsDbContext` | 17 |
-| [quality](quality.md) | `QualityDbContext` | 5 |
-| [safety](safety.md) | `SafetyDbContext` | 15 |
-| [tickets](tickets.md) | `TicketsDbContext` | 5 |
+| Module                            | DbContext                | Tables |
+| --------------------------------- | ------------------------ | ------ |
+| [ctms](ctms.md)                   | `CtmsDbContext`          | 17     |
+| [econsent](econsent.md)           | `EconsentDbContext`      | 15     |
+| [eisf](eisf.md)                   | `EisfDbContext`          | 5      |
+| [etmf](etmf.md)                   | `EtmfDbContext`          | 7      |
+| [execution](execution.md)         | `ExecutionDbContext`     | 17     |
+| [fileshare](fileshare.md)         | `FileshareDbContext`     | 6      |
+| [imaging](imaging.md)             | `ImagingDbContext`       | 9      |
+| [interop](interop.md)             | `InteropDbContext`       | 15     |
+| [kernel](kernel.md)               | `KernelDbContext`        | 54     |
+| [knowledge](knowledge.md)         | `KnowledgeDbContext`     | 7      |
+| [notifications](notifications.md) | `NotificationsDbContext` | 4      |
+| [org](org.md)                     | `OrgDbContext`           | 5      |
+| [payments](payments.md)           | `PaymentsDbContext`      | 17     |
+| [quality](quality.md)             | `QualityDbContext`       | 5      |
+| [safety](safety.md)               | `SafetyDbContext`        | 15     |
+| [tickets](tickets.md)             | `TicketsDbContext`       | 5      |

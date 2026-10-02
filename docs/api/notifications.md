@@ -2,8 +2,8 @@
 
 Generated from `docs/openapi/notifications_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
-| Method | Path | Operation | Summary |
-| ------ | ---- | --------- | ------- |
+| Method | Path                           | Operation                  | Summary                                                |
+| ------ | ------------------------------ | -------------------------- | ------------------------------------------------------ |
 | `POST` | `/api/v1/notifications/render` | RenderNotificationTemplate | Renders a Liquid notification template asynchronously. |
-| `GET` | `/api/v1/notifications/status` | NotificationsStatus | Returns Notifications operational status. |
-| `GET` | `/healthz` | NotificationsHealthCheck | Notifications dispatch health probe. |
+| `GET`  | `/api/v1/notifications/status` | NotificationsStatus        | Returns Notifications operational status.              |
+| `GET`  | `/healthz`                     | NotificationsHealthCheck   | Notifications dispatch health probe.                   |

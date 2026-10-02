@@ -4,41 +4,41 @@
 
 Generated from the EF Core model of `Cadence.Apps.Interop.Infrastructure.Persistence.InteropDbContext`, not from a live database. Unqualified tables live in the `interop` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`interop.audit_log_entries`](#interopaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`interop.clinical_queries`](#interopclinical_queries) | `ClinicalQuery` | 10 |
-| [`interop.device_registrations`](#interopdevice_registrations) | `DeviceRegistrationRecord` | 20 |
-| [`interop.ehr_endpoints`](#interopehr_endpoints) | `EhrEndpointRecord` | 15 |
-| [`interop.ehr_reconciliation_candidates`](#interopehr_reconciliation_candidates) | `EhrReconciliationCandidateRecord` | 32 |
-| [`interop.epro_defeated_submissions`](#interopepro_defeated_submissions) | `EproSubmissionDefeated` | 8 |
-| [`interop.epro_quarantined_submissions`](#interopepro_quarantined_submissions) | `EproSubmissionQuarantine` | 12 |
-| [`interop.epro_submissions`](#interopepro_submissions) | `EproSubmission` | 12 |
-| [`interop.instruments`](#interopinstruments) | `Instrument` | 10 |
-| [`interop.interop_audit_logs`](#interopinterop_audit_logs) | `InteropAuditLog` | 7 |
-| [`interop.sensor_daily_summaries`](#interopsensor_daily_summaries) | `SensorDailySummaryRecord` | 38 |
-| [`interop.sensor_safety_alerts`](#interopsensor_safety_alerts) | `SensorSafetyAlertRecord` | 20 |
-| [`interop.sensor_telemetry_streams`](#interopsensor_telemetry_streams) | `SensorTelemetryStreamRecord` | 17 |
-| [`interop.subject_assignments`](#interopsubject_assignments) | `SubjectAssignment` | 13 |
-| [`interop.subject_notifications`](#interopsubject_notifications) | `SubjectNotification` | 12 |
+| Table                                                                            | Entity                             | Columns |
+| -------------------------------------------------------------------------------- | ---------------------------------- | ------- |
+| [`interop.audit_log_entries`](#interopaudit_log_entries)                         | `AuditLogEntry`                    | 11      |
+| [`interop.clinical_queries`](#interopclinical_queries)                           | `ClinicalQuery`                    | 10      |
+| [`interop.device_registrations`](#interopdevice_registrations)                   | `DeviceRegistrationRecord`         | 20      |
+| [`interop.ehr_endpoints`](#interopehr_endpoints)                                 | `EhrEndpointRecord`                | 15      |
+| [`interop.ehr_reconciliation_candidates`](#interopehr_reconciliation_candidates) | `EhrReconciliationCandidateRecord` | 32      |
+| [`interop.epro_defeated_submissions`](#interopepro_defeated_submissions)         | `EproSubmissionDefeated`           | 8       |
+| [`interop.epro_quarantined_submissions`](#interopepro_quarantined_submissions)   | `EproSubmissionQuarantine`         | 12      |
+| [`interop.epro_submissions`](#interopepro_submissions)                           | `EproSubmission`                   | 12      |
+| [`interop.instruments`](#interopinstruments)                                     | `Instrument`                       | 10      |
+| [`interop.interop_audit_logs`](#interopinterop_audit_logs)                       | `InteropAuditLog`                  | 7       |
+| [`interop.sensor_daily_summaries`](#interopsensor_daily_summaries)               | `SensorDailySummaryRecord`         | 38      |
+| [`interop.sensor_safety_alerts`](#interopsensor_safety_alerts)                   | `SensorSafetyAlertRecord`          | 20      |
+| [`interop.sensor_telemetry_streams`](#interopsensor_telemetry_streams)           | `SensorTelemetryStreamRecord`      | 17      |
+| [`interop.subject_assignments`](#interopsubject_assignments)                     | `SubjectAssignment`                | 13      |
+| [`interop.subject_notifications`](#interopsubject_notifications)                 | `SubjectNotification`              | 12      |
 
 ## interop.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -48,18 +48,18 @@ Indexes:
 
 Entity: `ClinicalQuery`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `Domain` | `character varying(50)` | yes |  |  |
-| `Explanation` | `character varying(1000)` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TestCode` | `character varying(100)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VisitId` | `character varying(255)` | yes |  |  |
+| Column        | Type                       | Null | Default | Key |
+| ------------- | -------------------------- | ---- | ------- | --- |
+| `Id`          | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`   | `timestamp with time zone` | no   |         |     |
+| `Domain`      | `character varying(50)`    | yes  |         |     |
+| `Explanation` | `character varying(1000)`  | yes  |         |     |
+| `Status`      | `character varying(50)`    | no   |         |     |
+| `StudyId`     | `character varying(255)`   | no   |         |     |
+| `SubjectId`   | `character varying(255)`   | no   |         |     |
+| `TestCode`    | `character varying(100)`   | no   |         |     |
+| `UpdatedAt`   | `timestamp with time zone` | no   |         |     |
+| `VisitId`     | `character varying(255)`   | yes  |         |     |
 
 Indexes:
 
@@ -71,28 +71,28 @@ Indexes:
 
 Entity: `DeviceRegistrationRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CalibrationDate` | `timestamp with time zone` | yes |  |  |
-| `CalibrationStatus` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DeviceTokenHash` | `character varying(64)` | no |  |  |
-| `DeviceType` | `character varying(50)` | no |  |  |
-| `FirmwareVersion` | `character varying(50)` | yes |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `MacAddressMasked` | `character varying(50)` | yes |  |  |
-| `ModelName` | `character varying(100)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `UdiDi` | `character varying(100)` | no |  |  |
-| `UdiPiLot` | `character varying(100)` | yes |  |  |
-| `UdiPiSerial` | `character varying(100)` | yes |  |  |
-| `Vendor` | `character varying(100)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                | `character varying(36)`    | no   |         | PK  |
+| `CalibrationDate`   | `timestamp with time zone` | yes  |         |     |
+| `CalibrationStatus` | `character varying(50)`    | no   |         |     |
+| `CreatedAt`         | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`         | `character varying(255)`   | no   |         |     |
+| `DeviceTokenHash`   | `character varying(64)`    | no   |         |     |
+| `DeviceType`        | `character varying(50)`    | no   |         |     |
+| `FirmwareVersion`   | `character varying(50)`    | yes  |         |     |
+| `IsActive`          | `boolean`                  | no   |         |     |
+| `MacAddressMasked`  | `character varying(50)`    | yes  |         |     |
+| `ModelName`         | `character varying(100)`   | no   |         |     |
+| `ReasonForChange`   | `character varying(1000)`  | no   |         |     |
+| `SiteId`            | `character varying(255)`   | yes  |         |     |
+| `StudyId`           | `character varying(255)`   | no   |         |     |
+| `SubjectId`         | `character varying(255)`   | no   |         |     |
+| `UdiDi`             | `character varying(100)`   | no   |         |     |
+| `UdiPiLot`          | `character varying(100)`   | yes  |         |     |
+| `UdiPiSerial`       | `character varying(100)`   | yes  |         |     |
+| `Vendor`            | `character varying(100)`   | no   |         |     |
+| `VersionIndex`      | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -108,23 +108,23 @@ Indexes:
 
 Entity: `EhrEndpointRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ClientId` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `FhirBaseUrl` | `character varying(500)` | no |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `LastPolledAt` | `timestamp with time zone` | yes |  |  |
-| `Name` | `character varying(255)` | no |  |  |
-| `PollingIntervalSec` | `integer` | no |  |  |
-| `PublicKeyJwksUrl` | `character varying(500)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ScopesJson` | `jsonb` | no |  |  |
-| `SystemType` | `character varying(50)` | no |  |  |
-| `TokenUrl` | `character varying(500)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `character varying(36)`    | no   |         | PK  |
+| `ClientId`           | `character varying(255)`   | no   |         |     |
+| `CreatedAt`          | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`          | `character varying(255)`   | no   |         |     |
+| `FhirBaseUrl`        | `character varying(500)`   | no   |         |     |
+| `IsActive`           | `boolean`                  | no   |         |     |
+| `LastPolledAt`       | `timestamp with time zone` | yes  |         |     |
+| `Name`               | `character varying(255)`   | no   |         |     |
+| `PollingIntervalSec` | `integer`                  | no   |         |     |
+| `PublicKeyJwksUrl`   | `character varying(500)`   | yes  |         |     |
+| `ReasonForChange`    | `character varying(1000)`  | no   |         |     |
+| `ScopesJson`         | `jsonb`                    | no   |         |     |
+| `SystemType`         | `character varying(50)`    | no   |         |     |
+| `TokenUrl`           | `character varying(500)`   | no   |         |     |
+| `VersionIndex`       | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -136,40 +136,40 @@ Indexes:
 
 Entity: `EhrReconciliationCandidateRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CandidateUnit` | `character varying(50)` | yes |  |  |
-| `CandidateValueJson` | `jsonb` | no |  |  |
-| `CdashTest` | `character varying(255)` | yes |  |  |
-| `CdashTestcd` | `character varying(100)` | yes |  |  |
-| `ClinicalQueryId` | `character varying(36)` | yes |  |  |
-| `ConfidenceScore` | `double precision` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `CurrentEcrfUpdatedAt` | `timestamp with time zone` | yes |  |  |
-| `CurrentEcrfValueJson` | `jsonb` | yes |  |  |
-| `DiscrepancyType` | `character varying(50)` | no |  |  |
-| `EhrSystemId` | `character varying(255)` | no |  |  |
-| `ElectronicSignatureJson` | `jsonb` | yes |  |  |
-| `FhirResourceId` | `character varying(255)` | no |  |  |
-| `FhirResourceType` | `character varying(100)` | no |  |  |
-| `MappingProvenance` | `character varying(500)` | no |  |  |
-| `RawFhirResourceJson` | `jsonb` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ResolutionAction` | `character varying(50)` | yes |  |  |
-| `ResolutionReason` | `character varying(1000)` | yes |  |  |
-| `ResolvedAt` | `timestamp with time zone` | yes |  |  |
-| `ResolvedBy` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `SourceTimestamp` | `timestamp with time zone` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `SubjectPseudonym` | `character varying(255)` | no |  |  |
-| `TargetDomain` | `character varying(50)` | no |  |  |
-| `TargetVariable` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                    | Type                       | Null | Default | Key |
+| ------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                      | `character varying(36)`    | no   |         | PK  |
+| `CandidateUnit`           | `character varying(50)`    | yes  |         |     |
+| `CandidateValueJson`      | `jsonb`                    | no   |         |     |
+| `CdashTest`               | `character varying(255)`   | yes  |         |     |
+| `CdashTestcd`             | `character varying(100)`   | yes  |         |     |
+| `ClinicalQueryId`         | `character varying(36)`    | yes  |         |     |
+| `ConfidenceScore`         | `double precision`         | no   |         |     |
+| `CreatedAt`               | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`               | `character varying(255)`   | no   |         |     |
+| `CurrentEcrfUpdatedAt`    | `timestamp with time zone` | yes  |         |     |
+| `CurrentEcrfValueJson`    | `jsonb`                    | yes  |         |     |
+| `DiscrepancyType`         | `character varying(50)`    | no   |         |     |
+| `EhrSystemId`             | `character varying(255)`   | no   |         |     |
+| `ElectronicSignatureJson` | `jsonb`                    | yes  |         |     |
+| `FhirResourceId`          | `character varying(255)`   | no   |         |     |
+| `FhirResourceType`        | `character varying(100)`   | no   |         |     |
+| `MappingProvenance`       | `character varying(500)`   | no   |         |     |
+| `RawFhirResourceJson`     | `jsonb`                    | no   |         |     |
+| `ReasonForChange`         | `character varying(1000)`  | no   |         |     |
+| `ResolutionAction`        | `character varying(50)`    | yes  |         |     |
+| `ResolutionReason`        | `character varying(1000)`  | yes  |         |     |
+| `ResolvedAt`              | `timestamp with time zone` | yes  |         |     |
+| `ResolvedBy`              | `character varying(255)`   | yes  |         |     |
+| `SiteId`                  | `character varying(255)`   | no   |         |     |
+| `SourceTimestamp`         | `timestamp with time zone` | no   |         |     |
+| `Status`                  | `character varying(50)`    | no   |         |     |
+| `StudyId`                 | `character varying(255)`   | no   |         |     |
+| `SubjectId`               | `character varying(255)`   | no   |         |     |
+| `SubjectPseudonym`        | `character varying(255)`   | no   |         |     |
+| `TargetDomain`            | `character varying(50)`    | no   |         |     |
+| `TargetVariable`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`            | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -190,16 +190,16 @@ Indexes:
 
 Entity: `EproSubmissionDefeated`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AnswersJson` | `jsonb` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `DeviceTimestamp` | `timestamp with time zone` | no |  |  |
-| `DiaryId` | `character varying(255)` | no |  |  |
-| `OfflineSyncMarkersJson` | `jsonb` | no |  |  |
-| `Status` | `character varying(100)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
+| Column                   | Type                       | Null | Default | Key |
+| ------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                     | `character varying(36)`    | no   |         | PK  |
+| `AnswersJson`            | `jsonb`                    | no   |         |     |
+| `CreatedAt`              | `timestamp with time zone` | no   |         |     |
+| `DeviceTimestamp`        | `timestamp with time zone` | no   |         |     |
+| `DiaryId`                | `character varying(255)`   | no   |         |     |
+| `OfflineSyncMarkersJson` | `jsonb`                    | no   |         |     |
+| `Status`                 | `character varying(100)`   | no   |         |     |
+| `SubjectId`              | `character varying(255)`   | no   |         |     |
 
 Indexes:
 
@@ -210,20 +210,20 @@ Indexes:
 
 Entity: `EproSubmissionQuarantine`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AnswersJson` | `jsonb` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `DeviceTimestamp` | `timestamp with time zone` | no |  |  |
-| `DiaryId` | `character varying(255)` | no |  |  |
-| `OfflineSyncMarkersJson` | `jsonb` | no |  |  |
-| `OriginalAnswersJson` | `jsonb` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TriageHistoryJson` | `jsonb` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `ValidationErrorsJson` | `jsonb` | no |  |  |
+| Column                   | Type                       | Null | Default | Key |
+| ------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                     | `character varying(36)`    | no   |         | PK  |
+| `AnswersJson`            | `jsonb`                    | no   |         |     |
+| `CreatedAt`              | `timestamp with time zone` | no   |         |     |
+| `DeviceTimestamp`        | `timestamp with time zone` | no   |         |     |
+| `DiaryId`                | `character varying(255)`   | no   |         |     |
+| `OfflineSyncMarkersJson` | `jsonb`                    | no   |         |     |
+| `OriginalAnswersJson`    | `jsonb`                    | no   |         |     |
+| `Status`                 | `character varying(50)`    | no   |         |     |
+| `SubjectId`              | `character varying(255)`   | no   |         |     |
+| `TriageHistoryJson`      | `jsonb`                    | no   |         |     |
+| `UpdatedAt`              | `timestamp with time zone` | no   |         |     |
+| `ValidationErrorsJson`   | `jsonb`                    | no   |         |     |
 
 Indexes:
 
@@ -235,20 +235,20 @@ Indexes:
 
 Entity: `EproSubmission`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AnswersJson` | `jsonb` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DeviceTimestamp` | `timestamp with time zone` | no |  |  |
-| `DiaryId` | `character varying(255)` | no |  |  |
-| `OfflineSyncMarkersJson` | `jsonb` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ServerTimestamp` | `timestamp with time zone` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `SyncStatus` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                   | Type                       | Null | Default | Key |
+| ------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                     | `character varying(36)`    | no   |         | PK  |
+| `AnswersJson`            | `jsonb`                    | no   |         |     |
+| `CreatedAt`              | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`              | `character varying(255)`   | no   |         |     |
+| `DeviceTimestamp`        | `timestamp with time zone` | no   |         |     |
+| `DiaryId`                | `character varying(255)`   | no   |         |     |
+| `OfflineSyncMarkersJson` | `jsonb`                    | no   |         |     |
+| `ReasonForChange`        | `character varying(1000)`  | no   |         |     |
+| `ServerTimestamp`        | `timestamp with time zone` | no   |         |     |
+| `SubjectId`              | `character varying(255)`   | no   |         |     |
+| `SyncStatus`             | `character varying(50)`    | no   |         |     |
+| `VersionIndex`           | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -260,32 +260,32 @@ Indexes:
 
 Entity: `Instrument`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Description` | `character varying(1000)` | yes |  |  |
-| `ItemsJson` | `jsonb` | no |  |  |
-| `Name` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ResponseTypesJson` | `jsonb` | no |  |  |
-| `ScoringMetadataJson` | `jsonb` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                | Type                       | Null | Default | Key |
+| --------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                  | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`           | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`           | `character varying(255)`   | no   |         |     |
+| `Description`         | `character varying(1000)`  | yes  |         |     |
+| `ItemsJson`           | `jsonb`                    | no   |         |     |
+| `Name`                | `character varying(255)`   | no   |         |     |
+| `ReasonForChange`     | `character varying(1000)`  | no   |         |     |
+| `ResponseTypesJson`   | `jsonb`                    | no   |         |     |
+| `ScoringMetadataJson` | `jsonb`                    | no   |         |     |
+| `VersionIndex`        | `integer`                  | no   |         |     |
 
 ## interop.interop_audit_logs
 
 Entity: `InteropAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `ChangeReason` | `character varying(255)` | yes |  |  |
-| `Details` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `UserRole` | `character varying(255)` | no |  |  |
+| Column         | Type                       | Null | Default | Key |
+| -------------- | -------------------------- | ---- | ------- | --- |
+| `Id`           | `character varying(36)`    | no   |         | PK  |
+| `Action`       | `character varying(50)`    | no   |         |     |
+| `ChangeReason` | `character varying(255)`   | yes  |         |     |
+| `Details`      | `character varying(1000)`  | no   |         |     |
+| `Timestamp`    | `timestamp with time zone` | no   |         |     |
+| `UserId`       | `character varying(255)`   | no   |         |     |
+| `UserRole`     | `character varying(255)`   | no   |         |     |
 
 Indexes:
 
@@ -296,46 +296,46 @@ Indexes:
 
 Entity: `SensorDailySummaryRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ActiveMinutes` | `double precision` | yes |  |  |
-| `ActiveWearHours` | `double precision` | no |  |  |
-| `BestFev1Liters` | `double precision` | yes |  |  |
-| `BestFvcLiters` | `double precision` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `DeviceTokenHash` | `character varying(64)` | no |  |  |
-| `DeviceType` | `character varying(50)` | no |  |  |
-| `Fev1FvcRatio` | `double precision` | yes |  |  |
-| `Fev1PercentPredicted` | `double precision` | yes |  |  |
-| `GlucoseCvPercent` | `double precision` | yes |  |  |
-| `GlucoseManagementIndicator` | `double precision` | yes |  |  |
-| `GlucoseSd` | `double precision` | yes |  |  |
-| `LakehouseRecordId` | `character varying(255)` | yes |  |  |
-| `MeanArterialPressureMmhg` | `double precision` | yes |  |  |
-| `MeanCadenceSpm` | `double precision` | yes |  |  |
-| `MeanDiastolicMmhg` | `double precision` | yes |  |  |
-| `MeanGlucoseMgDl` | `double precision` | yes |  |  |
-| `MeanSystolicMmhg` | `double precision` | yes |  |  |
-| `PeakCadenceSpm` | `double precision` | yes |  |  |
-| `PeakExpiratoryFlowLMin` | `double precision` | yes |  |  |
-| `ReadingsCount` | `integer` | no |  |  |
-| `RestingHeartRateBpm` | `double precision` | yes |  |  |
-| `SedentaryMinutes` | `double precision` | yes |  |  |
-| `Sha256Hash` | `character varying(64)` | no |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `SleepDurationMinutes` | `double precision` | yes |  |  |
-| `SleepEfficiencyPercent` | `double precision` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `SummaryDate` | `timestamp with time zone` | no |  |  |
-| `SummaryManifestJson` | `jsonb` | no |  |  |
-| `TarLevel1Percentage` | `double precision` | yes |  |  |
-| `TarLevel2Percentage` | `double precision` | yes |  |  |
-| `TbrLevel1Percentage` | `double precision` | yes |  |  |
-| `TbrLevel2Percentage` | `double precision` | yes |  |  |
-| `TirPercentage` | `double precision` | yes |  |  |
-| `TotalSteps` | `integer` | yes |  |  |
+| Column                       | Type                       | Null | Default | Key |
+| ---------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                         | `character varying(36)`    | no   |         | PK  |
+| `ActiveMinutes`              | `double precision`         | yes  |         |     |
+| `ActiveWearHours`            | `double precision`         | no   |         |     |
+| `BestFev1Liters`             | `double precision`         | yes  |         |     |
+| `BestFvcLiters`              | `double precision`         | yes  |         |     |
+| `CreatedAt`                  | `timestamp with time zone` | no   |         |     |
+| `DeviceTokenHash`            | `character varying(64)`    | no   |         |     |
+| `DeviceType`                 | `character varying(50)`    | no   |         |     |
+| `Fev1FvcRatio`               | `double precision`         | yes  |         |     |
+| `Fev1PercentPredicted`       | `double precision`         | yes  |         |     |
+| `GlucoseCvPercent`           | `double precision`         | yes  |         |     |
+| `GlucoseManagementIndicator` | `double precision`         | yes  |         |     |
+| `GlucoseSd`                  | `double precision`         | yes  |         |     |
+| `LakehouseRecordId`          | `character varying(255)`   | yes  |         |     |
+| `MeanArterialPressureMmhg`   | `double precision`         | yes  |         |     |
+| `MeanCadenceSpm`             | `double precision`         | yes  |         |     |
+| `MeanDiastolicMmhg`          | `double precision`         | yes  |         |     |
+| `MeanGlucoseMgDl`            | `double precision`         | yes  |         |     |
+| `MeanSystolicMmhg`           | `double precision`         | yes  |         |     |
+| `PeakCadenceSpm`             | `double precision`         | yes  |         |     |
+| `PeakExpiratoryFlowLMin`     | `double precision`         | yes  |         |     |
+| `ReadingsCount`              | `integer`                  | no   |         |     |
+| `RestingHeartRateBpm`        | `double precision`         | yes  |         |     |
+| `SedentaryMinutes`           | `double precision`         | yes  |         |     |
+| `Sha256Hash`                 | `character varying(64)`    | no   |         |     |
+| `SiteId`                     | `character varying(255)`   | yes  |         |     |
+| `SleepDurationMinutes`       | `double precision`         | yes  |         |     |
+| `SleepEfficiencyPercent`     | `double precision`         | yes  |         |     |
+| `StudyId`                    | `character varying(255)`   | no   |         |     |
+| `SubjectId`                  | `character varying(255)`   | no   |         |     |
+| `SummaryDate`                | `timestamp with time zone` | no   |         |     |
+| `SummaryManifestJson`        | `jsonb`                    | no   |         |     |
+| `TarLevel1Percentage`        | `double precision`         | yes  |         |     |
+| `TarLevel2Percentage`        | `double precision`         | yes  |         |     |
+| `TbrLevel1Percentage`        | `double precision`         | yes  |         |     |
+| `TbrLevel2Percentage`        | `double precision`         | yes  |         |     |
+| `TirPercentage`              | `double precision`         | yes  |         |     |
+| `TotalSteps`                 | `integer`                  | yes  |         |     |
 
 Indexes:
 
@@ -352,28 +352,28 @@ Indexes:
 
 Entity: `SensorSafetyAlertRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AcknowledgedAt` | `timestamp with time zone` | yes |  |  |
-| `AcknowledgedBy` | `character varying(255)` | yes |  |  |
-| `AcknowledgmentNotes` | `character varying(1000)` | yes |  |  |
-| `AlertId` | `character varying(100)` | no |  |  |
-| `AlertType` | `character varying(50)` | no |  |  |
-| `AuditSignature` | `character varying(255)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `DeviceTokenHash` | `character varying(64)` | no |  |  |
-| `DeviceType` | `character varying(50)` | no |  |  |
-| `IsAcknowledged` | `boolean` | no |  |  |
-| `ObservedValue` | `double precision` | no |  |  |
-| `ParameterName` | `character varying(100)` | no |  |  |
-| `Severity` | `character varying(50)` | no |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `ThresholdValue` | `double precision` | no |  |  |
-| `TriggeredAt` | `timestamp with time zone` | no |  |  |
-| `Unit` | `character varying(50)` | no |  |  |
+| Column                | Type                       | Null | Default | Key |
+| --------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                  | `character varying(36)`    | no   |         | PK  |
+| `AcknowledgedAt`      | `timestamp with time zone` | yes  |         |     |
+| `AcknowledgedBy`      | `character varying(255)`   | yes  |         |     |
+| `AcknowledgmentNotes` | `character varying(1000)`  | yes  |         |     |
+| `AlertId`             | `character varying(100)`   | no   |         |     |
+| `AlertType`           | `character varying(50)`    | no   |         |     |
+| `AuditSignature`      | `character varying(255)`   | yes  |         |     |
+| `CreatedAt`           | `timestamp with time zone` | no   |         |     |
+| `DeviceTokenHash`     | `character varying(64)`    | no   |         |     |
+| `DeviceType`          | `character varying(50)`    | no   |         |     |
+| `IsAcknowledged`      | `boolean`                  | no   |         |     |
+| `ObservedValue`       | `double precision`         | no   |         |     |
+| `ParameterName`       | `character varying(100)`   | no   |         |     |
+| `Severity`            | `character varying(50)`    | no   |         |     |
+| `SiteId`              | `character varying(255)`   | yes  |         |     |
+| `StudyId`             | `character varying(255)`   | no   |         |     |
+| `SubjectId`           | `character varying(255)`   | no   |         |     |
+| `ThresholdValue`      | `double precision`         | no   |         |     |
+| `TriggeredAt`         | `timestamp with time zone` | no   |         |     |
+| `Unit`                | `character varying(50)`    | no   |         |     |
 
 Indexes:
 
@@ -392,25 +392,25 @@ Indexes:
 
 Entity: `SensorTelemetryStreamRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `BatchId` | `character varying(100)` | no |  |  |
-| `ClockDriftOffsetMs` | `double precision` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `DeviceTokenHash` | `character varying(64)` | no |  |  |
-| `DeviceType` | `character varying(50)` | no |  |  |
-| `EndTimestamp` | `timestamp with time zone` | no |  |  |
-| `FeedLakehouseRecordIdsJson` | `jsonb` | no |  |  |
-| `FhirObservationsJson` | `jsonb` | no |  |  |
-| `OmhPayloadJson` | `jsonb` | no |  |  |
-| `RawDataHash` | `character varying(64)` | no |  |  |
-| `ReadingCount` | `integer` | no |  |  |
-| `ReceivedAt` | `timestamp with time zone` | no |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `StartTimestamp` | `timestamp with time zone` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
+| Column                       | Type                       | Null | Default | Key |
+| ---------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                         | `character varying(36)`    | no   |         | PK  |
+| `BatchId`                    | `character varying(100)`   | no   |         |     |
+| `ClockDriftOffsetMs`         | `double precision`         | no   |         |     |
+| `CreatedAt`                  | `timestamp with time zone` | no   |         |     |
+| `DeviceTokenHash`            | `character varying(64)`    | no   |         |     |
+| `DeviceType`                 | `character varying(50)`    | no   |         |     |
+| `EndTimestamp`               | `timestamp with time zone` | no   |         |     |
+| `FeedLakehouseRecordIdsJson` | `jsonb`                    | no   |         |     |
+| `FhirObservationsJson`       | `jsonb`                    | no   |         |     |
+| `OmhPayloadJson`             | `jsonb`                    | no   |         |     |
+| `RawDataHash`                | `character varying(64)`    | no   |         |     |
+| `ReadingCount`               | `integer`                  | no   |         |     |
+| `ReceivedAt`                 | `timestamp with time zone` | no   |         |     |
+| `SiteId`                     | `character varying(255)`   | yes  |         |     |
+| `StartTimestamp`             | `timestamp with time zone` | no   |         |     |
+| `StudyId`                    | `character varying(255)`   | no   |         |     |
+| `SubjectId`                  | `character varying(255)`   | no   |         |     |
 
 Indexes:
 
@@ -427,21 +427,21 @@ Indexes:
 
 Entity: `SubjectAssignment`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DueAt` | `timestamp with time zone` | yes |  |  |
-| `EndDate` | `timestamp with time zone` | no |  |  |
-| `InstrumentId` | `character varying(36)` | no |  |  |
-| `LastMissedAlertAt` | `timestamp with time zone` | yes |  |  |
-| `LastMissedAlertNotifiedAt` | `timestamp with time zone` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RecurrencePattern` | `character varying(50)` | yes |  |  |
-| `StartDate` | `timestamp with time zone` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                      | Type                       | Null | Default | Key |
+| --------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                        | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`                 | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                 | `character varying(255)`   | no   |         |     |
+| `DueAt`                     | `timestamp with time zone` | yes  |         |     |
+| `EndDate`                   | `timestamp with time zone` | no   |         |     |
+| `InstrumentId`              | `character varying(36)`    | no   |         |     |
+| `LastMissedAlertAt`         | `timestamp with time zone` | yes  |         |     |
+| `LastMissedAlertNotifiedAt` | `timestamp with time zone` | yes  |         |     |
+| `ReasonForChange`           | `character varying(1000)`  | no   |         |     |
+| `RecurrencePattern`         | `character varying(50)`    | yes  |         |     |
+| `StartDate`                 | `timestamp with time zone` | no   |         |     |
+| `SubjectId`                 | `character varying(255)`   | no   |         |     |
+| `VersionIndex`              | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -452,20 +452,20 @@ Indexes:
 
 Entity: `SubjectNotification`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AssignmentId` | `character varying(36)` | yes |  |  |
-| `Channel` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DeliveryStatus` | `character varying(50)` | no |  |  |
-| `DueAt` | `timestamp with time zone` | no |  |  |
-| `IsRead` | `boolean` | no |  |  |
-| `ReadAt` | `timestamp with time zone` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `AssignmentId`    | `character varying(36)`    | yes  |         |     |
+| `Channel`         | `character varying(50)`    | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `DeliveryStatus`  | `character varying(50)`    | no   |         |     |
+| `DueAt`           | `timestamp with time zone` | no   |         |     |
+| `IsRead`          | `boolean`                  | no   |         |     |
+| `ReadAt`          | `timestamp with time zone` | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `SubjectId`       | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
 
 Indexes:
 

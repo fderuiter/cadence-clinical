@@ -4,43 +4,43 @@
 
 Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistence.CtmsDbContext`, not from a live database. Unqualified tables live in the `ctms` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`ctms.audit_log_entries`](#ctmsaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`ctms.ctms_audit_logs`](#ctmsctms_audit_logs) | `CtmsAuditLog` | 10 |
-| [`ctms.ctms_budget_line_items`](#ctmsctms_budget_line_items) | `CtmsBudgetLineItem` | 9 |
-| [`ctms.ctms_clinical_queries`](#ctmsctms_clinical_queries) | `CtmsClinicalQuery` | 10 |
-| [`ctms.ctms_cra_allocations`](#ctmsctms_cra_allocations) | `CtmsCraAllocation` | 11 |
-| [`ctms.ctms_defeated_monitoring_visits`](#ctmsctms_defeated_monitoring_visits) | `CtmsDefeatedMonitoringVisit` | 11 |
-| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 12 |
-| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 16 |
-| [`ctms.ctms_investigator_grants`](#ctmsctms_investigator_grants) | `CtmsInvestigatorGrant` | 10 |
-| [`ctms.ctms_investigator_payables`](#ctmsctms_investigator_payables) | `CtmsInvestigatorPayable` | 11 |
-| [`ctms.ctms_monitoring_visit_findings`](#ctmsctms_monitoring_visit_findings) | `CtmsMonitoringVisitFinding` | 11 |
-| [`ctms.ctms_monitoring_visits`](#ctmsctms_monitoring_visits) | `CtmsMonitoringVisit` | 17 |
-| [`ctms.ctms_payment_milestones`](#ctmsctms_payment_milestones) | `CtmsPaymentMilestone` | 11 |
-| [`ctms.ctms_recruitment_records`](#ctmsctms_recruitment_records) | `CtmsRecruitmentRecord` | 11 |
-| [`ctms.ctms_regulatory_forms`](#ctmsctms_regulatory_forms) | `CtmsRegulatoryForm` | 13 |
-| [`ctms.ctms_site_milestones`](#ctmsctms_site_milestones) | `CtmsSiteMilestone` | 11 |
-| [`ctms.doa_delegation_records`](#ctmsdoa_delegation_records) | `DoaDelegationRecord` | 15 |
+| Table                                                                          | Entity                        | Columns |
+| ------------------------------------------------------------------------------ | ----------------------------- | ------- |
+| [`ctms.audit_log_entries`](#ctmsaudit_log_entries)                             | `AuditLogEntry`               | 11      |
+| [`ctms.ctms_audit_logs`](#ctmsctms_audit_logs)                                 | `CtmsAuditLog`                | 10      |
+| [`ctms.ctms_budget_line_items`](#ctmsctms_budget_line_items)                   | `CtmsBudgetLineItem`          | 9       |
+| [`ctms.ctms_clinical_queries`](#ctmsctms_clinical_queries)                     | `CtmsClinicalQuery`           | 10      |
+| [`ctms.ctms_cra_allocations`](#ctmsctms_cra_allocations)                       | `CtmsCraAllocation`           | 11      |
+| [`ctms.ctms_defeated_monitoring_visits`](#ctmsctms_defeated_monitoring_visits) | `CtmsDefeatedMonitoringVisit` | 11      |
+| [`ctms.ctms_delegations`](#ctmsctms_delegations)                               | `CtmsDelegation`              | 12      |
+| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters)                   | `CtmsGeneratedLetter`         | 16      |
+| [`ctms.ctms_investigator_grants`](#ctmsctms_investigator_grants)               | `CtmsInvestigatorGrant`       | 10      |
+| [`ctms.ctms_investigator_payables`](#ctmsctms_investigator_payables)           | `CtmsInvestigatorPayable`     | 11      |
+| [`ctms.ctms_monitoring_visit_findings`](#ctmsctms_monitoring_visit_findings)   | `CtmsMonitoringVisitFinding`  | 11      |
+| [`ctms.ctms_monitoring_visits`](#ctmsctms_monitoring_visits)                   | `CtmsMonitoringVisit`         | 17      |
+| [`ctms.ctms_payment_milestones`](#ctmsctms_payment_milestones)                 | `CtmsPaymentMilestone`        | 11      |
+| [`ctms.ctms_recruitment_records`](#ctmsctms_recruitment_records)               | `CtmsRecruitmentRecord`       | 11      |
+| [`ctms.ctms_regulatory_forms`](#ctmsctms_regulatory_forms)                     | `CtmsRegulatoryForm`          | 13      |
+| [`ctms.ctms_site_milestones`](#ctmsctms_site_milestones)                       | `CtmsSiteMilestone`           | 11      |
+| [`ctms.doa_delegation_records`](#ctmsdoa_delegation_records)                   | `DoaDelegationRecord`         | 15      |
 
 ## ctms.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -50,18 +50,18 @@ Indexes:
 
 Entity: `CtmsAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Details` | `character varying(1000)` | no |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `UserRole` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `text`                     | no   |         |     |
+| `Details`         | `character varying(1000)`  | no   |         |     |
+| `ReasonForChange` | `text`                     | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `UserRole`        | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -72,17 +72,17 @@ Indexes:
 
 Entity: `CtmsBudgetLineItem`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Amount` | `double precision` | no |  |  |
-| `Category` | `character varying(100)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Description` | `character varying(255)` | no |  |  |
-| `GrantId` | `character varying(36)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Amount`          | `double precision`         | no   |         |     |
+| `Category`        | `character varying(100)`   | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Description`     | `character varying(255)`   | no   |         |     |
+| `GrantId`         | `character varying(36)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -96,18 +96,18 @@ Indexes:
 
 Entity: `CtmsClinicalQuery`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Explanation` | `character varying(1000)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(255)` | yes |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Explanation`     | `character varying(1000)`  | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `SiteId`          | `character varying(255)`   | no   |         |     |
+| `Status`          | `character varying(50)`    | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
+| `VisitId`         | `character varying(255)`   | yes  |         |     |
 
 Indexes:
 
@@ -119,19 +119,19 @@ Indexes:
 
 Entity: `CtmsCraAllocation`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CraId` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `EffectiveEndDate` | `timestamp with time zone` | yes |  |  |
-| `EffectiveStartDate` | `timestamp with time zone` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `character varying(36)`    | no   |         | PK  |
+| `CraId`              | `character varying(255)`   | no   |         |     |
+| `CreatedAt`          | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`          | `character varying(255)`   | no   |         |     |
+| `EffectiveEndDate`   | `timestamp with time zone` | yes  |         |     |
+| `EffectiveStartDate` | `timestamp with time zone` | no   |         |     |
+| `ReasonForChange`    | `character varying(1000)`  | no   |         |     |
+| `SiteId`             | `character varying(255)`   | no   |         |     |
+| `Status`             | `character varying(50)`    | no   |         |     |
+| `StudyId`            | `character varying(255)`   | no   |         |     |
+| `VersionIndex`       | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -143,19 +143,19 @@ Indexes:
 
 Entity: `CtmsDefeatedMonitoringVisit`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ActualDate` | `timestamp with time zone` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DeviceTimestamp` | `timestamp with time zone` | no |  |  |
-| `Findings` | `text` | yes |  |  |
-| `OfflineSyncMarkers` | `jsonb` | no |  |  |
-| `ReasonForChange` | `character varying(500)` | no |  |  |
-| `Status` | `character varying(100)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(255)` | no |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `character varying(36)`    | no   |         | PK  |
+| `ActualDate`         | `timestamp with time zone` | yes  |         |     |
+| `CreatedAt`          | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`          | `character varying(255)`   | no   |         |     |
+| `DeviceTimestamp`    | `timestamp with time zone` | no   |         |     |
+| `Findings`           | `text`                     | yes  |         |     |
+| `OfflineSyncMarkers` | `jsonb`                    | no   |         |     |
+| `ReasonForChange`    | `character varying(500)`   | no   |         |     |
+| `Status`             | `character varying(100)`   | no   |         |     |
+| `VersionIndex`       | `bigint`                   | no   |         |     |
+| `VisitId`            | `character varying(255)`   | no   |         |     |
 
 Indexes:
 
@@ -165,20 +165,20 @@ Indexes:
 
 Entity: `CtmsDelegation`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `EndDate` | `character varying(50)` | yes |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SignedOff` | `boolean` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `StaffUserId` | `character varying(255)` | no |  |  |
-| `StartDate` | `character varying(50)` | no |  |  |
-| `TaskCodes` | `jsonb` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `EndDate`         | `character varying(50)`    | yes  |         |     |
+| `IsActive`        | `boolean`                  | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `SignedOff`       | `boolean`                  | no   |         |     |
+| `SiteId`          | `character varying(255)`   | no   |         |     |
+| `StaffUserId`     | `character varying(255)`   | no   |         |     |
+| `StartDate`       | `character varying(50)`    | no   |         |     |
+| `TaskCodes`       | `jsonb`                    | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -189,24 +189,24 @@ Indexes:
 
 Entity: `CtmsGeneratedLetter`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DispatchedAt` | `timestamp with time zone` | yes |  |  |
-| `EtmfDocumentId` | `character varying(100)` | yes |  |  |
-| `IsSigned` | `boolean` | no |  |  |
-| `LetterType` | `character varying(50)` | no |  |  |
-| `PdfObjectKey` | `character varying(1000)` | yes |  |  |
-| `PdfSha256Hash` | `character varying(64)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RecipientEmail` | `character varying(255)` | yes |  |  |
-| `RenderedContent` | `character varying(100000)` | no |  |  |
-| `SignatureManifestation` | `jsonb` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(36)` | no |  |  |
+| Column                   | Type                        | Null | Default | Key |
+| ------------------------ | --------------------------- | ---- | ------- | --- |
+| `Id`                     | `character varying(36)`     | no   |         | PK  |
+| `CreatedAt`              | `timestamp with time zone`  | no   |         |     |
+| `CreatedBy`              | `character varying(255)`    | no   |         |     |
+| `DispatchedAt`           | `timestamp with time zone`  | yes  |         |     |
+| `EtmfDocumentId`         | `character varying(100)`    | yes  |         |     |
+| `IsSigned`               | `boolean`                   | no   |         |     |
+| `LetterType`             | `character varying(50)`     | no   |         |     |
+| `PdfObjectKey`           | `character varying(1000)`   | yes  |         |     |
+| `PdfSha256Hash`          | `character varying(64)`     | yes  |         |     |
+| `ReasonForChange`        | `character varying(1000)`   | no   |         |     |
+| `RecipientEmail`         | `character varying(255)`    | yes  |         |     |
+| `RenderedContent`        | `character varying(100000)` | no   |         |     |
+| `SignatureManifestation` | `jsonb`                     | yes  |         |     |
+| `Status`                 | `character varying(50)`     | no   |         |     |
+| `VersionIndex`           | `bigint`                    | no   |         |     |
+| `VisitId`                | `character varying(36)`     | no   |         |     |
 
 Indexes:
 
@@ -216,18 +216,18 @@ Indexes:
 
 Entity: `CtmsInvestigatorGrant`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TotalBudget` | `double precision` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Currency`        | `character varying(10)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `SiteId`          | `character varying(255)`   | no   |         |     |
+| `Status`          | `character varying(50)`    | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `TotalBudget`     | `double precision`         | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -238,19 +238,19 @@ Indexes:
 
 Entity: `CtmsInvestigatorPayable`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Amount` | `double precision` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DueDate` | `timestamp with time zone` | yes |  |  |
-| `GrantId` | `character varying(36)` | no |  |  |
-| `MilestoneId` | `character varying(36)` | yes |  |  |
-| `PaidAt` | `timestamp with time zone` | yes |  |  |
-| `PaymentStatus` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Amount`          | `double precision`         | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `DueDate`         | `timestamp with time zone` | yes  |         |     |
+| `GrantId`         | `character varying(36)`    | no   |         |     |
+| `MilestoneId`     | `character varying(36)`    | yes  |         |     |
+| `PaidAt`          | `timestamp with time zone` | yes  |         |     |
+| `PaymentStatus`   | `character varying(50)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -266,19 +266,19 @@ Indexes:
 
 Entity: `CtmsMonitoringVisitFinding`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `OfflineSyncMarkers` | `jsonb` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ResolutionStatus` | `character varying(50)` | no |  |  |
-| `Severity` | `character varying(50)` | no |  |  |
-| `SyncStatus` | `character varying(50)` | yes |  |  |
-| `Text` | `character varying(1000)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitId` | `character varying(36)` | no |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`          | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`          | `character varying(255)`   | no   |         |     |
+| `OfflineSyncMarkers` | `jsonb`                    | yes  |         |     |
+| `ReasonForChange`    | `character varying(1000)`  | no   |         |     |
+| `ResolutionStatus`   | `character varying(50)`    | no   |         |     |
+| `Severity`           | `character varying(50)`    | no   |         |     |
+| `SyncStatus`         | `character varying(50)`    | yes  |         |     |
+| `Text`               | `character varying(1000)`  | no   |         |     |
+| `VersionIndex`       | `bigint`                   | no   |         |     |
+| `VisitId`            | `character varying(36)`    | no   |         |     |
 
 Indexes:
 
@@ -288,25 +288,25 @@ Indexes:
 
 Entity: `CtmsMonitoringVisit`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ActualDate` | `timestamp with time zone` | yes |  |  |
-| `CraId` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `OfflineSyncMarkers` | `jsonb` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ScheduledDate` | `timestamp with time zone` | no |  |  |
-| `SignatureManifestation` | `jsonb` | yes |  |  |
-| `Signer` | `character varying(255)` | yes |  |  |
-| `SigningTimestamp` | `timestamp with time zone` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SyncStatus` | `character varying(50)` | yes |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
-| `VisitType` | `character varying(50)` | no |  |  |
+| Column                   | Type                       | Null | Default | Key |
+| ------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                     | `character varying(36)`    | no   |         | PK  |
+| `ActualDate`             | `timestamp with time zone` | yes  |         |     |
+| `CraId`                  | `character varying(255)`   | no   |         |     |
+| `CreatedAt`              | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`              | `character varying(255)`   | no   |         |     |
+| `OfflineSyncMarkers`     | `jsonb`                    | yes  |         |     |
+| `ReasonForChange`        | `character varying(1000)`  | no   |         |     |
+| `ScheduledDate`          | `timestamp with time zone` | no   |         |     |
+| `SignatureManifestation` | `jsonb`                    | yes  |         |     |
+| `Signer`                 | `character varying(255)`   | yes  |         |     |
+| `SigningTimestamp`       | `timestamp with time zone` | yes  |         |     |
+| `SiteId`                 | `character varying(255)`   | no   |         |     |
+| `Status`                 | `character varying(50)`    | no   |         |     |
+| `StudyId`                | `character varying(255)`   | no   |         |     |
+| `SyncStatus`             | `character varying(50)`    | yes  |         |     |
+| `VersionIndex`           | `bigint`                   | no   |         |     |
+| `VisitType`              | `character varying(50)`    | no   |         |     |
 
 Indexes:
 
@@ -317,19 +317,19 @@ Indexes:
 
 Entity: `CtmsPaymentMilestone`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Amount` | `double precision` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `GrantId` | `character varying(36)` | no |  |  |
-| `IsTriggered` | `boolean` | no |  |  |
-| `MilestoneName` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `TriggerCondition` | `character varying(100)` | no |  |  |
-| `TriggeredAt` | `timestamp with time zone` | yes |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column             | Type                       | Null | Default | Key |
+| ------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`               | `character varying(36)`    | no   |         | PK  |
+| `Amount`           | `double precision`         | no   |         |     |
+| `CreatedAt`        | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`        | `character varying(255)`   | no   |         |     |
+| `GrantId`          | `character varying(36)`    | no   |         |     |
+| `IsTriggered`      | `boolean`                  | no   |         |     |
+| `MilestoneName`    | `character varying(255)`   | no   |         |     |
+| `ReasonForChange`  | `character varying(1000)`  | no   |         |     |
+| `TriggerCondition` | `character varying(100)`   | no   |         |     |
+| `TriggeredAt`      | `timestamp with time zone` | yes  |         |     |
+| `VersionIndex`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -343,19 +343,19 @@ Indexes:
 
 Entity: `CtmsRecruitmentRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AsOfDate` | `timestamp with time zone` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `EnrolledCount` | `integer` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ScreenedCount` | `integer` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TargetCount` | `integer` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `AsOfDate`        | `timestamp with time zone` | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `EnrolledCount`   | `integer`                  | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `ScreenedCount`   | `integer`                  | no   |         |     |
+| `SiteId`          | `character varying(255)`   | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `TargetCount`     | `integer`                  | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -366,21 +366,21 @@ Indexes:
 
 Entity: `CtmsRegulatoryForm`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ApprovalStatus` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `FormType` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RenderedContent` | `character varying(100000)` | no |  |  |
-| `SignatureManifestation` | `jsonb` | yes |  |  |
-| `Signer` | `character varying(255)` | yes |  |  |
-| `SigningTimestamp` | `timestamp with time zone` | yes |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column                   | Type                        | Null | Default | Key |
+| ------------------------ | --------------------------- | ---- | ------- | --- |
+| `Id`                     | `character varying(36)`     | no   |         | PK  |
+| `ApprovalStatus`         | `character varying(50)`     | no   |         |     |
+| `CreatedAt`              | `timestamp with time zone`  | no   |         |     |
+| `CreatedBy`              | `character varying(255)`    | no   |         |     |
+| `FormType`               | `character varying(50)`     | no   |         |     |
+| `ReasonForChange`        | `character varying(1000)`   | no   |         |     |
+| `RenderedContent`        | `character varying(100000)` | no   |         |     |
+| `SignatureManifestation` | `jsonb`                     | yes  |         |     |
+| `Signer`                 | `character varying(255)`    | yes  |         |     |
+| `SigningTimestamp`       | `timestamp with time zone`  | yes  |         |     |
+| `SiteId`                 | `character varying(255)`    | yes  |         |     |
+| `StudyId`                | `character varying(255)`    | no   |         |     |
+| `VersionIndex`           | `bigint`                    | no   |         |     |
 
 Indexes:
 
@@ -391,19 +391,19 @@ Indexes:
 
 Entity: `CtmsSiteMilestone`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ActualDate` | `timestamp with time zone` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `MilestoneType` | `character varying(100)` | no |  |  |
-| `PlannedDate` | `timestamp with time zone` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `ActualDate`      | `timestamp with time zone` | yes  |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `MilestoneType`   | `character varying(100)`   | no   |         |     |
+| `PlannedDate`     | `timestamp with time zone` | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `SiteId`          | `character varying(255)`   | no   |         |     |
+| `Status`          | `character varying(50)`    | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -415,23 +415,23 @@ Indexes:
 
 Entity: `DoaDelegationRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `text` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `EndDate` | `timestamp with time zone` | yes |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `IsDeleted` | `boolean` | no |  |  |
-| `PiApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `PiSignatureHash` | `text` | yes |  |  |
-| `ReasonForChange` | `text` | no |  |  |
-| `SiteId` | `text` | no |  |  |
-| `StaffUserId` | `text` | no |  |  |
-| `StartDate` | `timestamp with time zone` | no |  |  |
-| `Status` | `text` | no |  |  |
-| `TaskCode` | `text` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `text`                     | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `text`                     | no   |         |     |
+| `EndDate`         | `timestamp with time zone` | yes  |         |     |
+| `IsActive`        | `boolean`                  | no   |         |     |
+| `IsDeleted`       | `boolean`                  | no   |         |     |
+| `PiApprovedAt`    | `timestamp with time zone` | yes  |         |     |
+| `PiSignatureHash` | `text`                     | yes  |         |     |
+| `ReasonForChange` | `text`                     | no   |         |     |
+| `SiteId`          | `text`                     | no   |         |     |
+| `StaffUserId`     | `text`                     | no   |         |     |
+| `StartDate`       | `timestamp with time zone` | no   |         |     |
+| `Status`          | `text`                     | no   |         |     |
+| `TaskCode`        | `text`                     | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 

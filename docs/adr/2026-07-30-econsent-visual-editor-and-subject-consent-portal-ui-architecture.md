@@ -21,19 +21,18 @@ Describe the architectural context and problem statement. Reference the applicab
 ### Option 1: Option A (Selected)
 
 - **Overview:** Option A (Selected)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Option B (Alternative)
 
 - **Overview:** Option B (Alternative)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

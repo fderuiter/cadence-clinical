@@ -22,6 +22,7 @@ This decision implements requirements under Trace-7.
 ## 3. Options Considered
 
 ### Option 1: Shared Database Schema with CTMS
+
 Incorporate deviation and CAPA management directly into the CTMS database and microservice.
 
 - Pros:
@@ -30,9 +31,8 @@ Incorporate deviation and CAPA management directly into the CTMS database and mi
   - ❌ Increases coupling between operations (CTMS) and quality assurance workflows.
   - ❌ Harder to scale or deploy the Quality system independently.
 
-
-
 ### Option 2: Standalone Quality Service with Isolated Persistence (Selected)
+
 Establish a separate FastAPI service under `apps/quality/` with its own `QualityDatabaseManager` and separate SQLAlchemy 2.0 tables for Deviation, RCA, CAPARecord, and QualityAuditLog.
 
 - Pros:
@@ -41,8 +41,6 @@ Establish a separate FastAPI service under `apps/quality/` with its own `Quality
   - ✅ Enforced database-level relationships and foreign key referential integrity.
 - Cons:
   - ❌ Minimal operational overhead of an additional microservice setup.
-
-
 
 ## 4. Decision Outcome
 

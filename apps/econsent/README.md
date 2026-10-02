@@ -35,8 +35,8 @@ Electronic consent scaffold. It holds the consent persistence model (documents, 
 
 ## Configuration and secrets at rest
 
-| Setting | Purpose |
-| --- | --- |
+| Setting                | Purpose                                                                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FIELD_ENCRYPTION_KEY` | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts signer e-mail addresses. The service refuses to start without a valid key; there is no default. |
 
 Consent signatures (`consent_signatures`, #4770):

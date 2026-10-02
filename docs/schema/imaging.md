@@ -4,35 +4,35 @@
 
 Generated from the EF Core model of `Cadence.Apps.Imaging.Infrastructure.Persistence.ImagingDbContext`, not from a live database. Unqualified tables live in the `imaging` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`imaging.audit_log_entries`](#imagingaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`imaging.imaging_adjudication_sessions`](#imagingimaging_adjudication_sessions) | `ImagingAdjudicationSession` | 36 |
-| [`imaging.imaging_audit_logs`](#imagingimaging_audit_logs) | `ImagingAuditLog` | 7 |
-| [`imaging.imaging_caliper_annotations`](#imagingimaging_caliper_annotations) | `ImagingAnnotation` | 29 |
-| [`imaging.imaging_deid_certificates`](#imagingimaging_deid_certificates) | `DeidentificationCertificate` | 19 |
-| [`imaging.imaging_instance_envelopes`](#imagingimaging_instance_envelopes) | `ImagingInstanceEnvelope` | 18 |
-| [`imaging.imaging_series_envelopes`](#imagingimaging_series_envelopes) | `ImagingSeriesEnvelope` | 10 |
-| [`imaging.imaging_study_envelopes`](#imagingimaging_study_envelopes) | `ImagingStudyEnvelope` | 19 |
-| [`imaging.imaging_tumor_response_assessments`](#imagingimaging_tumor_response_assessments) | `TumorResponseAssessment` | 34 |
+| Table                                                                                      | Entity                        | Columns |
+| ------------------------------------------------------------------------------------------ | ----------------------------- | ------- |
+| [`imaging.audit_log_entries`](#imagingaudit_log_entries)                                   | `AuditLogEntry`               | 11      |
+| [`imaging.imaging_adjudication_sessions`](#imagingimaging_adjudication_sessions)           | `ImagingAdjudicationSession`  | 36      |
+| [`imaging.imaging_audit_logs`](#imagingimaging_audit_logs)                                 | `ImagingAuditLog`             | 7       |
+| [`imaging.imaging_caliper_annotations`](#imagingimaging_caliper_annotations)               | `ImagingAnnotation`           | 29      |
+| [`imaging.imaging_deid_certificates`](#imagingimaging_deid_certificates)                   | `DeidentificationCertificate` | 19      |
+| [`imaging.imaging_instance_envelopes`](#imagingimaging_instance_envelopes)                 | `ImagingInstanceEnvelope`     | 18      |
+| [`imaging.imaging_series_envelopes`](#imagingimaging_series_envelopes)                     | `ImagingSeriesEnvelope`       | 10      |
+| [`imaging.imaging_study_envelopes`](#imagingimaging_study_envelopes)                       | `ImagingStudyEnvelope`        | 19      |
+| [`imaging.imaging_tumor_response_assessments`](#imagingimaging_tumor_response_assessments) | `TumorResponseAssessment`     | 34      |
 
 ## imaging.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -42,44 +42,44 @@ Indexes:
 
 Entity: `ImagingAdjudicationSession`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AdjudicationRationale` | `character varying(2000)` | yes |  |  |
-| `AdjudicatorAssessmentJson` | `jsonb` | yes |  |  |
-| `AdjudicatorId` | `character varying(255)` | yes |  |  |
-| `AdjudicatorName` | `character varying(255)` | yes |  |  |
-| `AssessmentCriteria` | `character varying(50)` | no |  |  |
-| `BindingReader` | `character varying(50)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DiscordanceReasonsJson` | `jsonb` | no |  |  |
-| `ElectronicSignatureJson` | `jsonb` | yes |  |  |
-| `FinalConsensusResponse` | `character varying(50)` | yes |  |  |
-| `FinalConsensusSldMm` | `double precision` | yes |  |  |
-| `IsResponseDiscordant` | `boolean` | no |  |  |
-| `LockedAt` | `timestamp with time zone` | yes |  |  |
-| `LockedBy` | `character varying(255)` | yes |  |  |
-| `Reader1AssessmentJson` | `jsonb` | yes |  |  |
-| `Reader1Id` | `character varying(255)` | no |  |  |
-| `Reader1Name` | `character varying(255)` | no |  |  |
-| `Reader1Status` | `character varying(50)` | no |  |  |
-| `Reader2AssessmentJson` | `jsonb` | yes |  |  |
-| `Reader2Id` | `character varying(255)` | no |  |  |
-| `Reader2Name` | `character varying(255)` | no |  |  |
-| `Reader2Status` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `SessionDigest` | `character varying(64)` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `SldDiscordanceDelta` | `double precision` | no |  |  |
-| `StudyEnvelopeId` | `character varying(36)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TenantId` | `character varying(255)` | no |  |  |
-| `TimepointName` | `character varying(100)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `WorkflowStatus` | `character varying(50)` | no |  |  |
+| Column                      | Type                       | Null | Default | Key |
+| --------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                        | `character varying(36)`    | no   |         | PK  |
+| `AdjudicationRationale`     | `character varying(2000)`  | yes  |         |     |
+| `AdjudicatorAssessmentJson` | `jsonb`                    | yes  |         |     |
+| `AdjudicatorId`             | `character varying(255)`   | yes  |         |     |
+| `AdjudicatorName`           | `character varying(255)`   | yes  |         |     |
+| `AssessmentCriteria`        | `character varying(50)`    | no   |         |     |
+| `BindingReader`             | `character varying(50)`    | yes  |         |     |
+| `CreatedAt`                 | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                 | `character varying(255)`   | no   |         |     |
+| `DiscordanceReasonsJson`    | `jsonb`                    | no   |         |     |
+| `ElectronicSignatureJson`   | `jsonb`                    | yes  |         |     |
+| `FinalConsensusResponse`    | `character varying(50)`    | yes  |         |     |
+| `FinalConsensusSldMm`       | `double precision`         | yes  |         |     |
+| `IsResponseDiscordant`      | `boolean`                  | no   |         |     |
+| `LockedAt`                  | `timestamp with time zone` | yes  |         |     |
+| `LockedBy`                  | `character varying(255)`   | yes  |         |     |
+| `Reader1AssessmentJson`     | `jsonb`                    | yes  |         |     |
+| `Reader1Id`                 | `character varying(255)`   | no   |         |     |
+| `Reader1Name`               | `character varying(255)`   | no   |         |     |
+| `Reader1Status`             | `character varying(50)`    | no   |         |     |
+| `Reader2AssessmentJson`     | `jsonb`                    | yes  |         |     |
+| `Reader2Id`                 | `character varying(255)`   | no   |         |     |
+| `Reader2Name`               | `character varying(255)`   | no   |         |     |
+| `Reader2Status`             | `character varying(50)`    | no   |         |     |
+| `ReasonForChange`           | `character varying(1000)`  | yes  |         |     |
+| `SessionDigest`             | `character varying(64)`    | no   |         |     |
+| `SiteId`                    | `character varying(255)`   | no   |         |     |
+| `SldDiscordanceDelta`       | `double precision`         | no   |         |     |
+| `StudyEnvelopeId`           | `character varying(36)`    | yes  |         |     |
+| `StudyId`                   | `character varying(255)`   | no   |         |     |
+| `SubjectId`                 | `character varying(255)`   | no   |         |     |
+| `TenantId`                  | `character varying(255)`   | no   |         |     |
+| `TimepointName`             | `character varying(100)`   | no   |         |     |
+| `UpdatedAt`                 | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`              | `integer`                  | no   |         |     |
+| `WorkflowStatus`            | `character varying(50)`    | no   |         |     |
 
 Indexes:
 
@@ -98,15 +98,15 @@ Indexes:
 
 Entity: `ImagingAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(100)` | no |  |  |
-| `ActorId` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `DetailsJson` | `jsonb` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `StudyEnvelopeId` | `character varying(36)` | yes |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Action`          | `character varying(100)`   | no   |         |     |
+| `ActorId`         | `character varying(255)`   | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `DetailsJson`     | `jsonb`                    | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `StudyEnvelopeId` | `character varying(36)`    | yes  |         |     |
 
 Indexes:
 
@@ -118,37 +118,37 @@ Indexes:
 
 Entity: `ImagingAnnotation`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DeauvilleScore` | `integer` | yes |  |  |
-| `HounsfieldStatsJson` | `jsonb` | yes |  |  |
-| `LesionId` | `character varying(50)` | no |  |  |
-| `LesionType` | `character varying(50)` | no |  |  |
-| `LongestDiameterMm` | `double precision` | no |  |  |
-| `MeasurementCriteria` | `character varying(50)` | no |  |  |
-| `MeasurementType` | `character varying(50)` | no |  |  |
-| `Notes` | `character varying(1000)` | yes |  |  |
-| `OrganSite` | `character varying(100)` | no |  |  |
-| `PerpendicularDiameterMm` | `double precision` | yes |  |  |
-| `PointsJson` | `jsonb` | no |  |  |
-| `ProductPerpendicularMm2` | `double precision` | yes |  |  |
-| `ReaderId` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `SeriesEnvelopeId` | `character varying(36)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `SliceIndex` | `integer` | yes |  |  |
-| `SliceLocation` | `double precision` | yes |  |  |
-| `SopInstanceUid` | `character varying(64)` | yes |  |  |
-| `StudyEnvelopeId` | `character varying(36)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TimepointName` | `character varying(100)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VolumeMm3` | `double precision` | yes |  |  |
+| Column                    | Type                       | Null | Default | Key |
+| ------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                      | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`               | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`               | `character varying(255)`   | no   |         |     |
+| `DeauvilleScore`          | `integer`                  | yes  |         |     |
+| `HounsfieldStatsJson`     | `jsonb`                    | yes  |         |     |
+| `LesionId`                | `character varying(50)`    | no   |         |     |
+| `LesionType`              | `character varying(50)`    | no   |         |     |
+| `LongestDiameterMm`       | `double precision`         | no   |         |     |
+| `MeasurementCriteria`     | `character varying(50)`    | no   |         |     |
+| `MeasurementType`         | `character varying(50)`    | no   |         |     |
+| `Notes`                   | `character varying(1000)`  | yes  |         |     |
+| `OrganSite`               | `character varying(100)`   | no   |         |     |
+| `PerpendicularDiameterMm` | `double precision`         | yes  |         |     |
+| `PointsJson`              | `jsonb`                    | no   |         |     |
+| `ProductPerpendicularMm2` | `double precision`         | yes  |         |     |
+| `ReaderId`                | `character varying(255)`   | no   |         |     |
+| `ReasonForChange`         | `character varying(1000)`  | yes  |         |     |
+| `SeriesEnvelopeId`        | `character varying(36)`    | yes  |         |     |
+| `SiteId`                  | `character varying(255)`   | no   |         |     |
+| `SliceIndex`              | `integer`                  | yes  |         |     |
+| `SliceLocation`           | `double precision`         | yes  |         |     |
+| `SopInstanceUid`          | `character varying(64)`    | yes  |         |     |
+| `StudyEnvelopeId`         | `character varying(36)`    | yes  |         |     |
+| `StudyId`                 | `character varying(255)`   | no   |         |     |
+| `SubjectId`               | `character varying(255)`   | no   |         |     |
+| `TimepointName`           | `character varying(100)`   | no   |         |     |
+| `UpdatedAt`               | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`            | `integer`                  | no   |         |     |
+| `VolumeMm3`               | `double precision`         | yes  |         |     |
 
 Indexes:
 
@@ -166,27 +166,27 @@ Indexes:
 
 Entity: `DeidentificationCertificate`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AnonymizedSopInstanceUid` | `character varying(64)` | no |  |  |
-| `AnonymizedStudyInstanceUid` | `character varying(64)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `OperatorIdentity` | `character varying(255)` | no |  |  |
-| `OriginalSopInstanceUidHash` | `character varying(64)` | no |  |  |
-| `OriginalStudyInstanceUidHash` | `character varying(64)` | no |  |  |
-| `PixelMaskApplied` | `boolean` | no |  |  |
-| `PixelMasksJson` | `jsonb` | no |  |  |
-| `ScrubbedTagsCount` | `integer` | no |  |  |
-| `ScrubbedTagsJson` | `jsonb` | no |  |  |
-| `Signature` | `character varying(255)` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `SourceSha256` | `character varying(64)` | no |  |  |
-| `StudyEnvelopeId` | `character varying(36)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TargetSha256` | `character varying(64)` | no |  |  |
-| `Timestamp` | `character varying(50)` | no |  |  |
+| Column                         | Type                       | Null | Default | Key |
+| ------------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                           | `character varying(36)`    | no   |         | PK  |
+| `AnonymizedSopInstanceUid`     | `character varying(64)`    | no   |         |     |
+| `AnonymizedStudyInstanceUid`   | `character varying(64)`    | no   |         |     |
+| `CreatedAt`                    | `timestamp with time zone` | no   |         |     |
+| `OperatorIdentity`             | `character varying(255)`   | no   |         |     |
+| `OriginalSopInstanceUidHash`   | `character varying(64)`    | no   |         |     |
+| `OriginalStudyInstanceUidHash` | `character varying(64)`    | no   |         |     |
+| `PixelMaskApplied`             | `boolean`                  | no   |         |     |
+| `PixelMasksJson`               | `jsonb`                    | no   |         |     |
+| `ScrubbedTagsCount`            | `integer`                  | no   |         |     |
+| `ScrubbedTagsJson`             | `jsonb`                    | no   |         |     |
+| `Signature`                    | `character varying(255)`   | no   |         |     |
+| `SiteId`                       | `character varying(255)`   | no   |         |     |
+| `SourceSha256`                 | `character varying(64)`    | no   |         |     |
+| `StudyEnvelopeId`              | `character varying(36)`    | yes  |         |     |
+| `StudyId`                      | `character varying(255)`   | no   |         |     |
+| `SubjectId`                    | `character varying(255)`   | no   |         |     |
+| `TargetSha256`                 | `character varying(64)`    | no   |         |     |
+| `Timestamp`                    | `character varying(50)`    | no   |         |     |
 
 Indexes:
 
@@ -203,26 +203,26 @@ Indexes:
 
 Entity: `ImagingInstanceEnvelope`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `BitsAllocated` | `integer` | no |  |  |
-| `BurnedInPhiMasked` | `boolean` | no |  |  |
-| `CertificateId` | `character varying(36)` | yes |  |  |
-| `ChecksumSha256` | `character varying(64)` | no |  |  |
-| `Columns` | `integer` | no |  |  |
-| `InstanceNumber` | `integer` | yes |  |  |
-| `ObjectKey` | `character varying(1000)` | no |  |  |
-| `PixelSpacingJson` | `jsonb` | yes |  |  |
-| `Rows` | `integer` | no |  |  |
-| `SeriesEnvelopeId` | `character varying(36)` | no |  |  |
-| `SizeBytes` | `bigint` | no |  |  |
-| `SliceLocation` | `double precision` | yes |  |  |
-| `SliceThickness` | `double precision` | yes |  |  |
-| `SopClassUid` | `character varying(64)` | no |  |  |
-| `SopInstanceUid` | `character varying(64)` | no |  |  |
-| `WindowCenter` | `double precision` | yes |  |  |
-| `WindowWidth` | `double precision` | yes |  |  |
+| Column              | Type                      | Null | Default | Key |
+| ------------------- | ------------------------- | ---- | ------- | --- |
+| `Id`                | `character varying(36)`   | no   |         | PK  |
+| `BitsAllocated`     | `integer`                 | no   |         |     |
+| `BurnedInPhiMasked` | `boolean`                 | no   |         |     |
+| `CertificateId`     | `character varying(36)`   | yes  |         |     |
+| `ChecksumSha256`    | `character varying(64)`   | no   |         |     |
+| `Columns`           | `integer`                 | no   |         |     |
+| `InstanceNumber`    | `integer`                 | yes  |         |     |
+| `ObjectKey`         | `character varying(1000)` | no   |         |     |
+| `PixelSpacingJson`  | `jsonb`                   | yes  |         |     |
+| `Rows`              | `integer`                 | no   |         |     |
+| `SeriesEnvelopeId`  | `character varying(36)`   | no   |         |     |
+| `SizeBytes`         | `bigint`                  | no   |         |     |
+| `SliceLocation`     | `double precision`        | yes  |         |     |
+| `SliceThickness`    | `double precision`        | yes  |         |     |
+| `SopClassUid`       | `character varying(64)`   | no   |         |     |
+| `SopInstanceUid`    | `character varying(64)`   | no   |         |     |
+| `WindowCenter`      | `double precision`        | yes  |         |     |
+| `WindowWidth`       | `double precision`        | yes  |         |     |
 
 Indexes:
 
@@ -237,18 +237,18 @@ Indexes:
 
 Entity: `ImagingSeriesEnvelope`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `BodyPartExamined` | `character varying(100)` | yes |  |  |
-| `FrameOfReferenceUid` | `character varying(64)` | yes |  |  |
-| `InstanceCount` | `integer` | no |  |  |
-| `Modality` | `character varying(20)` | no |  |  |
-| `ProtocolName` | `character varying(255)` | yes |  |  |
-| `SeriesDescription` | `character varying(500)` | yes |  |  |
-| `SeriesInstanceUid` | `character varying(64)` | no |  |  |
-| `SeriesNumber` | `integer` | yes |  |  |
-| `StudyEnvelopeId` | `character varying(36)` | no |  |  |
+| Column                | Type                     | Null | Default | Key |
+| --------------------- | ------------------------ | ---- | ------- | --- |
+| `Id`                  | `character varying(36)`  | no   |         | PK  |
+| `BodyPartExamined`    | `character varying(100)` | yes  |         |     |
+| `FrameOfReferenceUid` | `character varying(64)`  | yes  |         |     |
+| `InstanceCount`       | `integer`                | no   |         |     |
+| `Modality`            | `character varying(20)`  | no   |         |     |
+| `ProtocolName`        | `character varying(255)` | yes  |         |     |
+| `SeriesDescription`   | `character varying(500)` | yes  |         |     |
+| `SeriesInstanceUid`   | `character varying(64)`  | no   |         |     |
+| `SeriesNumber`        | `integer`                | yes  |         |     |
+| `StudyEnvelopeId`     | `character varying(36)`  | no   |         |     |
 
 Indexes:
 
@@ -260,27 +260,27 @@ Indexes:
 
 Entity: `ImagingStudyEnvelope`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AdjudicationStatus` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `InstanceCount` | `integer` | no |  |  |
-| `ModalitiesJson` | `jsonb` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `SeriesCount` | `integer` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StoragePrefix` | `character varying(1000)` | yes |  |  |
-| `StudyDate` | `character varying(8)` | yes |  |  |
-| `StudyDescription` | `character varying(500)` | yes |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `StudyInstanceUid` | `character varying(64)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TenantId` | `character varying(255)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `character varying(36)`    | no   |         | PK  |
+| `AdjudicationStatus` | `character varying(50)`    | no   |         |     |
+| `CreatedAt`          | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`          | `character varying(255)`   | no   |         |     |
+| `InstanceCount`      | `integer`                  | no   |         |     |
+| `ModalitiesJson`     | `jsonb`                    | no   |         |     |
+| `ReasonForChange`    | `character varying(1000)`  | yes  |         |     |
+| `SeriesCount`        | `integer`                  | no   |         |     |
+| `SiteId`             | `character varying(255)`   | no   |         |     |
+| `Status`             | `character varying(50)`    | no   |         |     |
+| `StoragePrefix`      | `character varying(1000)`  | yes  |         |     |
+| `StudyDate`          | `character varying(8)`     | yes  |         |     |
+| `StudyDescription`   | `character varying(500)`   | yes  |         |     |
+| `StudyId`            | `character varying(255)`   | no   |         |     |
+| `StudyInstanceUid`   | `character varying(64)`    | no   |         |     |
+| `SubjectId`          | `character varying(255)`   | no   |         |     |
+| `TenantId`           | `character varying(255)`   | no   |         |     |
+| `UpdatedAt`          | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`       | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -297,42 +297,42 @@ Indexes:
 
 Entity: `TumorResponseAssessment`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AbsoluteChangeNadirMm` | `double precision` | yes |  |  |
-| `AssessmentCriteria` | `character varying(50)` | no |  |  |
-| `BaselineSldMm` | `double precision` | yes |  |  |
-| `BaselineSpdMm2` | `double precision` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `CurrentSldMm` | `double precision` | yes |  |  |
-| `CurrentSpdMm2` | `double precision` | yes |  |  |
-| `IsLocked` | `boolean` | no |  |  |
-| `LockedAt` | `timestamp with time zone` | yes |  |  |
-| `LockedBy` | `character varying(255)` | yes |  |  |
-| `ManifestSha256` | `character varying(64)` | no |  |  |
-| `MaxDeauvilleScore` | `integer` | yes |  |  |
-| `NadirSldMm` | `double precision` | yes |  |  |
-| `NadirSpdMm2` | `double precision` | yes |  |  |
-| `NewLesionsCount` | `integer` | no |  |  |
-| `NewLesionsPresent` | `boolean` | no |  |  |
-| `NonTargetStatus` | `character varying(50)` | no |  |  |
-| `OverallResponse` | `character varying(50)` | no |  |  |
-| `PctChangeBaseline` | `double precision` | yes |  |  |
-| `PctChangeNadir` | `double precision` | yes |  |  |
-| `PctChangeSpdBaseline` | `double precision` | yes |  |  |
-| `PctChangeSpdNadir` | `double precision` | yes |  |  |
-| `ReaderId` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `Signature` | `character varying(255)` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TargetResponse` | `character varying(50)` | no |  |  |
-| `TimepointName` | `character varying(100)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                  | Type                       | Null | Default | Key |
+| ----------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                    | `character varying(36)`    | no   |         | PK  |
+| `AbsoluteChangeNadirMm` | `double precision`         | yes  |         |     |
+| `AssessmentCriteria`    | `character varying(50)`    | no   |         |     |
+| `BaselineSldMm`         | `double precision`         | yes  |         |     |
+| `BaselineSpdMm2`        | `double precision`         | yes  |         |     |
+| `CreatedAt`             | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`             | `character varying(255)`   | no   |         |     |
+| `CurrentSldMm`          | `double precision`         | yes  |         |     |
+| `CurrentSpdMm2`         | `double precision`         | yes  |         |     |
+| `IsLocked`              | `boolean`                  | no   |         |     |
+| `LockedAt`              | `timestamp with time zone` | yes  |         |     |
+| `LockedBy`              | `character varying(255)`   | yes  |         |     |
+| `ManifestSha256`        | `character varying(64)`    | no   |         |     |
+| `MaxDeauvilleScore`     | `integer`                  | yes  |         |     |
+| `NadirSldMm`            | `double precision`         | yes  |         |     |
+| `NadirSpdMm2`           | `double precision`         | yes  |         |     |
+| `NewLesionsCount`       | `integer`                  | no   |         |     |
+| `NewLesionsPresent`     | `boolean`                  | no   |         |     |
+| `NonTargetStatus`       | `character varying(50)`    | no   |         |     |
+| `OverallResponse`       | `character varying(50)`    | no   |         |     |
+| `PctChangeBaseline`     | `double precision`         | yes  |         |     |
+| `PctChangeNadir`        | `double precision`         | yes  |         |     |
+| `PctChangeSpdBaseline`  | `double precision`         | yes  |         |     |
+| `PctChangeSpdNadir`     | `double precision`         | yes  |         |     |
+| `ReaderId`              | `character varying(255)`   | no   |         |     |
+| `ReasonForChange`       | `character varying(1000)`  | yes  |         |     |
+| `Signature`             | `character varying(255)`   | no   |         |     |
+| `SiteId`                | `character varying(255)`   | no   |         |     |
+| `StudyId`               | `character varying(255)`   | no   |         |     |
+| `SubjectId`             | `character varying(255)`   | no   |         |     |
+| `TargetResponse`        | `character varying(50)`    | no   |         |     |
+| `TimepointName`         | `character varying(100)`   | no   |         |     |
+| `UpdatedAt`             | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`          | `integer`                  | no   |         |     |
 
 Indexes:
 

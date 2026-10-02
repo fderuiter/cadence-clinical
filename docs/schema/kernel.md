@@ -4,80 +4,80 @@
 
 Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`, not from a live database. Unqualified tables live in the `public` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`kernel.activity_entries`](#kernelactivity_entries) | `ActivityEntryRecord` | 11 |
-| [`kernel.artifact_versions`](#kernelartifact_versions) | `ArtifactVersion` | 9 |
-| [`kernel.artifacts`](#kernelartifacts) | `Artifact` | 9 |
-| [`kernel.attestations`](#kernelattestations) | `Attestation` | 15 |
-| [`kernel.audit_chain_heads`](#kernelaudit_chain_heads) | `AuditChainHead` | 3 |
-| [`kernel.audit_chain_seals`](#kernelaudit_chain_seals) | `AuditChainSeal` | 6 |
-| [`kernel.audit_entries`](#kernelaudit_entries) | `AuditEntryRecord` | 14 |
-| [`kernel.code_system_entries`](#kernelcode_system_entries) | `CodeSystemEntry` | 9 |
-| [`kernel.code_system_versions`](#kernelcode_system_versions) | `CodeSystemVersion` | 15 |
-| [`kernel.code_systems`](#kernelcode_systems) | `CodeSystem` | 10 |
-| [`kernel.concept_mappings`](#kernelconcept_mappings) | `ConceptMapping` | 13 |
-| [`kernel.concept_revisions`](#kernelconcept_revisions) | `ConceptRevision` | 6 |
-| [`kernel.concepts`](#kernelconcepts) | `Concept` | 13 |
-| [`kernel.domain_events`](#kerneldomain_events) | `DomainEventRecord` | 11 |
-| [`kernel.effectivities`](#kerneleffectivities) | `Effectivity` | 13 |
-| [`kernel.effectivity_status_periods`](#kerneleffectivity_status_periods) | `EffectivityStatusPeriod` | 7 |
-| [`kernel.enrollment_status_periods`](#kernelenrollment_status_periods) | `EnrollmentStatusPeriod` | 8 |
-| [`kernel.enrollments`](#kernelenrollments) | `Enrollment` | 15 |
-| [`kernel.grant_periods`](#kernelgrant_periods) | `GrantPeriod` | 5 |
-| [`kernel.grants`](#kernelgrants) | `Grant` | 16 |
-| [`kernel.idempotency_records`](#kernelidempotency_records) | `IdempotencyRecord` | 7 |
-| [`kernel.library_items`](#kernellibrary_items) | `LibraryItem` | 16 |
-| [`kernel.lineage_edges`](#kernellineage_edges) | `LineageEdgeRecord` | 12 |
-| [`kernel.lineage_nodes`](#kernellineage_nodes) | `LineageNodeRecord` | 7 |
-| [`kernel.organizations`](#kernelorganizations) | `Organization` | 10 |
-| [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
-| [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
-| [`kernel.people`](#kernelpeople) | `Person` | 6 |
-| [`kernel.proposals`](#kernelproposals) | `Proposal` | 24 |
-| [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
-| [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 14 |
-| [`kernel.qualification_periods`](#kernelqualification_periods) | `QualificationPeriod` | 5 |
-| [`kernel.qualification_requirement_periods`](#kernelqualification_requirement_periods) | `QualificationRequirementPeriod` | 5 |
-| [`kernel.qualification_requirements`](#kernelqualification_requirements) | `QualificationRequirement` | 13 |
-| [`kernel.qualifications`](#kernelqualifications) | `Qualification` | 13 |
-| [`kernel.roles`](#kernelroles) | `Role` | 9 |
-| [`kernel.sites`](#kernelsites) | `Site` | 11 |
-| [`kernel.standard_datasets`](#kernelstandard_datasets) | `StandardDataset` | 7 |
-| [`kernel.standard_terminology`](#kernelstandard_terminology) | `StandardTerminologyBinding` | 5 |
-| [`kernel.standard_value_level_definitions`](#kernelstandard_value_level_definitions) | `StandardValueLevelDefinition` | 11 |
-| [`kernel.standard_variables`](#kernelstandard_variables) | `StandardVariable` | 13 |
-| [`kernel.standard_versions`](#kernelstandard_versions) | `StandardVersion` | 16 |
-| [`kernel.studies`](#kernelstudies) | `Study` | 11 |
-| [`kernel.study_sites`](#kernelstudy_sites) | `StudySite` | 10 |
-| [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 11 |
-| [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
-| [`kernel.tenants`](#kerneltenants) | `Tenant` | 9 |
-| [`kernel.validation_detections`](#kernelvalidation_detections) | `ValidationDetectionRecord` | 17 |
-| [`kernel.validation_findings`](#kernelvalidation_findings) | `ValidationFinding` | 14 |
-| [`kernel.validation_run_datasets`](#kernelvalidation_run_datasets) | `ValidationRunDataset` | 3 |
-| [`kernel.validation_run_inputs`](#kernelvalidation_run_inputs) | `ValidationRunInput` | 3 |
-| [`kernel.validation_run_packs`](#kernelvalidation_run_packs) | `ValidationRunPack` | 6 |
-| [`kernel.validation_runs`](#kernelvalidation_runs) | `ValidationRun` | 15 |
-| [`kernel.work_queue_definitions`](#kernelwork_queue_definitions) | `WorkQueueDefinition` | 12 |
+| Table                                                                                  | Entity                           | Columns |
+| -------------------------------------------------------------------------------------- | -------------------------------- | ------- |
+| [`kernel.activity_entries`](#kernelactivity_entries)                                   | `ActivityEntryRecord`            | 11      |
+| [`kernel.artifact_versions`](#kernelartifact_versions)                                 | `ArtifactVersion`                | 9       |
+| [`kernel.artifacts`](#kernelartifacts)                                                 | `Artifact`                       | 9       |
+| [`kernel.attestations`](#kernelattestations)                                           | `Attestation`                    | 15      |
+| [`kernel.audit_chain_heads`](#kernelaudit_chain_heads)                                 | `AuditChainHead`                 | 3       |
+| [`kernel.audit_chain_seals`](#kernelaudit_chain_seals)                                 | `AuditChainSeal`                 | 6       |
+| [`kernel.audit_entries`](#kernelaudit_entries)                                         | `AuditEntryRecord`               | 14      |
+| [`kernel.code_system_entries`](#kernelcode_system_entries)                             | `CodeSystemEntry`                | 9       |
+| [`kernel.code_system_versions`](#kernelcode_system_versions)                           | `CodeSystemVersion`              | 15      |
+| [`kernel.code_systems`](#kernelcode_systems)                                           | `CodeSystem`                     | 10      |
+| [`kernel.concept_mappings`](#kernelconcept_mappings)                                   | `ConceptMapping`                 | 13      |
+| [`kernel.concept_revisions`](#kernelconcept_revisions)                                 | `ConceptRevision`                | 6       |
+| [`kernel.concepts`](#kernelconcepts)                                                   | `Concept`                        | 13      |
+| [`kernel.domain_events`](#kerneldomain_events)                                         | `DomainEventRecord`              | 11      |
+| [`kernel.effectivities`](#kerneleffectivities)                                         | `Effectivity`                    | 13      |
+| [`kernel.effectivity_status_periods`](#kerneleffectivity_status_periods)               | `EffectivityStatusPeriod`        | 7       |
+| [`kernel.enrollment_status_periods`](#kernelenrollment_status_periods)                 | `EnrollmentStatusPeriod`         | 8       |
+| [`kernel.enrollments`](#kernelenrollments)                                             | `Enrollment`                     | 15      |
+| [`kernel.grant_periods`](#kernelgrant_periods)                                         | `GrantPeriod`                    | 5       |
+| [`kernel.grants`](#kernelgrants)                                                       | `Grant`                          | 16      |
+| [`kernel.idempotency_records`](#kernelidempotency_records)                             | `IdempotencyRecord`              | 7       |
+| [`kernel.library_items`](#kernellibrary_items)                                         | `LibraryItem`                    | 16      |
+| [`kernel.lineage_edges`](#kernellineage_edges)                                         | `LineageEdgeRecord`              | 12      |
+| [`kernel.lineage_nodes`](#kernellineage_nodes)                                         | `LineageNodeRecord`              | 7       |
+| [`kernel.organizations`](#kernelorganizations)                                         | `Organization`                   | 10      |
+| [`kernel.outbox_messages`](#kerneloutbox_messages)                                     | `OutboxMessageRecord`            | 10      |
+| [`kernel.participants`](#kernelparticipants)                                           | `Participant`                    | 6       |
+| [`kernel.people`](#kernelpeople)                                                       | `Person`                         | 6       |
+| [`kernel.proposals`](#kernelproposals)                                                 | `Proposal`                       | 24      |
+| [`kernel.protocol_versions`](#kernelprotocol_versions)                                 | `ProtocolVersion`                | 16      |
+| [`kernel.provenance_activities`](#kernelprovenance_activities)                         | `ProvenanceActivityRecord`       | 14      |
+| [`kernel.qualification_periods`](#kernelqualification_periods)                         | `QualificationPeriod`            | 5       |
+| [`kernel.qualification_requirement_periods`](#kernelqualification_requirement_periods) | `QualificationRequirementPeriod` | 5       |
+| [`kernel.qualification_requirements`](#kernelqualification_requirements)               | `QualificationRequirement`       | 13      |
+| [`kernel.qualifications`](#kernelqualifications)                                       | `Qualification`                  | 13      |
+| [`kernel.roles`](#kernelroles)                                                         | `Role`                           | 9       |
+| [`kernel.sites`](#kernelsites)                                                         | `Site`                           | 11      |
+| [`kernel.standard_datasets`](#kernelstandard_datasets)                                 | `StandardDataset`                | 7       |
+| [`kernel.standard_terminology`](#kernelstandard_terminology)                           | `StandardTerminologyBinding`     | 5       |
+| [`kernel.standard_value_level_definitions`](#kernelstandard_value_level_definitions)   | `StandardValueLevelDefinition`   | 11      |
+| [`kernel.standard_variables`](#kernelstandard_variables)                               | `StandardVariable`               | 13      |
+| [`kernel.standard_versions`](#kernelstandard_versions)                                 | `StandardVersion`                | 16      |
+| [`kernel.studies`](#kernelstudies)                                                     | `Study`                          | 11      |
+| [`kernel.study_sites`](#kernelstudy_sites)                                             | `StudySite`                      | 10      |
+| [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles)                   | `StudyStandardsProfile`          | 11      |
+| [`kernel.tenant_memberships`](#kerneltenant_memberships)                               | `TenantMembership`               | 8       |
+| [`kernel.tenants`](#kerneltenants)                                                     | `Tenant`                         | 9       |
+| [`kernel.validation_detections`](#kernelvalidation_detections)                         | `ValidationDetectionRecord`      | 17      |
+| [`kernel.validation_findings`](#kernelvalidation_findings)                             | `ValidationFinding`              | 14      |
+| [`kernel.validation_run_datasets`](#kernelvalidation_run_datasets)                     | `ValidationRunDataset`           | 3       |
+| [`kernel.validation_run_inputs`](#kernelvalidation_run_inputs)                         | `ValidationRunInput`             | 3       |
+| [`kernel.validation_run_packs`](#kernelvalidation_run_packs)                           | `ValidationRunPack`              | 6       |
+| [`kernel.validation_runs`](#kernelvalidation_runs)                                     | `ValidationRun`                  | 15      |
+| [`kernel.work_queue_definitions`](#kernelwork_queue_definitions)                       | `WorkQueueDefinition`            | 12      |
 
 ## kernel.activity_entries
 
 Entity: `ActivityEntryRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `event_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `actor_id` | `character varying(255)` | no |  |  |
-| `correlation_id` | `uuid` | no |  |  |
-| `family` | `character varying(32)` | no |  |  |
-| `occurred_valid` | `timestamp with time zone` | yes |  |  |
-| `recorded` | `timestamp with time zone` | no |  |  |
-| `scope` | `text[]` | no |  |  |
-| `subject` | `character varying(128)` | yes |  |  |
-| `subject_kind` | `character varying(48)` | yes |  |  |
-| `type` | `character varying(128)` | no |  |  |
+| Column           | Type                       | Null | Default | Key |
+| ---------------- | -------------------------- | ---- | ------- | --- |
+| `event_id`       | `uuid`                     | no   |         | PK  |
+| `tenant_id`      | `uuid`                     | no   |         | PK  |
+| `actor_id`       | `character varying(255)`   | no   |         |     |
+| `correlation_id` | `uuid`                     | no   |         |     |
+| `family`         | `character varying(32)`    | no   |         |     |
+| `occurred_valid` | `timestamp with time zone` | yes  |         |     |
+| `recorded`       | `timestamp with time zone` | no   |         |     |
+| `scope`          | `text[]`                   | no   |         |     |
+| `subject`        | `character varying(128)`   | yes  |         |     |
+| `subject_kind`   | `character varying(48)`    | yes  |         |     |
+| `type`           | `character varying(128)`   | no   |         |     |
 
 Foreign keys:
 
@@ -92,17 +92,17 @@ Indexes:
 
 Entity: `ArtifactVersion`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `artifact_id` | `uuid` | no |  |  |
-| `content_hash` | `character varying(71)` | no |  |  |
-| `media_type` | `character varying(255)` | no |  |  |
-| `number` | `integer` | no |  |  |
-| `recorded_at` | `timestamp with time zone` | no |  |  |
-| `size_bytes` | `bigint` | no |  |  |
-| `storage_ref` | `character varying(1024)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
+| Column         | Type                       | Null | Default | Key |
+| -------------- | -------------------------- | ---- | ------- | --- |
+| `id`           | `uuid`                     | no   |         | PK  |
+| `artifact_id`  | `uuid`                     | no   |         |     |
+| `content_hash` | `character varying(71)`    | no   |         |     |
+| `media_type`   | `character varying(255)`   | no   |         |     |
+| `number`       | `integer`                  | no   |         |     |
+| `recorded_at`  | `timestamp with time zone` | no   |         |     |
+| `size_bytes`   | `bigint`                   | no   |         |     |
+| `storage_ref`  | `character varying(1024)`  | no   |         |     |
+| `tenant_id`    | `uuid`                     | no   |         |     |
 
 Foreign keys:
 
@@ -124,17 +124,17 @@ Check constraints:
 
 Entity: `Artifact`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `kind` | `character varying(32)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `study_id` | `uuid` | yes |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `title` | `character varying(500)` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `kind`              | `character varying(32)`    | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `study_id`          | `uuid`                     | yes  |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `title`             | `character varying(500)`   | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -150,23 +150,23 @@ Indexes:
 
 Entity: `Attestation`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `actor_id` | `character varying(255)` | no |  |  |
-| `authenticated_at` | `timestamp with time zone` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `meaning` | `character varying(32)` | no |  |  |
-| `method` | `character varying(64)` | no |  |  |
-| `reason` | `character varying(1000)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `recorded_at` | `timestamp with time zone` | no |  |  |
-| `target_content_hash` | `character varying(71)` | no |  |  |
-| `target_id` | `uuid` | no |  |  |
-| `target_kind` | `character varying(64)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                | Type                       | Null | Default | Key |
+| --------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                  | `uuid`                     | no   |         | PK  |
+| `actor_id`            | `character varying(255)`   | no   |         |     |
+| `authenticated_at`    | `timestamp with time zone` | no   |         |     |
+| `created_at`          | `timestamp with time zone` | no   |         |     |
+| `created_by`          | `character varying(255)`   | no   |         |     |
+| `meaning`             | `character varying(32)`    | no   |         |     |
+| `method`              | `character varying(64)`    | no   |         |     |
+| `reason`              | `character varying(1000)`  | no   |         |     |
+| `reason_for_change`   | `character varying(1000)`  | no   |         |     |
+| `recorded_at`         | `timestamp with time zone` | no   |         |     |
+| `target_content_hash` | `character varying(71)`    | no   |         |     |
+| `target_id`           | `uuid`                     | no   |         |     |
+| `target_kind`         | `character varying(64)`    | no   |         |     |
+| `tenant_id`           | `uuid`                     | no   |         |     |
+| `version_index`       | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -185,24 +185,24 @@ Check constraints:
 
 Entity: `AuditChainHead`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `tenant_id` | `uuid` | no |  | PK |
-| `last_hash` | `character varying(64)` | no |  |  |
-| `last_sequence` | `bigint` | no |  |  |
+| Column          | Type                    | Null | Default | Key |
+| --------------- | ----------------------- | ---- | ------- | --- |
+| `tenant_id`     | `uuid`                  | no   |         | PK  |
+| `last_hash`     | `character varying(64)` | no   |         |     |
+| `last_sequence` | `bigint`                | no   |         |     |
 
 ## kernel.audit_chain_seals
 
 Entity: `AuditChainSeal`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `hash` | `character varying(64)` | no |  |  |
-| `sealed_at` | `timestamp with time zone` | no |  |  |
-| `sealed_by` | `character varying(256)` | no |  |  |
-| `sequence` | `bigint` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
+| Column      | Type                       | Null | Default | Key |
+| ----------- | -------------------------- | ---- | ------- | --- |
+| `id`        | `uuid`                     | no   |         | PK  |
+| `hash`      | `character varying(64)`    | no   |         |     |
+| `sealed_at` | `timestamp with time zone` | no   |         |     |
+| `sealed_by` | `character varying(256)`   | no   |         |     |
+| `sequence`  | `bigint`                   | no   |         |     |
+| `tenant_id` | `uuid`                     | no   |         |     |
 
 Indexes:
 
@@ -212,22 +212,22 @@ Indexes:
 
 Entity: `AuditEntryRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `action` | `character varying(64)` | no |  |  |
-| `activity_id` | `uuid` | no |  |  |
-| `actor_id` | `character varying(256)` | no |  |  |
-| `aggregate_id` | `character varying(200)` | yes |  |  |
-| `aggregate_type` | `character varying(200)` | yes |  |  |
-| `aggregate_version` | `bigint` | yes |  |  |
-| `changes` | `text` | no |  |  |
-| `hash` | `character varying(64)` | no |  |  |
-| `predecessor_hash` | `character varying(64)` | no |  |  |
-| `reason_for_change` | `character varying(2000)` | no |  |  |
-| `recorded_at` | `timestamp with time zone` | no |  |  |
-| `sequence` | `bigint` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `action`            | `character varying(64)`    | no   |         |     |
+| `activity_id`       | `uuid`                     | no   |         |     |
+| `actor_id`          | `character varying(256)`   | no   |         |     |
+| `aggregate_id`      | `character varying(200)`   | yes  |         |     |
+| `aggregate_type`    | `character varying(200)`   | yes  |         |     |
+| `aggregate_version` | `bigint`                   | yes  |         |     |
+| `changes`           | `text`                     | no   |         |     |
+| `hash`              | `character varying(64)`    | no   |         |     |
+| `predecessor_hash`  | `character varying(64)`    | no   |         |     |
+| `reason_for_change` | `character varying(2000)`  | no   |         |     |
+| `recorded_at`       | `timestamp with time zone` | no   |         |     |
+| `sequence`          | `bigint`                   | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
 
 Indexes:
 
@@ -238,17 +238,17 @@ Indexes:
 
 Entity: `CodeSystemEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `code_system_version_id` | `uuid` | no |  | PK |
-| `ordinal` | `integer` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `code` | `character varying(64)` | no |  |  |
-| `definition` | `text` | yes |  |  |
-| `display` | `character varying(1000)` | no |  |  |
-| `group_code` | `character varying(64)` | yes |  |  |
-| `submission_value` | `character varying(255)` | yes |  |  |
-| `synonyms` | `text[]` | no |  |  |
+| Column                   | Type                      | Null | Default | Key |
+| ------------------------ | ------------------------- | ---- | ------- | --- |
+| `code_system_version_id` | `uuid`                    | no   |         | PK  |
+| `ordinal`                | `integer`                 | no   |         | PK  |
+| `tenant_id`              | `uuid`                    | no   |         | PK  |
+| `code`                   | `character varying(64)`   | no   |         |     |
+| `definition`             | `text`                    | yes  |         |     |
+| `display`                | `character varying(1000)` | no   |         |     |
+| `group_code`             | `character varying(64)`   | yes  |         |     |
+| `submission_value`       | `character varying(255)`  | yes  |         |     |
+| `synonyms`               | `text[]`                  | no   |         |     |
 
 Foreign keys:
 
@@ -263,23 +263,23 @@ Indexes:
 
 Entity: `CodeSystemVersion`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `code_system_id` | `uuid` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `entry_count` | `integer` | no |  |  |
-| `package_byte_length` | `bigint` | no |  |  |
-| `package_file_name` | `character varying(255)` | no |  |  |
-| `package_format` | `character varying(64)` | no |  |  |
-| `package_sha256` | `character(64)` | no |  |  |
-| `package_source_uri` | `character varying(1024)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `released_on` | `date` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version` | `character varying(64)` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                | Type                       | Null | Default | Key |
+| --------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                  | `uuid`                     | no   |         | PK  |
+| `code_system_id`      | `uuid`                     | no   |         |     |
+| `created_at`          | `timestamp with time zone` | no   |         |     |
+| `created_by`          | `character varying(255)`   | no   |         |     |
+| `entry_count`         | `integer`                  | no   |         |     |
+| `package_byte_length` | `bigint`                   | no   |         |     |
+| `package_file_name`   | `character varying(255)`   | no   |         |     |
+| `package_format`      | `character varying(64)`    | no   |         |     |
+| `package_sha256`      | `character(64)`            | no   |         |     |
+| `package_source_uri`  | `character varying(1024)`  | no   |         |     |
+| `reason_for_change`   | `character varying(1000)`  | no   |         |     |
+| `released_on`         | `date`                     | no   |         |     |
+| `tenant_id`           | `uuid`                     | no   |         |     |
+| `version`             | `character varying(64)`    | no   |         |     |
+| `version_index`       | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -295,18 +295,18 @@ Indexes:
 
 Entity: `CodeSystem`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `license` | `character varying(32)` | no |  |  |
-| `name` | `character varying(255)` | no |  |  |
-| `publisher` | `character varying(255)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `uri` | `character varying(512)` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `license`           | `character varying(32)`    | no   |         |     |
+| `name`              | `character varying(255)`   | no   |         |     |
+| `publisher`         | `character varying(255)`   | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `uri`               | `character varying(512)`   | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -321,21 +321,21 @@ Indexes:
 
 Entity: `ConceptMapping`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `code` | `character varying(64)` | no |  |  |
-| `code_system_version_id` | `uuid` | no |  |  |
-| `concept_id` | `uuid` | no |  |  |
-| `concept_version` | `integer` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `evidence` | `character varying(2000)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `relation` | `character varying(32)` | no |  |  |
-| `status` | `character varying(32)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                   | Type                       | Null | Default | Key |
+| ------------------------ | -------------------------- | ---- | ------- | --- |
+| `id`                     | `uuid`                     | no   |         | PK  |
+| `code`                   | `character varying(64)`    | no   |         |     |
+| `code_system_version_id` | `uuid`                     | no   |         |     |
+| `concept_id`             | `uuid`                     | no   |         |     |
+| `concept_version`        | `integer`                  | no   |         |     |
+| `created_at`             | `timestamp with time zone` | no   |         |     |
+| `created_by`             | `character varying(255)`   | no   |         |     |
+| `evidence`               | `character varying(2000)`  | no   |         |     |
+| `reason_for_change`      | `character varying(1000)`  | no   |         |     |
+| `relation`               | `character varying(32)`    | no   |         |     |
+| `status`                 | `character varying(32)`    | no   |         |     |
+| `tenant_id`              | `uuid`                     | no   |         |     |
+| `version_index`          | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -354,14 +354,14 @@ Indexes:
 
 Entity: `ConceptRevision`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `concept_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `version` | `integer` | no |  | PK |
-| `definition` | `text` | no |  |  |
-| `preferred_label` | `character varying(500)` | no |  |  |
-| `recorded_at` | `timestamp with time zone` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `concept_id`      | `uuid`                     | no   |         | PK  |
+| `tenant_id`       | `uuid`                     | no   |         | PK  |
+| `version`         | `integer`                  | no   |         | PK  |
+| `definition`      | `text`                     | no   |         |     |
+| `preferred_label` | `character varying(500)`   | no   |         |     |
+| `recorded_at`     | `timestamp with time zone` | no   |         |     |
 
 Foreign keys:
 
@@ -371,21 +371,21 @@ Foreign keys:
 
 Entity: `Concept`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `definition` | `text` | no |  |  |
-| `external_code` | `character varying(64)` | yes |  |  |
-| `kind` | `character varying(32)` | no |  |  |
-| `origin` | `character varying(32)` | no |  |  |
-| `preferred_label` | `character varying(500)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `status` | `character varying(32)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version` | `integer` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `definition`        | `text`                     | no   |         |     |
+| `external_code`     | `character varying(64)`    | yes  |         |     |
+| `kind`              | `character varying(32)`    | no   |         |     |
+| `origin`            | `character varying(32)`    | no   |         |     |
+| `preferred_label`   | `character varying(500)`   | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `status`            | `character varying(32)`    | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version`           | `integer`                  | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -400,19 +400,19 @@ Indexes:
 
 Entity: `DomainEventRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `event_id` | `uuid` | no |  | PK |
-| `activity_id` | `uuid` | no |  |  |
-| `actor_id` | `character varying(256)` | no |  |  |
-| `causation_id` | `uuid` | yes |  |  |
-| `correlation_id` | `uuid` | no |  |  |
-| `occurred_valid` | `timestamp with time zone` | yes |  |  |
-| `payload` | `jsonb` | no |  |  |
-| `recorded` | `timestamp with time zone` | no |  |  |
-| `schema_version` | `integer` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `type` | `character varying(200)` | no |  |  |
+| Column           | Type                       | Null | Default | Key |
+| ---------------- | -------------------------- | ---- | ------- | --- |
+| `event_id`       | `uuid`                     | no   |         | PK  |
+| `activity_id`    | `uuid`                     | no   |         |     |
+| `actor_id`       | `character varying(256)`   | no   |         |     |
+| `causation_id`   | `uuid`                     | yes  |         |     |
+| `correlation_id` | `uuid`                     | no   |         |     |
+| `occurred_valid` | `timestamp with time zone` | yes  |         |     |
+| `payload`        | `jsonb`                    | no   |         |     |
+| `recorded`       | `timestamp with time zone` | no   |         |     |
+| `schema_version` | `integer`                  | no   |         |     |
+| `tenant_id`      | `uuid`                     | no   |         |     |
+| `type`           | `character varying(200)`   | no   |         |     |
 
 Indexes:
 
@@ -423,21 +423,21 @@ Indexes:
 
 Entity: `Effectivity`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `protocol_version_id` | `uuid` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `scope_country` | `character varying(2)` | yes |  |  |
-| `scope_level` | `character varying(16)` | no |  |  |
-| `scope_study_site_id` | `uuid` | yes |  |  |
-| `status` | `character varying(32)` | no |  |  |
-| `status_since` | `timestamp with time zone` | no |  |  |
-| `study_id` | `uuid` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                | Type                       | Null | Default | Key |
+| --------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                  | `uuid`                     | no   |         | PK  |
+| `created_at`          | `timestamp with time zone` | no   |         |     |
+| `created_by`          | `character varying(255)`   | no   |         |     |
+| `protocol_version_id` | `uuid`                     | no   |         |     |
+| `reason_for_change`   | `character varying(1000)`  | no   |         |     |
+| `scope_country`       | `character varying(2)`     | yes  |         |     |
+| `scope_level`         | `character varying(16)`    | no   |         |     |
+| `scope_study_site_id` | `uuid`                     | yes  |         |     |
+| `status`              | `character varying(32)`    | no   |         |     |
+| `status_since`        | `timestamp with time zone` | no   |         |     |
+| `study_id`            | `uuid`                     | no   |         |     |
+| `tenant_id`           | `uuid`                     | no   |         |     |
+| `version_index`       | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -461,15 +461,15 @@ Check constraints:
 
 Entity: `EffectivityStatusPeriod`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `effectivity_id` | `uuid` | no |  |  |
-| `evidence` | `uuid[]` | no |  |  |
-| `recorded_period` | `tstzrange` | no |  |  |
-| `status` | `character varying(32)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `valid_period` | `tstzrange` | no |  |  |
+| Column            | Type                    | Null | Default | Key |
+| ----------------- | ----------------------- | ---- | ------- | --- |
+| `id`              | `uuid`                  | no   |         | PK  |
+| `effectivity_id`  | `uuid`                  | no   |         |     |
+| `evidence`        | `uuid[]`                | no   |         |     |
+| `recorded_period` | `tstzrange`             | no   |         |     |
+| `status`          | `character varying(32)` | no   |         |     |
+| `tenant_id`       | `uuid`                  | no   |         |     |
+| `valid_period`    | `tstzrange`             | no   |         |     |
 
 Foreign keys:
 
@@ -483,16 +483,16 @@ Indexes:
 
 Entity: `EnrollmentStatusPeriod`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `enrollment_id` | `uuid` | no |  |  |
-| `participant_id` | `uuid` | no |  |  |
-| `recorded_period` | `tstzrange` | no |  |  |
-| `status` | `character varying(16)` | no |  |  |
-| `study_site_id` | `uuid` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `valid_period` | `tstzrange` | no |  |  |
+| Column            | Type                    | Null | Default | Key |
+| ----------------- | ----------------------- | ---- | ------- | --- |
+| `id`              | `uuid`                  | no   |         | PK  |
+| `enrollment_id`   | `uuid`                  | no   |         |     |
+| `participant_id`  | `uuid`                  | no   |         |     |
+| `recorded_period` | `tstzrange`             | no   |         |     |
+| `status`          | `character varying(16)` | no   |         |     |
+| `study_site_id`   | `uuid`                  | no   |         |     |
+| `tenant_id`       | `uuid`                  | no   |         |     |
+| `valid_period`    | `tstzrange`             | no   |         |     |
 
 Foreign keys:
 
@@ -507,23 +507,23 @@ Indexes:
 
 Entity: `Enrollment`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `enrollment_number` | `integer` | yes |  |  |
-| `participant_id` | `uuid` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `status` | `character varying(16)` | no |  |  |
-| `status_since` | `timestamp with time zone` | no |  |  |
-| `study_id` | `uuid` | no |  |  |
-| `study_site_id` | `uuid` | no |  |  |
-| `subject_code` | `character varying(64)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
-| `withdrawal_attestation_id` | `uuid` | yes |  |  |
-| `withdrawal_kind` | `character varying(32)` | yes |  |  |
+| Column                      | Type                       | Null | Default | Key |
+| --------------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                        | `uuid`                     | no   |         | PK  |
+| `created_at`                | `timestamp with time zone` | no   |         |     |
+| `created_by`                | `character varying(255)`   | no   |         |     |
+| `enrollment_number`         | `integer`                  | yes  |         |     |
+| `participant_id`            | `uuid`                     | no   |         |     |
+| `reason_for_change`         | `character varying(1000)`  | no   |         |     |
+| `status`                    | `character varying(16)`    | no   |         |     |
+| `status_since`              | `timestamp with time zone` | no   |         |     |
+| `study_id`                  | `uuid`                     | no   |         |     |
+| `study_site_id`             | `uuid`                     | no   |         |     |
+| `subject_code`              | `character varying(64)`    | no   |         |     |
+| `tenant_id`                 | `uuid`                     | no   |         |     |
+| `version_index`             | `bigint`                   | no   |         |     |
+| `withdrawal_attestation_id` | `uuid`                     | yes  |         |     |
+| `withdrawal_kind`           | `character varying(32)`    | yes  |         |     |
 
 Foreign keys:
 
@@ -551,13 +551,13 @@ Check constraints:
 
 Entity: `GrantPeriod`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `grant_id` | `uuid` | no |  |  |
-| `recorded_period` | `tstzrange` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `valid_period` | `tstzrange` | no |  |  |
+| Column            | Type        | Null | Default | Key |
+| ----------------- | ----------- | ---- | ------- | --- |
+| `id`              | `uuid`      | no   |         | PK  |
+| `grant_id`        | `uuid`      | no   |         |     |
+| `recorded_period` | `tstzrange` | no   |         |     |
+| `tenant_id`       | `uuid`      | no   |         |     |
+| `valid_period`    | `tstzrange` | no   |         |     |
 
 Foreign keys:
 
@@ -571,24 +571,24 @@ Indexes:
 
 Entity: `Grant`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `capability` | `character varying(96)` | yes |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `grantee_id` | `character varying(256)` | no |  |  |
-| `grantee_kind` | `character varying(32)` | no |  |  |
-| `issued_by` | `character varying(300)` | no |  |  |
-| `parent_grant_id` | `uuid` | yes |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `role_id` | `uuid` | yes |  |  |
-| `scope_country` | `character varying(2)` | yes |  |  |
-| `scope_level` | `character varying(16)` | no |  |  |
-| `scope_target_id` | `uuid` | yes |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
-| `with_grant_option` | `boolean` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `capability`        | `character varying(96)`    | yes  |         |     |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `grantee_id`        | `character varying(256)`   | no   |         |     |
+| `grantee_kind`      | `character varying(32)`    | no   |         |     |
+| `issued_by`         | `character varying(300)`   | no   |         |     |
+| `parent_grant_id`   | `uuid`                     | yes  |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `role_id`           | `uuid`                     | yes  |         |     |
+| `scope_country`     | `character varying(2)`     | yes  |         |     |
+| `scope_level`       | `character varying(16)`    | no   |         |     |
+| `scope_target_id`   | `uuid`                     | yes  |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
+| `with_grant_option` | `boolean`                  | no   |         |     |
 
 Foreign keys:
 
@@ -612,38 +612,38 @@ Check constraints:
 
 Entity: `IdempotencyRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `idempotency_key` | `character varying(200)` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `activity_id` | `uuid` | no |  |  |
-| `command_type` | `character varying(200)` | no |  |  |
-| `recorded_at` | `timestamp with time zone` | no |  |  |
-| `request_hash` | `character varying(64)` | no |  |  |
-| `result_json` | `text` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `idempotency_key` | `character varying(200)`   | no   |         | PK  |
+| `tenant_id`       | `uuid`                     | no   |         | PK  |
+| `activity_id`     | `uuid`                     | no   |         |     |
+| `command_type`    | `character varying(200)`   | no   |         |     |
+| `recorded_at`     | `timestamp with time zone` | no   |         |     |
+| `request_hash`    | `character varying(64)`    | no   |         |     |
+| `result_json`     | `text`                     | no   |         |     |
 
 ## kernel.library_items
 
 Entity: `LibraryItem`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `approval_attestation_id` | `uuid` | yes |  |  |
-| `content` | `text` | no |  |  |
-| `content_hash` | `character varying(71)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `deprecation_attestation_id` | `uuid` | yes |  |  |
-| `item_version` | `integer` | no |  |  |
-| `key` | `character varying(128)` | no |  |  |
-| `kind` | `character varying(64)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `standard_version_ids` | `uuid[]` | no |  |  |
-| `status` | `character varying(32)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `title` | `character varying(500)` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                       | Type                       | Null | Default | Key |
+| ---------------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                         | `uuid`                     | no   |         | PK  |
+| `approval_attestation_id`    | `uuid`                     | yes  |         |     |
+| `content`                    | `text`                     | no   |         |     |
+| `content_hash`               | `character varying(71)`    | no   |         |     |
+| `created_at`                 | `timestamp with time zone` | no   |         |     |
+| `created_by`                 | `character varying(255)`   | no   |         |     |
+| `deprecation_attestation_id` | `uuid`                     | yes  |         |     |
+| `item_version`               | `integer`                  | no   |         |     |
+| `key`                        | `character varying(128)`   | no   |         |     |
+| `kind`                       | `character varying(64)`    | no   |         |     |
+| `reason_for_change`          | `character varying(1000)`  | no   |         |     |
+| `standard_version_ids`       | `uuid[]`                   | no   |         |     |
+| `status`                     | `character varying(32)`    | no   |         |     |
+| `tenant_id`                  | `uuid`                     | no   |         |     |
+| `title`                      | `character varying(500)`   | no   |         |     |
+| `version_index`              | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -658,20 +658,20 @@ Indexes:
 
 Entity: `LineageEdgeRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `activity_id` | `uuid` | no |  |  |
-| `from_id` | `uuid` | no |  |  |
-| `from_kind` | `character varying(48)` | no |  |  |
-| `from_version` | `bigint` | no |  |  |
-| `kind` | `character varying(32)` | no |  |  |
-| `recorded_at` | `timestamp with time zone` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `to_id` | `uuid` | no |  |  |
-| `to_kind` | `character varying(48)` | no |  |  |
-| `to_version` | `bigint` | no |  |  |
-| `valid_from` | `timestamp with time zone` | yes |  |  |
+| Column         | Type                       | Null | Default | Key |
+| -------------- | -------------------------- | ---- | ------- | --- |
+| `id`           | `uuid`                     | no   |         | PK  |
+| `activity_id`  | `uuid`                     | no   |         |     |
+| `from_id`      | `uuid`                     | no   |         |     |
+| `from_kind`    | `character varying(48)`    | no   |         |     |
+| `from_version` | `bigint`                   | no   |         |     |
+| `kind`         | `character varying(32)`    | no   |         |     |
+| `recorded_at`  | `timestamp with time zone` | no   |         |     |
+| `tenant_id`    | `uuid`                     | no   |         |     |
+| `to_id`        | `uuid`                     | no   |         |     |
+| `to_kind`      | `character varying(48)`    | no   |         |     |
+| `to_version`   | `bigint`                   | no   |         |     |
+| `valid_from`   | `timestamp with time zone` | yes  |         |     |
 
 Foreign keys:
 
@@ -686,15 +686,15 @@ Indexes:
 
 Entity: `LineageNodeRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `kind` | `character varying(48)` | no |  | PK |
-| `node_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `version` | `bigint` | no |  | PK |
-| `activity_id` | `uuid` | no |  |  |
-| `derived` | `boolean` | no |  |  |
-| `recorded_at` | `timestamp with time zone` | no |  |  |
+| Column        | Type                       | Null | Default | Key |
+| ------------- | -------------------------- | ---- | ------- | --- |
+| `kind`        | `character varying(48)`    | no   |         | PK  |
+| `node_id`     | `uuid`                     | no   |         | PK  |
+| `tenant_id`   | `uuid`                     | no   |         | PK  |
+| `version`     | `bigint`                   | no   |         | PK  |
+| `activity_id` | `uuid`                     | no   |         |     |
+| `derived`     | `boolean`                  | no   |         |     |
+| `recorded_at` | `timestamp with time zone` | no   |         |     |
 
 Foreign keys:
 
@@ -708,18 +708,18 @@ Indexes:
 
 Entity: `Organization`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `code` | `character varying(64)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `is_active` | `boolean` | no |  |  |
-| `kind` | `character varying(32)` | no |  |  |
-| `name` | `character varying(255)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `code`              | `character varying(64)`    | no   |         |     |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `is_active`         | `boolean`                  | no   |         |     |
+| `kind`              | `character varying(32)`    | no   |         |     |
+| `name`              | `character varying(255)`   | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -734,18 +734,18 @@ Indexes:
 
 Entity: `OutboxMessageRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `attempts` | `integer` | no |  |  |
-| `dispatched_at` | `timestamp with time zone` | yes |  |  |
-| `enqueued_at` | `timestamp with time zone` | no |  |  |
-| `envelope` | `jsonb` | no |  |  |
-| `event_id` | `uuid` | no |  |  |
-| `last_error` | `character varying(2000)` | yes |  |  |
-| `next_attempt_at` | `timestamp with time zone` | yes |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `type` | `character varying(200)` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `id`              | `uuid`                     | no   |         | PK  |
+| `attempts`        | `integer`                  | no   |         |     |
+| `dispatched_at`   | `timestamp with time zone` | yes  |         |     |
+| `enqueued_at`     | `timestamp with time zone` | no   |         |     |
+| `envelope`        | `jsonb`                    | no   |         |     |
+| `event_id`        | `uuid`                     | no   |         |     |
+| `last_error`      | `character varying(2000)`  | yes  |         |     |
+| `next_attempt_at` | `timestamp with time zone` | yes  |         |     |
+| `tenant_id`       | `uuid`                     | no   |         |     |
+| `type`            | `character varying(200)`   | no   |         |     |
 
 Indexes:
 
@@ -757,14 +757,14 @@ Indexes:
 
 Entity: `Participant`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -778,45 +778,45 @@ Indexes:
 
 Entity: `Person`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `is_active` | `boolean` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `is_active`         | `boolean`                  | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 ## kernel.proposals
 
 Entity: `Proposal`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `affected` | `text[]` | no |  |  |
-| `approval_attestation_id` | `uuid` | yes |  |  |
-| `content_hash` | `character varying(71)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `decided_at` | `timestamp with time zone` | yes |  |  |
-| `decided_by_id` | `character varying(256)` | yes |  |  |
-| `decided_by_kind` | `character varying(32)` | yes |  |  |
-| `decision_reason` | `character varying(1000)` | yes |  |  |
-| `expires_at` | `timestamp with time zone` | no |  |  |
-| `intent` | `character varying(2000)` | no |  |  |
-| `model_id` | `character varying(200)` | yes |  |  |
-| `plan_artifact_version_id` | `uuid` | no |  |  |
-| `proposed_at` | `timestamp with time zone` | no |  |  |
-| `proposed_by_id` | `character varying(256)` | no |  |  |
-| `proposed_by_kind` | `character varying(32)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `requested_capabilities` | `text[]` | no |  |  |
-| `simulated_impact` | `character varying(71)` | yes |  |  |
-| `status` | `character varying(16)` | no |  |  |
-| `study_id` | `uuid` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                     | Type                       | Null | Default | Key |
+| -------------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                       | `uuid`                     | no   |         | PK  |
+| `affected`                 | `text[]`                   | no   |         |     |
+| `approval_attestation_id`  | `uuid`                     | yes  |         |     |
+| `content_hash`             | `character varying(71)`    | no   |         |     |
+| `created_at`               | `timestamp with time zone` | no   |         |     |
+| `created_by`               | `character varying(255)`   | no   |         |     |
+| `decided_at`               | `timestamp with time zone` | yes  |         |     |
+| `decided_by_id`            | `character varying(256)`   | yes  |         |     |
+| `decided_by_kind`          | `character varying(32)`    | yes  |         |     |
+| `decision_reason`          | `character varying(1000)`  | yes  |         |     |
+| `expires_at`               | `timestamp with time zone` | no   |         |     |
+| `intent`                   | `character varying(2000)`  | no   |         |     |
+| `model_id`                 | `character varying(200)`   | yes  |         |     |
+| `plan_artifact_version_id` | `uuid`                     | no   |         |     |
+| `proposed_at`              | `timestamp with time zone` | no   |         |     |
+| `proposed_by_id`           | `character varying(256)`   | no   |         |     |
+| `proposed_by_kind`         | `character varying(32)`    | no   |         |     |
+| `reason_for_change`        | `character varying(1000)`  | no   |         |     |
+| `requested_capabilities`   | `text[]`                   | no   |         |     |
+| `simulated_impact`         | `character varying(71)`    | yes  |         |     |
+| `status`                   | `character varying(16)`    | no   |         |     |
+| `study_id`                 | `uuid`                     | no   |         |     |
+| `tenant_id`                | `uuid`                     | no   |         |     |
+| `version_index`            | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -847,24 +847,24 @@ Check constraints:
 
 Entity: `ProtocolVersion`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `amendment` | `jsonb` | yes |  |  |
-| `approval_attestation_id` | `uuid` | yes |  |  |
-| `content` | `text` | no |  |  |
-| `content_hash` | `character varying(71)` | yes |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `number` | `integer` | no |  |  |
-| `parent_version_id` | `uuid` | yes |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `status` | `character varying(16)` | no |  |  |
-| `study_id` | `uuid` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
-| `withdrawal_attestation_id` | `uuid` | yes |  |  |
-| `withdrawal_reason` | `character varying(1000)` | yes |  |  |
+| Column                      | Type                       | Null | Default | Key |
+| --------------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                        | `uuid`                     | no   |         | PK  |
+| `amendment`                 | `jsonb`                    | yes  |         |     |
+| `approval_attestation_id`   | `uuid`                     | yes  |         |     |
+| `content`                   | `text`                     | no   |         |     |
+| `content_hash`              | `character varying(71)`    | yes  |         |     |
+| `created_at`                | `timestamp with time zone` | no   |         |     |
+| `created_by`                | `character varying(255)`   | no   |         |     |
+| `number`                    | `integer`                  | no   |         |     |
+| `parent_version_id`         | `uuid`                     | yes  |         |     |
+| `reason_for_change`         | `character varying(1000)`  | no   |         |     |
+| `status`                    | `character varying(16)`    | no   |         |     |
+| `study_id`                  | `uuid`                     | no   |         |     |
+| `tenant_id`                 | `uuid`                     | no   |         |     |
+| `version_index`             | `bigint`                   | no   |         |     |
+| `withdrawal_attestation_id` | `uuid`                     | yes  |         |     |
+| `withdrawal_reason`         | `character varying(1000)`  | yes  |         |     |
 
 Foreign keys:
 
@@ -891,22 +891,22 @@ Check constraints:
 
 Entity: `ProvenanceActivityRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `actor_id` | `character varying(256)` | no |  |  |
-| `actor_kind` | `character varying(32)` | no |  |  |
-| `aggregate_id` | `character varying(200)` | yes |  |  |
-| `aggregate_type` | `character varying(200)` | yes |  |  |
-| `authorization` | `jsonb` | yes |  |  |
-| `causation_id` | `uuid` | yes |  |  |
-| `command_type` | `character varying(200)` | no |  |  |
-| `correlation_id` | `uuid` | no |  |  |
-| `idempotency_key` | `character varying(200)` | no |  |  |
-| `outcome` | `character varying(32)` | no |  |  |
-| `reason_for_change` | `character varying(2000)` | no |  |  |
-| `recorded_at` | `timestamp with time zone` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `actor_id`          | `character varying(256)`   | no   |         |     |
+| `actor_kind`        | `character varying(32)`    | no   |         |     |
+| `aggregate_id`      | `character varying(200)`   | yes  |         |     |
+| `aggregate_type`    | `character varying(200)`   | yes  |         |     |
+| `authorization`     | `jsonb`                    | yes  |         |     |
+| `causation_id`      | `uuid`                     | yes  |         |     |
+| `command_type`      | `character varying(200)`   | no   |         |     |
+| `correlation_id`    | `uuid`                     | no   |         |     |
+| `idempotency_key`   | `character varying(200)`   | no   |         |     |
+| `outcome`           | `character varying(32)`    | no   |         |     |
+| `reason_for_change` | `character varying(2000)`  | no   |         |     |
+| `recorded_at`       | `timestamp with time zone` | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
 
 Indexes:
 
@@ -917,13 +917,13 @@ Indexes:
 
 Entity: `QualificationPeriod`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `qualification_id` | `uuid` | no |  |  |
-| `recorded_period` | `tstzrange` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `valid_period` | `tstzrange` | no |  |  |
+| Column             | Type        | Null | Default | Key |
+| ------------------ | ----------- | ---- | ------- | --- |
+| `id`               | `uuid`      | no   |         | PK  |
+| `qualification_id` | `uuid`      | no   |         |     |
+| `recorded_period`  | `tstzrange` | no   |         |     |
+| `tenant_id`        | `uuid`      | no   |         |     |
+| `valid_period`     | `tstzrange` | no   |         |     |
 
 Foreign keys:
 
@@ -937,13 +937,13 @@ Indexes:
 
 Entity: `QualificationRequirementPeriod`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `recorded_period` | `tstzrange` | no |  |  |
-| `requirement_id` | `uuid` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `valid_period` | `tstzrange` | no |  |  |
+| Column            | Type        | Null | Default | Key |
+| ----------------- | ----------- | ---- | ------- | --- |
+| `id`              | `uuid`      | no   |         | PK  |
+| `recorded_period` | `tstzrange` | no   |         |     |
+| `requirement_id`  | `uuid`      | no   |         |     |
+| `tenant_id`       | `uuid`      | no   |         |     |
+| `valid_period`    | `tstzrange` | no   |         |     |
 
 Foreign keys:
 
@@ -957,21 +957,21 @@ Indexes:
 
 Entity: `QualificationRequirement`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `capability` | `character varying(96)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `defined_by` | `character varying(300)` | no |  |  |
-| `protocol_version_id` | `uuid` | yes |  |  |
-| `qualification_code` | `character varying(64)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `scope_country` | `character varying(2)` | yes |  |  |
-| `scope_level` | `character varying(16)` | no |  |  |
-| `scope_target_id` | `uuid` | yes |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                | Type                       | Null | Default | Key |
+| --------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                  | `uuid`                     | no   |         | PK  |
+| `capability`          | `character varying(96)`    | no   |         |     |
+| `created_at`          | `timestamp with time zone` | no   |         |     |
+| `created_by`          | `character varying(255)`   | no   |         |     |
+| `defined_by`          | `character varying(300)`   | no   |         |     |
+| `protocol_version_id` | `uuid`                     | yes  |         |     |
+| `qualification_code`  | `character varying(64)`    | no   |         |     |
+| `reason_for_change`   | `character varying(1000)`  | no   |         |     |
+| `scope_country`       | `character varying(2)`     | yes  |         |     |
+| `scope_level`         | `character varying(16)`    | no   |         |     |
+| `scope_target_id`     | `uuid`                     | yes  |         |     |
+| `tenant_id`           | `uuid`                     | no   |         |     |
+| `version_index`       | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -993,21 +993,21 @@ Check constraints:
 
 Entity: `Qualification`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `code` | `character varying(64)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `evidence_artifact_version_id` | `uuid` | no |  |  |
-| `holder_id` | `character varying(256)` | no |  |  |
-| `holder_kind` | `character varying(32)` | no |  |  |
-| `kind` | `character varying(32)` | no |  |  |
-| `protocol_version_id` | `uuid` | yes |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `recorded_by` | `character varying(300)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                         | Type                       | Null | Default | Key |
+| ------------------------------ | -------------------------- | ---- | ------- | --- |
+| `id`                           | `uuid`                     | no   |         | PK  |
+| `code`                         | `character varying(64)`    | no   |         |     |
+| `created_at`                   | `timestamp with time zone` | no   |         |     |
+| `created_by`                   | `character varying(255)`   | no   |         |     |
+| `evidence_artifact_version_id` | `uuid`                     | no   |         |     |
+| `holder_id`                    | `character varying(256)`   | no   |         |     |
+| `holder_kind`                  | `character varying(32)`    | no   |         |     |
+| `kind`                         | `character varying(32)`    | no   |         |     |
+| `protocol_version_id`          | `uuid`                     | yes  |         |     |
+| `reason_for_change`            | `character varying(1000)`  | no   |         |     |
+| `recorded_by`                  | `character varying(300)`   | no   |         |     |
+| `tenant_id`                    | `uuid`                     | no   |         |     |
+| `version_index`                | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1031,17 +1031,17 @@ Check constraints:
 
 Entity: `Role`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `capabilities` | `text[]` | no |  |  |
-| `code` | `character varying(32)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `name` | `character varying(200)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `capabilities`      | `text[]`                   | no   |         |     |
+| `code`              | `character varying(32)`    | no   |         |     |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `name`              | `character varying(200)`   | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1060,19 +1060,19 @@ Check constraints:
 
 Entity: `Site`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `country` | `character varying(2)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `institution_id` | `uuid` | no |  |  |
-| `is_active` | `boolean` | no |  |  |
-| `name` | `character varying(255)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `site_code` | `character varying(64)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `country`           | `character varying(2)`     | no   |         |     |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `institution_id`    | `uuid`                     | no   |         |     |
+| `is_active`         | `boolean`                  | no   |         |     |
+| `name`              | `character varying(255)`   | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `site_code`         | `character varying(64)`    | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1089,15 +1089,15 @@ Indexes:
 
 Entity: `StandardDataset`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `name` | `character varying(64)` | no |  | PK |
-| `standard_version_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `class` | `character varying(255)` | yes |  |  |
-| `label` | `character varying(500)` | no |  |  |
-| `ordinal` | `integer` | no |  |  |
-| `structure` | `character varying(1000)` | yes |  |  |
+| Column                | Type                      | Null | Default | Key |
+| --------------------- | ------------------------- | ---- | ------- | --- |
+| `name`                | `character varying(64)`   | no   |         | PK  |
+| `standard_version_id` | `uuid`                    | no   |         | PK  |
+| `tenant_id`           | `uuid`                    | no   |         | PK  |
+| `class`               | `character varying(255)`  | yes  |         |     |
+| `label`               | `character varying(500)`  | no   |         |     |
+| `ordinal`             | `integer`                 | no   |         |     |
+| `structure`           | `character varying(1000)` | yes  |         |     |
 
 Foreign keys:
 
@@ -1107,13 +1107,13 @@ Foreign keys:
 
 Entity: `StandardTerminologyBinding`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `code_system` | `character varying(64)` | no |  | PK |
-| `standard_version_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `version` | `character varying(64)` | no |  | PK |
-| `code_system_version_id` | `uuid` | yes |  |  |
+| Column                   | Type                    | Null | Default | Key |
+| ------------------------ | ----------------------- | ---- | ------- | --- |
+| `code_system`            | `character varying(64)` | no   |         | PK  |
+| `standard_version_id`    | `uuid`                  | no   |         | PK  |
+| `tenant_id`              | `uuid`                  | no   |         | PK  |
+| `version`                | `character varying(64)` | no   |         | PK  |
+| `code_system_version_id` | `uuid`                  | yes  |         |     |
 
 Foreign keys:
 
@@ -1128,19 +1128,19 @@ Indexes:
 
 Entity: `StandardValueLevelDefinition`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `ordinal` | `integer` | no |  | PK |
-| `standard_version_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `codelists` | `text[]` | no |  |  |
-| `data_type` | `character varying(16)` | no |  |  |
-| `dataset` | `character varying(64)` | no |  |  |
-| `description` | `text` | yes |  |  |
-| `length` | `integer` | yes |  |  |
-| `value_list` | `text[]` | no |  |  |
-| `variable` | `character varying(64)` | no |  |  |
-| `where` | `jsonb` | no |  |  |
+| Column                | Type                    | Null | Default | Key |
+| --------------------- | ----------------------- | ---- | ------- | --- |
+| `ordinal`             | `integer`               | no   |         | PK  |
+| `standard_version_id` | `uuid`                  | no   |         | PK  |
+| `tenant_id`           | `uuid`                  | no   |         | PK  |
+| `codelists`           | `text[]`                | no   |         |     |
+| `data_type`           | `character varying(16)` | no   |         |     |
+| `dataset`             | `character varying(64)` | no   |         |     |
+| `description`         | `text`                  | yes  |         |     |
+| `length`              | `integer`               | yes  |         |     |
+| `value_list`          | `text[]`                | no   |         |     |
+| `variable`            | `character varying(64)` | no   |         |     |
+| `where`               | `jsonb`                 | no   |         |     |
 
 Foreign keys:
 
@@ -1155,21 +1155,21 @@ Indexes:
 
 Entity: `StandardVariable`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `dataset_name` | `character varying(64)` | no |  | PK |
-| `name` | `character varying(64)` | no |  | PK |
-| `standard_version_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `codelists` | `text[]` | no |  |  |
-| `core` | `character varying(16)` | no |  |  |
-| `data_type` | `character varying(16)` | no |  |  |
-| `described_value_domain` | `character varying(255)` | yes |  |  |
-| `description` | `text` | yes |  |  |
-| `label` | `character varying(500)` | no |  |  |
-| `ordinal` | `integer` | no |  |  |
-| `role` | `character varying(255)` | yes |  |  |
-| `value_list` | `text[]` | no |  |  |
+| Column                   | Type                     | Null | Default | Key |
+| ------------------------ | ------------------------ | ---- | ------- | --- |
+| `dataset_name`           | `character varying(64)`  | no   |         | PK  |
+| `name`                   | `character varying(64)`  | no   |         | PK  |
+| `standard_version_id`    | `uuid`                   | no   |         | PK  |
+| `tenant_id`              | `uuid`                   | no   |         | PK  |
+| `codelists`              | `text[]`                 | no   |         |     |
+| `core`                   | `character varying(16)`  | no   |         |     |
+| `data_type`              | `character varying(16)`  | no   |         |     |
+| `described_value_domain` | `character varying(255)` | yes  |         |     |
+| `description`            | `text`                   | yes  |         |     |
+| `label`                  | `character varying(500)` | no   |         |     |
+| `ordinal`                | `integer`                | no   |         |     |
+| `role`                   | `character varying(255)` | yes  |         |     |
+| `value_list`             | `text[]`                 | no   |         |     |
 
 Foreign keys:
 
@@ -1179,24 +1179,24 @@ Foreign keys:
 
 Entity: `StandardVersion`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `approval_attestation_id` | `uuid` | yes |  |  |
-| `content_hash` | `character varying(71)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `deprecation_attestation_id` | `uuid` | yes |  |  |
-| `effective_date` | `date` | yes |  |  |
-| `name` | `character varying(500)` | no |  |  |
-| `publisher` | `character varying(255)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `source` | `character varying(1000)` | yes |  |  |
-| `standard_code` | `character varying(64)` | no |  |  |
-| `status` | `character varying(32)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version` | `character varying(64)` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                       | Type                       | Null | Default | Key |
+| ---------------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                         | `uuid`                     | no   |         | PK  |
+| `approval_attestation_id`    | `uuid`                     | yes  |         |     |
+| `content_hash`               | `character varying(71)`    | no   |         |     |
+| `created_at`                 | `timestamp with time zone` | no   |         |     |
+| `created_by`                 | `character varying(255)`   | no   |         |     |
+| `deprecation_attestation_id` | `uuid`                     | yes  |         |     |
+| `effective_date`             | `date`                     | yes  |         |     |
+| `name`                       | `character varying(500)`   | no   |         |     |
+| `publisher`                  | `character varying(255)`   | no   |         |     |
+| `reason_for_change`          | `character varying(1000)`  | no   |         |     |
+| `source`                     | `character varying(1000)`  | yes  |         |     |
+| `standard_code`              | `character varying(64)`    | no   |         |     |
+| `status`                     | `character varying(32)`    | no   |         |     |
+| `tenant_id`                  | `uuid`                     | no   |         |     |
+| `version`                    | `character varying(64)`    | no   |         |     |
+| `version_index`              | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1211,19 +1211,19 @@ Indexes:
 
 Entity: `Study`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `is_active` | `boolean` | no |  |  |
-| `phase` | `character varying(32)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `sponsor_id` | `uuid` | no |  |  |
-| `study_code` | `character varying(64)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `title` | `character varying(1000)` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `is_active`         | `boolean`                  | no   |         |     |
+| `phase`             | `character varying(32)`    | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `sponsor_id`        | `uuid`                     | no   |         |     |
+| `study_code`        | `character varying(64)`    | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `title`             | `character varying(1000)`  | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1240,18 +1240,18 @@ Indexes:
 
 Entity: `StudySite`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `is_active` | `boolean` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `site_id` | `uuid` | no |  |  |
-| `status` | `character varying(32)` | no |  |  |
-| `study_id` | `uuid` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `is_active`         | `boolean`                  | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `site_id`           | `uuid`                     | no   |         |     |
+| `status`            | `character varying(32)`    | no   |         |     |
+| `study_id`          | `uuid`                     | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1271,19 +1271,19 @@ Indexes:
 
 Entity: `StudyStandardsProfile`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `controlled_terminology` | `text[]` | no |  |  |
-| `controlled_terminology_versions` | `uuid[]` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `library_pins` | `uuid[]` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `standard_version_ids` | `uuid[]` | no |  |  |
-| `study_id` | `uuid` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column                            | Type                       | Null | Default | Key |
+| --------------------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                              | `uuid`                     | no   |         | PK  |
+| `controlled_terminology`          | `text[]`                   | no   |         |     |
+| `controlled_terminology_versions` | `uuid[]`                   | no   |         |     |
+| `created_at`                      | `timestamp with time zone` | no   |         |     |
+| `created_by`                      | `character varying(255)`   | no   |         |     |
+| `library_pins`                    | `uuid[]`                   | no   |         |     |
+| `reason_for_change`               | `character varying(1000)`  | no   |         |     |
+| `standard_version_ids`            | `uuid[]`                   | no   |         |     |
+| `study_id`                        | `uuid`                     | no   |         |     |
+| `tenant_id`                       | `uuid`                     | no   |         |     |
+| `version_index`                   | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1299,16 +1299,16 @@ Indexes:
 
 Entity: `TenantMembership`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `is_active` | `boolean` | no |  |  |
-| `person_id` | `uuid` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `is_active`         | `boolean`                  | no   |         |     |
+| `person_id`         | `uuid`                     | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1325,17 +1325,17 @@ Indexes:
 
 Entity: `Tenant`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `code` | `character varying(64)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `is_active` | `boolean` | no |  |  |
-| `name` | `character varying(255)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `residency` | `character varying(8)` | yes |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `code`              | `character varying(64)`    | no   |         |     |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `is_active`         | `boolean`                  | no   |         |     |
+| `name`              | `character varying(255)`   | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `residency`         | `character varying(8)`     | yes  |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -1349,25 +1349,25 @@ Check constraints:
 
 Entity: `ValidationDetectionRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `finding_id` | `uuid` | no |  | PK |
-| `run_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `dataset` | `character varying(64)` | no |  |  |
-| `expected` | `character varying(2000)` | yes |  |  |
-| `message` | `character varying(2000)` | no |  |  |
-| `observed` | `jsonb` | no |  |  |
-| `pack_item_id` | `uuid` | no |  |  |
-| `pack_key` | `character varying(128)` | no |  |  |
-| `rule_id` | `character varying(64)` | no |  |  |
-| `rule_version` | `integer` | no |  |  |
-| `severity` | `character varying(16)` | no |  |  |
-| `stage` | `character varying(32)` | no |  |  |
-| `study_id` | `uuid` | no |  |  |
-| `target_key` | `character varying(200)` | no |  |  |
-| `target_kind` | `character varying(32)` | no |  |  |
-| `variable` | `character varying(64)` | yes |  |  |
+| Column         | Type                      | Null | Default | Key |
+| -------------- | ------------------------- | ---- | ------- | --- |
+| `finding_id`   | `uuid`                    | no   |         | PK  |
+| `run_id`       | `uuid`                    | no   |         | PK  |
+| `tenant_id`    | `uuid`                    | no   |         | PK  |
+| `dataset`      | `character varying(64)`   | no   |         |     |
+| `expected`     | `character varying(2000)` | yes  |         |     |
+| `message`      | `character varying(2000)` | no   |         |     |
+| `observed`     | `jsonb`                   | no   |         |     |
+| `pack_item_id` | `uuid`                    | no   |         |     |
+| `pack_key`     | `character varying(128)`  | no   |         |     |
+| `rule_id`      | `character varying(64)`   | no   |         |     |
+| `rule_version` | `integer`                 | no   |         |     |
+| `severity`     | `character varying(16)`   | no   |         |     |
+| `stage`        | `character varying(32)`   | no   |         |     |
+| `study_id`     | `uuid`                    | no   |         |     |
+| `target_key`   | `character varying(200)`  | no   |         |     |
+| `target_kind`  | `character varying(32)`   | no   |         |     |
+| `variable`     | `character varying(64)`   | yes  |         |     |
 
 Foreign keys:
 
@@ -1386,22 +1386,22 @@ Indexes:
 
 Entity: `ValidationFinding`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `attestation_id` | `uuid` | yes |  |  |
-| `classification` | `character varying(32)` | yes |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `decided_at` | `timestamp with time zone` | yes |  |  |
-| `decided_by` | `character varying(255)` | yes |  |  |
-| `decided_on_run` | `uuid` | yes |  |  |
-| `decision` | `character varying(32)` | yes |  |  |
-| `decision_text` | `character varying(4000)` | yes |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `study_id` | `uuid` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `attestation_id`    | `uuid`                     | yes  |         |     |
+| `classification`    | `character varying(32)`    | yes  |         |     |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `decided_at`        | `timestamp with time zone` | yes  |         |     |
+| `decided_by`        | `character varying(255)`   | yes  |         |     |
+| `decided_on_run`    | `uuid`                     | yes  |         |     |
+| `decision`          | `character varying(32)`    | yes  |         |     |
+| `decision_text`     | `character varying(4000)`  | yes  |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `study_id`          | `uuid`                     | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1421,11 +1421,11 @@ Indexes:
 
 Entity: `ValidationRunDataset`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `dataset` | `character varying(64)` | no |  | PK |
-| `run_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
+| Column      | Type                    | Null | Default | Key |
+| ----------- | ----------------------- | ---- | ------- | --- |
+| `dataset`   | `character varying(64)` | no   |         | PK  |
+| `run_id`    | `uuid`                  | no   |         | PK  |
+| `tenant_id` | `uuid`                  | no   |         | PK  |
 
 Foreign keys:
 
@@ -1435,11 +1435,11 @@ Foreign keys:
 
 Entity: `ValidationRunInput`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `input` | `character varying(128)` | no |  | PK |
-| `run_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
+| Column      | Type                     | Null | Default | Key |
+| ----------- | ------------------------ | ---- | ------- | --- |
+| `input`     | `character varying(128)` | no   |         | PK  |
+| `run_id`    | `uuid`                   | no   |         | PK  |
+| `tenant_id` | `uuid`                   | no   |         | PK  |
 
 Foreign keys:
 
@@ -1449,14 +1449,14 @@ Foreign keys:
 
 Entity: `ValidationRunPack`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `pack_key` | `character varying(128)` | no |  | PK |
-| `run_id` | `uuid` | no |  | PK |
-| `tenant_id` | `uuid` | no |  | PK |
-| `content_hash` | `character varying(71)` | no |  |  |
-| `library_item_id` | `uuid` | no |  |  |
-| `pack_version` | `integer` | no |  |  |
+| Column            | Type                     | Null | Default | Key |
+| ----------------- | ------------------------ | ---- | ------- | --- |
+| `pack_key`        | `character varying(128)` | no   |         | PK  |
+| `run_id`          | `uuid`                   | no   |         | PK  |
+| `tenant_id`       | `uuid`                   | no   |         | PK  |
+| `content_hash`    | `character varying(71)`  | no   |         |     |
+| `library_item_id` | `uuid`                   | no   |         |     |
+| `pack_version`    | `integer`                | no   |         |     |
 
 Foreign keys:
 
@@ -1471,23 +1471,23 @@ Indexes:
 
 Entity: `ValidationRun`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `agency` | `character varying(64)` | yes |  |  |
-| `as_of` | `date` | no |  |  |
-| `completed_at` | `timestamp with time zone` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `detection_count` | `integer` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `stage` | `character varying(32)` | no |  |  |
-| `standard` | `character varying(64)` | yes |  |  |
-| `standard_version` | `character varying(64)` | yes |  |  |
-| `started_at` | `timestamp with time zone` | no |  |  |
-| `study_id` | `uuid` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `agency`            | `character varying(64)`    | yes  |         |     |
+| `as_of`             | `date`                     | no   |         |     |
+| `completed_at`      | `timestamp with time zone` | no   |         |     |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `detection_count`   | `integer`                  | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `stage`             | `character varying(32)`    | no   |         |     |
+| `standard`          | `character varying(64)`    | yes  |         |     |
+| `standard_version`  | `character varying(64)`    | yes  |         |     |
+| `started_at`        | `timestamp with time zone` | no   |         |     |
+| `study_id`          | `uuid`                     | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -1503,20 +1503,20 @@ Indexes:
 
 Entity: `WorkQueueDefinition`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `id` | `uuid` | no |  | PK |
-| `capability` | `character varying(100)` | no |  |  |
-| `code` | `character varying(64)` | no |  |  |
-| `created_at` | `timestamp with time zone` | no |  |  |
-| `created_by` | `character varying(255)` | no |  |  |
-| `reason_for_change` | `character varying(1000)` | no |  |  |
-| `source` | `character varying(100)` | no |  |  |
-| `tenant_id` | `uuid` | no |  |  |
-| `title` | `character varying(200)` | no |  |  |
-| `verb_class` | `character varying(16)` | no |  |  |
-| `version` | `integer` | no |  |  |
-| `version_index` | `bigint` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `id`                | `uuid`                     | no   |         | PK  |
+| `capability`        | `character varying(100)`   | no   |         |     |
+| `code`              | `character varying(64)`    | no   |         |     |
+| `created_at`        | `timestamp with time zone` | no   |         |     |
+| `created_by`        | `character varying(255)`   | no   |         |     |
+| `reason_for_change` | `character varying(1000)`  | no   |         |     |
+| `source`            | `character varying(100)`   | no   |         |     |
+| `tenant_id`         | `uuid`                     | no   |         |     |
+| `title`             | `character varying(200)`   | no   |         |     |
+| `verb_class`        | `character varying(16)`    | no   |         |     |
+| `version`           | `integer`                  | no   |         |     |
+| `version_index`     | `bigint`                   | no   |         |     |
 
 Foreign keys:
 

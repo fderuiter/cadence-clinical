@@ -33,19 +33,19 @@ This decision addresses the following requirements:
 ### Option 1: Native IntersectionObserver with Over-Scanning & ResizeObserver (Selected)
 
 - **Overview:** Wrap each dynamic clinical form field inside a layout-stable recycling wrapper (`ClinicalFormField.vue`) that dynamically monitors viewport entry and exit using a native browser `IntersectionObserver` with a `200px` root margin for pre-rendering. Active mounted fields are monitored by a `ResizeObserver` to record and cache their exact pixel height; this cached height is then enforced as a placeholder when the child components are unmounted.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Restricts the active DOM node count to <100 nodes at any time.
   - ✅ Zero third-party virtualization dependencies.
   - ✅ Root margin of `200px` guarantees smooth scrolling with zero visual flickering.
   - ✅ Dynamic height caching ensures zero layout shifting during mounting/unmounting.
   - ✅ Empty placeholders preserve a minimum height of `44px` for WCAG compliance.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Relies on client-side observers which need mock setups in tests.
 
 ### Option 2: Heavy Third-Party Virtualization Libraries
 
 - **Overview:** Integrate external packages (e.g., vue-virtual-scroller or similar).
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates our strict third-party registry boundaries and increases GxP validation surface.
   - ❌ Difficult to customize for dynamic forms with fluctuating heights caused by validation errors or expanding query panels.
 

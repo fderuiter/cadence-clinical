@@ -4,31 +4,31 @@
 
 Generated from the EF Core model of `Cadence.Apps.Eisf.Infrastructure.Persistence.EisfDbContext`, not from a live database. Unqualified tables live in the `eisf` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`eisf.audit_log_entries`](#eisfaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`eisf.eisf_document_records`](#eisfeisf_document_records) | `EisfDocumentRecord` | 17 |
-| [`eisf.eisf_section_taxonomies`](#eisfeisf_section_taxonomies) | `EisfSectionTaxonomy` | 5 |
-| [`eisf.isf_audit_logs`](#eisfisf_audit_logs) | `IsfAuditLog` | 11 |
-| [`eisf.isf_documents`](#eisfisf_documents) | `IsfDocument` | 19 |
+| Table                                                          | Entity                | Columns |
+| -------------------------------------------------------------- | --------------------- | ------- |
+| [`eisf.audit_log_entries`](#eisfaudit_log_entries)             | `AuditLogEntry`       | 11      |
+| [`eisf.eisf_document_records`](#eisfeisf_document_records)     | `EisfDocumentRecord`  | 17      |
+| [`eisf.eisf_section_taxonomies`](#eisfeisf_section_taxonomies) | `EisfSectionTaxonomy` | 5       |
+| [`eisf.isf_audit_logs`](#eisfisf_audit_logs)                   | `IsfAuditLog`         | 11      |
+| [`eisf.isf_documents`](#eisfisf_documents)                     | `IsfDocument`         | 19      |
 
 ## eisf.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -38,25 +38,25 @@ Indexes:
 
 Entity: `EisfDocumentRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `ExpirationDate` | `timestamp with time zone` | yes |  |  |
-| `FilePath` | `character varying(500)` | no |  |  |
-| `Filename` | `character varying(255)` | no |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `IsDeleted` | `boolean` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SectionCode` | `character varying(50)` | no |  |  |
-| `Sha256Checksum` | `character varying(64)` | no |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VersionMajor` | `integer` | no |  |  |
-| `VersionMinor` | `integer` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `ExpirationDate`  | `timestamp with time zone` | yes  |         |     |
+| `FilePath`        | `character varying(500)`   | no   |         |     |
+| `Filename`        | `character varying(255)`   | no   |         |     |
+| `IsActive`        | `boolean`                  | no   |         |     |
+| `IsDeleted`       | `boolean`                  | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `SectionCode`     | `character varying(50)`    | no   |         |     |
+| `Sha256Checksum`  | `character varying(64)`    | no   |         |     |
+| `SiteId`          | `character varying(255)`   | no   |         |     |
+| `Status`          | `character varying(50)`    | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
+| `VersionMajor`    | `integer`                  | no   |         |     |
+| `VersionMinor`    | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -68,13 +68,13 @@ Indexes:
 
 Entity: `EisfSectionTaxonomy`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `SectionCode` | `character varying(50)` | no |  | PK |
-| `Description` | `character varying(1000)` | no |  |  |
-| `IsMandatory` | `boolean` | no |  |  |
-| `SectionNumber` | `character varying(50)` | no |  |  |
-| `Title` | `character varying(255)` | no |  |  |
+| Column          | Type                      | Null | Default | Key |
+| --------------- | ------------------------- | ---- | ------- | --- |
+| `SectionCode`   | `character varying(50)`   | no   |         | PK  |
+| `Description`   | `character varying(1000)` | no   |         |     |
+| `IsMandatory`   | `boolean`                 | no   |         |     |
+| `SectionNumber` | `character varying(50)`   | no   |         |     |
+| `Title`         | `character varying(255)`  | no   |         |     |
 
 Indexes:
 
@@ -84,19 +84,19 @@ Indexes:
 
 Entity: `IsfAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `ActorId` | `character varying(255)` | no |  |  |
-| `ActorRole` | `character varying(255)` | no |  |  |
-| `Details` | `character varying(1000)` | no |  |  |
-| `DocumentId` | `character varying(36)` | yes |  |  |
-| `PreviousDigest` | `character varying(64)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Sha256Digest` | `character varying(64)` | yes |  |  |
-| `TenantId` | `character varying(255)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `ActorId`         | `character varying(255)`   | no   |         |     |
+| `ActorRole`       | `character varying(255)`   | no   |         |     |
+| `Details`         | `character varying(1000)`  | no   |         |     |
+| `DocumentId`      | `character varying(36)`    | yes  |         |     |
+| `PreviousDigest`  | `character varying(64)`    | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Sha256Digest`    | `character varying(64)`    | yes  |         |     |
+| `TenantId`        | `character varying(255)`   | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
 
 Indexes:
 
@@ -108,27 +108,27 @@ Indexes:
 
 Entity: `IsfDocument`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `BinderClassification` | `character varying(255)` | no |  |  |
-| `Content` | `text` | yes |  |  |
-| `ContentChecksum` | `character varying(64)` | yes |  |  |
-| `CorrelationKey` | `character varying(255)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DocumentOwnerId` | `character varying(255)` | yes |  |  |
-| `ExpirationDate` | `timestamp with time zone` | yes |  |  |
-| `Filename` | `character varying(255)` | no |  |  |
-| `IssueDate` | `timestamp with time zone` | yes |  |  |
-| `MetadataJson` | `jsonb` | yes |  |  |
-| `MimeType` | `character varying(100)` | no |  |  |
-| `ObjectKey` | `character varying(500)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `SourceSystem` | `character varying(100)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SyncStatus` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                 | Type                       | Null | Default | Key |
+| ---------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                   | `character varying(36)`    | no   |         | PK  |
+| `BinderClassification` | `character varying(255)`   | no   |         |     |
+| `Content`              | `text`                     | yes  |         |     |
+| `ContentChecksum`      | `character varying(64)`    | yes  |         |     |
+| `CorrelationKey`       | `character varying(255)`   | yes  |         |     |
+| `CreatedAt`            | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`            | `character varying(255)`   | no   |         |     |
+| `DocumentOwnerId`      | `character varying(255)`   | yes  |         |     |
+| `ExpirationDate`       | `timestamp with time zone` | yes  |         |     |
+| `Filename`             | `character varying(255)`   | no   |         |     |
+| `IssueDate`            | `timestamp with time zone` | yes  |         |     |
+| `MetadataJson`         | `jsonb`                    | yes  |         |     |
+| `MimeType`             | `character varying(100)`   | no   |         |     |
+| `ObjectKey`            | `character varying(500)`   | yes  |         |     |
+| `SiteId`               | `character varying(255)`   | no   |         |     |
+| `SourceSystem`         | `character varying(100)`   | no   |         |     |
+| `StudyId`              | `character varying(255)`   | no   |         |     |
+| `SyncStatus`           | `character varying(50)`    | no   |         |     |
+| `VersionIndex`         | `integer`                  | no   |         |     |
 
 Indexes:
 

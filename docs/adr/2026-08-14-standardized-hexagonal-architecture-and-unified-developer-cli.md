@@ -27,22 +27,21 @@ To achieve enterprise-grade maintainability, zero-downtime microservice decoupli
 ### Option 1: **Option A (Selected): Unified Typer Developer CLI + Hexagonal Kernel Primitives + Dynamic Sentinels**
 
 - **Overview:** - Implements `packages/cli` exposing `cadence` command with subcommand suite (`doctor`, `dev`, `test`, `check`, `fix`, `db`, `scaffold`, `gxp`).
-   - Enhances `packages/hexagonal` with domain primitives (`BaseEntity`, `AggregateRoot`, `DomainEvent`, `RepositoryPort`, `UseCasePort`, `ExternalServiceClientPort`).
-   - Upgrades `scripts/verify_contracts.py` to dynamically discover and validate all port and adapter contracts with MyPy.
-   - Decouples cross-app test imports and eliminates legacy import exemption lists.
-- ***Pros:***
+  - Enhances `packages/hexagonal` with domain primitives (`BaseEntity`, `AggregateRoot`, `DomainEvent`, `RepositoryPort`, `UseCasePort`, `ExternalServiceClientPort`).
+  - Upgrades `scripts/verify_contracts.py` to dynamically discover and validate all port and adapter contracts with MyPy.
+  - Decouples cross-app test imports and eliminates legacy import exemption lists.
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B: Fragmented Shell Scripts and Ad-Hoc Makefiles**
 
 - **Overview:** - Keeps fragmented Python/Bash scripts in `scripts/`. Lacks unified CLI interface, structured JSON output for AI agents, and centralized database snapshot tooling.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

@@ -4,43 +4,43 @@
 
 Generated from the EF Core model of `Cadence.Apps.Payments.Infrastructure.Persistence.PaymentsDbContext`, not from a live database. Unqualified tables live in the `payments` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`payments.audit_log_entries`](#paymentsaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`payments.payments_audit_logs`](#paymentspayments_audit_logs) | `PaymentAuditLog` | 13 |
-| [`payments.payments_budget_contracts`](#paymentspayments_budget_contracts) | `BudgetContract` | 17 |
-| [`payments.payments_erp_sync_logs`](#paymentspayments_erp_sync_logs) | `ErpSyncLog` | 13 |
-| [`payments.payments_fee_schedules`](#paymentspayments_fee_schedules) | `FeeSchedule` | 19 |
-| [`payments.payments_holdback_reserves`](#paymentspayments_holdback_reserves) | `HoldbackReserve` | 20 |
-| [`payments.payments_invoice_line_items`](#paymentspayments_invoice_line_items) | `InvoiceLineItem` | 21 |
-| [`payments.payments_participant_disbursements`](#paymentspayments_participant_disbursements) | `ParticipantDisbursement` | 10 |
-| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 22 |
-| [`payments.payments_participant_stipend_rules`](#paymentspayments_participant_stipend_rules) | `ParticipantStipendRule` | 19 |
-| [`payments.payments_participant_transactions`](#paymentspayments_participant_transactions) | `ParticipantTransaction` | 12 |
-| [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 32 |
-| [`payments.payments_payable_allocations`](#paymentspayments_payable_allocations) | `PayableAllocation` | 16 |
-| [`payments.payments_payables`](#paymentspayments_payables) | `Payable` | 30 |
-| [`payments.payments_remittance_advices`](#paymentspayments_remittance_advices) | `RemittanceAdvice` | 26 |
-| [`payments.payments_self_billing_invoices`](#paymentspayments_self_billing_invoices) | `SelfBillingInvoice` | 33 |
-| [`payments.payments_split_payees`](#paymentspayments_split_payees) | `SplitPayeeConfig` | 14 |
+| Table                                                                                          | Entity                    | Columns |
+| ---------------------------------------------------------------------------------------------- | ------------------------- | ------- |
+| [`payments.audit_log_entries`](#paymentsaudit_log_entries)                                     | `AuditLogEntry`           | 11      |
+| [`payments.payments_audit_logs`](#paymentspayments_audit_logs)                                 | `PaymentAuditLog`         | 13      |
+| [`payments.payments_budget_contracts`](#paymentspayments_budget_contracts)                     | `BudgetContract`          | 17      |
+| [`payments.payments_erp_sync_logs`](#paymentspayments_erp_sync_logs)                           | `ErpSyncLog`              | 13      |
+| [`payments.payments_fee_schedules`](#paymentspayments_fee_schedules)                           | `FeeSchedule`             | 19      |
+| [`payments.payments_holdback_reserves`](#paymentspayments_holdback_reserves)                   | `HoldbackReserve`         | 20      |
+| [`payments.payments_invoice_line_items`](#paymentspayments_invoice_line_items)                 | `InvoiceLineItem`         | 21      |
+| [`payments.payments_participant_disbursements`](#paymentspayments_participant_disbursements)   | `ParticipantDisbursement` | 10      |
+| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 22      |
+| [`payments.payments_participant_stipend_rules`](#paymentspayments_participant_stipend_rules)   | `ParticipantStipendRule`  | 19      |
+| [`payments.payments_participant_transactions`](#paymentspayments_participant_transactions)     | `ParticipantTransaction`  | 12      |
+| [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets)               | `ParticipantWallet`       | 32      |
+| [`payments.payments_payable_allocations`](#paymentspayments_payable_allocations)               | `PayableAllocation`       | 16      |
+| [`payments.payments_payables`](#paymentspayments_payables)                                     | `Payable`                 | 30      |
+| [`payments.payments_remittance_advices`](#paymentspayments_remittance_advices)                 | `RemittanceAdvice`        | 26      |
+| [`payments.payments_self_billing_invoices`](#paymentspayments_self_billing_invoices)           | `SelfBillingInvoice`      | 33      |
+| [`payments.payments_split_payees`](#paymentspayments_split_payees)                             | `SplitPayeeConfig`        | 14      |
 
 ## payments.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -50,21 +50,21 @@ Indexes:
 
 Entity: `PaymentAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(100)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Details` | `character varying(2000)` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityType` | `character varying(100)` | no |  |  |
-| `NewStateJson` | `jsonb` | yes |  |  |
-| `PreviousStateJson` | `jsonb` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `UserRoles` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                | `character varying(36)`    | no   |         | PK  |
+| `Action`            | `character varying(100)`   | no   |         |     |
+| `CreatedAt`         | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`         | `character varying(255)`   | no   |         |     |
+| `Details`           | `character varying(2000)`  | yes  |         |     |
+| `EntityId`          | `character varying(255)`   | no   |         |     |
+| `EntityType`        | `character varying(100)`   | no   |         |     |
+| `NewStateJson`      | `jsonb`                    | yes  |         |     |
+| `PreviousStateJson` | `jsonb`                    | yes  |         |     |
+| `ReasonForChange`   | `character varying(1000)`  | yes  |         |     |
+| `UserId`            | `character varying(255)`   | no   |         |     |
+| `UserRoles`         | `character varying(255)`   | no   |         |     |
+| `VersionIndex`      | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -78,25 +78,25 @@ Indexes:
 
 Entity: `BudgetContract`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ContractName` | `character varying(255)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `EffectiveDate` | `character varying(50)` | yes |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `OverheadPercentage` | `numeric(18,4)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TierLevel` | `character varying(50)` | no |  |  |
-| `TotalBudget` | `numeric(18,4)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `WithholdingPercentage` | `numeric(18,4)` | no |  |  |
+| Column                  | Type                       | Null | Default | Key |
+| ----------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                    | `character varying(36)`    | no   |         | PK  |
+| `ContractName`          | `character varying(255)`   | no   |         |     |
+| `CreatedAt`             | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`             | `character varying(255)`   | no   |         |     |
+| `Currency`              | `character varying(10)`    | no   |         |     |
+| `EffectiveDate`         | `character varying(50)`    | yes  |         |     |
+| `IsActive`              | `boolean`                  | no   |         |     |
+| `OverheadPercentage`    | `numeric(18,4)`            | no   |         |     |
+| `ReasonForChange`       | `character varying(1000)`  | yes  |         |     |
+| `SiteId`                | `character varying(255)`   | no   |         |     |
+| `Status`                | `character varying(50)`    | no   |         |     |
+| `StudyId`               | `character varying(255)`   | no   |         |     |
+| `TierLevel`             | `character varying(50)`    | no   |         |     |
+| `TotalBudget`           | `numeric(18,4)`            | no   |         |     |
+| `UpdatedAt`             | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`          | `integer`                  | no   |         |     |
+| `WithholdingPercentage` | `numeric(18,4)`            | no   |         |     |
 
 Indexes:
 
@@ -108,21 +108,21 @@ Indexes:
 
 Entity: `ErpSyncLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `ErpSystem` | `character varying(50)` | no |  |  |
-| `ExternalReference` | `character varying(100)` | yes |  |  |
-| `InvoiceId` | `character varying(36)` | no |  |  |
-| `PayloadJson` | `jsonb` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `Reconciled` | `boolean` | no |  |  |
-| `ResponseDataJson` | `jsonb` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `SyncDirection` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column              | Type                       | Null | Default | Key |
+| ------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`         | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`         | `character varying(255)`   | no   |         |     |
+| `ErpSystem`         | `character varying(50)`    | no   |         |     |
+| `ExternalReference` | `character varying(100)`   | yes  |         |     |
+| `InvoiceId`         | `character varying(36)`    | no   |         |     |
+| `PayloadJson`       | `jsonb`                    | yes  |         |     |
+| `ReasonForChange`   | `character varying(1000)`  | yes  |         |     |
+| `Reconciled`        | `boolean`                  | no   |         |     |
+| `ResponseDataJson`  | `jsonb`                    | yes  |         |     |
+| `Status`            | `character varying(50)`    | no   |         |     |
+| `SyncDirection`     | `character varying(50)`    | no   |         |     |
+| `VersionIndex`      | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -135,27 +135,27 @@ Indexes:
 
 Entity: `FeeSchedule`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ActivityId` | `character varying(100)` | yes |  |  |
-| `BaseAmount` | `numeric(18,4)` | no |  |  |
-| `ContractId` | `character varying(36)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `FormId` | `character varying(100)` | yes |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `OverheadPercentage` | `numeric(18,4)` | no |  |  |
-| `PatientStipend` | `numeric(18,4)` | no |  |  |
-| `ProcedureCode` | `character varying(100)` | no |  |  |
-| `ProcedureName` | `character varying(255)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `RequiresSdv` | `boolean` | no |  |  |
-| `TravelReimbursement` | `numeric(18,4)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VisitCode` | `character varying(100)` | no |  |  |
-| `WithholdingPercentage` | `numeric(18,4)` | no |  |  |
+| Column                  | Type                       | Null | Default | Key |
+| ----------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                    | `character varying(36)`    | no   |         | PK  |
+| `ActivityId`            | `character varying(100)`   | yes  |         |     |
+| `BaseAmount`            | `numeric(18,4)`            | no   |         |     |
+| `ContractId`            | `character varying(36)`    | no   |         |     |
+| `CreatedAt`             | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`             | `character varying(255)`   | no   |         |     |
+| `FormId`                | `character varying(100)`   | yes  |         |     |
+| `IsActive`              | `boolean`                  | no   |         |     |
+| `OverheadPercentage`    | `numeric(18,4)`            | no   |         |     |
+| `PatientStipend`        | `numeric(18,4)`            | no   |         |     |
+| `ProcedureCode`         | `character varying(100)`   | no   |         |     |
+| `ProcedureName`         | `character varying(255)`   | no   |         |     |
+| `ReasonForChange`       | `character varying(1000)`  | yes  |         |     |
+| `RequiresSdv`           | `boolean`                  | no   |         |     |
+| `TravelReimbursement`   | `numeric(18,4)`            | no   |         |     |
+| `UpdatedAt`             | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`          | `integer`                  | no   |         |     |
+| `VisitCode`             | `character varying(100)`   | no   |         |     |
+| `WithholdingPercentage` | `numeric(18,4)`            | no   |         |     |
 
 Indexes:
 
@@ -167,28 +167,28 @@ Indexes:
 
 Entity: `HoldbackReserve`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ContractId` | `character varying(36)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `DmSignoffAt` | `timestamp with time zone` | yes |  |  |
-| `DmSignoffBy` | `character varying(255)` | yes |  |  |
-| `HoldbackAmount` | `numeric(18,4)` | no |  |  |
-| `PayableId` | `character varying(36)` | no |  |  |
-| `QualitySignoffAt` | `timestamp with time zone` | yes |  |  |
-| `QualitySignoffBy` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `ReleaseAuthorizedAt` | `timestamp with time zone` | yes |  |  |
-| `ReleaseAuthorizedBy` | `character varying(255)` | yes |  |  |
-| `ReleaseNotes` | `character varying(1000)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                | Type                       | Null | Default | Key |
+| --------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                  | `character varying(36)`    | no   |         | PK  |
+| `ContractId`          | `character varying(36)`    | no   |         |     |
+| `CreatedAt`           | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`           | `character varying(255)`   | no   |         |     |
+| `Currency`            | `character varying(10)`    | no   |         |     |
+| `DmSignoffAt`         | `timestamp with time zone` | yes  |         |     |
+| `DmSignoffBy`         | `character varying(255)`   | yes  |         |     |
+| `HoldbackAmount`      | `numeric(18,4)`            | no   |         |     |
+| `PayableId`           | `character varying(36)`    | no   |         |     |
+| `QualitySignoffAt`    | `timestamp with time zone` | yes  |         |     |
+| `QualitySignoffBy`    | `character varying(255)`   | yes  |         |     |
+| `ReasonForChange`     | `character varying(1000)`  | yes  |         |     |
+| `ReleaseAuthorizedAt` | `timestamp with time zone` | yes  |         |     |
+| `ReleaseAuthorizedBy` | `character varying(255)`   | yes  |         |     |
+| `ReleaseNotes`        | `character varying(1000)`  | yes  |         |     |
+| `SiteId`              | `character varying(255)`   | no   |         |     |
+| `Status`              | `character varying(50)`    | no   |         |     |
+| `StudyId`             | `character varying(255)`   | no   |         |     |
+| `UpdatedAt`           | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`        | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -202,29 +202,29 @@ Indexes:
 
 Entity: `InvoiceLineItem`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `BaseAmount` | `numeric(18,4)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `GrossAmount` | `numeric(18,4)` | no |  |  |
-| `InvoiceId` | `character varying(36)` | no |  |  |
-| `NetAmount` | `numeric(18,4)` | no |  |  |
-| `OverheadAmount` | `numeric(18,4)` | no |  |  |
-| `PatientStipend` | `numeric(18,4)` | no |  |  |
-| `PayableId` | `character varying(36)` | yes |  |  |
-| `ProcedureCode` | `character varying(100)` | yes |  |  |
-| `ProcedureName` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TravelReimbursement` | `numeric(18,4)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VisitCode` | `character varying(100)` | no |  |  |
-| `WithholdingAmount` | `numeric(18,4)` | no |  |  |
-| `WithholdingRate` | `numeric(18,4)` | no |  |  |
+| Column                | Type                       | Null | Default | Key |
+| --------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                  | `character varying(36)`    | no   |         | PK  |
+| `BaseAmount`          | `numeric(18,4)`            | no   |         |     |
+| `CreatedAt`           | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`           | `character varying(255)`   | no   |         |     |
+| `Currency`            | `character varying(10)`    | no   |         |     |
+| `GrossAmount`         | `numeric(18,4)`            | no   |         |     |
+| `InvoiceId`           | `character varying(36)`    | no   |         |     |
+| `NetAmount`           | `numeric(18,4)`            | no   |         |     |
+| `OverheadAmount`      | `numeric(18,4)`            | no   |         |     |
+| `PatientStipend`      | `numeric(18,4)`            | no   |         |     |
+| `PayableId`           | `character varying(36)`    | yes  |         |     |
+| `ProcedureCode`       | `character varying(100)`   | yes  |         |     |
+| `ProcedureName`       | `character varying(255)`   | yes  |         |     |
+| `ReasonForChange`     | `character varying(1000)`  | yes  |         |     |
+| `SubjectId`           | `character varying(255)`   | no   |         |     |
+| `TravelReimbursement` | `numeric(18,4)`            | no   |         |     |
+| `UpdatedAt`           | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`        | `integer`                  | no   |         |     |
+| `VisitCode`           | `character varying(100)`   | no   |         |     |
+| `WithholdingAmount`   | `numeric(18,4)`            | no   |         |     |
+| `WithholdingRate`     | `numeric(18,4)`            | no   |         |     |
 
 Indexes:
 
@@ -237,18 +237,18 @@ Indexes:
 
 Entity: `ParticipantDisbursement`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Amount` | `numeric(18,4)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `DisbursementType` | `character varying(50)` | no |  |  |
-| `ReferenceNumber` | `character varying(100)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `WalletId` | `character varying(36)` | no |  |  |
+| Column             | Type                       | Null | Default | Key |
+| ------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`               | `character varying(36)`    | no   |         | PK  |
+| `Amount`           | `numeric(18,4)`            | no   |         |     |
+| `CreatedAt`        | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`        | `character varying(255)`   | no   |         |     |
+| `DisbursementType` | `character varying(50)`    | no   |         |     |
+| `ReferenceNumber`  | `character varying(100)`   | no   |         |     |
+| `Status`           | `character varying(50)`    | no   |         |     |
+| `SubjectId`        | `character varying(255)`   | no   |         |     |
+| `VersionIndex`     | `integer`                  | no   |         |     |
+| `WalletId`         | `character varying(36)`    | no   |         |     |
 
 Indexes:
 
@@ -261,30 +261,30 @@ Indexes:
 
 Entity: `ParticipantExpenseClaim`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Category` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `ExpenseDate` | `character varying(50)` | no |  |  |
-| `GrossAmount` | `numeric(18,4)` | no |  |  |
-| `MerchantName` | `character varying(255)` | no |  |  |
-| `NetAmount` | `numeric(18,4)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `ReceiptImageName` | `character varying(255)` | yes |  |  |
-| `ReceiptOcrDataJson` | `jsonb` | yes |  |  |
-| `ReviewNotes` | `character varying(1000)` | yes |  |  |
-| `ReviewedAt` | `timestamp with time zone` | yes |  |  |
-| `ReviewedBy` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TaxDeduction` | `numeric(18,4)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `WalletId` | `character varying(36)` | no |  |  |
+| Column               | Type                       | Null | Default | Key |
+| -------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                 | `character varying(36)`    | no   |         | PK  |
+| `Category`           | `character varying(50)`    | no   |         |     |
+| `CreatedAt`          | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`          | `character varying(255)`   | no   |         |     |
+| `ExpenseDate`        | `character varying(50)`    | no   |         |     |
+| `GrossAmount`        | `numeric(18,4)`            | no   |         |     |
+| `MerchantName`       | `character varying(255)`   | no   |         |     |
+| `NetAmount`          | `numeric(18,4)`            | no   |         |     |
+| `ReasonForChange`    | `character varying(1000)`  | yes  |         |     |
+| `ReceiptImageName`   | `character varying(255)`   | yes  |         |     |
+| `ReceiptOcrDataJson` | `jsonb`                    | yes  |         |     |
+| `ReviewNotes`        | `character varying(1000)`  | yes  |         |     |
+| `ReviewedAt`         | `timestamp with time zone` | yes  |         |     |
+| `ReviewedBy`         | `character varying(255)`   | yes  |         |     |
+| `SiteId`             | `character varying(255)`   | no   |         |     |
+| `Status`             | `character varying(50)`    | no   |         |     |
+| `StudyId`            | `character varying(255)`   | no   |         |     |
+| `SubjectId`          | `character varying(255)`   | no   |         |     |
+| `TaxDeduction`       | `numeric(18,4)`            | no   |         |     |
+| `UpdatedAt`          | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`       | `integer`                  | no   |         |     |
+| `WalletId`           | `character varying(36)`    | no   |         |     |
 
 Indexes:
 
@@ -298,27 +298,27 @@ Indexes:
 
 Entity: `ParticipantStipendRule`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Amount` | `numeric(18,4)` | no |  |  |
-| `AntiCoercionCap` | `numeric(18,4)` | yes |  |  |
-| `AutoDisbursementThreshold` | `numeric(18,4)` | yes |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `IsMilestone` | `boolean` | no |  |  |
-| `MilestoneCode` | `character varying(100)` | yes |  |  |
-| `ProcedureCode` | `character varying(100)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `RequiresVerification` | `boolean` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `Taxable` | `boolean` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VisitCode` | `character varying(100)` | no |  |  |
-| `VisitName` | `character varying(255)` | no |  |  |
+| Column                      | Type                       | Null | Default | Key |
+| --------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                        | `character varying(36)`    | no   |         | PK  |
+| `Amount`                    | `numeric(18,4)`            | no   |         |     |
+| `AntiCoercionCap`           | `numeric(18,4)`            | yes  |         |     |
+| `AutoDisbursementThreshold` | `numeric(18,4)`            | yes  |         |     |
+| `CreatedAt`                 | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                 | `character varying(255)`   | no   |         |     |
+| `Currency`                  | `character varying(10)`    | no   |         |     |
+| `IsActive`                  | `boolean`                  | no   |         |     |
+| `IsMilestone`               | `boolean`                  | no   |         |     |
+| `MilestoneCode`             | `character varying(100)`   | yes  |         |     |
+| `ProcedureCode`             | `character varying(100)`   | yes  |         |     |
+| `ReasonForChange`           | `character varying(1000)`  | yes  |         |     |
+| `RequiresVerification`      | `boolean`                  | no   |         |     |
+| `StudyId`                   | `character varying(255)`   | no   |         |     |
+| `Taxable`                   | `boolean`                  | no   |         |     |
+| `UpdatedAt`                 | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`              | `integer`                  | no   |         |     |
+| `VisitCode`                 | `character varying(100)`   | no   |         |     |
+| `VisitName`                 | `character varying(255)`   | no   |         |     |
 
 Indexes:
 
@@ -329,20 +329,20 @@ Indexes:
 
 Entity: `ParticipantTransaction`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Amount` | `numeric(18,4)` | no |  |  |
-| `BalanceAfter` | `numeric(18,4)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Description` | `character varying(500)` | no |  |  |
-| `ReferenceId` | `character varying(255)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TransactionType` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `WalletId` | `character varying(36)` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Amount`          | `numeric(18,4)`            | no   |         |     |
+| `BalanceAfter`    | `numeric(18,4)`            | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `Description`     | `character varying(500)`   | no   |         |     |
+| `ReferenceId`     | `character varying(255)`   | no   |         |     |
+| `StudyId`         | `character varying(255)`   | no   |         |     |
+| `SubjectId`       | `character varying(255)`   | no   |         |     |
+| `TransactionType` | `character varying(50)`    | no   |         |     |
+| `VersionIndex`    | `integer`                  | no   |         |     |
+| `WalletId`        | `character varying(36)`    | no   |         |     |
 
 Indexes:
 
@@ -356,40 +356,40 @@ Indexes:
 
 Entity: `ParticipantWallet`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AchAccountHolder` | `character varying(255)` | yes |  |  |
-| `AchAccountMask` | `character varying(50)` | yes |  |  |
-| `AchProcessorReference` | `character varying(1424)` | yes |  |  |
-| `AchRoutingMask` | `character varying(20)` | yes |  |  |
-| `AntiCoercionCap` | `numeric(18,4)` | yes |  |  |
-| `AutoDisbursementThreshold` | `numeric(18,4)` | yes |  |  |
-| `CardStatus` | `character varying(50)` | no |  |  |
-| `CardType` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `CurrentBalance` | `numeric(18,4)` | no |  |  |
-| `Is1099ThresholdExceeded` | `boolean` | no |  |  |
-| `LifetimeDisbursements` | `numeric(18,4)` | no |  |  |
-| `LifetimeReimbursements` | `numeric(18,4)` | no |  |  |
-| `LifetimeStipends` | `numeric(18,4)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TaxIdLastFour` | `character varying(4)` | yes |  |  |
-| `TaxableYtd` | `numeric(18,4)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VirtualCardExpiry` | `character varying(20)` | yes |  |  |
-| `VirtualCardMask` | `character varying(50)` | yes |  |  |
-| `VirtualCardProcessorReference` | `character varying(1424)` | yes |  |  |
-| `W9Status` | `character varying(50)` | no |  |  |
-| `W9SubmittedAt` | `timestamp with time zone` | yes |  |  |
-| `W9VerifiedAt` | `timestamp with time zone` | yes |  |  |
+| Column                          | Type                       | Null | Default | Key |
+| ------------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                            | `character varying(36)`    | no   |         | PK  |
+| `AchAccountHolder`              | `character varying(255)`   | yes  |         |     |
+| `AchAccountMask`                | `character varying(50)`    | yes  |         |     |
+| `AchProcessorReference`         | `character varying(1424)`  | yes  |         |     |
+| `AchRoutingMask`                | `character varying(20)`    | yes  |         |     |
+| `AntiCoercionCap`               | `numeric(18,4)`            | yes  |         |     |
+| `AutoDisbursementThreshold`     | `numeric(18,4)`            | yes  |         |     |
+| `CardStatus`                    | `character varying(50)`    | no   |         |     |
+| `CardType`                      | `character varying(50)`    | no   |         |     |
+| `CreatedAt`                     | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                     | `character varying(255)`   | no   |         |     |
+| `Currency`                      | `character varying(10)`    | no   |         |     |
+| `CurrentBalance`                | `numeric(18,4)`            | no   |         |     |
+| `Is1099ThresholdExceeded`       | `boolean`                  | no   |         |     |
+| `LifetimeDisbursements`         | `numeric(18,4)`            | no   |         |     |
+| `LifetimeReimbursements`        | `numeric(18,4)`            | no   |         |     |
+| `LifetimeStipends`              | `numeric(18,4)`            | no   |         |     |
+| `ReasonForChange`               | `character varying(1000)`  | yes  |         |     |
+| `SiteId`                        | `character varying(255)`   | no   |         |     |
+| `Status`                        | `character varying(50)`    | no   |         |     |
+| `StudyId`                       | `character varying(255)`   | no   |         |     |
+| `SubjectId`                     | `character varying(255)`   | no   |         |     |
+| `TaxIdLastFour`                 | `character varying(4)`     | yes  |         |     |
+| `TaxableYtd`                    | `numeric(18,4)`            | no   |         |     |
+| `UpdatedAt`                     | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`                  | `integer`                  | no   |         |     |
+| `VirtualCardExpiry`             | `character varying(20)`    | yes  |         |     |
+| `VirtualCardMask`               | `character varying(50)`    | yes  |         |     |
+| `VirtualCardProcessorReference` | `character varying(1424)`  | yes  |         |     |
+| `W9Status`                      | `character varying(50)`    | no   |         |     |
+| `W9SubmittedAt`                 | `timestamp with time zone` | yes  |         |     |
+| `W9VerifiedAt`                  | `timestamp with time zone` | yes  |         |     |
 
 Indexes:
 
@@ -403,24 +403,24 @@ Indexes:
 
 Entity: `PayableAllocation`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AllocationPercentage` | `numeric(18,4)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `GrossShare` | `numeric(18,4)` | no |  |  |
-| `NetShare` | `numeric(18,4)` | no |  |  |
-| `PayableId` | `character varying(36)` | no |  |  |
-| `PayeeId` | `character varying(100)` | no |  |  |
-| `PayeeName` | `character varying(255)` | no |  |  |
-| `PayeeRole` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `WithholdingShare` | `numeric(18,4)` | no |  |  |
+| Column                 | Type                       | Null | Default | Key |
+| ---------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                   | `character varying(36)`    | no   |         | PK  |
+| `AllocationPercentage` | `numeric(18,4)`            | no   |         |     |
+| `CreatedAt`            | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`            | `character varying(255)`   | no   |         |     |
+| `Currency`             | `character varying(10)`    | no   |         |     |
+| `GrossShare`           | `numeric(18,4)`            | no   |         |     |
+| `NetShare`             | `numeric(18,4)`            | no   |         |     |
+| `PayableId`            | `character varying(36)`    | no   |         |     |
+| `PayeeId`              | `character varying(100)`   | no   |         |     |
+| `PayeeName`            | `character varying(255)`   | no   |         |     |
+| `PayeeRole`            | `character varying(50)`    | no   |         |     |
+| `ReasonForChange`      | `character varying(1000)`  | yes  |         |     |
+| `Status`               | `character varying(50)`    | no   |         |     |
+| `UpdatedAt`            | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`         | `integer`                  | no   |         |     |
+| `WithholdingShare`     | `numeric(18,4)`            | no   |         |     |
 
 Indexes:
 
@@ -431,38 +431,38 @@ Indexes:
 
 Entity: `Payable`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `BaseAmount` | `numeric(18,4)` | no |  |  |
-| `ContractId` | `character varying(36)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `FormId` | `character varying(100)` | yes |  |  |
-| `GrossAmount` | `numeric(18,4)` | no |  |  |
-| `IsSdvGated` | `boolean` | no |  |  |
-| `NetAmount` | `numeric(18,4)` | no |  |  |
-| `OverheadAmount` | `numeric(18,4)` | no |  |  |
-| `PatientStipendAmount` | `numeric(18,4)` | no |  |  |
-| `ProcedureCode` | `character varying(100)` | yes |  |  |
-| `ProcedureName` | `character varying(255)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `SdvVerifiedAt` | `timestamp with time zone` | yes |  |  |
-| `SdvVerifiedBy` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `SubjectId` | `character varying(255)` | no |  |  |
-| `TravelReimbursementAmount` | `numeric(18,4)` | no |  |  |
-| `TriggerEventId` | `character varying(255)` | no |  |  |
-| `TriggerSource` | `character varying(100)` | no |  |  |
-| `TriggerType` | `character varying(50)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
-| `VisitCode` | `character varying(100)` | no |  |  |
-| `WithholdingAmount` | `numeric(18,4)` | no |  |  |
-| `WithholdingRate` | `numeric(18,4)` | no |  |  |
+| Column                      | Type                       | Null | Default | Key |
+| --------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                        | `character varying(36)`    | no   |         | PK  |
+| `BaseAmount`                | `numeric(18,4)`            | no   |         |     |
+| `ContractId`                | `character varying(36)`    | no   |         |     |
+| `CreatedAt`                 | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                 | `character varying(255)`   | no   |         |     |
+| `Currency`                  | `character varying(10)`    | no   |         |     |
+| `FormId`                    | `character varying(100)`   | yes  |         |     |
+| `GrossAmount`               | `numeric(18,4)`            | no   |         |     |
+| `IsSdvGated`                | `boolean`                  | no   |         |     |
+| `NetAmount`                 | `numeric(18,4)`            | no   |         |     |
+| `OverheadAmount`            | `numeric(18,4)`            | no   |         |     |
+| `PatientStipendAmount`      | `numeric(18,4)`            | no   |         |     |
+| `ProcedureCode`             | `character varying(100)`   | yes  |         |     |
+| `ProcedureName`             | `character varying(255)`   | yes  |         |     |
+| `ReasonForChange`           | `character varying(1000)`  | yes  |         |     |
+| `SdvVerifiedAt`             | `timestamp with time zone` | yes  |         |     |
+| `SdvVerifiedBy`             | `character varying(255)`   | yes  |         |     |
+| `SiteId`                    | `character varying(255)`   | no   |         |     |
+| `Status`                    | `character varying(50)`    | no   |         |     |
+| `StudyId`                   | `character varying(255)`   | no   |         |     |
+| `SubjectId`                 | `character varying(255)`   | no   |         |     |
+| `TravelReimbursementAmount` | `numeric(18,4)`            | no   |         |     |
+| `TriggerEventId`            | `character varying(255)`   | no   |         |     |
+| `TriggerSource`             | `character varying(100)`   | no   |         |     |
+| `TriggerType`               | `character varying(50)`    | no   |         |     |
+| `UpdatedAt`                 | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`              | `integer`                  | no   |         |     |
+| `VisitCode`                 | `character varying(100)`   | no   |         |     |
+| `WithholdingAmount`         | `numeric(18,4)`            | no   |         |     |
+| `WithholdingRate`           | `numeric(18,4)`            | no   |         |     |
 
 Indexes:
 
@@ -481,34 +481,34 @@ Indexes:
 
 Entity: `RemittanceAdvice`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `DispatchStatus` | `character varying(50)` | no |  |  |
-| `DispatchedAt` | `timestamp with time zone` | yes |  |  |
-| `DispatchedTo` | `character varying(255)` | yes |  |  |
-| `GrossAmount` | `numeric(18,4)` | no |  |  |
-| `HoldbackAmount` | `numeric(18,4)` | no |  |  |
-| `InvoiceId` | `character varying(36)` | no |  |  |
-| `IsSealed` | `boolean` | no |  |  |
-| `IsSigned` | `boolean` | no |  |  |
-| `NetAmount` | `numeric(18,4)` | no |  |  |
-| `OverheadAmount` | `numeric(18,4)` | no |  |  |
-| `PdfContent` | `text` | yes |  |  |
-| `PdfSha256Hash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `RemittanceNumber` | `character varying(100)` | no |  |  |
-| `SignatureManifestJson` | `jsonb` | yes |  |  |
-| `SignedAt` | `timestamp with time zone` | yes |  |  |
-| `SignedBy` | `character varying(255)` | yes |  |  |
-| `SignerRole` | `character varying(100)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                  | Type                       | Null | Default | Key |
+| ----------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                    | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`             | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`             | `character varying(255)`   | no   |         |     |
+| `Currency`              | `character varying(10)`    | no   |         |     |
+| `DispatchStatus`        | `character varying(50)`    | no   |         |     |
+| `DispatchedAt`          | `timestamp with time zone` | yes  |         |     |
+| `DispatchedTo`          | `character varying(255)`   | yes  |         |     |
+| `GrossAmount`           | `numeric(18,4)`            | no   |         |     |
+| `HoldbackAmount`        | `numeric(18,4)`            | no   |         |     |
+| `InvoiceId`             | `character varying(36)`    | no   |         |     |
+| `IsSealed`              | `boolean`                  | no   |         |     |
+| `IsSigned`              | `boolean`                  | no   |         |     |
+| `NetAmount`             | `numeric(18,4)`            | no   |         |     |
+| `OverheadAmount`        | `numeric(18,4)`            | no   |         |     |
+| `PdfContent`            | `text`                     | yes  |         |     |
+| `PdfSha256Hash`         | `character varying(64)`    | no   |         |     |
+| `ReasonForChange`       | `character varying(1000)`  | yes  |         |     |
+| `RemittanceNumber`      | `character varying(100)`   | no   |         |     |
+| `SignatureManifestJson` | `jsonb`                    | yes  |         |     |
+| `SignedAt`              | `timestamp with time zone` | yes  |         |     |
+| `SignedBy`              | `character varying(255)`   | yes  |         |     |
+| `SignerRole`            | `character varying(100)`   | yes  |         |     |
+| `SiteId`                | `character varying(255)`   | no   |         |     |
+| `StudyId`               | `character varying(255)`   | no   |         |     |
+| `UpdatedAt`             | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`          | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -522,41 +522,41 @@ Indexes:
 
 Entity: `SelfBillingInvoice`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `ApprovedBy` | `character varying(255)` | yes |  |  |
-| `BillingCycle` | `character varying(50)` | no |  |  |
-| `ContractId` | `character varying(36)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Currency` | `character varying(10)` | no |  |  |
-| `ErpReferenceId` | `character varying(100)` | yes |  |  |
-| `ErpSyncStatus` | `character varying(50)` | no |  |  |
-| `ErpSyncedAt` | `timestamp with time zone` | yes |  |  |
-| `ErpSystem` | `character varying(50)` | yes |  |  |
-| `InvoiceNumber` | `character varying(100)` | no |  |  |
-| `PayableCount` | `integer` | no |  |  |
-| `PeriodEnd` | `character varying(50)` | no |  |  |
-| `PeriodStart` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `ReconciledAt` | `timestamp with time zone` | yes |  |  |
-| `ReconciledBy` | `character varying(255)` | yes |  |  |
-| `ReconciliationNotes` | `character varying(1000)` | yes |  |  |
-| `ReconciliationReference` | `character varying(255)` | yes |  |  |
-| `SiteId` | `character varying(255)` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TotalBaseAmount` | `numeric(18,4)` | no |  |  |
-| `TotalGrossAmount` | `numeric(18,4)` | no |  |  |
-| `TotalHoldbackAmount` | `numeric(18,4)` | no |  |  |
-| `TotalNetAmount` | `numeric(18,4)` | no |  |  |
-| `TotalOverheadAmount` | `numeric(18,4)` | no |  |  |
-| `TotalPatientStipend` | `numeric(18,4)` | no |  |  |
-| `TotalTravelReimbursement` | `numeric(18,4)` | no |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                     | Type                       | Null | Default | Key |
+| -------------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                       | `character varying(36)`    | no   |         | PK  |
+| `ApprovedAt`               | `timestamp with time zone` | yes  |         |     |
+| `ApprovedBy`               | `character varying(255)`   | yes  |         |     |
+| `BillingCycle`             | `character varying(50)`    | no   |         |     |
+| `ContractId`               | `character varying(36)`    | no   |         |     |
+| `CreatedAt`                | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`                | `character varying(255)`   | no   |         |     |
+| `Currency`                 | `character varying(10)`    | no   |         |     |
+| `ErpReferenceId`           | `character varying(100)`   | yes  |         |     |
+| `ErpSyncStatus`            | `character varying(50)`    | no   |         |     |
+| `ErpSyncedAt`              | `timestamp with time zone` | yes  |         |     |
+| `ErpSystem`                | `character varying(50)`    | yes  |         |     |
+| `InvoiceNumber`            | `character varying(100)`   | no   |         |     |
+| `PayableCount`             | `integer`                  | no   |         |     |
+| `PeriodEnd`                | `character varying(50)`    | no   |         |     |
+| `PeriodStart`              | `character varying(50)`    | no   |         |     |
+| `ReasonForChange`          | `character varying(1000)`  | yes  |         |     |
+| `ReconciledAt`             | `timestamp with time zone` | yes  |         |     |
+| `ReconciledBy`             | `character varying(255)`   | yes  |         |     |
+| `ReconciliationNotes`      | `character varying(1000)`  | yes  |         |     |
+| `ReconciliationReference`  | `character varying(255)`   | yes  |         |     |
+| `SiteId`                   | `character varying(255)`   | no   |         |     |
+| `Status`                   | `character varying(50)`    | no   |         |     |
+| `StudyId`                  | `character varying(255)`   | no   |         |     |
+| `TotalBaseAmount`          | `numeric(18,4)`            | no   |         |     |
+| `TotalGrossAmount`         | `numeric(18,4)`            | no   |         |     |
+| `TotalHoldbackAmount`      | `numeric(18,4)`            | no   |         |     |
+| `TotalNetAmount`           | `numeric(18,4)`            | no   |         |     |
+| `TotalOverheadAmount`      | `numeric(18,4)`            | no   |         |     |
+| `TotalPatientStipend`      | `numeric(18,4)`            | no   |         |     |
+| `TotalTravelReimbursement` | `numeric(18,4)`            | no   |         |     |
+| `UpdatedAt`                | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`             | `integer`                  | no   |         |     |
 
 Indexes:
 
@@ -573,22 +573,22 @@ Indexes:
 
 Entity: `SplitPayeeConfig`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AllocationPercentage` | `numeric(18,4)` | no |  |  |
-| `BankAccountReference` | `character varying(100)` | yes |  |  |
-| `ContractId` | `character varying(36)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `IsActive` | `boolean` | no |  |  |
-| `PayeeId` | `character varying(100)` | no |  |  |
-| `PayeeName` | `character varying(255)` | no |  |  |
-| `PayeeRole` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | yes |  |  |
-| `TaxIdentifier` | `character varying(100)` | yes |  |  |
-| `UpdatedAt` | `timestamp with time zone` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| Column                 | Type                       | Null | Default | Key |
+| ---------------------- | -------------------------- | ---- | ------- | --- |
+| `Id`                   | `character varying(36)`    | no   |         | PK  |
+| `AllocationPercentage` | `numeric(18,4)`            | no   |         |     |
+| `BankAccountReference` | `character varying(100)`   | yes  |         |     |
+| `ContractId`           | `character varying(36)`    | no   |         |     |
+| `CreatedAt`            | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`            | `character varying(255)`   | no   |         |     |
+| `IsActive`             | `boolean`                  | no   |         |     |
+| `PayeeId`              | `character varying(100)`   | no   |         |     |
+| `PayeeName`            | `character varying(255)`   | no   |         |     |
+| `PayeeRole`            | `character varying(50)`    | no   |         |     |
+| `ReasonForChange`      | `character varying(1000)`  | yes  |         |     |
+| `TaxIdentifier`        | `character varying(100)`   | yes  |         |     |
+| `UpdatedAt`            | `timestamp with time zone` | no   |         |     |
+| `VersionIndex`         | `integer`                  | no   |         |     |
 
 Indexes:
 

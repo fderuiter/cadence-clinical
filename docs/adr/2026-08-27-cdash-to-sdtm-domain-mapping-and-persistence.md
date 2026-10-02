@@ -26,9 +26,9 @@ We need to design a clean, automated, GxP-compliant CDASH-to-SDTM domain mapping
 
 Perform CDASH-to-SDTM transformation on-the-fly and return them purely in-memory.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ No database schema modifications needed.
-- ***Cons:***
+- _**Cons:**_
   - ❌ No historical lineage or audit trail of the transformed SDTM records.
   - ❌ Fails GxP requirement of database-level audit ledger.
 
@@ -36,11 +36,11 @@ Perform CDASH-to-SDTM transformation on-the-fly and return them purely in-memory
 
 Establish a central `sdtm_domain_records` table mapping study-id, domain, and unique subject identifiers to the fully-serialized strongly-typed SDTMRecord Pydantic models.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Full auditable lineage per clinical data transaction.
   - ✅ Strong schema validation with Pydantic v2.
   - ✅ Decentralized JSON payload allows custom extensible schemas per SDTM domain without massive column expansion.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Minimal SQL query filtering on nested JSON keys (mitigated by indexing parent columns like study_id, domain, usubjid).
 
 ## 4. Decision Outcome

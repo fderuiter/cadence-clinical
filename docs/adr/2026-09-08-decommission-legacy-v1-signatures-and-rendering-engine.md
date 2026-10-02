@@ -26,20 +26,20 @@ Requirements: PRD-SYS-001
 ### Option 1: Retain V1 Standalone Fallback as Deprecated
 
 - **Overview:** Keep legacy rendering functions and simple string-based V1 signature validation paths while emitting deprecation logs.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Avoids immediate removal of backward-compatibility paths.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Leaves insecure cryptographic signatures accessible in codebase.
   - ❌ Increases maintenance overhead and potential for UI/UX drift between active rendering layouts.
 
 ### Option 2: Full Decommissioning and Security Matrix Consolidation [Selected]
 
 - **Overview:** Completely remove V1 string signature paths, decommission the legacy standalone document rendering blocks, and consolidate all role permission mappings (including removing duplicate `"soa"` dictionary keys) in `packages/security/rbac.py`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Absolute GxP/Part 11 security profile with exclusive V2 canonical validation.
   - ✅ Elimination of style/layout drift through unified rendering library.
   - ✅ Code clean, resolving lint F601 warnings immediately.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires updating legacy signature verifiers to throw 401 on V1 payloads instead of falling back.
 
 ## 4. Decision Outcome

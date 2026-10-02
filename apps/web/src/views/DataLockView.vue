@@ -965,9 +965,46 @@ export default {
     getBadgeClass(status) {
       if (!status) return "badge-unlocked";
       const s = status.toUpperCase();
-      if (s === "LOCKED" || s === "HARD_LOCK") return "badge-locked";
-      if (s === "FROZEN") return "badge-frozen";
+      if (s === "LOCKED" || s === "HARD_LOCK" || s === "PENDING_LOCK")
+        return "badge-locked";
+      if (s === "FROZEN" || s === "PENDING_FREEZE") return "badge-frozen";
+      if (s === "UNLOCKED" || s === "PENDING_UNLOCK") return "badge-unlocked";
       return "badge-unlocked";
+    },
+
+    applyOptimisticCascade(scopeType, scopeId, newStatus) {
+      const updateNodeAndChildren = (node) => {
+        node.status = newStatus;
+        if (node.sites) node.sites.forEach(updateNodeAndChildren);
+        if (node.subjects) node.subjects.forEach(updateNodeAndChildren);
+        if (node.visits) node.visits.forEach(updateNodeAndChildren);
+        if (node.forms) node.forms.forEach(updateNodeAndChildren);
+        if (node.fields) node.fields.forEach(updateNodeAndChildren);
+      };
+
+      const findTargetNode = (node) => {
+        if (node.type === scopeType && node.id === scopeId) {
+          updateNodeAndChildren(node);
+          return true;
+        }
+        const childrenArrays = [
+          node.sites,
+          node.subjects,
+          node.visits,
+          node.forms,
+          node.fields,
+        ];
+        for (const arr of childrenArrays) {
+          if (arr) {
+            for (const child of arr) {
+              if (findTargetNode(child)) return true;
+            }
+          }
+        }
+        return false;
+      };
+
+      findTargetNode(this.studyTree);
     },
 
     formatDate(iso) {
@@ -1001,7 +1038,11 @@ export default {
         );
         await ensureOk(response);
         const data = await response.json();
-        this.allLockRecords = data || [];
+        this.allLockRecords = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+            ? data.items
+            : [];
         this.calculateStats();
         this.syncTreeStatuses();
       } catch (err) {
@@ -1019,7 +1060,8 @@ export default {
 
       for (const r of this.allLockRecords) {
         if (r.is_active) {
-          if (r.lock_type === "FROZEN") frozen++;
+          if (r.lock_type === "FROZEN" || r.status === "PENDING_FREEZE")
+            frozen++;
           else active++;
         } else {
           unlocked++;
@@ -1100,21 +1142,52 @@ export default {
 
     async submitLock() {
       this.isSubmitting = true;
-      try {
-        const payload = {
-          scope_type: this.lockForm.scope_type,
-          scope_id: this.lockForm.scope_id,
-          study_id: this.lockForm.study_id,
-          site_id: this.lockForm.site_id || null,
-          subject_id: this.lockForm.subject_id || null,
-          visit_id: this.lockForm.visit_id || null,
-          form_id: this.lockForm.form_id || null,
-          field_name: this.lockForm.field_name || null,
-          action: this.lockForm.action,
-          lock_type: this.lockForm.action === "FREEZE" ? "FROZEN" : "HARD_LOCK",
-          reason_for_change: this.lockForm.reason,
-        };
 
+      // Capture pre-operation rollback snapshot
+      const snapshotTree = JSON.parse(JSON.stringify(this.studyTree));
+      const snapshotRecords = JSON.parse(JSON.stringify(this.allLockRecords));
+
+      const targetPendingStatus =
+        this.lockForm.action === "FREEZE" ? "PENDING_FREEZE" : "PENDING_LOCK";
+      const finalStatus =
+        this.lockForm.action === "FREEZE" ? "FROZEN" : "HARD_LOCK";
+
+      const payload = {
+        scope_type: this.lockForm.scope_type,
+        scope_id: this.lockForm.scope_id,
+        study_id: this.lockForm.study_id,
+        site_id: this.lockForm.site_id || null,
+        subject_id: this.lockForm.subject_id || null,
+        visit_id: this.lockForm.visit_id || null,
+        form_id: this.lockForm.form_id || null,
+        field_name: this.lockForm.field_name || null,
+        action: this.lockForm.action,
+        lock_type: finalStatus,
+        reason_for_change: this.lockForm.reason,
+      };
+
+      // Immediate optimistic update on tree and records
+      this.applyOptimisticCascade(
+        payload.scope_type,
+        payload.scope_id,
+        targetPendingStatus
+      );
+      const optimisticRecord = {
+        lock_id: `OPT-${Date.now()}`,
+        scope_type: payload.scope_type,
+        scope_id: payload.scope_id,
+        status: targetPendingStatus,
+        lock_type: targetPendingStatus,
+        is_active: true,
+        created_by: "Current User (Optimistic)",
+        reason_for_change: payload.reason_for_change,
+        created_at: new Date().toISOString(),
+      };
+      this.allLockRecords.unshift(optimisticRecord);
+      this.calculateStats();
+      this.isLockModalOpen = false;
+
+      try {
         const headers = { "Content-Type": "application/json" };
         if (this.lockForm.sig_token) {
           headers["X-Sig-Token"] = this.lockForm.sig_token;
@@ -1126,27 +1199,30 @@ export default {
           body: JSON.stringify(payload),
         });
 
-        // #4827: a rejected lock is an error, not a silently closed dialog.
         await ensureOk(res);
         const result = await res.json();
-        this.allLockRecords.unshift(
-          result.record || {
-            lock_id: result.lock_id,
-            scope_type: payload.scope_type,
-            scope_id: payload.scope_id,
-            status: result.status,
-            lock_type: result.status,
-            is_active: true,
-            created_by: "Current User",
-            reason_for_change: payload.reason_for_change,
-            created_at: new Date().toISOString(),
-          }
+
+        // Confirm lock with server response
+        optimisticRecord.lock_id = result.lock_id || optimisticRecord.lock_id;
+        optimisticRecord.status = result.status || finalStatus;
+        optimisticRecord.lock_type = result.status || finalStatus;
+        optimisticRecord.created_by = "Current User";
+
+        this.applyOptimisticCascade(
+          payload.scope_type,
+          payload.scope_id,
+          finalStatus
         );
         this.calculateStats();
-        this.syncTreeStatuses();
-        this.isLockModalOpen = false;
       } catch (err) {
-        useToastStore().apiError("Locking failed. Nothing was locked", err);
+        // Automatic rollback to snapshot on failure
+        this.studyTree = snapshotTree;
+        this.allLockRecords = snapshotRecords;
+        this.calculateStats();
+        useToastStore().apiError(
+          "Locking failed. Reverting optimistic state changes",
+          err
+        );
       } finally {
         this.isSubmitting = false;
       }
@@ -1155,15 +1231,39 @@ export default {
     async submitUnlock() {
       if (!this.isJustificationValid) return;
       this.isSubmitting = true;
-      try {
-        const payload = {
-          lock_id: this.unlockForm.lock_id || undefined,
-          scope_type: this.unlockForm.scope_type,
-          scope_id: this.unlockForm.scope_id,
-          justification: this.unlockForm.justification,
-          reason_for_change: `${this.unlockForm.reason_code}: ${this.unlockForm.justification}`,
-        };
 
+      // Capture pre-operation rollback snapshot
+      const snapshotTree = JSON.parse(JSON.stringify(this.studyTree));
+      const snapshotRecords = JSON.parse(JSON.stringify(this.allLockRecords));
+
+      const payload = {
+        lock_id: this.unlockForm.lock_id || undefined,
+        scope_type: this.unlockForm.scope_type,
+        scope_id: this.unlockForm.scope_id,
+        justification: this.unlockForm.justification,
+        reason_for_change: `${this.unlockForm.reason_code}: ${this.unlockForm.justification}`,
+      };
+
+      // Immediate optimistic update
+      this.applyOptimisticCascade(
+        payload.scope_type,
+        payload.scope_id,
+        "PENDING_UNLOCK"
+      );
+      const targetRecord = this.allLockRecords.find(
+        (r) =>
+          r.is_active &&
+          (r.scope_id === payload.scope_id || r.lock_id === payload.lock_id)
+      );
+      if (targetRecord) {
+        targetRecord.is_active = false;
+        targetRecord.status = "PENDING_UNLOCK";
+        targetRecord.unlock_justification = payload.justification;
+      }
+      this.calculateStats();
+      this.isUnlockModalOpen = false;
+
+      try {
         const res = await fetch("/api/v1/execution/locks/unlock", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1171,22 +1271,26 @@ export default {
         });
 
         await ensureOk(res);
-        const result = await res.json();
-        const target = this.allLockRecords.find(
-          (r) =>
-            r.lock_id === result.lock_id ||
-            r.scope_id === this.unlockForm.scope_id
-        );
-        if (target) {
-          target.is_active = false;
-          target.status = "UNLOCKED";
-          target.unlock_justification = payload.justification;
+        await res.json();
+
+        if (targetRecord) {
+          targetRecord.status = "UNLOCKED";
         }
+        this.applyOptimisticCascade(
+          payload.scope_type,
+          payload.scope_id,
+          "UNLOCKED"
+        );
         this.calculateStats();
-        this.syncTreeStatuses();
-        this.isUnlockModalOpen = false;
       } catch (err) {
-        useToastStore().apiError("Unlocking failed. Nothing was unlocked", err);
+        // Automatic rollback to snapshot on failure
+        this.studyTree = snapshotTree;
+        this.allLockRecords = snapshotRecords;
+        this.calculateStats();
+        useToastStore().apiError(
+          "Unlocking failed. Reverting optimistic state changes",
+          err
+        );
       } finally {
         this.isSubmitting = false;
       }

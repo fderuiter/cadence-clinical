@@ -172,6 +172,68 @@
         </div>
       </div>
 
+      <!-- Export Progress Display -->
+      <div
+        v-if="taskPipeline.isProcessing.value"
+        class="export-progress-panel"
+        style="
+          margin-top: 16px;
+          padding: 12px;
+          background: var(--bg);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+        "
+      >
+        <div style="font-size: 12px; font-weight: 600; margin-bottom: 4px">
+          {{ taskPipeline.currentStage.value }}
+        </div>
+        <div
+          class="progress-bar-track"
+          style="
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+          "
+        >
+          <div
+            class="progress-bar-fill"
+            :style="{
+              width: taskPipeline.progressPercent.value + '%',
+              height: '100%',
+              background: 'var(--primary, #0284c7)',
+            }"
+          />
+        </div>
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <span style="font-size: 11px; color: var(--text-muted)">
+            {{ taskPipeline.progressPercent.value }}% Completed
+          </span>
+          <button
+            type="button"
+            class="btn btn-sm btn-cancel-auditor-export"
+            style="
+              padding: 2px 8px;
+              font-size: 11px;
+              border: 1px solid #f87171;
+              color: #dc2626;
+              background: transparent;
+              cursor: pointer;
+            "
+            @click="cancelExport"
+          >
+            ⛔ Cancel
+          </button>
+        </div>
+      </div>
+
       <footer
         style="
           display: flex;
@@ -199,10 +261,11 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useAuditorStore } from "../../stores/auditor";
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useEscapeClose } from "@/composables/useEscapeClose";
+import { useTaskPipeline } from "@/composables/useTaskPipeline";
 
 const emit = defineEmits(["close"]);
 
@@ -211,31 +274,52 @@ useFocusTrap(modalRef);
 useEscapeClose(() => emit("close"));
 
 const auditorStore = useAuditorStore();
+const taskPipeline = useTaskPipeline();
 
 const exportFormat = ref("CSV");
 const startDate = ref(auditorStore.filters.dateRange.start);
 const endDate = ref(auditorStore.filters.dateRange.end);
-const exporting = ref(false);
+const exporting = computed(() => taskPipeline.isProcessing.value);
+
+function cancelExport() {
+  taskPipeline.cancelTask("Audit export cancelled by user");
+}
 
 async function handleExport() {
-  exporting.value = true;
   try {
-    // Apply bounds to the store before exporting
-    auditorStore.setFilters({
-      dateRange: {
-        start: startDate.value,
-        end: endDate.value,
-      },
-    });
-    // Fetch logs to make sure we have filtered logs matching constraints
-    await auditorStore.fetchAuditLogs();
-    // Export with the specified format
-    await auditorStore.exportAuditTrail(exportFormat.value);
-    emit("close");
+    await taskPipeline.runTask(
+      async ({ signal, updateProgress, registerObjectUrl }) => {
+        updateProgress(20, "Applying filter bounds to audit ledger...");
+        auditorStore.setFilters({
+          dateRange: {
+            start: startDate.value,
+            end: endDate.value,
+          },
+        });
+
+        if (signal.aborted) return;
+
+        updateProgress(50, "Fetching Part 11 audit logs from server...");
+        await auditorStore.fetchAuditLogs();
+
+        if (signal.aborted) return;
+
+        updateProgress(80, `Generating ${exportFormat.value} export file...`);
+        await auditorStore.exportAuditTrail(exportFormat.value, {
+          signal,
+          registerObjectUrl,
+        });
+
+        updateProgress(100, "Export completed successfully.");
+        emit("close");
+      }
+    );
   } catch (err) {
-    console.error("Export failed:", err);
-  } finally {
-    exporting.value = false;
+    if (taskPipeline.isCancelled.value || err?.name === "AbortError") {
+      console.log("Audit export cancelled by user");
+    } else {
+      console.error("Export failed:", err);
+    }
   }
 }
 </script>

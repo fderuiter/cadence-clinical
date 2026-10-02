@@ -22,6 +22,7 @@ The security package interceptor delegated logging out-of-band to an `AuditDiges
 ## 3. Options Considered
 
 ### Option 1: Retain Both Interceptors
+
 - **Overview:** Keep `Cadence.Security.Audit.GxPAuditInterceptor` alongside `Cadence.Database.GxPAuditInterceptor`.
 - **Pros:**
   - ✅ No files deleted.
@@ -30,6 +31,7 @@ The security package interceptor delegated logging out-of-band to an `AuditDiges
   - ❌ Security interceptor lacks transactional guarantees.
 
 ### Option 2: Consolidate on Cadence.Database.GxPAuditInterceptor (Selected)
+
 - **Overview:** Permanently delete `Cadence.Security.Audit.GxPAuditInterceptor` and remove its DI registration from `CadenceSecurityServiceCollectionExtensions.cs`.
 - **Pros:**
   - ✅ Single authoritative `GxPAuditInterceptor` in `Cadence.Database`.

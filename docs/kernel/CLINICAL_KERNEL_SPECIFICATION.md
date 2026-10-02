@@ -1,11 +1,11 @@
 # Cadence Clinical Research OS: Ontology and Kernel Specification v0.2
 
-| | |
-| --- | --- |
-| **Status** | Proposed. Normative once accepted (then v1.0). |
-| **Scope** | The concepts, invariants and boundaries that every Cadence capability builds on, across the whole lifecycle of developing evidence about an intervention |
-| **Supersedes** | Kernel specification v0.1 (same file, 2026-09-29) and the per-service entity models inherited from the Python topology (§16) |
-| **Companion work** | ADR-2244…ADR-2255 (§17), [execution migration inventory](EXECUTION_MIGRATION_INVENTORY.md) (its §3/§4 are resolved in Appendix A/B), epic #4719 |
+|                    |                                                                                                                                                          |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status**         | Proposed. Normative once accepted (then v1.0).                                                                                                           |
+| **Scope**          | The concepts, invariants and boundaries that every Cadence capability builds on, across the whole lifecycle of developing evidence about an intervention |
+| **Supersedes**     | Kernel specification v0.1 (same file, 2026-09-29) and the per-service entity models inherited from the Python topology (§16)                             |
+| **Companion work** | ADR-2244…ADR-2255 (§17), [execution migration inventory](EXECUTION_MIGRATION_INVENTORY.md) (its §3/§4 are resolved in Appendix A/B), epic #4719          |
 
 Keywords **MUST**, **MUST NOT**, **SHOULD**, **MAY** follow RFC 2119. Every rule tagged `K-…` is an invariant
 that becomes an automated test (architecture test, property test, database constraint or acceptance test).
@@ -29,13 +29,13 @@ Development strategy → Study conception → Protocol design → Feasibility / 
 
 The platform keeps **one graph** of:
 
-- *why* the trial was designed (objectives, endpoints, estimands),
-- *what was supposed to happen* (the executable protocol),
-- *what actually happened* (events, observations, specimens, artifacts),
-- *who was allowed to make it happen* (authority computed from evidence),
-- *where each piece of information came from* (provenance),
-- *how that evidence was transformed* into standard, analytical and submission representations (lineage),
-- and *how it supported a regulatory conclusion*.
+- _why_ the trial was designed (objectives, endpoints, estimands),
+- _what was supposed to happen_ (the executable protocol),
+- _what actually happened_ (events, observations, specimens, artifacts),
+- _who was allowed to make it happen_ (authority computed from evidence),
+- _where each piece of information came from_ (provenance),
+- _how that evidence was transformed_ into standard, analytical and submission representations (lineage),
+- and _how it supported a regulatory conclusion_.
 
 ICH E6(R3) (quality by design, risk proportionality, fit-for-purpose data sources) and its Annex 2
 (decentralised, pragmatic and real-world-data-enabled trials) are design inputs, not later compliance work.
@@ -48,7 +48,7 @@ ICH E6(R3) (quality by design, risk proportionality, fit-for-purpose data source
 
 Consequences:
 
-- A clinical fact is stored once, in the kernel, in terms of *meaning* (a Concept), not in terms of a
+- A clinical fact is stored once, in the kernel, in terms of _meaning_ (a Concept), not in terms of a
   standard's table layout (K-PROJ-1).
 - Every representation (an eCRF field, an SDTM record, an ADaM value, a CSR table cell) is **derived** and
   carries lineage back to the facts and the versioned specification that produced it (§11.4).
@@ -58,7 +58,7 @@ Consequences:
 ### 0.2 Non-goals of the kernel
 
 The kernel does not render forms or documents, run randomization algorithms, compute statistics, file TMF
-documents, pay sites or send notifications. Applications do these things *on top of* kernel concepts and
+documents, pay sites or send notifications. Applications do these things _on top of_ kernel concepts and
 record their results back as kernel facts where the result is evidence.
 
 ---
@@ -66,7 +66,7 @@ record their results back as kernel facts where the result is evidence.
 ## 1. Design Principles
 
 1. **Temporal relational state + immutable events + transactional outbox.** Not event sourcing. Current and
-   historical state are queryable from tables; events explain *why* state changed and drive integration.
+   historical state are queryable from tables; events explain _why_ state changed and drive integration.
    No clinical read path requires replaying a stream.
 2. **Bitemporal where truth is contestable.** Valid time (when it was true in the trial) and recorded time
    (when Cadence learned it) for anything that can later be disputed or corrected.
@@ -97,14 +97,14 @@ record their results back as kernel facts where the result is evidence.
 
 ### 2.1 Six engines
 
-| Engine | Answers | Kernel concepts (owned here) | Application capabilities built on it |
-| --- | --- | --- | --- |
-| **Knowledge** | What does it mean, and what is supposed to happen? | Concept Registry, terminology versions, Study, Protocol, ProtocolVersion, Amendment, Objective, Endpoint, Estimand, Population, Arm, Epoch, Cohort, Eligibility, Intervention, PlannedActivity, CollectionSpec, Standards Registry, MappingSpecification | Protocol authoring, SoA builder, MDR/standards governance, CRF design, statistical design, transparency registration |
-| **Execution** | What is happening, where, and to whom? | Tenant, Organization, Site, StudySite, Vendor responsibility, Effectivity, Participant, Enrollment, Applicability, ClinicalEvent, ActivityLocation | EDC workflow, CTMS, feasibility, start-up, recruitment, scheduling, RTSM, supply, payments |
-| **Evidence** | What was observed, collected or produced? | Observation, Assertion, Source, Artifact, Specimen, IngestionBatch | eCOA/ePRO, lab, imaging, devices/DHT, biospecimen management, eTMF/ISF, safety case intake |
-| **Trust** | Who was allowed, who agreed, where did it come from? | Actor, Person, identity layers, Grant, Capability, Delegation, Qualification, ConsentStatus, Attestation, ProvenanceActivity, AuditEntry, lineage graph | Signatures, DOA logs, training management, eConsent, inspection readiness, privacy |
-| **Quality** | Is it right, and is it under control? | Rule, RulePack, ValidationRun, ValidationFinding, CriticalToQualityFactor, Risk, Control, Indicator, Signal, Deviation, Issue/CAPA, Lock | Edit checks, P21-class conformance, RBQM/central monitoring, monitoring plans, SDV/SDR strategy, QMS, audits |
-| **Intelligence** | What does it imply, and what should happen next? | AutomationAgent, Proposal | AI assistants, analytics, forecasting, statistical analysis, TLF generation, submission assembly |
+| Engine           | Answers                                              | Kernel concepts (owned here)                                                                                                                                                                                                                             | Application capabilities built on it                                                                                 |
+| ---------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Knowledge**    | What does it mean, and what is supposed to happen?   | Concept Registry, terminology versions, Study, Protocol, ProtocolVersion, Amendment, Objective, Endpoint, Estimand, Population, Arm, Epoch, Cohort, Eligibility, Intervention, PlannedActivity, CollectionSpec, Standards Registry, MappingSpecification | Protocol authoring, SoA builder, MDR/standards governance, CRF design, statistical design, transparency registration |
+| **Execution**    | What is happening, where, and to whom?               | Tenant, Organization, Site, StudySite, Vendor responsibility, Effectivity, Participant, Enrollment, Applicability, ClinicalEvent, ActivityLocation                                                                                                       | EDC workflow, CTMS, feasibility, start-up, recruitment, scheduling, RTSM, supply, payments                           |
+| **Evidence**     | What was observed, collected or produced?            | Observation, Assertion, Source, Artifact, Specimen, IngestionBatch                                                                                                                                                                                       | eCOA/ePRO, lab, imaging, devices/DHT, biospecimen management, eTMF/ISF, safety case intake                           |
+| **Trust**        | Who was allowed, who agreed, where did it come from? | Actor, Person, identity layers, Grant, Capability, Delegation, Qualification, ConsentStatus, Attestation, ProvenanceActivity, AuditEntry, lineage graph                                                                                                  | Signatures, DOA logs, training management, eConsent, inspection readiness, privacy                                   |
+| **Quality**      | Is it right, and is it under control?                | Rule, RulePack, ValidationRun, ValidationFinding, CriticalToQualityFactor, Risk, Control, Indicator, Signal, Deviation, Issue/CAPA, Lock                                                                                                                 | Edit checks, P21-class conformance, RBQM/central monitoring, monitoring plans, SDV/SDR strategy, QMS, audits         |
+| **Intelligence** | What does it imply, and what should happen next?     | AutomationAgent, Proposal                                                                                                                                                                                                                                | AI assistants, analytics, forecasting, statistical analysis, TLF generation, submission assembly                     |
 
 Engines are an organising frame for concepts and teams. They are **not** deployment units; they share one
 kernel schema and one transaction boundary.
@@ -117,32 +117,32 @@ kernel schema and one transaction boundary.
 
 Worked examples:
 
-| Concept | Placement | Why |
-| --- | --- | --- |
-| Monitoring visit | CTMS application (`OperationalActivity`) | Operational, not evidence about a participant; its *findings* become kernel Assertions/Findings. |
-| Query (data clarification) workflow | EDC application | Workflow; each transition emits kernel Assertions targeting an Observation. |
-| Validation finding | Kernel (Quality) | Referenced by DM, standards, submission QC and inspection; carries authority and resolution evidence. |
-| Specimen | Kernel (Evidence) | Links participant, collection event, custody, consent scope and derived results across lab, biobank, safety and analysis. |
-| Randomization algorithm | RTSM application | The *assignment* is kernel evidence (an Assertion with blinding class); the algorithm is not. |
-| Site budget, invoice | Payments application | Needed by no evidence chain. Payment *triggers* read kernel events. |
-| Estimand | Kernel (Knowledge) | Needed to explain why data was collected and how a result was derived (§6.2, §9.6). |
+| Concept                             | Placement                                | Why                                                                                                                       |
+| ----------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Monitoring visit                    | CTMS application (`OperationalActivity`) | Operational, not evidence about a participant; its _findings_ become kernel Assertions/Findings.                          |
+| Query (data clarification) workflow | EDC application                          | Workflow; each transition emits kernel Assertions targeting an Observation.                                               |
+| Validation finding                  | Kernel (Quality)                         | Referenced by DM, standards, submission QC and inspection; carries authority and resolution evidence.                     |
+| Specimen                            | Kernel (Evidence)                        | Links participant, collection event, custody, consent scope and derived results across lab, biobank, safety and analysis. |
+| Randomization algorithm             | RTSM application                         | The _assignment_ is kernel evidence (an Assertion with blinding class); the algorithm is not.                             |
+| Site budget, invoice                | Payments application                     | Needed by no evidence chain. Payment _triggers_ read kernel events.                                                       |
+| Estimand                            | Kernel (Knowledge)                       | Needed to explain why data was collected and how a result was derived (§6.2, §9.6).                                       |
 
 ### 2.3 Forbidden redefinitions
 
 Applications **MUST NOT** define their own version of a kernel concept. They reference kernel IDs.
 
-| Kernel concept | Consequence for applications |
-| --- | --- |
-| Tenant, Organization, Person, Vendor | No `Organization`/`Personnel` tables in `org`, `ctms`, `econsent`, … |
-| Study, Protocol, ProtocolVersion, Amendment, Effectivity, Estimand, Endpoint | No `StudyId` strings; `StudyId` is the kernel type. No application-local protocol copies. |
-| Site, StudySite | Same for `SiteId`; CTMS site milestones hang off `StudySiteId`. |
-| Participant, Enrollment, Applicability | EDC "subject", eCOA "user", RTSM "randomized subject" are views of `ParticipantId`. |
-| ClinicalEvent, Visit | CTMS monitoring visits are `OperationalActivity`, never `Visit` (§7.4). |
-| Observation, Assertion, Source, Artifact, Specimen | EDC fields, lab results, ePRO answers, imaging reads and assay results resolve to kernel Observations. |
-| Concept, terminology version | No application-local code lists for clinical meaning; applications reference `ConceptRef`. |
-| Actor, Role, Capability, Grant, Delegation, Qualification, Attestation | No application-local roles, DOA or training tables. eSignature is kernel Attestation. |
-| Rule, ValidationFinding | No application-local rule engines with their own finding formats. |
-| AuditEntry, DomainEvent, Outbox | No application-local audit tables (`CtmsAuditLog`, `OrgAuditLog`, …). |
+| Kernel concept                                                               | Consequence for applications                                                                           |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Tenant, Organization, Person, Vendor                                         | No `Organization`/`Personnel` tables in `org`, `ctms`, `econsent`, …                                   |
+| Study, Protocol, ProtocolVersion, Amendment, Effectivity, Estimand, Endpoint | No `StudyId` strings; `StudyId` is the kernel type. No application-local protocol copies.              |
+| Site, StudySite                                                              | Same for `SiteId`; CTMS site milestones hang off `StudySiteId`.                                        |
+| Participant, Enrollment, Applicability                                       | EDC "subject", eCOA "user", RTSM "randomized subject" are views of `ParticipantId`.                    |
+| ClinicalEvent, Visit                                                         | CTMS monitoring visits are `OperationalActivity`, never `Visit` (§7.4).                                |
+| Observation, Assertion, Source, Artifact, Specimen                           | EDC fields, lab results, ePRO answers, imaging reads and assay results resolve to kernel Observations. |
+| Concept, terminology version                                                 | No application-local code lists for clinical meaning; applications reference `ConceptRef`.             |
+| Actor, Role, Capability, Grant, Delegation, Qualification, Attestation       | No application-local roles, DOA or training tables. eSignature is kernel Attestation.                  |
+| Rule, ValidationFinding                                                      | No application-local rule engines with their own finding formats.                                      |
+| AuditEntry, DomainEvent, Outbox                                              | No application-local audit tables (`CtmsAuditLog`, `OrgAuditLog`, …).                                  |
 
 - **K-XS-1** `Cadence.ArchitectureTests` fails if any assembly outside `Cadence.Kernel.*` declares a type named
   `Study|Site|Participant|Subject|Observation|Organization|Person|Role|Delegation|Specimen|Estimand` or
@@ -185,7 +185,7 @@ Tenant
 
 - A **Tenant** is the isolation and contractual boundary (a Cadence customer).
 - A **Study is owned by exactly one Organization** (the sponsor) within one Tenant.
-- **Site ≠ StudySite.** `Site` is a durable location record. `StudySite` is that site *in that study*
+- **Site ≠ StudySite.** `Site` is a durable location record. `StudySite` is that site _in that study_
   (activation, country approvals, PI, effective protocol version).
 - `OrganizationRelationship(from, to, kind, study_scope?, effective_period)` models collaboration
   (`SponsorOf`, `ContractedCro`, `AffiliatedSite`, `VendorTo`, …) and is bitemporal. Visibility across
@@ -234,7 +234,7 @@ Without a version the reference means "as of the read's `(valid_at, known_at)`".
 - **K-ID-3** Cross-tenant exchange occurs only through an explicit, audited `DataSharingAgreement`.
 - **K-ID-4** Person identity is tenant-independent; roles and access are tenant-scoped.
 - A regulated customer MAY be placed in a dedicated database with the identical schema (ADR-2250 upgrade path).
-- *Implemented (#4780):* composite keys and forced Row-Level Security on every kernel table; the tenant is set on
+- _Implemented (#4780):_ composite keys and forced Row-Level Security on every kernel table; the tenant is set on
   each kernel connection by `KernelTenantConnectionInterceptor`; persons are visible through `tenant_memberships`;
   system jobs list tenants through `kernel.tenant_ids()`. See ADR-2250 §6 and `packages/kernel/README.md`.
 
@@ -244,22 +244,22 @@ Without a version the reference means "as of the read's `(valid_at, known_at)`".
 
 ### 4.1 Two clocks
 
-| Clock | Meaning | Column |
-| --- | --- | --- |
-| **Valid time** | When it was true in the trial world | `valid_period tstzrange` |
+| Clock             | Meaning                               | Column                      |
+| ----------------- | ------------------------------------- | --------------------------- |
+| **Valid time**    | When it was true in the trial world   | `valid_period tstzrange`    |
 | **Recorded time** | When Cadence asserted / superseded it | `recorded_period tstzrange` |
 
 Canonical query: `as_of(valid_at, known_at)`. Operational reads default to `(now, now)`; regulatory
 reconstruction uses `(t_clinical, t_inspection_cutoff)`.
 
-| Bitemporal | Append-only | Current-state + audit |
-| --- | --- | --- |
+| Bitemporal                                                                                                                                                                             | Append-only                                                                                           | Current-state + audit                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Effectivity, Enrollment, Applicability, ConsentStatus, Grant, Delegation, Qualification, OrganizationRelationship, StudySite lifecycle, Observation, Assertion, Specimen custody state | DomainEvent, AuditEntry, Attestation, ProvenanceActivity, LineageEdge, ArtifactVersion, ValidationRun | Reference/config data without dispute semantics |
 
 - **K-TIME-1** Bitemporal rows are never `UPDATE`d except to close `recorded_period`. They are never deleted or truncated.
   Enforced by a trigger (SQLSTATE `KT001`).
 - **K-TIME-2** An exclusion constraint (`EXCLUDE USING gist`) prevents overlapping `(tenant, entity, valid,
-  recorded)` rectangles where a single truth is required (ADR-2246). The constraint is deferred to commit, so a correction
+recorded)` rectangles where a single truth is required (ADR-2246). The constraint is deferred to commit, so a correction
   can close the old row and insert its replacement in one transaction. How to apply both guards to a table:
   [`packages/kernel/README.md`](../../packages/kernel/README.md#bitemporal-tables-adr-2246).
 - **K-TIME-3** All timestamps are `timestamptz`; the kernel takes time only from `IClock`; `DateTime.Now`
@@ -304,14 +304,14 @@ a PostgreSQL advisory lock on the command's connection, held until the transacti
 correlation_id, causation_id, payload, subject }`, where `subject` is the NodeRef of the aggregate the command
 changed, pinned to its new version (§3.4; null for events about no aggregate, such as `DecisionDenied`).
 
-| Family | Examples |
-| --- | --- |
-| Knowledge | `ProtocolVersionDrafted` (carries the amendment's classification), `…Approved`, `…Withdrawn`, `ConceptMapped`, `MappingSpecificationPublished` (`LibraryItemApproved` with kind `MappingSpecification`, ADR-2463), `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
-| Execution | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityDeclared`, `EffectivityStatusChanged`, `StudySiteActivated`, `ParticipantRegistered`, `ParticipantScreened`, `ParticipantEnrolled`, `EnrollmentStatusChanged`, `ApplicabilityChanged`, `ParticipantWithdrawn` |
-| Evidence | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactRegistered`, `ArtifactVersioned`, `IngestionBatchAccepted` |
-| Trust | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `RoleDefined`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested` |
-| Quality | `ValidationRunCompleted` (with counts of detected, new and resolved findings), `FindingInvestigationStarted`, `FindingClassified`, `FindingAccepted`, `FindingExplained`, `FindingReopened`, `IndicatorBreached`, `SignalRaised`, `DeviationRecorded`, `LockApplied`, `LockReleased` |
-| Intelligence | `ProposalCreated`, `ProposalApproved`, `ProposalExecuted`, `ProposalRejected` |
+| Family       | Examples                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Knowledge    | `ProtocolVersionDrafted` (carries the amendment's classification), `…Approved`, `…Withdrawn`, `ConceptMapped`, `MappingSpecificationPublished` (`LibraryItemApproved` with kind `MappingSpecification`, ADR-2463), `RulePackReleased`, `StandardVersionRegistered`, `StandardVersionApproved`, `StandardVersionDeprecated`, `LibraryItemDrafted`, `LibraryItemApproved`, `LibraryItemDeprecated`, `StudyStandardsDeclared` |
+| Execution    | `OrganizationRegistered`, `SiteLinkedToStudy`, `EffectivityDeclared`, `EffectivityStatusChanged`, `StudySiteActivated`, `ParticipantRegistered`, `ParticipantScreened`, `ParticipantEnrolled`, `EnrollmentStatusChanged`, `ApplicabilityChanged`, `ParticipantWithdrawn`                                                                                                                                                   |
+| Evidence     | `EventRecorded`, `ObservationRecorded`, `ObservationCorrected`, `AssertionMade`, `AssertionRetracted`, `SpecimenCollected`, `SpecimenTransferred`, `ArtifactRegistered`, `ArtifactVersioned`, `IngestionBatchAccepted`                                                                                                                                                                                                     |
+| Trust        | `ConsentGiven`, `ConsentScopeChanged`, `ConsentWithdrawn`, `RoleDefined`, `GrantIssued`, `GrantRevoked`, `DelegationSigned`, `QualificationRecorded`, `DecisionDenied`, `Attested`                                                                                                                                                                                                                                         |
+| Quality      | `ValidationRunCompleted` (with counts of detected, new and resolved findings), `FindingInvestigationStarted`, `FindingClassified`, `FindingAccepted`, `FindingExplained`, `FindingReopened`, `IndicatorBreached`, `SignalRaised`, `DeviationRecorded`, `LockApplied`, `LockReleased`                                                                                                                                       |
+| Intelligence | `ProposalCreated`, `ProposalApproved`, `ProposalExecuted`, `ProposalRejected`                                                                                                                                                                                                                                                                                                                                              |
 
 - **K-EVT-1** Event schemas are additive-only within a major version; consumers tolerate unknown fields.
 - **K-EVT-2** Events are the integration contract; they are not replayed to rebuild clinical state.
@@ -405,7 +405,7 @@ which has no "latest" lookup. How to load a release: [`packages/kernel/README.md
 The protocol is a **machine-readable specification of the experiment**. The PDF, the CRF set, the SoA grid,
 the RTSM configuration and the registry entry are renderings or derivations of it. CDISC USDM is the
 interchange format for it, not its internal shape.
-*Implemented for the SoA grid (#4730, ADR-2475):* `ScheduleOfActivities.Compile` renders a design as planned activities
+_Implemented for the SoA grid (#4730, ADR-2475):_ `ScheduleOfActivities.Compile` renders a design as planned activities
 (columns, grouped by epoch) by collection specifications (rows), with generated footnotes; the same design always
 gives the same bytes. It is compiled on read, never stored.
 
@@ -439,22 +439,22 @@ ProtocolVersion contains:
 - **K-PROT-1** Every ProtocolVersion element has a stable element ID across versions, so a structural
   diff between versions is computable. An element is a JSON object with a non-empty string `id` (the USDM
   convention), and ids are unique within a version (ADR-2480 §4.6).
-  *Implemented (#4808, ADR-2472):* content is a protocol design document whose element ids are unique and whose
+  _Implemented (#4808, ADR-2472):_ content is a protocol design document whose element ids are unique and whose
   references between elements are checked by kind when it is written, so `ProtocolStructuralDiff` applies to it as is.
 - **K-PROT-2** **Amendment impact is computable**: given two ProtocolVersions, the kernel lists every
   downstream object that references a changed element (CollectionSpecs, mapping specifications, rules,
   RTSM configuration, monitoring plan, consent forms, TMF expected documents, open Proposals). An amendment
   cannot be approved while that impact report is not attested as reviewed.
-  *Implemented in part (#4841, #4808, ADR-2471 §4.5, ADR-2474):* approving a version writes its design elements as
+  _Implemented in part (#4841, #4808, ADR-2471 §4.5, ADR-2474):_ approving a version writes its design elements as
   lineage nodes. `IAmendmentImpact` lists the dependents of the amended parent version (§9.6 `Dependents`), excluding
   the fork itself, and follows only the elements the amendment changes or removes. The report carries the elements
   actually changed next to the amendment's declared impacted elements, and typed Schedule of Activities and
   eligibility directives (visit moved, activity collected less often, criterion added; ADR-2475) with the elements
   they touch that the amendment does not declare. The attestation gate on approval is still to come.
 - **K-PROT-3** The scientific chain `Objective → Endpoint → Estimand → required data → PlannedActivity →
-  CollectionSpec` is explicit; a CollectionSpec item with no path to an Endpoint, Estimand, safety
+CollectionSpec` is explicit; a CollectionSpec item with no path to an Endpoint, Estimand, safety
   requirement or operational need is flagged at design time (a Quality finding, not a blocker).
-  *Implemented (#4808, ADR-2472 §4.4):* `ProtocolDesignReview` reports objectives without endpoints, primary
+  _Implemented (#4808, ADR-2472 §4.4):_ `ProtocolDesignReview` reports objectives without endpoints, primary
   endpoints without estimands, unscheduled CollectionSpecs and items without a purpose. They become Quality findings
   with #4812. Submitting a version for review also checks that every ConceptRef, pinned code-system version and
   Artifact the design names exists in the tenant (K-SEM-1).
@@ -468,17 +468,17 @@ Standards (SDTM, SEND, ADaM, Define-XML, CDASH, Dataset-JSON, ODM, FHIR) are **r
 The subsystem makes them native, continuous outputs of the platform rather than an export-map-validate loop at
 database lock.
 
-| Component | Concept(s) | Placement |
-| --- | --- | --- |
-| Standards Registry | `Standard`, `StandardVersion`, `DatasetDefinition`, `VariableDefinition`, `ValueLevelDefinition` | Kernel (Knowledge), reference data |
-| Controlled Terminology | CDISC CT packages as `CodeSystemVersion` (§6.1) | Kernel |
-| Metadata Registry (MDR) | Reusable, governed library of CollectionSpecs, mappings and rules with versions and status | Kernel concepts, Standards application for authoring/governance |
-| Mapping Engine | `MappingSpecification(version, standard_version, CT versions, rules[])`: Concept/CollectionSpec → variable | Kernel concept; engine behind a port |
-| Transformation Engine | `Transformation` nodes forming a DAG from Observations to datasets | Engine behind a port (§10.1 Rust seam) |
-| Derivation Engine | `Derivation(algorithm, version, inputs → outputs)` for ADaM and derived observations | Engine behind a port |
-| Validation Engine | Rule evaluation over designs, observations and datasets (§10) | Quality engine |
-| Submission Generator | `SubmissionPackage` assembling datasets, Define-XML, reviewer guides (SDRG/ADRG), XPT/Dataset-JSON | Application |
-| Standards Governance | Versioning, approval (Attestation), deprecation of standards content | Application over kernel workflow |
+| Component               | Concept(s)                                                                                                 | Placement                                                       |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Standards Registry      | `Standard`, `StandardVersion`, `DatasetDefinition`, `VariableDefinition`, `ValueLevelDefinition`           | Kernel (Knowledge), reference data                              |
+| Controlled Terminology  | CDISC CT packages as `CodeSystemVersion` (§6.1)                                                            | Kernel                                                          |
+| Metadata Registry (MDR) | Reusable, governed library of CollectionSpecs, mappings and rules with versions and status                 | Kernel concepts, Standards application for authoring/governance |
+| Mapping Engine          | `MappingSpecification(version, standard_version, CT versions, rules[])`: Concept/CollectionSpec → variable | Kernel concept; engine behind a port                            |
+| Transformation Engine   | `Transformation` nodes forming a DAG from Observations to datasets                                         | Engine behind a port (§10.1 Rust seam)                          |
+| Derivation Engine       | `Derivation(algorithm, version, inputs → outputs)` for ADaM and derived observations                       | Engine behind a port                                            |
+| Validation Engine       | Rule evaluation over designs, observations and datasets (§10)                                              | Quality engine                                                  |
+| Submission Generator    | `SubmissionPackage` assembling datasets, Define-XML, reviewer guides (SDRG/ADRG), XPT/Dataset-JSON         | Application                                                     |
+| Standards Governance    | Versioning, approval (Attestation), deprecation of standards content                                       | Application over kernel workflow                                |
 
 - **K-STD-1** The mapping from a CollectionSpec item to its standard variables exists **before first data
   capture**: a CollectionSpec cannot be published for a study whose declared standards have no mapping for it,
@@ -489,7 +489,7 @@ database lock.
 - **K-PROJ-1** No kernel type references SDTM, ADaM or SEND variable names. Those names exist only in
   Standards Registry data and mapping specifications.
 - **K-PROJ-2** A projection is `f(kernel state as_of(valid, known), MappingSpecification version,
-  CT versions) → dataset Artifact`. The dataset Artifact's provenance names all of those inputs.
+CT versions) → dataset Artifact`. The dataset Artifact's provenance names all of those inputs.
 - **K-PROJ-3** Standards datasets are generated **continuously** (on events, per study) and validated in
   stream; database lock freezes inputs, it is not when SDTM is first produced.
 
@@ -566,7 +566,7 @@ issues and performance are application state (vendor oversight) keyed by the res
 
 - **K-LOC-1** No kernel concept assumes an activity occurs at an investigative site. `ActivityLocation` is
   one of `StudySite | ParticipantHome | Telehealth | LocalHealthcareProvider(organization) | Device |
-  ParticipantSelf | Laboratory(organization)`. PlannedActivities declare the modes they permit; ClinicalEvents
+ParticipantSelf | Laboratory(organization)`. PlannedActivities declare the modes they permit; ClinicalEvents
   record the mode used.
 - Every activity is still **attributed** to a responsible StudySite and investigator for oversight, even when
   performed elsewhere (ICH E6(R3) Annex 2).
@@ -582,9 +582,11 @@ issues and performance are application state (vendor oversight) keyed by the res
   Screening → Enrolled → Randomized → Active → Completed
   (Screening | Enrolled | Randomized | Active) → Withdrawn
   ```
+
   `Enrolled → Active` is allowed for non-randomized studies. `ReconsentRequired` is not a state: it is a
   pending Applicability transition (§7.5). `Unblinded` is not a state: unblinding is an
   Attestation-bearing event plus an RTSM Assertion, and blinding is an authorization condition (K-AUTH-4).
+
 - Withdrawal is a dedicated command with reason, withdrawal type and an Attestation; a generic state PATCH
   cannot reach it (inventory §3 item 2).
 - **Enrollment numbering** (resolves G1): numbers are allocated gap-free per `(tenant, study)` by default, or
@@ -599,12 +601,12 @@ issues and performance are application state (vendor oversight) keyed by the res
   the enrollment's content hash, and a database trigger and exclusion constraint repeat the lifecycle. Eligibility
   gating (#4727), StudySite activation gating (#4777) and per-StudySite numbering are not yet enforced.
 
-| Concept | Meaning | Owner |
-| --- | --- | --- |
-| `PlannedActivity` | From the ProtocolVersion. Immutable per version. | Kernel |
-| `ClinicalEvent` | Something that happened (or was attempted) with a participant: visit, procedure, dose, AE onset, discontinuation, specimen collection. `kind`, `valid_time`, `location`, `participant`, `study_site`, optional `planned_activity_id`. | Kernel |
-| `Visit` | A `ClinicalEvent` of kind `Visit`, mapped to a planned encounter. | Kernel |
-| `OperationalActivity` | Monitoring visit, site initiation, audit. About the site/study, not a participant. | CTMS |
+| Concept               | Meaning                                                                                                                                                                                                                               | Owner  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `PlannedActivity`     | From the ProtocolVersion. Immutable per version.                                                                                                                                                                                      | Kernel |
+| `ClinicalEvent`       | Something that happened (or was attempted) with a participant: visit, procedure, dose, AE onset, discontinuation, specimen collection. `kind`, `valid_time`, `location`, `participant`, `study_site`, optional `planned_activity_id`. | Kernel |
+| `Visit`               | A `ClinicalEvent` of kind `Visit`, mapped to a planned encounter.                                                                                                                                                                     | Kernel |
+| `OperationalActivity` | Monitoring visit, site initiation, audit. About the site/study, not a participant.                                                                                                                                                    | CTMS   |
 
 Deviations from plan (missed, out-of-window, unscheduled) are **derived Assertions**, not fields on visits.
 
@@ -621,12 +623,12 @@ Initial assignment at `t_enroll`:
 
 When a new version becomes Effective at the StudySite, the Amendment's TransitionPolicy decides:
 
-| Policy | Behaviour |
-| --- | --- |
-| `NewParticipantsOnly` | No change. |
-| `RequiresReconsent` | Pending Transition; Applicability moves only on valid re-consent. |
-| `Automatic` | Moves at the version's effective date (non-substantive changes). |
-| `ByCohort(predicate)` | Policy applies to participants matching a kernel predicate. |
+| Policy                | Behaviour                                                         |
+| --------------------- | ----------------------------------------------------------------- |
+| `NewParticipantsOnly` | No change.                                                        |
+| `RequiresReconsent`   | Pending Transition; Applicability moves only on valid re-consent. |
+| `Automatic`           | Moves at the version's effective date (non-substantive changes).  |
+| `ByCohort(predicate)` | Policy applies to participants matching a kernel predicate.       |
 
 - A newer consent resolves **every** pending Transition whose target version it covers (resolves G6).
 - **K-TIME-6** Exactly one governing ProtocolVersion per participant at any valid instant, or a flagged
@@ -652,8 +654,8 @@ When a new version becomes Effective at the StudySite, the Amendment's Transitio
 
 ### 8.1 Observation
 
-A **recorded clinical fact**: *this concept had this value for this participant over this valid period, as
-asserted by this source.*
+A **recorded clinical fact**: _this concept had this value for this participant over this valid period, as
+asserted by this source._
 
 ```csharp
 public sealed record Observation(
@@ -691,8 +693,8 @@ coordinates (inventory §3 item 10).
 ### 8.3 Source and Artifact
 
 - `Source`: `ManualEntry(actor, collection_spec) | Device(device_id, firmware) | LabFeed(lab_org, batch,
-  range_set_version) | ePRO(participant, device) | EHR(system, record_ref) | SourceDocument(artifact) |
-  Derived(inputs, algorithm) | Import(batch)`. Local lab ranges are versioned range-set Artifacts owned by
+range_set_version) | ePRO(participant, device) | EHR(system, record_ref) | SourceDocument(artifact) |
+Derived(inputs, algorithm) | Import(batch)`. Local lab ranges are versioned range-set Artifacts owned by
   the lab organization (resolves G9).
 - `Artifact` is versioned, hash-addressed content (signed ICF, IRB letter, lab report, DICOM series,
   generated dataset, protocol rendering). Classification (e.g. TMF artifact type) is an Assertion, so eTMF
@@ -748,14 +750,14 @@ receive (IngestionBatch, raw Artifact) → identity resolution (§9.2) → struc
 
 A participant is not a code. The model separates identity layers, each with its own resolution capability:
 
-| Layer | Example | Where it lives |
-| --- | --- | --- |
-| Person (healthcare identity) | Name, DOB, contact, MRN, national IDs | IdentityVault |
-| Recruitment identity | Prescreening candidate, referral | IdentityVault + recruitment application |
-| Study participant | `ParticipantId` (pseudonymous) | Kernel |
-| Site-local identifier | Site's screening log number | IdentityVault |
-| Sponsor pseudonym | `SubjectCode` | Kernel (value object) |
-| Submission identifier | `USUBJID` | Standards projection |
+| Layer                        | Example                               | Where it lives                          |
+| ---------------------------- | ------------------------------------- | --------------------------------------- |
+| Person (healthcare identity) | Name, DOB, contact, MRN, national IDs | IdentityVault                           |
+| Recruitment identity         | Prescreening candidate, referral      | IdentityVault + recruitment application |
+| Study participant            | `ParticipantId` (pseudonymous)        | Kernel                                  |
+| Site-local identifier        | Site's screening log number           | IdentityVault                           |
+| Sponsor pseudonym            | `SubjectCode`                         | Kernel (value object)                   |
+| Submission identifier        | `USUBJID`                             | Standards projection                    |
 
 - The **IdentityVault** is a separate schema with its own database role and envelope encryption (per-tenant
   key-encryption key in a KMS, per-record data keys, AES-256-GCM, blind indexes for lookup). It subsumes
@@ -815,7 +817,7 @@ protocol training + credential + effective dates + site activation state, never 
   act on it. The decision carries every condition evaluated, met and unmet, each with its evidence NodeRef, and
   explains itself as an `Explanation` (§5.5); the `DecisionDenied` event and audit entry record the conditions.
 - **K-AUTH-7** Authorization is one decision procedure over `AuthorizationRequest(actor, tenant, capability,
-  resource, at, known_at)`. Every kernel command declares its capability and the object it is authorized against;
+resource, at, known_at)`. Every kernel command declares its capability and the object it is authorized against;
   a command without a declaration is denied. A dry run, `CanI(capability, resource)`, asks the same procedure for
   the calling actor only. It is not written to the audit chain; it is recorded in the authorization access log
   (ADR-2483), and the command catalogue for an object lists each command offered on it with its dry-run decision.
@@ -826,7 +828,7 @@ protocol training + credential + effective dates + site activation state, never 
   (ADR-2471). A queue read without a scope spans every study of the tenant, which is the portfolio queue; queues
   never span tenants (ADR-2486).
 
-*Implemented in part (#4781, ADR-2455):* `Role`, `Grant` (with bitemporal `GrantPeriod` validity) and delegation as
+_Implemented in part (#4781, ADR-2455):_ `Role`, `Grant` (with bitemporal `GrantPeriod` validity) and delegation as
 a grant bounded by its parent, changed by `DefineRole`, `IssueGrant`, `DelegateGrant` and `RevokeGrant`.
 `AuthorityEvaluator` is the `IAuthorizationEvaluator`: it checks steps 1 and 2, requires every grant above a
 delegation to be in effect, denies automation agents Execute and Approve, and records each decision's conditions
@@ -834,7 +836,7 @@ in `provenance_activities.authorization`. Separation of duties (step 4) and the 
 conditions of step 3 are still to come. Work-queue definitions and the queue read
 (K-AUTH-8) are implemented (#4849), with protocol versions in review as the first item source.
 
-*Qualifications (#4781, ADR-2459, K031):* `Qualification` (bitemporal `QualificationPeriod` validity, a
+_Qualifications (#4781, ADR-2459, K031):_ `Qualification` (bitemporal `QualificationPeriod` validity, a
 `TrainingRecord` or `Credential` artifact version as evidence, a protocol version for protocol training) and
 `QualificationRequirement` (a capability, a qualification code, optionally a protocol version, a scope and bitemporal
 validity), changed by `RecordQualification`, `RevokeQualification`, `DefineQualificationRequirement` and
@@ -843,7 +845,7 @@ resource must be met by a qualification the actor holds at the same `(at, known_
 obtain, or what to renew and when it expired. Scenario 12 of §14 passes. A requirement names its protocol version
 explicitly; deriving it from the resource's governing version is still to come.
 
-*Visibility (#4781, ADR-2457):* `GrantNodeVisibility` is the `INodeVisibility` computed from the same grants. A reader
+_Visibility (#4781, ADR-2457):_ `GrantNodeVisibility` is the `INodeVisibility` computed from the same grants. A reader
 sees what a grant it holds in effect covers, the organization, study and country above that scope, participants and
 sites through the study sites they reach, and tenant reference data. Everything else is masked `NotPermitted`.
 
@@ -870,12 +872,12 @@ ConsentScope(purpose: MainStudy | FutureResearch | GeneticTesting | CommercialRe
 ### 9.5 Provenance and Attestation
 
 - `ProvenanceActivity(id, kind, actor, started, ended, inputs[], outputs[], protocol_version_context,
-  tool_version, rule/algorithm versions)`, W3C PROV-shaped.
+tool_version, rule/algorithm versions)`, W3C PROV-shaped.
 - **K-PROV-1** Every kernel write is produced by exactly one ProvenanceActivity, in the same transaction.
 - **K-PROV-2** Derived facts name their inputs and the versioned algorithm.
 - **K-PROV-3** AI-assisted actions record model identifier, prompt/plan artifact and the approving actor.
 - `Attestation(id, actor, meaning, target(kind, id, content_hash), authenticated_at, method, recorded_at,
-  reason)`, append-only. Meanings: `Authored`, `Reviewed`, `Approved`, `Verified`, `Responsibility`,
+reason)`, append-only. Meanings: `Authored`, `Reviewed`, `Approved`, `Verified`, `Responsibility`,
   `Consented`, `Withdrawn`. Binding to a content hash means a signed record cannot silently change
   (21 CFR 11.70). Only a person signs. The authentication must be at most five minutes old, and the target's
   current content must have the signed hash. Commands that need a signature name an Attestation, which
@@ -934,8 +936,9 @@ node = { handle, kind, ref | null, mask: null | NotPermitted | Blinded | Identit
 Dependents(node, depth, edge_kinds, valid_at, known_at) → { start, groups[{ kind, count, objects[] }], total, truncated }
 ```
 
-  Counts are of objects, not versions. Masked objects are counted, so a count never depends on the reader. The start
-  object is never its own dependent. Amendment impact (K-PROT-2) is one caller of this read (§6.2).
+Counts are of objects, not versions. Masked objects are counted, so a count never depends on the reader. The start
+object is never its own dependent. Amendment impact (K-PROT-2) is one caller of this read (§6.2).
+
 - **Protocol elements** (#4808, ADR-2474). An approved version's design elements are `protocol_element` nodes, one per
   study and element id, versioned by the protocol version that last changed them. Approval writes them with
   `governedBy` from the version, `supersedes` from a changed element's previous version, the scientific chain between
@@ -974,13 +977,13 @@ pins. Rule packs are described in [RULE_PACKS.md](RULE_PACKS.md).
 
 ### 10.2 Validation across the lifecycle
 
-| Stage | Examples | Blocking effect |
-| --- | --- | --- |
-| Design | Protocol completeness, CollectionSpec ↔ Concept ↔ standard mapping, CT and UCUM checks (K-STD-2) | `Error` blocks publishing the design object |
-| Collection | Edit checks, semantic and unit validation, cross-domain checks | Never blocks a kernel write of a clinical fact (below) |
-| Standardization | SDTM/SEND conformance, CT, sponsor and agency rules | Blocks release of a dataset Artifact at `Error` unless explained |
-| Analysis | ADaM conformance, derivation provenance, traceability | Same |
-| Submission | Define-XML, reviewer guides, XPT/Dataset-JSON, package completeness | Blocks package attestation |
+| Stage           | Examples                                                                                         | Blocking effect                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| Design          | Protocol completeness, CollectionSpec ↔ Concept ↔ standard mapping, CT and UCUM checks (K-STD-2) | `Error` blocks publishing the design object                      |
+| Collection      | Edit checks, semantic and unit validation, cross-domain checks                                   | Never blocks a kernel write of a clinical fact (below)           |
+| Standardization | SDTM/SEND conformance, CT, sponsor and agency rules                                              | Blocks release of a dataset Artifact at `Error` unless explained |
+| Analysis        | ADaM conformance, derivation provenance, traceability                                            | Same                                                             |
+| Submission      | Define-XML, reviewer guides, XPT/Dataset-JSON, package completeness                              | Blocks package attestation                                       |
 
 **Edit checks and kernel writes** (resolves G4): a clinical fact that is well-typed (Concept, UCUM unit,
 value type, permissible CT values declared in the CollectionSpec) is **always accepted**; the kernel
@@ -1060,7 +1063,7 @@ approval and read-only display are application workflow over it.
 - An AI agent is an `AutomationAgent` actor whose default grants are `Read` and `Propose`, scoped to the
   requesting human's scope, never wider.
 - A **Proposal** is a first-class kernel object `{intent, plan (artifact), affected lineage nodes, simulated
-  impact, requested capabilities, expiry}` with no effect on kernel state. AI-drafted queries are Proposals,
+impact, requested capabilities, expiry}` with no effect on kernel state. AI-drafted queries are Proposals,
   not a query status (inventory §3 item 10, G11).
 - `Execute` happens by (a) a human with the capability approving and executing as themselves with the agent
   recorded in provenance, or (b) a pre-authorised, narrowly scoped, time-boxed standing grant that a human
@@ -1089,7 +1092,7 @@ migration and a proposals work-queue source follow in later slices.
 ### 11.1 Simulation (ADR-2480)
 
 Simulation answers "what happens if I change this?" (Clinical Canvas Simulate verb) by **evaluating, never
-writing**. The change is a *candidate version* of a versioned specification: a draft ProtocolVersion,
+writing**. The change is a _candidate version_ of a versioned specification: a draft ProtocolVersion,
 MappingSpecification version or RulePack version, identified by its content hash. The engine evaluates the pure
 functions twice at one pinned `(valid_at, known_at)`, with the current versions (baseline) and with the candidate
 (candidate), and returns the difference:
@@ -1127,27 +1130,27 @@ Copy-on-write branches, review workflows over simulations, and operational what-
 
 Applications are compositions of engine concepts. This table fixes ownership, not detailed design.
 
-| Capability | Built on (kernel) | Application-owned state |
-| --- | --- | --- |
-| Study design / protocol authoring | ProtocolVersion model, Concepts, Estimands | Authoring drafts, comments, renderings |
-| Feasibility | Organization, Site, (RWD) Observations | Surveys, forecasts, site scoring |
-| Regulatory start-up | Effectivity, Artifacts, Attestations | Submission packets, tracking |
-| Contracts & finance | Organization, StudySite, events | Budgets, CTAs, invoices, payments |
-| Recruitment | Identity layers, Eligibility | Funnels, referrals, prescreening workflow |
-| Participant experience / eConsent / eCOA | ConsentStatus, Observations (ePRO), ActivityLocation | Portal content, reminders, travel |
-| EDC | CollectionSpec, Observations, Assertions, Findings, Locks | Form instances, query workflow, UI state |
-| RTSM / supply | Enrollment, arm Assertions, blinding conditions | Algorithms, inventory, shipments |
-| Laboratory / biospecimens | Specimen, custody, Observations, range sets | Kits, accessioning, storage maps |
-| Imaging / devices / DHT | Artifacts, Sources, derived Observations | Transfers, reads, device fleet |
-| Safety / PV | Observations (AE), Assertions (causality, expectedness, coding) | Cases, narratives, expedited reports |
-| Medical coding | Concept Registry, `CodedAs` Assertions | Synonym lists, auto-coder config |
-| Data management | Findings, Assertions, Locks, ingestion | Review workflows, reconciliation views |
-| Risk / quality / monitoring | QbD chain, Findings, Deviations | Plans, visit reports, CAPA workflow |
-| TMF / ISF | Artifacts, classification Assertions, expected-document rules | Filing views, QC workflow |
-| Standards / MDR / conformance | Standards Registry, mappings, rules, Findings | Authoring and governance UI |
-| Statistics / analysis | Estimands, Derivations, lineage | SAP authoring, analysis code, TLFs |
-| Submission / regulatory / transparency | Dataset Artifacts, lineage, Attestations | Packages, correspondence, registry records |
-| RWE / post-market | Ingestion, identity layers, consent scopes | Registries, study-specific cohorts |
+| Capability                               | Built on (kernel)                                               | Application-owned state                    |
+| ---------------------------------------- | --------------------------------------------------------------- | ------------------------------------------ |
+| Study design / protocol authoring        | ProtocolVersion model, Concepts, Estimands                      | Authoring drafts, comments, renderings     |
+| Feasibility                              | Organization, Site, (RWD) Observations                          | Surveys, forecasts, site scoring           |
+| Regulatory start-up                      | Effectivity, Artifacts, Attestations                            | Submission packets, tracking               |
+| Contracts & finance                      | Organization, StudySite, events                                 | Budgets, CTAs, invoices, payments          |
+| Recruitment                              | Identity layers, Eligibility                                    | Funnels, referrals, prescreening workflow  |
+| Participant experience / eConsent / eCOA | ConsentStatus, Observations (ePRO), ActivityLocation            | Portal content, reminders, travel          |
+| EDC                                      | CollectionSpec, Observations, Assertions, Findings, Locks       | Form instances, query workflow, UI state   |
+| RTSM / supply                            | Enrollment, arm Assertions, blinding conditions                 | Algorithms, inventory, shipments           |
+| Laboratory / biospecimens                | Specimen, custody, Observations, range sets                     | Kits, accessioning, storage maps           |
+| Imaging / devices / DHT                  | Artifacts, Sources, derived Observations                        | Transfers, reads, device fleet             |
+| Safety / PV                              | Observations (AE), Assertions (causality, expectedness, coding) | Cases, narratives, expedited reports       |
+| Medical coding                           | Concept Registry, `CodedAs` Assertions                          | Synonym lists, auto-coder config           |
+| Data management                          | Findings, Assertions, Locks, ingestion                          | Review workflows, reconciliation views     |
+| Risk / quality / monitoring              | QbD chain, Findings, Deviations                                 | Plans, visit reports, CAPA workflow        |
+| TMF / ISF                                | Artifacts, classification Assertions, expected-document rules   | Filing views, QC workflow                  |
+| Standards / MDR / conformance            | Standards Registry, mappings, rules, Findings                   | Authoring and governance UI                |
+| Statistics / analysis                    | Estimands, Derivations, lineage                                 | SAP authoring, analysis code, TLFs         |
+| Submission / regulatory / transparency   | Dataset Artifacts, lineage, Attestations                        | Packages, correspondence, registry records |
+| RWE / post-market                        | Ingestion, identity layers, consent scopes                      | Registries, study-specific cohorts         |
 
 ---
 
@@ -1194,15 +1197,15 @@ Applications are compositions of engine concepts. This table fixes ownership, no
 
 Each phase ships with tests for the invariants it introduces. Issue numbers refer to epic #4719.
 
-| Phase | Outcome | Scope | Issues |
-| --- | --- | --- | --- |
-| **0. Foundations** | A kernel that can hold truth safely | Kernel projects and pure Domain; `IClock`; tstzrange + exclusion; RLS + composite FKs; command pipeline with provenance, audit chain, outbox, idempotency, error registry; architecture baseline | #4772, #4784, #4773, #4780, #4779, #4785 |
-| **1. EDC on the kernel** | `apps/execution` runs on kernel concepts | ProtocolVersion lineage; Participant/Enrollment; Effectivity and Applicability; ConsentStatus; Observation, Assertion, Source, Artifact, Attestation; authority with Qualifications; IdentityVault; EDC projection | #4775, #4776, #4777, #4729, #4781, #4782, #4727, #4728 |
-| **2. Knowledge and standards** | Meaning-first design and continuous standards | Concept Registry and CT versions; executable protocol elements (objectives → estimands); Standards Registry; MappingSpecification; rule model and packs; ValidationFinding; design-time conformance; continuous SDTM projection; lineage store | new issues (spec §6, §9.6, §10) |
-| **3. Quality and trust expansion** | Native RBQM and computable consent | QbD chain, KRIs/QTLs, deviations, locks; consent scopes; Specimen and custody; ingestion layer; AI Proposals | #4783 + new issues |
-| **4. Analysis and submission** | Scientific traceability to the CSR | Statistical design artifacts, Derivations, ADaM, TLF lineage, Define-XML, reviewer guides, submission package, Rust rules/transformation runtime if measured need | new issues |
-| **5. Lifecycle breadth** | Whole evidence lifecycle | Feasibility, start-up, vendors, finance, recruitment, DCT, regulatory, transparency, RWE/post-market | new issues; scaffold services per #4787 |
-| **Verification** | Spec acceptance | §14 suite against PostgreSQL | #4731 |
+| Phase                              | Outcome                                       | Scope                                                                                                                                                                                                                                          | Issues                                                 |
+| ---------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **0. Foundations**                 | A kernel that can hold truth safely           | Kernel projects and pure Domain; `IClock`; tstzrange + exclusion; RLS + composite FKs; command pipeline with provenance, audit chain, outbox, idempotency, error registry; architecture baseline                                               | #4772, #4784, #4773, #4780, #4779, #4785               |
+| **1. EDC on the kernel**           | `apps/execution` runs on kernel concepts      | ProtocolVersion lineage; Participant/Enrollment; Effectivity and Applicability; ConsentStatus; Observation, Assertion, Source, Artifact, Attestation; authority with Qualifications; IdentityVault; EDC projection                             | #4775, #4776, #4777, #4729, #4781, #4782, #4727, #4728 |
+| **2. Knowledge and standards**     | Meaning-first design and continuous standards | Concept Registry and CT versions; executable protocol elements (objectives → estimands); Standards Registry; MappingSpecification; rule model and packs; ValidationFinding; design-time conformance; continuous SDTM projection; lineage store | new issues (spec §6, §9.6, §10)                        |
+| **3. Quality and trust expansion** | Native RBQM and computable consent            | QbD chain, KRIs/QTLs, deviations, locks; consent scopes; Specimen and custody; ingestion layer; AI Proposals                                                                                                                                   | #4783 + new issues                                     |
+| **4. Analysis and submission**     | Scientific traceability to the CSR            | Statistical design artifacts, Derivations, ADaM, TLF lineage, Define-XML, reviewer guides, submission package, Rust rules/transformation runtime if measured need                                                                              | new issues                                             |
+| **5. Lifecycle breadth**           | Whole evidence lifecycle                      | Feasibility, start-up, vendors, finance, recruitment, DCT, regulatory, transparency, RWE/post-market                                                                                                                                           | new issues; scaffold services per #4787                |
+| **Verification**                   | Spec acceptance                               | §14 suite against PostgreSQL                                                                                                                                                                                                                   | #4731                                                  |
 
 The 17 scaffold services are dispositioned against §12 (#4787): each becomes an application module over the
 kernel, is merged into another, or is retired.
@@ -1222,76 +1225,76 @@ kernel, is merged into another, or is retired.
 
 ## 17. Decisions
 
-| # | Decision | Outcome | ADR |
-| --- | --- | --- | --- |
-| K001 | Modular monolith kernel with single schema | Accepted | ADR-2244, ADR-2247 |
-| K002 | Bitemporal implementation | Hand-rolled `tstzrange` + exclusion constraints | ADR-2246 |
-| K003 | Tenant isolation | RLS in a shared schema; DB-per-tenant upgrade path | ADR-2250 |
-| K004 | Policy engine | Hand-coded evaluator behind `IAuthorizer`, authority computed from evidence | ADR-2251 |
-| K005 | Concept vocabulary | Concept Registry keyed by CDISC Biomedical Concepts with mapped external codes; per-tenant, pinned terminology | ADR-2252, ADR-2470 |
-| K006 | Identity vault | Separate schema and key hierarchy, same deployment; layered identity | ADR-2253 |
-| K007 | Neo4j for designer | Dropped for v1; protocol lifecycle in PostgreSQL | ADR-2245, ADR-2452 |
-| K008 | Rules and standards | Rules as versioned data over one AST; public standards only; Rust runtime seam | ADR-2254 |
-| K009 | Lineage | Lineage graph in the kernel schema, written transactionally, queried both ways; masked, never dropped, reads | ADR-2255, ADR-2471 |
-| K010 | Command pipeline and audit | One transaction per command; per-tenant hash chain; insert-only history | ADR-2449 |
-| K011 | Simulation | Evaluate-only over candidate versions; no study branches | ADR-2480 |
-| K012 | Object references and zoom path | `kind:id@version` NodeRef; kernel-computed, presentation-only zoom path | ADR-2481 |
-| K013 | Standards Registry and MDR | Tenant-scoped reference data; one governance envelope for library items; attested approval; immutable once registered | ADR-2460 |
-| K014 | Explanations | One `Explanation` type produced by the rule owner; authorization returns met and unmet conditions with evidence | ADR-2482 |
-| K015 | Dry-run authorization | One evaluator for commands and `CanI`; declared command capabilities; dry runs in the access log, not the audit chain | ADR-2483 |
-| K016 | Search | PostgreSQL full-text search over the source tables under RLS; NodeRef results; identity content excluded | ADR-2484 |
-| K017 | Participants and enrollment | Identity-only Participant; bitemporal Enrollment status rows; gap-free numbers under the Study advisory lock; attested withdrawal | ADR-2453 |
-| K018 | Rule language and evaluator | Canonical JSON AST with Kleene logic and fixed coercions; packs are `RulePack` library items; `IRuleEvaluator` in `Cadence.Rules` | ADR-2461 |
-| K019 | Activity stream | Asynchronous projection of outbox envelopes scoped by zoom path; payload-free; masked per reader at read time | ADR-2485 |
-| K020 | Evidence artifacts | Immutable, hash-addressed versions; bytes in object storage; declared kind, filing as an Assertion; attestations sign a version | ADR-2454 |
-| K021 | Grants, roles and delegation | Bitemporal grants of a capability or role at a scope; delegation as a bounded child grant; platform operators bootstrap tenants | ADR-2455 |
-| K022 | Validation findings | Immutable study-scoped runs; finding identity derived from rule and target; status derived from runs and attested decisions | ADR-2462 |
-| K023 | Work queues | Versioned definitions keyed by a capability; items from a registered source kept per reader by the one evaluator; portfolio queues span a tenant's studies | ADR-2486 |
-| K024 | Effectivity and study-site activation | Bitemporal effectivity per version and scope on artifact-version evidence; most specific scope decides; activation needs a version in force | ADR-2456 |
-| K025 | Expected schedule | Pure function of the design, a reference start and an as-of date; SDTM study days with no day 0; simulation reports schedule changes on the study-day axis | ADR-2487 |
-| K026 | Indicators | Pulse metrics, attention rules, KRIs and QTLs as versioned indicators in released `IndicatorSet` library items; counted through `IRuleEvaluator`; results carry the definition version, hashes, contributors and an explanation | ADR-2488 |
-| K027 | Grant-backed visibility | A reader sees what its grants in effect cover and the scope path above them; participants and sites through their study sites; reference data to any grant holder | ADR-2457 |
-| K028 | Mapping specifications | Governed library items pinned to one standard version, CT versions and Concept versions; K-STD-1 checked at protocol submission, gaps accepted as findings; engine behind `IMappingEngine` | ADR-2463 |
-| K029 | IdentityVault | Direct identifiers sealed per record (AES-256-GCM data keys wrapped by a per-tenant key) in the `identity_vault` schema, reached only through its functions; record, reveal, erase and cross-study link are audited kernel commands; residency is a tenant property | ADR-2458 |
-| K031 | Qualifications | Actor prerequisites are bitemporal Qualifications with artifact evidence; QualificationRequirements name the qualification a capability needs within a scope; the evaluator denies naming what to obtain or renew (K-AUTH-5, K-AUTH-6) | ADR-2459 |
-| K032 | Visit timing, anchors and cycles | `ExpectedSchedule.Assess` measures an actual date against the window with no built-in severity; visits anchored on another visit's actual date; repeating cycles as numbered occurrences | ADR-2507 |
-| K033 | AI proposals and automation agents | A Proposal with a content hash and no effect on kernel state; approval is an attested, separation-of-duties decision by a person; agents read and propose only; expiry derived on read | ADR-2489 |
+| #    | Decision                                   | Outcome                                                                                                                                                                                                                                                             | ADR                |
+| ---- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| K001 | Modular monolith kernel with single schema | Accepted                                                                                                                                                                                                                                                            | ADR-2244, ADR-2247 |
+| K002 | Bitemporal implementation                  | Hand-rolled `tstzrange` + exclusion constraints                                                                                                                                                                                                                     | ADR-2246           |
+| K003 | Tenant isolation                           | RLS in a shared schema; DB-per-tenant upgrade path                                                                                                                                                                                                                  | ADR-2250           |
+| K004 | Policy engine                              | Hand-coded evaluator behind `IAuthorizer`, authority computed from evidence                                                                                                                                                                                         | ADR-2251           |
+| K005 | Concept vocabulary                         | Concept Registry keyed by CDISC Biomedical Concepts with mapped external codes; per-tenant, pinned terminology                                                                                                                                                      | ADR-2252, ADR-2470 |
+| K006 | Identity vault                             | Separate schema and key hierarchy, same deployment; layered identity                                                                                                                                                                                                | ADR-2253           |
+| K007 | Neo4j for designer                         | Dropped for v1; protocol lifecycle in PostgreSQL                                                                                                                                                                                                                    | ADR-2245, ADR-2452 |
+| K008 | Rules and standards                        | Rules as versioned data over one AST; public standards only; Rust runtime seam                                                                                                                                                                                      | ADR-2254           |
+| K009 | Lineage                                    | Lineage graph in the kernel schema, written transactionally, queried both ways; masked, never dropped, reads                                                                                                                                                        | ADR-2255, ADR-2471 |
+| K010 | Command pipeline and audit                 | One transaction per command; per-tenant hash chain; insert-only history                                                                                                                                                                                             | ADR-2449           |
+| K011 | Simulation                                 | Evaluate-only over candidate versions; no study branches                                                                                                                                                                                                            | ADR-2480           |
+| K012 | Object references and zoom path            | `kind:id@version` NodeRef; kernel-computed, presentation-only zoom path                                                                                                                                                                                             | ADR-2481           |
+| K013 | Standards Registry and MDR                 | Tenant-scoped reference data; one governance envelope for library items; attested approval; immutable once registered                                                                                                                                               | ADR-2460           |
+| K014 | Explanations                               | One `Explanation` type produced by the rule owner; authorization returns met and unmet conditions with evidence                                                                                                                                                     | ADR-2482           |
+| K015 | Dry-run authorization                      | One evaluator for commands and `CanI`; declared command capabilities; dry runs in the access log, not the audit chain                                                                                                                                               | ADR-2483           |
+| K016 | Search                                     | PostgreSQL full-text search over the source tables under RLS; NodeRef results; identity content excluded                                                                                                                                                            | ADR-2484           |
+| K017 | Participants and enrollment                | Identity-only Participant; bitemporal Enrollment status rows; gap-free numbers under the Study advisory lock; attested withdrawal                                                                                                                                   | ADR-2453           |
+| K018 | Rule language and evaluator                | Canonical JSON AST with Kleene logic and fixed coercions; packs are `RulePack` library items; `IRuleEvaluator` in `Cadence.Rules`                                                                                                                                   | ADR-2461           |
+| K019 | Activity stream                            | Asynchronous projection of outbox envelopes scoped by zoom path; payload-free; masked per reader at read time                                                                                                                                                       | ADR-2485           |
+| K020 | Evidence artifacts                         | Immutable, hash-addressed versions; bytes in object storage; declared kind, filing as an Assertion; attestations sign a version                                                                                                                                     | ADR-2454           |
+| K021 | Grants, roles and delegation               | Bitemporal grants of a capability or role at a scope; delegation as a bounded child grant; platform operators bootstrap tenants                                                                                                                                     | ADR-2455           |
+| K022 | Validation findings                        | Immutable study-scoped runs; finding identity derived from rule and target; status derived from runs and attested decisions                                                                                                                                         | ADR-2462           |
+| K023 | Work queues                                | Versioned definitions keyed by a capability; items from a registered source kept per reader by the one evaluator; portfolio queues span a tenant's studies                                                                                                          | ADR-2486           |
+| K024 | Effectivity and study-site activation      | Bitemporal effectivity per version and scope on artifact-version evidence; most specific scope decides; activation needs a version in force                                                                                                                         | ADR-2456           |
+| K025 | Expected schedule                          | Pure function of the design, a reference start and an as-of date; SDTM study days with no day 0; simulation reports schedule changes on the study-day axis                                                                                                          | ADR-2487           |
+| K026 | Indicators                                 | Pulse metrics, attention rules, KRIs and QTLs as versioned indicators in released `IndicatorSet` library items; counted through `IRuleEvaluator`; results carry the definition version, hashes, contributors and an explanation                                     | ADR-2488           |
+| K027 | Grant-backed visibility                    | A reader sees what its grants in effect cover and the scope path above them; participants and sites through their study sites; reference data to any grant holder                                                                                                   | ADR-2457           |
+| K028 | Mapping specifications                     | Governed library items pinned to one standard version, CT versions and Concept versions; K-STD-1 checked at protocol submission, gaps accepted as findings; engine behind `IMappingEngine`                                                                          | ADR-2463           |
+| K029 | IdentityVault                              | Direct identifiers sealed per record (AES-256-GCM data keys wrapped by a per-tenant key) in the `identity_vault` schema, reached only through its functions; record, reveal, erase and cross-study link are audited kernel commands; residency is a tenant property | ADR-2458           |
+| K031 | Qualifications                             | Actor prerequisites are bitemporal Qualifications with artifact evidence; QualificationRequirements name the qualification a capability needs within a scope; the evaluator denies naming what to obtain or renew (K-AUTH-5, K-AUTH-6)                              | ADR-2459           |
+| K032 | Visit timing, anchors and cycles           | `ExpectedSchedule.Assess` measures an actual date against the window with no built-in severity; visits anchored on another visit's actual date; repeating cycles as numbered occurrences                                                                            | ADR-2507           |
+| K033 | AI proposals and automation agents         | A Proposal with a content hash and no effect on kernel state; approval is an attested, separation-of-duties decision by a person; agents read and propose only; expiry derived on read                                                                              | ADR-2489           |
 
 ---
 
 ## Appendix A. Resolution of the inventory's disagreements (inventory §3)
 
-| # | Topic | Resolution | Where |
-| --- | --- | --- | --- |
-| 1 | Enrollment states | Inventory recommendation accepted: 7 states; `ReconsentRequired` → pending transition; `Unblinded` → Attestation-bearing event + RTSM Assertion | §7.4 |
-| 2 | Unblind/Withdraw logic | Only guards migrate; withdrawal is a dedicated command | §7.4 |
-| 3 | `ProtocolVersionRef` | Maps to `ConsentStatus.protocol_version`; Applicability replaces `ActiveProtocolVersion`, observation tags and `FormSubmission.ProtocolVersion` | §7.5, §9.4 |
-| 4 | Consent model | Bitemporal ConsentStatus with scopes + `Attestation(Consented)` + ICF Artifact | §9.4 |
-| 5 | `EConsentCompletedConsumer` | Replaced: eConsent issues kernel commands as a saga | §5.1 K-TX-1 |
-| 6 | Site compliance cache | StudySite activation via Effectivity (K-TIME-4/5); K-AUTH-5 only for actor prerequisites | §7.1, §9.3 |
-| 7 | Audit chain location | Kernel AuditEntry, one chain per tenant, unifying the two per-type chains | §5.3 |
-| 8 | Outbox | Plumbing reused; domain events are net-new | §5.2 |
-| 9 | Edit checks / UCUM / outlier | UCUM and ranges are kernel derivations; edit checks are EDC rules on the shared rule engine; outlier service deleted (central monitoring may reintroduce it as an indicator) | §8.1, §10 |
-| 10 | Query targeting | Queries target `ObservationId`; `DraftAi` becomes a Proposal | §8.2, §11 |
-| 11 | Code value objects and IDs | `StudyCode/SiteCode/SubjectCode` move to Abstractions; execution `SubjectId`/`ObservationId` replaced by kernel IDs | §3.2 |
+| #   | Topic                        | Resolution                                                                                                                                                                   | Where       |
+| --- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| 1   | Enrollment states            | Inventory recommendation accepted: 7 states; `ReconsentRequired` → pending transition; `Unblinded` → Attestation-bearing event + RTSM Assertion                              | §7.4        |
+| 2   | Unblind/Withdraw logic       | Only guards migrate; withdrawal is a dedicated command                                                                                                                       | §7.4        |
+| 3   | `ProtocolVersionRef`         | Maps to `ConsentStatus.protocol_version`; Applicability replaces `ActiveProtocolVersion`, observation tags and `FormSubmission.ProtocolVersion`                              | §7.5, §9.4  |
+| 4   | Consent model                | Bitemporal ConsentStatus with scopes + `Attestation(Consented)` + ICF Artifact                                                                                               | §9.4        |
+| 5   | `EConsentCompletedConsumer`  | Replaced: eConsent issues kernel commands as a saga                                                                                                                          | §5.1 K-TX-1 |
+| 6   | Site compliance cache        | StudySite activation via Effectivity (K-TIME-4/5); K-AUTH-5 only for actor prerequisites                                                                                     | §7.1, §9.3  |
+| 7   | Audit chain location         | Kernel AuditEntry, one chain per tenant, unifying the two per-type chains                                                                                                    | §5.3        |
+| 8   | Outbox                       | Plumbing reused; domain events are net-new                                                                                                                                   | §5.2        |
+| 9   | Edit checks / UCUM / outlier | UCUM and ranges are kernel derivations; edit checks are EDC rules on the shared rule engine; outlier service deleted (central monitoring may reintroduce it as an indicator) | §8.1, §10   |
+| 10  | Query targeting              | Queries target `ObservationId`; `DraftAi` becomes a Proposal                                                                                                                 | §8.2, §11   |
+| 11  | Code value objects and IDs   | `StudyCode/SiteCode/SubjectCode` move to Abstractions; execution `SubjectId`/`ObservationId` replaced by kernel IDs                                                          | §3.2        |
 
 ## Appendix B. Disposition of the inventory's gaps (inventory §4)
 
-| Gap | Disposition | Where |
-| --- | --- | --- |
-| G1 Enrollment numbering | Specified: gap-free per study (or per StudySite), under the Study lock | §7.4 |
-| G2 `SubjectCode` scope | Specified: unique per Study; resolution query | §3.2 |
-| G3 Eligibility | Specified: Eligibility Assertions over Observations | §7.4 |
-| G4 Edit checks vs kernel writes | Specified: structural checks pre-commit; edit checks post-commit, never reject a fact | §10.2 |
-| G5 Lock/freeze | Specified: `Frozen`/`Locked` Assertions as conditions | §10.5 |
-| G6 Re-consent and paper consent | Specified | §7.5, §9.4 |
-| G7 Non-randomized arm | Specified: RTSM Assertion with blinding class | §7.4 |
-| G8 Extension properties | Specified: not allowed; use Concept qualifiers | §8.1 K-FACT-5 |
-| G9 Local lab ranges | Specified: range-set Artifacts; `LabFeed` source | §8.3 |
-| G10 Outlier detection | Deferred to the central-monitoring (RBQM) application as an Indicator | §10.4 |
-| G11 Query metadata, AI drafts | Metadata stays EDC; AI drafts are Proposals | §11 |
-| G12 Cross-aggregate locking | Specified: lock and read, no cross-aggregate write | §5.1 K-TX-4 |
-| G13 Error-code registry | Specified | §5.4 |
-| G14 Anonymous/system actors | Specified: named ServiceAccounts only | §5.1 K-TX-5 |
-| G15 Natural-key idempotency | Specified | §5.1 K-TX-3 |
-| G16 Legacy routes | Deferred to the API gateway's versioning and deprecation policy; aliases removed in migration slice S9 | inventory §5 |
+| Gap                             | Disposition                                                                                            | Where         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------- |
+| G1 Enrollment numbering         | Specified: gap-free per study (or per StudySite), under the Study lock                                 | §7.4          |
+| G2 `SubjectCode` scope          | Specified: unique per Study; resolution query                                                          | §3.2          |
+| G3 Eligibility                  | Specified: Eligibility Assertions over Observations                                                    | §7.4          |
+| G4 Edit checks vs kernel writes | Specified: structural checks pre-commit; edit checks post-commit, never reject a fact                  | §10.2         |
+| G5 Lock/freeze                  | Specified: `Frozen`/`Locked` Assertions as conditions                                                  | §10.5         |
+| G6 Re-consent and paper consent | Specified                                                                                              | §7.5, §9.4    |
+| G7 Non-randomized arm           | Specified: RTSM Assertion with blinding class                                                          | §7.4          |
+| G8 Extension properties         | Specified: not allowed; use Concept qualifiers                                                         | §8.1 K-FACT-5 |
+| G9 Local lab ranges             | Specified: range-set Artifacts; `LabFeed` source                                                       | §8.3          |
+| G10 Outlier detection           | Deferred to the central-monitoring (RBQM) application as an Indicator                                  | §10.4         |
+| G11 Query metadata, AI drafts   | Metadata stays EDC; AI drafts are Proposals                                                            | §11           |
+| G12 Cross-aggregate locking     | Specified: lock and read, no cross-aggregate write                                                     | §5.1 K-TX-4   |
+| G13 Error-code registry         | Specified                                                                                              | §5.4          |
+| G14 Anonymous/system actors     | Specified: named ServiceAccounts only                                                                  | §5.1 K-TX-5   |
+| G15 Natural-key idempotency     | Specified                                                                                              | §5.1 K-TX-3   |
+| G16 Legacy routes               | Deferred to the API gateway's versioning and deprecation policy; aliases removed in migration slice S9 | inventory §5  |

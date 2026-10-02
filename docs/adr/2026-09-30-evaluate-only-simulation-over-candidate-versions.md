@@ -29,7 +29,7 @@ every kernel table, every bitemporal guard and every read.
 - **K-TRUTH-1:** a simulated state must never be mistaken for, or leak into, clinical truth.
 - **Existing guarantees.** The spec already makes the relevant computations pure: the expected schedule is
   `f(ProtocolVersion, anchor events, as_of)` (K-TIME-7), a projection is `f(state as_of, MappingSpecification
-  version, CT versions)` (K-PROJ-2, K-LIN-3), rule evaluation is deterministic (K-RULE-4), and ProtocolVersion
+version, CT versions)` (K-PROJ-2, K-LIN-3), rule evaluation is deterministic (K-RULE-4), and ProtocolVersion
   elements keep stable IDs so versions can be diffed (K-PROT-1).
 - **Bitemporal reads.** Any read can be pinned to `(valid_at, known_at)` (ADR-2246), so two evaluations can see
   exactly the same state.
@@ -47,7 +47,7 @@ every kernel table, every bitemporal guard and every read.
 
 ### Option 1: Evaluate-only simulation over candidate versions (selected)
 
-- **Overview:** the proposed change is expressed as a *candidate version* of a versioned specification (a draft
+- **Overview:** the proposed change is expressed as a _candidate version_ of a versioned specification (a draft
   ProtocolVersion, MappingSpecification version or RulePack version). The simulation engine evaluates the pure
   functions twice at one pinned `(valid_at, known_at)`: once with the current versions (baseline) and once with the
   candidate substituted (candidate). It returns the difference. It writes nothing. A user who wants to keep the

@@ -1,4 +1,5 @@
 # ADR-2204: Cumulative Mean Kinetic Temperature Stability Budget Engine
+
 - **Status:** Accepted
 - **Date:** 2026-08-22
 - **Authors:** @fderuiter
@@ -13,36 +14,35 @@ Traditional RTSM systems rely on rigid, instantaneous binary alarms (e.g. flaggi
 
 ## 2. Decision Drivers & Constraints
 
-* **Patient Safety & Regulatory Compliance (USP <1079> / PDA TR 39)**: Thermal stability evaluations must use the Arrhenius equation to calculate non-linear thermal degradation over time rather than simple arithmetic averages.
-* **Cumulative Multi-Echelon Tracking**: Drug lots transit through multiple air/ground couriers and depots; the stability ledger must track cumulative lifetime thermal exposure across all legs.
-* **Automated Real-Time RTSM Quarantine**: If a cumulative stability budget is breached or a critical upper excursion threshold is violated, all impacted kits must be quarantined instantaneously across the entire supply chain.
+- **Patient Safety & Regulatory Compliance (USP <1079> / PDA TR 39)**: Thermal stability evaluations must use the Arrhenius equation to calculate non-linear thermal degradation over time rather than simple arithmetic averages.
+- **Cumulative Multi-Echelon Tracking**: Drug lots transit through multiple air/ground couriers and depots; the stability ledger must track cumulative lifetime thermal exposure across all legs.
+- **Automated Real-Time RTSM Quarantine**: If a cumulative stability budget is breached or a critical upper excursion threshold is violated, all impacted kits must be quarantined instantaneously across the entire supply chain.
 
 ## 3. Options Considered
 
 ### Option 1: **Cumulative Arrhenius MKT Kinetic Ledger & Automated RTSM Quarantine (Selected)**: The system models stability budgets in `apps/designer` (e.g. activation energy $\Delta H$, max cumulative degree-hours, excursion threshold curves). IoT logger data streams ingested at each transit hop update the kit's cumulative MKT and remaining stability budget. Breaches automatically transition kit states to `QUARANTINED_EXCURSION` and trigger depot replenishment orders in `apps/execution` (RTSM).
 
 - **Overview:** **Cumulative Arrhenius MKT Kinetic Ledger & Automated RTSM Quarantine (Selected)**: The system models stability budgets in `apps/designer` (e.g. activation energy $\Delta H$, max cumulative degree-hours, excursion threshold curves). IoT logger data streams ingested at each transit hop update the kit's cumulative MKT and remaining stability budget. Breaches automatically transition kit states to `QUARANTINED_EXCURSION` and trigger depot replenishment orders in `apps/execution` (RTSM).
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Instantaneous Binary Threshold Alarms**: Any temperature reading outside 2°C–8°C triggers immediate automatic destruction.
 
 - **Overview:** **Instantaneous Binary Threshold Alarms**: Any temperature reading outside 2°C–8°C triggers immediate automatic destruction.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 3: **Manual Offline Temperature Logger Evaluation**: Sites download CSV logger files, email them to sponsor quality teams, and wait days for manual review.
 
 - **Overview:** **Manual Offline Temperature Logger Evaluation**: Sites download CSV logger files, email them to sponsor quality teams, and wait days for manual review.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 
@@ -54,17 +54,16 @@ Traditional RTSM systems rely on rigid, instantaneous binary alarms (e.g. flaggi
 
 ## 5. Consequences & Trade-offs
 
-* **Positive**:
+- **Positive**:
   - Dramatic reduction in wasted clinical supply batches.
   - Sub-second automated quarantine and depot resupply dispatch upon confirmed excursion.
   - Complete, verifiable temperature audit trail for regulatory inspection.
-* **Negative**:
+- **Negative**:
   - Requires sponsors to define thermal activation energy ($\Delta H$) and stability curves during study setup.
   - Requires IoT temperature logger format adapters in `apps/interop`.
 
 ## 6. Implementation & Verification
 
-* **Requirements:** Specified in `docs/SDLC/01_Product_Requirements_Document_PRD.md` under `PRD-SCM-003`.
-* **Domain Model:** Captured and defined in `CONTEXT.md`.
-* **GxP Traceability:** Synchronized via `uv run python scripts/sync_gxp.py`.
-
+- **Requirements:** Specified in `docs/SDLC/01_Product_Requirements_Document_PRD.md` under `PRD-SCM-003`.
+- **Domain Model:** Captured and defined in `CONTEXT.md`.
+- **GxP Traceability:** Synchronized via `uv run python scripts/sync_gxp.py`.

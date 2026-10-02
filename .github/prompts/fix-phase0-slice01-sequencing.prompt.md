@@ -5,6 +5,7 @@
 You are a Principal Systems Architect responsible for closing an open sequencing decision in the Phase 0 migration plan before Phase 1 (Slice 01) work is staffed. This is a **decision-and-documentation task with a small, tightly-scoped contract-freeze deliverable** — it is not a request to transcribe Execution or Designer's business logic to .NET. Do not start writing domain code for either service.
 
 **Source of truth for this task:**
+
 - `docs/migration/phase0/00_validation_gate_report.md` §4 ("Gate 4 — Dependency Graph & Topological Sort Audit"), which independently confirmed the finding below.
 - `docs/migration/phase0/02_bounded_contexts.md` §4.2 ("Circular dependencies"), which first identified it.
 - `docs/migration/phase0/03_migration_plan.md`, blocker table entry **MIG-03** and the SLICE-01/SLICE-02 rows.
@@ -16,7 +17,7 @@ You are a Principal Systems Architect responsible for closing an open sequencing
 - Execution → Designer: `apps/execution/designer_client.py:31` (`os.getenv("DESIGNER_URL")`), consumed by `apps/execution/eligibility_service.py` to fetch eligibility criteria for a study.
 - Designer → Execution: `apps/designer/presentation/routers/designer_routes.py:2618` (`os.getenv("EXECUTION_SERVICE_URL")`), part of the protocol-amendment publish flow.
 
-Neither service is a true leaf. `03_migration_plan.md` currently names SLICE-01 as the lead Phase 1 slice without this cycle being resolved — MIG-03 is listed as an *open* blocker, not a decision. That is the gap this prompt closes.
+Neither service is a true leaf. `03_migration_plan.md` currently names SLICE-01 as the lead Phase 1 slice without this cycle being resolved — MIG-03 is listed as an _open_ blocker, not a decision. That is the gap this prompt closes.
 
 ## Step 1 — Re-verify the finding still holds
 
@@ -33,8 +34,8 @@ Read both call sites in full (`apps/execution/designer_client.py`, `apps/executi
 
 Choose one of the two options `03_migration_plan.md` already names, or propose a third if neither fits once you've read the actual call sites:
 
-- **(a) Parallel migration with contract-first coordination.** Both Execution and Designer are staffed as Slice 01 and Slice 02 together (not sequentially), with both directions' HTTP contracts frozen in `Cadence.Contracts` *before* either team starts writing service code, so each side can build against a stable interface without waiting on the other's implementation.
-- **(b) Explicit sub-sequencing.** One of the two ships first, with the other side stubbed/mocked for the duration (e.g. Execution ships first, with a stub Designer client that returns a fixed eligibility-criteria fixture until real Designer is live; or vice versa). If you choose this, you must justify *which* one goes first — the validation report notes Execution has "the highest fan-in/fan-out of any context" and downstream Tier 3 orchestrators are sequenced behind it, which is a real argument for shipping it first, but the eligibility-criteria dependency on Designer is a real argument against — weigh both explicitly rather than picking by default.
+- **(a) Parallel migration with contract-first coordination.** Both Execution and Designer are staffed as Slice 01 and Slice 02 together (not sequentially), with both directions' HTTP contracts frozen in `Cadence.Contracts` _before_ either team starts writing service code, so each side can build against a stable interface without waiting on the other's implementation.
+- **(b) Explicit sub-sequencing.** One of the two ships first, with the other side stubbed/mocked for the duration (e.g. Execution ships first, with a stub Designer client that returns a fixed eligibility-criteria fixture until real Designer is live; or vice versa). If you choose this, you must justify _which_ one goes first — the validation report notes Execution has "the highest fan-in/fan-out of any context" and downstream Tier 3 orchestrators are sequenced behind it, which is a real argument for shipping it first, but the eligibility-criteria dependency on Designer is a real argument against — weigh both explicitly rather than picking by default.
 
 Do not leave this as "either is fine" — the deliverable is a specific, justified choice a Phase 1 team can act on without re-litigating it.
 
@@ -61,6 +62,7 @@ While you're in this area, re-run the same check the audit used, to confirm Exec
 # For every pair of apps/<X> and apps/<Y>, look for X calling Y's *_URL and Y calling X's *_URL
 rg -n "os\.getenv\(\"[A-Z_]+_URL\"" apps --type py -g '!*/tests/*'
 ```
+
 Cross-reference the tier assignment of any bidirectional pair you find against `03_migration_plan.md`'s Phase/Slice table.
 
 ## Deliverable

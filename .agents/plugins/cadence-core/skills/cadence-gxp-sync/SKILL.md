@@ -13,17 +13,18 @@ Automates 21 CFR Part 11 and FDA GxP compliance document regeneration and tracea
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Execution** | `run_command` | `CommandLine="dotnet cadence gxp sync"`, `WaitMsBeforeAsync=10000` | Launch qualification suite and RTM generator |
-| **Task Monitoring** | `manage_task` | `Action="status"`, `TaskId="..."` | Monitor long-running test execution asynchronously |
-| **Watchdog Timer** | `schedule` | `DurationSeconds=180`, `TimerCondition=<task-id>` | Bound execution time to prevent hanging workers |
-| **Verification** | `view_file` | `AbsolutePath=".../docs/SDLC/Requirements_Traceability_Matrix.md"` | Verify requirement coverage percentage and outcomes |
-| **Summary Artifact** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/gxp_sync_summary.md` | Emit audit-ready execution summary artifact |
+| Phase                | Antigravity Tool | Invocation Pattern                                                 | Objective                                           |
+| :------------------- | :--------------- | :----------------------------------------------------------------- | :-------------------------------------------------- |
+| **Execution**        | `run_command`    | `CommandLine="dotnet cadence gxp sync"`, `WaitMsBeforeAsync=10000` | Launch qualification suite and RTM generator        |
+| **Task Monitoring**  | `manage_task`    | `Action="status"`, `TaskId="..."`                                  | Monitor long-running test execution asynchronously  |
+| **Watchdog Timer**   | `schedule`       | `DurationSeconds=180`, `TimerCondition=<task-id>`                  | Bound execution time to prevent hanging workers     |
+| **Verification**     | `view_file`      | `AbsolutePath=".../docs/SDLC/Requirements_Traceability_Matrix.md"` | Verify requirement coverage percentage and outcomes |
+| **Summary Artifact** | `write_to_file`  | Target: `<appDataDir>/brain/<conversation-id>/gxp_sync_summary.md` | Emit audit-ready execution summary artifact         |
 
 ## When to Run
 
 Run this workflow whenever:
+
 - Test methods are added, renamed, or deleted in xUnit v3 test suites.
 - `@req:PRD-SYS-xxx` tags in test doc comments or `[GxPRequirement("PRD-SYS-xxx")]` attributes in C# tests are added or modified.
 - Test pass/fail outcomes change.
@@ -44,4 +45,3 @@ Run this workflow whenever:
    ```bash
    git commit -m "docs(rtm): sync GxP compliance docs with current test state"
    ```
-

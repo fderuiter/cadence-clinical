@@ -27,9 +27,9 @@ This ADR specifically relates to requirements under **PRD-SYS-001**.
 ### Option 1: Ad-hoc Hardcoded Role Gates in Endpoints
 
 - **Overview:** Keep using `get_normalized_roles` and check specific role list membership directly in each route handler.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Extremely quick to implement locally for individual endpoints.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Leads to policy fragmentation and high maintenance overhead.
   - ❌ Difficult to audit or keep consistent with SDLC spec sheets.
 
@@ -41,11 +41,11 @@ This ADR specifically relates to requirements under **PRD-SYS-001**.
   - `protocol_export` (actions: `generate`, `read`)
   - `designer_cache` (action: `admin`)
   - `study_design` (actions extended with `approve` for atomic study version sign-offs)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Single, auditable source of truth for all platform-wide permissions.
   - ✅ Clear separation of concerns between roles and granular permissions.
   - ✅ Simplifies automated integration testing of positive/negative authorization paths.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires upfront effort to map all roles and write comprehensive matrix assertions.
 
 ## 4. Decision Outcome

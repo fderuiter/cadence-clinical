@@ -31,21 +31,21 @@ This decision implements requirements under PRD-MDR-007.
 ### Option 1: Client-side XPath/XForm compilation
 
 - **Overview:** Compile DSL expressions into XPath statements (similar to the rules engine) and rely on an XPath library or rendering client to execute them.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Leverages existing XPath conventions.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Complex translation; parsing is heavily dependent on execution-service context.
   - ❌ Lack of fine-grained node-by-node explanation details and Kleene 3-valued logic propagation.
 
 ### Option 2: Pure-Python AST parser and Kleene-logic evaluation engine
 
 - **Overview:** Implement a dedicated custom tokenizer and recursive descent parser to compile the DSL into a structured Pydantic-validated AST. Create a deterministic, in-memory evaluator that evaluates the AST nodes recursively, utilizing Kleene 3-valued logic (True, False, Indeterminate) for missing values.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Fully decoupled from FastAPI/databases and runnable in any environment.
   - ✅ High security; absolutely no execution of arbitrary python strings.
   - ✅ Standardized error reporting and detailed, user-friendly per-node audit explanations.
   - ✅ Explicitly handles and propagates missing values as Indeterminate instead of crashing or mis-evaluating as False.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires writing and maintaining a custom parser/evaluator.
 
 ## 4. Decision Outcome

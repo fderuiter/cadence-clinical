@@ -29,9 +29,9 @@ To support efficient monitoring workflows and maintain strict compliance with re
 ### Option 1: Incremental Individual Verification & Manual Page Navigation
 
 - **Overview:** Keep eCRF, CTMS, and eTMF views fully decoupled. Continue to require CRAs to navigate manually and sign off on field verification one-by-one.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Minimizes frontend complexity (no need for batch signature modals or route-based state syncing).
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe operational inefficiency when monitoring high-throughput clinical sites.
   - ❌ High probability of missing post-verification field modifications due to lack of automated clear mechanisms and notifications.
 
@@ -43,11 +43,11 @@ To support efficient monitoring workflows and maintain strict compliance with re
   3. Integrate GxP-compliant checkbox components adjacent to clinical fields, prompting a unified dual-factor electronic re-authentication modal for bulk signing.
   4. Enforce client/server-side 60-second signature expiration limit.
   5. Automatically drop verification status on field modifications, log `SDV_CLEAR` to the ledger, and push a high-priority `ALERTS` notification back to the unified inbox.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High usability: CRAs can transition from notification straight into the correct subject, visit, and field contexts.
   - ✅ High efficiency: Enables single-action multi-select bulk sign-offs.
   - ✅ Full Regulatory Compliance: Adheres to FDA 21 CFR Part 11 re-authentication, audit-trail ledger preservation, and 60-second lockout window constraints.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Moderate frontend architectural overhead for Pinia state sync and modal management.
 
 ## 4. Decision Outcome

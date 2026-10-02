@@ -4,32 +4,32 @@
 
 Generated from the EF Core model of `Cadence.Apps.Fileshare.Infrastructure.Persistence.FileshareDbContext`, not from a live database. Unqualified tables live in the `fileshare` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`fileshare.audit_log_entries`](#fileshareaudit_log_entries) | `AuditLogEntry` | 11 |
-| [`fileshare.file_audit_logs`](#filesharefile_audit_logs) | `FileAuditLog` | 10 |
-| [`fileshare.file_records`](#filesharefile_records) | `FileRecord` | 33 |
-| [`fileshare.guest_links`](#fileshareguest_links) | `GuestLink` | 11 |
-| [`fileshare.playback_audit_logs`](#fileshareplayback_audit_logs) | `PlaybackAuditLog` | 11 |
-| [`fileshare.share_grants`](#fileshareshare_grants) | `ShareGrant` | 13 |
+| Table                                                            | Entity             | Columns |
+| ---------------------------------------------------------------- | ------------------ | ------- |
+| [`fileshare.audit_log_entries`](#fileshareaudit_log_entries)     | `AuditLogEntry`    | 11      |
+| [`fileshare.file_audit_logs`](#filesharefile_audit_logs)         | `FileAuditLog`     | 10      |
+| [`fileshare.file_records`](#filesharefile_records)               | `FileRecord`       | 33      |
+| [`fileshare.guest_links`](#fileshareguest_links)                 | `GuestLink`        | 11      |
+| [`fileshare.playback_audit_logs`](#fileshareplayback_audit_logs) | `PlaybackAuditLog` | 11      |
+| [`fileshare.share_grants`](#fileshareshare_grants)               | `ShareGrant`       | 13      |
 
 ## fileshare.audit_log_entries
 
 Entity: `AuditLogEntry`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `uuid` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `BlockHash` | `character varying(64)` | no |  |  |
-| `ChangesJson` | `text` | yes |  |  |
-| `EntityId` | `character varying(255)` | no |  |  |
-| `EntityName` | `character varying(255)` | no |  |  |
-| `PredecessorHash` | `character varying(64)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `uuid`                     | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `BlockHash`       | `character varying(64)`    | no   |         |     |
+| `ChangesJson`     | `text`                     | yes  |         |     |
+| `EntityId`        | `character varying(255)`   | no   |         |     |
+| `EntityName`      | `character varying(255)`   | no   |         |     |
+| `PredecessorHash` | `character varying(64)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -39,18 +39,18 @@ Indexes:
 
 Entity: `FileAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `Action` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Detail` | `jsonb` | yes |  |  |
-| `FileRecordId` | `character varying(36)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `Action`          | `character varying(50)`    | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `text`                     | no   |         |     |
+| `Detail`          | `jsonb`                    | yes  |         |     |
+| `FileRecordId`    | `character varying(36)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -67,41 +67,41 @@ Indexes:
 
 Entity: `FileRecord`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `ApprovalReason` | `character varying(1000)` | yes |  |  |
-| `ApprovalStatus` | `character varying(50)` | no |  |  |
-| `ApprovedAt` | `timestamp with time zone` | yes |  |  |
-| `ApprovedBy` | `character varying(255)` | yes |  |  |
-| `ChecksumSha256` | `character varying(64)` | yes |  |  |
-| `ConversionError` | `character varying(2000)` | yes |  |  |
-| `ConversionStatus` | `character varying(50)` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `Filename` | `character varying(500)` | no |  |  |
-| `HlsManifestKey` | `character varying(1000)` | yes |  |  |
-| `HoldReason` | `character varying(1000)` | yes |  |  |
-| `IsDeleted` | `boolean` | no |  |  |
-| `IsOnHold` | `boolean` | no |  |  |
-| `MimeType` | `character varying(255)` | no |  |  |
-| `ObjectKey` | `character varying(1000)` | no |  |  |
-| `PdfRenditionKey` | `character varying(1000)` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `ScanCompletedAt` | `timestamp with time zone` | yes |  |  |
-| `ScanEngine` | `character varying(100)` | yes |  |  |
-| `ScanStatus` | `character varying(50)` | no |  |  |
-| `ScanThreatName` | `character varying(255)` | yes |  |  |
-| `SignatureManifestation` | `jsonb` | yes |  |  |
-| `SiteId` | `character varying(255)` | yes |  |  |
-| `SizeBytes` | `bigint` | no |  |  |
-| `Status` | `character varying(50)` | no |  |  |
-| `StudyId` | `character varying(255)` | no |  |  |
-| `TranscodeError` | `character varying(2000)` | yes |  |  |
-| `TranscodeStatus` | `character varying(50)` | no |  |  |
-| `UploadedAt` | `timestamp with time zone` | no |  |  |
-| `UploadedBy` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column                   | Type                       | Null | Default | Key |
+| ------------------------ | -------------------------- | ---- | ------- | --- |
+| `Id`                     | `character varying(36)`    | no   |         | PK  |
+| `ApprovalReason`         | `character varying(1000)`  | yes  |         |     |
+| `ApprovalStatus`         | `character varying(50)`    | no   |         |     |
+| `ApprovedAt`             | `timestamp with time zone` | yes  |         |     |
+| `ApprovedBy`             | `character varying(255)`   | yes  |         |     |
+| `ChecksumSha256`         | `character varying(64)`    | yes  |         |     |
+| `ConversionError`        | `character varying(2000)`  | yes  |         |     |
+| `ConversionStatus`       | `character varying(50)`    | no   |         |     |
+| `CreatedAt`              | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`              | `character varying(255)`   | no   |         |     |
+| `Filename`               | `character varying(500)`   | no   |         |     |
+| `HlsManifestKey`         | `character varying(1000)`  | yes  |         |     |
+| `HoldReason`             | `character varying(1000)`  | yes  |         |     |
+| `IsDeleted`              | `boolean`                  | no   |         |     |
+| `IsOnHold`               | `boolean`                  | no   |         |     |
+| `MimeType`               | `character varying(255)`   | no   |         |     |
+| `ObjectKey`              | `character varying(1000)`  | no   |         |     |
+| `PdfRenditionKey`        | `character varying(1000)`  | yes  |         |     |
+| `ReasonForChange`        | `character varying(1000)`  | no   |         |     |
+| `ScanCompletedAt`        | `timestamp with time zone` | yes  |         |     |
+| `ScanEngine`             | `character varying(100)`   | yes  |         |     |
+| `ScanStatus`             | `character varying(50)`    | no   |         |     |
+| `ScanThreatName`         | `character varying(255)`   | yes  |         |     |
+| `SignatureManifestation` | `jsonb`                    | yes  |         |     |
+| `SiteId`                 | `character varying(255)`   | yes  |         |     |
+| `SizeBytes`              | `bigint`                   | no   |         |     |
+| `Status`                 | `character varying(50)`    | no   |         |     |
+| `StudyId`                | `character varying(255)`   | no   |         |     |
+| `TranscodeError`         | `character varying(2000)`  | yes  |         |     |
+| `TranscodeStatus`        | `character varying(50)`    | no   |         |     |
+| `UploadedAt`             | `timestamp with time zone` | no   |         |     |
+| `UploadedBy`             | `character varying(255)`   | no   |         |     |
+| `VersionIndex`           | `bigint`                   | no   |         |     |
 
 Indexes:
 
@@ -120,19 +120,19 @@ Indexes:
 
 Entity: `GuestLink`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `AccessCount` | `integer` | no |  |  |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `ExpiresAt` | `timestamp with time zone` | no |  |  |
-| `FileRecordId` | `character varying(36)` | no |  |  |
-| `LastAccessedAt` | `timestamp with time zone` | yes |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RevokedAt` | `timestamp with time zone` | yes |  |  |
-| `TokenHmac` | `character varying(128)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `AccessCount`     | `integer`                  | no   |         |     |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `ExpiresAt`       | `timestamp with time zone` | no   |         |     |
+| `FileRecordId`    | `character varying(36)`    | no   |         |     |
+| `LastAccessedAt`  | `timestamp with time zone` | yes  |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `RevokedAt`       | `timestamp with time zone` | yes  |         |     |
+| `TokenHmac`       | `character varying(128)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -147,19 +147,19 @@ Indexes:
 
 Entity: `PlaybackAuditLog`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `text` | no |  |  |
-| `Event` | `character varying(50)` | no |  |  |
-| `FileRecordId` | `character varying(36)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `SessionId` | `character varying(255)` | no |  |  |
-| `Source` | `character varying(50)` | no |  |  |
-| `Timestamp` | `timestamp with time zone` | no |  |  |
-| `UserId` | `character varying(255)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `text`                     | no   |         |     |
+| `Event`           | `character varying(50)`    | no   |         |     |
+| `FileRecordId`    | `character varying(36)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `SessionId`       | `character varying(255)`   | no   |         |     |
+| `Source`          | `character varying(50)`    | no   |         |     |
+| `Timestamp`       | `timestamp with time zone` | no   |         |     |
+| `UserId`          | `character varying(255)`   | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Foreign keys:
 
@@ -176,21 +176,21 @@ Indexes:
 
 Entity: `ShareGrant`
 
-| Column | Type | Null | Default | Key |
-| --- | --- | --- | --- | --- |
-| `Id` | `character varying(36)` | no |  | PK |
-| `CreatedAt` | `timestamp with time zone` | no |  |  |
-| `CreatedBy` | `character varying(255)` | no |  |  |
-| `ExpiresAt` | `timestamp with time zone` | yes |  |  |
-| `FileRecordId` | `character varying(36)` | no |  |  |
-| `GrantedByUserId` | `character varying(255)` | no |  |  |
-| `GrantedToUserId` | `character varying(255)` | yes |  |  |
-| `IsDeleted` | `boolean` | no |  |  |
-| `PermissionLevel` | `character varying(50)` | no |  |  |
-| `ReasonForChange` | `character varying(1000)` | no |  |  |
-| `RevokedAt` | `timestamp with time zone` | yes |  |  |
-| `Scope` | `character varying(50)` | no |  |  |
-| `VersionIndex` | `bigint` | no |  |  |
+| Column            | Type                       | Null | Default | Key |
+| ----------------- | -------------------------- | ---- | ------- | --- |
+| `Id`              | `character varying(36)`    | no   |         | PK  |
+| `CreatedAt`       | `timestamp with time zone` | no   |         |     |
+| `CreatedBy`       | `character varying(255)`   | no   |         |     |
+| `ExpiresAt`       | `timestamp with time zone` | yes  |         |     |
+| `FileRecordId`    | `character varying(36)`    | no   |         |     |
+| `GrantedByUserId` | `character varying(255)`   | no   |         |     |
+| `GrantedToUserId` | `character varying(255)`   | yes  |         |     |
+| `IsDeleted`       | `boolean`                  | no   |         |     |
+| `PermissionLevel` | `character varying(50)`    | no   |         |     |
+| `ReasonForChange` | `character varying(1000)`  | no   |         |     |
+| `RevokedAt`       | `timestamp with time zone` | yes  |         |     |
+| `Scope`           | `character varying(50)`    | no   |         |     |
+| `VersionIndex`    | `bigint`                   | no   |         |     |
 
 Foreign keys:
 

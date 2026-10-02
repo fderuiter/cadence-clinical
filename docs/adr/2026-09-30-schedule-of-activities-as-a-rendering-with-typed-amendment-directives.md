@@ -94,15 +94,15 @@ reference on the planned activity, which is an additive design change for a late
 `ScheduleOfActivitiesDiff.Compare(before, after)` compares two designs through their stable element ids (K-PROT-1) and
 returns `SoaAmendmentDiff`:
 
-| Directive | When |
-| --- | --- |
-| `VisitAdded`, `VisitRemoved` | A planned activity is new or gone. |
-| `VisitMoved` | Its epoch or study day changed, or it gained or lost a fixed day. |
-| `VisitWindowChanged` | Only its window changed. |
-| `VisitLocationsChanged` | Where it may take place changed. |
-| `ActivityAdded`, `ActivityRemoved` | A collection specification is new or gone. |
-| `ActivityFrequencyChanged` | The planned activities that collect it changed; the directive lists those added and removed. |
-| `ActivityConceptsChanged` | Its items, or the concept versions they record, changed. |
+| Directive                                                | When                                                                                          |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `VisitAdded`, `VisitRemoved`                             | A planned activity is new or gone.                                                            |
+| `VisitMoved`                                             | Its epoch or study day changed, or it gained or lost a fixed day.                             |
+| `VisitWindowChanged`                                     | Only its window changed.                                                                      |
+| `VisitLocationsChanged`                                  | Where it may take place changed.                                                              |
+| `ActivityAdded`, `ActivityRemoved`                       | A collection specification is new or gone.                                                    |
+| `ActivityFrequencyChanged`                               | The planned activities that collect it changed; the directive lists those added and removed.  |
+| `ActivityConceptsChanged`                                | Its items, or the concept versions they record, changed.                                      |
 | `CriterionAdded`, `CriterionRemoved`, `CriterionChanged` | An eligibility criterion is new, gone, or its text, category, concepts or expression changed. |
 
 - Each directive names the elements it touches: a visit directive names the activity and the specifications it

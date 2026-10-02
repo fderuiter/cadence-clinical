@@ -146,40 +146,105 @@
           </div>
         </div>
 
-        <!-- 1-Click Action Buttons -->
-        <div style="display: flex; gap: 8px">
-          <button
-            type="button"
-            class="btn btn-primary btn-fast-export-odm"
+        <!-- 1-Click Action Buttons & Progress -->
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+          "
+        >
+          <div style="display: flex; gap: 8px">
+            <button
+              type="button"
+              class="btn btn-primary btn-fast-export-odm"
+              style="
+                padding: 8px 14px;
+                font-size: 12px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+              "
+              :disabled="isFastExporting"
+              @click="fastExportOdmXml"
+            >
+              <span>📦</span> 1-Click CDISC ODM XML
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-fast-export-csv"
+              style="
+                padding: 8px 14px;
+                font-size: 12px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+              "
+              :disabled="isFastExporting"
+              @click="fastExportCsv"
+            >
+              <span>📊</span> 1-Click CSV Datasets
+            </button>
+          </div>
+
+          <!-- Fast Export Progress & Cancel Bar -->
+          <div
+            v-if="fastTask.isProcessing.value"
+            class="fast-export-progress-box"
             style="
-              padding: 8px 14px;
-              font-size: 12px;
-              cursor: pointer;
               display: flex;
               align-items: center;
-              gap: 6px;
+              gap: 12px;
+              background: var(--card-bg, #f8fafc);
+              border: 1px solid var(--border);
+              border-radius: 6px;
+              padding: 6px 12px;
+              width: 100%;
+              max-width: 380px;
             "
-            :disabled="isFastExporting"
-            @click="fastExportOdmXml"
           >
-            <span>📦</span> 1-Click CDISC ODM XML
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary btn-fast-export-csv"
-            style="
-              padding: 8px 14px;
-              font-size: 12px;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              gap: 6px;
-            "
-            :disabled="isFastExporting"
-            @click="fastExportCsv"
-          >
-            <span>📊</span> 1-Click CSV Datasets
-          </button>
+            <div style="flex: 1; font-size: 11px">
+              <div style="font-weight: 600; color: var(--primary)">
+                {{ fastTask.currentStage.value }}
+              </div>
+              <div
+                class="progress-bar-track"
+                style="
+                  height: 4px;
+                  background: #e2e8f0;
+                  border-radius: 2px;
+                  overflow: hidden;
+                  margin-top: 3px;
+                "
+              >
+                <div
+                  class="progress-bar-fill"
+                  :style="{
+                    width: fastTask.progressPercent.value + '%',
+                    height: '100%',
+                    background: 'var(--accent, #10b981)',
+                  }"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-outline btn-sm btn-cancel-fast-export"
+              style="
+                padding: 3px 8px;
+                font-size: 11px;
+                border-color: #f87171;
+                color: #dc2626;
+                cursor: pointer;
+              "
+              @click="cancelFastExport"
+            >
+              ⛔ Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -626,6 +691,30 @@
             <span class="progress-percent-label"
               >{{ progressPercent }}% Completed</span
             >
+            <button
+              type="button"
+              class="btn btn-outline btn-cancel-pipeline-export"
+              style="margin-top: 16px; border-color: #f87171; color: #dc2626"
+              @click="cancelExportPipeline"
+            >
+              ⛔ Cancel Export
+            </button>
+          </div>
+
+          <div v-if="exportStatus === 'cancelled'" class="execution-cancelled">
+            <div class="cancelled-icon">🚫</div>
+            <h4 class="cancelled-title">Export Operation Cancelled</h4>
+            <p class="cancelled-desc">
+              The export pipeline execution was cancelled by user. Temporary
+              blob resources were safely removed.
+            </p>
+            <button
+              type="button"
+              class="btn btn-primary mt-3"
+              @click="resetExport"
+            >
+              🔄 Start New Export
+            </button>
           </div>
 
           <div v-if="exportStatus === 'success'" class="execution-success">
@@ -699,6 +788,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import { useTaskPipeline } from "../composables/useTaskPipeline.js";
 
 const STEPS = [
   { number: 1, title: "Target Format", shortDesc: "XPT, ODM, JSON, CSV" },
@@ -889,10 +979,14 @@ const privacyProfile = ref("SAFE_HARBOR");
 const hmacSalt = ref("secure-clinical-salt-98765");
 const includeAuditTrail = ref(true);
 const recordLockFilter = ref("all");
-const isFastExporting = ref(false);
+
+// Task Pipelines
+const fastTask = useTaskPipeline();
+const pipelineTask = useTaskPipeline();
+const isFastExporting = computed(() => fastTask.isProcessing.value);
 
 // Execution State
-const exportStatus = ref("idle"); // idle, processing, success, error
+const exportStatus = ref("idle"); // idle, processing, success, error, cancelled
 const progressPercent = ref(0);
 const progressStepText = ref("");
 const errorMessage = ref("");
@@ -1004,43 +1098,125 @@ ${studyIdVal},VS,SUBJ-101,SITE-101,${statusStr},SCREENING,DIABP,80,mmHg,crc.user
 ${studyIdVal},AE,SUBJ-101,SITE-101,${statusStr},VISIT1,CEPHALALGIA,Severe headache,,crc.user,Adverse event onset documented`;
 }
 
-function downloadBlobFile(blob, filename) {
+function downloadBlobFile(blob, filename, registerFn) {
   const url = URL.createObjectURL(blob);
+  if (registerFn) {
+    registerFn(url);
+  }
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+function cancelFastExport() {
+  fastTask.cancelTask("Fast export cancelled by user");
 }
 
 async function fastExportOdmXml() {
-  isFastExporting.value = true;
-  try {
-    const xmlContent = generateValidOdmXml(
-      studyId.value,
-      recordLockFilter.value,
-      true
-    );
-    const blob = new Blob([xmlContent], { type: "application/xml" });
-    const filename = `${studyId.value.toLowerCase()}_cdisc_odm_v1.3.2_${recordLockFilter.value}.xml`;
-    downloadBlobFile(blob, filename);
-  } finally {
-    isFastExporting.value = false;
-  }
+  await fastTask
+    .runTask(async ({ signal, updateProgress, registerObjectUrl }) => {
+      updateProgress(25, "Preparing CDISC ODM XML structure...");
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, 300);
+        signal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            reject(new DOMException("Fast export cancelled", "AbortError"));
+          },
+          { once: true }
+        );
+      });
+
+      if (signal.aborted) return;
+
+      updateProgress(65, "Validating ODM metadata and audit records...");
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, 350);
+        signal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            reject(new DOMException("Fast export cancelled", "AbortError"));
+          },
+          { once: true }
+        );
+      });
+
+      if (signal.aborted) return;
+
+      updateProgress(90, "Generating XML Blob and launching download...");
+      const xmlContent = generateValidOdmXml(
+        studyId.value,
+        recordLockFilter.value,
+        true
+      );
+      const blob = new Blob([xmlContent], { type: "application/xml" });
+      const filename = `${studyId.value.toLowerCase()}_cdisc_odm_v1.3.2_${recordLockFilter.value}.xml`;
+      downloadBlobFile(blob, filename, registerObjectUrl);
+      updateProgress(100, "CDISC ODM XML export completed.");
+    })
+    .catch((err) => {
+      if (err?.name !== "AbortError") {
+        console.error("Fast ODM export error:", err);
+      }
+    });
 }
 
 async function fastExportCsv() {
-  isFastExporting.value = true;
-  try {
-    const csvContent = generateValidCsv(studyId.value, recordLockFilter.value);
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const filename = `${studyId.value.toLowerCase()}_clinical_dataset_${recordLockFilter.value}.csv`;
-    downloadBlobFile(blob, filename);
-  } finally {
-    isFastExporting.value = false;
-  }
+  await fastTask
+    .runTask(async ({ signal, updateProgress, registerObjectUrl }) => {
+      updateProgress(25, "Extracting study datasets for CSV packaging...");
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, 300);
+        signal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            reject(new DOMException("Fast export cancelled", "AbortError"));
+          },
+          { once: true }
+        );
+      });
+
+      if (signal.aborted) return;
+
+      updateProgress(65, "Applying record lock filters and formatting CSV...");
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, 350);
+        signal.addEventListener(
+          "abort",
+          () => {
+            clearTimeout(timer);
+            reject(new DOMException("Fast export cancelled", "AbortError"));
+          },
+          { once: true }
+        );
+      });
+
+      if (signal.aborted) return;
+
+      updateProgress(90, "Generating CSV bundle and launching download...");
+      const csvContent = generateValidCsv(
+        studyId.value,
+        recordLockFilter.value
+      );
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const filename = `${studyId.value.toLowerCase()}_clinical_dataset_${recordLockFilter.value}.csv`;
+      downloadBlobFile(blob, filename, registerObjectUrl);
+      updateProgress(100, "CSV Datasets export completed.");
+    })
+    .catch((err) => {
+      if (err?.name !== "AbortError") {
+        console.error("Fast CSV export error:", err);
+      }
+    });
 }
 
 function formatNameById(id) {
@@ -1092,13 +1268,20 @@ function toggleCohort(arm) {
   }
 }
 
+function cancelExportPipeline() {
+  pipelineTask.cancelTask("Export pipeline cancelled by user");
+  exportStatus.value = "cancelled";
+  errorMessage.value = "Export pipeline cancelled by user.";
+  if (downloadBlobUrl.value) {
+    URL.revokeObjectURL(downloadBlobUrl.value);
+    downloadBlobUrl.value = null;
+  }
+}
+
 async function startExportPipeline() {
   // #4827: the package below is a hardcoded sample, not an export of study data. Only a demo build builds it.
   if (!allowUnbackedAction("Exporting study data")) return;
   exportStatus.value = "processing";
-  progressPercent.value = 15;
-  progressStepText.value =
-    "Extracting clinical observations from PostgreSQL execution ledger...";
 
   const extMap = {
     xpt_v5: ".xpt",
@@ -1110,55 +1293,125 @@ async function startExportPipeline() {
   downloadFileName.value = `${studyId.value.toLowerCase()}_${selectedFormat.value}${extMap[selectedFormat.value] || ".dat"}`;
 
   try {
-    // Step-by-step progress update
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    progressPercent.value = 45;
-    progressStepText.value =
-      "Applying deterministic HMAC-SHA256 pseudonymization and date shifts...";
+    await pipelineTask.runTask(
+      async ({ signal, updateProgress, registerObjectUrl }) => {
+        updateProgress(
+          15,
+          "Extracting clinical observations from PostgreSQL execution ledger..."
+        );
+        progressPercent.value = 15;
+        progressStepText.value = pipelineTask.currentStage.value;
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    progressPercent.value = 75;
-    progressStepText.value = `Serializing to ${formatNameById(selectedFormat.value)} standard...`;
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, 350);
+          signal.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(
+                new DOMException("Export pipeline cancelled", "AbortError")
+              );
+            },
+            { once: true }
+          );
+        });
 
-    // Create a mock client-side Blob or fetch from API if reachable
-    let blobContent;
-    let mimeType = "application/json";
+        if (signal.aborted) return;
 
-    if (selectedFormat.value === "dataset_json") {
-      const mockResult = {
-        datasetJSONCreationDateTime: new Date().toISOString(),
-        datasetJSONVersion: "1.0.0",
-        studyOID: studyId.value,
-        itemGroupData: {},
-      };
-      selectedDomains.value.forEach((d) => {
-        mockResult.itemGroupData[`IG.${d}`] = {
-          records: 1,
-          name: d,
-          label: `${d} Dataset`,
-        };
-      });
-      blobContent = JSON.stringify(mockResult, null, 2);
-      mimeType = "application/json";
-    } else if (selectedFormat.value === "odm_xml") {
-      blobContent = `<?xml version="1.0" encoding="UTF-8"?>\n<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" ODMVersion="1.3.2" FileType="Snapshot" FileOID="ODM.${studyId.value}"><Study OID="${studyId.value}"><GlobalVariables><StudyName>${studyId.value}</StudyName></GlobalVariables></Study></ODM>`;
-      mimeType = "application/xml";
-    } else {
-      blobContent = `STUDYID,DOMAIN,USUBJID,ARM\n${studyId.value},DM,SUBJ-001,Active Arm`;
-      mimeType = "text/csv";
-    }
+        updateProgress(
+          45,
+          "Applying deterministic HMAC-SHA256 pseudonymization and date shifts..."
+        );
+        progressPercent.value = 45;
+        progressStepText.value = pipelineTask.currentStage.value;
 
-    const blob = new Blob([blobContent], { type: mimeType });
-    downloadBlobUrl.value = URL.createObjectURL(blob);
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, 400);
+          signal.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(
+                new DOMException("Export pipeline cancelled", "AbortError")
+              );
+            },
+            { once: true }
+          );
+        });
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    progressPercent.value = 100;
-    progressStepText.value = "Export package verified and ready for download.";
-    exportStatus.value = "success";
+        if (signal.aborted) return;
+
+        updateProgress(
+          75,
+          `Serializing to ${formatNameById(selectedFormat.value)} standard...`
+        );
+        progressPercent.value = 75;
+        progressStepText.value = pipelineTask.currentStage.value;
+
+        await new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, 300);
+          signal.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              reject(
+                new DOMException("Export pipeline cancelled", "AbortError")
+              );
+            },
+            { once: true }
+          );
+        });
+
+        if (signal.aborted) return;
+
+        // Create client-side Blob
+        let blobContent;
+        let mimeType;
+
+        if (selectedFormat.value === "dataset_json") {
+          const mockResult = {
+            datasetJSONCreationDateTime: new Date().toISOString(),
+            datasetJSONVersion: "1.0.0",
+            studyOID: studyId.value,
+            itemGroupData: {},
+          };
+          selectedDomains.value.forEach((d) => {
+            mockResult.itemGroupData[`IG.${d}`] = {
+              records: 1,
+              name: d,
+              label: `${d} Dataset`,
+            };
+          });
+          blobContent = JSON.stringify(mockResult, null, 2);
+          mimeType = "application/json";
+        } else if (selectedFormat.value === "odm_xml") {
+          blobContent = `<?xml version="1.0" encoding="UTF-8"?>\n<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" ODMVersion="1.3.2" FileType="Snapshot" FileOID="ODM.${studyId.value}"><Study OID="${studyId.value}"><GlobalVariables><StudyName>${studyId.value}</StudyName></GlobalVariables></Study></ODM>`;
+          mimeType = "application/xml";
+        } else {
+          blobContent = `STUDYID,DOMAIN,USUBJID,ARM\n${studyId.value},DM,SUBJ-001,Active Arm`;
+          mimeType = "text/csv";
+        }
+
+        const blob = new Blob([blobContent], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        registerObjectUrl(url);
+        downloadBlobUrl.value = url;
+
+        updateProgress(100, "Export package verified and ready for download.");
+        progressPercent.value = 100;
+        progressStepText.value = pipelineTask.currentStage.value;
+        exportStatus.value = "success";
+      }
+    );
   } catch (err) {
-    exportStatus.value = "error";
-    errorMessage.value =
-      err.message || "An unexpected error occurred during export generation.";
+    if (pipelineTask.isCancelled.value || err?.name === "AbortError") {
+      exportStatus.value = "cancelled";
+      errorMessage.value = "Export pipeline cancelled by user.";
+    } else {
+      exportStatus.value = "error";
+      errorMessage.value =
+        err.message || "An unexpected error occurred during export generation.";
+    }
   }
 }
 

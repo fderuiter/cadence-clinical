@@ -31,9 +31,9 @@ Additionally, our frontend continuous integration (CI) pipelines lacked enforced
 
 Keep custom testing setup files separately configured inside each application workspace, running independent coverage checks without rigid gating rules.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Quick setup for individual applications.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe duplicate configurations across `apps/web` and `apps/subject-portal`.
   - ❌ Lack of uniform accessibility criteria or global rulesets.
   - ❌ No automated mechanism blocks pull requests with low-quality or untested code.
@@ -42,11 +42,11 @@ Keep custom testing setup files separately configured inside each application wo
 
 Extract custom Jest/Vitest matchers (e.g. `toBeAccessible`) to a shared workspace package (`packages/ui`), expose them globally, and configure rigid Vitest coverage threshold gates requiring 80% coverage for lines, functions, branches, and statements.
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Perfect architectural separation of concerns (dry utility package).
   - ✅ Guarantees 80% test coverage gate is automatically executed in CI.
   - ✅ Allows easy global extension of WCAG rules across all current and future portals.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Minor build config orchestration required via `pnpm` workspaces.
 
 ## 4. Decision Outcome

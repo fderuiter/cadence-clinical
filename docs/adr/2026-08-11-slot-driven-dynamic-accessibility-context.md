@@ -29,19 +29,19 @@ Requirements Traceability:
 ### Option 1: Explicit Prop Drilling
 
 - **Overview:** Explicitly pass properties (like error states, descriptions, and IDs) from parent layout components down to child inputs.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simple to trace in code.
-- ***Cons:***
+- _**Cons:**_
   - ❌ High boilerplate and brittle integration across deeply-nested custom slots.
 
 ### Option 2: Slot-Driven Accessibility Context (Selected)
 
 - **Overview:** Leverage Vue 3 slot scopes to dynamically expose accessibility context (attributes like `id`, `aria-describedby`, `aria-invalid`, and labeled IDs) from the outer wrapper directly to standard inputs and custom inputs inside slots.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Decoupled parenting with high extensibility.
   - ✅ Automatic mapping of validation alerts and error tags.
   - ✅ Elegant and robust screen-reader announcement.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires slightly more advanced slot-usage understanding from clinical developers.
 
 ## 4. Decision Outcome

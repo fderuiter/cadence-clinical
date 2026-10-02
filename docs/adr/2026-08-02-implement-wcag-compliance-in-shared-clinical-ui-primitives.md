@@ -31,19 +31,18 @@ Requirements Traceability:
 ### Option 1: **Framework-Agnostic Raw Semantic HTML (Selected):** Inject raw semantic HTML and WAI-ARIA attributes directly into our existing template builders to prevent bundle bloat and maintain a zero-dependency runtime layout.
 
 - **Overview:** **Framework-Agnostic Raw Semantic HTML (Selected):** Inject raw semantic HTML and WAI-ARIA attributes directly into our existing template builders to prevent bundle bloat and maintain a zero-dependency runtime layout.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Standard Frontend Framework Migration (Alternative):** Migrate shared clinical primitives to a standard SPA framework like Vue or React. This was rejected due to runtime overhead, bundle bloat, and the need to rewrite the light-weight server-side and mobile runtime layers.
 
 - **Overview:** **Standard Frontend Framework Migration (Alternative):** Migrate shared clinical primitives to a standard SPA framework like Vue or React. This was rejected due to runtime overhead, bundle bloat, and the need to rewrite the light-weight server-side and mobile runtime layers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

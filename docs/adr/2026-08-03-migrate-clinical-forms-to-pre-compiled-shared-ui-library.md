@@ -29,19 +29,19 @@ This decision supports compliance tracing and standardized trial audits under **
 ### Option A: Standard pre-compiled shared UI library with Vite bundling (Selected)
 
 - **Overview:** Configure `packages/ui` to compile into distributable ESM and CJS formats using a dedicated Vite bundling pipeline. Move the clinical form orchestration engine and all leaf inputs (such as `ClinicalFormField.vue`, `ClinicalInput.vue`, `ClinicalRadioGroup.vue`, `ClinicalLookupInput.vue`, `ClinicalQueryFlag.vue`, and `ClinicalQueryPanel.vue`) along with their custom accessibility composables into `packages/ui`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Solves compiler drift by compiling `.vue` and JS assets into stable distributed assets (`packages/ui/dist/index.js`).
   - ✅ Promotes absolute parity in rendering behavior, styles, and accessibility across portals.
   - ✅ Decouples internal logic dynamically via runtime store lookup using Pinia instead of static relative imports.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Increases upfront build step overhead inside the workspace (`packages/ui` must be built).
 
 ### Option B: Raw source sharing with workspace aliases
 
 - **Overview:** Share raw `.vue` source components directly via workspace aliases or symbolic links without pre-compiling.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simpler package setup with no intermediate build steps.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Consumer applications must have perfectly identical webpack/vite configurations to compile raw `.vue` files, risking compilation drift.
   - ❌ Hard to share and integrate cleanly into environments that do not use standard Vue build toolchains.
 
