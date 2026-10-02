@@ -125,7 +125,14 @@
             ✓ {{ selectedFiles.length }} Selected
           </span>
           <button
-            class="btn btn-sm btn-primary btn-bulk-share"
+            v-if="selectedFiles.length >= 2"
+            class="btn btn-sm btn-primary btn-bulk-edit-metadata"
+            @click="openBulkEditDrawer"
+          >
+            🏷️ Bulk Edit Metadata
+          </button>
+          <button
+            class="btn btn-sm btn-outline-primary btn-bulk-share"
             @click="openBulkShareDrawer"
           >
             🔗 Bulk Share ({{ selectedFiles.length }})
@@ -433,6 +440,14 @@
       :site-id="fileshareStore.activeFilters.siteId || null"
       @close="isBatchDrawerOpen = false"
     />
+
+    <!-- Bulk Metadata Drawer -->
+    <BulkMetadataDrawer
+      :is-open="isBulkEditDrawerOpen"
+      :selected-files="selectedFiles"
+      @close="isBulkEditDrawerOpen = false"
+      @submitted="onBulkMetadataSubmitted"
+    />
   </div>
 </template>
 
@@ -444,6 +459,7 @@ import ShareDrawer from "../components/fileshare/ShareDrawer.vue";
 import ActivityFeed from "../components/fileshare/ActivityFeed.vue";
 import MediaPreviewModal from "../components/fileshare/MediaPreviewModal.vue";
 import BatchUploadDrawer from "../components/etmf/BatchUploadDrawer.vue";
+import BulkMetadataDrawer from "../components/etmf/BulkMetadataDrawer.vue";
 import CraQcQueue from "../components/etmf/CraQcQueue.vue";
 
 const props = defineProps({
@@ -471,7 +487,16 @@ const itemsPerPage = 15;
 // Modal / Drawer state
 const previewingFile = ref(null);
 const isShareDrawerOpen = ref(false);
+const isBulkEditDrawerOpen = ref(false);
 const filesToShare = ref([]);
+
+function openBulkEditDrawer() {
+  isBulkEditDrawerOpen.value = true;
+}
+
+function onBulkMetadataSubmitted() {
+  isBulkEditDrawerOpen.value = false;
+}
 const isActivityDrawerOpen = ref(false);
 const activityFile = ref(null);
 

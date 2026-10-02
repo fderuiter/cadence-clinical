@@ -24,7 +24,7 @@ using Microsoft.Extensions.Configuration;
 namespace Cadence.Apps.Ctms.Endpoints;
 
 /// <summary>
-/// Site Startup (SSU) & Country-Level Multi-Site Greenlight Activation Matrix endpoints.
+/// Site Startup (SSU) and Country-Level Multi-Site Greenlight Activation Matrix endpoints.
 /// @req:PRD-SSU-001
 /// @req:PRD-SSU-002
 /// @req:PRD-SSU-003
@@ -67,7 +67,7 @@ public static class StartupGreenlightEndpoints
         string siteId,
         [FromQuery] string studyId,
         [FromQuery] string? countryCode,
-        CtmsDbContext db,
+        [FromServices] CtmsDbContext db,
         CancellationToken ct)
     {
         countryCode = (countryCode ?? "US").ToUpperInvariant();
@@ -80,9 +80,9 @@ public static class StartupGreenlightEndpoints
         [FromQuery] string studyId,
         [FromQuery] string? countryCode,
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
-        CtmsDbContext db,
-        IClock clock,
-        IConfiguration config,
+        [FromServices] CtmsDbContext db,
+        [FromServices] IClock clock,
+        [FromServices] IConfiguration config,
         CancellationToken ct)
     {
         countryCode = (countryCode ?? "US").ToUpperInvariant();
@@ -131,7 +131,7 @@ public static class StartupGreenlightEndpoints
     public static async Task<Ok<List<SiteGreenlightGateResponseDto>>> GetCountryMatrixAsync(
         [FromQuery] string studyId,
         [FromQuery] string countryCode,
-        CtmsDbContext db,
+        [FromServices] CtmsDbContext db,
         CancellationToken ct)
     {
         countryCode = (countryCode ?? "US").ToUpperInvariant();
@@ -156,9 +156,9 @@ public static class StartupGreenlightEndpoints
     public static async Task<Results<Ok<BatchCertifyResponseDto>, BadRequest<ProblemDetails>>> BatchCertifyCountrySitesAsync(
         [FromBody] BatchCertifyRequestDto request,
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
-        CtmsDbContext db,
-        IClock clock,
-        IConfiguration config,
+        [FromServices] CtmsDbContext db,
+        [FromServices] IClock clock,
+        [FromServices] IConfiguration config,
         CancellationToken ct)
     {
         if (request.SiteIds == null || request.SiteIds.Count == 0)

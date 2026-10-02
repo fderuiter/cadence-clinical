@@ -204,6 +204,28 @@
         }
       }
     },
+    "/api/v1/etmf/documents/bulk-tag": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_BulkTagDocumentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/etmf/ingest": {
       "post": {
         "tags": [
@@ -264,6 +286,63 @@
             ]
           },
           "service": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_BulkTagDocumentsRequest": {
+        "required": [
+          "documentIds",
+          "reasonForChange"
+        ],
+        "type": "object",
+        "properties": {
+          "documentIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reasonForChange": {
+            "type": "string"
+          },
+          "zone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "section": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "milestone": {
             "type": [
               "null",
               "string"

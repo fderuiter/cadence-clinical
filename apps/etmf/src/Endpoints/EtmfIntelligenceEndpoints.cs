@@ -33,6 +33,7 @@ public static class EtmfIntelligenceEndpoints
 
         group.MapGet("/documents", GetDocuments);
         group.MapGet("/documents/{document_id}", GetDocumentById);
+        group.MapPost("/documents/bulk-tag", BulkTagDocuments);
         group.MapPost("/ingest", IngestDocument);
         group.MapGet("/taxonomy", GetTaxonomy);
     }
@@ -272,6 +273,132 @@ public static class EtmfIntelligenceEndpoints
         await dbContext.SaveChangesAsync(ct);
 
         return TypedResults.Ok(doc);
+    }
+
+    public static async Task<IResult> BulkTagDocuments(
+        [FromBody] BulkTagDocumentsRequest request,
+        [FromServices] EtmfDbContext dbContext,
+        [FromServices] IClock clock,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.ReasonForChange) || request.ReasonForChange.Trim().Length < 10)
+        {
+            return TypedResults.BadRequest(new { error = "21 CFR Part 11 requires a reason_for_change of at least 10 characters." });
+        }
+
+        if (request.DocumentIds == null || request.DocumentIds.Count == 0)
+        {
+            return TypedResults.BadRequest(new { error = "At least one document ID must be provided." });
+        }
+
+        if (request.DocumentIds.Count > 50)
+        {
+            return TypedResults.BadRequest(new { error = "Bulk update limit exceeded. Maximum 50 documents per request." });
+        }
+
+        var now = clock.UtcNow;
+        var user = httpContext.User?.Identity?.Name ?? "document.manager";
+        var requestedIds = request.DocumentIds.Distinct().ToList();
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+
+        var targetDocs = await dbContext.TmfDocuments
+            .Where(d => requestedIds.Contains(d.Id))
+            .ToListAsync(ct);
+
+        var updatedDocs = new List<TmfDocument>();
+        int totalExcluded = 0;
+
+        foreach (var doc in targetDocs)
+        {
+            if (doc.Status == "ON_HOLD")
+            {
+                totalExcluded++;
+                continue;
+            }
+
+            bool updatedAny = false;
+
+            if (request.Zone.HasValue && request.Zone.Value > 0)
+            {
+                doc.Zone = request.Zone.Value;
+                updatedAny = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Section))
+            {
+                doc.Section = request.Section.Trim();
+                updatedAny = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ArtifactCode))
+            {
+                doc.ArtifactCode = request.ArtifactCode.Trim();
+                updatedAny = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.ArtifactType))
+            {
+                doc.ArtifactType = request.ArtifactType.Trim();
+                updatedAny = true;
+            }
+
+            if (request.SiteId != null)
+            {
+                doc.SiteId = string.IsNullOrWhiteSpace(request.SiteId) ? null : request.SiteId.Trim();
+                updatedAny = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Milestone))
+            {
+                Dictionary<string, object?> metaDict = new();
+                if (!string.IsNullOrWhiteSpace(doc.MetadataJson))
+                {
+                    try
+                    {
+                        metaDict = JsonSerializer.Deserialize<Dictionary<string, object?>>(doc.MetadataJson) ?? new();
+                    }
+                    catch
+                    {
+                        metaDict = new();
+                    }
+                }
+                metaDict["milestone"] = request.Milestone.Trim();
+                doc.MetadataJson = JsonSerializer.Serialize(metaDict);
+                updatedAny = true;
+            }
+
+            if (updatedAny)
+            {
+                doc.ReasonForChange = request.ReasonForChange;
+
+                var audit = new TmfAuditLog
+                {
+                    Timestamp = now,
+                    UserId = user,
+                    UserRole = "Document Manager",
+                    Action = "BULK_METADATA_TAG",
+                    DocumentId = doc.Id,
+                    Details = $"Bulk metadata updated. Zone: {doc.Zone}, Section: {doc.Section}, ArtifactCode: {doc.ArtifactCode}, SiteId: {doc.SiteId}.",
+                    ReasonForChange = request.ReasonForChange
+                };
+                dbContext.TmfAuditLogs.Add(audit);
+                updatedDocs.Add(doc);
+            }
+        }
+
+        await dbContext.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
+
+        var response = new BulkTagDocumentsResponse(
+            TotalRequested: requestedIds.Count,
+            TotalUpdated: updatedDocs.Count,
+            TotalExcluded: totalExcluded,
+            UpdatedDocuments: updatedDocs
+        );
+
+        return TypedResults.Ok(response);
     }
 
     public static async Task<IResult> GetDocuments(
@@ -561,4 +688,22 @@ public record CraqcStagingItem(
     string StagedBy,
     string? QcAssignedTo,
     List<string> DiscrepancyNotes
+);
+
+public record BulkTagDocumentsRequest(
+    List<string> DocumentIds,
+    string ReasonForChange,
+    int? Zone = null,
+    string? Section = null,
+    string? ArtifactCode = null,
+    string? ArtifactType = null,
+    string? SiteId = null,
+    string? Milestone = null
+);
+
+public record BulkTagDocumentsResponse(
+    int TotalRequested,
+    int TotalUpdated,
+    int TotalExcluded,
+    List<TmfDocument> UpdatedDocuments
 );

@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { fileshareService } from "../api/fileshare";
+import { etmfService } from "../api/etmf";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth";
 import { useToastStore } from "./toasts.js";
@@ -800,6 +801,86 @@ export const useFileshareStore = defineStore("fileshare", {
     async fetchActivityFeed(fileId, params = {}) {
       const res = await fileshareService.getActivityFeed(fileId, params);
       return res.data || res;
+    },
+
+    /**
+     * Bulk update metadata for multiple selected document records.
+     */
+    async bulkUpdateMetadata(payload) {
+      this.isLoading = true;
+      this.error = null;
+      let response;
+      try {
+        response = await etmfService.bulkTagDocuments({
+          document_ids: payload.documentIds,
+          reason_for_change: payload.reasonForChange,
+          zone: payload.zone !== undefined ? payload.zone : null,
+          section: payload.section || null,
+          artifact_code: payload.artifactCode || null,
+          artifact_type: payload.artifactType || null,
+          site_id: payload.siteId !== undefined ? payload.siteId : null,
+          milestone: payload.milestone || null,
+        });
+      } catch (err) {
+        const authStore = useAuthStore();
+        if (isDemoBuild() && authStore.isDemoMode) {
+          response = null;
+        } else {
+          this.error = err;
+          useToastStore().apiError("Could not bulk update metadata", err);
+          throw err;
+        }
+      } finally {
+        this.isLoading = false;
+      }
+
+      // Synchronously update local document states
+      const idsToUpdate = payload.documentIds || [];
+      const updatedRemoteDocs = response?.updated_documents || response?.updatedDocuments || [];
+
+      this.files = this.files.map((file) => {
+        if (!idsToUpdate.includes(file.id)) {
+          return file;
+        }
+        if (file.is_on_hold || file.status === "ON_HOLD") {
+          return file;
+        }
+
+        const remoteDoc = Array.isArray(updatedRemoteDocs)
+          ? updatedRemoteDocs.find((d) => (d.id || d.Id) === file.id)
+          : null;
+
+        const updatedFile = { ...file };
+
+        if (payload.zone !== undefined && payload.zone !== null) {
+          updatedFile.zone_code = String(payload.zone);
+          if (remoteDoc?.zone !== undefined) updatedFile.zone = remoteDoc.zone;
+        }
+        if (payload.section) {
+          updatedFile.section_code = payload.section;
+          if (remoteDoc?.section) updatedFile.section = remoteDoc.section;
+        }
+        if (payload.artifactCode) {
+          updatedFile.folder_code = payload.artifactCode;
+          updatedFile.artifact_code = payload.artifactCode;
+        }
+        if (payload.artifactType) {
+          updatedFile.artifact_type = payload.artifactType;
+        }
+        if (payload.siteId !== undefined) {
+          updatedFile.site_id = payload.siteId;
+        }
+        if (payload.milestone) {
+          updatedFile.milestone = payload.milestone;
+        }
+        if (payload.reasonForChange) {
+          updatedFile.reason_for_change = payload.reasonForChange;
+        }
+
+        return updatedFile;
+      });
+
+      return response || { success: true };
     },
   },
 });

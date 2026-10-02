@@ -333,4 +333,30 @@ export const etmfService = {
       )
     );
   },
+
+  bulkTagDocuments(
+    payload: {
+      document_ids: string[];
+      reason_for_change: string;
+      zone?: number | null;
+      section?: string | null;
+      artifact_code?: string | null;
+      artifact_type?: string | null;
+      site_id?: string | null;
+      milestone?: string | null;
+    },
+    options: Record<string, unknown> = {}
+  ) {
+    const headers: Record<string, string> = {};
+    if (payload.reason_for_change) {
+      headers["X-Change-Reason"] = encodeChangeReason(payload.reason_for_change);
+    }
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/etmf/documents/bulk-tag" as any, {
+        body: payload as never,
+        headers,
+        ...options,
+      })
+    );
+  },
 };
