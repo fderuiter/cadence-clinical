@@ -1,8 +1,13 @@
 # Dependency and environment directories
 node_modules/
+**/node_modules/
 .venv/
 dist/
 build/
+bin/
+obj/
+**/bin/
+**/obj/
 .pytest_cache/
 .ruff_cache/
 pnpm-lock.yaml
@@ -12,8 +17,10 @@ uv.lock
 docs/CDISC/
 docs/NCI/
 
-# Generated OpenAPI schemas
+# Generated OpenAPI schemas, API docs, and SDLC run artifacts
 docs/openapi/
+docs/api/
+docs/SDLC/runs/
 
 # Keep CDASH type definition pristine to prevent ADR gating
 **/cdash.ts
