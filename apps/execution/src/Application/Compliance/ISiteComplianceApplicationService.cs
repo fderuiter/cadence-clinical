@@ -37,14 +37,11 @@ public interface ISiteComplianceApplicationService
     Task<Result<bool>> ApplyEtmfWebhookAsync(EtmfCompletenessWebhookPayload payload, CancellationToken ct);
 
     /// <summary>
-    /// Re-reads the <c>SITE_ACTIVATION</c> compliance-cache row for <paramref name="siteId"/> /
-    /// <paramref name="request"/>'s study. If missing or incomplete, writes a <c>BLOCKED_ACTIVATION</c>
-    /// audit entry <b>before</b> returning <c>SubjectErrors.BlockedActivation</c>
-    /// (raise site #9); otherwise writes a <c>SITE_ACTIVATION</c> audit entry and succeeds. Never itself
-    /// flips <c>SiteComplianceCache.IsComplete</c> — only
-    /// <see cref="ApplyEtmfWebhookAsync"/> does that.
+    /// Evaluates the 6 mandatory regulatory facets or executive GxP override for <paramref name="siteId"/> /
+    /// <paramref name="request"/>'s study. Generates a signed HMAC SHA-256 <c>GreenlightToken</c> on success,
+    /// or writes a <c>BLOCKED_ACTIVATION</c> audit entry before returning <c>SubjectErrors.BlockedActivation</c>.
     /// </summary>
-    Task<Result<bool>> ActivateSiteAsync(string siteId, SiteActivationRequest request, CancellationToken ct);
+    Task<Result<SiteActivationResponse>> ActivateSiteAsync(string siteId, SiteActivationRequest request, CancellationToken ct);
 
     /// <summary>
     /// Always returns HTTP 200: a missing cache row is reported as <c>IsComplete: false</c>,

@@ -8,4 +8,11 @@ namespace Cadence.Apps.Execution.Application.Compliance;
 /// Legacy Python source being replaced: <c>apps/execution/presentation/dtos.py</c> (Pydantic request models).
 /// @req:PRD-SUB-001
 /// </summary>
-public sealed record SiteActivationRequest(string StudyId);
+public sealed record SiteActivationRequest(
+    string StudyId,
+    string? QaDirectorSigToken = null,
+    string? MedicalMonitorSigToken = null,
+    string? Justification = null,
+    string? QaDirectorUserId = null,
+    string? MedicalMonitorUserId = null,
+    string? CountryCode = null);

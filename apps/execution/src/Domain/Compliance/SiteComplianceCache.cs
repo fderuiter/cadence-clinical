@@ -34,6 +34,11 @@ public sealed class SiteComplianceCache : AggregateRoot<Guid>
     // legacy's own optimistic counter — see §4.2, distinct from EF's rowversion.
     public int Version { get; private set; } = 1;
 
+    /// <summary>
+    /// Signed HMAC SHA-256 Site Greenlight Activation Token issued upon successful 6-facet evaluation or GxP override.
+    /// </summary>
+    public string? GreenlightToken { get; private set; }
+
     private SiteComplianceCache() { }
 
     public static SiteComplianceCache Create(StudyCode studyCode, SiteCode siteCode, string milestone,
@@ -63,5 +68,14 @@ public sealed class SiteComplianceCache : AggregateRoot<Guid>
         _missingDocuments.Clear();
         _missingDocuments.AddRange(missingDocuments);
         Version++;
+    }
+
+    /// <summary>
+    /// Attaches an HMAC greenlight activation token and marks activation state.
+    /// </summary>
+    public void SetGreenlightToken(string token, bool isComplete = true)
+    {
+        IsComplete = isComplete;
+        GreenlightToken = token;
     }
 }

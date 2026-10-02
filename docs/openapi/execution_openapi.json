@@ -2810,7 +2810,8 @@
           },
           "message": {
             "type": "string"
-          }
+          },
+          "data": {}
         }
       },
       "Execution_ProblemDetails": {
@@ -3079,6 +3080,42 @@
         "properties": {
           "study_id": {
             "type": "string"
+          },
+          "qa_director_sig_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "medical_monitor_sig_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "justification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "qa_director_user_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "medical_monitor_user_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "country_code": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

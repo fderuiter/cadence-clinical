@@ -271,7 +271,7 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
 
         public string? LastComplianceStatusMilestone { get; private set; }
 
-        public Result<bool>? ActivateSiteResult { get; set; }
+        public Result<SiteActivationResponse>? ActivateSiteResult { get; set; }
 
         public ComplianceStatusResponse? ComplianceStatusResult { get; set; }
 
@@ -285,12 +285,12 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
             return Task.FromResult(Result<bool>.Success(true));
         }
 
-        public Task<Result<bool>> ActivateSiteAsync(string siteId, SiteActivationRequest request, CancellationToken ct)
+        public Task<Result<SiteActivationResponse>> ActivateSiteAsync(string siteId, SiteActivationRequest request, CancellationToken ct)
         {
             ActivateSiteAsyncCalls++;
             LastActivateSiteId = siteId;
             ct.ThrowIfCancellationRequested();
-            return Task.FromResult(ActivateSiteResult ?? Result<bool>.Success(true));
+            return Task.FromResult(ActivateSiteResult ?? Result<SiteActivationResponse>.Success(new SiteActivationResponse(siteId, request.StudyId, true, "test-token")));
         }
 
         public Task<ComplianceStatusResponse> GetComplianceStatusAsync(string siteId, string studyId, string milestone, CancellationToken ct)

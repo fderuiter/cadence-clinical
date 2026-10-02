@@ -56,6 +56,7 @@ public sealed class SiteComplianceCacheConfiguration : IEntityTypeConfiguration<
         // field to a genuine Postgres array (no manual delimiter/JSON conversion needed); HasColumnType
         // pins the exact column type string so the mapping is explicit rather than provider-inferred.
         builder.Ignore(x => x.MissingDocuments);
+        builder.Ignore(x => x.GreenlightToken);
         builder.Property<List<string>>("_missingDocuments")
             .UsePropertyAccessMode(PropertyAccessMode.Field)
             .HasColumnName("missing_documents")

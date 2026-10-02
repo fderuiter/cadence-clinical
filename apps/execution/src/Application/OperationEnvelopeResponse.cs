@@ -10,4 +10,4 @@ namespace Cadence.Apps.Execution.Application;
 /// <c>message</c> without needing any per-property override.
 /// @req:PRD-SUB-001
 /// </summary>
-public sealed record OperationEnvelopeResponse(string Status, string Message);
+public sealed record OperationEnvelopeResponse(string Status, string Message, object? Data = null);

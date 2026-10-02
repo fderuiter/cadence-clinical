@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,6 +10,8 @@ using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Security;
+using Cadence.Security.Authentication;
 
 namespace Cadence.Apps.Execution.Application.Compliance;
 
@@ -92,32 +96,147 @@ public sealed class SiteComplianceApplicationService(
         return true;
     }
 
-    public async Task<Result<bool>> ActivateSiteAsync(string siteId, SiteActivationRequest request, CancellationToken ct)
+    private static readonly string[] MandatoryFacets =
+    [
+        "REGULATORY_IRB",
+        "CTA_BUDGET",
+        "EISF_BASELINE",
+        "DOA_LOG",
+        "STAFF_TRAINING",
+        "IP_RELEASE"
+    ];
+
+    public async Task<Result<SiteActivationResponse>> ActivateSiteAsync(string siteId, SiteActivationRequest request, CancellationToken ct)
     {
         var studyCode = new StudyCode(request.StudyId);
         var siteCode = new SiteCode(siteId);
 
-        var gate = await compliance.GetAsync(studyCode, siteCode, SiteActivationMilestone, ct);
-        if (gate is not { IsComplete: true })
+        var gate = await compliance.GetAsync(studyCode, siteCode, SiteActivationMilestone, ct).ConfigureAwait(false);
+        bool siteActivationComplete = gate is { IsComplete: true };
+
+        bool allFacetsPassed = siteActivationComplete;
+        var facetStates = new Dictionary<string, bool>();
+
+        if (!allFacetsPassed)
         {
-            // The BLOCKED_ACTIVATION audit entry must be written -- and committed -- before the failure
-            // result is returned (01_spec.md §1.1, raise site #9). IAuditLogWriter.WriteAsync does not
-            // itself call SaveChangesAsync, so the explicit SaveChangesAsync below is what actually commits
-            // it; both calls are awaited in order, ahead of the `return`.
+            allFacetsPassed = true;
+            foreach (var facet in MandatoryFacets)
+            {
+                var row = await compliance.GetAsync(studyCode, siteCode, facet, ct).ConfigureAwait(false);
+                if (row is not { IsComplete: true })
+                {
+                    var altRow = await compliance.GetAsync(studyCode, siteCode, "facet_" + facet.ToLowerInvariant(), ct).ConfigureAwait(false);
+                    if (altRow is not { IsComplete: true })
+                    {
+                        facetStates[facet] = false;
+                        allFacetsPassed = false;
+                    }
+                    else
+                    {
+                        facetStates[facet] = true;
+                    }
+                }
+                else
+                {
+                    facetStates[facet] = true;
+                }
+            }
+        }
+        else
+        {
+            foreach (var facet in MandatoryFacets)
+            {
+                facetStates[facet] = true;
+            }
+        }
+
+        bool isExecutiveOverride = false;
+        if (!allFacetsPassed &&
+            !string.IsNullOrWhiteSpace(request.QaDirectorSigToken) &&
+            !string.IsNullOrWhiteSpace(request.MedicalMonitorSigToken))
+        {
+            var verifier = new SigTokenVerifier();
+            byte[] secret = Encoding.UTF8.GetBytes(
+                Environment.GetEnvironmentVariable("GATEWAY_SECRET")
+                ?? Environment.GetEnvironmentVariable("INTERNAL_GATEWAY_SECRET")
+                ?? "internal-gateway-secret-abcdefabcdef!!");
+
+            try
+            {
+                string qaUserId = request.QaDirectorUserId ?? "qa_director";
+                string medUserId = request.MedicalMonitorUserId ?? "medical_monitor";
+
+                var qaJwt = verifier.VerifyAndConsumeSigToken(request.QaDirectorSigToken, qaUserId, secret);
+                var medJwt = verifier.VerifyAndConsumeSigToken(request.MedicalMonitorSigToken, medUserId, secret);
+
+                var qaRoles = qaJwt.Claims.Where(c => c.Type == SigTokenClaims.Roles || c.Type == "role").Select(c => c.Value).ToList();
+                var medRoles = medJwt.Claims.Where(c => c.Type == SigTokenClaims.Roles || c.Type == "role").Select(c => c.Value).ToList();
+
+                bool isQa = qaRoles.Any(r => r.Contains("qa", StringComparison.OrdinalIgnoreCase) || r.Contains("quality", StringComparison.OrdinalIgnoreCase));
+                bool isMed = medRoles.Any(r => r.Contains("med", StringComparison.OrdinalIgnoreCase) || r.Contains("monitor", StringComparison.OrdinalIgnoreCase) || r.Contains("physician", StringComparison.OrdinalIgnoreCase));
+
+                if (isQa && isMed && !string.Equals(qaUserId, medUserId, StringComparison.OrdinalIgnoreCase))
+                {
+                    isExecutiveOverride = true;
+                }
+            }
+            catch
+            {
+                isExecutiveOverride = false;
+            }
+        }
+
+        if (!allFacetsPassed && !isExecutiveOverride)
+        {
             await auditLog.WriteAsync(SiteComplianceEntityName, siteId, "BLOCKED_ACTIVATION",
-                auditContext.UserId, auditContext.ChangeReason, oldValues: null, newValues: null, ct);
-            await compliance.SaveChangesAsync(ct);
+                auditContext.UserId, auditContext.ChangeReason, oldValues: null, newValues: null, ct).ConfigureAwait(false);
+            await compliance.SaveChangesAsync(ct).ConfigureAwait(false);
 
             return SubjectErrors.BlockedActivation(siteId);
         }
 
-        // This endpoint does not itself flip SiteComplianceCache.IsComplete -- that only happens via
-        // ApplyEtmfWebhookAsync above (01_spec.md §1.1's explicit note). Only the audit trail is written here.
-        await auditLog.WriteAsync(SiteComplianceEntityName, siteId, "SITE_ACTIVATION",
-            auditContext.UserId, auditContext.ChangeReason, oldValues: null, newValues: null, ct);
-        await compliance.SaveChangesAsync(ct);
+        string facetHash = Cadence.Security.Authentication.HmacSigner.ComputeSha256Hash(System.Text.Json.JsonSerializer.Serialize(facetStates));
+        string token = GreenlightToken.Generate(
+            studyId: studyCode.Value,
+            siteId: siteCode.Value,
+            certifiedBy: auditContext.UserId,
+            isOverridden: isExecutiveOverride,
+            countryCode: request.CountryCode ?? "US",
+            facetHash: facetHash);
 
-        return true;
+        if (gate is not null)
+        {
+            gate.SetGreenlightToken(token, isComplete: true);
+        }
+        else
+        {
+            var newGate = SiteComplianceCache.Create(studyCode, siteCode, SiteActivationMilestone, isComplete: true, Array.Empty<string>());
+            newGate.SetGreenlightToken(token, isComplete: true);
+            await compliance.AddAsync(newGate, ct).ConfigureAwait(false);
+        }
+
+        var auditValues = new Dictionary<string, object?>
+        {
+            ["greenlight_token"] = token,
+            ["is_overridden"] = isExecutiveOverride,
+            ["study_id"] = studyCode.Value,
+            ["site_id"] = siteCode.Value,
+            ["country_code"] = request.CountryCode ?? "US",
+        };
+
+        if (isExecutiveOverride)
+        {
+            auditValues["qa_director_user_id"] = request.QaDirectorUserId;
+            auditValues["medical_monitor_user_id"] = request.MedicalMonitorUserId;
+            auditValues["justification"] = request.Justification;
+        }
+
+        await auditLog.WriteAsync(SiteComplianceEntityName, siteId, "SITE_GREENLIGHT_ISSUED",
+            auditContext.UserId, request.Justification ?? auditContext.ChangeReason, oldValues: null, newValues: auditValues, ct).ConfigureAwait(false);
+
+        await compliance.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return new SiteActivationResponse(siteCode.Value, studyCode.Value, Activated: true, GreenlightToken: token, IsOverridden: isExecutiveOverride);
     }
 
     public async Task<ComplianceStatusResponse> GetComplianceStatusAsync(

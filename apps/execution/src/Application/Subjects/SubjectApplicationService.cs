@@ -9,6 +9,7 @@ using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 
 namespace Cadence.Apps.Execution.Application.Subjects;
 
@@ -476,7 +477,18 @@ public sealed class SubjectApplicationService(
         if (target == SubjectState.Enrolled)
         {
             var gate = await compliance.GetAsync(subject.StudyCode, subject.SiteCode, "SITE_ACTIVATION", ct).ConfigureAwait(false);
-            if (gate is not { IsComplete: true })
+            bool isValid = gate is { IsComplete: true };
+
+            if (isValid && !string.IsNullOrWhiteSpace(gate!.GreenlightToken))
+            {
+                var tokenPayload = GreenlightToken.Verify(gate.GreenlightToken, subject.StudyCode.Value, subject.SiteCode?.Value);
+                if (tokenPayload == null)
+                {
+                    isValid = false;
+                }
+            }
+
+            if (!isValid)
             {
                 // MIG-SUBJ-026 fix: this audit write was never committed. IAuditLogWriter.WriteAsync only
                 // stages the entry on the shared DbContext's ChangeTracker (see its own doc comment: "commits

@@ -701,6 +701,7 @@ export interface components {
     Execution_OperationEnvelopeResponse: {
       status: string;
       message: string;
+      data?: unknown;
     };
     Execution_ProblemDetails: {
       type?: null | string;
@@ -771,6 +772,12 @@ export interface components {
     };
     Execution_SiteActivationRequest: {
       study_id: string;
+      qa_director_sig_token?: null | string;
+      medical_monitor_sig_token?: null | string;
+      justification?: null | string;
+      qa_director_user_id?: null | string;
+      medical_monitor_user_id?: null | string;
+      country_code?: null | string;
     };
     Execution_SiteCode: string;
     Execution_StudyCode: string;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,6 +13,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.UnitTests.Fixtures.Execution;
 
@@ -270,7 +272,7 @@ public class SiteComplianceApplicationServiceTests
         }
 
         auditLog.Calls.Should().ContainSingle();
-        auditLog.Calls[0].Action.Should().Be("SITE_ACTIVATION");
+        auditLog.Calls[0].Action.Should().Be("SITE_GREENLIGHT_ISSUED");
         auditLog.Calls[0].RecordId.Should().Be(SiteId);
 
         // ActivateSiteAsync never itself flips IsComplete -- only the eTMF webhook does that.
@@ -330,5 +332,117 @@ public class SiteComplianceApplicationServiceTests
         response.IsComplete.Should().BeTrue();
         response.MissingDocuments.Should().Equal("Form-B");
         response.SiteId.Should().Be(new SiteCode(SiteId));
+    }
+
+    // ---- 6-Facet Prerequisite Evaluation & Executive Overrides ------------------------------------
+
+    [Fact]
+    public async Task ActivateSiteAsync_AllSixFacetsComplete_GeneratesSignedHMACGreenlightToken()
+    {
+        string databaseName = Guid.NewGuid().ToString();
+        var auditLog = new RecordingAuditLogWriter();
+
+        string[] facets = ["REGULATORY_IRB", "CTA_BUDGET", "EISF_BASELINE", "DOA_LOG", "STAFF_TRAINING", "IP_RELEASE"];
+
+        await using (var seed = CreateContext(databaseName))
+        {
+            foreach (var facet in facets)
+            {
+                seed.SiteComplianceCaches.Add(SiteComplianceCache.Create(
+                    Study, new SiteCode(SiteId), facet, isComplete: true, Array.Empty<string>()));
+            }
+            await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var context = CreateContext(databaseName);
+        var service = CreateService(context, auditLog);
+
+        var result = await service.ActivateSiteAsync(
+            SiteId, new SiteActivationRequest(Study.Value), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Activated.Should().BeTrue();
+        result.Value.GreenlightToken.Should().NotBeNullOrWhiteSpace();
+        result.Value.IsOverridden.Should().BeFalse();
+
+        var tokenPayload = GreenlightToken.Verify(result.Value.GreenlightToken, Study.Value, SiteId);
+        tokenPayload.Should().NotBeNull();
+        tokenPayload!.StudyId.Should().Be(Study.Value);
+        tokenPayload.SiteId.Should().Be(SiteId);
+        tokenPayload.IsOverridden.Should().BeFalse();
+
+        auditLog.Calls.Should().ContainSingle(c => c.Action == "SITE_GREENLIGHT_ISSUED");
+    }
+
+    [Fact]
+    public async Task ActivateSiteAsync_OneFacetIncomplete_BlocksActivationAndLogsBlockedActivation()
+    {
+        string databaseName = Guid.NewGuid().ToString();
+        var auditLog = new RecordingAuditLogWriter();
+
+        // 5 facets complete, 1 missing
+        string[] facets = ["REGULATORY_IRB", "CTA_BUDGET", "EISF_BASELINE", "DOA_LOG", "STAFF_TRAINING"];
+
+        await using (var seed = CreateContext(databaseName))
+        {
+            foreach (var facet in facets)
+            {
+                seed.SiteComplianceCaches.Add(SiteComplianceCache.Create(
+                    Study, new SiteCode(SiteId), facet, isComplete: true, Array.Empty<string>()));
+            }
+            await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var context = CreateContext(databaseName);
+        var service = CreateService(context, auditLog);
+
+        var result = await service.ActivateSiteAsync(
+            SiteId, new SiteActivationRequest(Study.Value), TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("BLOCKED_ACTIVATION");
+
+        auditLog.Calls.Should().ContainSingle(c => c.Action == "BLOCKED_ACTIVATION");
+    }
+
+    [Fact]
+    public async Task ActivateSiteAsync_IncompleteFacetsWithValidDualExecutiveTokens_SucceedsWithOverrideFlag()
+    {
+        string databaseName = Guid.NewGuid().ToString();
+        var auditLog = new RecordingAuditLogWriter();
+
+        byte[] secret = Encoding.UTF8.GetBytes(
+            Environment.GetEnvironmentVariable("GATEWAY_SECRET")
+            ?? Environment.GetEnvironmentVariable("INTERNAL_GATEWAY_SECRET")
+            ?? "internal-gateway-secret-abcdefabcdef!!");
+
+        var qaGrant = new SigTokenGrant("qa-director-01", "qa-director-01", ["qa_director"], "SITE_ACTIVATION_OVERRIDE", "SITE_ACTIVATION_OVERRIDE");
+        var medGrant = new SigTokenGrant("med-monitor-02", "med-monitor-02", ["lead_medical_monitor"], "SITE_ACTIVATION_OVERRIDE", "SITE_ACTIVATION_OVERRIDE");
+
+        string qaToken = SigTokenIssuer.Issue(qaGrant, SystemClock.Instance.UtcNow, secret);
+        string medToken = SigTokenIssuer.Issue(medGrant, SystemClock.Instance.UtcNow, secret);
+
+        var request = new SiteActivationRequest(
+            Study.Value,
+            QaDirectorSigToken: qaToken,
+            MedicalMonitorSigToken: medToken,
+            Justification: "Urgent GxP compassionate release authorized by executive board",
+            QaDirectorUserId: "qa-director-01",
+            MedicalMonitorUserId: "med-monitor-02");
+
+        await using var context = CreateContext(databaseName);
+        var service = CreateService(context, auditLog);
+
+        var result = await service.ActivateSiteAsync(SiteId, request, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.IsOverridden.Should().BeTrue();
+        result.Value.GreenlightToken.Should().NotBeNullOrWhiteSpace();
+
+        var tokenPayload = GreenlightToken.Verify(result.Value.GreenlightToken, Study.Value, SiteId, secret: secret);
+        tokenPayload.Should().NotBeNull();
+        tokenPayload!.IsOverridden.Should().BeTrue();
+
+        auditLog.Calls.Should().ContainSingle(c => c.Action == "SITE_GREENLIGHT_ISSUED");
     }
 }
