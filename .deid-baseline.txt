@@ -142,7 +142,6 @@ apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue|ip_mac_addresses
 apps/web/src/components/payments/SelfBillingInvoicingConsole.vue|dates|20c04126f8b319c1
 apps/web/src/components/payments/SelfBillingInvoicingConsole.vue|dates|b77491bd614362c2
 apps/web/src/components/persona/CrcFormRenderer.vue|zip_geographic|92c673752b9e2cb2
-apps/web/src/components/quality/StatisticalForensicsViewer.vue|telephone_fax|205a70949afe01c4
 apps/web/src/components/quality/StatisticalForensicsViewer.vue|zip_geographic|8d3e810cb0b4ecab
 apps/web/src/components/quality/StatisticalForensicsViewer.vue|zip_geographic|8d3e810cb0b4ecab
 apps/web/src/components/quality/StatisticalForensicsViewer.vue|zip_geographic|d6d20fb139e917b0

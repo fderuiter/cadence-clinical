@@ -1257,7 +1257,7 @@
                   <strong>Hash:</strong>
                   <code>{{
                     imgMatch.forensic_metadata?.primary_phash ||
-                    "a3f01b92c4d5e678"
+                    "a3f01b92c4d5e678" // pragma: allowlist secret
                   }}</code>
                 </div>
               </div>
@@ -1281,7 +1281,7 @@
                   <strong>Hash:</strong>
                   <code>{{
                     imgMatch.forensic_metadata?.matched_phash ||
-                    "a3f01b92c4d5e678"
+                    "a3f01b92c4d5e678" // pragma: allowlist secret
                   }}</code>
                 </div>
               </div>
@@ -2039,8 +2039,8 @@ function generateSimulatedDataset() {
         evidence_summary:
           "Medical image duplication detected (CHEST_CT): Image 'IMG-101-BL' for Subject 'SUBJ-101-001' (SITE-101) matches Image 'IMG-104-099' for Subject 'SUBJ-104-099' (SITE-104) with Hamming distance 2 (96.9% similarity, 90-deg rotation).",
         forensic_metadata: {
-          primary_phash: "d4e5f60123456789",
-          matched_phash: "d4e5f6012345678b",
+          primary_phash: "d4e5f60123456789", // pragma: allowlist secret
+          matched_phash: "d4e5f6012345678b", // pragma: allowlist secret
         },
       },
     ];
