@@ -1014,6 +1014,9 @@
 import { ref, computed, onMounted } from "vue";
 import { statisticalComputingService } from "../../api/statisticalComputing";
 import { apiClient } from "../../api/apiClient";
+import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
+
+const { confirmDialog } = useConfirmDialog();
 
 const props = defineProps({
   studyId: {
@@ -1429,7 +1432,14 @@ async function confirmIssueToken() {
 }
 
 async function revokeToken(tokenId: string) {
-  if (!confirm(`Are you sure you want to revoke token ${tokenId}?`)) return;
+  const confirmed = await confirmDialog({
+    title: "Revoke Lock Token",
+    message: `Are you sure you want to revoke token ${tokenId}?`,
+    confirmLabel: "Revoke Token",
+    cancelLabel: "Cancel",
+    variant: "danger",
+  });
+  if (!confirmed) return;
   try {
     await statisticalComputingService.revokeLockToken(
       tokenId,

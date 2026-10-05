@@ -320,7 +320,11 @@
           role="alert"
           data-testid="diff-load-error"
         >
-          {{ presentError("Amendment diff could not be loaded: " + diffLoadError) }}. No impact summary or SoA diff is shown.
+          {{
+            presentError(
+              "Amendment diff could not be loaded: " + diffLoadError
+            )
+          }}. No impact summary or SoA diff is shown.
         </div>
 
         <!-- Amendment Impact Summary Card -->
