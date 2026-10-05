@@ -334,7 +334,9 @@
 
       <dl v-else-if="protocolVersion" id="inspector-version" class="details">
         <dt>Status</dt>
-        <dd id="inspector-version-status">{{ protocolVersion.status }}</dd>
+        <dd id="inspector-version-status">
+          {{ protocolVersion.status }}
+        </dd>
         <dt>Amends</dt>
         <dd>
           {{
@@ -376,7 +378,9 @@
           <dt>Protocol version</dt>
           <dd>{{ participant.active_protocol_version || "Not recorded" }}</dd>
           <dt>Enrollment number</dt>
-          <dd class="numeric">{{ participant.enrollment_index }}</dd>
+          <dd class="numeric">
+            {{ participant.enrollment_index }}
+          </dd>
         </dl>
 
         <ParticipantStateChange

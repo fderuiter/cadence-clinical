@@ -79,7 +79,9 @@
           </th>
           <td>{{ participantStateLabel(participant.status) }}</td>
           <td>{{ participant.site_id || "Not assigned" }}</td>
-          <td class="numeric">{{ participant.enrollment_index }}</td>
+          <td class="numeric">
+            {{ participant.enrollment_index }}
+          </td>
         </tr>
       </tbody>
     </table>

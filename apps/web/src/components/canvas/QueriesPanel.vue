@@ -21,7 +21,9 @@
           }}</span>
           <span class="query-target">{{ targetLabel(query) }}</span>
         </div>
-        <p class="query-text">{{ query.explanation }}</p>
+        <p class="query-text">
+          {{ query.explanation }}
+        </p>
         <p v-if="query.response" class="query-response">
           Answer: {{ query.response }}
         </p>

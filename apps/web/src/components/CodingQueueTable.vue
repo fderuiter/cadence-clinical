@@ -182,7 +182,9 @@
 
               <!-- Dictionary System -->
               <td role="gridcell">
-                <div class="dict-label">{{ cluster.dictionary_type }}</div>
+                <div class="dict-label">
+                  {{ cluster.dictionary_type }}
+                </div>
                 <div class="dict-version">
                   v{{ cluster.dictionary_version }}
                 </div>

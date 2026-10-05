@@ -46,12 +46,12 @@
         <div
           class="dropzone"
           :class="{ 'is-dragging': isDragging }"
-          @dragover.prevent="isDragging = true"
-          @dragleave.prevent="isDragging = false"
-          @drop.prevent="handleDrop"
           role="button"
           tabindex="0"
           aria-label="Choose files to upload"
+          @dragover.prevent="isDragging = true"
+          @dragleave.prevent="isDragging = false"
+          @drop.prevent="handleDrop"
           @click="triggerFileInput"
           @keydown.enter.prevent="triggerFileInput"
           @keydown.space.prevent="triggerFileInput"
@@ -119,7 +119,7 @@
             <div
               class="progress-bar-fill"
               :style="{ width: overallProgress + '%' }"
-            ></div>
+            />
           </div>
         </div>
 
