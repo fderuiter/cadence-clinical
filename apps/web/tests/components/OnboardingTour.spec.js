@@ -256,6 +256,59 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
         window.localStorage.getItem("onboarding_super_admin_is_active")
       ).toBe("true");
     });
+
+    it("purges all onboarding storage keys across all personas in resetTour and clears state for persona switching", () => {
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+
+      // Populate storage keys for multiple personas
+      window.localStorage.setItem("onboarding_super_admin_current_step", "3");
+      window.localStorage.setItem("onboarding_super_admin_disabled", "true");
+      window.localStorage.setItem("onboarding_site_crc_current_step", "2");
+      window.localStorage.setItem("onboarding_site_crc_disabled", "true");
+      window.localStorage.setItem("onboarding_site_crc_is_active", "false");
+      window.localStorage.setItem("onboarding_pi_current_step", "4");
+
+      // Reset tour from active persona super_admin
+      store.resetTour();
+
+      // All previous persona keys should be purged
+      expect(
+        window.localStorage.getItem("onboarding_site_crc_current_step")
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_site_crc_disabled")
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_site_crc_is_active")
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_pi_current_step")
+      ).toBeNull();
+
+      // Current persona active state is re-initialized and persisted cleanly
+      expect(store.currentStep).toBe(1);
+      expect(store.isActive).toBe(true);
+      expect(store.disabled).toBe(false);
+      expect(
+        window.localStorage.getItem("onboarding_super_admin_current_step")
+      ).toBe("1");
+      expect(
+        window.localStorage.getItem("onboarding_super_admin_is_active")
+      ).toBe("true");
+      expect(
+        window.localStorage.getItem("onboarding_super_admin_disabled")
+      ).toBe("false");
+
+      // Switching persona receives clean initial onboarding state
+      authStore.switchPersona("site_crc");
+      store.loadPersonaState("site_crc");
+
+      expect(store.currentPersona).toBe("site_crc");
+      expect(store.currentStep).toBe(1);
+      expect(store.isActive).toBe(true);
+      expect(store.disabled).toBe(false);
+    });
   });
 
   describe("OnboardingTour.vue component", () => {
@@ -377,6 +430,98 @@ describe("Onboarding Guided Tour & Event Buffer Spec", () => {
       expect(store.currentPersona).toBe("site_crc");
       expect(store.isActive).toBe(true);
       expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
+    });
+
+    it("maintains popover coordinates during tab transitions when element query is delayed and retries across frames", async () => {
+      const store = useOnboardingStore();
+      store.currentStep = 2; // Step 2 targets .tab-btn-soa
+
+      // Mock element for step 2
+      const targetSoa = document.createElement("button");
+      targetSoa.className = "tab-btn-soa";
+      targetSoa.getBoundingClientRect = () => ({
+        top: 100,
+        bottom: 140,
+        left: 200,
+        right: 300,
+        width: 100,
+        height: 40,
+      });
+      document.body.appendChild(targetSoa);
+
+      const wrapper = mount(OnboardingTour, {
+        props: {
+          activeTab: "soa",
+        },
+        attachTo: document.body,
+      });
+
+      await wrapper.vm.$nextTick();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      const popoverCard = wrapper.find(".onboarding-popover-card");
+      expect(popoverCard.element.style.top).toBe("152px"); // 140 + 12
+      expect(popoverCard.element.style.left).toBe("250px"); // 200 + 50
+
+      // Remove step 2 target element to simulate transition
+      document.body.removeChild(targetSoa);
+
+      // Transition to step 3 (targets .tab-btn-mdr)
+      store.currentStep = 3;
+      await wrapper.vm.$nextTick();
+
+      // On intermediate frame before .tab-btn-mdr exists in DOM:
+      // popover retains step 2 position (top: 152px, left: 250px) rather than resetting to 50% / 50%
+      expect(popoverCard.element.style.top).toBe("152px");
+      expect(popoverCard.element.style.left).toBe("250px");
+
+      // Now append .tab-btn-mdr to simulate asynchronous mounting
+      const targetMdr = document.createElement("button");
+      targetMdr.className = "tab-btn-mdr";
+      targetMdr.getBoundingClientRect = () => ({
+        top: 100,
+        bottom: 140,
+        left: 400,
+        right: 500,
+        width: 100,
+        height: 40,
+      });
+      document.body.appendChild(targetMdr);
+
+      // Next RAF frame checks query again and finds .tab-btn-mdr
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      expect(popoverCard.element.style.top).toBe("152px");
+      expect(popoverCard.element.style.left).toBe("450px");
+
+      // Clean up
+      document.body.removeChild(targetMdr);
+      wrapper.unmount();
+    });
+
+    it("falls back to viewport center after retry attempts expire if target element never appears", async () => {
+      const store = useOnboardingStore();
+      store.currentStep = 2; // Targets .tab-btn-soa which doesn't exist
+
+      const wrapper = mount(OnboardingTour, {
+        props: {
+          activeTab: "soa",
+        },
+        attachTo: document.body,
+      });
+
+      await wrapper.vm.$nextTick();
+
+      // Run multiple RAF ticks until retries expire
+      for (let i = 0; i < 7; i++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+
+      const popoverCard = wrapper.find(".onboarding-popover-card");
+      expect(popoverCard.element.style.top).toBe("50%");
+      expect(popoverCard.element.style.left).toBe("50%");
+
+      wrapper.unmount();
     });
   });
 

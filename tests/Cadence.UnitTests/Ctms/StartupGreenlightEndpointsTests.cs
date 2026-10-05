@@ -52,7 +52,7 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task GetCountryMatrix_ReturnsSixFacetReadinessForAllSites()
     {
         // Act
-        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "DE", _db, CancellationToken.None);
+        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "DE", _db, TestContext.Current.CancellationToken);
 
         // Assert
         result.Should().NotBeNull();
@@ -91,7 +91,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "21 CFR Part 11 Batch Certification", _db, _clock, _config, CancellationToken.None);
+            request, "21 CFR Part 11 Batch Certification", _db, _clock, _config, TestContext.Current.CancellationToken);
 
         // Assert
         result.Result.Should().BeOfType<BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>();
@@ -105,7 +105,7 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task BatchCertify_CertifiesCompliantSites_WithIndividualTokensAndAuditLogs()
     {
         // Arrange
-        var matrix = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "GB", _db, CancellationToken.None);
+        var matrix = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "GB", _db, TestContext.Current.CancellationToken);
         var compliantSiteIds = matrix.Value!
             .Where(s => s.IsCompliant)
             .Select(s => s.SiteId)
@@ -124,7 +124,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Batch activation approved", _db, _clock, _config, CancellationToken.None);
+            request, "Batch activation approved", _db, _clock, _config, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>().Subject;
@@ -194,7 +194,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Performance test batch certification", _db, _clock, _config, CancellationToken.None);
+            request, "Performance test batch certification", _db, _clock, _config, TestContext.Current.CancellationToken);
 
         sw.Stop();
 

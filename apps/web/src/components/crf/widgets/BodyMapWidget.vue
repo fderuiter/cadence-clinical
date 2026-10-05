@@ -13,9 +13,9 @@
       @keydown.enter="onCanvasClick"
     >
       <div class="anatomical-silhouette">
-        <div class="head-region" title="Head / Neck"></div>
-        <div class="torso-region" title="Chest / Abdomen"></div>
-        <div class="limbs-region" title="Arms / Legs"></div>
+        <div class="head-region" title="Head / Neck" />
+        <div class="torso-region" title="Chest / Abdomen" />
+        <div class="limbs-region" title="Arms / Legs" />
       </div>
 
       <!-- Placed Pin Markers -->

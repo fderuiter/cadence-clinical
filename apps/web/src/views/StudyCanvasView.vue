@@ -6,17 +6,18 @@
       <nav class="zoom-path" aria-label="Zoom path">
         <ol>
           <li>
-            <router-link id="zoom-studies" :to="{ name: 'study' }"
-              >Studies</router-link
-            >
+            <router-link id="zoom-studies" :to="{ name: 'study' }">
+              Studies
+            </router-link>
           </li>
           <li v-if="studyCode">
             <router-link
               id="zoom-study"
               :to="studyLocation()"
               :aria-current="zoomCurrent === 'study' ? 'page' : undefined"
-              >{{ studyCode }}</router-link
             >
+              {{ studyCode }}
+            </router-link>
           </li>
           <li v-if="zoomSite">
             <router-link
@@ -29,8 +30,9 @@
                 })
               "
               :aria-current="zoomCurrent === 'site' ? 'page' : undefined"
-              >Site {{ zoomSite }}</router-link
             >
+              Site {{ zoomSite }}
+            </router-link>
           </li>
           <li v-if="zoomParticipant">
             <span
@@ -43,8 +45,9 @@
               v-else
               id="zoom-participant"
               :to="recordLocationFor(zoomParticipant)"
-              >{{ zoomParticipant.subject_id }}</router-link
             >
+              {{ zoomParticipant.subject_id }}
+            </router-link>
           </li>
           <li v-if="selectedObservation">
             <span id="zoom-observation" aria-current="page">{{
@@ -82,7 +85,9 @@
 
     <template v-if="studyCode">
       <div class="study-header">
-        <h1 id="canvas-study-title">{{ studyCode }}</h1>
+        <h1 id="canvas-study-title">
+          {{ studyCode }}
+        </h1>
         <nav aria-label="Lifecycle">
           <ol class="lifecycle-rail">
             <li v-for="item in STAGES" :key="item.id">
@@ -116,7 +121,9 @@
             :key="group.id"
             class="nav-group"
           >
-            <h2 class="nav-group-title">{{ group.label }}</h2>
+            <h2 class="nav-group-title">
+              {{ group.label }}
+            </h2>
             <ul v-if="group.sections.length">
               <li v-for="item in group.sections" :key="item.id">
                 <router-link
@@ -155,7 +162,8 @@
                 :to="
                   studyLocation({ stage: 'conduct', section: 'participants' })
                 "
-                >Find it in Participants</router-link
+              >
+                Find it in Participants </router-link
               >.
             </p>
           </template>
@@ -195,14 +203,17 @@
             class="stage-overview"
             aria-labelledby="stage-overview-title"
           >
-            <h2 id="stage-overview-title">{{ stage.label }}</h2>
+            <h2 id="stage-overview-title">
+              {{ stage.label }}
+            </h2>
             <p class="stage-scope">{{ stage.scope }}.</p>
             <ul v-if="stage.sections.length" class="stage-sections">
               <li v-for="item in stage.sections" :key="item.id">
                 <router-link
                   :to="studyLocation({ stage: stage.id, section: item.id })"
-                  >{{ item.label }}</router-link
                 >
+                  {{ item.label }}
+                </router-link>
                 <span class="stage-section-description">
                   {{ item.description }}.</span
                 >

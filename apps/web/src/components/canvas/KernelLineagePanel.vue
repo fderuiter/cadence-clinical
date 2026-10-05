@@ -4,7 +4,9 @@
     class="lineage"
     :aria-labelledby="`kernel-${verb}-title`"
   >
-    <h3 :id="`kernel-${verb}-title`">{{ title }}</h3>
+    <h3 :id="`kernel-${verb}-title`">
+      {{ title }}
+    </h3>
     <p v-if="loading" class="lineage-note" role="status">
       Reading the kernel's lineage…
     </p>

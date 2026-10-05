@@ -627,10 +627,13 @@
 import { computed, ref } from "vue";
 import { apiClient } from "../api/apiClient";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
+import { useErrorPresenter } from "../composables/useErrorPresenter";
 import ArmVisualizer from "../components/clinical/ArmVisualizer.vue";
 import IECriteriaTable from "../components/clinical/IECriteriaTable.vue";
 import SoaMatrixGrid from "../components/clinical/SoaMatrixGrid.vue";
 import UsdmConceptStagingDrawer from "../components/clinical/UsdmConceptStagingDrawer.vue";
+
+const { presentError } = useErrorPresenter();
 
 const currentStep = ref(1);
 const isDragging = ref(false);
@@ -982,7 +985,7 @@ const _triggerEscalation = (jobData = {}) => {
   isPendingReview.value = true;
   failedStageName.value = jobData.current_stage || "SOA_EXTRACTION";
   gateErrors.value = jobData.error_message
-    ? [jobData.error_message]
+    ? [presentError(jobData.error_message)]
     : [
         "Schema validation gate failure at SOA_EXTRACTION after 2 self-healing retries.",
       ];
@@ -1055,10 +1058,7 @@ const submitCorrectionAndResume = async () => {
     extractionProgress.value = 100;
     currentStageIndex.value = extractionStages.length;
   } catch (err) {
-    correctionError.value =
-      err?.response?.data?.detail ||
-      err?.message ||
-      "Failed to submit stage correction.";
+    correctionError.value = presentError(err, "Failed to submit stage correction.");
   } finally {
     isSubmittingCorrection.value = false;
   }
