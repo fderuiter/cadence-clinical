@@ -13,5 +13,7 @@ export { default as ClinicalRadioGroup } from "./components/clinical/ClinicalRad
 export { default as ConfidenceBadge } from "./components/clinical/ConfidenceBadge.vue";
 
 export { default as FileUploadModal } from "./components/FileUploadModal.vue";
+export { default as ModalErrorAlert } from "./components/ModalErrorAlert.vue";
 export { default as MediaPlayer } from "./components/MediaPlayer.vue";
 export { default as PersonaSwitcher } from "./components/clinical/PersonaSwitcher.vue";
+export { useAsyncRetry } from "./composables/useAsyncRetry.js";

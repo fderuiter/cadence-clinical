@@ -72,10 +72,13 @@
         </div>
 
         <!-- Error State -->
-        <div v-if="codingStore.impactAnalysis.error" class="error-banner">
-          <span class="error-icon">⚠️</span>
-          <span>{{ codingStore.impactAnalysis.error }}</span>
-        </div>
+        <ModalErrorAlert
+          :error="codingStore.impactAnalysis.error"
+          retry-label="Attempt Again"
+          dismiss-label="Dismiss"
+          @retry="runAnalysis"
+          @dismiss="codingStore.impactAnalysis.error = null"
+        />
 
         <!-- Loading State -->
         <div
@@ -229,6 +232,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { ModalErrorAlert } from "ui";
 import { useCodingStore } from "../stores/coding";
 
 const codingStore = useCodingStore();

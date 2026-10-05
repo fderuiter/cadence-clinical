@@ -70,9 +70,14 @@
           </select>
         </div>
 
-        <div v-if="error" id="sig-error-msg" class="error-msg">
-          {{ error }}
-        </div>
+        <ModalErrorAlert
+          id="sig-error-msg"
+          :error="error"
+          retry-label="Retry"
+          dismiss-label="Dismiss"
+          @retry="confirm"
+          @dismiss="error = ''"
+        />
       </div>
       <div class="modal-footer">
         <button
@@ -98,6 +103,7 @@
 
 <script setup>
 import { ref, watch, inject } from "vue";
+import { ModalErrorAlert } from "ui";
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useEscapeClose } from "@/composables/useEscapeClose";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
