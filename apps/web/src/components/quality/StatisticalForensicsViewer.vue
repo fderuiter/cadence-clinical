@@ -1381,19 +1381,30 @@ const internalSubTab = ref("overview");
 
 const syncForensicsTabFromRoute = (path) => {
   if (!path) return;
-  if (path.includes("/quality/forensics/benford")) internalSubTab.value = "benford";
-  else if (path.includes("/quality/forensics/rounding")) internalSubTab.value = "rounding";
-  else if (path.includes("/quality/forensics/mahalanobis")) internalSubTab.value = "mahalanobis";
-  else if (path.includes("/quality/forensics/variance")) internalSubTab.value = "variance";
-  else if (path.includes("/quality/forensics/duplicate-patients")) internalSubTab.value = "duplicate-patients";
-  else if (path.includes("/quality/forensics/temporal")) internalSubTab.value = "temporal";
-  else if (path.includes("/quality/forensics/phash")) internalSubTab.value = "phash";
-  else if (path.includes("/quality/forensics/overview")) internalSubTab.value = "overview";
+  if (path.includes("/quality/forensics/benford"))
+    internalSubTab.value = "benford";
+  else if (path.includes("/quality/forensics/rounding"))
+    internalSubTab.value = "rounding";
+  else if (path.includes("/quality/forensics/mahalanobis"))
+    internalSubTab.value = "mahalanobis";
+  else if (path.includes("/quality/forensics/variance"))
+    internalSubTab.value = "variance";
+  else if (path.includes("/quality/forensics/duplicate-patients"))
+    internalSubTab.value = "duplicate-patients";
+  else if (path.includes("/quality/forensics/temporal"))
+    internalSubTab.value = "temporal";
+  else if (path.includes("/quality/forensics/phash"))
+    internalSubTab.value = "phash";
+  else if (path.includes("/quality/forensics/overview"))
+    internalSubTab.value = "overview";
 };
 
 if (route) {
   syncForensicsTabFromRoute(route.path);
-  watch(() => route.path, (newPath) => syncForensicsTabFromRoute(newPath));
+  watch(
+    () => route.path,
+    (newPath) => syncForensicsTabFromRoute(newPath)
+  );
 }
 
 const activeSubTab = computed({

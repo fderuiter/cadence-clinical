@@ -9,7 +9,9 @@ describe("CellGeneTherapyCocConsole.vue - Domain Formatting Specification", () =
     expect(wrapper.text()).toContain("Subject Identifier");
     expect(wrapper.text()).not.toContain("Subject ID / UUID");
 
-    expect(wrapper.text()).toContain("Enter a valid Study Protocol and Subject Identifier above");
+    expect(wrapper.text()).toContain(
+      "Enter a valid Study Protocol and Subject Identifier above"
+    );
     expect(wrapper.text()).not.toContain("Subject UUID");
   });
 

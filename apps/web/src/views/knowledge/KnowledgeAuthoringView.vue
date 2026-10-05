@@ -3,7 +3,8 @@
     <div class="tab-section-header">
       <h4>Immutable Snapshot Versions</h4>
       <p class="section-desc">
-        Controlled snapshot archive of all historical versions under 21 CFR Part 11.
+        Controlled snapshot archive of all historical versions under 21 CFR Part
+        11.
       </p>
     </div>
 
@@ -12,7 +13,10 @@
       <p>Loading version snapshots...</p>
     </div>
 
-    <div v-else-if="!versionsList || versionsList.length === 0" class="empty-box">
+    <div
+      v-else-if="!versionsList || versionsList.length === 0"
+      class="empty-box"
+    >
       <p>No snapshot versions recorded for this document.</p>
     </div>
 
@@ -38,14 +42,20 @@
             <td>
               <span
                 class="status-pill"
-                :class="getStatusPillClass ? getStatusPillClass(ver.status_at_snapshot) : ''"
+                :class="
+                  getStatusPillClass
+                    ? getStatusPillClass(ver.status_at_snapshot)
+                    : ''
+                "
               >
                 {{ ver.status_at_snapshot }}
               </span>
             </td>
             <td>{{ ver.created_by || "system" }}</td>
             <td>{{ ver.reason_for_change || "Baseline initial version" }}</td>
-            <td>{{ formatDate ? formatDate(ver.created_at) : ver.created_at }}</td>
+            <td>
+              {{ formatDate ? formatDate(ver.created_at) : ver.created_at }}
+            </td>
             <td>
               <span
                 class="badge"

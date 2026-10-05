@@ -26,13 +26,18 @@
                   {{ m.actual_date ? m.actual_date.slice(0, 10) : "Pending" }}
                 </td>
                 <td>
-                  <span class="badge" :class="{ gxp: m.status === 'ACHIEVED' }">{{
-                    m.status
-                  }}</span>
+                  <span
+                    class="badge"
+                    :class="{ gxp: m.status === 'ACHIEVED' }"
+                    >{{ m.status }}</span
+                  >
                 </td>
               </tr>
               <tr v-if="milestones.length === 0">
-                <td colspan="4" style="text-align: center; color: #64748b; padding: 12px">
+                <td
+                  colspan="4"
+                  style="text-align: center; color: #64748b; padding: 12px"
+                >
                   No milestones found. Create one to begin tracking.
                 </td>
               </tr>
@@ -68,13 +73,18 @@
                 </td>
                 <td>{{ v.cra_user_id || "Unassigned" }}</td>
                 <td>
-                  <span class="badge" :class="{ gxp: v.status === 'COMPLETED' }">{{
-                    v.status
-                  }}</span>
+                  <span
+                    class="badge"
+                    :class="{ gxp: v.status === 'COMPLETED' }"
+                    >{{ v.status }}</span
+                  >
                 </td>
               </tr>
               <tr v-if="visits.length === 0">
-                <td colspan="5" style="text-align: center; color: #64748b; padding: 12px">
+                <td
+                  colspan="5"
+                  style="text-align: center; color: #64748b; padding: 12px"
+                >
                   No monitoring visits scheduled.
                 </td>
               </tr>
@@ -99,7 +109,9 @@ onMounted(async () => {
   const siteId = store.activeSiteId || "SITE-001";
   try {
     const [mRes, vRes] = await Promise.all([
-      apiClient.get(`/ctms/sites/${siteId}/milestones`).catch(() => ({ data: [] })),
+      apiClient
+        .get(`/ctms/sites/${siteId}/milestones`)
+        .catch(() => ({ data: [] })),
       apiClient.get(`/ctms/sites/${siteId}/visits`).catch(() => ({ data: [] })),
     ]);
     milestones.value = mRes.data || [];

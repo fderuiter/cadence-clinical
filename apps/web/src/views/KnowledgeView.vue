@@ -1159,14 +1159,20 @@ export default {
 
     const syncTabFromRoute = (path) => {
       if (!path) return;
-      if (path.includes("/knowledge/authoring")) internalReaderTab.value = "versions";
-      else if (path.includes("/knowledge/audit")) internalReaderTab.value = "audit";
-      else if (path.includes("/knowledge/documents")) internalReaderTab.value = "content";
+      if (path.includes("/knowledge/authoring"))
+        internalReaderTab.value = "versions";
+      else if (path.includes("/knowledge/audit"))
+        internalReaderTab.value = "audit";
+      else if (path.includes("/knowledge/documents"))
+        internalReaderTab.value = "content";
     };
 
     if (route) {
       syncTabFromRoute(route.path);
-      watch(() => route.path, (newPath) => syncTabFromRoute(newPath));
+      watch(
+        () => route.path,
+        (newPath) => syncTabFromRoute(newPath)
+      );
     }
 
     const activeReaderTab = computed({

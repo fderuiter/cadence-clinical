@@ -3,7 +3,8 @@
     <div class="card" style="margin-bottom: 24px">
       <div class="card-title">Delegation of Authority (DOA) Log</div>
       <p style="color: #64748b; font-size: 14px; margin-bottom: 16px">
-        Manage site investigator duties, trial responsibilities, delegation start/end dates, and electronic sign-offs.
+        Manage site investigator duties, trial responsibilities, delegation
+        start/end dates, and electronic sign-offs.
       </p>
       <div id="ctms-delegations-container">
         <table class="clinical-visit-matrix">
@@ -19,17 +20,30 @@
           </thead>
           <tbody>
             <tr v-for="s in delegatedStaff" :key="s.id">
-              <td><strong>{{ s.user_name || s.user_id }}</strong></td>
-              <td>{{ s.role }}</td>
-              <td>{{ s.assigned_duties ? s.assigned_duties.join(', ') : 'All Duties' }}</td>
-              <td>{{ s.start_date ? s.start_date.slice(0, 10) : 'N/A' }}</td>
-              <td>{{ s.end_date ? s.end_date.slice(0, 10) : 'Active' }}</td>
               <td>
-                <span class="badge" :class="{ gxp: s.status === 'ACTIVE' }">{{ s.status || 'ACTIVE' }}</span>
+                <strong>{{ s.user_name || s.user_id }}</strong>
+              </td>
+              <td>{{ s.role }}</td>
+              <td>
+                {{
+                  s.assigned_duties
+                    ? s.assigned_duties.join(", ")
+                    : "All Duties"
+                }}
+              </td>
+              <td>{{ s.start_date ? s.start_date.slice(0, 10) : "N/A" }}</td>
+              <td>{{ s.end_date ? s.end_date.slice(0, 10) : "Active" }}</td>
+              <td>
+                <span class="badge" :class="{ gxp: s.status === 'ACTIVE' }">{{
+                  s.status || "ACTIVE"
+                }}</span>
               </td>
             </tr>
             <tr v-if="delegatedStaff.length === 0">
-              <td colspan="6" style="text-align: center; color: #64748b; padding: 12px">
+              <td
+                colspan="6"
+                style="text-align: center; color: #64748b; padding: 12px"
+              >
                 No delegated staff members found for site.
               </td>
             </tr>
@@ -51,7 +65,9 @@ const delegatedStaff = ref([]);
 onMounted(async () => {
   const siteId = store.activeSiteId || "SITE-001";
   try {
-    const res = await apiClient.get(`/ctms/sites/${siteId}/delegations`).catch(() => ({ data: [] }));
+    const res = await apiClient
+      .get(`/ctms/sites/${siteId}/delegations`)
+      .catch(() => ({ data: [] }));
     delegatedStaff.value = res.data || [];
   } catch (err) {
     console.error("Error loading DOA log:", err);

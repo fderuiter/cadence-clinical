@@ -1372,7 +1372,8 @@ const internalTab = ref<
 const syncSafetyTabFromRoute = (path?: string) => {
   if (!path) return;
   if (path.includes("/safety/tabulations")) internalTab.value = "tabulations";
-  else if (path.includes("/safety/line-listings")) internalTab.value = "line_listings";
+  else if (path.includes("/safety/line-listings"))
+    internalTab.value = "line_listings";
   else if (path.includes("/safety/signals")) internalTab.value = "signals";
   else if (path.includes("/safety/signoff")) internalTab.value = "qppv";
   else if (path.includes("/safety/simulator")) internalTab.value = "clocks";
@@ -1381,14 +1382,31 @@ const syncSafetyTabFromRoute = (path?: string) => {
 
 if (route) {
   syncSafetyTabFromRoute(route.path);
-  watch(() => route.path, (newPath) => syncSafetyTabFromRoute(newPath));
+  watch(
+    () => route.path,
+    (newPath) => syncSafetyTabFromRoute(newPath)
+  );
 }
 
 const activeTab = computed({
-  get(): "exposure" | "tabulations" | "line_listings" | "signals" | "clocks" | "qppv" {
+  get():
+    | "exposure"
+    | "tabulations"
+    | "line_listings"
+    | "signals"
+    | "clocks"
+    | "qppv" {
     return internalTab.value;
   },
-  set(val: "exposure" | "tabulations" | "line_listings" | "signals" | "clocks" | "qppv") {
+  set(
+    val:
+      | "exposure"
+      | "tabulations"
+      | "line_listings"
+      | "signals"
+      | "clocks"
+      | "qppv"
+  ) {
     internalTab.value = val;
     if (router && route) {
       const routePathMap: Record<string, string> = {

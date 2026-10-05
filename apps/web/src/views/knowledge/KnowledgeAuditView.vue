@@ -3,7 +3,8 @@
     <div class="tab-section-header">
       <h4>21 CFR Part 11 Electronic Audit Ledger</h4>
       <p class="section-desc">
-        Append-only tamper-evident transaction log with SHA-256 cryptographic hashes.
+        Append-only tamper-evident transaction log with SHA-256 cryptographic
+        hashes.
       </p>
     </div>
 
@@ -12,7 +13,10 @@
       <p>Fetching immutable audit trail...</p>
     </div>
 
-    <div v-else-if="!auditLogList || auditLogList.length === 0" class="empty-box">
+    <div
+      v-else-if="!auditLogList || auditLogList.length === 0"
+      class="empty-box"
+    >
       <p>No audit trail logs recorded yet.</p>
     </div>
 
@@ -37,7 +41,11 @@
               <span
                 v-if="log.target_status"
                 class="status-pill"
-                :class="getStatusPillClass ? getStatusPillClass(log.target_status) : ''"
+                :class="
+                  getStatusPillClass
+                    ? getStatusPillClass(log.target_status)
+                    : ''
+                "
               >
                 {{ log.target_status }}
               </span>
@@ -50,7 +58,9 @@
                 {{ (log.sha256_hash || "sha256:e3b0c442").substring(0, 12) }}...
               </code>
             </td>
-            <td>{{ formatDate ? formatDate(log.created_at) : log.created_at }}</td>
+            <td>
+              {{ formatDate ? formatDate(log.created_at) : log.created_at }}
+            </td>
           </tr>
         </tbody>
       </table>

@@ -107,7 +107,11 @@ export function isScreenAvailable(routeName) {
   if (prefix && AVAILABLE_SCREENS.has(prefix)) {
     return true;
   }
-  if (String(routeName).startsWith("forensics-") && (AVAILABLE_SCREENS.has("quality") || AVAILABLE_SCREENS.has("quality-forensics"))) {
+  if (
+    String(routeName).startsWith("forensics-") &&
+    (AVAILABLE_SCREENS.has("quality") ||
+      AVAILABLE_SCREENS.has("quality-forensics"))
+  ) {
     return true;
   }
   return false;

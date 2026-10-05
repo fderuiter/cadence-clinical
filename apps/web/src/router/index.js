@@ -867,7 +867,8 @@ const routes = [
       {
         path: "documents",
         name: "knowledge-documents",
-        component: () => import("../views/knowledge/KnowledgeDocumentsView.vue"),
+        component: () =>
+          import("../views/knowledge/KnowledgeDocumentsView.vue"),
         meta: {
           requiresAuth: true,
         },
@@ -875,7 +876,8 @@ const routes = [
       {
         path: "authoring",
         name: "knowledge-authoring",
-        component: () => import("../views/knowledge/KnowledgeAuthoringView.vue"),
+        component: () =>
+          import("../views/knowledge/KnowledgeAuthoringView.vue"),
         meta: {
           requiresAuth: true,
           requiresRole: [
@@ -960,7 +962,10 @@ router.beforeEach(async (to) => {
     for (const record of to.matched) {
       const requiredRoles = record.meta?.requiresRole;
       if (requiredRoles && requiredRoles.length > 0) {
-        const hasRole = hasRequiredRole(authStore.normalizedRoles, requiredRoles);
+        const hasRole = hasRequiredRole(
+          authStore.normalizedRoles,
+          requiredRoles
+        );
         if (!hasRole) {
           console.warn(
             `User does not have required roles for route ${record.path}: ${requiredRoles.join(", ")}`

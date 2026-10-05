@@ -2369,16 +2369,23 @@ const internalActiveTab = ref(
 const syncCtmsTabFromRoute = (path) => {
   if (!path) return;
   if (path.includes("/ctms/monitoring")) internalActiveTab.value = "monitoring";
-  else if (path.includes("/ctms/delegation")) internalActiveTab.value = "delegation";
-  else if (path.includes("/ctms/financials")) internalActiveTab.value = "financials";
-  else if (path.includes("/ctms/startup") || path === "/ssu") internalActiveTab.value = "startup";
+  else if (path.includes("/ctms/delegation"))
+    internalActiveTab.value = "delegation";
+  else if (path.includes("/ctms/financials"))
+    internalActiveTab.value = "financials";
+  else if (path.includes("/ctms/startup") || path === "/ssu")
+    internalActiveTab.value = "startup";
   else if (path.includes("/ctms/rtsm")) internalActiveTab.value = "rtsm";
-  else if (path.includes("/ctms/operations")) internalActiveTab.value = "operations";
+  else if (path.includes("/ctms/operations"))
+    internalActiveTab.value = "operations";
 };
 
 if (route) {
   syncCtmsTabFromRoute(route.path);
-  watch(() => route.path, (newPath) => syncCtmsTabFromRoute(newPath));
+  watch(
+    () => route.path,
+    (newPath) => syncCtmsTabFromRoute(newPath)
+  );
 }
 
 const activeTab = computed({
@@ -2388,7 +2395,8 @@ const activeTab = computed({
   set(val) {
     internalActiveTab.value = val;
     if (router && route) {
-      const target = val === "startup" && route.path === "/ssu" ? "/ssu" : `/ctms/${val}`;
+      const target =
+        val === "startup" && route.path === "/ssu" ? "/ssu" : `/ctms/${val}`;
       if (route.path !== target) {
         router.push(target);
       }
