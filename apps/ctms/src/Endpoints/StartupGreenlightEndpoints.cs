@@ -82,7 +82,7 @@ public static class StartupGreenlightEndpoints
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
         [FromServices] IClock clock,
-        [FromServices] IConfiguration config,
+        IConfiguration config,
         CancellationToken ct)
     {
         countryCode = (countryCode ?? "US").ToUpperInvariant();
@@ -158,7 +158,7 @@ public static class StartupGreenlightEndpoints
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
         [FromServices] IClock clock,
-        [FromServices] IConfiguration config,
+        IConfiguration config,
         CancellationToken ct)
     {
         if (request.SiteIds == null || request.SiteIds.Count == 0)
