@@ -62,7 +62,7 @@
         />
       </div>
       <div class="filter-group">
-        <label for="input-subject">Subject ID / UUID</label>
+        <label for="input-subject">{{ formatLabel("subject_id") }}</label>
         <input
           id="input-subject"
           v-model="filters.subjectId"
@@ -91,7 +91,7 @@
           <span class="metric-label">Donation ID (ISBT 128 DIN)</span>
           <span class="metric-value code-font">{{ cocData.din }}</span>
           <span class="metric-sub"
-            >Facility: {{ cocData.collection_site_id || "N/A" }}</span
+            >{{ formatDatabaseKey("collection_site_id") }}: {{ formatFacilityCode(cocData.collection_site_id) }}</span
           >
         </div>
 
@@ -107,7 +107,7 @@
             cocData.batch_id || "Pending Synthesis"
           }}</span>
           <span class="metric-sub"
-            >CMO: {{ cocData.manufacturing_facility_id || "In Queue" }}</span
+            >{{ formatDatabaseKey("manufacturing_facility_id") }}: {{ formatFacilityCode(cocData.manufacturing_facility_id) || "In Queue" }}</span
           >
         </div>
 
@@ -226,7 +226,7 @@
           <h3 class="section-title">Tamper-Evident Cryptographic Barcode</h3>
           <p class="barcode-meta">
             HMAC-SHA256 signed 2D DataMatrix payload dynamically binding Subject
-            UUID, ISBT 128 DIN, and Manufacturing Batch.
+            Identifier, ISBT 128 DIN, and Manufacturing Batch.
           </p>
           <div class="hash-display">
             <span class="hash-label">Cryptographic Seal:</span>
@@ -358,7 +358,7 @@
     <!-- Empty State -->
     <div v-else class="card empty-state">
       <p class="empty-text">
-        Enter a valid Study Protocol and Subject UUID above to load the
+        Enter a valid Study Protocol and Subject Identifier above to load the
         Vein-to-Vein Chain of Custody ledger.
       </p>
     </div>
@@ -388,13 +388,13 @@
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Site ID</label>
+              <label>{{ formatDatabaseKey("site_id") }}</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input v-model="apheresisForm.site_id" type="text" required />
             </div>
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Subject UUID</label>
+              <label>{{ formatDatabaseKey("subject_id") }}</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input v-model="apheresisForm.subject_id" type="text" required />
             </div>
@@ -489,7 +489,7 @@
           <div class="form-grid">
             <div class="form-group col-full">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Scanned Patient Wristband Subject UUID</label>
+              <label>Scanned Patient Wristband Subject Identifier</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 v-model="bedsideForm.scanned_wristband_subject_id"
@@ -793,6 +793,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
+import { useDomainFormatter } from "@/composables/useDomainFormatter";
+
+const { formatLabel, formatDatabaseKey, formatFacilityCode } = useDomainFormatter();
 
 interface CGTChainOfCustody {
   id: string;
