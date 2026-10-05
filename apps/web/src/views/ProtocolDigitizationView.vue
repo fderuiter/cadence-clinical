@@ -1058,7 +1058,10 @@ const submitCorrectionAndResume = async () => {
     extractionProgress.value = 100;
     currentStageIndex.value = extractionStages.length;
   } catch (err) {
-    correctionError.value = presentError(err, "Failed to submit stage correction.");
+    correctionError.value = presentError(
+      err,
+      "Failed to submit stage correction."
+    );
   } finally {
     isSubmittingCorrection.value = false;
   }

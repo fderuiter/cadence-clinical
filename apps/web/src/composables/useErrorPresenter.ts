@@ -28,7 +28,10 @@ export function useErrorPresenter() {
    * Sanitizes a string error message by replacing microservice names and
    * stripping raw stack traces or internal URL topologies.
    */
-  function sanitizeErrorText(rawText: string, fallbackMessage?: string): string {
+  function sanitizeErrorText(
+    rawText: string,
+    fallbackMessage?: string
+  ): string {
     if (!rawText || typeof rawText !== "string") {
       return fallbackMessage || "An unexpected clinical system error occurred.";
     }
@@ -58,7 +61,10 @@ export function useErrorPresenter() {
     }
 
     // Clean up trailing colons or double spaces caused by regex replacements
-    text = text.replace(/:\s*$/, "").replace(/\s{2,}/g, " ").trim();
+    text = text
+      .replace(/:\s*$/, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
 
     if (!text || text === ":") {
       return fallbackMessage || "System operation failed. Please try again.";
@@ -76,7 +82,10 @@ export function useErrorPresenter() {
     if (error instanceof Error) return error.message;
 
     const errObj = error as {
-      response?: { data?: { detail?: string; message?: string; error?: string }; statusText?: string };
+      response?: {
+        data?: { detail?: string; message?: string; error?: string };
+        statusText?: string;
+      };
       message?: string;
       detail?: string;
     };
@@ -107,7 +116,10 @@ export function useErrorPresenter() {
   /**
    * Alias for presentError.
    */
-  function formatErrorMessage(error: unknown, fallbackMessage?: string): string {
+  function formatErrorMessage(
+    error: unknown,
+    fallbackMessage?: string
+  ): string {
     return presentError(error, fallbackMessage);
   }
 
