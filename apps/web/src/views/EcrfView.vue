@@ -1,9 +1,9 @@
 <template>
   <div id="section-ecrf" class="dashboard-section active">
     <div class="section-header">
-      <h2>{{ $t('ecrf.title') }}</h2>
+      <h2>{{ $t("ecrf.title") }}</h2>
       <p>
-        {{ $t('ecrf.description') }}
+        {{ $t("ecrf.description") }}
       </p>
     </div>
 
@@ -23,7 +23,7 @@
       "
     >
       <div style="font-size: 0.9rem">
-        {{ $t('ecrf.activeRole') }}
+        {{ $t("ecrf.activeRole") }}
         <span
           class="badge"
           style="
@@ -62,13 +62,13 @@
           "
           @click="showEhrReconciliationDrawer = true"
         >
-          🏥 {{ $t('ecrf.ehrReconciliation') }}
+          🏥 {{ $t("ecrf.ehrReconciliation") }}
         </button>
 
         <label
           for="role-tester-select"
           style="font-size: 0.8rem; font-weight: bold"
-          >{{ $t('ecrf.demoRoleToggle') }}</label
+          >{{ $t("ecrf.demoRoleToggle") }}</label
         >
         <select
           id="role-tester-select"
@@ -79,8 +79,8 @@
             border: 1px solid var(--border);
           "
         >
-          <option value="site_investigator">{{ $t('ecrf.roleCrc') }}</option>
-          <option value="cra">{{ $t('ecrf.roleCra') }}</option>
+          <option value="site_investigator">{{ $t("ecrf.roleCrc") }}</option>
+          <option value="cra">{{ $t("ecrf.roleCra") }}</option>
         </select>
       </div>
     </div>
@@ -190,9 +190,9 @@
           style="display: flex; flex-direction: column; gap: 16px"
         >
           <div>
-            <div class="card-title">{{ $t('ecrf.cdashTitle') }}</div>
+            <div class="card-title">{{ $t("ecrf.cdashTitle") }}</div>
             <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
-              {{ $t('ecrf.cdashDesc') }}
+              {{ $t("ecrf.cdashDesc") }}
             </p>
           </div>
 
@@ -212,7 +212,7 @@
                 color: var(--primary);
               "
             >
-              {{ $t('ecrf.validationRulesTitle') }}
+              {{ $t("ecrf.validationRulesTitle") }}
             </h3>
             <ul
               style="
@@ -225,16 +225,16 @@
               "
             >
               <li>
-                {{ $t('ecrf.birthDateRule') }}
+                {{ $t("ecrf.birthDateRule") }}
               </li>
               <li>
-                {{ $t('ecrf.systolicBpRule') }}
+                {{ $t("ecrf.systolicBpRule") }}
               </li>
               <li>
-                {{ $t('ecrf.diastolicBpRule') }}
+                {{ $t("ecrf.diastolicBpRule") }}
               </li>
               <li>
-                {{ $t('ecrf.pulseRateRule') }}
+                {{ $t("ecrf.pulseRateRule") }}
               </li>
             </ul>
           </div>
@@ -255,10 +255,10 @@
                 color: var(--primary);
               "
             >
-              {{ $t('ecrf.queryManagementTitle') }}
+              {{ $t("ecrf.queryManagementTitle") }}
             </h3>
             <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
-              {{ $t('ecrf.queryManagementDesc') }}
+              {{ $t("ecrf.queryManagementDesc") }}
             </p>
           </div>
         </div>

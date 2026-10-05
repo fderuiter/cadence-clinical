@@ -1,7 +1,9 @@
 <template>
   <div class="language-translation-tabs-container card">
     <div class="tabs-header">
-      <span class="tabs-label">🌍 {{ $t('econsent.translationTabs.headerLabel') }}</span>
+      <span class="tabs-label"
+        >🌍 {{ $t("econsent.translationTabs.headerLabel") }}</span
+      >
       <div ref="tabsListRef" class="tabs-list" role="tablist">
         <button
           v-for="lang in availableLanguages"
@@ -26,11 +28,21 @@
     <!-- Active Language Banner/Info -->
     <div class="active-lang-banner">
       <p>
-        {{ $t('econsent.translationTabs.bannerText', { language: activeLanguageName, locale: econsentStore.activeLanguage }) }}
+        {{
+          $t("econsent.translationTabs.bannerText", {
+            language: activeLanguageName,
+            locale: econsentStore.activeLanguage,
+          })
+        }}
       </p>
       <div class="completion-metrics">
         <span class="metric-badge">
-          {{ $t('econsent.translationTabs.sectionsMetric', { translated: translatedSectionsCount, total: econsentStore.sections.length }) }}
+          {{
+            $t("econsent.translationTabs.sectionsMetric", {
+              translated: translatedSectionsCount,
+              total: econsentStore.sections.length,
+            })
+          }}
         </span>
       </div>
     </div>

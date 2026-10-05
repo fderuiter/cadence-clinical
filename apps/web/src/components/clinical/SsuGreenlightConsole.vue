@@ -274,7 +274,6 @@
               <th class="col-checkbox">
                 <input
                   type="checkbox"
-                  aria-label="Select all compliant sites"
                   title="Select / Deselect All Compliant Sites"
                   aria-label="Select all compliant sites"
                   :checked="isAllCompliantSelected"
@@ -305,8 +304,8 @@
               <td class="col-checkbox">
                 <input
                   type="checkbox"
-                  aria-label="Select site"
                   class="site-select-checkbox"
+                  aria-label="Select site for batch certification"
                   :disabled="
                     !site.is_compliant ||
                     site.overall_status === 'APPROVED' ||

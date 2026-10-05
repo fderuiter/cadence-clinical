@@ -160,6 +160,33 @@ export const FileUploadModal: DefineComponent<
   any
 >;
 
+export const ModalErrorAlert: DefineComponent<
+  {
+    error?: any;
+    errorMessage?: string;
+    title?: string;
+    retryLabel?: string;
+    dismissLabel?: string;
+    showRetry?: boolean;
+    showDismiss?: boolean;
+    onRetry?: (...args: any[]) => void;
+    onDismiss?: (...args: any[]) => void;
+    id?: string;
+  },
+  {},
+  any
+>;
+
+export function useAsyncRetry<T extends (...args: any[]) => any>(
+  asyncFn?: T
+): {
+  isLoading: import("vue").Ref<boolean>;
+  error: import("vue").Ref<any>;
+  execute: (...args: any[]) => Promise<any>;
+  retry: (...args: any[]) => Promise<any>;
+  clearError: () => void;
+};
+
 // Utility functions
 export function debounce<T extends (...args: any[]) => any>(
   func: T,

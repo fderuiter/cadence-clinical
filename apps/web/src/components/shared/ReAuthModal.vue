@@ -84,10 +84,13 @@
           </select>
         </div>
 
-        <div v-if="effectiveError" class="alert-box error-box" role="alert">
-          <span class="error-icon">⚠️</span>
-          <span>{{ effectiveError }}</span>
-        </div>
+        <ModalErrorAlert
+          :error="effectiveError"
+          retry-label="Retry"
+          dismiss-label="Dismiss"
+          @retry="handleConfirm"
+          @dismiss="localError = ''"
+        />
       </div>
 
       <div class="modal-footer">
@@ -114,6 +117,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
+import { ModalErrorAlert } from "ui";
 import { useFocusTrap } from "@/composables/useFocusTrap";
 import { useEscapeClose } from "@/composables/useEscapeClose";
 
