@@ -179,6 +179,405 @@ function readStorageForPersona(personaKey) {
   };
 }
 
+export const ROLE_STEP_SEQUENCES = {
+  sponsor_designer: [
+    {
+      step: 1,
+      routeName: "mdr",
+      query: { tab: "soa" },
+      targetSelector: null,
+      title: "Welcome to the Sandbox",
+      description:
+        "This interactive sandbox guides you through designing clinical trial protocol metadata. Let's explore the workspace together step-by-step!",
+      prompt:
+        "Welcome, Designer! Ready to architect clinical protocols and CDISC USDM data structures with maximum accuracy?",
+    },
+    {
+      step: 2,
+      routeName: "mdr",
+      query: { tab: "soa" },
+      targetSelector: ".tab-btn-soa",
+      title: "Schedule of Activities",
+      description:
+        "This tab shows the Schedule of Activities (SoA). Here you can build trial cohorts, epochs, and define study visits. Try adding an Arm or Epoch to see updates in real-time.",
+      prompt:
+        "Design the perfect Schedule of Activities with clinical precision for your study arms and epochs.",
+    },
+    {
+      step: 3,
+      routeName: "mdr",
+      query: { tab: "mdr" },
+      targetSelector: ".tab-btn-mdr",
+      title: "MDR Concept Browse",
+      description:
+        "This tab allows you to browse concepts from standard clinical controlled vocabularies. Align your variables with CDISC definitions directly in the sandbox.",
+      prompt:
+        "Browse and bind CDISC terminology concepts directly into your study parameters.",
+    },
+    {
+      step: 4,
+      routeName: "mdr",
+      query: { tab: "diff" },
+      targetSelector: ".tab-btn-diff",
+      title: "Alignment & Differences",
+      description:
+        "This tab shows real-time changes compared to standard CDISC templates, allowing you to track protocol deviations and structural changes as you edit.",
+      prompt:
+        "Audit and verify that your clinical data elements are strictly aligned with GxP and regulatory standards.",
+    },
+    {
+      step: 5,
+      routeName: "mdr",
+      query: { tab: "soa" },
+      targetSelector: null,
+      title: "Tour Complete!",
+      description:
+        "Your trial design and onboarding events are safely saved in your browser's persistent storage. Turn on Onboarding Telemetry in the footer to inspect captured user interactions!",
+      prompt:
+        "All set! Your clinical metadata schema is fully authored, mapped, and persisted.",
+    },
+  ],
+
+  data_manager: [
+    {
+      step: 1,
+      routeName: "rules",
+      query: { tab: "rules" },
+      targetSelector: null,
+      title: "Welcome to Data Management",
+      description:
+        "Welcome to the Rules & Data Quality engine. Here you can configure automated edit checks, manage discrepancies, and inspect clinical logic.",
+      prompt:
+        "Welcome, Data Manager! You can map concepts, curate eCRF templates, and inspect data collection rules.",
+    },
+    {
+      step: 2,
+      routeName: "rules",
+      query: { tab: "rules" },
+      targetSelector: ".tab-btn-rules",
+      title: "Edit Checks & Logic Rules",
+      description:
+        "Configure univariate and multivariate edit checks to validate incoming eCRF submissions in real time.",
+      prompt:
+        "Validate that all scheduled study activities map directly to clean data collection points.",
+    },
+    {
+      step: 3,
+      routeName: "rules",
+      query: { tab: "queries" },
+      targetSelector: ".tab-btn-queries",
+      title: "Discrepancy & Query Dispatch",
+      description:
+        "Monitor and manage automated queries raised by the auto-query engine during participant data capture.",
+      prompt:
+        "Enforce standard terminology to prevent data entry inconsistencies during downstream capture.",
+    },
+    {
+      step: 4,
+      routeName: "mdr",
+      query: { tab: "mdr" },
+      targetSelector: ".tab-btn-mdr",
+      title: "MDR Concept Alignment",
+      description:
+        "Cross-reference edit check variables with standardized CDISC controlled terminology in the metadata repository.",
+      prompt:
+        "Generate alignment metrics and difference reports to ensure complete database lock compliance.",
+    },
+    {
+      step: 5,
+      routeName: "rules",
+      query: { tab: "rules" },
+      targetSelector: null,
+      title: "Tour Complete!",
+      description:
+        "Your data validation configuration is complete and saved. Inspect telemetry events in the diagnostic drawer at any time.",
+      prompt:
+        "Fantastic! Your clinical metadata definitions are securely stored and ready for electronic capture mapping.",
+    },
+  ],
+
+  cra_monitor: [
+    {
+      step: 1,
+      routeName: "ctms",
+      targetSelector: null,
+      title: "Welcome to Clinical Operations",
+      description:
+        "Welcome to CTMS & Monitoring. Here you can oversee site startup, operational milestones, monitoring visits, and subject metrics.",
+      prompt:
+        "Welcome, CRA! Oversee site operations, monitoring visits, and subject tracking across all active clinical sites.",
+    },
+    {
+      step: 2,
+      routeName: "ctms",
+      targetSelector: "#kpi-open-queries",
+      title: "Operational Key Metrics",
+      description:
+        "Track open queries, recruitment progress, and protocol compliance across study sites in real-time.",
+      prompt:
+        "Review site open query volume and operational milestone progress across all trial locations.",
+    },
+    {
+      step: 3,
+      routeName: "ctms",
+      targetSelector: ".tabs-container",
+      title: "Site & Delegation Logs",
+      description:
+        "Manage site startup documents, investigator delegation of authority, and monitoring visit reports.",
+      prompt:
+        "Manage site operations, investigator delegation logs, and financial disbursement milestones.",
+    },
+    {
+      step: 4,
+      routeName: "ecrf",
+      targetSelector: ".ecrf-container",
+      title: "Source Data Verification",
+      description:
+        "Navigate to participant eCRF records to perform source data verification (SDV) and manage clinical queries.",
+      prompt:
+        "Perform source data verification on eCRF forms to ensure complete Part 11 trial compliance.",
+    },
+    {
+      step: 5,
+      routeName: "ctms",
+      targetSelector: null,
+      title: "Tour Complete!",
+      description:
+        "Your monitoring dashboard and operational workflows are fully setup. Access telemetry logs in the footer anytime.",
+      prompt:
+        "All set! Your monitoring dashboard is fully ready for site management and source data verification.",
+    },
+  ],
+
+  auditor: [
+    {
+      step: 1,
+      routeName: "audit",
+      targetSelector: null,
+      title: "Welcome to Regulatory & Audit",
+      description:
+        "Welcome to the GxP & Part 11 Audit Trail viewer. Reconstruct point-in-time system state and verify cryptographic hashes.",
+      prompt:
+        "Welcome, Auditor! Inspect bitemporal audit logs, electronic signatures, and regulatory compliance state.",
+    },
+    {
+      step: 2,
+      routeName: "audit",
+      targetSelector: ".audit-filter-bar",
+      title: "Bitemporal Audit Trail Search",
+      description:
+        "Filter system audit entries by entity, user identity, action, and valid/recorded time intervals.",
+      prompt:
+        "Filter cryptographic audit records by entity, user, or timestamp range for 21 CFR Part 11 inspections.",
+    },
+    {
+      step: 3,
+      routeName: "audit",
+      targetSelector: ".audit-ledger-card",
+      title: "Cryptographic Hash Chain",
+      description:
+        "Verify SHA-256 Merkle block hashes and predecessor linkages to ensure tamper-proof audit log integrity.",
+      prompt:
+        "Verify SHA-256 Merkle block hashes for gap-free 21 CFR Part 11 electronic record compliance.",
+    },
+    {
+      step: 4,
+      routeName: "amendment-diff",
+      targetSelector: ".diff-summary-card",
+      title: "Protocol Version Differences",
+      description:
+        "Review automated protocol amendment difference reports to verify metadata changes across study versions.",
+      prompt:
+        "Review schema differences and protocol amendments to guarantee full regulatory change traceability.",
+    },
+    {
+      step: 5,
+      routeName: "audit",
+      targetSelector: null,
+      title: "Tour Complete!",
+      description:
+        "Audit trail inspection tools and compliance records are verified. Check telemetry events in the footer drawer.",
+      prompt:
+        "Excellent! Complete regulatory audit logs and compliance state are verified and inspection-ready.",
+    },
+  ],
+
+  site_crc: [
+    {
+      step: 1,
+      routeName: "ecrf",
+      targetSelector: null,
+      title: "Welcome to Electronic Data Capture",
+      description:
+        "Welcome to EDC & Participant Management. Screen subjects, record visit observations, and manage eCRF forms.",
+      prompt:
+        "Welcome, Site Coordinator! Manage participant data entry, visits, and eCRF forms for your study site.",
+    },
+    {
+      step: 2,
+      routeName: "ecrf",
+      targetSelector: ".subject-selector-card",
+      title: "Participant Selection & Screening",
+      description:
+        "Select study participants, view visit progress, and initiate new subject screening workflows.",
+      prompt:
+        "Select participants and navigate study visit encounters for accurate data capture.",
+    },
+    {
+      step: 3,
+      routeName: "ecrf",
+      targetSelector: ".ecrf-form-renderer",
+      title: "eCRF Data Entry Forms",
+      description:
+        "Enter vital signs, lab results, and clinical observations with automated real-time validation checks.",
+      prompt:
+        "Enter clinical trial observations with real-time edit checks and immediate query alerts.",
+    },
+    {
+      step: 4,
+      routeName: "ctms",
+      targetSelector: ".tabs-container",
+      title: "Site Operational Milestones",
+      description:
+        "View site operational milestones, delegation logs, and subject stipend disbursement statuses.",
+      prompt:
+        "Check delegation logs and site operational startup tasks to maintain site readiness.",
+    },
+    {
+      step: 5,
+      routeName: "ecrf",
+      targetSelector: null,
+      title: "Tour Complete!",
+      description:
+        "Your EDC workspace orientation is complete. View telemetry events in the footer diagnostic drawer anytime.",
+      prompt:
+        "Great job! Participant data capture and visit schedules are ready for trial operations.",
+    },
+  ],
+
+  super_admin: [
+    {
+      step: 1,
+      routeName: "mdr",
+      query: { tab: "soa" },
+      targetSelector: null,
+      title: "Welcome to the Sandbox",
+      description:
+        "This interactive sandbox guides you through designing clinical trial protocol metadata. Let's explore the workspace together step-by-step!",
+      prompt:
+        "Welcome, Administrator! Oversee the full digital data flow, audit trails, and multi-tenant compliance settings.",
+    },
+    {
+      step: 2,
+      routeName: "mdr",
+      query: { tab: "soa" },
+      targetSelector: ".tab-btn-soa",
+      title: "Schedule of Activities",
+      description:
+        "This tab shows the Schedule of Activities (SoA). Here you can build trial cohorts, epochs, and define study visits. Try adding an Arm or Epoch to see updates in real-time.",
+      prompt:
+        "Review and approve the global Schedule of Activities to ensure operational feasibility.",
+    },
+    {
+      step: 3,
+      routeName: "mdr",
+      query: { tab: "mdr" },
+      targetSelector: ".tab-btn-mdr",
+      title: "MDR Concept Browse",
+      description:
+        "This tab allows you to browse concepts from standard clinical controlled vocabularies. Align your variables with CDISC definitions directly in the sandbox.",
+      prompt:
+        "Browse controlled vocabularies and manage organization-wide metadata catalogs.",
+    },
+    {
+      step: 4,
+      routeName: "mdr",
+      query: { tab: "diff" },
+      targetSelector: ".tab-btn-diff",
+      title: "Alignment & Differences",
+      description:
+        "This tab shows real-time changes compared to standard CDISC templates, allowing you to track protocol deviations and structural changes as you edit.",
+      prompt:
+        "Analyze difference reports to ensure zero schema drift across all study versions.",
+    },
+    {
+      step: 5,
+      routeName: "mdr",
+      query: { tab: "soa" },
+      targetSelector: null,
+      title: "Tour Complete!",
+      description:
+        "Your trial design and onboarding events are safely saved in your browser's persistent storage. Turn on Onboarding Telemetry in the footer to inspect captured user interactions!",
+      prompt:
+        "Excellent! The study configuration is fully locked, logged, and securely backed up.",
+    },
+  ],
+};
+
+function getSequenceForPersona(personaKey) {
+  let authStore = null;
+  try {
+    authStore = useAuthStore();
+  } catch {
+    // Pinia or auth store not ready
+  }
+
+  const roles = authStore?.normalizedRoles || [];
+
+  if (
+    personaKey &&
+    personaKey !== "super_admin" &&
+    ROLE_STEP_SEQUENCES[personaKey]
+  ) {
+    return ROLE_STEP_SEQUENCES[personaKey];
+  }
+
+  if (personaKey === "designer" || personaKey === "study_designer") {
+    return ROLE_STEP_SEQUENCES.sponsor_designer;
+  }
+  if (personaKey === "crc") {
+    return ROLE_STEP_SEQUENCES.site_crc;
+  }
+  if (personaKey === "cra" || personaKey === "monitor") {
+    return ROLE_STEP_SEQUENCES.cra_monitor;
+  }
+  if (personaKey === "tmf_auditor") {
+    return ROLE_STEP_SEQUENCES.auditor;
+  }
+  if (personaKey === "sponsor_admin") {
+    return ROLE_STEP_SEQUENCES.super_admin;
+  }
+
+  if (roles.length > 0) {
+    if (
+      roles.includes("sponsor_designer") &&
+      !roles.includes("sponsor_admin")
+    ) {
+      return ROLE_STEP_SEQUENCES.sponsor_designer;
+    }
+    if (roles.includes("data_manager") && !roles.includes("sponsor_admin")) {
+      return ROLE_STEP_SEQUENCES.data_manager;
+    }
+    if (roles.includes("site_investigator") || roles.includes("crc")) {
+      return ROLE_STEP_SEQUENCES.site_crc;
+    }
+    if (roles.includes("cra") || roles.includes("monitor")) {
+      return ROLE_STEP_SEQUENCES.cra_monitor;
+    }
+    if (roles.includes("auditor") || roles.includes("tmf_auditor")) {
+      return ROLE_STEP_SEQUENCES.auditor;
+    }
+  }
+
+  if (ROLE_STEP_SEQUENCES[personaKey]) {
+    return ROLE_STEP_SEQUENCES[personaKey];
+  }
+
+  return (
+    ROLE_STEP_SEQUENCES.super_admin || ROLE_STEP_SEQUENCES.sponsor_designer
+  );
+}
+
 export const useOnboardingStore = defineStore("onboarding", {
   state: () => {
     const activePersona = getActivePersona();
@@ -195,6 +594,20 @@ export const useOnboardingStore = defineStore("onboarding", {
       updatedAt: initial.updatedAt,
       isSyncing: false,
     };
+  },
+  getters: {
+    personaSteps(state) {
+      return getSequenceForPersona(state.currentPersona);
+    },
+    currentStepConfig(state) {
+      const steps = getSequenceForPersona(state.currentPersona);
+      const stepIdx = Math.max(0, state.currentStep - 1);
+      return steps[stepIdx] || steps[0] || null;
+    },
+    totalSteps(state) {
+      const steps = getSequenceForPersona(state.currentPersona);
+      return steps.length || 5;
+    },
   },
   actions: {
     loadPersonaState(personaKey) {

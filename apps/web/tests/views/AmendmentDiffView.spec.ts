@@ -317,7 +317,8 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
       global: { plugins: [pinia] },
     });
     wrapper.vm.activeTab = "graph";
-    wrapper.vm.diffLoadError = "HTTP 500 Internal Server Error in Designer service";
+    wrapper.vm.diffLoadError =
+      "HTTP 500 Internal Server Error in Designer service";
     await wrapper.vm.$nextTick();
 
     const errorAlert = wrapper.find('[data-testid="diff-load-error"]');

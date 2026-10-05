@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
+import ModalErrorAlert from "./ModalErrorAlert.vue";
 
 const props = defineProps({
   modelValue: {
@@ -225,6 +226,17 @@ watch(
     }
   }
 );
+
+defineExpose({
+  errorMessage,
+  selectedFile,
+  reasonForChange,
+  status,
+  progress,
+  startUpload,
+  resetForm,
+  handleSelectedFile,
+});
 </script>
 
 <template>
@@ -256,9 +268,17 @@ watch(
 
         <div class="modal-body">
           <!-- Error alert -->
-          <div v-if="errorMessage" class="error-alert" role="alert">
-            ⚠️ {{ errorMessage }}
-          </div>
+          <ModalErrorAlert
+            :error="errorMessage"
+            retry-label="Retry Upload"
+            dismiss-label="Clear Error"
+            @retry="startUpload"
+            @dismiss="
+              errorMessage = '';
+              status = 'idle';
+              selectedFile = null;
+            "
+          />
 
           <!-- Dropzone -->
           <div

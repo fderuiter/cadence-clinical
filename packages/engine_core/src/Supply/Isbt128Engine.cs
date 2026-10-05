@@ -88,6 +88,6 @@ public static class Isbt128Engine
             return string.Equals(actualChk, expectedChk, StringComparison.OrdinalIgnoreCase);
         }
 
-        return clean.All(char.IsLetterOrDigit);
+        return clean.All(ch => char.IsLetterOrDigit(ch) || ch == '*');
     }
 }
