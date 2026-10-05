@@ -132,6 +132,8 @@ describe("ICFBuilderView.vue and Pinia Store Unit Tests", () => {
     const modal = wrapper.findComponent({ name: "SignatureCaptureModal" });
     expect(modal.exists()).toBe(true);
     expect(modal.props("isOpen")).toBe(true);
+    expect(modal.props("semanticAction")).toBe("econsent.icf.capture_consent");
+    expect(modal.props("actionUrl")).not.toContain("/api/v1/");
 
     // Simulate signature success
     const mockSigManifest = {

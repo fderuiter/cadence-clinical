@@ -293,7 +293,7 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
             signer_role = signerRole,
             signing_reason = SigningReason,
             payload_hash = JsonCanonicalization.Sha256Hex(payload),
-            hmac_signature = hmacSignature ?? Cadence.Security.Authentication.HmacSigner.ComputeSignature(JsonCanonicalization.Sha256Hex(payload), TestSecurityContext.GatewaySecret),
+            hmac_signature = hmacSignature ?? Cadence.Security.HmacSigner.ComputeSignature(JsonCanonicalization.Sha256Hex(payload), TestSecurityContext.GatewaySecret),
             signed_at = FakeClock.DefaultStart.UtcDateTime,
         },
     };
