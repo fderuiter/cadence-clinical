@@ -918,6 +918,7 @@
 <script setup lang="ts">
 import { encodeChangeReason } from "../../api/changeReason";
 import { ref, computed, onMounted } from "vue";
+import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 
 interface RACTFactor {
   id: string;
@@ -978,6 +979,7 @@ const selectedCategory = ref<string>("ALL");
 const activeViewMode = ref<"matrix" | "sri" | "kri">("matrix");
 const searchQuery = ref<string>("");
 const isLoading = ref<boolean>(false);
+const { confirmDialog } = useConfirmDialog();
 
 const riskFactors = ref<RACTFactor[]>([]);
 const siteProfiles = ref<SiteProfile[]>([]);
@@ -1273,8 +1275,14 @@ async function saveRiskFactor() {
 }
 
 async function deleteFactor(factorId: string) {
-  if (!confirm("Are you sure you want to delete this protocol risk factor?"))
-    return;
+  const confirmed = await confirmDialog({
+    title: "Delete Risk Factor",
+    message: "Are you sure you want to delete this protocol risk factor?",
+    confirmLabel: "Delete",
+    cancelLabel: "Cancel",
+    variant: "danger",
+  });
+  if (!confirmed) return;
   isLoading.value = true;
   try {
     const res = await fetch(`/api/v1/quality/rbqm/ract/factors/${factorId}`, {

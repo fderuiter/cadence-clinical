@@ -902,11 +902,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Global Onboarding Tour Overlay -->
+    <OnboardingTour v-if="isAuthenticatedRoute" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { useRoute } from "vue-router";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth";
 import { useNotificationsStore } from "../stores/notifications";
 import { useClinicalStore } from "../stores/clinical";
@@ -915,8 +919,18 @@ import { useKnowledgeStore } from "../stores/knowledge";
 import { hasRequiredRole } from "../router";
 import { isScreenAvailable } from "../router/availability";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+import OnboardingTour from "./OnboardingTour.vue";
 
+const route = useRoute();
 const authStore = useAuthStore();
+
+const isAuthenticatedRoute = computed(() => {
+  if (!authStore.isAuthenticated) return false;
+  const unauthNames = ["login", "forbidden", "unavailable"];
+  if (route && route.name && unauthNames.includes(route.name)) return false;
+  if (route && route.meta && route.meta.requiresAuth === false) return false;
+  return true;
+});
 const notificationsStore = useNotificationsStore();
 const clinicalStore = useClinicalStore();
 const studyCanvasPath = computed(() =>

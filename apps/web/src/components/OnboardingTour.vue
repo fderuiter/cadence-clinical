@@ -4,11 +4,12 @@
     class="onboarding-tour-container"
     style="position: relative; z-index: 1000"
   >
-    <!-- Translucent backdrop only on steps 1 and 5 to highlight onboarding introduction/completion without blocking interaction during edits -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- Translucent backdrop only on unanchored modal steps to highlight onboarding introduction/completion without blocking interaction during edits -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
-      v-if="currentStep === 1 || currentStep === 5"
+      v-if="
+        currentStep === 1 || currentStep === totalSteps || !hasTargetElement
+      "
       class="onboarding-backdrop"
       style="
         position: fixed;
@@ -39,9 +40,9 @@
         font-family: var(--font);
       "
     >
-      <!-- Arrow pointing up (only on anchored steps) -->
+      <!-- Arrow pointing up (only on anchored steps with valid target selector) -->
       <div
-        v-if="currentStep >= 2 && currentStep <= 4"
+        v-if="hasTargetElement && currentStepConfig?.targetSelector"
         class="popover-arrow"
         style="
           position: absolute;
@@ -76,7 +77,7 @@
           {{ stepTitle }}
         </h4>
         <span style="font-size: 0.75rem; color: #64748b; font-weight: 600">
-          Step {{ currentStep }} of 5
+          Step {{ currentStep }} of {{ totalSteps }}
         </span>
       </div>
 
@@ -90,6 +91,7 @@
         "
       >
         <div
+          v-if="dynamicPrompt"
           style="
             background-color: #f0fdf4;
             border-left: 3px solid #22c55e;
@@ -142,7 +144,7 @@
               cursor: pointer;
               background: white;
             "
-            @click="onboardingStore.prevStep()"
+            @click="handlePrev"
           >
             Back
           </button>
@@ -167,7 +169,7 @@
           </button>
 
           <button
-            v-if="currentStep < 5"
+            v-if="currentStep < totalSteps"
             class="btn btn-primary btn-tour-next"
             style="
               padding: 6px 14px;
@@ -207,14 +209,16 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useAuthStore } from "../stores/auth";
 
 const props = defineProps({
   activeTab: {
     type: String,
-    required: true,
+    required: false,
+    default: "",
   },
 });
 
@@ -222,61 +226,32 @@ const emit = defineEmits(["update:activeTab"]);
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
+let router;
+let route;
+
+try {
+  router = useRouter();
+  route = useRoute();
+} catch {
+  // Gracefully fallback if router is not provided in isolated unit test environments
+}
 
 const currentStep = computed(() => onboardingStore.currentStep);
-const roles = computed(() => authStore.normalizedRoles || []);
-const hasRole = (role) => roles.value.includes(role);
+const currentStepConfig = computed(
+  () => onboardingStore.currentStepConfig || {}
+);
+const totalSteps = computed(() => onboardingStore.totalSteps || 5);
 
-const stepTitle = computed(() => {
-  switch (currentStep.value) {
-    case 1:
-      return "Welcome to the Sandbox";
-    case 2:
-      return "Schedule of Activities";
-    case 3:
-      return "MDR Concept Browse";
-    case 4:
-      return "Alignment & Differences";
-    case 5:
-      return "Tour Complete!";
-    default:
-      return "";
-  }
-});
+const stepTitle = computed(() => currentStepConfig.value?.title || "");
+const stepDescription = computed(
+  () => currentStepConfig.value?.description || ""
+);
+const dynamicPrompt = computed(() => currentStepConfig.value?.prompt || "");
+const stepTargetDescription = computed(
+  () => currentStepConfig.value?.title || `Step ${currentStep.value}`
+);
 
-const stepDescription = computed(() => {
-  switch (currentStep.value) {
-    case 1:
-      return "This interactive sandbox guides you through designing clinical trial protocol metadata. Let's explore the workspace together step-by-step!";
-    case 2:
-      return "This tab shows the Schedule of Activities (SoA). Here you can build trial cohorts, epochs, and define study visits. Try adding an Arm or Epoch to see updates in real-time.";
-    case 3:
-      return "This tab allows you to browse concepts from standard clinical controlled vocabularies. Align your variables with CDISC definitions directly in the sandbox.";
-    case 4:
-      return "This tab shows real-time changes compared to standard CDISC templates, allowing you to track protocol deviations and structural changes as you edit.";
-    case 5:
-      return "Your trial design and onboarding events are safely saved in your browser's persistent storage. Turn on Onboarding Telemetry in the footer to inspect captured user interactions!";
-    default:
-      return "";
-  }
-});
-
-const stepTargetDescription = computed(() => {
-  switch (currentStep.value) {
-    case 1:
-      return "Welcome Popover";
-    case 2:
-      return "Interactive SoA & USDM Tab";
-    case 3:
-      return "MDR Concept Browse & Edit Tab";
-    case 4:
-      return "Alignment & Differences Report Tab";
-    case 5:
-      return "Tour Completion";
-    default:
-      return "";
-  }
-});
+const hasTargetElement = ref(false);
 
 const popoverStyle = ref({
   position: "fixed",
@@ -288,6 +263,36 @@ const popoverStyle = ref({
 
 let currentRafId = null;
 
+async function syncStepRoute() {
+  if (!onboardingStore.isActive || onboardingStore.disabled) return;
+  const config = currentStepConfig.value;
+  if (!config) return;
+
+  if (router && route) {
+    if (config.routeName && route.name !== config.routeName) {
+      const query = config.query
+        ? { ...route.query, ...config.query }
+        : { ...route.query };
+      await router.push({ name: config.routeName, query });
+    } else if (config.query) {
+      let needsUpdate = false;
+      const newQuery = { ...route.query };
+      for (const [k, v] of Object.entries(config.query)) {
+        if (route.query[k] !== v) {
+          newQuery[k] = v;
+          needsUpdate = true;
+        }
+      }
+      if (needsUpdate) {
+        await router.push({
+          name: config.routeName || route.name,
+          query: newQuery,
+        });
+      }
+    }
+  }
+}
+
 const updatePosition = () => {
   if (!onboardingStore.isActive || onboardingStore.disabled) return;
 
@@ -296,33 +301,29 @@ const updatePosition = () => {
     currentRafId = null;
   }
 
-  nextTick(() => {
-    if (!onboardingStore.isActive || onboardingStore.disabled) return;
+  const config = currentStepConfig.value;
+  const selector = config?.targetSelector;
 
-    const step = currentStep.value;
-    let selector = null;
-    if (step === 2) selector = ".tab-btn-soa";
-    else if (step === 3) selector = ".tab-btn-mdr";
-    else if (step === 4) selector = ".tab-btn-diff";
+  if (!selector) {
+    hasTargetElement.value = false;
+    popoverStyle.value = {
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      zIndex: 1000,
+    };
+    return;
+  }
 
-    if (!selector) {
-      popoverStyle.value = {
-        position: "fixed",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        zIndex: 1000,
-      };
-      return;
-    }
+  const MAX_RETRIES = 5;
+  let attempts = 0;
 
-    const MAX_RETRIES = 5;
-    let attempts = 0;
-
-    const checkAndPosition = () => {
-      const el = document.querySelector(selector);
-      if (el) {
-        const rect = el.getBoundingClientRect();
+  const checkAndPosition = () => {
+    const el = document.querySelector(selector);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
         popoverStyle.value = {
           position: "fixed",
           top: `${rect.bottom + 12}px`,
@@ -330,29 +331,45 @@ const updatePosition = () => {
           transform: "translateX(-50%)",
           zIndex: 1000,
         };
+        hasTargetElement.value = true;
         currentRafId = null;
-      } else if (attempts < MAX_RETRIES) {
-        attempts++;
-        currentRafId = requestAnimationFrame(checkAndPosition);
-      } else {
-        popoverStyle.value = {
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          zIndex: 1000,
-        };
-        currentRafId = null;
+        return;
       }
-    };
+    }
+    if (attempts < MAX_RETRIES) {
+      attempts++;
+      currentRafId = requestAnimationFrame(checkAndPosition);
+    } else {
+      hasTargetElement.value = false;
+      popoverStyle.value = {
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        zIndex: 1000,
+      };
+      currentRafId = null;
+    }
+  };
 
-    currentRafId = requestAnimationFrame(checkAndPosition);
-  });
+  checkAndPosition();
 };
 
-const handleNext = () => {
+const handleNext = async () => {
   const currentDesc = stepTargetDescription.value;
   onboardingStore.nextStep(currentDesc);
+  await syncStepRoute();
+  updatePosition();
+  setTimeout(updatePosition, 50);
+  setTimeout(updatePosition, 150);
+};
+
+const handlePrev = async () => {
+  onboardingStore.prevStep();
+  await syncStepRoute();
+  updatePosition();
+  setTimeout(updatePosition, 50);
+  setTimeout(updatePosition, 150);
 };
 
 const handleComplete = () => {
@@ -360,75 +377,32 @@ const handleComplete = () => {
   onboardingStore.disableTour();
 };
 
-const dynamicPrompt = computed(() => {
-  const step = currentStep.value;
-  if (hasRole("sponsor_designer") || hasRole("designer")) {
-    if (step === 1)
-      return "Welcome, Designer! Ready to architect clinical protocols and CDISC USDM data structures with maximum accuracy?";
-    if (step === 2)
-      return "Design the perfect Schedule of Activities with clinical precision for your study arms and epochs.";
-    if (step === 3)
-      return "Browse and bind CDISC terminology concepts directly into your study parameters.";
-    if (step === 4)
-      return "Audit and verify that your clinical data elements are strictly aligned with GxP and regulatory standards.";
-    if (step === 5)
-      return "All set! Your clinical metadata schema is fully authored, mapped, and persisted.";
+watch(currentStep, async () => {
+  const config = currentStepConfig.value;
+  if (config?.query?.tab) {
+    emit("update:activeTab", config.query.tab);
   }
-  if (hasRole("data_manager")) {
-    if (step === 1)
-      return "Welcome, Data Manager! You can map concepts, curate eCRF templates, and inspect data collection rules.";
-    if (step === 2)
-      return "Validate that all scheduled study activities map directly to clean data collection points.";
-    if (step === 3)
-      return "Enforce standard terminology to prevent data entry inconsistencies during downstream capture.";
-    if (step === 4)
-      return "Generate alignment metrics and difference reports to ensure complete database lock compliance.";
-    if (step === 5)
-      return "Fantastic! Your clinical metadata definitions are securely stored and ready for electronic capture mapping.";
-  }
-  if (hasRole("sponsor_admin")) {
-    if (step === 1)
-      return "Welcome, Administrator! Oversee the full digital data flow, audit trails, and multi-tenant compliance settings.";
-    if (step === 2)
-      return "Review and approve the global Schedule of Activities to ensure operational feasibility.";
-    if (step === 3)
-      return "Browse controlled vocabularies and manage organization-wide metadata catalogs.";
-    if (step === 4)
-      return "Analyze difference reports to ensure zero schema drift across all study versions.";
-    if (step === 5)
-      return "Excellent! The study configuration is fully locked, logged, and securely backed up.";
-  }
-
-  if (step === 1)
-    return "Welcome to the Clinical Sandbox! Let's walk through how to build and persist a custom study design.";
-  if (step === 2)
-    return "Define study arms, epochs, and design a Schedule of Activities matrix.";
-  if (step === 3)
-    return "Search and browse controlled clinical vocabularies and CDISC concept codes.";
-  if (step === 4)
-    return "Check differences and ensure consistency across protocol metadata models.";
-  if (step === 5)
-    return "Congratulations! You have successfully explored the core features of the clinical sandbox.";
-  return "";
-});
-
-watch(currentStep, (newStep) => {
-  if (newStep === 2) emit("update:activeTab", "soa");
-  else if (newStep === 3) emit("update:activeTab", "mdr");
-  else if (newStep === 4) emit("update:activeTab", "diff");
+  await syncStepRoute();
   updatePosition();
+  setTimeout(updatePosition, 50);
 });
+
+watch(
+  () => route?.fullPath,
+  () => {
+    updatePosition();
+    setTimeout(updatePosition, 50);
+  }
+);
 
 watch(
   () => props.activeTab,
   (newTab) => {
-    if (onboardingStore.isActive && !onboardingStore.disabled) {
-      if (newTab === "soa" && currentStep.value !== 2) {
-        onboardingStore.currentStep = 2;
-      } else if (newTab === "mdr" && currentStep.value !== 3) {
-        onboardingStore.currentStep = 3;
-      } else if (newTab === "diff" && currentStep.value !== 4) {
-        onboardingStore.currentStep = 4;
+    if (newTab && onboardingStore.isActive && !onboardingStore.disabled) {
+      const steps = onboardingStore.personaSteps;
+      const matchingStep = steps.find((s) => s.query?.tab === newTab);
+      if (matchingStep && currentStep.value !== matchingStep.step) {
+        onboardingStore.currentStep = matchingStep.step;
       }
     }
     updatePosition();
@@ -438,24 +412,30 @@ watch(
 watch(
   () => onboardingStore.isActive,
   (active) => {
-    if (active) updatePosition();
+    if (active) {
+      syncStepRoute();
+      updatePosition();
+    }
   }
 );
 
 watch(
   () => authStore.currentPersona,
-  (newPersona) => {
+  async (newPersona) => {
     if (newPersona) {
       onboardingStore.loadPersonaState(newPersona);
+      await syncStepRoute();
       updatePosition();
     }
   },
   { immediate: true }
 );
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener("resize", updatePosition);
+  await syncStepRoute();
   updatePosition();
+  setTimeout(updatePosition, 100);
   if (
     onboardingStore.isActive &&
     !onboardingStore.disabled &&
