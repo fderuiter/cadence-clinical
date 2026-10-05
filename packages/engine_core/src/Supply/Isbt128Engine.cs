@@ -43,7 +43,7 @@ public static class Isbt128Engine
         int? sequenceNum = null,
         int defaultYear = 26)
     {
-        string fac = (facilityCode ?? "W1234").ToUpperInvariant().Replace("=", "").Trim();
+        string fac = (facilityCode ?? "W1234").ToUpperInvariant().Replace("=", "").Replace(" ", "").Replace("-", "").Trim();
         if (fac.Length < 5)
         {
             fac = fac.PadRight(5, '0');
@@ -88,6 +88,6 @@ public static class Isbt128Engine
             return string.Equals(actualChk, expectedChk, StringComparison.OrdinalIgnoreCase);
         }
 
-        return clean.All(char.IsLetterOrDigit);
+        return clean.All(ch => char.IsLetterOrDigit(ch) || ch == '*');
     }
 }
