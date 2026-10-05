@@ -146,9 +146,9 @@ public sealed record CiJob(string Key, string Name, IReadOnlyList<CiStep> Steps)
 public static class CiPlan
 {
     private const string Cli = "packages/cli/src/Cadence.Cli.csproj";
-    private const string QualitySentinels = "style/Run Cadence quality sentinels";
-    private const string StyleNodeInstall = "style/Install Node dependencies";
-    private const string StyleUiBuild = "style/Build UI package";
+    private const string QualitySentinels = "dotnet-quality/Run Cadence quality sentinels";
+    private const string StyleNodeInstall = "lint-and-static/Install Node dependencies";
+    private const string StyleUiBuild = "lint-and-static/Build UI package";
     private const string PushOnly = "CI runs it only on a push to main";
     private const string RtmReport = "docs/SDLC/Requirements_Traceability_Matrix.md";
     private const string IqReport = "docs/SDLC/IQ_OQ_PQ_Execution_Report.md";
@@ -196,89 +196,94 @@ public static class CiPlan
 
     private static List<CiJob> BuildJobs()
     {
-        var style = new CiJob("style", "Style and Lint Verification",
+        var lintAndStatic = new CiJob("lint-and-static", "Lint and Static Verification",
         [
-            new("style", "Install Node dependencies") { Commands = [Pnpm("install", "--frozen-lockfile")] },
-            new("style", "Build UI package") { Commands = [Pnpm("--filter", "ui", "build")] },
-            new("style", "Run frontend style and lint")
+            new("lint-and-static", "Install Node dependencies") { Commands = [Pnpm("install", "--frozen-lockfile")] },
+            new("lint-and-static", "Build UI package") { Commands = [Pnpm("--filter", "ui", "build")] },
+            new("lint-and-static", "Run frontend style and lint")
             {
-                Always = true,
                 Commands =
                 [
                     Pnpm("--filter", "web", "--filter", "subject-portal", "--filter", "ui", "exec", "prettier", "--check", "."),
                     Pnpm("-r", "lint"),
                 ],
             },
-            new("style", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
-            new("style", "Verify .NET C# code formatting (.editorconfig)")
-            {
-                Always = true,
-                Commands = [Dotnet("format", "Cadence.sln", "--verify-no-changes", "--no-restore")],
-            },
-            new("style", "Run Cadence quality sentinels") { Always = true, Commands = [CadenceCli(true, "check")] },
-            new("style", "Run architecture tests")
-            {
-                Always = true,
-                Commands = [Dotnet("test", "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj", "--no-build")],
-            },
-            new("style", "Publish the CLI as Native AOT")
-            {
-                Always = true,
-                Commands =
-                [
-                    Dotnet("publish", Cli, "-c", "Release", "-r", AotRuntimeIdentifier, "-o", Path.Combine(Path.GetTempPath(), "cadence-ci-aot"))
-                        with { CiText = $"dotnet publish {Cli} -c Release -r linux-x64" },
-                ],
-            },
-            new("style", "Run hexagonal contract verification")
-            {
-                Always = true,
-                CoveredBy = QualitySentinels,
-                Commands = [CadenceCli(true, "check", "contracts")],
-            },
-            new("style", "Run Hadolint on Dockerfiles")
+            new("lint-and-static", "Run Hadolint on Dockerfiles")
             {
                 RequiredTool = "hadolint",
                 ToolHint = "install hadolint 2.15.1 (CI downloads it from github.com/hadolint/hadolint/releases)",
                 Files = CiFileSource.Dockerfiles,
                 Commands = [new CiCommand("hadolint", ["--failure-threshold", "error"])],
             },
-            new("style", "Run ShellCheck on shell scripts")
+            new("lint-and-static", "Run ShellCheck on shell scripts")
             {
                 RequiredTool = "shellcheck",
                 ToolHint = "install ShellCheck (CI runs 'apt-get install shellcheck')",
                 Files = CiFileSource.ShellScripts,
                 Commands = [new CiCommand("shellcheck", [])],
             },
-            new("style", "Run ADR validation") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "adrs")] },
-            new("style", "Run CODEOWNERS coverage validation") { Always = true, Commands = [CadenceCli(true, "validate-codeowners")] },
-            new("style", "Run Markdown validation") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "markdown")] },
-            new("style", "Run documentation compilation")
+            new("lint-and-static", "Run Markdown validation") { Commands = [CadenceCli(false, "check", "markdown")] },
+        ]);
+
+        var dotnetQuality = new CiJob("dotnet-quality", ".NET Quality & Sentinel Checks",
+        [
+            new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
+            new("dotnet-quality", "Verify .NET C# code formatting (.editorconfig)")
             {
-                Always = true,
+                Commands = [Dotnet("format", "Cadence.sln", "--verify-no-changes", "--no-restore")],
+            },
+            new("dotnet-quality", "Run Cadence quality sentinels") { Commands = [CadenceCli(true, "check")] },
+            new("dotnet-quality", "Run architecture tests")
+            {
+                Commands = [Dotnet("test", "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj", "--no-build")],
+            },
+            new("dotnet-quality", "Run hexagonal contract verification")
+            {
+                CoveredBy = QualitySentinels,
+                Commands = [CadenceCli(true, "check", "contracts")],
+            },
+            new("dotnet-quality", "Run ADR validation") { CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "adrs")] },
+            new("dotnet-quality", "Run CODEOWNERS coverage validation") { Commands = [CadenceCli(true, "validate-codeowners")] },
+            new("dotnet-quality", "Verify schema documentation freshness")
+            {
+                CoveredBy = QualitySentinels,
+                Commands = [CadenceCli(true, "check", "schema-doc")],
+            },
+            new("dotnet-quality", "Verify OpenAPI specification drift") { CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "openapi")] },
+            new("dotnet-quality", "Run requirements traceability validation") { Commands = [CadenceCli(true, "check", "rtm")] },
+            new("dotnet-quality", "Run code duplication verification")
+            {
+                CoveredBy = QualitySentinels,
+                Files = CiFileSource.ChangedFiles,
+                FilePattern = @"\.(py|js|vue|css|cs)$",
+                NoFilesMessage = "No relevant files changed.",
+                Commands = [CadenceCli(true, "check", "duplication")],
+            },
+        ]);
+
+        var nativeAotBuild = new CiJob("native-aot-build", "Native AOT Compilation",
+        [
+            new("native-aot-build", "Publish the CLI as Native AOT")
+            {
+                Commands =
+                [
+                    Dotnet("publish", Cli, "-c", "Release", "-r", AotRuntimeIdentifier, "-o", Path.Combine(Path.GetTempPath(), "cadence-ci-aot"))
+                        with { CiText = $"dotnet publish {Cli} -c Release -r linux-x64" },
+                ],
+            },
+        ]);
+
+        var docsBuild = new CiJob("docs-build", "Documentation Compilation",
+        [
+            new("docs-build", "Install Node dependencies") { Commands = [Pnpm("install", "--frozen-lockfile")] },
+            new("docs-build", "Run documentation compilation")
+            {
                 Commands = [Pnpm("docs:build")],
 
                 // scripts/build-docs.js runs the full 'cadence check' again before building; it skips that when the
                 // same gates already passed in this run (#5028). It also rewrites the RTM as a draft.
                 EnvironmentIfPassed = [new(QualitySentinels, "CADENCE_DOCS_SKIP_CHECKS", "1")],
                 RestoreFiles = [RtmReport, IqReport],
-            },
-            new("style", "Verify schema documentation freshness")
-            {
-                Always = true,
-                CoveredBy = QualitySentinels,
-                Commands = [CadenceCli(true, "check", "schema-doc")],
-            },
-            new("style", "Verify OpenAPI specification drift") { Always = true, CoveredBy = QualitySentinels, Commands = [CadenceCli(true, "check", "openapi")] },
-            new("style", "Run requirements traceability validation") { Always = true, Commands = [CadenceCli(true, "check", "rtm")] },
-            new("style", "Run code duplication verification")
-            {
-                Always = true,
-                CoveredBy = QualitySentinels,
-                Files = CiFileSource.ChangedFiles,
-                FilePattern = @"\.(py|js|vue|css|cs)$",
-                NoFilesMessage = "No relevant files changed.",
-                Commands = [CadenceCli(true, "check", "duplication")],
             },
         ]);
 
@@ -389,7 +394,7 @@ public static class CiPlan
             },
         };
 
-        return [style, security, frontend, dotnetTests, e2e, compliance];
+        return [lintAndStatic, dotnetQuality, nativeAotBuild, docsBuild, security, frontend, dotnetTests, e2e, compliance];
     }
 
     /// <summary>

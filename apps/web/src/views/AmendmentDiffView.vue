@@ -320,8 +320,7 @@
           role="alert"
           data-testid="diff-load-error"
         >
-          Amendment diff could not be loaded from the Designer service:
-          {{ diffLoadError }}. No impact summary or SoA diff is shown.
+          {{ presentError("Amendment diff could not be loaded: " + diffLoadError) }}. No impact summary or SoA diff is shown.
         </div>
 
         <!-- Amendment Impact Summary Card -->
@@ -1382,10 +1381,12 @@ import { apiClient } from "../api/apiClient";
 import { designerService } from "../api/designer";
 import { useClinicalStore } from "../stores/clinical";
 import { useToastStore } from "../stores/toasts.js";
+import { useErrorPresenter } from "../composables/useErrorPresenter";
 
 const store = useClinicalStore();
 const clinicalStore = store;
 const toasts = useToastStore();
+const { presentError } = useErrorPresenter();
 
 // Mode & Tab Navigation State
 const activeMode = ref("manager"); // 'manager' | 'coordinator'

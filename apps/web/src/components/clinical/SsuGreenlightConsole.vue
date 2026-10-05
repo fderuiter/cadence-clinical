@@ -276,6 +276,7 @@
                   type="checkbox"
                   aria-label="Select all compliant sites"
                   title="Select / Deselect All Compliant Sites"
+                  aria-label="Select all compliant sites"
                   :checked="isAllCompliantSelected"
                   :disabled="compliantSites.length === 0"
                   @change="toggleSelectAllCompliant"

@@ -6,7 +6,9 @@
     :aria-busy="record.loading"
   >
     <header class="record-header">
-      <h2 id="participant-record-title">{{ participant.subject_id }}</h2>
+      <h2 id="participant-record-title">
+        {{ participant.subject_id }}
+      </h2>
       <span class="record-meta">
         {{ participantStateLabel(participant.status) }} ·
         {{ participant.site_id ? `Site ${participant.site_id}` : "No site" }}
@@ -44,7 +46,9 @@
           No observations recorded for {{ participant.subject_id }} yet.
         </p>
         <template v-for="group in visitGroups" v-else :key="group.visit">
-          <h4 class="visit-title">{{ group.visit }}</h4>
+          <h4 class="visit-title">
+            {{ group.visit }}
+          </h4>
           <table class="record-table">
             <thead>
               <tr>
@@ -117,7 +121,9 @@
           </thead>
           <tbody>
             <tr v-for="form in record.forms" :key="form.id">
-              <th scope="row">{{ form.form_id }}</th>
+              <th scope="row">
+                {{ form.form_id }}
+              </th>
               <td>{{ form.visit_id || "Not recorded" }}</td>
               <td>
                 {{ FORM_STATUS[form.status] ?? form.status
