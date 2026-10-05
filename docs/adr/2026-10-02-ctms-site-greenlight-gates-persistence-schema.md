@@ -1,4 +1,4 @@
-# ADR-2806: CTMS Site Greenlight Gates Persistence Schema
+# ADR-2807: CTMS Site Greenlight Gates Persistence Schema
 
 - **Status:** Accepted
 - **Date:** 2026-10-02

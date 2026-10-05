@@ -37,14 +37,16 @@
 
     <!-- Active Form Viewport Frame -->
     <div class="form-canvas-frame">
-      <form @submit.prevent="handleSubmit" class="rendered-form">
+      <form class="rendered-form" @submit.prevent="handleSubmit">
         <!-- Render UI Schema Sections -->
         <div
           v-for="section in formDefinition.ui_schema.sections"
           :key="section.id"
           class="form-section-card"
         >
-          <h4 class="section-title">{{ section.title }}</h4>
+          <h4 class="section-title">
+            {{ section.title }}
+          </h4>
 
           <div
             class="section-grid"
@@ -77,9 +79,9 @@
               <template v-if="widget.widget === 'number_input'">
                 <input
                   :id="'widget-' + widget.variable_id"
+                  v-model.number="formData[widget.variable_id]"
                   type="number"
                   class="form-input"
-                  v-model.number="formData[widget.variable_id]"
                   :placeholder="widget.placeholder || ''"
                   @input="evaluateRules"
                 />
@@ -110,9 +112,9 @@
               <template v-else>
                 <input
                   :id="'widget-' + widget.variable_id"
+                  v-model="formData[widget.variable_id]"
                   type="text"
                   class="form-input"
-                  v-model="formData[widget.variable_id]"
                   :placeholder="widget.placeholder || ''"
                   @input="evaluateRules"
                 />
