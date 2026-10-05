@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import { i18n, setGlobalLocale, SUPPORTED_LOCALES } from "../../src/i18n/index.js";
+import {
+  i18n,
+  setGlobalLocale,
+  SUPPORTED_LOCALES,
+} from "../../src/i18n/index.js";
 import LanguageTranslationTabs from "../../src/components/econsent/LanguageTranslationTabs.vue";
 
 describe("Vue i18n Locale Catalogs & Integration", () => {
@@ -18,34 +22,49 @@ describe("Vue i18n Locale Catalogs & Integration", () => {
 
   it("should resolve translation keys correctly across locales", () => {
     setGlobalLocale("en");
-    expect(i18n.global.t("econsent.authoring.title")).toBe("eConsent Template Authoring");
+    expect(i18n.global.t("econsent.authoring.title")).toBe(
+      "eConsent Template Authoring"
+    );
 
     setGlobalLocale("es");
-    expect(i18n.global.t("econsent.authoring.title")).toBe("Redacción de plantillas de eConsent");
+    expect(i18n.global.t("econsent.authoring.title")).toBe(
+      "Redacción de plantillas de eConsent"
+    );
 
     setGlobalLocale("fr");
-    expect(i18n.global.t("econsent.authoring.title")).toBe("Raction de modèles eConsent");
+    expect(i18n.global.t("econsent.authoring.title")).toBe(
+      "Raction de modèles eConsent"
+    );
 
     setGlobalLocale("de");
-    expect(i18n.global.t("econsent.authoring.title")).toBe("eConsent-Vorlagenerstellung");
+    expect(i18n.global.t("econsent.authoring.title")).toBe(
+      "eConsent-Vorlagenerstellung"
+    );
   });
 
   it("should perform variable interpolation properly", () => {
     setGlobalLocale("en");
     expect(
-      i18n.global.t("econsent.editor.editSection", { title: "Informed Consent" })
+      i18n.global.t("econsent.editor.editSection", {
+        title: "Informed Consent",
+      })
     ).toBe("Edit Section: Informed Consent");
 
     setGlobalLocale("es");
     expect(
-      i18n.global.t("econsent.editor.editSection", { title: "Informed Consent" })
+      i18n.global.t("econsent.editor.editSection", {
+        title: "Informed Consent",
+      })
     ).toBe("Editar sección: Informed Consent");
   });
 
   it("should fall back to English if key is missing in active locale", () => {
     setGlobalLocale("es");
     // Add a temporary missing key check with missing key fallback
-    const result = i18n.global.t("econsent.editor.nonExistentKey", "Default English Fallback");
+    const result = i18n.global.t(
+      "econsent.editor.nonExistentKey",
+      "Default English Fallback"
+    );
     expect(result).toBe("Default English Fallback");
   });
 
@@ -74,6 +93,8 @@ describe("Vue i18n Locale Catalogs & Integration", () => {
 
     expect(i18n.global.locale.value).toBe("es");
     expect(localStorage.getItem("user_locale")).toBe("es");
-    expect(wrapper.text()).toContain("Traducciones de consentimiento localizadas:");
+    expect(wrapper.text()).toContain(
+      "Traducciones de consentimiento localizadas:"
+    );
   });
 });

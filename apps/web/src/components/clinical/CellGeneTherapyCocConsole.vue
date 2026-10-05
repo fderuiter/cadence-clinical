@@ -91,7 +91,8 @@
           <span class="metric-label">Donation ID (ISBT 128 DIN)</span>
           <span class="metric-value code-font">{{ cocData.din }}</span>
           <span class="metric-sub"
-            >{{ formatDatabaseKey("collection_site_id") }}: {{ formatFacilityCode(cocData.collection_site_id) }}</span
+            >{{ formatDatabaseKey("collection_site_id") }}:
+            {{ formatFacilityCode(cocData.collection_site_id) }}</span
           >
         </div>
 
@@ -107,7 +108,11 @@
             cocData.batch_id || "Pending Synthesis"
           }}</span>
           <span class="metric-sub"
-            >{{ formatDatabaseKey("manufacturing_facility_id") }}: {{ formatFacilityCode(cocData.manufacturing_facility_id) || "In Queue" }}</span
+            >{{ formatDatabaseKey("manufacturing_facility_id") }}:
+            {{
+              formatFacilityCode(cocData.manufacturing_facility_id) ||
+              "In Queue"
+            }}</span
           >
         </div>
 
@@ -795,7 +800,8 @@
 import { ref, reactive, onMounted } from "vue";
 import { useDomainFormatter } from "@/composables/useDomainFormatter";
 
-const { formatLabel, formatDatabaseKey, formatFacilityCode } = useDomainFormatter();
+const { formatLabel, formatDatabaseKey, formatFacilityCode } =
+  useDomainFormatter();
 
 interface CGTChainOfCustody {
   id: string;

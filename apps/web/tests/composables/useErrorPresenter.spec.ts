@@ -2,10 +2,12 @@ import { describe, it, expect, vi } from "vitest";
 import { useErrorPresenter } from "@/composables/useErrorPresenter";
 
 describe("useErrorPresenter composable", () => {
-  const { presentError, formatErrorMessage, sanitizeError } = useErrorPresenter();
+  const { presentError, formatErrorMessage, sanitizeError } =
+    useErrorPresenter();
 
   it("replaces internal microservice names with clean clinical domain service names", () => {
-    const rawError = "Amendment diff could not be loaded from the Designer service: HTTP 500";
+    const rawError =
+      "Amendment diff could not be loaded from the Designer service: HTTP 500";
     const presented = presentError(rawError);
     expect(presented).not.toContain("Designer service");
     expect(presented).toContain("protocol design service");

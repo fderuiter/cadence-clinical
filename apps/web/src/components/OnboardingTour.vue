@@ -7,7 +7,9 @@
     <!-- Translucent backdrop only on unanchored modal steps to highlight onboarding introduction/completion without blocking interaction during edits -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
-      v-if="currentStep === 1 || currentStep === totalSteps || !hasTargetElement"
+      v-if="
+        currentStep === 1 || currentStep === totalSteps || !hasTargetElement
+      "
       class="onboarding-backdrop"
       style="
         position: fixed;
@@ -207,7 +209,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useAuthStore } from "../stores/auth";
@@ -235,11 +237,15 @@ try {
 }
 
 const currentStep = computed(() => onboardingStore.currentStep);
-const currentStepConfig = computed(() => onboardingStore.currentStepConfig || {});
+const currentStepConfig = computed(
+  () => onboardingStore.currentStepConfig || {}
+);
 const totalSteps = computed(() => onboardingStore.totalSteps || 5);
 
 const stepTitle = computed(() => currentStepConfig.value?.title || "");
-const stepDescription = computed(() => currentStepConfig.value?.description || "");
+const stepDescription = computed(
+  () => currentStepConfig.value?.description || ""
+);
 const dynamicPrompt = computed(() => currentStepConfig.value?.prompt || "");
 const stepTargetDescription = computed(
   () => currentStepConfig.value?.title || `Step ${currentStep.value}`
@@ -278,7 +284,10 @@ async function syncStepRoute() {
         }
       }
       if (needsUpdate) {
-        await router.push({ name: config.routeName || route.name, query: newQuery });
+        await router.push({
+          name: config.routeName || route.name,
+          query: newQuery,
+        });
       }
     }
   }
@@ -295,10 +304,42 @@ const updatePosition = () => {
   const config = currentStepConfig.value;
   const selector = config?.targetSelector;
 
-  nextTick(() => {
-    if (!onboardingStore.isActive || onboardingStore.disabled) return;
+  if (!selector) {
+    hasTargetElement.value = false;
+    popoverStyle.value = {
+      position: "fixed",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      zIndex: 1000,
+    };
+    return;
+  }
 
-    if (!selector) {
+  const MAX_RETRIES = 5;
+  let attempts = 0;
+
+  const checkAndPosition = () => {
+    const el = document.querySelector(selector);
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        popoverStyle.value = {
+          position: "fixed",
+          top: `${rect.bottom + 12}px`,
+          left: `${rect.left + rect.width / 2}px`,
+          transform: "translateX(-50%)",
+          zIndex: 1000,
+        };
+        hasTargetElement.value = true;
+        currentRafId = null;
+        return;
+      }
+    }
+    if (attempts < MAX_RETRIES) {
+      attempts++;
+      currentRafId = requestAnimationFrame(checkAndPosition);
+    } else {
       hasTargetElement.value = false;
       popoverStyle.value = {
         position: "fixed",
@@ -307,47 +348,11 @@ const updatePosition = () => {
         transform: "translate(-50%, -50%)",
         zIndex: 1000,
       };
-      return;
+      currentRafId = null;
     }
+  };
 
-    const MAX_RETRIES = 5;
-    let attempts = 0;
-
-    const checkAndPosition = () => {
-      const el = document.querySelector(selector);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          popoverStyle.value = {
-            position: "fixed",
-            top: `${rect.bottom + 12}px`,
-            left: `${rect.left + rect.width / 2}px`,
-            transform: "translateX(-50%)",
-            zIndex: 1000,
-          };
-          hasTargetElement.value = true;
-          currentRafId = null;
-          return;
-        }
-      }
-      if (attempts < MAX_RETRIES) {
-        attempts++;
-        currentRafId = requestAnimationFrame(checkAndPosition);
-      } else {
-        hasTargetElement.value = false;
-        popoverStyle.value = {
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          zIndex: 1000,
-        };
-        currentRafId = null;
-      }
-    };
-
-    currentRafId = requestAnimationFrame(checkAndPosition);
-  });
+  checkAndPosition();
 };
 
 const handleNext = async () => {
@@ -372,18 +377,15 @@ const handleComplete = () => {
   onboardingStore.disableTour();
 };
 
-watch(
-  currentStep,
-  async () => {
-    const config = currentStepConfig.value;
-    if (config?.query?.tab) {
-      emit("update:activeTab", config.query.tab);
-    }
-    await syncStepRoute();
-    updatePosition();
-    setTimeout(updatePosition, 50);
+watch(currentStep, async () => {
+  const config = currentStepConfig.value;
+  if (config?.query?.tab) {
+    emit("update:activeTab", config.query.tab);
   }
-);
+  await syncStepRoute();
+  updatePosition();
+  setTimeout(updatePosition, 50);
+});
 
 watch(
   () => route?.fullPath,
