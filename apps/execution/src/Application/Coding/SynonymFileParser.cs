@@ -12,7 +12,7 @@ namespace Cadence.Apps.Execution.Application.Coding;
 public static class SynonymFileParser
 {
     public const long MaxFileSizeBytes = 50 * 1024 * 1024; // 50 MB
-    public const int MaxRowCount = 50000;
+    public const int MaxRowCount = 50000; // deid-ignore
 
     public static List<SynonymRowDto> Parse(byte[] fileBytes, string fileName)
     {
@@ -109,7 +109,7 @@ public static class SynonymFileParser
         {
             using var entryStream = sharedStringsEntry.Open();
             var xdoc = XDocument.Load(entryStream);
-            XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+            XNamespace ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"; // deid-ignore
 
             foreach (var si in xdoc.Descendants(ns + "si"))
             {
@@ -127,7 +127,7 @@ public static class SynonymFileParser
 
         using var sheetStream = sheetEntry.Open();
         var sheetDoc = XDocument.Load(sheetStream);
-        XNamespace sns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+        XNamespace sns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"; // deid-ignore
 
         var sheetData = sheetDoc.Descendants(sns + "sheetData").FirstOrDefault();
         if (sheetData == null)
