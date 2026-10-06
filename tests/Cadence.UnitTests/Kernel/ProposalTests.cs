@@ -62,7 +62,8 @@ public sealed class ProposalTests
         catalog.Find(typeof(ApproveProposal))!.Capability.Should().Be(new Capability("proposal.approve", VerbClass.Approve));
         catalog.Find(typeof(RejectProposal))!.Capability.Should().Be(new Capability("proposal.reject", VerbClass.Approve));
         catalog.Find(typeof(WithdrawProposal))!.Capability.Should().Be(new Capability("proposal.withdraw", VerbClass.Propose));
-        foreach (var command in new[] { typeof(ApproveProposal), typeof(RejectProposal), typeof(WithdrawProposal) })
+        catalog.Find(typeof(EscalateProposal))!.Capability.Should().Be(new Capability("proposal.escalate", VerbClass.Approve));
+        foreach (var command in new[] { typeof(ApproveProposal), typeof(RejectProposal), typeof(WithdrawProposal), typeof(EscalateProposal) })
         {
             catalog.Find(command)!.ResourceKind.Should().Be(NodeKinds.Proposal);
         }
@@ -277,7 +278,7 @@ public sealed class ProposalTests
         proposal.DecisionReason.Should().BeNull();
         proposal.ToState(now).Should().BeEquivalentTo(new ProposalState(
             proposal.Id, proposal.StudyId, ProposalStatus.Approved, proposal.ContentHash, Agent.Id, ActorKind.AutomationAgent, "claude-opus-5",
-            proposal.ExpiresAt, now, Approver.Id, attestation));
+            proposal.ExpiresAt, now, Approver.Id, attestation, ConfidenceScore: null, ConfidenceTier: null, IsEscalated: false));
 
         proposal.Approve(Approver, AttestationId.New(), now).Should().Be(ProposalErrors.NotOpen with { Message = "The proposal is already Approved." });
         proposal.Reject(Approver, "No", now)!.Code.Should().Be(ProposalErrors.NotOpen.Code);
@@ -344,6 +345,61 @@ public sealed class ProposalTests
         proposal.Withdraw(Proposer, "Too late", expiresAt).Should().Be(ProposalErrors.Expired);
         proposal.Status.Should().Be(ProposalStatus.Open);
         proposal.DecidedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void ConfidenceScore_ValidatesAndCalculatesTier()
+    {
+        var high = Create(Command() with { ConfidenceScore = 0.92, ModelId = "claude-opus-5" }, Agent);
+        high.ConfidenceScore.Should().Be(0.92);
+        high.ConfidenceTier.Should().Be("High");
+
+        var medium = Create(Command() with { ConfidenceScore = 0.78, ModelId = "claude-opus-5" }, Agent);
+        medium.ConfidenceScore.Should().Be(0.78);
+        medium.ConfidenceTier.Should().Be("Medium");
+
+        var low = Create(Command() with { ConfidenceScore = 0.55, ModelId = "claude-opus-5" }, Agent);
+        low.ConfidenceScore.Should().Be(0.55);
+        low.ConfidenceTier.Should().Be("Low");
+
+        Error(Command() with { ConfidenceScore = -0.1 }, Proposer).Code.Should().Be(ProposalErrors.InvalidConfidenceScore.Code);
+        Error(Command() with { ConfidenceScore = 1.05 }, Proposer).Code.Should().Be(ProposalErrors.InvalidConfidenceScore.Code);
+    }
+
+    [Fact]
+    public void AutoEscalation_TriggersOnLowConfidenceOrPolicy()
+    {
+        var highProp = Create(Command() with { ConfidenceScore = 0.88, ModelId = "claude-opus-5" }, Agent);
+        highProp.IsEscalated.Should().BeFalse();
+
+        var lowProp = Create(Command() with { ConfidenceScore = 0.60, ModelId = "claude-opus-5" }, Agent);
+        lowProp.IsEscalated.Should().BeTrue();
+        lowProp.EscalatedTo.Should().Be("Manual Review");
+        lowProp.EscalationReason.Should().Contain("Confidence score (0.60) is below threshold (0.75)");
+        lowProp.EscalationPolicy.Should().Be("LowConfidenceAutoEscalation");
+
+        var forceProp = Create(Command() with { ConfidenceScore = 0.95, EscalationPolicy = "ForceEscalation", ModelId = "claude-opus-5" }, Agent);
+        forceProp.IsEscalated.Should().BeTrue();
+        forceProp.EscalationReason.Should().Contain("Policy explicitly requested escalation");
+    }
+
+    [Fact]
+    public void Escalate_UpdatesEscalationStateAndValidatesInputs()
+    {
+        var proposal = Create(Command(), Proposer);
+        var now = _clock.Advance(TimeSpan.FromMinutes(10));
+
+        proposal.Escalate(Approver, "", "Needs review", now).Should().Be(ProposalErrors.EscalationTargetRequired);
+
+        proposal.Escalate(Approver, "Medical Director", "Complex protocol change", now).Should().BeNull();
+        proposal.IsEscalated.Should().BeTrue();
+        proposal.EscalatedTo.Should().Be("Medical Director");
+        proposal.EscalationReason.Should().Be("Complex protocol change");
+        proposal.EscalatedById.Should().Be(Approver.Id);
+        proposal.EscalatedByKind.Should().Be(ActorKind.Person);
+        proposal.EscalatedAt.Should().Be(now);
+
+        proposal.Escalate(Approver, "Safety Board", "Duplicate escalation", now).Should().Be(ProposalErrors.AlreadyEscalated);
     }
 
     private Propose Command() => new(
