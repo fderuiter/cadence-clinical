@@ -230,10 +230,28 @@ export const interopService = {
     );
   },
 
+  batchAcceptEhrCandidates(body: unknown, options: Record<string, unknown> = {}) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/interop/esource/reconcile/batch-accept", {
+        body: body as paths["/api/v1/interop/esource/reconcile/batch-accept"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
+    );
+  },
+
   rejectEhrCandidate(body: unknown, options: Record<string, unknown> = {}) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/esource/reconcile/reject", {
         body: body as paths["/api/v1/interop/esource/reconcile/reject"]["post"]["requestBody"]["content"]["application/json"],
+        ...options,
+      })
+    );
+  },
+
+  batchRejectEhrCandidates(body: unknown, options: Record<string, unknown> = {}) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/interop/esource/reconcile/batch-reject", {
+        body: body as paths["/api/v1/interop/esource/reconcile/batch-reject"]["post"]["requestBody"]["content"]["application/json"],
         ...options,
       })
     );

@@ -16,11 +16,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Counts cover the requirement-tagged test methods in section 3. Whole-suite totals are in the TRX files under
 `TestResults/gxp/`, so this report only changes when a tagged test or its result changes.
 
-- **Requirement-Tagged Test Methods:** 201
-- **Passed:** 142 🟢
+- **Requirement-Tagged Test Methods:** 205
+- **Passed:** 156 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 49 ⚪
-- **Not Run:** 10
+- **Not Run:** 0
 - **Pass Rate (of executed):** 100.00%
 
 ## 2. Installation Qualification (IQ)
@@ -107,9 +107,9 @@ out so the report only changes when results change; they are in the TRX files un
 | `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
 | `EvaluateInlineConstraints_FlagsReferenceRangeViolations` | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests` | SRS-EDC-002 | 🟢 PASSED |
-| `BatchSignOff_Exceeds100SubjectsCap_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | ⚪ (NOT RUN) NOT RUN |
-| `BatchSignOff_NonPiRole_RejectsWithForbidden` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | ⚪ (NOT RUN) NOT RUN |
-| `BatchSignOff_SubjectLevel_ApprovesCompletedSubmissionsAndReturnsSummary` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | ⚪ (NOT RUN) NOT RUN |
+| `BatchSignOff_Exceeds100SubjectsCap_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
+| `BatchSignOff_NonPiRole_RejectsWithForbidden` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
+| `BatchSignOff_SubjectLevel_ApprovesCompletedSubmissionsAndReturnsSummary` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
 | `ChangingRoute_WithoutAChangeReason_Returns400` | `Cadence.UnitTests.Execution.Endpoints.LegacyAliasChangeReasonTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ApproveFormSubmission_Handler_WithInvalidHmac_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
 | `ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
@@ -192,19 +192,23 @@ out so the report only changes when results change; they are in the TRX files un
 | `SignatureVerification_WithoutSignIn_Returns401` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
 | `TokenEndpoint_IsDerivedFromTheOidcSettings` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
 | `AcceptCandidate_CommitsValueAndWritesGxPAuditAndESignature` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-SYS-001 | 🟢 PASSED |
+| `BatchAcceptCandidates_CommitsAllValidCandidatesAndWritesAuditLogs` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-SYS-001 | 🟢 PASSED |
+| `BatchAcceptCandidates_ExceedingLimit_ReturnsBadRequest` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | 🟢 PASSED |
+| `BatchOperation_WithNonExistentCandidateId_RollsBackTransaction` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | 🟢 PASSED |
+| `BatchRejectCandidates_RequiresRationaleAndUpdatesStatus` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
 | `GenerateAndVerifySmartAssertion_ValidatesOAuth2AssertionToken` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
 | `GetProvenanceAudit_ReturnsRawFhirPayloadAndAuditTrail` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
 | `PollHospitalEhr_IngestsCandidatesWithDiscrepancyClassification` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
 | `RaiseClinicalQuery_RegistersQueryAndUpdatesCandidateStatus` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | 🟢 PASSED |
 | `RegisterAndListEndpoints_SuccessfullyManagesEhrEndpoints` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
 | `RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
-| `DatabaseLockToken_IssueAndRevoke_UpdatesTokenStateAndAuditTrail` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (NOT RUN) NOT RUN |
-| `ExecuteInSandbox_ExecutesProgramAndGeneratesArtifactsAndManifestDigest` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (NOT RUN) NOT RUN |
-| `ExecutionManifest_VerifySeal_ReturnsValidWhenUntampered` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (NOT RUN) NOT RUN |
-| `ValidateLockfile_TamperedDigest_ReturnsTamperedStatus` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (NOT RUN) NOT RUN |
-| `ValidateLockfile_UnqualifiedPackageWithStrictQualification_RejectsPackage` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (NOT RUN) NOT RUN |
-| `ValidateLockfile_ValidRenvLock_ParsesRPackages` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (NOT RUN) NOT RUN |
-| `ValidateLockfile_ValidUvLock_ReturnsValidStatusAndParsedPackages` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (NOT RUN) NOT RUN |
+| `DatabaseLockToken_IssueAndRevoke_UpdatesTokenStateAndAuditTrail` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ExecuteInSandbox_ExecutesProgramAndGeneratesArtifactsAndManifestDigest` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ExecutionManifest_VerifySeal_ReturnsValidWhenUntampered` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ValidateLockfile_TamperedDigest_ReturnsTamperedStatus` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ValidateLockfile_UnqualifiedPackageWithStrictQualification_RejectsPackage` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ValidateLockfile_ValidRenvLock_ParsesRPackages` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ValidateLockfile_ValidUvLock_ReturnsValidStatusAndParsedPackages` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
 | `EveryRead_IsRefused_WhenTheSignedTenantIsNotAKernelTenant` | `Cadence.UnitTests.Kernel.Api.KernelApiHostTests` | PRD-CRF-013 | 🟢 PASSED |
 | `Navigation_ReadsInTheCallersTenant` | `Cadence.UnitTests.Kernel.Api.KernelApiHostTests` | PRD-CRF-013 | 🟢 PASSED |
 | `EnrollmentTransitionsFollowTheLifecycle` | `Cadence.UnitTests.Kernel.EnrollmentTests` | PRD-SUB-001 | 🟢 PASSED |
@@ -238,7 +242,7 @@ out so the report only changes when results change; they are in the TRX files un
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
-Qualified Requirements: 20 of 195
+Qualified Requirements: 21 of 195
 
 ## 5. Qualification Review & Authorization
 
@@ -252,4 +256,4 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** 36b304ddb03f8aca72db274b37c0daf8106895a3e1cb64ecd97f56a20bbacfd2
+- **Content Hash (SHA-256):** dcbdde03e6b4efa04d4fab181d1b6dd6f0b9a7fecba7e3471f95db437ac8e759

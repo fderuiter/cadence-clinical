@@ -15,7 +15,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [execution](execution.md) | 47 |
 | [fileshare](fileshare.md) | 2 |
 | [imaging](imaging.md) | 9 |
-| [interop](interop.md) | 26 |
+| [interop](interop.md) | 28 |
 | [kernel](kernel.md) | 18 |
 | [knowledge](knowledge.md) | 2 |
 | [notifications](notifications.md) | 3 |

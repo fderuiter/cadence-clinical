@@ -3887,6 +3887,56 @@
         }
       }
     },
+    "/api/v1/interop/esource/reconcile/batch-accept": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "BatchAcceptCandidates",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrReconcileBatchAcceptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrReconcileBatchActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/interop/esource/reconcile/reject": {
       "post": {
         "tags": [
@@ -3910,6 +3960,56 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Interop_EhrReconcileActionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/esource/reconcile/batch-reject": {
+      "post": {
+        "tags": [
+          "eSource Reconciliation \u0026 SMART on FHIR"
+        ],
+        "operationId": "BatchRejectCandidates",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_EhrReconcileBatchRejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_EhrReconcileBatchActionResponse"
                 }
               }
             }
@@ -12151,6 +12251,90 @@
           },
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "Interop_EhrReconcileBatchAcceptRequest": {
+        "required": [
+          "candidateIds",
+          "commitReason",
+          "changeReason"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "commitReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_EhrReconcileBatchActionResponse": {
+        "required": [
+          "success",
+          "actionCount",
+          "candidates",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "actionCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_EhrCandidateItemDto"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_EhrReconcileBatchRejectRequest": {
+        "required": [
+          "candidateIds",
+          "rejectionReason",
+          "changeReason"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rejectionReason": {
+            "type": "string"
+          },
+          "changeReason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

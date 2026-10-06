@@ -83,9 +83,21 @@ public static class EsourceEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
+        group.MapPost("/reconcile/batch-accept", BatchAcceptCandidatesAsync)
+            .WithName("BatchAcceptCandidates")
+            .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
         group.MapPost("/reconcile/reject", RejectCandidateAsync)
             .WithName("RejectCandidate")
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+
+        group.MapPost("/reconcile/batch-reject", BatchRejectCandidatesAsync)
+            .WithName("BatchRejectCandidates")
+            .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
@@ -532,6 +544,211 @@ public static class EsourceEndpoints
             Candidate: ToDto(item),
             ClinicalQueryId: null,
             Message: $"Candidate {item.TargetVariable} rejected with recorded justification."));
+    }
+
+    public static async Task<IResult> BatchAcceptCandidatesAsync(
+        EhrReconcileBatchAcceptRequest request,
+        InteropDbContext db,
+        IClock clock,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        if (request.CandidateIds == null || request.CandidateIds.Count == 0)
+        {
+            return Results.Problem("CandidateIds array cannot be empty for batch accept.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (request.CandidateIds.Count > 100)
+        {
+            return Results.Problem("Batch size exceeds maximum limit of 100 candidate items.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var distinctIds = request.CandidateIds.Distinct().ToList();
+
+        using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false)
+            : null;
+
+        try
+        {
+            var items = await db.EhrReconciliationCandidateRecords
+                .Where(c => distinctIds.Contains(c.Id))
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            if (items.Count != distinctIds.Count)
+            {
+                var missingIds = distinctIds.Except(items.Select(i => i.Id)).ToList();
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
+                }
+                return Results.Problem($"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}", statusCode: StatusCodes.Status404NotFound);
+            }
+
+            var callerUser = GetCallerUser(httpContext);
+            var callerRole = GetCallerRole(httpContext);
+            var now = clock.UtcNow;
+            var commitReason = string.IsNullOrWhiteSpace(request.CommitReason) ? "CRC batch accepted candidate data from hospital EHR" : request.CommitReason;
+
+            foreach (var item in items)
+            {
+                item.Status = "ACCEPTED";
+                item.ResolutionAction = "ACCEPT_COMMIT";
+                item.ResolutionReason = commitReason;
+                item.ResolvedBy = callerUser;
+                item.ResolvedAt = now;
+                item.CurrentEcrfValueJson = item.CandidateValueJson;
+                item.CurrentEcrfUpdatedAt = now;
+                item.DiscrepancyType = "EXACT_MATCH";
+                item.VersionIndex += 1;
+
+                var eSig = new
+                {
+                    signed_by = callerUser,
+                    role = callerRole,
+                    signed_at = now,
+                    meaning = "21 CFR Part 11 eSignature - Batch Accept & Commit eSource Records",
+                    reason = request.ChangeReason ?? "CRC eSource Batch Reconciliation Accept & Commit"
+                };
+                item.ElectronicSignatureJson = JsonSerializer.Serialize(eSig);
+
+                db.InteropAuditLogs.Add(new InteropAuditLog
+                {
+                    Timestamp = now,
+                    UserId = callerUser,
+                    UserRole = callerRole,
+                    Action = "ESOURCE_CANDIDATE_BATCH_ACCEPTED",
+                    Details = $"Batch accepted candidate {item.Id} ({item.TargetVariable}) into eCRF with value {item.CandidateValueJson}",
+                    ChangeReason = request.ChangeReason ?? "CRC eSource Batch Reconciliation Accept & Commit"
+                });
+            }
+
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(ct).ConfigureAwait(false);
+            }
+
+            var dtos = items.Select(ToDto).ToList();
+            return Results.Ok(new EhrReconcileBatchActionResponse(
+                Success: true,
+                ActionCount: dtos.Count,
+                Candidates: dtos,
+                Message: $"Successfully batch accepted {dtos.Count} candidate items."));
+        }
+        catch
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(ct).ConfigureAwait(false);
+            }
+            throw;
+        }
+    }
+
+    public static async Task<IResult> BatchRejectCandidatesAsync(
+        EhrReconcileBatchRejectRequest request,
+        InteropDbContext db,
+        IClock clock,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        if (request.CandidateIds == null || request.CandidateIds.Count == 0)
+        {
+            return Results.Problem("CandidateIds array cannot be empty for batch reject.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (request.CandidateIds.Count > 100)
+        {
+            return Results.Problem("Batch size exceeds maximum limit of 100 candidate items.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.RejectionReason))
+        {
+            return Results.Problem("Mandatory clinical rationale is required when batch rejecting candidate EHR records under GxP rules.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var distinctIds = request.CandidateIds.Distinct().ToList();
+
+        using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false)
+            : null;
+
+        try
+        {
+            var items = await db.EhrReconciliationCandidateRecords
+                .Where(c => distinctIds.Contains(c.Id))
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            if (items.Count != distinctIds.Count)
+            {
+                var missingIds = distinctIds.Except(items.Select(i => i.Id)).ToList();
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
+                }
+                return Results.Problem($"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}", statusCode: StatusCodes.Status404NotFound);
+            }
+
+            var callerUser = GetCallerUser(httpContext);
+            var callerRole = GetCallerRole(httpContext);
+            var now = clock.UtcNow;
+
+            foreach (var item in items)
+            {
+                item.Status = "REJECTED";
+                item.ResolutionAction = "REJECT";
+                item.ResolutionReason = request.RejectionReason.Trim();
+                item.ResolvedBy = callerUser;
+                item.ResolvedAt = now;
+                item.VersionIndex += 1;
+
+                var eSig = new
+                {
+                    signed_by = callerUser,
+                    role = callerRole,
+                    signed_at = now,
+                    meaning = "21 CFR Part 11 eSignature - Batch Reject eSource Records",
+                    reason = request.RejectionReason
+                };
+                item.ElectronicSignatureJson = JsonSerializer.Serialize(eSig);
+
+                db.InteropAuditLogs.Add(new InteropAuditLog
+                {
+                    Timestamp = now,
+                    UserId = callerUser,
+                    UserRole = callerRole,
+                    Action = "ESOURCE_CANDIDATE_BATCH_REJECTED",
+                    Details = $"Batch rejected candidate {item.Id} ({item.TargetVariable}). Clinical rationale: {request.RejectionReason}",
+                    ChangeReason = request.ChangeReason ?? "CRC eSource Batch Reconciliation Reject"
+                });
+            }
+
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(ct).ConfigureAwait(false);
+            }
+
+            var dtos = items.Select(ToDto).ToList();
+            return Results.Ok(new EhrReconcileBatchActionResponse(
+                Success: true,
+                ActionCount: dtos.Count,
+                Candidates: dtos,
+                Message: $"Successfully batch rejected {dtos.Count} candidate items."));
+        }
+        catch
+        {
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(ct).ConfigureAwait(false);
+            }
+            throw;
+        }
     }
 
     public static async Task<IResult> RaiseClinicalQueryAsync(
@@ -1020,8 +1237,18 @@ public record EhrReconcileAcceptRequest(
     string? CommitReason,
     string? ChangeReason);
 
+public record EhrReconcileBatchAcceptRequest(
+    List<string> CandidateIds,
+    string? CommitReason,
+    string? ChangeReason);
+
 public record EhrReconcileRejectRequest(
     string CandidateId,
+    string RejectionReason,
+    string? ChangeReason);
+
+public record EhrReconcileBatchRejectRequest(
+    List<string> CandidateIds,
     string RejectionReason,
     string? ChangeReason);
 
@@ -1035,6 +1262,12 @@ public record EhrReconcileActionResponse(
     bool Success,
     EhrCandidateItemDto Candidate,
     string? ClinicalQueryId,
+    string Message);
+
+public record EhrReconcileBatchActionResponse(
+    bool Success,
+    int ActionCount,
+    List<EhrCandidateItemDto> Candidates,
     string Message);
 
 public record EhrProvenanceResponse(
