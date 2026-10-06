@@ -34,7 +34,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
 | [`kernel.people`](#kernelpeople) | `Person` | 6 |
-| [`kernel.proposals`](#kernelproposals) | `Proposal` | 24 |
+| [`kernel.proposals`](#kernelproposals) | `Proposal` | 32 |
 | [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
 | [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 14 |
 | [`kernel.qualification_periods`](#kernelqualification_periods) | `QualificationPeriod` | 5 |
@@ -796,6 +796,7 @@ Entity: `Proposal`
 | `id` | `uuid` | no |  | PK |
 | `affected` | `text[]` | no |  |  |
 | `approval_attestation_id` | `uuid` | yes |  |  |
+| `confidence_score` | `double precision` | yes |  |  |
 | `content_hash` | `character varying(71)` | no |  |  |
 | `created_at` | `timestamp with time zone` | no |  |  |
 | `created_by` | `character varying(255)` | no |  |  |
@@ -803,8 +804,15 @@ Entity: `Proposal`
 | `decided_by_id` | `character varying(256)` | yes |  |  |
 | `decided_by_kind` | `character varying(32)` | yes |  |  |
 | `decision_reason` | `character varying(1000)` | yes |  |  |
+| `escalated_at` | `timestamp with time zone` | yes |  |  |
+| `escalated_by_id` | `character varying(256)` | yes |  |  |
+| `escalated_by_kind` | `character varying(32)` | yes |  |  |
+| `escalated_to` | `character varying(256)` | yes |  |  |
+| `escalation_policy` | `character varying(200)` | yes |  |  |
+| `escalation_reason` | `character varying(1000)` | yes |  |  |
 | `expires_at` | `timestamp with time zone` | no |  |  |
 | `intent` | `character varying(2000)` | no |  |  |
+| `is_escalated` | `boolean` | no |  |  |
 | `model_id` | `character varying(200)` | yes |  |  |
 | `plan_artifact_version_id` | `uuid` | no |  |  |
 | `proposed_at` | `timestamp with time zone` | no |  |  |
@@ -835,6 +843,7 @@ Indexes:
 Check constraints:
 
 - `ck_proposals_affected`: `cardinality(affected) <= 200`
+- `ck_proposals_confidence_score`: `confidence_score IS NULL OR (confidence_score >= 0.0 AND confidence_score <= 1.0)`
 - `ck_proposals_content_hash`: `content_hash ~ '^sha256:[0-9a-f]{64}$'`
 - `ck_proposals_decision`: `(status = 'Open' AND decided_at IS NULL AND decided_by_id IS NULL AND decided_by_kind IS NULL AND approval_attestation_id IS NULL AND decision_reason IS NULL) OR (status = 'Approved' AND decided_at IS NOT NULL AND decided_by_id IS NOT NULL AND decided_by_kind = 'Person' AND approval_attestation_id IS NOT NULL) OR (status IN ('Rejected', 'Withdrawn') AND decided_at IS NOT NULL AND decided_by_id IS NOT NULL AND decided_by_kind IS NOT NULL AND approval_attestation_id IS NULL AND decision_reason IS NOT NULL)`
 - `ck_proposals_expiry`: `expires_at > proposed_at AND expires_at <= proposed_at + interval '90 days'`
