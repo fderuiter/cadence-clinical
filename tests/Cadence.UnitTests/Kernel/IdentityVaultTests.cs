@@ -30,7 +30,7 @@ namespace Cadence.UnitTests.Kernel;
 [Trait("Category", "Unit")]
 public sealed class IdentityVaultTests
 {
-    private static readonly TenantId Tenant = TenantId.New();
+    private static readonly TenantId Tenant = new(Guid.Parse("00000000-0000-0000-0000-000000000001"));
     private static readonly Guid Subject = Guid.CreateVersion7();
 
     private static readonly IdentityDetails Jane = new()
@@ -180,7 +180,7 @@ public sealed class IdentityVaultTests
     [Fact(DisplayName = "RecordCommands_NeverSerializeOrPrintTheDetails")]
     public void RecordCommandsNeverSerializeOrPrintTheDetails()
     {
-        var command = new RecordPersonIdentity(Tenant, PersonId.New(), Jane, "key-1", "Registration at screening");
+        var command = new RecordPersonIdentity(Tenant, new PersonId(Guid.Parse("00000000-0000-0000-0000-000000000002")), Jane, "key-1", "Registration at screening");
         var other = command with { Details = new IdentityDetails { GivenName = "Somebody", FamilyName = "Else" } };
 
         foreach (var text in new[] { JsonSerializer.Serialize(command), command.ToString(), Jane.ToString() })
