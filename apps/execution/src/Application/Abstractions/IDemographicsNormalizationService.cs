@@ -27,13 +27,14 @@ public interface IDemographicsNormalizationService
     double? CalculateAge(DateOnly? birthDate, DateOnly? observationDate);
 
     /// <summary>
-    /// Safely extracts the normalized gender and current age from <paramref name="subject"/> — a
+    /// Safely extracts the normalized gender and age from <paramref name="subject"/> — a
     /// raw ciphertext <see cref="string"/>, an <see cref="IReadOnlyDictionary{TKey,TValue}"/>
     /// carrying an <c>"encrypted_demographics"</c> key, or any object exposing an
-    /// <c>EncryptedDemographics</c> property. Always returns at least <c>{"gender": "U", "age":
-    /// null}</c>, silently swallowing decrypt failures and any other exception. Never throws.
+    /// <c>EncryptedDemographics</c> property. Computes age relative to <paramref name="observationDate"/>
+    /// if provided, falling back to the current system clock date when omitted. Always returns at
+    /// least <c>{"gender": "U", "age": null}</c>, silently swallowing decrypt failures and any other exception. Never throws.
     /// </summary>
-    SafeDemographics GetSafeDemographics(object? subject, bool preserveCustom = false);
+    SafeDemographics GetSafeDemographics(object? subject, DateOnly? observationDate = null, bool preserveCustom = false);
 }
 
 /// <summary>
