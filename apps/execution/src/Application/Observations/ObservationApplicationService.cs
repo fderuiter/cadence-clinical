@@ -1,17 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.EditChecks;
 using Cadence.Apps.Execution.Application.Queries;
+using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
+using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Core.Domain;
+using Cadence.Core.Domain.Toxicity;
 using Cadence.Kernel;
 using Cadence.Kernel.Time;
 
@@ -19,7 +24,7 @@ namespace Cadence.Apps.Execution.Application.Observations;
 
 /// <summary>
 /// Application service implementing discrete observation ingestion, UCUM normalization,
-/// demographic reference range evaluation, and SDV audit verification.
+/// demographic reference range evaluation, CTCAE v5.0 toxicity grading, and SDV audit verification.
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-042
 /// @req:PRD-SYS-121
@@ -34,7 +39,10 @@ public sealed class ObservationApplicationService(
     IClock clock,
     ICurrentAuditContextAccessor auditContextAccessor,
     IDemographicsNormalizationService? demographicsNormalizationService = null,
-    IAutoQueryDispatchService? autoQueryDispatchService = null) : IObservationApplicationService
+    IAutoQueryDispatchService? autoQueryDispatchService = null,
+    IStagedAdverseEventReviewRepository? stagedReviewRepository = null,
+    IFormSubmissionRepository? formSubmissionRepository = null,
+    IClinicalQueryRepository? queryRepository = null) : IObservationApplicationService
 {
     public async Task<Result<ObservationResponse>> CreateAsync(
         ObservationCreateRequest request,
@@ -192,6 +200,20 @@ public sealed class ObservationApplicationService(
         observation.ReasonForChange = auditContextAccessor.ChangeReason;
 
         await observationRepository.AddAsync(observation, cancellationToken).ConfigureAwait(false);
+
+        // CTCAE v5.0 Toxicity Grading & Staging
+        await ProcessToxicityGradingAndStagingAsync(
+            studyCode,
+            subjectCode,
+            siteCode,
+            domainCode,
+            testCode,
+            request,
+            observation,
+            labResult,
+            normVal,
+            cancellationToken).ConfigureAwait(false);
+
         await observationRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         if (autoQueryDispatchService != null)
@@ -208,6 +230,203 @@ public sealed class ObservationApplicationService(
         }
 
         return MapToResponse(observation);
+    }
+
+    private async Task ProcessToxicityGradingAndStagingAsync(
+        StudyCode studyCode,
+        SubjectCode subjectCode,
+        SiteCode? siteCode,
+        DomainCode domainCode,
+        TestCode testCode,
+        ObservationCreateRequest request,
+        ClinicalObservation observation,
+        LabAssessmentResult labResult,
+        double? normVal,
+        CancellationToken cancellationToken)
+    {
+        // 1. Calculate baseline value from historical observations
+        var history = await observationRepository.ListByCoordinatesAsync(
+            studyCode, subjectCode, visitId: null, domain: null, testCode: testCode, cancellationToken: cancellationToken).ConfigureAwait(false);
+        double? baselineValue = history.Count > 0
+            ? history.OrderBy(h => h.ObservationDate).First().Value
+            : null;
+
+        double evalVal = normVal ?? request.Value ?? 0.0;
+        var toxicityEngine = new LabToxicityGradingEngine();
+        var toxEval = toxicityEngine.EvaluateObservation(
+            testCode: testCode.Value,
+            value: evalVal,
+            unit: request.Unit ?? string.Empty,
+            evaluatedAt: clock.UtcNow,
+            refLow: labResult.RangeLow,
+            refHigh: labResult.RangeHigh,
+            baselineValue: baselineValue);
+
+        // 2. Evaluate Hy's Law DILI criteria for hepatic panel
+        bool isHysLawWarning = false;
+        string codeUpper = testCode.Value.Trim().ToUpperInvariant();
+        if (codeUpper is "ALT" or "AST" or "BILIRUBIN" or "TBIL" or "TOTAL_BILIRUBIN" or "BILI" or "ALKP" or "ALP" or "SGPT" or "SGOT" or "ALAT" or "ASAT")
+        {
+            isHysLawWarning = await CheckHysLawAsync(studyCode, subjectCode, testCode.Value, evalVal, labResult.RangeHigh, cancellationToken).ConfigureAwait(false);
+        }
+
+        bool isSevereTrigger = toxEval.IsCriticalAeTrigger || isHysLawWarning;
+
+        if (isSevereTrigger)
+        {
+            // Draft AE FormSubmission
+            FormSubmission? aeForm = null;
+            if (formSubmissionRepository != null)
+            {
+                var payloadDict = new Dictionary<string, object?>
+                {
+                    ["test_code"] = toxEval.TestCode,
+                    ["test_name"] = toxEval.TestName,
+                    ["lab_value"] = toxEval.ObservedValue,
+                    ["unit"] = toxEval.Unit,
+                    ["ctcae_grade"] = (int)toxEval.Grade,
+                    ["meddra_term"] = toxEval.AeDraft?.MeddraTerm ?? $"{toxEval.TestName} abnormal",
+                    ["severity"] = toxEval.AeDraft?.Severity ?? "SEVERE",
+                    ["is_serious"] = true,
+                    ["hys_law_indicated"] = isHysLawWarning,
+                    ["status"] = "DRAFT_AI"
+                };
+
+                string payloadJson = JsonSerializer.Serialize(payloadDict);
+                var aeFormResult = FormSubmission.Initialize(
+                    studyId: studyCode,
+                    subjectId: subjectCode,
+                    formId: new FormId("AE_CRF"),
+                    siteId: siteCode,
+                    visitId: request.VisitId,
+                    protocolVersion: request.ProtocolVersionTag ?? "1.0.0",
+                    initialPayload: payloadJson);
+
+                if (aeFormResult.IsSuccess)
+                {
+                    aeForm = aeFormResult.Value!;
+                    await formSubmissionRepository.AddAsync(aeForm, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            // Open ClinicalQuery for Investigator
+            ClinicalQuery? query = null;
+            if (queryRepository != null)
+            {
+                string queryMsg = $"Investigator review required for Grade {(int)toxEval.Grade} laboratory toxicity: {toxEval.TestName} ({toxEval.ObservedValue} {toxEval.Unit}).";
+                if (isHysLawWarning)
+                {
+                    queryMsg += " [Hy's Law DILI Alert]";
+                }
+
+                var queryResult = ClinicalQuery.Raise(
+                    studyId: studyCode,
+                    subjectId: subjectCode,
+                    testCode: testCode,
+                    explanation: queryMsg,
+                    initialStatus: QueryStatus.Open,
+                    siteId: siteCode,
+                    visitId: request.VisitId,
+                    domain: domainCode,
+                    observationId: observation.Id,
+                    origin: "AUTO_TOXICITY_GRADING",
+                    priority: "HIGH",
+                    ruleId: "CTCAE_V5_GRADE3_4",
+                    formId: "AE_CRF",
+                    fieldId: testCode.Value,
+                    queryType: "TOXICITY_REVIEW",
+                    actionRequired: "INVESTIGATOR_CONFIRMATION");
+
+                if (queryResult.IsSuccess)
+                {
+                    query = queryResult.Value!;
+                    await queryRepository.AddAsync(query, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            // StagedAdverseEventReview record
+            if (stagedReviewRepository != null)
+            {
+                var stagedReview = StagedAdverseEventReview.Create(
+                    studyId: studyCode,
+                    subjectId: subjectCode,
+                    testCode: testCode,
+                    testName: toxEval.TestName,
+                    labValue: toxEval.ObservedValue,
+                    unit: toxEval.Unit,
+                    ctcaeGrade: (int)toxEval.Grade,
+                    toxicityTerm: toxEval.AeDraft?.MeddraTerm ?? $"{toxEval.TestName} abnormal",
+                    clinicalDescription: toxEval.Description,
+                    isHysLawWarning: isHysLawWarning,
+                    isDeltaCheckAlert: toxEval.IsDeltaCheckAlert,
+                    deltaPercentage: toxEval.DeltaPercentage,
+                    siteId: siteCode,
+                    visitId: request.VisitId,
+                    observationId: observation.Id,
+                    formSubmissionId: aeForm?.Id,
+                    queryId: query?.Id,
+                    gradingScale: toxEval.Scale);
+
+                await stagedReviewRepository.AddAsync(stagedReview, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private async Task<bool> CheckHysLawAsync(
+        StudyCode studyCode,
+        SubjectCode subjectCode,
+        string currentTestCode,
+        double currentValue,
+        double? currentRefHigh,
+        CancellationToken cancellationToken)
+    {
+        var subjectObs = await observationRepository.ListBySubjectAsync(studyCode, subjectCode, cancellationToken).ConfigureAwait(false);
+
+        double alt = 0.0, ast = 0.0, tbil = 0.0, alkp = 0.0;
+        double altUln = 50.0, astUln = 50.0, tbilUln = 1.2, alkpUln = 120.0;
+
+        string cUpper = currentTestCode.Trim().ToUpperInvariant();
+        if (cUpper is "ALT" or "SGPT" or "ALAT") { alt = currentValue; if (currentRefHigh > 0) altUln = currentRefHigh.Value; }
+        if (cUpper is "AST" or "SGOT" or "ASAT") { ast = currentValue; if (currentRefHigh > 0) astUln = currentRefHigh.Value; }
+        if (cUpper is "BILIRUBIN" or "TBIL" or "TOTAL_BILIRUBIN" or "BILI") { tbil = currentValue; if (currentRefHigh > 0) tbilUln = currentRefHigh.Value; }
+        if (cUpper is "ALKP" or "ALP" or "ALKALINE_PHOSPHATASE") { alkp = currentValue; if (currentRefHigh > 0) alkpUln = currentRefHigh.Value; }
+
+        foreach (var obs in subjectObs)
+        {
+            string code = obs.TestCode.Value.Trim().ToUpperInvariant();
+            if (code is "ALT" or "SGPT" or "ALAT")
+            {
+                if (alt < 0.0001 && obs.Value.HasValue) alt = obs.Value.Value;
+                if (obs.ReferenceRangeHigh.HasValue && obs.ReferenceRangeHigh.Value > 0) altUln = obs.ReferenceRangeHigh.Value;
+            }
+            else if (code is "AST" or "SGOT" or "ASAT")
+            {
+                if (ast < 0.0001 && obs.Value.HasValue) ast = obs.Value.Value;
+                if (obs.ReferenceRangeHigh.HasValue && obs.ReferenceRangeHigh.Value > 0) astUln = obs.ReferenceRangeHigh.Value;
+            }
+            else if (code is "BILIRUBIN" or "TBIL" or "TOTAL_BILIRUBIN" or "BILI")
+            {
+                if (tbil < 0.0001 && obs.Value.HasValue) tbil = obs.Value.Value;
+                if (obs.ReferenceRangeHigh.HasValue && obs.ReferenceRangeHigh.Value > 0) tbilUln = obs.ReferenceRangeHigh.Value;
+            }
+            else if (code is "ALKP" or "ALP" or "ALKALINE_PHOSPHATASE")
+            {
+                if (alkp < 0.0001 && obs.Value.HasValue) alkp = obs.Value.Value;
+                if (obs.ReferenceRangeHigh.HasValue && obs.ReferenceRangeHigh.Value > 0) alkpUln = obs.ReferenceRangeHigh.Value;
+            }
+        }
+
+        if (alt > 0 && tbil > 0)
+        {
+            var hysEval = LabToxicityGradingEngine.EvaluateHysLaw(
+                alt: alt, ast: ast, tbil: tbil, alkp: alkp,
+                altUln: altUln, astUln: astUln, tbilUln: tbilUln, alkpUln: alkpUln,
+                evaluatedAt: clock.UtcNow);
+
+            return hysEval.IsHysLawMet;
+        }
+
+        return false;
     }
 
     public Task<Result<ObservationResponse>> GetByIdAsync(string id, CancellationToken cancellationToken = default) =>
