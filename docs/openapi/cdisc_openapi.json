@@ -1047,6 +1047,76 @@
         }
       }
     },
+    "/api/v1/execution/batch-sign-off": {
+      "post": {
+        "tags": [
+          "Forms"
+        ],
+        "operationId": "BatchSignOff",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_BatchSignOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_BatchSignOffResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/subjects": {
       "post": {
         "tags": [
@@ -2514,6 +2584,158 @@
         }
       }
     },
+    "/api/v1/execution/labs/toxicity/review-queue": {
+      "get": {
+        "tags": [
+          "Laboratory Governance \u0026 Ingestion"
+        ],
+        "summary": "List Staged Ae Review Queue",
+        "description": "Retrieve laboratory Grade 3/4 toxicity triggers staged for Investigator review.",
+        "operationId": "ListStagedAeReviewQueue",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "review_status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_StagedAdverseEventReviewResponse"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/toxicity/review/{review_id}/action": {
+      "post": {
+        "tags": [
+          "Laboratory Governance \u0026 Ingestion"
+        ],
+        "summary": "Action Staged Ae Review",
+        "description": "Perform Investigator workflow action on a staged Grade 3/4 AE (Confirm, Dismiss, Escalate).",
+        "operationId": "ActionStagedAeReview",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_StagedAdverseEventActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_StagedAdverseEventActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/toxicity/evaluate": {
+      "post": {
+        "tags": [
+          "Laboratory Governance \u0026 Ingestion"
+        ],
+        "summary": "Evaluate Lab Toxicity Endpoint",
+        "description": "Evaluate CTCAE v5.0 Grade, Hy\u0027s Law criteria, and delta checks for a single lab observation.",
+        "operationId": "EvaluateLabToxicityEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_LabToxicityEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_LabToxicityEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
       "post": {
         "tags": [
@@ -3801,6 +4023,295 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/programs": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_CreateProgramRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/programs/{program_id}": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "program_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/validate-lockfile": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_ValidateLockfileRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/lock-tokens": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_IssueLockTokenRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/lock-tokens/{token_id}/revoke": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/execute": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_ExecuteProgramRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "program_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs/{run_id}/verify": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -7392,6 +7903,102 @@
           }
         }
       },
+      "Execution_BatchSignOffRequest": {
+        "required": [
+          "study_id",
+          "target_type",
+          "target_ids",
+          "signing_reason"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "target_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "signing_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Execution_BatchSignOffResponse": {
+        "required": [
+          "status",
+          "approved_submission_ids",
+          "skipped_submission_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "approved_submission_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skipped_submission_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "signature_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signed_forms_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "content_digest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timestamp_utc": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "audit_tx": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Execution_CecDossier": {
         "type": "object",
         "properties": {
@@ -8635,6 +9242,12 @@
               "null",
               "string"
             ]
+          },
+          "form_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8785,6 +9398,131 @@
                 "type": "string"
               }
             }
+          }
+        }
+      },
+      "Execution_LabToxicityEvaluateRequest": {
+        "required": [
+          "test_code",
+          "value",
+          "unit"
+        ],
+        "type": "object",
+        "properties": {
+          "test_code": {
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "ref_low": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "ref_high": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "baseline_value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "evaluated_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_LabToxicityEvaluateResponse": {
+        "required": [
+          "test_code",
+          "test_name",
+          "observed_value",
+          "unit",
+          "ctcae_grade",
+          "grading_scale",
+          "toxicity_description",
+          "is_critical_ae_trigger",
+          "is_hys_law_warning",
+          "is_delta_check_alert",
+          "delta_percentage"
+        ],
+        "type": "object",
+        "properties": {
+          "test_code": {
+            "type": "string"
+          },
+          "test_name": {
+            "type": "string"
+          },
+          "observed_value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "ctcae_grade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "grading_scale": {
+            "type": "string"
+          },
+          "toxicity_description": {
+            "type": "string"
+          },
+          "is_critical_ae_trigger": {
+            "type": "boolean"
+          },
+          "is_hys_law_warning": {
+            "type": "boolean"
+          },
+          "is_delta_check_alert": {
+            "type": "boolean"
+          },
+          "delta_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -9367,6 +10105,242 @@
       },
       "Execution_SiteCode": {
         "type": "string"
+      },
+      "Execution_StagedAdverseEventActionRequest": {
+        "required": [
+          "action",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "investigator_notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "causality_assessment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "electronic_signature_password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_StagedAdverseEventActionResponse": {
+        "required": [
+          "id",
+          "review_status",
+          "action_taken",
+          "form_submission_id",
+          "query_id",
+          "message",
+          "timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "review_status": {
+            "type": "string"
+          },
+          "action_taken": {
+            "type": "string"
+          },
+          "form_submission_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_StagedAdverseEventReviewResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_id",
+          "observation_id",
+          "form_submission_id",
+          "query_id",
+          "test_code",
+          "test_name",
+          "lab_value",
+          "unit",
+          "ctcae_grade",
+          "grading_scale",
+          "toxicity_term",
+          "clinical_description",
+          "is_hys_law_warning",
+          "is_delta_check_alert",
+          "delta_percentage",
+          "review_status",
+          "reviewed_by",
+          "reviewed_at",
+          "investigator_notes",
+          "version",
+          "is_deleted",
+          "created_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "visit_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observation_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_submission_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "test_code": {
+            "type": "string"
+          },
+          "test_name": {
+            "type": "string"
+          },
+          "lab_value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "ctcae_grade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "grading_scale": {
+            "type": "string"
+          },
+          "toxicity_term": {
+            "type": "string"
+          },
+          "clinical_description": {
+            "type": "string"
+          },
+          "is_hys_law_warning": {
+            "type": "boolean"
+          },
+          "is_delta_check_alert": {
+            "type": "boolean"
+          },
+          "delta_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "review_status": {
+            "type": "string"
+          },
+          "reviewed_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reviewed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "investigator_notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
       },
       "Execution_StudyCode": {
         "type": "string"
@@ -10488,6 +11462,63 @@
           }
         }
       },
+      "Interop_CreateProgramRequestDto": {
+        "required": [
+          "study_id",
+          "name",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "default": "PYTHON"
+          },
+          "version": {
+            "type": "string",
+            "default": "1.0.0"
+          },
+          "source_code": {
+            "type": "string",
+            "default": ""
+          },
+          "lockfile_content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lock_type": {
+            "type": "string",
+            "default": "UV_LOCK"
+          },
+          "target_domain": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": "Initial program authoring"
+          }
+        }
+      },
       "Interop_EhrCandidateItemDto": {
         "required": [
           "id",
@@ -11174,6 +12205,101 @@
           }
         }
       },
+      "Interop_ExecuteProgramRequestDto": {
+        "required": [
+          "study_id",
+          "program_id",
+          "snapshot_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "program_id": {
+            "type": "string"
+          },
+          "snapshot_id": {
+            "type": "string"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "default": false
+          },
+          "database_lock_token_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sandbox_config": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Interop_ExecutionSandboxConfigDto"
+              }
+            ]
+          },
+          "reason_for_execution": {
+            "type": "string",
+            "default": "Statistical analysis execution run"
+          }
+        }
+      },
+      "Interop_ExecutionSandboxConfigDto": {
+        "type": "object",
+        "properties": {
+          "max_memory_mb": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 2048
+          },
+          "timeout_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 300
+          },
+          "network_isolated": {
+            "type": "boolean",
+            "default": true
+          },
+          "filesystem_readonly_root": {
+            "type": "boolean",
+            "default": true
+          },
+          "max_output_bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 10485760
+          },
+          "docker_image_digest": {
+            "type": "string",
+            "default": "sha256:cadence-sce-r4.4-py3.14-validated-base-2026"
+          },
+          "python_version": {
+            "type": "string",
+            "default": "3.14.0"
+          },
+          "r_version": {
+            "type": "string",
+            "default": "4.4.2"
+          }
+        }
+      },
       "Interop_FhirBundleIngestRequest": {
         "required": [
           "studyId",
@@ -11275,6 +12401,51 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Interop_IssueLockTokenRequestDto": {
+        "required": [
+          "study_id",
+          "lock_id",
+          "milestone",
+          "issued_to",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "lock_id": {
+            "type": "string"
+          },
+          "milestone": {
+            "type": "string"
+          },
+          "issued_to": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "expires_in_hours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double",
+            "default": 24
+          },
+          "authorized_roles": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -11438,6 +12609,31 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Interop_ValidateLockfileRequestDto": {
+        "required": [
+          "lock_type",
+          "content"
+        ],
+        "type": "object",
+        "properties": {
+          "lock_type": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "expected_digest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "strict_qualification": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

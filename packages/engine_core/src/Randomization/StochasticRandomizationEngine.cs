@@ -19,6 +19,14 @@ public static class StochasticRandomizationEngine
         return MinimizationEngine.Allocate(config, request);
     }
 
+    public static SubjectAllocationResult AllocateResponseAdaptive(
+        ResponseAdaptiveConfig config,
+        IReadOnlyList<ResponseArmState> armStates,
+        SubjectAllocationRequest request)
+    {
+        return ResponseAdaptiveEngine.Allocate(config, armStates, request);
+    }
+
     public static BOINDoseRecommendation EvaluateBoinDose(
         BOINConfig config,
         IReadOnlyList<DoseLevelDefinition> doseLevels,

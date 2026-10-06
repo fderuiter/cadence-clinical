@@ -399,6 +399,50 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
         node.Summary.Status.Should().Be(nameof(ProposalStatus.Open));
     }
 
+    /// <summary>
+    /// A proposal created with low confidence (&lt; 0.75) or ForceEscalation policy is automatically marked as escalated.
+    /// An open proposal can also be explicitly escalated via <see cref="EscalateProposal"/>.
+    /// </summary>
+    [Fact(DisplayName = "Proposal_ConfidenceAndEscalation_AutoEscalatesAndAllowsManualEscalation")]
+    public async Task ProposalConfidenceAndEscalationAutoEscalatesAndAllowsManualEscalation()
+    {
+        _fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _scenario.NewStudyAsync(ct);
+        var (_, plan) = await RegisterPlanAsync(tenant, study, ct);
+        await GrantAsync(tenant, Agent, "proposal.create", AuthorityScope.Study(study), ct);
+        await GrantAsync(tenant, Colleague, "proposal.escalate", AuthorityScope.Study(study), ct);
+        UseProductionAuthorization();
+
+        var autoEscalatedId = ProposalId.New();
+        var autoEscalated = await As(Agent, Propose(tenant, autoEscalatedId, study, plan, [], model: Model) with { ConfidenceScore = 0.60 }, ct);
+        autoEscalated.IsEscalated.Should().BeTrue();
+        autoEscalated.ConfidenceTier.Should().Be("Medium");
+        autoEscalated.EscalatedByKind.Should().Be(ActorKind.ServiceAccount);
+
+        var normalId = ProposalId.New();
+        var normal = await As(Agent, Propose(tenant, normalId, study, plan, [], model: Model) with { ConfidenceScore = 0.95 }, ct);
+        normal.IsEscalated.Should().BeFalse();
+        normal.ConfidenceTier.Should().Be("High");
+
+        var escalated = await As(Colleague, new EscalateProposal(tenant, normalId, "SafetyLead", "Safety concerns raised during review", KernelProtocolScenario.Key(), Reason), ct);
+        escalated.IsEscalated.Should().BeTrue();
+        escalated.EscalatedById.Should().Be(Colleague.Id);
+        escalated.EscalatedByKind.Should().Be(ActorKind.Person);
+        escalated.EscalatedTo.Should().Be("SafetyLead");
+        escalated.EscalationReason.Should().Be("Safety concerns raised during review");
+
+        await using var db = _fixture.CreateContext(tenant);
+        var storedAuto = await db.Proposals.AsNoTracking().SingleAsync(p => p.Id == autoEscalatedId, ct);
+        storedAuto.IsEscalated.Should().BeTrue();
+        storedAuto.ConfidenceScore.Should().Be(0.60);
+
+        var storedManual = await db.Proposals.AsNoTracking().SingleAsync(p => p.Id == normalId, ct);
+        storedManual.IsEscalated.Should().BeTrue();
+        storedManual.EscalatedTo.Should().Be("SafetyLead");
+        storedManual.EscalationReason.Should().Be("Safety concerns raised during review");
+    }
+
     private void Tick() => _fixture.Clock.Advance(TimeSpan.FromSeconds(1));
 
     private Propose Propose(TenantId tenant, ProposalId id, StudyId study, ArtifactVersionId plan, IReadOnlyList<NodeRef> affected, string? model) =>
