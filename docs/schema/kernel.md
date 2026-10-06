@@ -24,6 +24,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.effectivity_status_periods`](#kerneleffectivity_status_periods) | `EffectivityStatusPeriod` | 7 |
 | [`kernel.enrollment_status_periods`](#kernelenrollment_status_periods) | `EnrollmentStatusPeriod` | 8 |
 | [`kernel.enrollments`](#kernelenrollments) | `Enrollment` | 15 |
+| [`kernel.form_version_snapshots`](#kernelform_version_snapshots) | `FormVersionSnapshot` | 15 |
 | [`kernel.grant_periods`](#kernelgrant_periods) | `GrantPeriod` | 5 |
 | [`kernel.grants`](#kernelgrants) | `Grant` | 16 |
 | [`kernel.idempotency_records`](#kernelidempotency_records) | `IdempotencyRecord` | 7 |
@@ -546,6 +547,43 @@ Check constraints:
 
 - `ck_enrollments_number`: `enrollment_number IS NULL OR enrollment_number > 0`
 - `ck_enrollments_numbered`: `(status IN ('Screening', 'ScreenFailed') AND enrollment_number IS NULL) OR (status IN ('Enrolled', 'Randomized', 'Active', 'Completed') AND enrollment_number IS NOT NULL) OR status = 'Withdrawn'`
+
+## kernel.form_version_snapshots
+
+Entity: `FormVersionSnapshot`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `ddf_ir` | `jsonb` | no |  |  |
+| `form_hash` | `character varying(71)` | no |  |  |
+| `form_id` | `character varying(128)` | no |  |  |
+| `odm_xml` | `text` | yes |  |  |
+| `open_rosa_xml` | `text` | no |  |  |
+| `protocol_version` | `character varying(64)` | no |  |  |
+| `protocol_version_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `recorded_at` | `timestamp with time zone` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_form_version_snapshots_protocol_versions_tenant_id_protocol~`: (`tenant_id`, `protocol_version_id`) references `kernel.protocol_versions` (`tenant_id`, `id`), on delete restrict
+- `FK_form_version_snapshots_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_form_version_snapshots_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `IX_form_version_snapshots_tenant_id_protocol_version_id`: (`tenant_id`, `protocol_version_id`)
+- `IX_form_version_snapshots_tenant_id_study_id_protocol_version_~`: unique (`tenant_id`, `study_id`, `protocol_version`, `form_id`)
+
+Check constraints:
+
+- `ck_form_version_snapshots_form_hash`: `form_hash ~ '^sha256:[0-9a-f]{64}$'`
 
 ## kernel.grant_periods
 

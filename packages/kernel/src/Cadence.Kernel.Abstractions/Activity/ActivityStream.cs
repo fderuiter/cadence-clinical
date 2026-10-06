@@ -86,6 +86,7 @@ public static class KernelEventFamilies
         ["ProposalApproved"] = EventFamily.Intelligence,
         ["ProposalRejected"] = EventFamily.Intelligence,
         ["ProposalWithdrawn"] = EventFamily.Intelligence,
+        ["FormVersionPublished"] = EventFamily.Knowledge,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>Every classified event type.</summary>

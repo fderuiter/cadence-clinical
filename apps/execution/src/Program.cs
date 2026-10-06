@@ -3,6 +3,7 @@ using System;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cec;
 using Cadence.Apps.Execution.Application.Cgt;
+using Cadence.Apps.Execution.Application.Coding;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.EditChecks;
 using Cadence.Apps.Execution.Application.Forms;
@@ -163,6 +164,7 @@ builder.Services.AddScoped<IConsentRepository, ConsentRepository>();
 builder.Services.AddScoped<ISiteComplianceRepository, SiteComplianceRepository>();
 builder.Services.AddScoped<IObservationRepository, ObservationRepository>();
 builder.Services.AddScoped<IFormSubmissionRepository, FormSubmissionRepository>();
+builder.Services.AddScoped<IPublishedFormVersionRegistryRepository, PublishedFormVersionRegistryRepository>();
 builder.Services.AddScoped<IClinicalQueryRepository, ClinicalQueryRepository>();
 builder.Services.AddScoped<IStagedAdverseEventReviewRepository, StagedAdverseEventReviewRepository>();
 builder.Services.AddScoped<ICecRepository, CecRepository>();
@@ -197,6 +199,7 @@ builder.Services.AddScoped<IAutoQueryDispatchService, AutoQueryDispatchService>(
 builder.Services.AddScoped<ILabToxicityGovernanceService, LabToxicityGovernanceService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
 builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
+builder.Services.AddScoped<ISynonymImportService, SynonymImportService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -234,6 +237,7 @@ builder.Services.AddMassTransit(x =>
     });
 
     x.AddConsumer<EConsentCompletedConsumer>();
+    x.AddConsumer<FormVersionPublishedConsumer>();
 
     x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
 });
@@ -257,6 +261,7 @@ app.MapQueryEndpoints();
 app.MapLabToxicityEndpoints();
 app.MapCecEndpoints();
 app.MapCgtEndpoints();
+app.MapSynonymEndpoints();
 
 if (args.Contains("--seed"))
 {

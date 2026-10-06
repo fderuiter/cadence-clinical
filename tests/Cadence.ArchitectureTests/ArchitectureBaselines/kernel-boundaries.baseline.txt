@@ -52,6 +52,9 @@ K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtDestructionC
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtMilestoneEvent.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.SiteId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.StudyId
+K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Coding.BulkSynonymImportJob.StudyId
+K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Coding.SynonymRule.StudyId
+K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Forms.PublishedFormVersionRegistry.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ClinicalObservation.LabSiteId
 K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.SiteId
 K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.StudyId
@@ -203,6 +206,8 @@ K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtVialRetu
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtVialReturnReconciliationRequest.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtVialReturnReconciliationResponse.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtVialReturnReconciliationResponse.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Coding.BulkSynonymImportJobResponse.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Coding.SynonymRuleResponse.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.EtmfCompletenessWebhookPayload.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.EtmfCompletenessWebhookPayload.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.SiteActivationRequest.StudyId
@@ -241,6 +246,9 @@ K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtDestructionCe
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtMilestoneEvent.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Coding.BulkSynonymImportJob.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Coding.SynonymRule.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Forms.PublishedFormVersionRegistry.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ClinicalObservation.LabSiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ObservationAdditionalProperties.LabSiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Infrastructure.Consumers.EConsentCompletedEvent.SiteId

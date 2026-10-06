@@ -3106,6 +3106,119 @@
         }
       }
     },
+    "/api/v1/execution/coding/synonyms/validate": {
+      "post": {
+        "tags": [
+          "Medical Coding Synonyms"
+        ],
+        "summary": "Pre-flight validation report for bulk synonym dictionary CSV/XLSX file.",
+        "operationId": "ValidateSynonymFile",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/coding/synonyms/import": {
+      "post": {
+        "tags": [
+          "Medical Coding Synonyms"
+        ],
+        "summary": "Ingest validated synonym dictionary rules into persistent store with GxP audit lineage.",
+        "operationId": "ImportSynonymFile",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/coding/synonyms": {
+      "get": {
+        "tags": [
+          "Medical Coding Synonyms"
+        ],
+        "summary": "Retrieve active synonym rules for study auto-coding engine.",
+        "operationId": "GetActiveSynonymRules",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/coding/synonyms/jobs": {
+      "get": {
+        "tags": [
+          "Medical Coding Synonyms"
+        ],
+        "summary": "Retrieve GxP audit ledger of bulk synonym import jobs.",
+        "operationId": "GetSynonymImportJobs",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/coding/synonyms/{id}": {
+      "delete": {
+        "tags": [
+          "Medical Coding Synonyms"
+        ],
+        "summary": "Deactivate an active synonym rule.",
+        "operationId": "DeactivateSynonymRule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/fileshare/status": {
       "get": {
         "tags": [
@@ -9238,6 +9351,12 @@
             ]
           },
           "payload": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_hash": {
             "type": [
               "null",
               "string"
@@ -15749,7 +15868,16 @@
               "string"
             ]
           },
-          "receiptOcrData": {}
+          "receiptOcrData": {},
+          "ocrConfidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
         }
       },
       "Payments_SubmitW9RequestDto": {

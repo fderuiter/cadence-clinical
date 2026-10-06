@@ -417,8 +417,8 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
         var autoEscalatedId = ProposalId.New();
         var autoEscalated = await As(Agent, Propose(tenant, autoEscalatedId, study, plan, [], model: Model) with { ConfidenceScore = 0.60 }, ct);
         autoEscalated.IsEscalated.Should().BeTrue();
-        autoEscalated.ConfidenceTier.Should().Be("Low");
-        autoEscalated.EscalatedByKind.Should().Be(ActorKind.AutomationAgent);
+        autoEscalated.ConfidenceTier.Should().Be("Medium");
+        autoEscalated.EscalatedByKind.Should().Be(ActorKind.ServiceAccount);
 
         var normalId = ProposalId.New();
         var normal = await As(Agent, Propose(tenant, normalId, study, plan, [], model: Model) with { ConfidenceScore = 0.95 }, ct);

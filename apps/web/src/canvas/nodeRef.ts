@@ -42,6 +42,7 @@ export const NODE_KINDS = [
   "validation_finding",
   "protocol_element",
   "proposal",
+  "form_version_snapshot",
 ] as const;
 
 export type NodeKind = (typeof NODE_KINDS)[number];
