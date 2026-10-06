@@ -303,6 +303,12 @@ public static class UsdmCompiler
                 dependsOn[id] = itemRules.SkipLogicReads;
             }
 
+            string? constraintCode = itemRules.ConstraintCode;
+            if (itemRules.Constraint != null && string.IsNullOrWhiteSpace(constraintCode))
+            {
+                constraintCode = $"{element}_constraint";
+            }
+
             items.Add(new DDFItemIR(
                 Id: id,
                 Name: element,
@@ -311,6 +317,8 @@ public static class UsdmCompiler
                 Relevant: itemRules.Relevant,
                 Constraint: itemRules.Constraint,
                 ConstraintMessage: itemRules.ConstraintMessage,
+                ConstraintSeverity: itemRules.ConstraintSeverity,
+                ConstraintCode: constraintCode,
                 Localizations: ItemText.Localize(id, source.Text, source.Localizations, defaultLanguage, problems)));
         }
 
