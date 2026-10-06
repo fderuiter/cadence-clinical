@@ -74,29 +74,7 @@ public sealed class AuditBinderCompiler(EtmfDbContext dbContext, IClock clock)
         }
 
         // Compliance audit chain records mapping for verification
-        var complianceRecords = new List<ComplianceAuditLogRecord>();
-        var prevDigest = "GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000";
-        for (int idx = 0; idx < auditLogs.Count; idx++)
-        {
-            var log = auditLogs[idx];
-            var currentPrev = prevDigest;
-            var record = new ComplianceAuditLogRecord(
-                RecordId: log.DocumentId ?? $"rec-{idx}",
-                Action: log.Action,
-                UserId: log.UserId,
-                ChangeReason: string.IsNullOrEmpty(log.Details) ? "Audit Log Entry" : log.Details,
-                Id: log.Id,
-                EventId: log.Id,
-                ServiceName: "Cadence.Apps.Etmf",
-                TableName: "TmfDocument",
-                UserRole: log.UserRole,
-                Timestamp: log.Timestamp,
-                PreviousDigest: currentPrev,
-                Sha256Digest: log.CryptographicSeal
-            );
-            complianceRecords.Add(record);
-            prevDigest = log.CryptographicSeal ?? currentPrev;
-        }
+        var complianceRecords = MapToComplianceRecords(auditLogs);
 
         var secretKey = Environment.GetEnvironmentVariable("AUDIT_LOG_SECRET_KEY") ?? "Cadence_Etmf_Audit_Secret_Key_32bytes!";
         var verificationResult = AuditChainVerifier.VerifyAuditChain(complianceRecords, secretKey);
@@ -297,5 +275,33 @@ public sealed class AuditBinderCompiler(EtmfDbContext dbContext, IClock clock)
     {
         if (string.IsNullOrWhiteSpace(filename)) return "file";
         return filename.Replace("/", "_").Replace("\\", "_").Replace(":", "_");
+    }
+
+    public static List<ComplianceAuditLogRecord> MapToComplianceRecords(List<TmfAuditLog> auditLogs)
+    {
+        var complianceRecords = new List<ComplianceAuditLogRecord>();
+        var prevDigest = "GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000";
+        for (int idx = 0; idx < auditLogs.Count; idx++)
+        {
+            var log = auditLogs[idx];
+            var currentPrev = prevDigest;
+            var record = new ComplianceAuditLogRecord(
+                RecordId: log.DocumentId ?? $"rec-{idx}",
+                Action: log.Action,
+                UserId: log.UserId,
+                ChangeReason: string.IsNullOrEmpty(log.Details) ? "Audit Log Entry" : log.Details,
+                Id: log.Id,
+                EventId: log.Id,
+                ServiceName: "Cadence.Apps.Etmf",
+                TableName: "TmfDocument",
+                UserRole: log.UserRole,
+                Timestamp: log.Timestamp,
+                PreviousDigest: currentPrev,
+                Sha256Digest: log.CryptographicSeal
+            );
+            complianceRecords.Add(record);
+            prevDigest = log.CryptographicSeal ?? currentPrev;
+        }
+        return complianceRecords;
     }
 }
