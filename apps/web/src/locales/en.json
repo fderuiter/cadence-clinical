@@ -78,6 +78,13 @@
       "headerLabel": "Localized Consent Translations:",
       "bannerText": "Currently editing content in {language}. All modifications to the section content will be saved under the {locale} translation locale.",
       "sectionsMetric": "Sections: {translated} / {total} Translated"
+    },
+    "autoTranslate": {
+      "autoTranslateBtn": "Auto-Translate",
+      "drawerTitle": "eConsent Auto-Translation & Vendor XLIFF Exchange",
+      "drawerSubtitle": "Generate machine-translated draft consent forms or manage vendor XLIFF 1.2/2.0 localization packages.",
+      "statusDraftPending": "Draft - Pending Review",
+      "statusVendorVerified": "Vendor Verified"
     }
   },
   "ecrf": {

@@ -78,6 +78,13 @@
       "headerLabel": "Traductions de consentement localisées :",
       "bannerText": "Édition du contenu actuellement en {language}. Toutes les modifications apportées au contenu de la section seront enregistrées sous la langue de traduction {locale}.",
       "sectionsMetric": "Sections : {translated} / {total} traduites"
+    },
+    "autoTranslate": {
+      "autoTranslateBtn": "Auto-Traduire",
+      "drawerTitle": "Auto-Traduction eConsent & Échange XLIFF Fournisseur",
+      "drawerSubtitle": "Générer des brouillons traduits automatiquement ou gérer les packages de localisation XLIFF 1.2/2.0 des fournisseurs.",
+      "statusDraftPending": "Brouillon - En attente de révision",
+      "statusVendorVerified": "Vérifié par le fournisseur"
     }
   },
   "ecrf": {

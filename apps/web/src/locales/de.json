@@ -78,6 +78,13 @@
       "headerLabel": "Lokalisierte Einwilligungübersetzungen:",
       "bannerText": "Inhalte werden derzeit auf {language} bearbeitet. Alle Änderungen am Abschnittsinhalt werden unter der Übersetzungssprache {locale} gespeichert.",
       "sectionsMetric": "Abschnitte: {translated} / {total} übersetzt"
+    },
+    "autoTranslate": {
+      "autoTranslateBtn": "Auto-Übersetzen",
+      "drawerTitle": "eConsent Auto-Übersetzung & Anbieter-XLIFF-Austausch",
+      "drawerSubtitle": "Automatisch übersetzte Entwürfe generieren oder Anbieter-XLIFF 1.2/2.0-Lokalisierungspakete verwalten.",
+      "statusDraftPending": "Entwurf - Überprüfung ausstehend",
+      "statusVendorVerified": "Vom Anbieter verifiziert"
     }
   },
   "ecrf": {

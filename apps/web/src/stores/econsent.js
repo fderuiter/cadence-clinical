@@ -1,6 +1,89 @@
 import { defineStore } from "pinia";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
+function translateText(text, targetLang) {
+  if (!text) return "";
+  if (targetLang === "es") {
+    let t = text
+      .replace(/Study Purpose/g, "Propósito del Estudio")
+      .replace(/Risks & Benefits/g, "Riesgos y Beneficios")
+      .replace(/Alternative Treatments/g, "Tratamientos Alternativos")
+      .replace(/Confidentiality/g, "Confidencialidad")
+      .replace(/Voluntary Participation/g, "Participación Voluntaria")
+      .replace(
+        /The purpose of this study is to evaluate/g,
+        "El propósito de este estudio es evaluar"
+      )
+      .replace(/Potential risks include/g, "Los riesgos potenciales incluyen")
+      .replace(
+        /Alternative treatments include/g,
+        "Los tratamientos alternativos incluyen"
+      )
+      .replace(/All clinical data/g, "Todos los datos clínicos")
+      .replace(
+        /Your participation is completely voluntary/g,
+        "Su participación es completamente voluntaria"
+      );
+    if (t === text && !t.includes("(ES)")) {
+      t = t + " (ES)";
+    }
+    return t;
+  }
+  if (targetLang === "fr") {
+    let t = text
+      .replace(/Study Purpose/g, "Objectif de l'étude")
+      .replace(/Risks & Benefits/g, "Risques et avantages")
+      .replace(/Alternative Treatments/g, "Traitements alternatifs")
+      .replace(/Confidentiality/g, "Confidentialité")
+      .replace(/Voluntary Participation/g, "Participation volontaire")
+      .replace(
+        /The purpose of this study is to evaluate/g,
+        "Le but de cette étude est d'évaluer"
+      )
+      .replace(/Potential risks include/g, "Les risques potentiels comprennent")
+      .replace(
+        /Alternative treatments include/g,
+        "Les traitements alternatifs comprennent"
+      )
+      .replace(/All clinical data/g, "Toutes les données cliniques")
+      .replace(
+        /Your participation is completely voluntary/g,
+        "Votre participation est entièrement voluntary"
+      );
+    if (t === text && !t.includes("(FR)")) {
+      t = t + " (FR)";
+    }
+    return t;
+  }
+  if (targetLang === "de") {
+    let t = text
+      .replace(/Study Purpose/g, "Zweck der Studie")
+      .replace(/Risks & Benefits/g, "Risiken und Nutzen")
+      .replace(/Alternative Treatments/g, "Alternative Behandlungen")
+      .replace(/Confidentiality/g, "Vertraulichkeit")
+      .replace(/Voluntary Participation/g, "Freiwillige Teilnahme")
+      .replace(
+        /The purpose of this study is to evaluate/g,
+        "Der Zweck dieser Studie ist die Bewertung"
+      )
+      .replace(/Potential risks include/g, "Mögliche Risiken umfassen")
+      .replace(
+        /Alternative treatments include/g,
+        "Alternative Behandlungen umfassen"
+      )
+      .replace(/All clinical data/g, "Alle klinischen Daten")
+      .replace(
+        /Your participation is completely voluntary/g,
+        "Ihre Teilnahme ist völlig freiwillig"
+      );
+    if (t === text && !t.includes("(DE)")) {
+      t = t + " (DE)";
+    }
+    return t;
+  }
+  return text + ` (${targetLang.toUpperCase()})`;
+}
+
 export const useEconsentStore = defineStore("econsent", {
   state: () => ({
     currentIcf: null,
@@ -70,18 +153,21 @@ export const useEconsentStore = defineStore("econsent", {
           title: sec.title,
           html: sec.content,
           translations: {
-            en: { title: sec.title, html: sec.content },
+            en: { title: sec.title, html: sec.content, status: "Approved" },
             es: {
               title: sec.title + " (Spanish)",
               html: sec.content.replace("The purpose", "El propósito"),
+              status: "Draft - Pending Review",
             },
             fr: {
               title: sec.title + " (French)",
               html: sec.content.replace("The purpose", "Le but"),
+              status: "Draft - Pending Review",
             },
             de: {
               title: sec.title + " (German)",
               html: sec.content.replace("The purpose", "Der zweck"),
+              status: "Draft - Pending Review",
             },
           },
         };
@@ -297,6 +383,217 @@ export const useEconsentStore = defineStore("econsent", {
 
       this.versionHistory.push(versionRecord);
       return true;
+    },
+
+    autoTranslateDrafts({
+      targetLocales = ["es", "fr", "de"],
+      scope = "all",
+      overwriteExisting = false,
+    } = {}) {
+      const locales = Array.isArray(targetLocales)
+        ? targetLocales
+        : [targetLocales];
+
+      locales.forEach((lang) => {
+        if (lang === "en") return;
+
+        this.sections.forEach((sec) => {
+          const sourceTitle = sec.translations?.en?.title || sec.title;
+          const sourceHtml = sec.translations?.en?.html || sec.html;
+          const existing = sec.translations?.[lang];
+
+          const isUnedited =
+            !existing ||
+            !existing.html ||
+            existing.status === "Draft - Pending Review";
+          const isApproved = existing && existing.status === "Approved";
+          const isEdited =
+            existing &&
+            existing.html &&
+            existing.status !== "Draft - Pending Review" &&
+            !isUnedited;
+
+          if (scope === "unedited" && !isUnedited && !overwriteExisting) {
+            return;
+          }
+
+          if (isApproved && !overwriteExisting) {
+            return;
+          }
+
+          if (isEdited && !overwriteExisting) {
+            return;
+          }
+
+          const translatedTitle = translateText(sourceTitle, lang);
+          const translatedHtml = translateText(sourceHtml, lang);
+
+          if (!sec.translations) sec.translations = {};
+          sec.translations[lang] = {
+            title: translatedTitle,
+            html: translatedHtml,
+            status: "Draft - Pending Review",
+            updatedAt: new Date().toISOString(),
+          };
+
+          if (this.activeLanguage === lang) {
+            sec.title = translatedTitle;
+            sec.html = translatedHtml;
+          }
+        });
+      });
+    },
+
+    exportXliff({ targetLocale = "es", version = "1.2" } = {}) {
+      const icfId = this.currentIcf?.id || "icf-001";
+      const escapeXml = (str) =>
+        (str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&apos;");
+
+      if (version === "2.0") {
+        const units = this.sections
+          .flatMap((sec) => {
+            const sourceTitle = sec.translations?.en?.title || sec.title || "";
+            const targetTitle = sec.translations?.[targetLocale]?.title || "";
+            const sourceHtml = sec.translations?.en?.html || sec.html || "";
+            const targetHtml = sec.translations?.[targetLocale]?.html || "";
+            return [
+              `    <unit id="${sec.id}_title">\n      <segment>\n        <source>${escapeXml(sourceTitle)}</source>\n        <target>${escapeXml(targetTitle)}</target>\n      </segment>\n    </unit>`,
+              `    <unit id="${sec.id}_html">\n      <segment>\n        <source>${escapeXml(sourceHtml)}</source>\n        <target>${escapeXml(targetHtml)}</target>\n      </segment>\n    </unit>`,
+            ];
+          })
+          .join("\n");
+
+        return `<?xml version="1.0" encoding="UTF-8"?>\n<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en" trgLang="${targetLocale}">\n  <file id="f1" original="${icfId}">\n${units}\n  </file>\n</xliff>`;
+      } else {
+        const transUnits = this.sections
+          .flatMap((sec) => {
+            const sourceTitle = sec.translations?.en?.title || sec.title || "";
+            const targetTitle = sec.translations?.[targetLocale]?.title || "";
+            const sourceHtml = sec.translations?.en?.html || sec.html || "";
+            const targetHtml = sec.translations?.[targetLocale]?.html || "";
+            return [
+              `      <trans-unit id="${sec.id}_title">\n        <source>${escapeXml(sourceTitle)}</source>\n        <target>${escapeXml(targetTitle)}</target>\n      </trans-unit>`,
+              `      <trans-unit id="${sec.id}_html">\n        <source>${escapeXml(sourceHtml)}</source>\n        <target>${escapeXml(targetHtml)}</target>\n      </trans-unit>`,
+            ];
+          })
+          .join("\n");
+
+        return `<?xml version="1.0" encoding="UTF-8"?>\n<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n  <file source-language="en" target-language="${targetLocale}" datatype="plaintext" original="${icfId}">\n    <header>\n      <tool tool-id="cadence-econsent" tool-name="Cadence eConsent Translator"/>\n    </header>\n    <body>\n${transUnits}\n    </body>\n  </file>\n</xliff>`;
+      }
+    },
+
+    importXliff(xmlText, targetLocaleOverride = null) {
+      if (!xmlText || typeof xmlText !== "string" || !xmlText.trim()) {
+        return {
+          success: false,
+          error: "XLIFF file is empty or unreadable.",
+        };
+      }
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, "text/xml");
+
+      const parserError = doc.querySelector("parsererror");
+      if (parserError) {
+        return {
+          success: false,
+          error: `XML Syntax Error: ${parserError.textContent.split("\n")[0] || "Invalid XML markup"}`,
+        };
+      }
+
+      const root = doc.documentElement;
+      if (!root || root.nodeName.toLowerCase() !== "xliff") {
+        return {
+          success: false,
+          error: "XML Schema Error: Root element is not <xliff>.",
+        };
+      }
+
+      let targetLocale = targetLocaleOverride;
+      if (!targetLocale) {
+        const fileEl = doc.querySelector("file");
+        targetLocale =
+          fileEl?.getAttribute("target-language") ||
+          fileEl?.getAttribute("trgLang") ||
+          root.getAttribute("trgLang") ||
+          this.activeLanguage ||
+          "es";
+      }
+
+      let updatedCount = 0;
+      const mismatchedKeys = new Set();
+
+      const transUnits = Array.from(doc.querySelectorAll("trans-unit, unit"));
+      if (transUnits.length === 0) {
+        return {
+          success: false,
+          error:
+            "XML Schema Error: No translation units (<trans-unit> or <unit>) found in XLIFF file.",
+        };
+      }
+
+      transUnits.forEach((unit) => {
+        const id = unit.getAttribute("id");
+        if (!id) return;
+
+        let targetText = "";
+        const targetEl = unit.querySelector("target");
+        if (targetEl) {
+          targetText = targetEl.textContent || targetEl.innerText || "";
+        } else {
+          const sourceEl = unit.querySelector("source");
+          if (sourceEl) {
+            targetText = sourceEl.textContent || sourceEl.innerText || "";
+          }
+        }
+
+        let secId = id;
+        let field = "html";
+
+        const match = id.match(/^(.*?)[-_.:](title|html)$/i);
+        if (match) {
+          secId = match[1];
+          field = match[2].toLowerCase();
+        } else if (id.toLowerCase().includes("title")) {
+          field = "title";
+        }
+
+        const section = this.sections.find((s) => s.id === secId);
+        if (section) {
+          if (!section.translations) section.translations = {};
+          if (!section.translations[targetLocale]) {
+            section.translations[targetLocale] = {
+              title: section.title,
+              html: section.html,
+              status: "Vendor Verified",
+            };
+          }
+          section.translations[targetLocale][field] = targetText;
+          section.translations[targetLocale].status = "Vendor Verified";
+          section.translations[targetLocale].updatedAt =
+            new Date().toISOString();
+
+          if (this.activeLanguage === targetLocale) {
+            if (field === "title") section.title = targetText;
+            if (field === "html") section.html = targetText;
+          }
+          updatedCount++;
+        } else {
+          mismatchedKeys.add(id);
+        }
+      });
+
+      return {
+        success: true,
+        targetLocale,
+        updatedCount,
+        mismatchedKeys: Array.from(mismatchedKeys),
+      };
     },
   },
 });

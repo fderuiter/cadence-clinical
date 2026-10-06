@@ -23,6 +23,13 @@
           <span class="lang-code-badge">{{ lang.code.toUpperCase() }}</span>
         </button>
       </div>
+      <button
+        type="button"
+        class="btn btn-secondary btn-auto-translate"
+        @click="showAutoTranslateDrawer = true"
+      >
+        🌐 Auto-Translate
+      </button>
     </div>
 
     <!-- Active Language Banner/Info -->
@@ -36,6 +43,20 @@
         }}
       </p>
       <div class="completion-metrics">
+        <span
+          v-if="activeLanguageStatus"
+          :class="[
+            'status-pill-badge',
+            activeLanguageStatus === 'Approved' ||
+            activeLanguageStatus === 'Master Source'
+              ? 'pill-success'
+              : activeLanguageStatus === 'Vendor Verified'
+                ? 'pill-info'
+                : 'pill-warning',
+          ]"
+        >
+          {{ activeLanguageStatus }}
+        </span>
         <span class="metric-badge">
           {{
             $t("econsent.translationTabs.sectionsMetric", {
@@ -46,6 +67,12 @@
         </span>
       </div>
     </div>
+
+    <!-- Slide-in Auto Translation Drawer -->
+    <AutoTranslationDrawer
+      :is-open="showAutoTranslateDrawer"
+      @close="showAutoTranslateDrawer = false"
+    />
   </div>
 </template>
 
@@ -54,9 +81,11 @@ import { computed, ref } from "vue";
 import { useEconsentStore } from "../../stores/econsent.js";
 import { useRovingTabindex } from "../../composables/useRovingTabindex.js";
 import { setGlobalLocale } from "../../i18n/index.js";
+import AutoTranslationDrawer from "./AutoTranslationDrawer.vue";
 
 const econsentStore = useEconsentStore();
 const tabsListRef = ref(null);
+const showAutoTranslateDrawer = ref(false);
 
 const availableLanguages = [
   { code: "en", name: "English", flag: "🇬🇧" },
@@ -79,6 +108,21 @@ const activeLanguageName = computed(() => {
     (l) => l.code === econsentStore.activeLanguage
   );
   return found ? found.name : econsentStore.activeLanguage;
+});
+
+const activeLanguageStatus = computed(() => {
+  if (econsentStore.activeLanguage === "en") return "Master Source";
+  const currentLang = econsentStore.activeLanguage;
+  const hasDraftPending = econsentStore.sections.some(
+    (sec) =>
+      sec.translations?.[currentLang]?.status === "Draft - Pending Review"
+  );
+  if (hasDraftPending) return "Draft - Pending Review";
+  const hasVendorVerified = econsentStore.sections.some(
+    (sec) => sec.translations?.[currentLang]?.status === "Vendor Verified"
+  );
+  if (hasVendorVerified) return "Vendor Verified";
+  return "Draft - Pending Review";
 });
 
 const translatedSectionsCount = computed(() => {
@@ -192,6 +236,54 @@ const selectLanguage = (langCode) => {
 
 .completion-metrics {
   display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-auto-translate {
+  margin-left: auto;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background-color: #f1f5f9;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-auto-translate:hover {
+  background-color: #e2e8f0;
+  border-color: var(--accent);
+  color: var(--primary);
+}
+
+.status-pill-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.pill-success {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.pill-info {
+  background-color: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.pill-warning {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fef3c7;
 }
 
 .metric-badge {

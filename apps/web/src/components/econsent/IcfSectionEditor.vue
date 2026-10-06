@@ -2,9 +2,24 @@
   <div class="icf-section-editor-container card">
     <div class="editor-header">
       <h3>{{ $t("econsent.editor.editSection", { title: section.title }) }}</h3>
-      <span class="section-id-badge">{{
-        $t("econsent.editor.sectionId", { id: section.id })
-      }}</span>
+      <div style="display: flex; gap: 8px; align-items: center">
+        <span
+          v-if="sectionStatus"
+          :class="[
+            'status-pill-badge',
+            sectionStatus === 'Approved'
+              ? 'pill-success'
+              : sectionStatus === 'Vendor Verified'
+                ? 'pill-info'
+                : 'pill-warning',
+          ]"
+        >
+          {{ sectionStatus }}
+        </span>
+        <span class="section-id-badge">{{
+          $t("econsent.editor.sectionId", { id: section.id })
+        }}</span>
+      </div>
     </div>
 
     <!-- Formatting Toolbar -->
@@ -177,6 +192,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import ReadabilityDrawer from "./ReadabilityDrawer.vue";
+import { useEconsentStore } from "../../stores/econsent.js";
 
 const props = defineProps({
   section: {
@@ -186,6 +202,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update"]);
+
+const econsentStore = useEconsentStore();
+
+const sectionStatus = computed(() => {
+  const activeLang = econsentStore.activeLanguage;
+  if (!props.section?.translations?.[activeLang]) return "";
+  return props.section.translations[activeLang].status || "";
+});
 
 const editorRef = ref(null);
 const localHtml = ref("");
@@ -652,5 +676,30 @@ const hidePopover = () => {
   text-transform: uppercase;
   font-size: 0.7rem;
   letter-spacing: 0.05em;
+}
+
+.status-pill-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.pill-success {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.pill-info {
+  background-color: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.pill-warning {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fef3c7;
 }
 </style>

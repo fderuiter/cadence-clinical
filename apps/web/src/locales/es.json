@@ -78,6 +78,13 @@
       "headerLabel": "Traducciones de consentimiento localizadas:",
       "bannerText": "Actualmente editando contenido en {language}. Todas las modificaciones al contenido de la sección se guardarán bajo la configuración regional de traducción {locale}.",
       "sectionsMetric": "Secciones: {translated} / {total} traducidas"
+    },
+    "autoTranslate": {
+      "autoTranslateBtn": "Auto-Traducir",
+      "drawerTitle": "Auto-Traducción eConsent e Intercambio XLIFF de Proveedor",
+      "drawerSubtitle": "Generar borradores traducidos automáticamente o gestionar paquetes de localización XLIFF 1.2/2.0 de proveedores.",
+      "statusDraftPending": "Borrador - Pendiente de Revisión",
+      "statusVendorVerified": "Verificado por Proveedor"
     }
   },
   "ecrf": {
