@@ -1017,6 +1017,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/studies/{studyId}/enrollment-velocity": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetEnrollmentVelocity"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/studies/{studyId}/enrollment-velocity/forecast": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["ForecastEnrollmentVelocity"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1319,6 +1351,42 @@ export interface components {
       gender: null | string;
       race: null | string;
     };
+    Execution_EnrollmentVelocityForecastResult: {
+      study_id: string;
+      /** Format: double */
+      current_velocity_weekly: number | string;
+      /** Format: double */
+      target_velocity_weekly: number | string;
+      status: components["schemas"]["Execution_VelocityStatus"];
+      /** Format: date */
+      forecasted_completion_date: string;
+      /** Format: int32 */
+      days_ahead_or_behind: number | string;
+      /** Format: int32 */
+      target_subjects: number | string;
+      /** Format: int32 */
+      currently_enrolled: number | string;
+      weekly_projections: components["schemas"]["Execution_WeeklyEnrollmentProjection"][];
+      site_velocities: components["schemas"]["Execution_SiteEnrollmentVelocity"][];
+    };
+    Execution_EnrollmentVelocityParams: {
+      study_id: string;
+      /** Format: int32 */
+      target_subjects: number | string;
+      /** Format: date */
+      target_completion_date: string;
+      /** Format: double */
+      historical_weekly_rate: number | string;
+      /** Format: int32 */
+      currently_enrolled: number | string;
+      /** Format: int32 */
+      active_site_count: number | string;
+      /**
+       * Format: int32
+       * @default 24
+       */
+      simulation_horizon_weeks: number | string;
+    };
     Execution_EtmfCompletenessWebhookPayload: {
       study_id: string;
       site_id: null | string;
@@ -1554,56 +1622,16 @@ export interface components {
       study_id: string;
     };
     Execution_SiteCode: string;
-    Execution_StagedAdverseEventActionRequest: {
-      action: string;
-      reason_for_change: string;
-      investigator_notes?: null | string;
-      causality_assessment?: null | string;
-      electronic_signature_password?: null | string;
-    };
-    Execution_StagedAdverseEventActionResponse: {
-      id: string;
-      review_status: string;
-      action_taken: string;
-      form_submission_id: null | string;
-      query_id: null | string;
-      message: string;
-      /** Format: date-time */
-      timestamp: string;
-    };
-    Execution_StagedAdverseEventReviewResponse: {
-      id: string;
-      study_id: string;
-      site_id: null | string;
-      subject_id: string;
-      visit_id: null | string;
-      observation_id: null | string;
-      form_submission_id: null | string;
-      query_id: null | string;
-      test_code: string;
-      test_name: string;
-      /** Format: double */
-      lab_value: number | string;
-      unit: string;
+    Execution_SiteEnrollmentVelocity: {
+      site_id: string;
+      site_name: string;
       /** Format: int32 */
-      ctcae_grade: number | string;
-      grading_scale: string;
-      toxicity_term: string;
-      clinical_description: string;
-      is_hys_law_warning: boolean;
-      is_delta_check_alert: boolean;
+      active_subjects: number | string;
       /** Format: double */
-      delta_percentage: null | number | string;
-      review_status: string;
-      reviewed_by: null | string;
-      /** Format: date-time */
-      reviewed_at: null | string;
-      investigator_notes: null | string;
-      /** Format: int32 */
-      version: number | string;
-      is_deleted: boolean;
-      /** Format: date-time */
-      created_at: null | string;
+      historical_weekly_rate: number | string;
+      /** Format: double */
+      projected_weekly_rate: number | string;
+      velocity_risk_level: string;
     };
     Execution_StagedAdverseEventActionRequest: {
       action: string;
@@ -1740,6 +1768,23 @@ export interface components {
       active_protocol_version: string;
       /** Format: int32 */
       enrollment_index: number | string;
+    };
+    Execution_VelocityStatus: number;
+    Execution_WeeklyEnrollmentProjection: {
+      /** Format: int32 */
+      week_index: number | string;
+      /** Format: date */
+      week_start_date: string;
+      /** Format: int32 */
+      projected_cumulative_enrolled: number | string;
+      /** Format: int32 */
+      lower_bound_ci: number | string;
+      /** Format: int32 */
+      upper_bound_ci: number | string;
+      /** Format: int32 */
+      target_cumulative: number | string;
+      /** Format: double */
+      weekly_rate: number | string;
     };
   };
   responses: never;
@@ -3287,6 +3332,72 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  GetEnrollmentVelocity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studyId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_EnrollmentVelocityForecastResult"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ForecastEnrollmentVelocity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        studyId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_EnrollmentVelocityParams"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_EnrollmentVelocityForecastResult"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
       };
     };
   };

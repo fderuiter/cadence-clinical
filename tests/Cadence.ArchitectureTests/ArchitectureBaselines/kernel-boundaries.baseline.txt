@@ -346,6 +346,8 @@ K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityDeviation.SiteId
 K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityDeviation.StudyId
 K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityRootCauseAnalysis.SiteId
 K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityRootCauseAnalysis.StudyId
+K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.SiteRiskHeatmapMatrix.StudyId
+K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.SiteRiskHeatmapRow.SiteId
 K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.As2Transmission.StudyId
 K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.As2TransmissionAuditLog
 K-XS-1|Cadence.Apps.Safety|Cadence.Apps.Safety.Domain.DeviceSafetyInvestigation.SiteId
@@ -372,6 +374,9 @@ K-XS-1|Cadence.Contracts|Cadence.Contracts.Grade3ToxicityDetected.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.Grade3ToxicityDetected.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.PublishAmendmentRequestDto.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.SubjectSummaryDto.SiteId
+K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Enrollment.EnrollmentVelocityForecastResult.StudyId
+K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Enrollment.EnrollmentVelocityParams.StudyId
+K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Enrollment.SiteEnrollmentVelocity.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.StudyId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationResult.StudyId

@@ -3219,6 +3219,96 @@
         }
       }
     },
+    "/api/v1/execution/studies/{studyId}/enrollment-velocity": {
+      "get": {
+        "tags": [
+          "EnrollmentVelocity"
+        ],
+        "operationId": "GetEnrollmentVelocity",
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_EnrollmentVelocityForecastResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/studies/{studyId}/enrollment-velocity/forecast": {
+      "post": {
+        "tags": [
+          "EnrollmentVelocity"
+        ],
+        "operationId": "ForecastEnrollmentVelocity",
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_EnrollmentVelocityParams"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_EnrollmentVelocityForecastResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fileshare/status": {
       "get": {
         "tags": [
@@ -6401,6 +6491,91 @@
         }
       }
     },
+    "/api/v1/quality/rbqm/site-risk-heatmaps": {
+      "get": {
+        "tags": [
+          "SiteRiskHeatmap"
+        ],
+        "operationId": "GetSiteRiskHeatmap",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_SiteRiskHeatmapMatrix"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/rbqm/site-risk-heatmaps/compute": {
+      "post": {
+        "tags": [
+          "SiteRiskHeatmap"
+        ],
+        "operationId": "ComputeSiteRiskHeatmap",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_SiteRiskHeatmapMatrix"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quality_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/safety/status": {
       "get": {
         "tags": [
@@ -9242,6 +9417,146 @@
           }
         }
       },
+      "Execution_EnrollmentVelocityForecastResult": {
+        "required": [
+          "study_id",
+          "current_velocity_weekly",
+          "target_velocity_weekly",
+          "status",
+          "forecasted_completion_date",
+          "days_ahead_or_behind",
+          "target_subjects",
+          "currently_enrolled",
+          "weekly_projections",
+          "site_velocities"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "current_velocity_weekly": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "target_velocity_weekly": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Execution_VelocityStatus"
+          },
+          "forecasted_completion_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "days_ahead_or_behind": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "target_subjects": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "currently_enrolled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "weekly_projections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_WeeklyEnrollmentProjection"
+            }
+          },
+          "site_velocities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_SiteEnrollmentVelocity"
+            }
+          }
+        }
+      },
+      "Execution_EnrollmentVelocityParams": {
+        "required": [
+          "study_id",
+          "target_subjects",
+          "target_completion_date",
+          "historical_weekly_rate",
+          "currently_enrolled",
+          "active_site_count"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "target_subjects": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "target_completion_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "historical_weekly_rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "currently_enrolled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "active_site_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "simulation_horizon_weeks": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 24
+          }
+        }
+      },
       "Execution_EtmfCompletenessWebhookPayload": {
         "required": [
           "study_id",
@@ -10219,169 +10534,24 @@
       "Execution_SiteCode": {
         "type": "string"
       },
-      "Execution_StagedAdverseEventActionRequest": {
+      "Execution_SiteEnrollmentVelocity": {
         "required": [
-          "action",
-          "reason_for_change"
-        ],
-        "type": "object",
-        "properties": {
-          "action": {
-            "type": "string"
-          },
-          "reason_for_change": {
-            "type": "string"
-          },
-          "investigator_notes": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "causality_assessment": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "electronic_signature_password": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "Execution_StagedAdverseEventActionResponse": {
-        "required": [
-          "id",
-          "review_status",
-          "action_taken",
-          "form_submission_id",
-          "query_id",
-          "message",
-          "timestamp"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "review_status": {
-            "type": "string"
-          },
-          "action_taken": {
-            "type": "string"
-          },
-          "form_submission_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "query_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "message": {
-            "type": "string"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "Execution_StagedAdverseEventReviewResponse": {
-        "required": [
-          "id",
-          "study_id",
           "site_id",
-          "subject_id",
-          "visit_id",
-          "observation_id",
-          "form_submission_id",
-          "query_id",
-          "test_code",
-          "test_name",
-          "lab_value",
-          "unit",
-          "ctcae_grade",
-          "grading_scale",
-          "toxicity_term",
-          "clinical_description",
-          "is_hys_law_warning",
-          "is_delta_check_alert",
-          "delta_percentage",
-          "review_status",
-          "reviewed_by",
-          "reviewed_at",
-          "investigator_notes",
-          "version",
-          "is_deleted",
-          "created_at"
+          "site_name",
+          "active_subjects",
+          "historical_weekly_rate",
+          "projected_weekly_rate",
+          "velocity_risk_level"
         ],
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
-          },
-          "study_id": {
-            "type": "string"
-          },
           "site_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "subject_id": {
             "type": "string"
           },
-          "visit_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "observation_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "form_submission_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "query_id": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "test_code": {
+          "site_name": {
             "type": "string"
           },
-          "test_name": {
-            "type": "string"
-          },
-          "lab_value": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "unit": {
-            "type": "string"
-          },
-          "ctcae_grade": {
+          "active_subjects": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -10389,69 +10559,24 @@
             ],
             "format": "int32"
           },
-          "grading_scale": {
-            "type": "string"
-          },
-          "toxicity_term": {
-            "type": "string"
-          },
-          "clinical_description": {
-            "type": "string"
-          },
-          "is_hys_law_warning": {
-            "type": "boolean"
-          },
-          "is_delta_check_alert": {
-            "type": "boolean"
-          },
-          "delta_percentage": {
+          "historical_weekly_rate": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
             "type": [
-              "null",
               "number",
               "string"
             ],
             "format": "double"
           },
-          "review_status": {
+          "projected_weekly_rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "velocity_risk_level": {
             "type": "string"
-          },
-          "reviewed_by": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "reviewed_at": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "investigator_notes": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "is_deleted": {
-            "type": "boolean"
-          },
-          "created_at": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
           }
         }
       },
@@ -11078,6 +11203,75 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "Execution_VelocityStatus": {
+        "type": "integer"
+      },
+      "Execution_WeeklyEnrollmentProjection": {
+        "required": [
+          "week_index",
+          "week_start_date",
+          "projected_cumulative_enrolled",
+          "lower_bound_ci",
+          "upper_bound_ci",
+          "target_cumulative",
+          "weekly_rate"
+        ],
+        "type": "object",
+        "properties": {
+          "week_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "week_start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "projected_cumulative_enrolled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lower_bound_ci": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "upper_bound_ci": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "target_cumulative": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "weekly_rate": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -16204,6 +16398,220 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Quality_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Quality_SiteRiskCategoryScore": {
+        "required": [
+          "categoryKey",
+          "categoryName",
+          "riskScore",
+          "riskTier",
+          "triggeredMetricsCount",
+          "details"
+        ],
+        "type": "object",
+        "properties": {
+          "categoryKey": {
+            "type": "string"
+          },
+          "categoryName": {
+            "type": "string"
+          },
+          "riskScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "riskTier": {
+            "type": "string"
+          },
+          "triggeredMetricsCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "details": {
+            "type": "string"
+          }
+        }
+      },
+      "Quality_SiteRiskHeatmapMatrix": {
+        "required": [
+          "studyId",
+          "evaluatedAtUtc",
+          "totalSites",
+          "highRiskSitesCount",
+          "mediumRiskSitesCount",
+          "lowRiskSitesCount",
+          "categories",
+          "rows"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "evaluatedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totalSites": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "highRiskSitesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "mediumRiskSitesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lowRiskSitesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Quality_SiteRiskHeatmapRow"
+            }
+          }
+        }
+      },
+      "Quality_SiteRiskHeatmapRow": {
+        "required": [
+          "siteId",
+          "siteName",
+          "compositeRiskScore",
+          "riskTier",
+          "rank",
+          "categoryScores",
+          "activeQueriesCount",
+          "activeDeviationsCount",
+          "recommendedActions"
+        ],
+        "type": "object",
+        "properties": {
+          "siteId": {
+            "type": "string"
+          },
+          "siteName": {
+            "type": "string"
+          },
+          "compositeRiskScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "riskTier": {
+            "type": "string"
+          },
+          "rank": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "categoryScores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Quality_SiteRiskCategoryScore"
+            }
+          },
+          "activeQueriesCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activeDeviationsCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "recommendedActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
