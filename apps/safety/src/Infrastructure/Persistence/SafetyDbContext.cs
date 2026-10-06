@@ -26,6 +26,7 @@ public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) :
     public DbSet<SafetySignalDetectionRun> SafetySignalDetectionRuns => Set<SafetySignalDetectionRun>();
     public DbSet<SafetySignalAlert> SafetySignalAlerts => Set<SafetySignalAlert>();
     public DbSet<PeriodicSafetyReportRecord> PeriodicSafetyReports => Set<PeriodicSafetyReportRecord>();
+    public DbSet<DsurSnapshotRecord> DsurSnapshots => Set<DsurSnapshotRecord>();
     public DbSet<DeviceSafetyInvestigation> DeviceSafetyInvestigations => Set<DeviceSafetyInvestigation>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
@@ -46,6 +47,7 @@ public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) :
         modelBuilder.ApplyConfiguration(new SafetySignalDetectionRunConfiguration());
         modelBuilder.ApplyConfiguration(new SafetySignalAlertConfiguration());
         modelBuilder.ApplyConfiguration(new PeriodicSafetyReportRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new DsurSnapshotRecordConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceSafetyInvestigationConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
     }

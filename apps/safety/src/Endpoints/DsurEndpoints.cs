@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -59,6 +60,27 @@ public static class DsurEndpoints
             .Produces<PeriodicSafetyReportRecord[]>(StatusCodes.Status200OK)
             .RequirePermission(SafetyPermission);
 
+        // Snapshot ledger endpoints
+        group.MapGet("/dsur/{id}/snapshots", GetDsurSnapshotsAsync)
+            .WithName("GetDsurReportSnapshots")
+            .WithSummary("Retrieves all versioned point-in-time snapshot summaries for a given DSUR report.")
+            .Produces<IReadOnlyList<DsurSnapshotSummary>>(StatusCodes.Status200OK)
+            .RequirePermission(SafetyPermission);
+
+        group.MapGet("/dsur/snapshots/{snapshotId}", GetDsurSnapshotByIdAsync)
+            .WithName("GetDsurSnapshotById")
+            .WithSummary("Retrieves an immutable point-in-time DSUR snapshot record by snapshot ID.")
+            .Produces<DsurSnapshotDetail>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(SafetyPermission);
+
+        group.MapPost("/dsur/snapshots/{snapshotId}/verify", VerifyDsurSnapshotAsync)
+            .WithName("VerifyDsurSnapshot")
+            .WithSummary("Cryptographically verifies SHA-256 payload digest, Part 11 e-signature, and GxP Merkle audit chain.")
+            .Produces<DsurSnapshotVerificationResult>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(SafetyPermission);
+
         // Alias routes for periodic-reports endpoint path conventions
         group.MapPost("/periodic-reports/compile", CompileDsurAsync)
             .WithName("CompilePeriodicReport")
@@ -82,6 +104,30 @@ public static class DsurEndpoints
 
         group.MapGet("/periodic-reports", ListDsurReportsAsync)
             .WithName("ListPeriodicReports")
+            .RequirePermission(SafetyPermission);
+
+        group.MapGet("/periodic-reports/{id}/snapshots", GetDsurSnapshotsAsync)
+            .WithName("GetPeriodicReportSnapshots")
+            .RequirePermission(SafetyPermission);
+
+        group.MapGet("/periodic-reports/snapshots/{snapshotId}", GetDsurSnapshotByIdAsync)
+            .WithName("GetPeriodicReportSnapshotById")
+            .RequirePermission(SafetyPermission);
+
+        group.MapPost("/periodic-reports/snapshots/{snapshotId}/verify", VerifyDsurSnapshotAsync)
+            .WithName("VerifyPeriodicReportSnapshot")
+            .RequirePermission(SafetyPermission);
+
+        group.MapGet("/snapshots/{snapshotId}", GetDsurSnapshotByIdAsync)
+            .WithName("GetSnapshotById")
+            .RequirePermission(SafetyPermission);
+
+        group.MapGet("/snapshots/{snapshotId}/verify", VerifyDsurSnapshotAsync)
+            .WithName("GetSnapshotVerification")
+            .RequirePermission(SafetyPermission);
+
+        group.MapPost("/snapshots/{snapshotId}/verify", VerifyDsurSnapshotAsync)
+            .WithName("VerifySnapshot")
             .RequirePermission(SafetyPermission);
 
         return group;
@@ -170,5 +216,48 @@ public static class DsurEndpoints
     {
         var records = await dbContext.PeriodicSafetyReports.AsNoTracking().ToArrayAsync(cancellationToken);
         return TypedResults.Ok(records);
+    }
+
+    public static async Task<IResult> GetDsurSnapshotsAsync(
+        string id,
+        SafetyDbContext dbContext,
+        IClock? clock,
+        CancellationToken cancellationToken)
+    {
+        var compiler = new DsurCompilerEngine(dbContext, clock);
+        var snapshots = await compiler.GetSnapshotsForReportAsync(id, cancellationToken);
+        return TypedResults.Ok(snapshots);
+    }
+
+    public static async Task<IResult> GetDsurSnapshotByIdAsync(
+        string snapshotId,
+        SafetyDbContext dbContext,
+        IClock? clock,
+        CancellationToken cancellationToken)
+    {
+        var compiler = new DsurCompilerEngine(dbContext, clock);
+        var snapshot = await compiler.GetSnapshotByIdAsync(snapshotId, cancellationToken);
+        if (snapshot == null)
+        {
+            return TypedResults.Problem($"Snapshot record '{snapshotId}' not found.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        return TypedResults.Ok(snapshot);
+    }
+
+    public static async Task<IResult> VerifyDsurSnapshotAsync(
+        string snapshotId,
+        SafetyDbContext dbContext,
+        IClock? clock,
+        CancellationToken cancellationToken)
+    {
+        var compiler = new DsurCompilerEngine(dbContext, clock);
+        var verification = await compiler.VerifySnapshotAsync(snapshotId, cancellationToken);
+        if (!verification.HashValid && verification.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+        {
+            return TypedResults.Problem(verification.Message, statusCode: StatusCodes.Status404NotFound);
+        }
+
+        return TypedResults.Ok(verification);
     }
 }

@@ -1,5 +1,7 @@
 using System;
 
+using Cadence.Core.Domain;
+
 namespace Cadence.Apps.Safety.Domain;
 
 public class IcsrReportingEvaluation
@@ -242,7 +244,7 @@ public class SafetySignalAlert
     public int VersionIndex { get; set; } = 1;
 }
 
-public class PeriodicSafetyReportRecord
+public class PeriodicSafetyReportRecord : AggregateRootBase
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string ReportType { get; set; } = "DSUR";
@@ -257,10 +259,23 @@ public class PeriodicSafetyReportRecord
     public string? ApprovedByUserId { get; set; }
     public DateTimeOffset? ApprovedAt { get; set; }
     public string? EsignatureManifestId { get; set; }
-    public required DateTimeOffset CreatedAt { get; set; }
-    public string CreatedBy { get; set; } = string.Empty;
-    public string ReasonForChange { get; set; } = string.Empty;
-    public int VersionIndex { get; set; } = 1;
+}
+
+public class DsurSnapshotRecord : AggregateRootBase
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string ReportId { get; set; } = string.Empty;
+    public string ReportType { get; set; } = "DSUR";
+    public string CompoundName { get; set; } = string.Empty;
+    public string StudyId { get; set; } = string.Empty;
+    public DateTimeOffset PeriodStart { get; set; }
+    public DateTimeOffset PeriodEnd { get; set; }
+    public string Status { get; set; } = "DRAFT";
+    public string ReportPayloadJson { get; set; } = "{}";
+    public string PayloadDigestSha256 { get; set; } = string.Empty;
+    public string? ApprovedByUserId { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
+    public string? EsignatureManifestId { get; set; }
 }
 
 public class DeviceSafetyInvestigation

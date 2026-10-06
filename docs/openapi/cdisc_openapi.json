@@ -6572,6 +6572,122 @@
         }
       }
     },
+    "/api/v1/safety/dsur/{id}/snapshots": {
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "summary": "Retrieves all versioned point-in-time snapshot summaries for a given DSUR report.",
+        "operationId": "GetDsurReportSnapshots",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Safety_DsurSnapshotSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/dsur/snapshots/{snapshotId}": {
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "summary": "Retrieves an immutable point-in-time DSUR snapshot record by snapshot ID.",
+        "operationId": "GetDsurSnapshotById",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_DsurSnapshotDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/dsur/snapshots/{snapshotId}/verify": {
+      "post": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "summary": "Cryptographically verifies SHA-256 payload digest, Part 11 e-signature, and GxP Merkle audit chain.",
+        "operationId": "VerifyDsurSnapshot",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_DsurSnapshotVerificationResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Safety_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/safety/periodic-reports/compile": {
       "post": {
         "tags": [
@@ -6733,6 +6849,142 @@
           "DsurEndpoints"
         ],
         "operationId": "ListPeriodicReports",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/{id}/snapshots": {
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "GetPeriodicReportSnapshots",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/snapshots/{snapshotId}": {
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "GetPeriodicReportSnapshotById",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/safety/periodic-reports/snapshots/{snapshotId}/verify": {
+      "post": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "VerifyPeriodicReportSnapshot",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/safety/snapshots/{snapshotId}": {
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "GetSnapshotById",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/safety/snapshots/{snapshotId}/verify": {
+      "get": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "GetSnapshotVerification",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DsurEndpoints"
+        ],
+        "operationId": "VerifySnapshot",
+        "parameters": [
+          {
+            "name": "snapshotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -15951,6 +16203,497 @@
           }
         }
       },
+      "Safety_DsurLineListingItem": {
+        "required": [
+          "caseId",
+          "subjectId",
+          "studyId",
+          "treatmentArm",
+          "dosageCohort",
+          "age",
+          "sex",
+          "aeTerm",
+          "meddraPt",
+          "meddraSoc",
+          "onsetDate",
+          "resolutionDate",
+          "isSerious",
+          "isFatal",
+          "isAesi",
+          "aesiCategory",
+          "causality",
+          "expectedness",
+          "actionTaken"
+        ],
+        "type": "object",
+        "properties": {
+          "caseId": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "treatmentArm": {
+            "type": "string"
+          },
+          "dosageCohort": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "age": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sex": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "aeTerm": {
+            "type": "string"
+          },
+          "meddraPt": {
+            "type": "string"
+          },
+          "meddraSoc": {
+            "type": "string"
+          },
+          "onsetDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "resolutionDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "isSerious": {
+            "type": "boolean"
+          },
+          "isFatal": {
+            "type": "boolean"
+          },
+          "isAesi": {
+            "type": "boolean"
+          },
+          "aesiCategory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "causality": {
+            "type": "string"
+          },
+          "expectedness": {
+            "type": "string"
+          },
+          "actionTaken": {
+            "type": "string"
+          }
+        }
+      },
+      "Safety_DsurReportPayload": {
+        "required": [
+          "reportId",
+          "reportType",
+          "compoundName",
+          "studyId",
+          "periodStart",
+          "periodEnd",
+          "exposureMetrics",
+          "totalSubjectExposure",
+          "totalSaes",
+          "totalFatalCases",
+          "totalSusars",
+          "totalAesi",
+          "lineListings",
+          "summaryTabulations",
+          "rsiComparisonSummary",
+          "signalSummary"
+        ],
+        "type": "object",
+        "properties": {
+          "reportId": {
+            "type": "string"
+          },
+          "reportType": {
+            "type": "string"
+          },
+          "compoundName": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "exposureMetrics": {
+            "$ref": "#/components/schemas/Safety_SubjectExposureMetrics"
+          },
+          "totalSubjectExposure": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalSaes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalFatalCases": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalSusars": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalAesi": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lineListings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Safety_DsurLineListingItem"
+            }
+          },
+          "summaryTabulations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Safety_DsurSummaryTabulationRow"
+            }
+          },
+          "rsiComparisonSummary": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "signalSummary": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "Safety_DsurSnapshotDetail": {
+        "required": [
+          "id",
+          "reportId",
+          "reportType",
+          "compoundName",
+          "studyId",
+          "periodStart",
+          "periodEnd",
+          "status",
+          "payload",
+          "payloadDigestSha256",
+          "versionIndex",
+          "createdAt",
+          "createdBy"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "reportType": {
+            "type": "string"
+          },
+          "compoundName": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/Safety_DsurReportPayload"
+          },
+          "payloadDigestSha256": {
+            "type": "string"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "approvedByUserId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "esignatureManifestId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Safety_DsurSnapshotSummary": {
+        "required": [
+          "id",
+          "reportId",
+          "reportType",
+          "compoundName",
+          "studyId",
+          "periodStart",
+          "periodEnd",
+          "status",
+          "payloadDigestSha256",
+          "versionIndex",
+          "createdAt",
+          "createdBy"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "reportType": {
+            "type": "string"
+          },
+          "compoundName": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "payloadDigestSha256": {
+            "type": "string"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "approvedByUserId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "approvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Safety_DsurSnapshotVerificationResult": {
+        "required": [
+          "snapshotId",
+          "reportId",
+          "hashValid",
+          "payloadHash",
+          "expectedHash",
+          "signatureValid",
+          "signatureStatus",
+          "merkleChainValid",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "snapshotId": {
+            "type": "string"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "hashValid": {
+            "type": "boolean"
+          },
+          "payloadHash": {
+            "type": "string"
+          },
+          "expectedHash": {
+            "type": "string"
+          },
+          "signatureValid": {
+            "type": "boolean"
+          },
+          "signatureStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "merkleChainValid": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Safety_DsurSummaryTabulationRow": {
+        "required": [
+          "meddraSoc",
+          "meddraPt",
+          "isAesi",
+          "aesiCategory",
+          "isFatal",
+          "investigationalDrugCount",
+          "placeboCount",
+          "comparatorCount",
+          "totalCount",
+          "rsiStatus"
+        ],
+        "type": "object",
+        "properties": {
+          "meddraSoc": {
+            "type": "string"
+          },
+          "meddraPt": {
+            "type": "string"
+          },
+          "isAesi": {
+            "type": "boolean"
+          },
+          "aesiCategory": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isFatal": {
+            "type": "boolean"
+          },
+          "investigationalDrugCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "placeboCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "comparatorCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rsiStatus": {
+            "type": "string"
+          }
+        }
+      },
       "Safety_DsurUpdateRequest": {
         "required": [
           "compoundName",
@@ -16289,9 +17032,6 @@
         }
       },
       "Safety_PeriodicSafetyReportRecord": {
-        "required": [
-          "createdAt"
-        ],
         "type": "object",
         "properties": {
           "id": {
@@ -16371,7 +17111,7 @@
               "integer",
               "string"
             ],
-            "format": "int32"
+            "format": "int64"
           }
         }
       },
@@ -16526,6 +17266,103 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "Safety_SubjectExposureDetail": {
+        "required": [
+          "subjectId",
+          "studyId",
+          "treatmentArm",
+          "startDate",
+          "endDate",
+          "exposureDays",
+          "patientYears"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "treatmentArm": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "exposureDays": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "patientYears": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Safety_SubjectExposureMetrics": {
+        "required": [
+          "totalSubjectsEnrolled",
+          "totalPatientYearsExposure",
+          "investigationalArmPatientYears",
+          "placeboArmPatientYears",
+          "exposureDetails"
+        ],
+        "type": "object",
+        "properties": {
+          "totalSubjectsEnrolled": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalPatientYearsExposure": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "investigationalArmPatientYears": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "placeboArmPatientYears": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "exposureDetails": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Safety_SubjectExposureDetail"
+            }
           }
         }
       },

@@ -340,3 +340,30 @@ public class DeviceSafetyInvestigationConfiguration : IEntityTypeConfiguration<D
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
 }
+
+public class DsurSnapshotRecordConfiguration : IEntityTypeConfiguration<DsurSnapshotRecord>
+{
+    public void Configure(EntityTypeBuilder<DsurSnapshotRecord> builder)
+    {
+        builder.ToTable("dsur_snapshots");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.ReportId).HasMaxLength(36).IsRequired();
+        builder.HasIndex(x => x.ReportId);
+        builder.Property(x => x.ReportType).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.ReportType);
+        builder.Property(x => x.CompoundName).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.CompoundName);
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.StudyId);
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.HasIndex(x => x.Status);
+        builder.Property(x => x.ReportPayloadJson).HasColumnType("jsonb");
+        builder.Property(x => x.PayloadDigestSha256).HasMaxLength(64).IsRequired();
+        builder.HasIndex(x => x.PayloadDigestSha256);
+        builder.Property(x => x.ApprovedByUserId).HasMaxLength(255);
+        builder.Property(x => x.EsignatureManifestId).HasMaxLength(255);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}

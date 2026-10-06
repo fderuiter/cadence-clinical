@@ -253,4 +253,154 @@ public class DsurCompilerEngineTests
         var problemResult = (ProblemHttpResult)updateResult;
         problemResult.StatusCode.Should().Be(StatusCodes.Status409Conflict);
     }
+
+    /// <summary>
+    /// Validates that compilation automatically aggregates safety cases from SafetyDbContext when payload arrays are null or empty.
+    /// @req:PRD-PVG-004
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-PVG-004")]
+    public async Task CompileDsur_GivenNullOrEmptyPayloads_AutomaticallyAggregatesFromSafetyDbContext()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var fakeClock = new FakeClock(new DateTimeOffset(2026, 9, 30, 15, 0, 0, TimeSpan.Zero));
+        var engine = new DsurCompilerEngine(dbContext, fakeClock);
+
+        var periodStart = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var periodEnd = new DateTimeOffset(2025, 12, 31, 23, 59, 59, TimeSpan.Zero);
+
+        // Seed SafetyCases in DbContext
+        var seededCaseInput = new SafetyCaseIcsrInput(
+            CaseId: "CASE-DB-100",
+            SubjectId: "SUBJ-999",
+            StudyId: "STUDY-AUTO",
+            ReceiptDate: new DateTimeOffset(2025, 5, 20, 0, 0, 0, TimeSpan.Zero),
+            AeTerm: "Fatigue",
+            MeddraPt: "Fatigue",
+            MeddraSoc: "General disorders and administration site conditions",
+            IsSerious: true,
+            IsFatal: false,
+            IsAesi: false,
+            AesiCategory: null,
+            Causality: "CAUSAL",
+            Expectedness: "EXPECTED",
+            TreatmentArm: "Investigational Drug",
+            ActionTaken: "DOSE_REDUCED",
+            OnsetDate: new DateTimeOffset(2025, 5, 19, 0, 0, 0, TimeSpan.Zero),
+            ResolutionDate: null
+        );
+
+        dbContext.SafetyCases.Add(new SafetyCaseIcsr
+        {
+            Id = Guid.NewGuid().ToString(),
+            WorldwideUniqueCaseId = "WW-CASE-100",
+            PatientId = "SUBJ-999",
+            CaseDataJson = JsonSerializer.Serialize(seededCaseInput),
+            CreatedAt = fakeClock.UtcNow,
+            CreatedBy = "seeder",
+            ReasonForChange = "Test Seed Data",
+            VersionIndex = 1
+        });
+
+        // Seed SafetyReportingEvaluations in DbContext
+        dbContext.SafetyReportingEvaluations.Add(new IcsrReportingEvaluation
+        {
+            Id = Guid.NewGuid().ToString(),
+            CaseId = "CASE-DB-200",
+            StudyId = "STUDY-AUTO",
+            SubjectId = "SUBJ-888",
+            ReceiptDate = new DateTimeOffset(2025, 8, 10, 0, 0, 0, TimeSpan.Zero),
+            IsSerious = true,
+            SeriousnessDeath = false,
+            Causality = "CAUSAL",
+            Expectedness = "UNEXPECTED",
+            ApprovalStatus = "APPROVED",
+            CreatedAt = fakeClock.UtcNow,
+            CreatedBy = "seeder",
+            ReasonForChange = "Test Seed Evaluation",
+            VersionIndex = 1
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var request = new DsurCompileRequest(
+            CompoundName: "Cadence-Compound-Auto",
+            StudyId: "STUDY-AUTO",
+            PeriodStart: periodStart,
+            PeriodEnd: periodEnd,
+            ReasonForChange: "Automated Aggregation Test",
+            SubjectEnrollments: null,
+            SafetyCases: null
+        );
+
+        // Act
+        var result = await engine.CompileDsurAsync(request, "safety-officer", cancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Record.TotalSaes.Should().Be(2);
+        result.Payload.LineListings.Should().HaveCount(2);
+
+        // Verify snapshot ledger creation
+        var snapshots = await dbContext.DsurSnapshots.Where(s => s.ReportId == result.Record.Id).ToListAsync(cancellationToken);
+        snapshots.Should().HaveCount(1);
+        snapshots[0].PayloadDigestSha256.Should().HaveLength(64);
+        snapshots[0].VersionIndex.Should().Be(1);
+    }
+
+    /// <summary>
+    /// Validates snapshot query and cryptographic verification endpoints for locked report snapshots.
+    /// @req:PRD-PVG-008
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-PVG-008")]
+    public async Task GetSnapshotsAndVerify_ReturnsPointInTimePayloadAndCryptographicVerification()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Arrange
+        using var dbContext = CreateInMemoryDbContext();
+        var fakeClock = new FakeClock(new DateTimeOffset(2026, 9, 30, 16, 0, 0, TimeSpan.Zero));
+        var engine = new DsurCompilerEngine(dbContext, fakeClock);
+
+        var compileReq = new DsurCompileRequest(
+            CompoundName: "Compound-Snapshot-Check",
+            StudyId: "STUDY-SNAP",
+            PeriodStart: new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            PeriodEnd: new DateTimeOffset(2025, 12, 31, 0, 0, 0, TimeSpan.Zero),
+            ReasonForChange: "Initial compilation"
+        );
+
+        var compileResult = await engine.CompileDsurAsync(compileReq, "officer", cancellationToken);
+        var reportId = compileResult.Record.Id;
+
+        // Approve and freeze snapshot
+        var approveResult = await engine.ApproveDsurAsync(reportId, new DsurApproveRequest("qppv-physician", "Final Signoff", "Locking report"), "qppv-physician", cancellationToken);
+        approveResult.Status.Should().Be(DsurOperationStatus.Success);
+
+        // Act 1: Get snapshots for report
+        var snapshots = await engine.GetSnapshotsForReportAsync(reportId, cancellationToken);
+        snapshots.Should().HaveCount(1);
+        var snapshotSummary = snapshots[0];
+        snapshotSummary.Status.Should().Be("LOCKED");
+        snapshotSummary.ApprovedByUserId.Should().Be("qppv-physician");
+
+        // Act 2: Get snapshot detail by snapshot ID
+        var snapshotDetail = await engine.GetSnapshotByIdAsync(snapshotSummary.Id, cancellationToken);
+        snapshotDetail.Should().NotBeNull();
+        snapshotDetail!.Payload.CompoundName.Should().Be("Compound-Snapshot-Check");
+        snapshotDetail.EsignatureManifestId.Should().NotBeNullOrEmpty();
+
+        // Act 3: Verify snapshot cryptographically
+        var verification = await engine.VerifySnapshotAsync(snapshotSummary.Id, cancellationToken);
+
+        // Assert 3
+        verification.HashValid.Should().BeTrue();
+        verification.SignatureValid.Should().BeTrue();
+        verification.MerkleChainValid.Should().BeTrue();
+        verification.Message.Should().Contain("PASSED");
+    }
 }

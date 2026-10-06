@@ -126,3 +126,51 @@ public record DsurReportPayload(
     IReadOnlyList<IReadOnlyDictionary<string, object>> RsiComparisonSummary,
     IReadOnlyList<IReadOnlyDictionary<string, object>> SignalSummary
 );
+
+public record DsurSnapshotSummary(
+    string Id,
+    string ReportId,
+    string ReportType,
+    string CompoundName,
+    string StudyId,
+    DateTimeOffset PeriodStart,
+    DateTimeOffset PeriodEnd,
+    string Status,
+    string PayloadDigestSha256,
+    long VersionIndex,
+    DateTime CreatedAt,
+    string CreatedBy,
+    string? ApprovedByUserId = null,
+    DateTimeOffset? ApprovedAt = null
+);
+
+public record DsurSnapshotDetail(
+    string Id,
+    string ReportId,
+    string ReportType,
+    string CompoundName,
+    string StudyId,
+    DateTimeOffset PeriodStart,
+    DateTimeOffset PeriodEnd,
+    string Status,
+    DsurReportPayload Payload,
+    string PayloadDigestSha256,
+    long VersionIndex,
+    DateTime CreatedAt,
+    string CreatedBy,
+    string? ApprovedByUserId = null,
+    DateTimeOffset? ApprovedAt = null,
+    string? EsignatureManifestId = null
+);
+
+public record DsurSnapshotVerificationResult(
+    string SnapshotId,
+    string ReportId,
+    bool HashValid,
+    string PayloadHash,
+    string ExpectedHash,
+    bool SignatureValid,
+    string? SignatureStatus,
+    bool MerkleChainValid,
+    string Message
+);

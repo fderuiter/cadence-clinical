@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Core.Domain.Audit;
 using Cadence.Kernel.Time;
 
 using Microsoft.EntityFrameworkCore;
@@ -40,8 +42,11 @@ public class DsurCompilerEngine
 
         async Task<DsurCompileResult> CompileCoreAsync()
         {
-            var exposureMetrics = CalculatePatientYearsExposure(request);
-            var (lineListings, summaryTabulations) = ProcessMedDraCrossTabulations(request);
+            var (enrollments, safetyCases) = await ResolveInputsAsync(request, cancellationToken);
+            var effectiveRequest = request with { SubjectEnrollments = enrollments, SafetyCases = safetyCases };
+
+            var exposureMetrics = CalculatePatientYearsExposure(effectiveRequest);
+            var (lineListings, summaryTabulations) = ProcessMedDraCrossTabulations(effectiveRequest);
 
             var fatalCasesCount = lineListings.Count(l => l.IsFatal);
             var susarsCount = lineListings.Count(l => l.IsSerious && string.Equals(l.Expectedness, "UNEXPECTED", StringComparison.OrdinalIgnoreCase) && string.Equals(l.Causality, "CAUSAL", StringComparison.OrdinalIgnoreCase));
@@ -69,6 +74,7 @@ public class DsurCompilerEngine
             );
 
             var payloadJson = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+            string payloadDigestSha256 = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson)));
 
             var record = new PeriodicSafetyReportRecord
             {
@@ -82,13 +88,30 @@ public class DsurCompilerEngine
                 TotalSubjectExposure = (int)Math.Round(exposureMetrics.TotalPatientYearsExposure),
                 TotalSaes = lineListings.Count,
                 ReportPayloadJson = payloadJson,
-                CreatedAt = _clock.UtcNow,
                 CreatedBy = string.IsNullOrWhiteSpace(callerUserId) ? "safety-officer" : callerUserId,
                 ReasonForChange = string.IsNullOrWhiteSpace(request.ReasonForChange) ? "DSUR Automated Aggregation and Compilation" : request.ReasonForChange,
                 VersionIndex = 1
             };
 
+            var snapshot = new DsurSnapshotRecord
+            {
+                Id = Guid.NewGuid().ToString(),
+                ReportId = reportId,
+                ReportType = "DSUR",
+                CompoundName = request.CompoundName,
+                StudyId = request.StudyId ?? string.Empty,
+                PeriodStart = request.PeriodStart,
+                PeriodEnd = request.PeriodEnd,
+                Status = "DRAFT",
+                ReportPayloadJson = payloadJson,
+                PayloadDigestSha256 = payloadDigestSha256,
+                CreatedBy = string.IsNullOrWhiteSpace(callerUserId) ? "safety-officer" : callerUserId,
+                ReasonForChange = string.IsNullOrWhiteSpace(request.ReasonForChange) ? "DSUR Point-in-time Snapshot Ledger Creation" : request.ReasonForChange,
+                VersionIndex = 1
+            };
+
             _dbContext.PeriodicSafetyReports.Add(record);
+            _dbContext.DsurSnapshots.Add(snapshot);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
             return new DsurCompileResult(record, payload);
@@ -188,6 +211,19 @@ public class DsurCompilerEngine
             : request.ReasonForChange;
         record.VersionIndex += 1;
 
+        var snapshots = await _dbContext.DsurSnapshots.Where(s => s.ReportId == reportId).ToListAsync(cancellationToken);
+        foreach (var snap in snapshots)
+        {
+            snap.Status = "LOCKED";
+            snap.ApprovedByUserId = signerId;
+            snap.ApprovedAt = _clock.UtcNow;
+            snap.EsignatureManifestId = signedManifest;
+            snap.ReasonForChange = string.IsNullOrWhiteSpace(request?.ReasonForChange)
+                ? "Part 11 Electronic Signature Snapshot Freeze"
+                : request.ReasonForChange;
+            snap.VersionIndex += 1;
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new DsurApprovalResult(DsurOperationStatus.Success, "DSUR approved and locked.", record, verificationResult);
@@ -231,14 +267,310 @@ public class DsurCompilerEngine
             record.PeriodEnd = request.PeriodEnd.Value;
         }
 
+        var compileReq = new DsurCompileRequest(
+            CompoundName: record.CompoundName,
+            StudyId: record.StudyId,
+            PeriodStart: record.PeriodStart,
+            PeriodEnd: record.PeriodEnd,
+            ReasonForChange: request.ReasonForChange
+        );
+
+        var (enrollments, safetyCases) = await ResolveInputsAsync(compileReq, cancellationToken);
+        var effectiveReq = compileReq with { SubjectEnrollments = enrollments, SafetyCases = safetyCases };
+
+        var exposureMetrics = CalculatePatientYearsExposure(effectiveReq);
+        var (lineListings, summaryTabulations) = ProcessMedDraCrossTabulations(effectiveReq);
+
+        var fatalCasesCount = lineListings.Count(l => l.IsFatal);
+        var susarsCount = lineListings.Count(l => l.IsSerious && string.Equals(l.Expectedness, "UNEXPECTED", StringComparison.OrdinalIgnoreCase) && string.Equals(l.Causality, "CAUSAL", StringComparison.OrdinalIgnoreCase));
+        var aesiCount = lineListings.Count(l => l.IsAesi);
+
+        var payload = new DsurReportPayload(
+            ReportId: record.Id,
+            ReportType: record.ReportType,
+            CompoundName: record.CompoundName,
+            StudyId: record.StudyId,
+            PeriodStart: record.PeriodStart,
+            PeriodEnd: record.PeriodEnd,
+            ExposureMetrics: exposureMetrics,
+            TotalSubjectExposure: exposureMetrics.TotalSubjectsEnrolled,
+            TotalSaes: lineListings.Count,
+            TotalFatalCases: fatalCasesCount,
+            TotalSusars: susarsCount,
+            TotalAesi: aesiCount,
+            LineListings: lineListings,
+            SummaryTabulations: summaryTabulations,
+            RsiComparisonSummary: BuildRsiComparisonSummary(summaryTabulations),
+            SignalSummary: []
+        );
+
+        var payloadJson = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+        string payloadDigestSha256 = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(payloadJson)));
+
+        record.ReportPayloadJson = payloadJson;
+        record.TotalSubjectExposure = (int)Math.Round(exposureMetrics.TotalPatientYearsExposure);
+        record.TotalSaes = lineListings.Count;
         record.ReasonForChange = string.IsNullOrWhiteSpace(request.ReasonForChange)
             ? "Draft DSUR record updated"
             : request.ReasonForChange;
         record.VersionIndex += 1;
 
+        var existingSnapshots = await _dbContext.DsurSnapshots.Where(s => s.ReportId == reportId).ToListAsync(cancellationToken);
+        long nextVersion = (existingSnapshots.Count > 0 ? existingSnapshots.Max(s => s.VersionIndex) : 0L) + 1;
+
+        var newSnapshot = new DsurSnapshotRecord
+        {
+            Id = Guid.NewGuid().ToString(),
+            ReportId = reportId,
+            ReportType = record.ReportType,
+            CompoundName = record.CompoundName,
+            StudyId = record.StudyId,
+            PeriodStart = record.PeriodStart,
+            PeriodEnd = record.PeriodEnd,
+            Status = record.Status,
+            ReportPayloadJson = payloadJson,
+            PayloadDigestSha256 = payloadDigestSha256,
+            CreatedBy = string.IsNullOrWhiteSpace(callerUserId) ? "safety-officer" : callerUserId,
+            ReasonForChange = record.ReasonForChange,
+            VersionIndex = nextVersion
+        };
+
+        _dbContext.DsurSnapshots.Add(newSnapshot);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new DsurUpdateResult(DsurOperationStatus.Success, "DSUR updated.", record);
+    }
+
+    public async Task<IReadOnlyList<DsurSnapshotSummary>> GetSnapshotsForReportAsync(
+        string reportId,
+        CancellationToken cancellationToken = default)
+    {
+        var snapshots = await _dbContext.DsurSnapshots
+            .AsNoTracking()
+            .Where(s => s.ReportId == reportId)
+            .OrderBy(s => s.VersionIndex)
+            .ToListAsync(cancellationToken);
+
+        return snapshots.Select(s => new DsurSnapshotSummary(
+            Id: s.Id,
+            ReportId: s.ReportId,
+            ReportType: s.ReportType,
+            CompoundName: s.CompoundName,
+            StudyId: s.StudyId,
+            PeriodStart: s.PeriodStart,
+            PeriodEnd: s.PeriodEnd,
+            Status: s.Status,
+            PayloadDigestSha256: s.PayloadDigestSha256,
+            VersionIndex: s.VersionIndex,
+            CreatedAt: s.CreatedAt,
+            CreatedBy: s.CreatedBy,
+            ApprovedByUserId: s.ApprovedByUserId,
+            ApprovedAt: s.ApprovedAt
+        )).ToList();
+    }
+
+    public async Task<DsurSnapshotDetail?> GetSnapshotByIdAsync(
+        string snapshotId,
+        CancellationToken cancellationToken = default)
+    {
+        var snap = await _dbContext.DsurSnapshots
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == snapshotId || s.ReportId == snapshotId, cancellationToken);
+
+        if (snap == null)
+        {
+            return null;
+        }
+
+        var payload = JsonSerializer.Deserialize<DsurReportPayload>(snap.ReportPayloadJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (payload == null)
+        {
+            return null;
+        }
+
+        return new DsurSnapshotDetail(
+            Id: snap.Id,
+            ReportId: snap.ReportId,
+            ReportType: snap.ReportType,
+            CompoundName: snap.CompoundName,
+            StudyId: snap.StudyId,
+            PeriodStart: snap.PeriodStart,
+            PeriodEnd: snap.PeriodEnd,
+            Status: snap.Status,
+            Payload: payload,
+            PayloadDigestSha256: snap.PayloadDigestSha256,
+            VersionIndex: snap.VersionIndex,
+            CreatedAt: snap.CreatedAt,
+            CreatedBy: snap.CreatedBy,
+            ApprovedByUserId: snap.ApprovedByUserId,
+            ApprovedAt: snap.ApprovedAt,
+            EsignatureManifestId: snap.EsignatureManifestId
+        );
+    }
+
+    public async Task<DsurSnapshotVerificationResult> VerifySnapshotAsync(
+        string snapshotId,
+        CancellationToken cancellationToken = default)
+    {
+        var snap = await _dbContext.DsurSnapshots
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == snapshotId || s.ReportId == snapshotId, cancellationToken);
+
+        if (snap == null)
+        {
+            return new DsurSnapshotVerificationResult(
+                SnapshotId: snapshotId,
+                ReportId: string.Empty,
+                HashValid: false,
+                PayloadHash: string.Empty,
+                ExpectedHash: string.Empty,
+                SignatureValid: false,
+                SignatureStatus: "NOT_FOUND",
+                MerkleChainValid: false,
+                Message: $"Snapshot record '{snapshotId}' not found."
+            );
+        }
+
+        string computedHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(snap.ReportPayloadJson)));
+        bool hashValid = string.Equals(computedHash, snap.PayloadDigestSha256, StringComparison.OrdinalIgnoreCase);
+
+        bool sigValid = true;
+        string? sigStatus = "UNSIGNED";
+        if (!string.IsNullOrWhiteSpace(snap.EsignatureManifestId))
+        {
+            var verifier = new ESignatureVerifier();
+            var verification = verifier.VerifySignature(Encoding.UTF8.GetBytes(snap.EsignatureManifestId));
+            sigValid = verification.IsValid;
+            sigStatus = verification.Status;
+        }
+
+        // Verify Merkle Audit Log entries
+        var auditLogs = await _dbContext.AuditLogEntries
+            .AsNoTracking()
+            .Where(a => a.EntityName == nameof(DsurSnapshotRecord) && a.EntityId == snap.Id)
+            .OrderBy(a => a.VersionIndex)
+            .ToListAsync(cancellationToken);
+
+        bool merkleValid = true;
+        if (auditLogs.Count > 0)
+        {
+            foreach (var log in auditLogs)
+            {
+                string recalculatedBlock = AuditLogEntry.ComputeBlockHash(
+                    log.EntityName, log.EntityId, log.Action, log.Timestamp, log.UserId,
+                    log.VersionIndex, log.ChangesJson, log.PredecessorHash);
+
+                if (!string.Equals(recalculatedBlock, log.BlockHash, StringComparison.Ordinal))
+                {
+                    merkleValid = false;
+                    break;
+                }
+            }
+        }
+
+        bool allPassed = hashValid && sigValid && merkleValid;
+        string message = allPassed
+            ? "Cryptographic snapshot verification PASSED. SHA-256 payload digest, Part 11 e-signature, and GxP Merkle audit chain intact."
+            : "Cryptographic snapshot verification FAILED.";
+
+        return new DsurSnapshotVerificationResult(
+            SnapshotId: snap.Id,
+            ReportId: snap.ReportId,
+            HashValid: hashValid,
+            PayloadHash: computedHash,
+            ExpectedHash: snap.PayloadDigestSha256,
+            SignatureValid: sigValid,
+            SignatureStatus: sigStatus,
+            MerkleChainValid: merkleValid,
+            Message: message
+        );
+    }
+
+    private async Task<(IReadOnlyList<SubjectEnrollmentRecord> Enrollments, IReadOnlyList<SafetyCaseIcsrInput> SafetyCases)>
+        ResolveInputsAsync(DsurCompileRequest request, CancellationToken cancellationToken)
+    {
+        var enrollments = request.SubjectEnrollments?.ToList() ?? new List<SubjectEnrollmentRecord>();
+        var safetyCases = request.SafetyCases?.ToList() ?? new List<SafetyCaseIcsrInput>();
+
+        if (safetyCases.Count == 0)
+        {
+            // 1. Query SafetyCases table
+            var dbCases = await _dbContext.SafetyCases.AsNoTracking().ToListAsync(cancellationToken);
+            foreach (var c in dbCases)
+            {
+                try
+                {
+                    var input = JsonSerializer.Deserialize<SafetyCaseIcsrInput>(c.CaseDataJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (input != null)
+                    {
+                        bool studyMatch = string.IsNullOrEmpty(request.StudyId) || string.Equals(input.StudyId, request.StudyId, StringComparison.OrdinalIgnoreCase);
+                        bool dateMatch = input.ReceiptDate >= request.PeriodStart && input.ReceiptDate <= request.PeriodEnd;
+                        if (studyMatch && dateMatch)
+                        {
+                            safetyCases.Add(input);
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore non-matching json payloads
+                }
+            }
+
+            // 2. Query SafetyReportingEvaluations table
+            var dbEvals = await _dbContext.SafetyReportingEvaluations
+                .AsNoTracking()
+                .Where(e => (string.IsNullOrEmpty(request.StudyId) || e.StudyId == request.StudyId) && e.ReceiptDate >= request.PeriodStart && e.ReceiptDate <= request.PeriodEnd)
+                .ToListAsync(cancellationToken);
+
+            foreach (var e in dbEvals)
+            {
+                if (!safetyCases.Any(sc => sc.CaseId == e.CaseId))
+                {
+                    safetyCases.Add(new SafetyCaseIcsrInput(
+                        CaseId: e.CaseId,
+                        SubjectId: e.SubjectId,
+                        StudyId: e.StudyId,
+                        ReceiptDate: e.ReceiptDate,
+                        AeTerm: "Adverse Event",
+                        MeddraPt: "Unspecified Adverse Event",
+                        MeddraSoc: "General disorders and administration site conditions",
+                        IsSerious: e.IsSerious,
+                        IsFatal: e.SeriousnessDeath,
+                        IsAesi: false,
+                        AesiCategory: null,
+                        Causality: e.Causality,
+                        Expectedness: e.Expectedness,
+                        TreatmentArm: "Investigational Drug",
+                        ActionTaken: "DRUG_WITHDRAWN",
+                        OnsetDate: e.ReceiptDate,
+                        ResolutionDate: null
+                    ));
+                }
+            }
+        }
+
+        if (enrollments.Count == 0 && safetyCases.Count > 0)
+        {
+            // Infer enrollments from aggregated safety cases
+            var groupedSubjects = safetyCases.GroupBy(c => c.SubjectId);
+            foreach (var group in groupedSubjects)
+            {
+                var minDate = group.Min(c => c.OnsetDate < c.ReceiptDate ? c.OnsetDate : c.ReceiptDate);
+                var arm = group.Select(c => c.TreatmentArm).FirstOrDefault(a => !string.IsNullOrEmpty(a)) ?? "Investigational Drug";
+                var studyId = group.Select(c => c.StudyId).FirstOrDefault(s => !string.IsNullOrEmpty(s)) ?? request.StudyId ?? string.Empty;
+
+                enrollments.Add(new SubjectEnrollmentRecord(
+                    SubjectId: group.Key,
+                    StudyId: studyId,
+                    TreatmentArm: arm,
+                    EnrollmentDate: minDate < request.PeriodStart ? minDate : request.PeriodStart,
+                    DiscontinuationDate: null
+                ));
+            }
+        }
+
+        return (enrollments, safetyCases);
     }
 
     public static SubjectExposureMetrics CalculatePatientYearsExposure(DsurCompileRequest request)

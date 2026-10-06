@@ -8,6 +8,7 @@ Generated from the EF Core model of `Cadence.Apps.Safety.Infrastructure.Persiste
 | --- | --- | --- |
 | [`safety.audit_log_entries`](#safetyaudit_log_entries) | `AuditLogEntry` | 11 |
 | [`safety.device_safety_investigations`](#safetydevice_safety_investigations) | `DeviceSafetyInvestigation` | 31 |
+| [`safety.dsur_snapshots`](#safetydsur_snapshots) | `DsurSnapshotRecord` | 17 |
 | [`safety.periodic_safety_reports`](#safetyperiodic_safety_reports) | `PeriodicSafetyReportRecord` | 17 |
 | [`safety.sae_discrepancies`](#safetysae_discrepancies) | `SaeDiscrepancy` | 12 |
 | [`safety.sae_reconciliation_jobs`](#safetysae_reconciliation_jobs) | `SaeReconciliationJob` | 9 |
@@ -95,6 +96,39 @@ Indexes:
 - `IX_device_safety_investigations_StudyId`: (`StudyId`)
 - `IX_device_safety_investigations_SubjectId`: (`SubjectId`)
 
+## safety.dsur_snapshots
+
+Entity: `DsurSnapshotRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `ApprovedAt` | `timestamp with time zone` | yes |  |  |
+| `ApprovedByUserId` | `character varying(255)` | yes |  |  |
+| `CompoundName` | `character varying(255)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `EsignatureManifestId` | `character varying(255)` | yes |  |  |
+| `PayloadDigestSha256` | `character varying(64)` | no |  |  |
+| `PeriodEnd` | `timestamp with time zone` | no |  |  |
+| `PeriodStart` | `timestamp with time zone` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `ReportId` | `character varying(36)` | no |  |  |
+| `ReportPayloadJson` | `jsonb` | no |  |  |
+| `ReportType` | `character varying(50)` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_dsur_snapshots_CompoundName`: (`CompoundName`)
+- `IX_dsur_snapshots_PayloadDigestSha256`: (`PayloadDigestSha256`)
+- `IX_dsur_snapshots_ReportId`: (`ReportId`)
+- `IX_dsur_snapshots_ReportType`: (`ReportType`)
+- `IX_dsur_snapshots_Status`: (`Status`)
+- `IX_dsur_snapshots_StudyId`: (`StudyId`)
+
 ## safety.periodic_safety_reports
 
 Entity: `PeriodicSafetyReportRecord`
@@ -117,7 +151,7 @@ Entity: `PeriodicSafetyReportRecord`
 | `StudyId` | `character varying(255)` | no |  |  |
 | `TotalSaes` | `integer` | no |  |  |
 | `TotalSubjectExposure` | `integer` | no |  |  |
-| `VersionIndex` | `integer` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
 
 Indexes:
 
