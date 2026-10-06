@@ -4,6 +4,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `POST` | `/api/v1/execution/batch-sign-off` | BatchSignOff |  |
 | `GET` | `/api/v1/execution/cec/dossiers/{id}` | GetCecDossierById |  |
 | `POST` | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate` | ChairAdjudicateDossier |  |
 | `POST` | `/api/v1/execution/forms` | CreateFormSubmission |  |

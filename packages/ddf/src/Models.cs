@@ -25,6 +25,8 @@ public record DDFItemIR(
     string? Relevant = null,
     string? Constraint = null,
     string? ConstraintMessage = null,
+    string? ConstraintSeverity = null,
+    string? ConstraintCode = null,
     IReadOnlyList<ItemLocalization>? Localizations = null
 );
 

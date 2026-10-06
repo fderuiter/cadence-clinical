@@ -164,10 +164,10 @@ public static class DdfDependencyGraph
 /// says when the item is shown (<c>show</c>, the default) or hidden (<c>hide</c>); a constraint condition says what a
 /// valid value satisfies, as an OpenRosa constraint does, and the query message is shown when it does not.
 /// </summary>
-public sealed record DdfItemRules(string? Relevant, string? Constraint, string? ConstraintMessage, IReadOnlyList<string> SkipLogicReads)
+public sealed record DdfItemRules(string? Relevant, string? Constraint, string? ConstraintMessage, IReadOnlyList<string> SkipLogicReads, string? ConstraintSeverity = null, string? ConstraintCode = null)
 {
     private static readonly HashSet<string> SkipLogicProperties = new(StringComparer.Ordinal) { "type", "action", "condition" };
-    private static readonly HashSet<string> ConstraintProperties = new(StringComparer.Ordinal) { "type", "condition", "query_message" };
+    private static readonly HashSet<string> ConstraintProperties = new(StringComparer.Ordinal) { "type", "condition", "query_message", "severity", "code", "rule_id" };
 
     /// <summary>
     /// Reads the rules of item <paramref name="itemId"/>. Problems (a malformed rule, an unknown item) are added to
@@ -192,6 +192,8 @@ public sealed record DdfItemRules(string? Relevant, string? Constraint, string? 
         var constraints = new List<string>();
         var messages = new List<string>();
         var reads = new List<string>();
+        var severities = new List<string>();
+        var codes = new List<string>();
         int index = 0;
         foreach (var rule in array.EnumerateArray())
         {
@@ -256,8 +258,63 @@ public sealed record DdfItemRules(string? Relevant, string? Constraint, string? 
                     continue;
                 }
 
+                string severity = "Error";
+                if (rule.TryGetProperty("severity", out var s) && s.ValueKind == JsonValueKind.String)
+                {
+                    string rawSeverity = s.GetString() ?? "";
+                    if (string.Equals(rawSeverity, "Error", StringComparison.OrdinalIgnoreCase))
+                    {
+                        severity = "Error";
+                    }
+                    else if (string.Equals(rawSeverity, "Warning", StringComparison.OrdinalIgnoreCase))
+                    {
+                        severity = "Warning";
+                    }
+                    else if (string.Equals(rawSeverity, "Notice", StringComparison.OrdinalIgnoreCase))
+                    {
+                        severity = "Notice";
+                    }
+                    else
+                    {
+                        problems.Add($"{where}: 'severity' must be 'Error', 'Warning', or 'Notice'.");
+                        continue;
+                    }
+                }
+                else if (rule.TryGetProperty("severity", out var sInvalid) && sInvalid.ValueKind != JsonValueKind.Null)
+                {
+                    problems.Add($"{where}: 'severity' must be 'Error', 'Warning', or 'Notice'.");
+                    continue;
+                }
+
+                string? code = null;
+                if (rule.TryGetProperty("code", out var c) && c.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(c.GetString()))
+                {
+                    code = c.GetString();
+                }
+                else if (rule.TryGetProperty("rule_id", out var rId) && rId.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(rId.GetString()))
+                {
+                    code = rId.GetString();
+                }
+
                 constraints.Add(xpath);
                 messages.Add(message);
+                severities.Add(severity);
+                if (code is not null)
+                {
+                    codes.Add(code);
+                }
+            }
+        }
+
+        string? constraintSeverity = null;
+        string? constraintCode = null;
+
+        if (constraints.Count > 0)
+        {
+            constraintSeverity = severities.Count == 0 ? "Error" : string.Join("; ", severities);
+            if (codes.Count > 0)
+            {
+                constraintCode = string.Join("; ", codes);
             }
         }
 
@@ -265,7 +322,9 @@ public sealed record DdfItemRules(string? Relevant, string? Constraint, string? 
             relevant.Count == 0 ? null : string.Join(" and ", relevant),
             constraints.Count == 0 ? null : string.Join(" and ", constraints),
             messages.Count == 0 ? null : string.Join("; ", messages),
-            reads);
+            reads,
+            constraintSeverity,
+            constraintCode);
     }
 }
 
