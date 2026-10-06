@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Domain.Forms;
+using Cadence.Apps.Execution.Domain.Forms.Errors;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Queries;
@@ -20,12 +22,13 @@ namespace Cadence.Apps.Execution.Application.Queries;
 /// Application service implementing clinical discrepancy query workflows, state transitions, and GxP role enforcement.
 /// @req:PRD-SYS-007
 /// @req:PRD-SYS-053
-/// @req:SRS-EDC-004
+/// @req:PRD-SRS-EDC-004
 /// </summary>
 public sealed class ClinicalQueryApplicationService(
     IClinicalQueryRepository queryRepository,
     ICurrentAuditContextAccessor auditContextAccessor,
-    IClock clock) : IClinicalQueryApplicationService
+    IClock clock,
+    IFormSubmissionRepository? formSubmissionRepository = null) : IClinicalQueryApplicationService
 {
     public async Task<Result<ClinicalQueryResponse>> CreateAsync(
         QueryCreateRequest request,
@@ -95,6 +98,18 @@ public sealed class ClinicalQueryApplicationService(
                 return DomainError.Validation("INVALID_OBSERVATION_ID", $"Observation ID '{request.ObservationId}' is not a valid GUID.");
             }
             observationId = parsedObsId;
+        }
+
+        var lockCheck = await EnsureFormNotLockedAsync(
+            studyCode,
+            subjectCode,
+            request.VisitId,
+            request.FormId,
+            cancellationToken);
+
+        if (lockCheck.IsFailure)
+        {
+            return lockCheck.Error!;
         }
 
         // Check whether active query already exists on this coordinate
@@ -239,6 +254,18 @@ public sealed class ClinicalQueryApplicationService(
             return QueryErrors.NotFound(id);
         }
 
+        var lockCheck = await EnsureFormNotLockedAsync(
+            query.StudyId,
+            query.SubjectId,
+            query.VisitId,
+            query.FormId,
+            cancellationToken);
+
+        if (lockCheck.IsFailure)
+        {
+            return lockCheck.Error!;
+        }
+
         // The responder is the authenticated caller; the request cannot name someone else (#4920).
         var answerResult = query.Answer(request.Response, auditContextAccessor.UserId);
         if (answerResult.IsFailure)
@@ -271,6 +298,18 @@ public sealed class ClinicalQueryApplicationService(
         if (query is null)
         {
             return QueryErrors.NotFound(id);
+        }
+
+        var lockCheck = await EnsureFormNotLockedAsync(
+            query.StudyId,
+            query.SubjectId,
+            query.VisitId,
+            query.FormId,
+            cancellationToken);
+
+        if (lockCheck.IsFailure)
+        {
+            return lockCheck.Error!;
         }
 
         // The resolver is the authenticated caller; the request cannot name someone else (#4920).
@@ -308,6 +347,18 @@ public sealed class ClinicalQueryApplicationService(
             return QueryErrors.NotFound(id);
         }
 
+        var lockCheck = await EnsureFormNotLockedAsync(
+            query.StudyId,
+            query.SubjectId,
+            query.VisitId,
+            query.FormId,
+            cancellationToken);
+
+        if (lockCheck.IsFailure)
+        {
+            return lockCheck.Error!;
+        }
+
         var reopenResult = query.Reopen(request.Reason, auditContextAccessor.UserId);
         if (reopenResult.IsFailure)
         {
@@ -341,6 +392,18 @@ public sealed class ClinicalQueryApplicationService(
             return QueryErrors.NotFound(id);
         }
 
+        var lockCheck = await EnsureFormNotLockedAsync(
+            query.StudyId,
+            query.SubjectId,
+            query.VisitId,
+            query.FormId,
+            cancellationToken);
+
+        if (lockCheck.IsFailure)
+        {
+            return lockCheck.Error!;
+        }
+
         var cancelResult = query.Cancel(request.Reason, auditContextAccessor.UserId);
         if (cancelResult.IsFailure)
         {
@@ -350,6 +413,43 @@ public sealed class ClinicalQueryApplicationService(
         await queryRepository.SaveChangesAsync(cancellationToken);
 
         return MapToResponse(query);
+    }
+
+    private async Task<Result<bool>> EnsureFormNotLockedAsync(
+        StudyCode studyCode,
+        SubjectCode subjectCode,
+        string? visitId,
+        string? formIdStr,
+        CancellationToken cancellationToken)
+    {
+        if (formSubmissionRepository is null || string.IsNullOrWhiteSpace(formIdStr))
+        {
+            return true;
+        }
+
+        FormId formId;
+        try
+        {
+            formId = new FormId(formIdStr);
+        }
+        catch (ArgumentException)
+        {
+            return true;
+        }
+
+        var form = await formSubmissionRepository.GetByCoordinatesAsync(
+            studyCode,
+            subjectCode,
+            visitId,
+            formId,
+            cancellationToken);
+
+        if (form is not null && (form.IsReadonly || form.Status == FormSubmissionStatus.Approved))
+        {
+            return FormErrors.FormReadonly(form.Id);
+        }
+
+        return true;
     }
 
     /// <summary>Whether <paramref name="role"/> may close, reopen or cancel a query (CRA or data manager).</summary>
@@ -397,3 +497,4 @@ public sealed class ClinicalQueryApplicationService(
             CreatedAt: q.CreatedAt,
             Version: q.VersionIndex);
 }
+

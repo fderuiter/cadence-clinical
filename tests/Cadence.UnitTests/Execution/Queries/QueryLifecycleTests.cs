@@ -3,9 +3,11 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Queries;
+using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Compliance;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
@@ -239,5 +241,178 @@ public sealed class QueryLifecycleTests
         reopen.Error!.Code.Should().Be("UNAUTHORIZED_QUERY_ROLE");
         cancel.Error!.Code.Should().Be("UNAUTHORIZED_QUERY_ROLE");
         query.Status.Should().Be(QueryStatus.Answered);
+    }
+
+    /// <summary>
+    /// Validates that query mutations (Create, Answer, Close, Reopen, Cancel) on approved/read-only forms return FORM_LOCKED error.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task ApplicationService_QueryOperationsOnLockedForm_ReturnFormLockedError()
+    {
+        var queryRepo = new InMemoryClinicalQueryRepository();
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var clock = new FakeClock();
+        var audit = new FakeCurrentAuditContextAccessor("cra-user-01", "Query management");
+
+        var service = new ClinicalQueryApplicationService(queryRepo, audit, clock, formRepo);
+
+        var studyCode = new StudyCode("STUDY-001");
+        var subjectCode = new SubjectCode("SUBJ-001");
+        var visitId = "VISIT-01";
+        var formId = new FormId("FORM-01");
+
+        // 1. Create an approved (locked) form
+        var form = FormSubmission.Initialize(studyCode, subjectCode, formId, new SiteCode("SITE-01"), visitId).Value!;
+        form.Complete().IsSuccess.Should().BeTrue();
+
+        var manifest = SignatureManifest.Create(
+            SignerId: "pi-user-01",
+            SignerRole: "principal_investigator",
+            SigningReason: "PI approval and sign-off.",
+            SignedAt: clock.UtcNow.UtcDateTime,
+            PayloadHash: "hash123");
+
+        form.Approve(manifest).IsSuccess.Should().BeTrue();
+        await formRepo.AddAsync(form, CancellationToken.None);
+
+        // 2. CreateAsync on locked form -> should fail with FORM_LOCKED
+        var createRequest = new QueryCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            TestCode: "SYSBP",
+            Explanation: "Query on locked form",
+            VisitId: "VISIT-01",
+            FormId: "FORM-01");
+
+        var createResult = await service.CreateAsync(createRequest, CancellationToken.None);
+        createResult.IsFailure.Should().BeTrue();
+        createResult.Error!.Code.Should().Be("FORM_LOCKED");
+
+        // 3. Add an existing open query associated with this form to test state transitions
+        var openQuery = ClinicalQuery.Raise(
+            studyId: studyCode,
+            subjectId: subjectCode,
+            testCode: new TestCode("SYSBP"),
+            explanation: "Existing query on locked form",
+            visitId: visitId,
+            formId: "FORM-01").Value!;
+        await queryRepo.AddAsync(openQuery, CancellationToken.None);
+
+        // AnswerAsync -> should fail with FORM_LOCKED
+        var answerResult = await service.AnswerAsync(
+            openQuery.Id.ToString(),
+            new QueryRespondRequest("Answering query"),
+            CancellationToken.None);
+        answerResult.IsFailure.Should().BeTrue();
+        answerResult.Error!.Code.Should().Be("FORM_LOCKED");
+
+        // CloseAsync -> should fail with FORM_LOCKED
+        var closeResult = await service.CloseAsync(
+            openQuery.Id.ToString(),
+            CancellationToken.None,
+            userRole: "cra");
+        closeResult.IsFailure.Should().BeTrue();
+        closeResult.Error!.Code.Should().Be("FORM_LOCKED");
+
+        // CancelAsync -> should fail with FORM_LOCKED
+        var cancelResult = await service.CancelAsync(
+            openQuery.Id.ToString(),
+            new QueryCancelRequest("Cancelling query"),
+            CancellationToken.None,
+            userRole: "cra");
+        cancelResult.IsFailure.Should().BeTrue();
+        cancelResult.Error!.Code.Should().Be("FORM_LOCKED");
+
+        // Add an answered query to test ReopenAsync
+        var answeredQuery = ClinicalQuery.Raise(
+            studyId: studyCode,
+            subjectId: subjectCode,
+            testCode: new TestCode("DIABP"),
+            explanation: "Answered query on locked form",
+            visitId: visitId,
+            formId: "FORM-01").Value!;
+        answeredQuery.Answer("Response", "inv-01");
+        await queryRepo.AddAsync(answeredQuery, CancellationToken.None);
+
+        // ReopenAsync -> should fail with FORM_LOCKED
+        var reopenResult = await service.ReopenAsync(
+            answeredQuery.Id.ToString(),
+            new QueryReopenRequest("Reopening query"),
+            CancellationToken.None,
+            userRole: "cra");
+        reopenResult.IsFailure.Should().BeTrue();
+        reopenResult.Error!.Code.Should().Be("FORM_LOCKED");
+    }
+
+    /// <summary>
+    /// Validates that query operations proceed normally when the form is in Draft or Completed status, or unlocked.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task ApplicationService_QueryOperationsOnUnapprovedOrUnlockedForm_Succeed()
+    {
+        var queryRepo = new InMemoryClinicalQueryRepository();
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var clock = new FakeClock();
+        var audit = new FakeCurrentAuditContextAccessor("cra-user-01", "Query management");
+
+        var service = new ClinicalQueryApplicationService(queryRepo, audit, clock, formRepo);
+
+        var studyCode = new StudyCode("STUDY-001");
+        var subjectCode = new SubjectCode("SUBJ-001");
+        var visitId = "VISIT-01";
+        var formId = new FormId("FORM-02");
+
+        // Create draft form submission
+        var form = FormSubmission.Initialize(studyCode, subjectCode, formId, new SiteCode("SITE-01"), visitId).Value!;
+        await formRepo.AddAsync(form, CancellationToken.None);
+
+        // CreateAsync on draft form succeeds
+        var createRequest = new QueryCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            TestCode: "SYSBP",
+            Explanation: "Query on draft form",
+            VisitId: "VISIT-01",
+            FormId: "FORM-02");
+
+        var createResult = await service.CreateAsync(createRequest, CancellationToken.None);
+        createResult.IsSuccess.Should().BeTrue();
+        var queryId = createResult.Value!.Id;
+
+        // AnswerAsync on draft form succeeds
+        var answerResult = await service.AnswerAsync(
+            queryId,
+            new QueryRespondRequest("Answer for draft form query"),
+            CancellationToken.None);
+        answerResult.IsSuccess.Should().BeTrue();
+
+        // CloseAsync on draft form succeeds
+        var closeResult = await service.CloseAsync(
+            queryId,
+            CancellationToken.None,
+            userRole: "cra");
+        closeResult.IsSuccess.Should().BeTrue();
+
+        // ReopenAsync on draft form succeeds
+        var reopenResult = await service.ReopenAsync(
+            queryId,
+            new QueryReopenRequest("Reopening draft form query"),
+            CancellationToken.None,
+            userRole: "cra");
+        reopenResult.IsSuccess.Should().BeTrue();
+
+        // CancelAsync on draft form succeeds
+        var cancelResult = await service.CancelAsync(
+            queryId,
+            new QueryCancelRequest("Cancelling draft form query"),
+            CancellationToken.None,
+            userRole: "cra");
+        cancelResult.IsSuccess.Should().BeTrue();
     }
 }
