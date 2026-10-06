@@ -1,4 +1,4 @@
-# ADR-2810: ACH Auto-Reimbursement and Expense Claim Disbursement Reference
+# ADR-2811: ACH Auto-Reimbursement and Expense Claim Disbursement Reference
 
 - **Status:** Accepted
 - **Date:** 2026-10-06
