@@ -408,4 +408,174 @@ public sealed class AutoQueryDispatchTests
         query.Resolver.Should().Be(ServiceAccounts.AutoQueryEngine.UserId);
         query.ReasonForChange.Should().Be($"Automated query auto-resolution upon site data correction by {ServiceAccounts.AutoQueryEngine.UserId}");
     }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task Requirement7_FormUpdate_CancelsOpenQueryWhenFieldIsRemoved()
+    {
+        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock, _auditContext);
+
+        // 1. Initial submission with out-of-range low value for Potassium (K = 2.8)
+        var lowObs = ClinicalObservation.Create(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-003"),
+            domain: new DomainCode("LB"),
+            testCode: new TestCode("K"),
+            testName: "Potassium",
+            observationDate: new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc),
+            value: 2.8,
+            additionalProperties: new ObservationAdditionalProperties { ReferenceRangeLow = 3.5, ReferenceRangeHigh = 5.0 }).Value!;
+
+        var initialViolations = _editCheckEngine.EvaluateInlineConstraints(lowObs);
+
+        await dispatchService.ProcessViolationsAndAutoResolutionAsync(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-003"),
+            siteId: new SiteCode("SITE-01"),
+            visitId: "VISIT-01",
+            formId: "FORM-LABS",
+            observations: [lowObs],
+            violations: initialViolations,
+            cancellationToken: CancellationToken.None);
+
+        var activeList = await _queryRepo.ListBySubjectAsync(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-003"), CancellationToken.None);
+        activeList.Should().ContainSingle(q => q.Status == QueryStatus.Open);
+        var openQuery = activeList.First(q => q.Status == QueryStatus.Open);
+
+        // 2. Field removal: User updates form payload removing Potassium (only Glucose is present)
+        var glucObs = ClinicalObservation.Create(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-003"),
+            domain: new DomainCode("LB"),
+            testCode: new TestCode("GLUC"),
+            testName: "Glucose",
+            observationDate: new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc),
+            value: 90.0).Value!;
+
+        var newViolations = _editCheckEngine.EvaluateInlineConstraints(glucObs);
+
+        await dispatchService.ProcessViolationsAndAutoResolutionAsync(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-003"),
+            siteId: new SiteCode("SITE-01"),
+            visitId: "VISIT-01",
+            formId: "FORM-LABS",
+            observations: [glucObs],
+            violations: newViolations,
+            cancellationToken: CancellationToken.None);
+
+        // 3. Verify open query for Potassium was cancelled
+        openQuery.Status.Should().Be(QueryStatus.Cancelled);
+        openQuery.CancellationReason.Should().Contain("field removal");
+        openQuery.ReasonForChange.Should().Contain("usr:crc-001");
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task Requirement8_FormUpdate_CancelsOpenQueriesWhenPayloadIsCleared()
+    {
+        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock, _auditContext);
+
+        // 1. Initial submission with out-of-range low value
+        var lowObs = ClinicalObservation.Create(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-004"),
+            domain: new DomainCode("LB"),
+            testCode: new TestCode("K"),
+            testName: "Potassium",
+            observationDate: new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc),
+            value: 2.8,
+            additionalProperties: new ObservationAdditionalProperties { ReferenceRangeLow = 3.5, ReferenceRangeHigh = 5.0 }).Value!;
+
+        var initialViolations = _editCheckEngine.EvaluateInlineConstraints(lowObs);
+
+        await dispatchService.ProcessViolationsAndAutoResolutionAsync(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-004"),
+            siteId: new SiteCode("SITE-01"),
+            visitId: "VISIT-01",
+            formId: "FORM-LABS",
+            observations: [lowObs],
+            violations: initialViolations,
+            cancellationToken: CancellationToken.None);
+
+        var activeList = await _queryRepo.ListBySubjectAsync(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-004"), CancellationToken.None);
+        var openQuery = activeList.First(q => q.Status == QueryStatus.Open);
+
+        // 2. Empty payload update: Form cleared completely
+        await dispatchService.ProcessViolationsAndAutoResolutionAsync(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-004"),
+            siteId: new SiteCode("SITE-01"),
+            visitId: "VISIT-01",
+            formId: "FORM-LABS",
+            observations: Array.Empty<ClinicalObservation>(),
+            violations: Array.Empty<EditCheckViolation>(),
+            cancellationToken: CancellationToken.None);
+
+        // 3. Verify open query was cancelled
+        openQuery.Status.Should().Be(QueryStatus.Cancelled);
+        openQuery.CancellationReason.Should().Contain("field removal");
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task Requirement9_FormUpdate_UpdatesObservationLinkOnMatchingActiveQueryWhenValueReplaced()
+    {
+        var dispatchService = new AutoQueryDispatchService(_queryRepo, _clock, _auditContext);
+
+        // 1. Initial submission with out-of-range low value (Obs 1)
+        var obs1 = ClinicalObservation.Create(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-005"),
+            domain: new DomainCode("LB"),
+            testCode: new TestCode("K"),
+            testName: "Potassium",
+            observationDate: new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc),
+            value: 2.8,
+            additionalProperties: new ObservationAdditionalProperties { ReferenceRangeLow = 3.5, ReferenceRangeHigh = 5.0 }).Value!;
+
+        var initialViolations = _editCheckEngine.EvaluateInlineConstraints(obs1);
+
+        await dispatchService.ProcessViolationsAndAutoResolutionAsync(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-005"),
+            siteId: new SiteCode("SITE-01"),
+            visitId: "VISIT-01",
+            formId: "FORM-LABS",
+            observations: [obs1],
+            violations: initialViolations,
+            cancellationToken: CancellationToken.None);
+
+        var activeList = await _queryRepo.ListBySubjectAsync(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-005"), CancellationToken.None);
+        var openQuery = activeList.First(q => q.Status == QueryStatus.Open);
+        openQuery.ObservationId.Should().Be(obs1.Id);
+
+        // 2. Updated payload with new value (Obs 2) that STILL violates edit checks (value = 2.5)
+        var obs2 = ClinicalObservation.Create(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-005"),
+            domain: new DomainCode("LB"),
+            testCode: new TestCode("K"),
+            testName: "Potassium",
+            observationDate: new DateTime(2026, 10, 1, 8, 0, 0, DateTimeKind.Utc),
+            value: 2.5,
+            additionalProperties: new ObservationAdditionalProperties { ReferenceRangeLow = 3.5, ReferenceRangeHigh = 5.0 }).Value!;
+
+        var newViolations = _editCheckEngine.EvaluateInlineConstraints(obs2);
+
+        await dispatchService.ProcessViolationsAndAutoResolutionAsync(
+            studyId: new StudyCode("STUDY-001"),
+            subjectId: new SubjectCode("SUBJ-005"),
+            siteId: new SiteCode("SITE-01"),
+            visitId: "VISIT-01",
+            formId: "FORM-LABS",
+            observations: [obs2],
+            violations: newViolations,
+            cancellationToken: CancellationToken.None);
+
+        // 3. Query remains open and its ObservationId is updated to obs2.Id
+        openQuery.Status.Should().Be(QueryStatus.Open);
+        openQuery.ObservationId.Should().Be(obs2.Id);
+    }
 }

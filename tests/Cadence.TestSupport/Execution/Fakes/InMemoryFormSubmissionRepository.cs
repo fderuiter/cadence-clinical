@@ -68,6 +68,44 @@ public sealed class InMemoryFormSubmissionRepository : IFormSubmissionRepository
         return Task.FromResult(list);
     }
 
+    public Task<IReadOnlyList<FormSubmission>> ListBySubjectsForUpdateAsync(
+        StudyCode studyId,
+        IEnumerable<SubjectCode> subjectIds,
+        CancellationToken cancellationToken)
+    {
+        var subjectSet = subjectIds.Select(s => s.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<FormSubmission> list = _store.Values
+            .Where(f => string.Equals(f.StudyId.Value, studyId.Value, StringComparison.OrdinalIgnoreCase) && subjectSet.Contains(f.SubjectId.Value) && f.IsActive)
+            .ToList();
+
+        return Task.FromResult(list);
+    }
+
+    public Task<IReadOnlyList<FormSubmission>> ListByVisitsForUpdateAsync(
+        StudyCode studyId,
+        IEnumerable<string> visitIds,
+        CancellationToken cancellationToken)
+    {
+        var visitSet = visitIds.Where(v => !string.IsNullOrEmpty(v)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<FormSubmission> list = _store.Values
+            .Where(f => string.Equals(f.StudyId.Value, studyId.Value, StringComparison.OrdinalIgnoreCase) && f.VisitId != null && visitSet.Contains(f.VisitId) && f.IsActive)
+            .ToList();
+
+        return Task.FromResult(list);
+    }
+
+    public Task<IReadOnlyList<FormSubmission>> ListByIdsForUpdateAsync(
+        IEnumerable<FormSubmissionId> ids,
+        CancellationToken cancellationToken)
+    {
+        var idSet = new HashSet<FormSubmissionId>(ids);
+        IReadOnlyList<FormSubmission> list = _store.Values
+            .Where(f => idSet.Contains(f.Id) && f.IsActive)
+            .ToList();
+
+        return Task.FromResult(list);
+    }
+
     public Task AddAsync(FormSubmission submission, CancellationToken cancellationToken)
     {
         _store[submission.Id] = submission;

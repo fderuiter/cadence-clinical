@@ -28,6 +28,12 @@ public interface IFormSubmissionRepository
 
     Task<IReadOnlyList<FormSubmission>> ListByVisitAsync(StudyCode studyId, SubjectCode subjectId, string visitId, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<FormSubmission>> ListBySubjectsForUpdateAsync(StudyCode studyId, IEnumerable<SubjectCode> subjectIds, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<FormSubmission>> ListByVisitsForUpdateAsync(StudyCode studyId, IEnumerable<string> visitIds, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<FormSubmission>> ListByIdsForUpdateAsync(IEnumerable<FormSubmissionId> ids, CancellationToken cancellationToken);
+
     Task AddAsync(FormSubmission submission, CancellationToken cancellationToken);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);

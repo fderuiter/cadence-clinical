@@ -257,4 +257,36 @@ public class DemographicsNormalizationServiceTests
         act.Should().NotThrow();
         service.GetSafeDemographics("ciphertext").Age.Should().BeNull();
     }
+
+    [Fact]
+    public void GetSafeDemographics_GivenExplicitObservationDate_ComputesAgeRelativeToObservationDate()
+    {
+        // Subject born on 2000-01-01. System clock is 2020-01-01 (age 20.0).
+        // Observation captured on 2016-01-01 (age 16.0).
+        var payload = new Dictionary<string, object?> { ["gender"] = "MALE", ["birthdate"] = "2000-01-01" };
+        var service = CreateService(
+            FakeDemographicsEncryptionService.ReturningPayload(payload),
+            utcNow: new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+        var backdatedObsDate = new DateOnly(2016, 1, 1);
+        SafeDemographics result = service.GetSafeDemographics("ciphertext", observationDate: backdatedObsDate);
+
+        result.Gender.Should().Be("M");
+        result.Age.Should().Be(16.0);
+    }
+
+    [Fact]
+    public void GetSafeDemographics_GivenOmittedObservationDate_FallsBackToClockUtcNow()
+    {
+        // Subject born on 2000-01-01. System clock is 2020-01-01 (age 20.0).
+        var payload = new Dictionary<string, object?> { ["gender"] = "MALE", ["birthdate"] = "2000-01-01" };
+        var service = CreateService(
+            FakeDemographicsEncryptionService.ReturningPayload(payload),
+            utcNow: new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+        SafeDemographics result = service.GetSafeDemographics("ciphertext");
+
+        result.Gender.Should().Be("M");
+        result.Age.Should().Be(20.0);
+    }
 }

@@ -112,7 +112,41 @@ public class DdfRulesTests
         var result = UsdmCompiler.CompileUsdm(usdm);
 
         result.OpenRosaXml.Should().Contain(
-            """<bind nodeset="/data/Weeks_pregnant" type="integer" relevant="(/data/Sex = &#x27;F&#x27;) and not((/data/Pregnant = &#x27;N&#x27;))" constraint="(/data/Weeks_pregnant &lt;= 45)" jr:constraintMsg="At most 45 weeks."/>""");
+            """<bind nodeset="/data/Weeks_pregnant" type="integer" relevant="(/data/Sex = &#x27;F&#x27;) and not((/data/Pregnant = &#x27;N&#x27;))" constraint="(/data/Weeks_pregnant &lt;= 45)" jr:constraintMsg="At most 45 weeks." or:severity="Error" or:code="Weeks_pregnant_constraint"/>""");
+    }
+
+    [Fact]
+    public void CompileUsdm_PropagatesSeverityAndRuleCode()
+    {
+        const string usdm = """
+            {"study":{"id":"S-1","name":"Rules"},"items":[
+              {"id":"BP","name":"Systolic BP","type":"integer","rules":[
+                {"type":"constraint","condition":{"op":"<=","args":[{"var":"BP"},180]},"query_message":"BP too high.","severity":"Warning","code":"RULE_BP_001"}
+              ]}
+            ]}
+            """;
+
+        var result = UsdmCompiler.CompileUsdm(usdm);
+
+        result.OpenRosaXml.Should().Contain(
+            """<bind nodeset="/data/Systolic_BP" type="integer" constraint="(/data/Systolic_BP &lt;= 180)" jr:constraintMsg="BP too high." or:severity="Warning" or:code="RULE_BP_001"/>""");
+    }
+
+    [Fact]
+    public void CompileUsdm_RejectsInvalidSeverity()
+    {
+        const string usdm = """
+            {"study":{"id":"S-1","name":"Rules"},"items":[
+              {"id":"BP","name":"Systolic BP","type":"integer","rules":[
+                {"type":"constraint","condition":{"op":"<=","args":[{"var":"BP"},180]},"query_message":"BP too high.","severity":"Fatal"}
+              ]}
+            ]}
+            """;
+
+        var compile = () => UsdmCompiler.CompileUsdm(usdm);
+
+        compile.Should().Throw<DdfCompilationException>()
+            .Which.Problems.Should().Contain("Item 'BP' rule 0: 'severity' must be 'Error', 'Warning', or 'Notice'.");
     }
 
     [Fact]
