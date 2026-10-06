@@ -11,6 +11,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -21,7 +22,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Cadence.Security.Authentication;
 
 namespace Cadence.Apps.Ctms.Endpoints;
 
