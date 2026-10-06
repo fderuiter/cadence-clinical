@@ -221,7 +221,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
 
             string blockHash = AuditLogEntry.ComputeBlockHash(
                 draft.EntityName, draft.EntityId, draft.Action, draft.Timestamp, draft.UserId,
-                draft.VersionIndex, draft.ChangesJson, predecessorHash);
+                draft.ReasonForChange, draft.VersionIndex, draft.ChangesJson, predecessorHash);
 
             var logEntry = new AuditLogEntry
             {

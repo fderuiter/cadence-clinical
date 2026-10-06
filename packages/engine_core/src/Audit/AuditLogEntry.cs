@@ -50,6 +50,23 @@ public sealed class AuditLogEntry
         string action,
         DateTime timestamp,
         string userId,
+        string? reasonForChange,
+        long versionIndex,
+        string? changesJson,
+        string predecessorHash)
+    {
+        string rawBlock = $"{entityName}|{entityId}|{action}|{timestamp:O}|{userId}|{reasonForChange ?? ""}|{versionIndex}|{changesJson ?? ""}|{predecessorHash}";
+        byte[] bytes = Encoding.UTF8.GetBytes(rawBlock);
+        byte[] hash = SHA256.HashData(bytes);
+        return Convert.ToHexStringLower(hash);
+    }
+
+    public static string ComputeLegacyBlockHash(
+        string entityName,
+        string entityId,
+        string action,
+        DateTime timestamp,
+        string userId,
         long versionIndex,
         string? changesJson,
         string predecessorHash)

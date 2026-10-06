@@ -47,10 +47,20 @@ public static class AuditLogChainVerifier
         int verified = 0;
         while (current is not null)
         {
-            string recomputed = AuditLogEntry.ComputeBlockHash(
+            string primaryHash = AuditLogEntry.ComputeBlockHash(
                 current.EntityName, current.EntityId, current.Action, AuditLogEntry.NormalizeTimestamp(current.Timestamp), current.UserId,
-                current.VersionIndex, current.ChangesJson, current.PredecessorHash);
-            if (!string.Equals(recomputed, current.BlockHash, StringComparison.OrdinalIgnoreCase))
+                current.ReasonForChange, current.VersionIndex, current.ChangesJson, current.PredecessorHash);
+
+            bool isValid = string.Equals(primaryHash, current.BlockHash, StringComparison.OrdinalIgnoreCase);
+            if (!isValid)
+            {
+                string legacyHash = AuditLogEntry.ComputeLegacyBlockHash(
+                    current.EntityName, current.EntityId, current.Action, AuditLogEntry.NormalizeTimestamp(current.Timestamp), current.UserId,
+                    current.VersionIndex, current.ChangesJson, current.PredecessorHash);
+                isValid = string.Equals(legacyHash, current.BlockHash, StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (!isValid)
             {
                 return Broken(verified, $"block hash mismatch at entry {current.Id}");
             }

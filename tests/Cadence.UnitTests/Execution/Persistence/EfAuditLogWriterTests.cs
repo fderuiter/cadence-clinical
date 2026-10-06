@@ -180,6 +180,62 @@ public class EfAuditLogWriterTests
         results.Should().HaveCount(2).And.OnlyContain(r => r.Valid);
     }
 
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public void Verifier_DetectsDirectEditToReasonForChange_AndReportsMismatch()
+    {
+        var chain = BuildChain("ClinicalSubject", 3);
+        var original = chain[1];
+        chain[1] = new AuditLogEntry
+        {
+            Id = original.Id,
+            EntityName = original.EntityName,
+            EntityId = original.EntityId,
+            Action = original.Action,
+            Timestamp = original.Timestamp,
+            UserId = original.UserId,
+            ReasonForChange = "Tampered Reason For Change",
+            VersionIndex = original.VersionIndex,
+            ChangesJson = original.ChangesJson,
+            PredecessorHash = original.PredecessorHash,
+            BlockHash = original.BlockHash,
+        };
+
+        var result = AuditLogChainVerifier.Verify(chain).Single();
+
+        result.Valid.Should().BeFalse();
+        result.VerifiedCount.Should().Be(1);
+        result.Error.Should().Contain("block hash mismatch");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public void Verifier_ValidatesLegacyAuditLogs_UsingFallback()
+    {
+        var timestamp = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        string legacyHash = AuditLogEntry.ComputeLegacyBlockHash(
+            "ClinicalSubject", "SUBJ-1", "ENROLL_SUBJECT", timestamp, "user-1", 1, null, string.Empty);
+
+        var legacyEntry = new AuditLogEntry
+        {
+            EntityName = "ClinicalSubject",
+            EntityId = "SUBJ-1",
+            Action = "ENROLL_SUBJECT",
+            Timestamp = timestamp,
+            UserId = "user-1",
+            ReasonForChange = "Historical Reason",
+            VersionIndex = 1,
+            PredecessorHash = string.Empty,
+            BlockHash = legacyHash,
+        };
+
+        var result = AuditLogChainVerifier.Verify(new[] { legacyEntry }).Single();
+
+        result.Valid.Should().BeTrue();
+        result.VerifiedCount.Should().Be(1);
+        result.Error.Should().BeNull();
+    }
+
     private static List<AuditLogEntry> BuildChain(string entityName, int length)
     {
         var chain = new List<AuditLogEntry>();
@@ -194,7 +250,7 @@ public class EfAuditLogWriterTests
         return chain;
     }
 
-    private static AuditLogEntry Entry(string entityName, string action, string predecessor)
+    private static AuditLogEntry Entry(string entityName, string action, string predecessor, string reasonForChange = "Initial reason")
     {
         var timestamp = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         return new AuditLogEntry
@@ -204,9 +260,10 @@ public class EfAuditLogWriterTests
             Action = action,
             Timestamp = timestamp,
             UserId = "user-1",
+            ReasonForChange = reasonForChange,
             VersionIndex = 1,
             PredecessorHash = predecessor,
-            BlockHash = AuditLogEntry.ComputeBlockHash(entityName, "SUBJ-1", action, timestamp, "user-1", 1, null, predecessor),
+            BlockHash = AuditLogEntry.ComputeBlockHash(entityName, "SUBJ-1", action, timestamp, "user-1", reasonForChange, 1, null, predecessor),
         };
     }
 }

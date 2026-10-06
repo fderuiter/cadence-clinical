@@ -219,7 +219,7 @@ public class GxPAuditInterceptorMerkleChainTests
             e.PredecessorHash.Should().Be(expectedPredecessor);
 
             string computedHash = AuditLogEntry.ComputeBlockHash(
-                e.EntityName, e.EntityId, e.Action, e.Timestamp, e.UserId, e.VersionIndex, e.ChangesJson, e.PredecessorHash);
+                e.EntityName, e.EntityId, e.Action, e.Timestamp, e.UserId, e.ReasonForChange, e.VersionIndex, e.ChangesJson, e.PredecessorHash);
             e.BlockHash.Should().Be(computedHash);
         }
     }

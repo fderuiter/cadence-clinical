@@ -110,15 +110,18 @@ public class SecurityAndDomainTests
 
         // Act
         string hash1 = AuditLogEntry.ComputeBlockHash(
-            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", 2, "{\"value\":120}", predecessor);
+            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", "Reason A", 2, "{\"value\":120}", predecessor);
         string hash2 = AuditLogEntry.ComputeBlockHash(
-            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", 2, "{\"value\":120}", predecessor);
+            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", "Reason A", 2, "{\"value\":120}", predecessor);
         string alteredHash = AuditLogEntry.ComputeBlockHash(
-            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", 2, "{\"value\":125}", predecessor);
+            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", "Reason A", 2, "{\"value\":125}", predecessor);
+        string alteredReasonHash = AuditLogEntry.ComputeBlockHash(
+            "ClinicalObservation", "OBS-99", "UPDATE", timestamp, "crc@site.org", "Reason B", 2, "{\"value\":120}", predecessor);
 
         // Assert
         hash1.Should().NotBeNullOrWhiteSpace();
         hash1.Should().Be(hash2);
         hash1.Should().NotBe(alteredHash);
+        hash1.Should().NotBe(alteredReasonHash);
     }
 }
