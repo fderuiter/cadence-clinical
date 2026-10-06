@@ -52,6 +52,7 @@ K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtDestructionC
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtMilestoneEvent.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.SiteId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.StudyId
+K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Forms.PublishedFormVersionRegistry.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ClinicalObservation.LabSiteId
 K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.SiteId
 K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.StudyId
@@ -246,6 +247,7 @@ K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtDestructionCe
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtMilestoneEvent.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Forms.PublishedFormVersionRegistry.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ClinicalObservation.LabSiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ObservationAdditionalProperties.LabSiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Infrastructure.Consumers.EConsentCompletedEvent.SiteId

@@ -85,6 +85,11 @@ public class ProtocolVersionIdValueConverter() : ValueConverter<ProtocolVersionI
     guid => new ProtocolVersionId(guid)
 );
 
+public class FormVersionSnapshotIdValueConverter() : ValueConverter<FormVersionSnapshotId, Guid>(
+    id => id.Value,
+    guid => new FormVersionSnapshotId(guid)
+);
+
 
 public class CodeSystemIdValueConverter() : ValueConverter<CodeSystemId, Guid>(
     id => id.Value,

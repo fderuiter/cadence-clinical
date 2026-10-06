@@ -60,4 +60,9 @@ public static class FormErrors
         DomainError.Validation(
             "PROTOCOL_VERSION_MISMATCH",
             $"Submitted protocol version '{explicitVersion}' does not match subject active protocol version '{activeVersion}'.");
+
+    public static DomainError ProtocolVersionSchemaMismatch(string details) =>
+        DomainError.Validation(
+            "PROTOCOL_VERSION_SCHEMA_MISMATCH",
+            $"Submitted form schema hash or version does not match the registered form snapshot: {details}");
 }

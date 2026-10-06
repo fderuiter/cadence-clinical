@@ -42,6 +42,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<FormSubmission> FormSubmissions => Set<FormSubmission>();
 
+    public DbSet<PublishedFormVersionRegistry> PublishedFormVersionRegistries => Set<PublishedFormVersionRegistry>();
+
     public DbSet<ClinicalQuery> ClinicalQueries => Set<ClinicalQuery>();
 
     public DbSet<StagedAdverseEventReview> StagedAdverseEventReviews => Set<StagedAdverseEventReview>();
@@ -71,6 +73,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new SiteComplianceCacheConfiguration());
         modelBuilder.ApplyConfiguration(new ClinicalObservationConfiguration());
         modelBuilder.ApplyConfiguration(new FormSubmissionConfiguration());
+        modelBuilder.ApplyConfiguration(new PublishedFormVersionRegistryConfiguration());
         modelBuilder.ApplyConfiguration(new ClinicalQueryConfiguration());
         modelBuilder.ApplyConfiguration(new StagedAdverseEventReviewConfiguration());
         modelBuilder.ApplyConfiguration(new CecDossierConfiguration());
