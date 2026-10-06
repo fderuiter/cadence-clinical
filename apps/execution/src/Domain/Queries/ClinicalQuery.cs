@@ -181,6 +181,15 @@ public sealed class ClinicalQuery : AggregateRoot<QueryId>
         return true;
     }
 
+    public void UpdateObservationLink(ObservationId? observationId, DomainCode? domain = null)
+    {
+        ObservationId = observationId;
+        if (domain.HasValue)
+        {
+            Domain = domain;
+        }
+    }
+
     public void Escalate(DateTimeOffset escalatedAt)
     {
         EscalatedAt = escalatedAt.ToUniversalTime();

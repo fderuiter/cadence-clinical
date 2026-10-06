@@ -38,6 +38,8 @@ public class RuleDefinition
     [JsonPropertyName("target_form")] public string? TargetForm { get; set; }
     [JsonPropertyName("target_group")] public string? TargetGroup { get; set; }
     [JsonPropertyName("query_message")] public string? QueryMessage { get; set; }
+    [JsonPropertyName("severity")] public string Severity { get; set; } = "Error";
+    [JsonPropertyName("code")] public string? Code { get; set; }
     [JsonPropertyName("version_index")] public int VersionIndex { get; set; } = 1;
     [JsonPropertyName("sha256_checksum")] public string? Sha256Checksum { get; set; }
     [JsonPropertyName("is_active")] public bool IsActive { get; set; } = true;
@@ -60,7 +62,9 @@ public class RuleDefinition
                 ["target_field"] = TargetField,
                 ["target_form"] = TargetForm,
                 ["query_message"] = QueryMessage,
-                ["version_index"] = VersionIndex
+                ["version_index"] = VersionIndex,
+                ["severity"] = Severity,
+                ["code"] = Code
             };
             string raw = payload.ToJsonString();
             byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(raw));

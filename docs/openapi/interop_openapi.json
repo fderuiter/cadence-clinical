@@ -592,6 +592,295 @@
           }
         }
       }
+    },
+    "/api/v1/interop/sce/programs": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_CreateProgramRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/programs/{program_id}": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "program_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/validate-lockfile": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_ValidateLockfileRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/lock-tokens": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_IssueLockTokenRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/lock-tokens/{token_id}/revoke": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "token_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/execute": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_ExecuteProgramRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "program_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs/{run_id}/verify": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Interop"
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -614,6 +903,63 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Interop_CreateProgramRequestDto": {
+        "required": [
+          "study_id",
+          "name",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "default": "PYTHON"
+          },
+          "version": {
+            "type": "string",
+            "default": "1.0.0"
+          },
+          "source_code": {
+            "type": "string",
+            "default": ""
+          },
+          "lockfile_content": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lock_type": {
+            "type": "string",
+            "default": "UV_LOCK"
+          },
+          "target_domain": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": "Initial program authoring"
           }
         }
       },
@@ -1303,6 +1649,101 @@
           }
         }
       },
+      "Interop_ExecuteProgramRequestDto": {
+        "required": [
+          "study_id",
+          "program_id",
+          "snapshot_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "program_id": {
+            "type": "string"
+          },
+          "snapshot_id": {
+            "type": "string"
+          },
+          "is_unblinded": {
+            "type": "boolean",
+            "default": false
+          },
+          "database_lock_token_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sandbox_config": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Interop_ExecutionSandboxConfigDto"
+              }
+            ]
+          },
+          "reason_for_execution": {
+            "type": "string",
+            "default": "Statistical analysis execution run"
+          }
+        }
+      },
+      "Interop_ExecutionSandboxConfigDto": {
+        "type": "object",
+        "properties": {
+          "max_memory_mb": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 2048
+          },
+          "timeout_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 300
+          },
+          "network_isolated": {
+            "type": "boolean",
+            "default": true
+          },
+          "filesystem_readonly_root": {
+            "type": "boolean",
+            "default": true
+          },
+          "max_output_bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64",
+            "default": 10485760
+          },
+          "docker_image_digest": {
+            "type": "string",
+            "default": "sha256:cadence-sce-r4.4-py3.14-validated-base-2026"
+          },
+          "python_version": {
+            "type": "string",
+            "default": "3.14.0"
+          },
+          "r_version": {
+            "type": "string",
+            "default": "4.4.2"
+          }
+        }
+      },
       "Interop_FhirBundleIngestRequest": {
         "required": [
           "studyId",
@@ -1404,6 +1845,51 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Interop_IssueLockTokenRequestDto": {
+        "required": [
+          "study_id",
+          "lock_id",
+          "milestone",
+          "issued_to",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "lock_id": {
+            "type": "string"
+          },
+          "milestone": {
+            "type": "string"
+          },
+          "issued_to": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "expires_in_hours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double",
+            "default": 24
+          },
+          "authorized_roles": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -1567,6 +2053,31 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Interop_ValidateLockfileRequestDto": {
+        "required": [
+          "lock_type",
+          "content"
+        ],
+        "type": "object",
+        "properties": {
+          "lock_type": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "expected_digest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "strict_qualification": {
+            "type": "boolean",
+            "default": false
           }
         }
       }

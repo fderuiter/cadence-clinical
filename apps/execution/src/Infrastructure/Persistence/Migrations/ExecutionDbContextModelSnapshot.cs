@@ -1401,6 +1401,143 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.ToTable("subject_consents", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Toxicity.StagedAdverseEventReview", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ClinicalDescription")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("clinical_description");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("CtcaeGrade")
+                        .HasColumnType("integer")
+                        .HasColumnName("ctcae_grade");
+
+                    b.Property<double?>("DeltaPercentage")
+                        .HasColumnType("double precision")
+                        .HasColumnName("delta_percentage");
+
+                    b.Property<string>("FormSubmissionId")
+                        .HasColumnType("text")
+                        .HasColumnName("form_submission_id");
+
+                    b.Property<string>("GradingScale")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("grading_scale");
+
+                    b.Property<string>("InvestigatorNotes")
+                        .HasColumnType("text")
+                        .HasColumnName("investigator_notes");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsDeltaCheckAlert")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_delta_check_alert");
+
+                    b.Property<bool>("IsHysLawWarning")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_hys_law_warning");
+
+                    b.Property<double>("LabValue")
+                        .HasColumnType("double precision")
+                        .HasColumnName("lab_value");
+
+                    b.Property<string>("ObservationId")
+                        .HasColumnType("text")
+                        .HasColumnName("observation_id");
+
+                    b.Property<string>("QueryId")
+                        .HasColumnType("text")
+                        .HasColumnName("query_id");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<string>("ReviewStatus")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("review_status");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasColumnType("text")
+                        .HasColumnName("reviewed_by");
+
+                    b.Property<string>("SiteId")
+                        .HasColumnType("text")
+                        .HasColumnName("site_id");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("study_id");
+
+                    b.Property<string>("SubjectId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subject_id");
+
+                    b.Property<string>("TestCode")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("test_code");
+
+                    b.Property<string>("TestName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("test_name");
+
+                    b.Property<string>("ToxicityTerm")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("toxicity_term");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("unit");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<long>("VersionIndex")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("VisitId")
+                        .HasColumnType("text")
+                        .HasColumnName("visit_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("StudyId", "ReviewStatus");
+
+                    b.ToTable("staged_adverse_event_reviews", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Core.Domain.Audit.AuditLogEntry", b =>
                 {
                     b.Property<Guid>("Id")
