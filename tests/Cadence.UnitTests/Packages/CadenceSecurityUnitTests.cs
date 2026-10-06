@@ -363,6 +363,150 @@ public class CadenceSecurityUnitTests
         statObj["drug_code"].Should().Be("Obfuscated Kit");
     }
 
+    private record TestPatientDto(
+        string TreatmentArm,
+        string RandomizationSeed,
+        string DrugCode,
+        string AdministeredDrugCode,
+        string TreatmentArmId,
+        string SubjectId,
+        string Ssn
+    );
+
+    private class TestCustomBlindedDto
+    {
+        [BlindedField("CUSTOM_BLINDED")]
+        public string TreatmentArm { get; init; } = "";
+    }
+
+    [Fact]
+    public void FieldMasker_ToSnakeCase_NormalizesIdentifiersCorrectly()
+    {
+        FieldMasker.ToSnakeCase("TreatmentArm").Should().Be("treatment_arm");
+        FieldMasker.ToSnakeCase("treatmentArm").Should().Be("treatment_arm");
+        FieldMasker.ToSnakeCase("treatment_arm").Should().Be("treatment_arm");
+        FieldMasker.ToSnakeCase("TreatmentArmId").Should().Be("treatment_arm_id");
+        FieldMasker.ToSnakeCase("AdministeredDrugCode").Should().Be("administered_drug_code");
+        FieldMasker.ToSnakeCase("RandomizationSeed").Should().Be("randomization_seed");
+        FieldMasker.ToSnakeCase("SSN").Should().Be("ssn");
+        FieldMasker.ToSnakeCase("DOB").Should().Be("dob");
+        FieldMasker.ToSnakeCase(null).Should().Be(string.Empty);
+        FieldMasker.ToSnakeCase("").Should().Be(string.Empty);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-MDR-006")]
+    public void FieldMasker_MasksPascalCaseDtoProperties_ForBlindedAndUnblindedRoles()
+    {
+        var dto = new TestPatientDto(
+            TreatmentArm: "ARM-A",
+            RandomizationSeed: "SEED-123",
+            DrugCode: "KIT-999",
+            AdministeredDrugCode: "DRUG-01",
+            TreatmentArmId: "ARM-ID-1",
+            SubjectId: "SUBJ-101",
+            Ssn: "123-45-6789"
+        );
+
+        // Blinded investigator -> all sensitive properties masked
+        var investigator = new Principal
+        {
+            UserId = "inv-01",
+            Roles = new[] { "investigator" },
+            UnblindedAccess = false
+        };
+
+        var maskedInv = FieldMasker.MaskPayload(dto, investigator) as IDictionary<string, object?>;
+        maskedInv.Should().NotBeNull();
+        maskedInv!["TreatmentArm"].Should().Be("BLINDED");
+        maskedInv["RandomizationSeed"].Should().Be("MASKED");
+        maskedInv["DrugCode"].Should().Be("Obfuscated Kit");
+        maskedInv["AdministeredDrugCode"].Should().Be("Obfuscated Kit");
+        maskedInv["TreatmentArmId"].Should().Be("BLINDED");
+        maskedInv["Ssn"].Should().Be("***-**-****");
+        maskedInv["SubjectId"].Should().Be("SUBJ-101");
+
+        // Unblinded statistician -> allocation fields unmasked, supply fields masked
+        var statistician = new Principal
+        {
+            UserId = "stat-01",
+            Roles = new[] { "unblinded_statistician" },
+            UnblindedAccess = false
+        };
+
+        var maskedStat = FieldMasker.MaskPayload(dto, statistician) as IDictionary<string, object?>;
+        maskedStat.Should().NotBeNull();
+        maskedStat!["TreatmentArm"].Should().Be("ARM-A");
+        maskedStat["RandomizationSeed"].Should().Be("SEED-123");
+        maskedStat["TreatmentArmId"].Should().Be("ARM-ID-1");
+        maskedStat["DrugCode"].Should().Be("Obfuscated Kit");
+        maskedStat["AdministeredDrugCode"].Should().Be("Obfuscated Kit");
+
+        // Pharmacist -> supply fields unmasked, allocation fields masked
+        var pharmacist = new Principal
+        {
+            UserId = "pharm-01",
+            Roles = new[] { "pharmacist" },
+            UnblindedAccess = false
+        };
+
+        var maskedPharm = FieldMasker.MaskPayload(dto, pharmacist) as IDictionary<string, object?>;
+        maskedPharm.Should().NotBeNull();
+        maskedPharm!["TreatmentArm"].Should().Be("BLINDED");
+        maskedPharm["DrugCode"].Should().Be("KIT-999");
+        maskedPharm["AdministeredDrugCode"].Should().Be("DRUG-01");
+    }
+
+    [Fact]
+    public void FieldMasker_MasksPascalAndCamelCaseDictionaryKeys()
+    {
+        var dict = new Dictionary<string, object?>
+        {
+            ["TreatmentArm"] = "ARM-B",
+            ["randomizationSeed"] = "SEED-456",
+            ["drugCode"] = "KIT-888"
+        };
+
+        var investigator = new Principal
+        {
+            UserId = "inv-02",
+            Roles = new[] { "investigator" },
+            UnblindedAccess = false
+        };
+
+        var maskedDict = FieldMasker.MaskPayload(dict, investigator) as IDictionary<string, object?>;
+        maskedDict.Should().NotBeNull();
+        maskedDict!["TreatmentArm"].Should().Be("BLINDED");
+        maskedDict["randomizationSeed"].Should().Be("MASKED");
+        maskedDict["drugCode"].Should().Be("Obfuscated Kit");
+    }
+
+    [Fact]
+    public void FieldMasker_BlindedFieldAttribute_WithPascalCaseProperty_HonorsUnmaskedFields()
+    {
+        var custom = new TestCustomBlindedDto { TreatmentArm = "ARM-Z" };
+
+        var investigator = new Principal
+        {
+            UserId = "inv-03",
+            Roles = new[] { "investigator" },
+            UnblindedAccess = false
+        };
+
+        var statistician = new Principal
+        {
+            UserId = "stat-02",
+            Roles = new[] { "unblinded_statistician" },
+            UnblindedAccess = false
+        };
+
+        var invResult = FieldMasker.MaskPayload(custom, investigator) as IDictionary<string, object?>;
+        invResult!["TreatmentArm"].Should().Be("CUSTOM_BLINDED");
+
+        var statResult = FieldMasker.MaskPayload(custom, statistician) as IDictionary<string, object?>;
+        statResult!["TreatmentArm"].Should().Be("ARM-Z");
+    }
+
     [Fact]
     public void DependencyInjection_RegistersCadenceSecurityServices()
     {

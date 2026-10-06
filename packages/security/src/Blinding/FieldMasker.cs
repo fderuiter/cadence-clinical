@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 
 using Cadence.Security.Rbac;
 
@@ -14,6 +15,12 @@ namespace Cadence.Security.Blinding;
 /// </summary>
 public static class FieldMasker
 {
+    public static string ToSnakeCase(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return name ?? string.Empty;
+        return JsonNamingPolicy.SnakeCaseLower.ConvertName(name);
+    }
+
     public static IReadOnlySet<string> UNMASKED_ALLOCATION_FIELDS { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "treatment_arm",
@@ -97,9 +104,9 @@ public static class FieldMasker
             foreach (DictionaryEntry entry in dictionary)
             {
                 string keyStr = entry.Key?.ToString() ?? "";
-                string keyLower = keyStr.ToLowerInvariant();
+                string keySnake = ToSnakeCase(keyStr);
 
-                if (MASKING_RULES.TryGetValue(keyLower, out var maskFunc) && !unmaskedFields.Contains(keyLower))
+                if (MASKING_RULES.TryGetValue(keySnake, out var maskFunc) && !unmaskedFields.Contains(keySnake))
                 {
                     result[keyStr] = maskFunc(entry.Value);
                 }
@@ -129,16 +136,16 @@ public static class FieldMasker
         {
             if (!prop.CanRead) continue;
             string propName = prop.Name;
-            string propLower = propName.ToLowerInvariant();
+            string propSnake = ToSnakeCase(propName);
             object? val = prop.GetValue(target);
 
             var blindAttr = prop.GetCustomAttribute<BlindedFieldAttribute>();
 
-            if (blindAttr != null && !unmaskedFields.Contains(propLower))
+            if (blindAttr != null && !unmaskedFields.Contains(propSnake))
             {
                 maskedDict[propName] = val != null ? blindAttr.MaskedValue : null;
             }
-            else if (MASKING_RULES.TryGetValue(propLower, out var maskFunc) && !unmaskedFields.Contains(propLower))
+            else if (MASKING_RULES.TryGetValue(propSnake, out var maskFunc) && !unmaskedFields.Contains(propSnake))
             {
                 maskedDict[propName] = maskFunc(val);
             }
