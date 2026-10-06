@@ -49,8 +49,11 @@ async function request(path, options = {}) {
   const controller = new AbortController();
   pendingRequests.set(requestKey, controller);
 
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
+
   const requestHeaders = {
-    "Content-Type": "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...headers,
   };
 
@@ -81,7 +84,11 @@ async function request(path, options = {}) {
   };
 
   if (body) {
-    fetchOptions.body = typeof body === "string" ? body : JSON.stringify(body);
+    if (isFormData || typeof body === "string") {
+      fetchOptions.body = body;
+    } else {
+      fetchOptions.body = JSON.stringify(body);
+    }
   }
 
   try {

@@ -10,6 +10,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.InboxState`](#edcinboxstate) | `InboxState` | 11 |
 | [`edc.OutboxMessage`](#edcoutboxmessage) | `OutboxMessage` | 21 |
 | [`edc.OutboxState`](#edcoutboxstate) | `OutboxState` | 6 |
+| [`edc.bulk_synonym_import_jobs`](#edcbulk_synonym_import_jobs) | `BulkSynonymImportJob` | 14 |
 | [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 17 |
 | [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 26 |
 | [`edc.cgt_bedside_verifications`](#edccgt_bedside_verifications) | `CgtBedsideVerification` | 23 |
@@ -23,6 +24,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
+| [`edc.synonym_rules`](#edcsynonym_rules) | `SynonymRule` | 15 |
 
 ## edc.AuditLogEntries
 
@@ -121,6 +123,31 @@ Entity: `OutboxState`
 Indexes:
 
 - `IX_OutboxState_Created`: (`Created`)
+
+## edc.bulk_synonym_import_jobs
+
+Entity: `BulkSynonymImportJob`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `DuplicateRows` | `integer` | no |  |  |
+| `FileHash` | `character varying(128)` | no |  |  |
+| `FileName` | `character varying(500)` | no |  |  |
+| `InvalidRows` | `integer` | no |  |  |
+| `ReasonForChange` | `character varying(2000)` | no |  |  |
+| `Scope` | `character varying(50)` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | yes |  |  |
+| `TotalRows` | `integer` | no |  |  |
+| `ValidRows` | `integer` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_bulk_synonym_import_jobs_CreatedAt`: (`CreatedAt`)
 
 ## edc.cec_chair_adjudications
 
@@ -574,3 +601,30 @@ Entity: `SubjectConsent`
 | `SubjectCode` | `character varying(255)` | no |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `_version` | `bigint` | no | `0` |  |
+
+## edc.synonym_rules
+
+Entity: `SynonymRule`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `DictionaryType` | `character varying(50)` | no |  |  |
+| `DictionaryVersion` | `character varying(50)` | no |  |  |
+| `ImportJobId` | `uuid` | no |  |  |
+| `ReasonForChange` | `character varying(2000)` | no |  |  |
+| `Scope` | `character varying(50)` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | yes |  |  |
+| `TargetCode` | `character varying(100)` | no |  |  |
+| `TargetLevel` | `character varying(50)` | yes |  |  |
+| `TargetTerm` | `character varying(500)` | no |  |  |
+| `VerbatimText` | `character varying(500)` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_synonym_rules_Scope_StudyId_Status`: (`Scope`, `StudyId`, `Status`)
+- `IX_synonym_rules_VerbatimText_DictionaryType`: (`VerbatimText`, `DictionaryType`)

@@ -6,6 +6,11 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/execution/cec/dossiers/{id}` | GetCecDossierById |  |
 | `POST` | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate` | ChairAdjudicateDossier |  |
+| `GET` | `/api/v1/execution/coding/synonyms` | GetActiveSynonymRules | Retrieve active synonym rules for study auto-coding engine. |
+| `POST` | `/api/v1/execution/coding/synonyms/import` | ImportSynonymFile | Ingest validated synonym dictionary rules into persistent store with GxP audit lineage. |
+| `GET` | `/api/v1/execution/coding/synonyms/jobs` | GetSynonymImportJobs | Retrieve GxP audit ledger of bulk synonym import jobs. |
+| `POST` | `/api/v1/execution/coding/synonyms/validate` | ValidateSynonymFile | Pre-flight validation report for bulk synonym dictionary CSV/XLSX file. |
+| `DELETE` | `/api/v1/execution/coding/synonyms/{id}` | DeactivateSynonymRule | Deactivate an active synonym rule. |
 | `POST` | `/api/v1/execution/forms` | CreateFormSubmission |  |
 | `GET` | `/api/v1/execution/forms/subject/{studyId}/{subjectId}` | ListFormSubmissionsBySubject |  |
 | `GET` | `/api/v1/execution/forms/{id}` | GetFormSubmissionById |  |
