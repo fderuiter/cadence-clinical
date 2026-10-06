@@ -14,7 +14,7 @@ Generated from the EF Core model of `Cadence.Apps.Payments.Infrastructure.Persis
 | [`payments.payments_holdback_reserves`](#paymentspayments_holdback_reserves) | `HoldbackReserve` | 20 |
 | [`payments.payments_invoice_line_items`](#paymentspayments_invoice_line_items) | `InvoiceLineItem` | 21 |
 | [`payments.payments_participant_disbursements`](#paymentspayments_participant_disbursements) | `ParticipantDisbursement` | 10 |
-| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 22 |
+| [`payments.payments_participant_expense_claims`](#paymentspayments_participant_expense_claims) | `ParticipantExpenseClaim` | 23 |
 | [`payments.payments_participant_stipend_rules`](#paymentspayments_participant_stipend_rules) | `ParticipantStipendRule` | 19 |
 | [`payments.payments_participant_transactions`](#paymentspayments_participant_transactions) | `ParticipantTransaction` | 12 |
 | [`payments.payments_participant_wallets`](#paymentspayments_participant_wallets) | `ParticipantWallet` | 32 |
@@ -267,6 +267,7 @@ Entity: `ParticipantExpenseClaim`
 | `Category` | `character varying(50)` | no |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
+| `DisbursementReference` | `character varying(100)` | yes |  |  |
 | `ExpenseDate` | `character varying(50)` | no |  |  |
 | `GrossAmount` | `numeric(18,4)` | no |  |  |
 | `MerchantName` | `character varying(255)` | no |  |  |
