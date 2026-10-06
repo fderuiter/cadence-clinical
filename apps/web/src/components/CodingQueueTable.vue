@@ -78,8 +78,11 @@
 
     <!-- Loading State -->
     <div v-if="codingStore.isLoading" class="table-loading-state">
-      <div class="spinner" />
-      <p>Loading medical coding queue...</p>
+      <SkeletonLoader
+        type="row"
+        :count="5"
+        :columns="codingStore.viewMode === 'CLUSTERS' ? 7 : 8"
+      />
     </div>
 
     <!-- Empty State -->
@@ -91,12 +94,21 @@
       "
       class="table-empty-state"
     >
-      <div class="empty-icon">🩺</div>
-      <h3>No Coding Assignments Found</h3>
-      <p>
-        No adverse events or concomitant medications match the active filters or
-        confidence score threshold.
-      </p>
+      <EmptyState
+        icon="🩺"
+        title="No Coding Assignments Found"
+        message="No adverse events or concomitant medications match the active filters or confidence score threshold."
+      >
+        <template #action>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm btn-reset-filters"
+            @click="resetFilters"
+          >
+            🔄 Reset Active Filters
+          </button>
+        </template>
+      </EmptyState>
     </div>
 
     <!-- ==================================================================== -->
@@ -921,9 +933,21 @@
 import { ref, computed } from "vue";
 import { useCodingStore } from "../stores/coding";
 import { use2DGrid } from "../composables/use2DGrid";
+import SkeletonLoader from "./common/SkeletonLoader.vue";
+import EmptyState from "./common/EmptyState.vue";
 
 const codingStore = useCodingStore();
 const containerRef = ref(null);
+
+function resetFilters() {
+  codingStore.confidenceThreshold = "ALL";
+  if (codingStore.filters) {
+    codingStore.filters.status = "ALL";
+    codingStore.filters.dictionaryType = "ALL";
+    codingStore.filters.confidenceThreshold = "ALL";
+    codingStore.filters.search = "";
+  }
+}
 
 // 2D Grid navigation composable
 const grid = use2DGrid(

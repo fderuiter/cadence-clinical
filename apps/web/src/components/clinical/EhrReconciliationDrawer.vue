@@ -140,20 +140,40 @@
       <!-- Main Split-Screen Reconciliation View -->
       <main class="drawer-body">
         <div v-if="isLoading" class="state-container">
-          <div class="spinner" />
-          <p>Loading eSource candidate data and current eCRF mappings...</p>
+          <SkeletonLoader type="card" :count="3" />
         </div>
 
         <div
           v-else-if="filteredCandidates.length === 0"
           class="state-container empty-state"
         >
-          <span class="empty-icon">📋</span>
-          <h3>No Candidate Records Found</h3>
-          <p>
-            No EHR source data items match the current filters or need
-            reconciliation.
-          </p>
+          <EmptyState
+            icon="📋"
+            title="No Candidate Records Found"
+            message="No EHR source data items match the current filters or need reconciliation."
+          >
+            <template #action>
+              <button
+                type="button"
+                class="btn btn-primary btn-sm btn-refresh-candidates"
+                @click="fetchCandidates"
+              >
+                🔄 Refresh EHR Ingestion
+              </button>
+              <button
+                v-if="
+                  selectedDomain !== 'ALL' ||
+                  selectedStatus !== 'ALL' ||
+                  searchQuery.trim()
+                "
+                type="button"
+                class="btn btn-secondary btn-sm btn-clear-filters"
+                @click="resetFilters"
+              >
+                Clear Filters
+              </button>
+            </template>
+          </EmptyState>
         </div>
 
         <div v-else class="candidate-list">
@@ -563,6 +583,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { interopService } from "../../api/interop";
+import SkeletonLoader from "../common/SkeletonLoader.vue";
+import EmptyState from "../common/EmptyState.vue";
 
 export interface EhrCandidate {
   id: string;
@@ -624,6 +646,12 @@ const isSubmitting = ref(false);
 const selectedDomain = ref<string>("ALL");
 const selectedStatus = ref<string>("ALL");
 const searchQuery = ref<string>("");
+
+function resetFilters() {
+  selectedDomain.value = "ALL";
+  selectedStatus.value = "ALL";
+  searchQuery.value = "";
+}
 
 const activeItem = ref<EhrCandidate | null>(null);
 const showRejectModal = ref(false);
