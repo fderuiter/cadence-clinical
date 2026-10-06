@@ -4,8 +4,12 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `GET` | `/api/v1/execution/cec/dossiers` | GetCecDossiersList |  |
+| `POST` | `/api/v1/execution/cec/dossiers/compile` | CompileCecDossier |  |
 | `GET` | `/api/v1/execution/cec/dossiers/{id}` | GetCecDossierById |  |
+| `POST` | `/api/v1/execution/cec/dossiers/{id}/assessments` | SubmitCecReaderAssessment |  |
 | `POST` | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate` | ChairAdjudicateDossier |  |
+| `GET` | `/api/v1/execution/cec/sdtm-ce` | ExportCecSdtmCe |  |
 | `POST` | `/api/v1/execution/forms` | CreateFormSubmission |  |
 | `GET` | `/api/v1/execution/forms/subject/{studyId}/{subjectId}` | ListFormSubmissionsBySubject |  |
 | `GET` | `/api/v1/execution/forms/{id}` | GetFormSubmissionById |  |

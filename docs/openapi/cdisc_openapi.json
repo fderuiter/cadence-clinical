@@ -2514,6 +2514,205 @@
         }
       }
     },
+    "/api/v1/execution/cec/dossiers": {
+      "get": {
+        "tags": [
+          "CecEndpoints"
+        ],
+        "operationId": "GetCecDossiersList",
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_CecDossierBlindedView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/{id}": {
+      "get": {
+        "tags": [
+          "CecEndpoints"
+        ],
+        "operationId": "GetCecDossierById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CecDossierBlindedView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/compile": {
+      "post": {
+        "tags": [
+          "CecEndpoints"
+        ],
+        "operationId": "CompileCecDossier",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_CompileDossierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_CecDossierBlindedView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/cec/dossiers/{id}/assessments": {
+      "post": {
+        "tags": [
+          "CecEndpoints"
+        ],
+        "operationId": "SubmitCecReaderAssessment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_SubmitReaderAssessmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ReaderAssessmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
       "post": {
         "tags": [
@@ -2594,17 +2793,16 @@
         }
       }
     },
-    "/api/v1/execution/cec/dossiers/{id}": {
+    "/api/v1/execution/cec/sdtm-ce": {
       "get": {
         "tags": [
           "CecEndpoints"
         ],
-        "operationId": "GetCecDossierById",
+        "operationId": "ExportCecSdtmCe",
         "parameters": [
           {
-            "name": "id",
-            "in": "path",
-            "required": true,
+            "name": "studyId",
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -2616,17 +2814,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Execution_CecDossier"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                  "$ref": "#/components/schemas/Execution_SdtmCeDataset"
                 }
               }
             }
@@ -7392,9 +7580,73 @@
           }
         }
       },
-      "Execution_CecDossier": {
+      "Execution_CecDiagnosticAttachment": {
+        "required": [
+          "attachment_id",
+          "document_type",
+          "title",
+          "summary",
+          "key_findings"
+        ],
         "type": "object",
         "properties": {
+          "attachment_id": {
+            "type": "string"
+          },
+          "document_type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "key_findings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Execution_CecDossierBlindedView": {
+        "required": [
+          "dossier_id",
+          "event_id",
+          "study_id",
+          "subject_id",
+          "masked_subject_id",
+          "site_id",
+          "masked_site_id",
+          "candidate_event_type",
+          "reported_term",
+          "reported_onset_date",
+          "verbatim_description",
+          "medical_narrative",
+          "is_deidentified",
+          "workflow_status",
+          "is_discordant",
+          "discordance_reasons",
+          "final_consensus_classification",
+          "final_consensus_subtype",
+          "final_adjudicated_onset_date",
+          "adjudication_rationale",
+          "reader1_status",
+          "reader2_status",
+          "reader1_assessment",
+          "reader2_assessment",
+          "lab_panels",
+          "ecg_records",
+          "diagnostic_attachments",
+          "signature_manifest",
+          "finalized_at"
+        ],
+        "type": "object",
+        "properties": {
+          "dossier_id": {
+            "type": "string"
+          },
           "event_id": {
             "type": "string"
           },
@@ -7427,6 +7679,21 @@
           },
           "reported_onset_date": {
             "type": "string"
+          },
+          "verbatim_description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "medical_narrative": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_deidentified": {
+            "type": "boolean"
           },
           "workflow_status": {
             "type": "string"
@@ -7470,6 +7737,44 @@
           "reader2_status": {
             "type": "string"
           },
+          "reader1_assessment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_CecReaderAssessment"
+              }
+            ]
+          },
+          "reader2_assessment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Execution_CecReaderAssessment"
+              }
+            ]
+          },
+          "lab_panels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_CecLabPanel"
+            }
+          },
+          "ecg_records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_CecEcgRecord"
+            }
+          },
+          "diagnostic_attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_CecDiagnosticAttachment"
+            }
+          },
           "signature_manifest": {
             "oneOf": [
               {
@@ -7486,30 +7791,201 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "Execution_CecEcgRecord": {
+        "required": [
+          "ecg_id",
+          "timestamp",
+          "rhythm",
+          "st_elevation_leads",
+          "st_depression_leads",
+          "q_wave_leads",
+          "lbbb_present",
+          "qtcf_ms",
+          "interpretation"
+        ],
+        "type": "object",
+        "properties": {
+          "ecg_id": {
+            "type": "string"
           },
-          "id": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rhythm": {
+            "type": "string"
+          },
+          "st_elevation_leads": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "st_depression_leads": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "q_wave_leads": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "lbbb_present": {
+            "type": "boolean"
+          },
+          "qtcf_ms": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "interpretation": {
+            "type": "string"
+          }
+        }
+      },
+      "Execution_CecLabPanel": {
+        "required": [
+          "test_name",
+          "loinc_code",
+          "result_value",
+          "result_unit",
+          "reference_low",
+          "reference_high",
+          "is_out_of_range",
+          "toxicity_grade"
+        ],
+        "type": "object",
+        "properties": {
+          "test_name": {
+            "type": "string"
+          },
+          "loinc_code": {
             "type": [
               "null",
               "string"
             ]
           },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "created_by": {
+          "result_value": {
             "type": "string"
           },
-          "reason_for_change": {
+          "result_unit": {
             "type": "string"
           },
-          "version_index": {
+          "reference_low": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "reference_high": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "is_out_of_range": {
+            "type": "boolean"
+          },
+          "toxicity_grade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Execution_CecReaderAssessment": {
+        "required": [
+          "assessment_id",
+          "dossier_id",
+          "reader_id",
+          "reader_name",
+          "reader_role",
+          "classification",
+          "subtype",
+          "adjudicated_onset_date",
+          "criteria_met",
+          "confidence_score",
+          "clinical_rationale",
+          "submitted_at"
+        ],
+        "type": "object",
+        "properties": {
+          "assessment_id": {
+            "type": "string"
+          },
+          "dossier_id": {
+            "type": "string"
+          },
+          "reader_id": {
+            "type": "string"
+          },
+          "reader_name": {
+            "type": "string"
+          },
+          "reader_role": {
+            "type": "string"
+          },
+          "classification": {
+            "type": "string"
+          },
+          "subtype": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjudicated_onset_date": {
+            "type": "string"
+          },
+          "criteria_met": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "confidence_score": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
               "string"
             ],
-            "format": "int64"
+            "format": "int32"
+          },
+          "clinical_rationale": {
+            "type": "string"
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -8450,6 +8926,106 @@
           }
         }
       },
+      "Execution_CompileDossierRequest": {
+        "required": [
+          "dossier_id",
+          "event_id",
+          "study_id",
+          "subject_id",
+          "masked_subject_id",
+          "candidate_event_type",
+          "reported_term",
+          "reported_onset_date",
+          "site_id",
+          "masked_site_id",
+          "verbatim_description",
+          "medical_narrative",
+          "lab_panels",
+          "ecg_records",
+          "diagnostic_attachments"
+        ],
+        "type": "object",
+        "properties": {
+          "dossier_id": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "masked_subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "candidate_event_type": {
+            "type": "string"
+          },
+          "reported_term": {
+            "type": "string"
+          },
+          "reported_onset_date": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "masked_site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "verbatim_description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "medical_narrative": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lab_panels": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Execution_CecLabPanel"
+            }
+          },
+          "ecg_records": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Execution_CecEcgRecord"
+            }
+          },
+          "diagnostic_attachments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Execution_CecDiagnosticAttachment"
+            }
+          }
+        }
+      },
       "Execution_ComplianceStatusResponse": {
         "required": [
           "study_id",
@@ -9315,6 +9891,132 @@
         ],
         "type": "string"
       },
+      "Execution_ReaderAssessmentResponse": {
+        "required": [
+          "dossier_id",
+          "reader_role",
+          "workflow_status",
+          "is_discordant",
+          "discordance_reasons",
+          "final_consensus_classification",
+          "submitted_at"
+        ],
+        "type": "object",
+        "properties": {
+          "dossier_id": {
+            "type": "string"
+          },
+          "reader_role": {
+            "type": "string"
+          },
+          "workflow_status": {
+            "type": "string"
+          },
+          "is_discordant": {
+            "type": "boolean"
+          },
+          "discordance_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "final_consensus_classification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "submitted_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_SdtmCeDataset": {
+        "required": [
+          "ce_records",
+          "supp_ce_records"
+        ],
+        "type": "object",
+        "properties": {
+          "ce_records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_SdtmCeRecord"
+            }
+          },
+          "supp_ce_records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_SuppCeRecord"
+            }
+          }
+        }
+      },
+      "Execution_SdtmCeRecord": {
+        "required": [
+          "studyid",
+          "domain",
+          "usubjid",
+          "ceseq",
+          "ceterm",
+          "cedecod",
+          "cecat",
+          "cescat",
+          "cepresp",
+          "ceoccur",
+          "cestdtc",
+          "cecadj"
+        ],
+        "type": "object",
+        "properties": {
+          "studyid": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "usubjid": {
+            "type": "string"
+          },
+          "ceseq": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ceterm": {
+            "type": "string"
+          },
+          "cedecod": {
+            "type": "string"
+          },
+          "cecat": {
+            "type": "string"
+          },
+          "cescat": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cepresp": {
+            "type": "string"
+          },
+          "ceoccur": {
+            "type": "string"
+          },
+          "cestdtc": {
+            "type": "string"
+          },
+          "cecadj": {
+            "type": "string"
+          }
+        }
+      },
       "Execution_SignatureManifest": {
         "required": [
           "signer_id",
@@ -9755,6 +10457,101 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "Execution_SubmitReaderAssessmentRequest": {
+        "required": [
+          "reader_role",
+          "classification",
+          "subtype",
+          "adjudicated_onset_date",
+          "criteria_met",
+          "confidence_score",
+          "clinical_rationale",
+          "reader_name"
+        ],
+        "type": "object",
+        "properties": {
+          "reader_role": {
+            "type": "string"
+          },
+          "classification": {
+            "type": "string"
+          },
+          "subtype": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adjudicated_onset_date": {
+            "type": "string"
+          },
+          "criteria_met": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "confidence_score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "clinical_rationale": {
+            "type": "string"
+          },
+          "reader_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_SuppCeRecord": {
+        "required": [
+          "studyid",
+          "rdomain",
+          "usubjid",
+          "idvar",
+          "idvarval",
+          "qnam",
+          "qlabel",
+          "qval"
+        ],
+        "type": "object",
+        "properties": {
+          "studyid": {
+            "type": "string"
+          },
+          "rdomain": {
+            "type": "string"
+          },
+          "usubjid": {
+            "type": "string"
+          },
+          "idvar": {
+            "type": "string"
+          },
+          "idvarval": {
+            "type": "string"
+          },
+          "qnam": {
+            "type": "string"
+          },
+          "qlabel": {
+            "type": "string"
+          },
+          "qval": {
+            "type": "string"
           }
         }
       },

@@ -179,6 +179,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2443: Decommission Legacy Python Compose Services and Set .NET 10 as Default Runtime](2026-09-25-decommission-legacy-python-services-and-default-dotnet10-runtime.md) (2026-09-25)
 - [ADR-2445: Payments Domain Primitive Decimal Conversion & EF Core Explicit Precision Mapping](2026-09-25-payments-primitive-decimal-conversion-and-explicit-ef-core-precision.md) (2026-09-25)
 - [ADR-2243: Topological Tier-Based .NET 10 Migration and Legacy Python Decommissioning](2026-09-28-topological-tier-based-dotnet-10-migration-and-python-decommissioning.md) (2026-09-28)
+- [ADR-2809: Clinical Endpoint Committee (CEC) Adjudication FSM and CDISC SDTM CE Compiler Schema](2026-10-06-cec-adjudication-fsm-and-sdtm-ce-compiler-schema.md) (2026-10-06)
 
 ### 2. API Gateway, Security & Identity
 

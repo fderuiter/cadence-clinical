@@ -422,6 +422,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/cec/dossiers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetCecDossiersList"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/cec/dossiers/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetCecDossierById"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/cec/dossiers/compile": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["CompileCecDossier"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/cec/dossiers/{id}/assessments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["SubmitCecReaderAssessment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
     parameters: {
       query?: never;
@@ -438,14 +502,14 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/execution/cec/dossiers/{id}": {
+  "/api/v1/execution/cec/sdtm-ce": {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    get: operations["GetCecDossierById"];
+    get: operations["ExportCecSdtmCe"];
     put?: never;
     post?: never;
     delete?: never;
@@ -865,36 +929,89 @@ export interface components {
       service: null | string;
       engine: null | string;
     };
-    Execution_CecDossier: {
-      event_id?: string;
-      study_id?: string;
-      subject_id?: string;
-      masked_subject_id?: string;
-      site_id?: null | string;
-      masked_site_id?: null | string;
-      candidate_event_type?: string;
-      reported_term?: string;
-      reported_onset_date?: string;
-      workflow_status?: string;
-      is_discordant?: boolean;
-      discordance_reasons?: string[];
-      final_consensus_classification?: null | string;
-      final_consensus_subtype?: null | string;
-      final_adjudicated_onset_date?: null | string;
-      adjudication_rationale?: null | string;
-      reader1_status?: string;
-      reader2_status?: string;
-      signature_manifest?:
+    Execution_CecDiagnosticAttachment: {
+      attachment_id: string;
+      document_type: string;
+      title: string;
+      summary: string;
+      key_findings: string[];
+    };
+    Execution_CecDossierBlindedView: {
+      dossier_id: string;
+      event_id: string;
+      study_id: string;
+      subject_id: string;
+      masked_subject_id: string;
+      site_id: null | string;
+      masked_site_id: null | string;
+      candidate_event_type: string;
+      reported_term: string;
+      reported_onset_date: string;
+      verbatim_description: null | string;
+      medical_narrative: null | string;
+      is_deidentified: boolean;
+      workflow_status: string;
+      is_discordant: boolean;
+      discordance_reasons: string[];
+      final_consensus_classification: null | string;
+      final_consensus_subtype: null | string;
+      final_adjudicated_onset_date: null | string;
+      adjudication_rationale: null | string;
+      reader1_status: string;
+      reader2_status: string;
+      reader1_assessment:
+        null | components["schemas"]["Execution_CecReaderAssessment"];
+      reader2_assessment:
+        null | components["schemas"]["Execution_CecReaderAssessment"];
+      lab_panels: components["schemas"]["Execution_CecLabPanel"][];
+      ecg_records: components["schemas"]["Execution_CecEcgRecord"][];
+      diagnostic_attachments: components["schemas"]["Execution_CecDiagnosticAttachment"][];
+      signature_manifest:
         null | components["schemas"]["Execution_SignatureManifest"];
       /** Format: date-time */
-      finalized_at?: null | string;
-      id?: null | string;
+      finalized_at: null | string;
+    };
+    Execution_CecEcgRecord: {
+      ecg_id: string;
       /** Format: date-time */
-      created_at?: string;
-      created_by?: string;
-      reason_for_change?: string;
-      /** Format: int64 */
-      version_index?: number | string;
+      timestamp: string;
+      rhythm: string;
+      st_elevation_leads: null | string[];
+      st_depression_leads: null | string[];
+      q_wave_leads: null | string[];
+      lbbb_present: boolean;
+      /** Format: int32 */
+      qtcf_ms: null | number | string;
+      interpretation: string;
+    };
+    Execution_CecLabPanel: {
+      test_name: string;
+      loinc_code: null | string;
+      result_value: string;
+      result_unit: string;
+      /** Format: double */
+      reference_low: null | number | string;
+      /** Format: double */
+      reference_high: null | number | string;
+      is_out_of_range: boolean;
+      /** Format: int32 */
+      toxicity_grade: null | number | string;
+    };
+    Execution_CecReaderAssessment: {
+      assessment_id: string;
+      dossier_id: string;
+      reader_id: string;
+      reader_name: string;
+      reader_role: string;
+      classification: string;
+      subtype: null | string;
+      adjudicated_onset_date: string;
+      criteria_met: string[];
+      /** Format: int32 */
+      confidence_score: number | string;
+      clinical_rationale: string;
+      /** Format: date-time */
+      submitted_at: string;
     };
     Execution_CgtApheresisCreateRequest: {
       study_id: string;
@@ -1123,6 +1240,24 @@ export interface components {
        */
       version: number | string;
     };
+    Execution_CompileDossierRequest: {
+      dossier_id: string;
+      event_id: string;
+      study_id: string;
+      subject_id: string;
+      masked_subject_id: null | string;
+      candidate_event_type: string;
+      reported_term: string;
+      reported_onset_date: string;
+      site_id: null | string;
+      masked_site_id: null | string;
+      verbatim_description: null | string;
+      medical_narrative: null | string;
+      lab_panels: null | components["schemas"]["Execution_CecLabPanel"][];
+      ecg_records: null | components["schemas"]["Execution_CecEcgRecord"][];
+      diagnostic_attachments:
+        null | components["schemas"]["Execution_CecDiagnosticAttachment"][];
+    };
     Execution_ComplianceStatusResponse: {
       study_id: components["schemas"]["Execution_StudyCode"];
       site_id: null | components["schemas"]["Execution_SiteCode"];
@@ -1326,6 +1461,35 @@ export interface components {
       | "CLOSED"
       | "REOPENED"
       | "CANCELLED";
+    Execution_ReaderAssessmentResponse: {
+      dossier_id: string;
+      reader_role: string;
+      workflow_status: string;
+      is_discordant: boolean;
+      discordance_reasons: string[];
+      final_consensus_classification: null | string;
+      /** Format: date-time */
+      submitted_at: string;
+    };
+    Execution_SdtmCeDataset: {
+      ce_records: components["schemas"]["Execution_SdtmCeRecord"][];
+      supp_ce_records: components["schemas"]["Execution_SuppCeRecord"][];
+    };
+    Execution_SdtmCeRecord: {
+      studyid: string;
+      domain: string;
+      usubjid: string;
+      /** Format: int32 */
+      ceseq: number | string;
+      ceterm: string;
+      cedecod: string;
+      cecat: string;
+      cescat: null | string;
+      cepresp: string;
+      ceoccur: string;
+      cestdtc: string;
+      cecadj: string;
+    };
     Execution_SignatureManifest: {
       signer_id: string;
       signer_name: string;
@@ -1424,6 +1588,27 @@ export interface components {
       active_protocol_version: string;
       /** Format: int32 */
       enrollment_index: number | string;
+    };
+    Execution_SubmitReaderAssessmentRequest: {
+      reader_role: string;
+      classification: string;
+      subtype: null | string;
+      adjudicated_onset_date: string;
+      criteria_met: null | string[];
+      /** Format: int32 */
+      confidence_score: number | string;
+      clinical_rationale: string;
+      reader_name: null | string;
+    };
+    Execution_SuppCeRecord: {
+      studyid: string;
+      rdomain: string;
+      usubjid: string;
+      idvar: string;
+      idvarval: string;
+      qnam: string;
+      qlabel: string;
+      qval: string;
     };
   };
   responses: never;
@@ -2622,6 +2807,155 @@ export interface operations {
       };
     };
   };
+  GetCecDossiersList: {
+    parameters: {
+      query?: {
+        studyId?: string;
+        status?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CecDossierBlindedView"][];
+        };
+      };
+    };
+  };
+  GetCecDossierById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CecDossierBlindedView"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  CompileCecDossier: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_CompileDossierRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_CecDossierBlindedView"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  SubmitCecReaderAssessment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_SubmitReaderAssessmentRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_ReaderAssessmentResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
   ChairAdjudicateDossier: {
     parameters: {
       query?: never;
@@ -2684,13 +3018,13 @@ export interface operations {
       };
     };
   };
-  GetCecDossierById: {
+  ExportCecSdtmCe: {
     parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
+      query?: {
+        studyId?: string;
       };
+      header?: never;
+      path?: never;
       cookie?: never;
     };
     requestBody?: never;
@@ -2701,16 +3035,7 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          "application/json": components["schemas"]["Execution_CecDossier"];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+          "application/json": components["schemas"]["Execution_SdtmCeDataset"];
         };
       };
     };

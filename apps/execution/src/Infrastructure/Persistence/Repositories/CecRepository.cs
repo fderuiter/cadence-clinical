@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,6 +32,23 @@ public sealed class CecRepository(ExecutionDbContext context, ResiliencePipeline
         await Context.CecDossiers
             .FirstOrDefaultAsync(d => d.Id == dossierId, cancellationToken)
             .ConfigureAwait(false);
+
+    public async Task<List<CecDossier>> GetDossiersAsync(string? studyId, string? workflowStatus, CancellationToken cancellationToken)
+    {
+        var query = Context.CecDossiers.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(studyId))
+        {
+            query = query.Where(d => d.StudyId == studyId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(workflowStatus) && !string.Equals(workflowStatus, "ALL", System.StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(d => d.WorkflowStatus == workflowStatus);
+        }
+
+        return await query.ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task AddDossierAsync(CecDossier dossier, CancellationToken cancellationToken)
     {

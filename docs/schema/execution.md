@@ -11,7 +11,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.OutboxMessage`](#edcoutboxmessage) | `OutboxMessage` | 21 |
 | [`edc.OutboxState`](#edcoutboxstate) | `OutboxState` | 6 |
 | [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 17 |
-| [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 26 |
+| [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 39 |
 | [`edc.cgt_bedside_verifications`](#edccgt_bedside_verifications) | `CgtBedsideVerification` | 23 |
 | [`edc.cgt_chains_of_custody`](#edccgt_chains_of_custody) | `CgtChainOfCustody` | 20 |
 | [`edc.cgt_destruction_certificates`](#edccgt_destruction_certificates) | `CgtDestructionCertificate` | 32 |
@@ -161,15 +161,22 @@ Entity: `CecDossier`
 | `CandidateEventType` | `character varying(100)` | no |  |  |
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `text` | no |  |  |
+| `DossierDigest` | `text` | yes |  |  |
 | `EventId` | `character varying(255)` | no |  |  |
 | `FinalAdjudicatedOnsetDate` | `text` | yes |  |  |
 | `FinalConsensusClassification` | `text` | yes |  |  |
 | `FinalConsensusSubtype` | `text` | yes |  |  |
 | `FinalizedAt` | `timestamp with time zone` | yes |  |  |
+| `IsDeidentified` | `boolean` | no |  |  |
 | `IsDiscordant` | `boolean` | no |  |  |
 | `MaskedSiteId` | `character varying(255)` | yes |  |  |
 | `MaskedSubjectId` | `character varying(255)` | no |  |  |
+| `MedicalNarrative` | `text` | yes |  |  |
+| `Reader1Id` | `text` | yes |  |  |
+| `Reader1Name` | `text` | yes |  |  |
 | `Reader1Status` | `text` | no |  |  |
+| `Reader2Id` | `text` | yes |  |  |
+| `Reader2Name` | `text` | yes |  |  |
 | `Reader2Status` | `text` | no |  |  |
 | `ReasonForChange` | `text` | no |  |  |
 | `ReportedOnsetDate` | `character varying(50)` | no |  |  |
@@ -177,10 +184,16 @@ Entity: `CecDossier`
 | `SiteId` | `character varying(255)` | yes |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
+| `VerbatimDescription` | `text` | yes |  |  |
 | `VersionIndex` | `bigint` | no |  |  |
 | `WorkflowStatus` | `character varying(100)` | no |  |  |
 | `_version` | `bigint` | no | `0` |  |
+| `diagnostic_attachments` | `jsonb` | no |  |  |
 | `discordance_reasons` | `jsonb` | no |  |  |
+| `ecg_records` | `jsonb` | no |  |  |
+| `lab_panels` | `jsonb` | no |  |  |
+| `reader_1_assessment` | `jsonb` | yes |  |  |
+| `reader_2_assessment` | `jsonb` | yes |  |  |
 | `signature_manifest` | `jsonb` | yes |  |  |
 
 Indexes:

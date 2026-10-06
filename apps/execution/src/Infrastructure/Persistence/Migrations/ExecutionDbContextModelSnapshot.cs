@@ -130,10 +130,23 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("DiagnosticAttachments")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("diagnostic_attachments");
+
                     b.Property<string>("DiscordanceReasons")
                         .IsRequired()
                         .HasColumnType("jsonb")
                         .HasColumnName("discordance_reasons");
+
+                    b.Property<string>("DossierDigest")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EcgRecords")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("ecg_records");
 
                     b.Property<string>("EventId")
                         .IsRequired()
@@ -152,8 +165,16 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("FinalizedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsDeidentified")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDiscordant")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("LabPanels")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("lab_panels");
 
                     b.Property<string>("MaskedSiteId")
                         .HasMaxLength(255)
@@ -164,8 +185,31 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<string>("MedicalNarrative")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reader1Assessment")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("reader_1_assessment");
+
+                    b.Property<string>("Reader1Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reader1Name")
+                        .HasColumnType("text");
+
                     b.Property<string>("Reader1Status")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reader2Assessment")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("reader_2_assessment");
+
+                    b.Property<string>("Reader2Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reader2Name")
                         .HasColumnType("text");
 
                     b.Property<string>("Reader2Status")
@@ -203,6 +247,9 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<string>("VerbatimDescription")
+                        .HasColumnType("text");
 
                     b.Property<long>("VersionIndex")
                         .HasColumnType("bigint");

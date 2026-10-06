@@ -13,8 +13,9 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 
 /// <summary>
 /// EF Core 10 entity mapping for the <c>cec_dossiers</c> table.
-/// Configures JSONB properties, signature manifest, and concurrency tokens.
+/// Configures JSONB properties, signature manifest, reader assessments, and optimistic concurrency tokens.
 /// @req:PRD-CEC-001
+/// @req:PRD-CEC-002
 /// @req:PRD-SYS-053
 /// </summary>
 public sealed class CecDossierConfiguration : IEntityTypeConfiguration<CecDossier>
@@ -94,6 +95,70 @@ public sealed class CecDossierConfiguration : IEntityTypeConfiguration<CecDossie
             .HasColumnName("signature_manifest")
             .HasColumnType("jsonb")
             .Metadata.SetValueComparer(signatureComparer);
+
+        var readerAssessmentComparer = new ValueComparer<CecReaderAssessment?>(
+            (a, b) => JsonSerializer.Serialize(a, JsonSerializerOptions.Default) == JsonSerializer.Serialize(b, JsonSerializerOptions.Default),
+            v => v == null ? 0 : JsonSerializer.Serialize(v, JsonSerializerOptions.Default).GetHashCode(StringComparison.Ordinal),
+            v => v == null ? null : JsonSerializer.Deserialize<CecReaderAssessment>(
+                JsonSerializer.Serialize(v, JsonSerializerOptions.Default), JsonSerializerOptions.Default));
+
+        builder.Property(d => d.Reader1Assessment)
+            .HasConversion(
+                v => v == null ? null : JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
+                v => v == null ? null : JsonSerializer.Deserialize<CecReaderAssessment>(v, JsonSerializerOptions.Default))
+            .HasColumnName("reader_1_assessment")
+            .HasColumnType("jsonb")
+            .Metadata.SetValueComparer(readerAssessmentComparer);
+
+        builder.Property(d => d.Reader2Assessment)
+            .HasConversion(
+                v => v == null ? null : JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
+                v => v == null ? null : JsonSerializer.Deserialize<CecReaderAssessment>(v, JsonSerializerOptions.Default))
+            .HasColumnName("reader_2_assessment")
+            .HasColumnType("jsonb")
+            .Metadata.SetValueComparer(readerAssessmentComparer);
+
+        var labPanelsComparer = new ValueComparer<List<CecLabPanel>>(
+            (a, b) => JsonSerializer.Serialize(a, JsonSerializerOptions.Default) == JsonSerializer.Serialize(b, JsonSerializerOptions.Default),
+            v => v == null ? 0 : JsonSerializer.Serialize(v, JsonSerializerOptions.Default).GetHashCode(StringComparison.Ordinal),
+            v => v == null ? new List<CecLabPanel>() : JsonSerializer.Deserialize<List<CecLabPanel>>(
+                JsonSerializer.Serialize(v, JsonSerializerOptions.Default), JsonSerializerOptions.Default) ?? new List<CecLabPanel>());
+
+        builder.Property(d => d.LabPanels)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
+                v => string.IsNullOrWhiteSpace(v) ? new List<CecLabPanel>() : JsonSerializer.Deserialize<List<CecLabPanel>>(v, JsonSerializerOptions.Default) ?? new List<CecLabPanel>())
+            .HasColumnName("lab_panels")
+            .HasColumnType("jsonb")
+            .Metadata.SetValueComparer(labPanelsComparer);
+
+        var ecgRecordsComparer = new ValueComparer<List<CecEcgRecord>>(
+            (a, b) => JsonSerializer.Serialize(a, JsonSerializerOptions.Default) == JsonSerializer.Serialize(b, JsonSerializerOptions.Default),
+            v => v == null ? 0 : JsonSerializer.Serialize(v, JsonSerializerOptions.Default).GetHashCode(StringComparison.Ordinal),
+            v => v == null ? new List<CecEcgRecord>() : JsonSerializer.Deserialize<List<CecEcgRecord>>(
+                JsonSerializer.Serialize(v, JsonSerializerOptions.Default), JsonSerializerOptions.Default) ?? new List<CecEcgRecord>());
+
+        builder.Property(d => d.EcgRecords)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
+                v => string.IsNullOrWhiteSpace(v) ? new List<CecEcgRecord>() : JsonSerializer.Deserialize<List<CecEcgRecord>>(v, JsonSerializerOptions.Default) ?? new List<CecEcgRecord>())
+            .HasColumnName("ecg_records")
+            .HasColumnType("jsonb")
+            .Metadata.SetValueComparer(ecgRecordsComparer);
+
+        var diagnosticAttachmentsComparer = new ValueComparer<List<CecDiagnosticAttachment>>(
+            (a, b) => JsonSerializer.Serialize(a, JsonSerializerOptions.Default) == JsonSerializer.Serialize(b, JsonSerializerOptions.Default),
+            v => v == null ? 0 : JsonSerializer.Serialize(v, JsonSerializerOptions.Default).GetHashCode(StringComparison.Ordinal),
+            v => v == null ? new List<CecDiagnosticAttachment>() : JsonSerializer.Deserialize<List<CecDiagnosticAttachment>>(
+                JsonSerializer.Serialize(v, JsonSerializerOptions.Default), JsonSerializerOptions.Default) ?? new List<CecDiagnosticAttachment>());
+
+        builder.Property(d => d.DiagnosticAttachments)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
+                v => string.IsNullOrWhiteSpace(v) ? new List<CecDiagnosticAttachment>() : JsonSerializer.Deserialize<List<CecDiagnosticAttachment>>(v, JsonSerializerOptions.Default) ?? new List<CecDiagnosticAttachment>())
+            .HasColumnName("diagnostic_attachments")
+            .HasColumnType("jsonb")
+            .Metadata.SetValueComparer(diagnosticAttachmentsComparer);
 
         builder.Property<long>("_version")
             .HasColumnName("_version")

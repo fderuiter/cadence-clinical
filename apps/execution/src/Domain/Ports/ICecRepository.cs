@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +16,7 @@ public interface ICecRepository
 {
     Task<CecDossier?> GetDossierByIdAsync(string dossierId, CancellationToken cancellationToken);
     Task<CecDossier?> GetDossierForUpdateAsync(string dossierId, CancellationToken cancellationToken);
+    Task<List<CecDossier>> GetDossiersAsync(string? studyId, string? workflowStatus, CancellationToken cancellationToken);
     Task AddDossierAsync(CecDossier dossier, CancellationToken cancellationToken);
     Task AddChairAdjudicationAsync(CecChairAdjudication adjudication, CancellationToken cancellationToken);
     Task SaveChangesAsync(CancellationToken cancellationToken);
