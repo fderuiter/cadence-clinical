@@ -5,7 +5,8 @@ export const DEFAULT_SETUP_TASKS = [
   {
     id: "task_protocol",
     title: "Digitize & Author Protocol",
-    description: "Upload protocol document or author study metadata and objectives",
+    description:
+      "Upload protocol document or author study metadata and objectives",
     route: "/digitization",
     completed: false,
     keywords: ["digitization", "digitize", "protocol", "welcome"],
@@ -176,7 +177,8 @@ function readStorageForPersona(personaKey) {
         isActive = true;
       }
 
-      const storedCompletedTasks = window.localStorage.getItem(completedTasksKey);
+      const storedCompletedTasks =
+        window.localStorage.getItem(completedTasksKey);
       if (storedCompletedTasks !== null) {
         try {
           const parsedTasks = JSON.parse(storedCompletedTasks);
@@ -830,7 +832,8 @@ export const useOnboardingStore = defineStore("onboarding", {
       ) {
         return;
       }
-      const searchStr = `${event.type} ${event.target} ${event.details}`.toLowerCase();
+      const searchStr =
+        `${event.type} ${event.target} ${event.details}`.toLowerCase();
       this.tasks.forEach((task) => {
         if (
           !task.completed &&
