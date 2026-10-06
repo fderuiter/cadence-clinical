@@ -103,7 +103,55 @@ internal sealed class ProposeHandler(INodeVisibility visibility) : ICommandHandl
             proposal.PlanArtifactVersionId,
             [.. proposal.RequestedCapabilities],
             proposal.ExpiresAt,
-            proposal.ContentHash));
+            proposal.ContentHash,
+            proposal.ConfidenceScore,
+            proposal.EscalationPolicy,
+            proposal.IsEscalated));
+
+        if (proposal.IsEscalated && proposal.EscalatedAt.HasValue)
+        {
+            context.Work.Raise(new ProposalEscalated(
+                proposal.TenantId,
+                proposal.Id,
+                proposal.StudyId,
+                proposal.EscalatedById ?? proposal.ProposedById,
+                proposal.EscalatedByKind ?? proposal.ProposedByKind,
+                proposal.EscalatedTo ?? "Manual Review",
+                proposal.EscalationReason ?? "Automated escalation",
+                proposal.EscalatedAt.Value,
+                proposal.EscalationPolicy));
+        }
+
+        return CommandResult<ProposalState>.Success(proposal.ToState(context.RecordedAt));
+    }
+}
+
+/// <summary>Handles <see cref="EscalateProposal"/>: escalates an open proposal for human review.</summary>
+internal sealed class EscalateProposalHandler : ICommandHandler<EscalateProposal, ProposalState>
+{
+    public async Task<CommandResult<ProposalState>> HandleAsync(EscalateProposal command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Work.FindAsync<Proposal>(command.ProposalId, cancellationToken).ConfigureAwait(false) is not { } proposal)
+        {
+            return KernelErrors.NotFound;
+        }
+
+        if (proposal.Escalate(context.Actor, command.EscalateTo, command.ReasonForChange, context.RecordedAt, command.EscalationPolicy) is { } error)
+        {
+            return error;
+        }
+
+        context.Work.Raise(new ProposalEscalated(
+            proposal.TenantId,
+            proposal.Id,
+            proposal.StudyId,
+            context.Actor.Id,
+            context.Actor.Kind,
+            command.EscalateTo,
+            command.ReasonForChange,
+            context.RecordedAt,
+            command.EscalationPolicy ?? proposal.EscalationPolicy));
+
         return CommandResult<ProposalState>.Success(proposal.ToState(context.RecordedAt));
     }
 }
@@ -220,6 +268,7 @@ public static class ProposalServiceCollectionExtensions
         services.AddTransient<ICommandHandler<ApproveProposal, ProposalState>, ApproveProposalHandler>();
         services.AddTransient<ICommandHandler<RejectProposal, ProposalState>, RejectProposalHandler>();
         services.AddTransient<ICommandHandler<WithdrawProposal, ProposalState>, WithdrawProposalHandler>();
+        services.AddTransient<ICommandHandler<EscalateProposal, ProposalState>, EscalateProposalHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Transient<IAttestationTargetCheck, ProposalAttestationCheck>());
         return services;
     }

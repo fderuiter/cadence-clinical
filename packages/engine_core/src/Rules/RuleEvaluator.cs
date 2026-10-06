@@ -23,6 +23,17 @@ public class TypeMismatchException : EvaluationException
     public TypeMismatchException(string message) : base(message) { }
 }
 
+public record RuleEvaluationFinding(
+    string RuleId,
+    string Code,
+    string Severity,
+    string? QueryMessage,
+    bool Fired,
+    string? TargetField = null,
+    string? TargetForm = null,
+    string? TargetGroup = null
+);
+
 public partial class RuleEvaluator
 {
     public bool StrictVariables { get; }
@@ -37,6 +48,29 @@ public partial class RuleEvaluator
     {
         StrictVariables = strictVariables;
         AsOf = NormalizeToUtc(asOf);
+    }
+
+    public bool EvaluateRuleDefinition(RuleDefinition rule, Dictionary<string, object?> context)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        ArgumentNullException.ThrowIfNull(context);
+        return IsTruthy(Evaluate(rule.Condition, context));
+    }
+
+    public RuleEvaluationFinding EvaluateFinding(RuleDefinition rule, Dictionary<string, object?> context)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        ArgumentNullException.ThrowIfNull(context);
+        bool fired = EvaluateRuleDefinition(rule, context);
+        return new RuleEvaluationFinding(
+            RuleId: rule.RuleId,
+            Code: !string.IsNullOrWhiteSpace(rule.Code) ? rule.Code : rule.RuleId,
+            Severity: string.IsNullOrWhiteSpace(rule.Severity) ? "Error" : rule.Severity,
+            QueryMessage: rule.QueryMessage,
+            Fired: fired,
+            TargetField: rule.TargetField,
+            TargetForm: rule.TargetForm,
+            TargetGroup: rule.TargetGroup);
     }
 
     public object? Evaluate(ExpressionNode node, Dictionary<string, object?> context)

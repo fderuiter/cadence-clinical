@@ -82,6 +82,7 @@ public static class KernelEventFamilies
         ["FindingExplained"] = EventFamily.Quality,
         ["FindingReopened"] = EventFamily.Quality,
         ["ProposalCreated"] = EventFamily.Intelligence,
+        ["ProposalEscalated"] = EventFamily.Intelligence,
         ["ProposalApproved"] = EventFamily.Intelligence,
         ["ProposalRejected"] = EventFamily.Intelligence,
         ["ProposalWithdrawn"] = EventFamily.Intelligence,

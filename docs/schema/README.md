@@ -13,7 +13,7 @@ One document per module, rendered from each module's EF Core design-time model. 
 | [execution](execution.md) | `ExecutionDbContext` | 18 |
 | [fileshare](fileshare.md) | `FileshareDbContext` | 6 |
 | [imaging](imaging.md) | `ImagingDbContext` | 9 |
-| [interop](interop.md) | `InteropDbContext` | 15 |
+| [interop](interop.md) | `InteropDbContext` | 19 |
 | [kernel](kernel.md) | `KernelDbContext` | 55 |
 | [knowledge](knowledge.md) | `KnowledgeDbContext` | 7 |
 | [notifications](notifications.md) | `NotificationsDbContext` | 4 |

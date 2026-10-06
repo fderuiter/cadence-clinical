@@ -73,6 +73,8 @@ public class RuleChecksumTests
             target_form = rule.TargetForm,
             query_message = rule.QueryMessage,
             version_index = rule.VersionIndex,
+            severity = rule.Severity,
+            code = rule.Code,
         };
         string expected = Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(original)))).ToLowerInvariant();

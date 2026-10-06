@@ -41,7 +41,30 @@ public class Proposal : AggregateRoot<ProposalId>
         ProposedById = proposedBy.Id;
         ProposedByKind = proposedBy.Kind;
         ModelId = command.ModelId;
+        ConfidenceScore = command.ConfidenceScore;
+        EscalationPolicy = command.EscalationPolicy;
         Status = ProposalStatus.Open;
+
+        if (command.ConfidenceScore.HasValue && command.ConfidenceScore.Value < Propose.AutoEscalationThreshold)
+        {
+            IsEscalated = true;
+            EscalatedAt = KernelTimestamps.ToStoredPrecision(proposedAt);
+            EscalatedById = proposedBy.Id;
+            EscalatedByKind = proposedBy.Kind;
+            EscalatedTo = "Manual Review";
+            EscalationReason = $"Automated escalation: Confidence score ({command.ConfidenceScore.Value:F2}) is below threshold ({Propose.AutoEscalationThreshold:F2}).";
+            EscalationPolicy ??= "LowConfidenceAutoEscalation";
+        }
+        else if (!string.IsNullOrWhiteSpace(command.EscalationPolicy) && command.EscalationPolicy.Equals("ForceEscalation", StringComparison.OrdinalIgnoreCase))
+        {
+            IsEscalated = true;
+            EscalatedAt = KernelTimestamps.ToStoredPrecision(proposedAt);
+            EscalatedById = proposedBy.Id;
+            EscalatedByKind = proposedBy.Kind;
+            EscalatedTo = "Manual Review";
+            EscalationReason = "Automated escalation: Policy explicitly requested escalation.";
+        }
+
         ContentHash = HashOf(this);
     }
 
@@ -79,6 +102,39 @@ public class Proposal : AggregateRoot<ProposalId>
 
     /// <summary>The model that produced it; set exactly when an automation agent proposed it (K-PROV-3).</summary>
     public string? ModelId { get; private set; }
+
+    /// <summary>The AI confidence score (0.0 to 1.0) if present.</summary>
+    public double? ConfidenceScore { get; private set; }
+
+    /// <summary>Calculated confidence tier based on score: High (>= 0.85), Medium (0.70 - 0.84), Low (&lt; 0.70).</summary>
+    public string? ConfidenceTier => ConfidenceScore switch
+    {
+        null => null,
+        >= 0.85 => "High",
+        >= 0.70 => "Medium",
+        _ => "Low",
+    };
+
+    /// <summary>True when the proposal has been escalated for review.</summary>
+    public bool IsEscalated { get; private set; }
+
+    /// <summary>When the proposal was escalated.</summary>
+    public DateTimeOffset? EscalatedAt { get; private set; }
+
+    /// <summary>The actor ID who escalated the proposal.</summary>
+    public string? EscalatedById { get; private set; }
+
+    /// <summary>The actor kind who escalated the proposal.</summary>
+    public ActorKind? EscalatedByKind { get; private set; }
+
+    /// <summary>The role, group, or person to whom the proposal was escalated.</summary>
+    public string? EscalatedTo { get; private set; }
+
+    /// <summary>The reason for escalation.</summary>
+    public string? EscalationReason { get; private set; }
+
+    /// <summary>The escalation policy rule name or ID, if applicable.</summary>
+    public string? EscalationPolicy { get; private set; }
 
     /// <summary>The kernel content hash of every content field, which an approval signs.</summary>
     public string ContentHash { get; private set; } = string.Empty;
@@ -195,9 +251,43 @@ public class Proposal : AggregateRoot<ProposalId>
         return null;
     }
 
+    /// <summary>Escalates the proposal for review by <paramref name="escalateTo"/>.</summary>
+    public KernelError? Escalate(Actor actor, string escalateTo, string reason, DateTimeOffset now, string? policy = null)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        if (string.IsNullOrWhiteSpace(escalateTo))
+        {
+            return ProposalErrors.EscalationTargetRequired;
+        }
+
+        if (CheckOpen(now) is { } refused)
+        {
+            return refused;
+        }
+
+        if (IsEscalated)
+        {
+            return ProposalErrors.AlreadyEscalated;
+        }
+
+        IsEscalated = true;
+        EscalatedAt = KernelTimestamps.ToStoredPrecision(now);
+        EscalatedById = actor.Id;
+        EscalatedByKind = actor.Kind;
+        EscalatedTo = escalateTo;
+        EscalationReason = reason;
+        if (!string.IsNullOrWhiteSpace(policy))
+        {
+            EscalationPolicy = policy;
+        }
+
+        return null;
+    }
+
     /// <summary>The proposal as a command result, with its status at <paramref name="now"/>.</summary>
     public ProposalState ToState(DateTimeOffset now) => new(
-        Id, StudyId, StatusAt(now), ContentHash, ProposedById, ProposedByKind, ModelId, ExpiresAt, DecidedAt, DecidedById, ApprovalAttestationId);
+        Id, StudyId, StatusAt(now), ContentHash, ProposedById, ProposedByKind, ModelId, ExpiresAt, DecidedAt, DecidedById, ApprovalAttestationId,
+        ConfidenceScore, ConfidenceTier, IsEscalated, EscalatedAt, EscalatedById, EscalatedByKind, EscalatedTo, EscalationReason, EscalationPolicy);
 
     /// <summary>
     /// The content hash of <paramref name="proposal"/>: the kernel content hash (<see cref="Trust.ContentHash"/>) of a JSON
@@ -223,12 +313,19 @@ public class Proposal : AggregateRoot<ProposalId>
                 ["kind"] = proposal.ProposedByKind.ToString(),
             },
             ["modelId"] = proposal.ModelId,
+            ["confidenceScore"] = proposal.ConfidenceScore,
+            ["escalationPolicy"] = proposal.EscalationPolicy,
         };
         return Trust.ContentHash.Compute(document.ToJsonString());
     }
 
     private static KernelError? Problem(Propose command, Actor proposedBy, DateTimeOffset proposedAt, Func<string, bool> isExecutableCapability)
     {
+        if (command.ConfidenceScore.HasValue && (command.ConfidenceScore.Value < 0.0 || command.ConfidenceScore.Value > 1.0))
+        {
+            return ProposalErrors.InvalidConfidenceScore;
+        }
+
         if (string.IsNullOrWhiteSpace(command.Intent) || command.Intent.Length > Propose.MaxIntentLength)
         {
             return ProposalErrors.Invalid.WithMessage($"The intent is 1 to {Propose.MaxIntentLength} characters.");

@@ -16,5 +16,17 @@ Generated from `docs/openapi/interop_openapi.json` by `pnpm cadence generate-api
 | `POST` | `/api/v1/interop/esource/reconcile/reject` | RejectCandidate |  |
 | `POST` | `/api/v1/interop/esource/smart/assertion` | GenerateClientAssertion |  |
 | `POST` | `/api/v1/interop/esource/smart/verify` | VerifyClientAssertion |  |
+| `POST` | `/api/v1/interop/sce/execute` |  |  |
+| `GET` | `/api/v1/interop/sce/lock-tokens` |  |  |
+| `POST` | `/api/v1/interop/sce/lock-tokens` |  |  |
+| `POST` | `/api/v1/interop/sce/lock-tokens/{token_id}/revoke` |  |  |
+| `GET` | `/api/v1/interop/sce/programs` |  |  |
+| `POST` | `/api/v1/interop/sce/programs` |  |  |
+| `GET` | `/api/v1/interop/sce/programs/{program_id}` |  |  |
+| `GET` | `/api/v1/interop/sce/runs` |  |  |
+| `GET` | `/api/v1/interop/sce/runs/{run_id}` |  |  |
+| `GET` | `/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}` |  |  |
+| `POST` | `/api/v1/interop/sce/runs/{run_id}/verify` |  |  |
+| `POST` | `/api/v1/interop/sce/validate-lockfile` |  |  |
 | `GET` | `/api/v1/interop/status` | InteropStatus | Returns Interoperability operational status. |
 | `GET` | `/healthz` | InteropHealthCheck | Interoperability FHIR & CDISC connector health probe. |

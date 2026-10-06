@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 
@@ -16,7 +17,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 persistence gateway for the Execution bounded context.
-/// Exposes aggregates for subjects, observations, form submissions, clinical queries, CEC dossiers, and CGT chain of custody records.
+/// Exposes aggregates for subjects, observations, form submissions, clinical queries, CEC dossiers, CGT chain of custody records, and staged adverse event reviews.
 /// @req:PRD-SUB-001
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
@@ -45,6 +46,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<ClinicalQuery> ClinicalQueries => Set<ClinicalQuery>();
 
+    public DbSet<StagedAdverseEventReview> StagedAdverseEventReviews => Set<StagedAdverseEventReview>();
+
     public DbSet<CecDossier> CecDossiers => Set<CecDossier>();
 
     public DbSet<CecChairAdjudication> CecChairAdjudications => Set<CecChairAdjudication>();
@@ -72,6 +75,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new FormSubmissionConfiguration());
         modelBuilder.ApplyConfiguration(new PublishedFormVersionRegistryConfiguration());
         modelBuilder.ApplyConfiguration(new ClinicalQueryConfiguration());
+        modelBuilder.ApplyConfiguration(new StagedAdverseEventReviewConfiguration());
         modelBuilder.ApplyConfiguration(new CecDossierConfiguration());
         modelBuilder.ApplyConfiguration(new CecChairAdjudicationConfiguration());
         modelBuilder.ApplyConfiguration(new CgtChainOfCustodyConfiguration());
