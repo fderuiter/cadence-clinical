@@ -371,6 +371,7 @@ public class ParticipantExpenseClaim
     public string? ReviewedBy { get; set; }
     public DateTimeOffset? ReviewedAt { get; set; }
     public string? ReviewNotes { get; set; }
+    public string? DisbursementReference { get; set; }
     public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
     public required DateTimeOffset UpdatedAt { get; set; }
