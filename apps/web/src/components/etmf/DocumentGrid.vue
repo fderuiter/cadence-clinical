@@ -55,175 +55,210 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="paginatedDocuments.length === 0">
+          <template v-if="isLoading">
+            <tr
+              v-for="sIdx in 5"
+              :key="`doc-skel-${sIdx}`"
+              class="skeleton-table-row"
+            >
+              <td colspan="7">
+                <SkeletonLoader type="row" :count="1" :columns="7" />
+              </td>
+            </tr>
+          </template>
+          <tr v-else-if="paginatedDocuments.length === 0">
             <td colspan="7" role="gridcell" class="empty-table-cell">
-              No documents have been uploaded for this artifact yet.
-            </td>
-          </tr>
-          <tr
-            v-for="(doc, rIndex) in paginatedDocuments"
-            :key="doc.id"
-            class="document-row"
-          >
-            <td
-              role="gridcell"
-              :tabindex="getCellTabindex(rIndex, 0)"
-              :class="{
-                'cell-active': isCellActive(rIndex, 0),
-              }"
-              :data-row="rIndex"
-              :data-col="0"
-              class="doc-name-cell"
-              @click="selectCell(rIndex, 0)"
-              @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
-            >
-              <span class="file-icon">📄</span>
-              <span class="filename" :title="doc.filename">{{
-                doc.filename
-              }}</span>
-              <span
-                v-if="doc.is_redacted"
-                class="compliance-badge-pill"
-                title="HIPAA/GDPR Compliant Redacted Copy"
-                >🛡️ Compliant</span
+              <EmptyState
+                icon="📄"
+                title="No Regulated Documents Found"
+                message="No documents have been uploaded for this artifact yet. Upload a single document or run batch ingestion to populate the eTMF."
               >
-            </td>
-            <td
-              role="gridcell"
-              :tabindex="
-                isEditing && isCellActive(rIndex, 1)
-                  ? -1
-                  : getCellTabindex(rIndex, 1)
-              "
-              :class="{
-                'cell-active': isCellActive(rIndex, 1),
-              }"
-              :data-row="rIndex"
-              :data-col="1"
-              @click="selectCell(rIndex, 1)"
-              @dblclick="startEditing(rIndex, doc)"
-              @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
-            >
-              <div
-                v-if="isEditing && isCellActive(rIndex, 1)"
-                class="inline-edit-container"
-              >
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select
-                  ref="inlineSelectRef"
-                  v-model="tempTaxonomyCode"
-                  class="form-control inline-select"
-                  @change="commitTaxonomy(doc)"
-                  @keydown="handleSelectKeyDown($event, doc)"
-                  @blur="cancelEditing"
-                >
-                  <option
-                    v-for="opt in taxonomyOptions"
-                    :key="opt.code"
-                    :value="opt.code"
+                <template #action>
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm upload-empty-btn"
+                    :disabled="!selectedArtifactCode"
+                    @click="openUploadModal"
                   >
-                    Z{{ getZoneAndSectionFromCode(opt.code).zone }} - S{{
-                      getZoneAndSectionFromCode(opt.code).section
-                    }}
-                    [{{ opt.code }}] ({{ opt.name }})
-                  </option>
-                </select>
-              </div>
-              <span v-else class="taxonomy-pill">
-                Z{{ doc.zone }} - S{{ doc.section }} [{{ doc.artifact_code }}]
-              </span>
-            </td>
-            <td
-              role="gridcell"
-              :tabindex="getCellTabindex(rIndex, 2)"
-              :class="{
-                'cell-active': isCellActive(rIndex, 2),
-              }"
-              :data-row="rIndex"
-              :data-col="2"
-              @click="selectCell(rIndex, 2)"
-              @keydown="handleCellKeyDown($event, rIndex, 2, doc)"
-            >
-              <span class="version-tag">v{{ doc.version_index }}.0</span>
-            </td>
-            <td
-              role="gridcell"
-              :tabindex="getCellTabindex(rIndex, 3)"
-              :class="{
-                'cell-active': isCellActive(rIndex, 3),
-              }"
-              :data-row="rIndex"
-              :data-col="3"
-              @click="selectCell(rIndex, 3)"
-              @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
-            >
-              <span class="status-badge" :class="getStatusClass(doc.status)">
-                {{ formatStatus(doc.status) }}
-              </span>
-            </td>
-            <td
-              role="gridcell"
-              :tabindex="getCellTabindex(rIndex, 4)"
-              :class="{
-                'cell-active': isCellActive(rIndex, 4),
-              }"
-              :data-row="rIndex"
-              :data-col="4"
-              @click="selectCell(rIndex, 4)"
-              @keydown="handleCellKeyDown($event, rIndex, 4, doc)"
-            >
-              <div class="user-meta">
-                <span class="username">{{ doc.created_by }}</span>
-              </div>
-            </td>
-            <td
-              role="gridcell"
-              :tabindex="getCellTabindex(rIndex, 5)"
-              :class="{
-                'cell-active': isCellActive(rIndex, 5),
-              }"
-              :data-row="rIndex"
-              :data-col="5"
-              class="date-cell"
-              @click="selectCell(rIndex, 5)"
-              @keydown="handleCellKeyDown($event, rIndex, 5, doc)"
-            >
-              {{ doc.formattedCreatedAt }}
-            </td>
-            <td
-              role="gridcell"
-              :tabindex="getCellTabindex(rIndex, 6)"
-              :class="{
-                'cell-active': isCellActive(rIndex, 6),
-              }"
-              :data-row="rIndex"
-              :data-col="6"
-              class="actions-cell"
-              @click="selectCell(rIndex, 6)"
-              @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
-            >
-              <div style="display: flex; gap: 4px; justify-content: flex-end">
-                <button
-                  class="btn btn-sm btn-outline-secondary btn-inspect-doc"
-                  title="Inspect 21 CFR Part 11 Metadata"
-                  :aria-label="'Inspect metadata for ' + doc.filename"
-                  @click.stop="$emit('inspect', doc)"
-                >
-                  📋 Inspect
-                </button>
-                <button
-                  class="btn btn-sm btn-outline-primary btn-preview-doc"
-                  title="View Watermarked PDF Preview"
-                  :aria-label="
-                    'Preview secure watermarked document ' + doc.filename
-                  "
-                  @click.stop="$emit('preview', doc)"
-                >
-                  👁️ Preview
-                </button>
-              </div>
+                    <span>📄</span> Upload Single Document
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-sm batch-empty-btn"
+                    @click="isBatchDrawerOpen = true"
+                  >
+                    <span>📤</span> Batch Ingestion
+                  </button>
+                </template>
+              </EmptyState>
             </td>
           </tr>
+          <template v-else>
+            <tr
+              v-for="(doc, rIndex) in paginatedDocuments"
+              :key="doc.id"
+              class="document-row"
+            >
+              <td
+                role="gridcell"
+                :tabindex="getCellTabindex(rIndex, 0)"
+                :class="{
+                  'cell-active': isCellActive(rIndex, 0),
+                }"
+                :data-row="rIndex"
+                :data-col="0"
+                class="doc-name-cell"
+                @click="selectCell(rIndex, 0)"
+                @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
+              >
+                <span class="file-icon">📄</span>
+                <span class="filename" :title="doc.filename">{{
+                  doc.filename
+                }}</span>
+                <span
+                  v-if="doc.is_redacted"
+                  class="compliance-badge-pill"
+                  title="HIPAA/GDPR Compliant Redacted Copy"
+                  >🛡️ Compliant</span
+                >
+              </td>
+              <td
+                role="gridcell"
+                :tabindex="
+                  isEditing && isCellActive(rIndex, 1)
+                    ? -1
+                    : getCellTabindex(rIndex, 1)
+                "
+                :class="{
+                  'cell-active': isCellActive(rIndex, 1),
+                }"
+                :data-row="rIndex"
+                :data-col="1"
+                @click="selectCell(rIndex, 1)"
+                @dblclick="startEditing(rIndex, doc)"
+                @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
+              >
+                <div
+                  v-if="isEditing && isCellActive(rIndex, 1)"
+                  class="inline-edit-container"
+                >
+                  <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                  <select
+                    ref="inlineSelectRef"
+                    v-model="tempTaxonomyCode"
+                    class="form-control inline-select"
+                    @change="commitTaxonomy(doc)"
+                    @keydown="handleSelectKeyDown($event, doc)"
+                    @blur="cancelEditing"
+                  >
+                    <option
+                      v-for="opt in taxonomyOptions"
+                      :key="opt.code"
+                      :value="opt.code"
+                    >
+                      Z{{ getZoneAndSectionFromCode(opt.code).zone }} - S{{
+                        getZoneAndSectionFromCode(opt.code).section
+                      }}
+                      [{{ opt.code }}] ({{ opt.name }})
+                    </option>
+                  </select>
+                </div>
+                <span v-else class="taxonomy-pill">
+                  Z{{ doc.zone }} - S{{ doc.section }} [{{ doc.artifact_code }}]
+                </span>
+              </td>
+              <td
+                role="gridcell"
+                :tabindex="getCellTabindex(rIndex, 2)"
+                :class="{
+                  'cell-active': isCellActive(rIndex, 2),
+                }"
+                :data-row="rIndex"
+                :data-col="2"
+                @click="selectCell(rIndex, 2)"
+                @keydown="handleCellKeyDown($event, rIndex, 2, doc)"
+              >
+                <span class="version-tag">v{{ doc.version_index }}.0</span>
+              </td>
+              <td
+                role="gridcell"
+                :tabindex="getCellTabindex(rIndex, 3)"
+                :class="{
+                  'cell-active': isCellActive(rIndex, 3),
+                }"
+                :data-row="rIndex"
+                :data-col="3"
+                @click="selectCell(rIndex, 3)"
+                @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
+              >
+                <span class="status-badge" :class="getStatusClass(doc.status)">
+                  {{ formatStatus(doc.status) }}
+                </span>
+              </td>
+              <td
+                role="gridcell"
+                :tabindex="getCellTabindex(rIndex, 4)"
+                :class="{
+                  'cell-active': isCellActive(rIndex, 4),
+                }"
+                :data-row="rIndex"
+                :data-col="4"
+                @click="selectCell(rIndex, 4)"
+                @keydown="handleCellKeyDown($event, rIndex, 4, doc)"
+              >
+                <div class="user-meta">
+                  <span class="username">{{ doc.created_by }}</span>
+                </div>
+              </td>
+              <td
+                role="gridcell"
+                :tabindex="getCellTabindex(rIndex, 5)"
+                :class="{
+                  'cell-active': isCellActive(rIndex, 5),
+                }"
+                :data-row="rIndex"
+                :data-col="5"
+                class="date-cell"
+                @click="selectCell(rIndex, 5)"
+                @keydown="handleCellKeyDown($event, rIndex, 5, doc)"
+              >
+                {{ doc.formattedCreatedAt }}
+              </td>
+              <td
+                role="gridcell"
+                :tabindex="getCellTabindex(rIndex, 6)"
+                :class="{
+                  'cell-active': isCellActive(rIndex, 6),
+                }"
+                :data-row="rIndex"
+                :data-col="6"
+                class="actions-cell"
+                @click="selectCell(rIndex, 6)"
+                @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
+              >
+                <div style="display: flex; gap: 4px; justify-content: flex-end">
+                  <button
+                    class="btn btn-sm btn-outline-secondary btn-inspect-doc"
+                    title="Inspect 21 CFR Part 11 Metadata"
+                    :aria-label="'Inspect metadata for ' + doc.filename"
+                    @click.stop="$emit('inspect', doc)"
+                  >
+                    📋 Inspect
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-primary btn-preview-doc"
+                    title="View Watermarked PDF Preview"
+                    :aria-label="
+                      'Preview secure watermarked document ' + doc.filename
+                    "
+                    @click.stop="$emit('preview', doc)"
+                  >
+                    👁️ Preview
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
@@ -459,6 +494,8 @@ import { etmfService } from "../../api/etmf";
 import { use2DGrid } from "../../composables/use2DGrid";
 import { useToastStore } from "../../stores/toasts.js";
 import BatchUploadDrawer from "./BatchUploadDrawer.vue";
+import SkeletonLoader from "../common/SkeletonLoader.vue";
+import EmptyState from "../common/EmptyState.vue";
 
 const isBatchDrawerOpen = ref(false);
 
@@ -466,6 +503,10 @@ const props = defineProps({
   documents: {
     type: Array,
     required: true,
+  },
+  isLoading: {
+    type: Boolean,
+    default: false,
   },
 });
 
