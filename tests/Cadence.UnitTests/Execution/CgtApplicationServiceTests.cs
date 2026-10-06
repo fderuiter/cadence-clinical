@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Domain.Cgt.Errors;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Core.Domain.Supply;
+using Cadence.Database;
 using Cadence.Kernel.Time;
 
 using Microsoft.Data.Sqlite;
@@ -27,6 +28,7 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
 
         var options = new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseSqlite(_connection)
+            .AddInterceptors(new GxPAuditInterceptor(() => "system", SystemClock.Instance))
             .Options;
 
         _dbContext = new ExecutionDbContext(options);
@@ -131,10 +133,175 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
             BagBarcodePayload: "DUMMY",
             PatientWristbandId: "SUB-1001",
             PrimaryVerifierId: "USR-SAME",
-            SecondaryVerifierId: "USR-SAME"); // Duplicate verifiers!
+            PrimarySignatureToken: "SIG-01",
+            SecondaryVerifierId: "USR-SAME",
+            SecondarySignatureToken: "SIG-02"); // Duplicate verifiers!
 
         var ex = await Assert.ThrowsAsync<DuplicateVerifierException>(() => service.VerifyBedsideAsync(request, ct));
         Assert.Contains("two distinct staff members", ex.Message);
+    }
+
+    [Fact]
+    public async Task VerifyBedsideAsync_RejectsMissingSecondaryVerifier()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new CgtApplicationService(_dbContext, _clock);
+
+        var request = new CgtBedsideVerificationRequest(
+            StudyId: "STUDY-CGT-001",
+            SiteId: "SITE-101",
+            SubjectId: "SUB-1001",
+            Din: "=W12342698765400",
+            BatchId: null,
+            BagBarcodePayload: "DUMMY",
+            PatientWristbandId: "SUB-1001",
+            PrimaryVerifierId: "NURSE-01",
+            PrimarySignatureToken: "SIG-01",
+            SecondaryVerifierId: "", // Missing secondary verifier!
+            SecondarySignatureToken: "SIG-02");
+
+        var ex = await Assert.ThrowsAsync<MissingVerifierException>(() => service.VerifyBedsideAsync(request, ct));
+        Assert.Contains("primary and secondary verifier identifiers", ex.Message);
+    }
+
+    [Fact]
+    public async Task VerifyBedsideAsync_RejectsMissingPrimaryOrSecondarySignatureToken()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new CgtApplicationService(_dbContext, _clock);
+
+        var request = new CgtBedsideVerificationRequest(
+            StudyId: "STUDY-CGT-001",
+            SiteId: "SITE-101",
+            SubjectId: "SUB-1001",
+            Din: "=W12342698765400",
+            BatchId: null,
+            BagBarcodePayload: "DUMMY",
+            PatientWristbandId: "SUB-1001",
+            PrimaryVerifierId: "NURSE-01",
+            PrimarySignatureToken: "SIG-01",
+            SecondaryVerifierId: "NURSE-02",
+            SecondarySignatureToken: ""); // Missing secondary signature!
+
+        var ex = await Assert.ThrowsAsync<MissingSignatureException>(() => service.VerifyBedsideAsync(request, ct));
+        Assert.Contains("electronic signature tokens", ex.Message);
+    }
+
+    [Fact]
+    public async Task VerifyBedsideAsync_RejectsQuarantinedProductAndGeneratesNoUnlockToken()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var service = new CgtApplicationService(_dbContext, _clock);
+
+        var cocResponse = await service.InitializeApheresisAsync(new CgtApheresisCreateRequest(
+            StudyId: "STUDY-CGT-001",
+            CollectionSiteId: "SITE-101",
+            SubjectId: "SUB-1001"), ct);
+
+        // Record a temperature excursion to cause QUARANTINED status
+        await service.RecordMilestoneAsync(new CgtMilestoneCreateRequest(
+            StudyId: "STUDY-CGT-001",
+            ChainOfCustodyId: cocResponse.Id,
+            Stage: "TRANSIT",
+            MilestoneType: "COURIER_PICKUP",
+            TemperatureCelsius: -50.0, // Excursion (> -70°C)
+            CustodianId: "COURIER-01"), ct);
+
+        var coc = await _dbContext.CGTChainsOfCustody.FirstAsync(x => x.Id == cocResponse.Id, ct);
+        Assert.Equal("QUARANTINED", coc.Status);
+
+        var barcode = CgtBarcodeEngine.GenerateCryptoBarcode(
+            studyId: "STUDY-CGT-001",
+            siteId: "SITE-101",
+            subjectId: "SUB-1001",
+            din: cocResponse.Din,
+            batchId: "BATCH-88");
+
+        var verifyRequest = new CgtBedsideVerificationRequest(
+            StudyId: "STUDY-CGT-001",
+            SiteId: "SITE-101",
+            SubjectId: "SUB-1001",
+            Din: cocResponse.Din,
+            BatchId: "BATCH-88",
+            BagBarcodePayload: barcode.BarcodePayload,
+            PatientWristbandId: "SUB-1001",
+            PrimaryVerifierId: "NURSE-01",
+            PrimarySignatureToken: "SIG-01",
+            SecondaryVerifierId: "NURSE-02",
+            SecondarySignatureToken: "SIG-02");
+
+        var ex = await Assert.ThrowsAsync<QuarantinedProductException>(() => service.VerifyBedsideAsync(verifyRequest, ct));
+        Assert.Contains("QUARANTINED", ex.Message);
+
+        // Confirm no unlock token was generated or assigned
+        var cocAfter = await _dbContext.CGTChainsOfCustody.FirstAsync(x => x.Id == cocResponse.Id, ct);
+        Assert.Null(cocAfter.UnlockToken);
+        Assert.Equal("QUARANTINED", cocAfter.Status);
+    }
+
+    [Fact]
+    public async Task VerifyBedsideAsync_RecordsAuditLog_OnFailedVerification()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var auditLogWriter = new EfAuditLogWriter(_dbContext);
+        var service = new CgtApplicationService(_dbContext, _clock, auditLogWriter);
+
+        var cocResponse = await service.InitializeApheresisAsync(new CgtApheresisCreateRequest(
+            StudyId: "STUDY-CGT-001",
+            CollectionSiteId: "SITE-101",
+            SubjectId: "SUB-1001"), ct);
+
+        // 1. Attempt verification with missing secondary verifier ID
+        var missingVerifierRequest = new CgtBedsideVerificationRequest(
+            StudyId: "STUDY-CGT-001",
+            SiteId: "SITE-101",
+            SubjectId: "SUB-1001",
+            Din: cocResponse.Din,
+            BatchId: "BATCH-88",
+            BagBarcodePayload: "DUMMY",
+            PatientWristbandId: "SUB-1001",
+            PrimaryVerifierId: "NURSE-01",
+            PrimarySignatureToken: "SIG-01",
+            SecondaryVerifierId: "",
+            SecondarySignatureToken: "SIG-02");
+
+        await Assert.ThrowsAsync<MissingVerifierException>(() => service.VerifyBedsideAsync(missingVerifierRequest, ct));
+
+        // 2. Put product in quarantine
+        await service.RecordMilestoneAsync(new CgtMilestoneCreateRequest(
+            StudyId: "STUDY-CGT-001",
+            ChainOfCustodyId: cocResponse.Id,
+            Stage: "TRANSIT",
+            MilestoneType: "COURIER_PICKUP",
+            TemperatureCelsius: -50.0,
+            CustodianId: "COURIER-01"), ct);
+
+        var barcode = CgtBarcodeEngine.GenerateCryptoBarcode(
+            studyId: "STUDY-CGT-001",
+            siteId: "SITE-101",
+            subjectId: "SUB-1001",
+            din: cocResponse.Din,
+            batchId: "BATCH-88");
+
+        var quarantinedRequest = new CgtBedsideVerificationRequest(
+            StudyId: "STUDY-CGT-001",
+            SiteId: "SITE-101",
+            SubjectId: "SUB-1001",
+            Din: cocResponse.Din,
+            BatchId: "BATCH-88",
+            BagBarcodePayload: barcode.BarcodePayload,
+            PatientWristbandId: "SUB-1001",
+            PrimaryVerifierId: "NURSE-01",
+            PrimarySignatureToken: "SIG-01",
+            SecondaryVerifierId: "NURSE-02",
+            SecondarySignatureToken: "SIG-02");
+
+        await Assert.ThrowsAsync<QuarantinedProductException>(() => service.VerifyBedsideAsync(quarantinedRequest, ct));
+
+        // Check audit log entries persisted
+        var auditEntries = await _dbContext.AuditLogEntries.ToListAsync(ct);
+        Assert.Contains(auditEntries, e => e.Action == "FAILED_BEDSIDE_VERIFICATION_MISSING_VERIFIER");
+        Assert.Contains(auditEntries, e => e.Action == "FAILED_BEDSIDE_VERIFICATION_QUARANTINED");
     }
 
     [Fact]
@@ -206,7 +373,9 @@ public sealed class CgtApplicationServiceTests : IAsyncLifetime
             BagBarcodePayload: barcode.BarcodePayload,
             PatientWristbandId: "SUB-1001",
             PrimaryVerifierId: "NURSE-01",
-            SecondaryVerifierId: "NURSE-02"), ct);
+            PrimarySignatureToken: "SIG-01",
+            SecondaryVerifierId: "NURSE-02",
+            SecondarySignatureToken: "SIG-02"), ct);
 
         var infusionReq = new CgtInfusionExecuteRequest(
             StudyId: "STUDY-CGT-001",

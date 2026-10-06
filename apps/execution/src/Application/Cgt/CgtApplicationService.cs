@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Cgt;
 using Cadence.Apps.Execution.Domain.Cgt.Errors;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
@@ -19,10 +20,12 @@ namespace Cadence.Apps.Execution.Application.Cgt;
 
 public sealed class CgtApplicationService(
     ExecutionDbContext dbContext,
-    IClock clock) : ICgtApplicationService
+    IClock clock,
+    IAuditLogWriter? auditLog = null) : ICgtApplicationService
 {
     private readonly ExecutionDbContext _dbContext = dbContext;
     private readonly IClock _clock = clock;
+    private readonly IAuditLogWriter? _auditLog = auditLog;
 
     public async Task<CgtChainOfCustodyResponse> InitializeApheresisAsync(CgtApheresisCreateRequest request, CancellationToken cancellationToken = default)
     {
@@ -166,11 +169,41 @@ public sealed class CgtApplicationService(
 
     public async Task<CgtBedsideVerificationResponse> VerifyBedsideAsync(CgtBedsideVerificationRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.Equals(request.PrimaryVerifierId?.Trim(), request.SecondaryVerifierId?.Trim(), StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(request.PrimaryVerifierId) || string.IsNullOrWhiteSpace(request.SecondaryVerifierId))
         {
+            await RecordFailedVerificationAuditAsync(
+                request,
+                "FAILED_BEDSIDE_VERIFICATION_MISSING_VERIFIER",
+                "Bedside verification failed: Primary or secondary verifier ID is missing or blank.",
+                cancellationToken);
+
+            throw new MissingVerifierException(
+                "GxP Compliance Violation: Bedside verification requires both primary and secondary verifier identifiers.");
+        }
+
+        if (string.Equals(request.PrimaryVerifierId.Trim(), request.SecondaryVerifierId.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            await RecordFailedVerificationAuditAsync(
+                request,
+                "FAILED_BEDSIDE_VERIFICATION_DUPLICATE_VERIFIERS",
+                $"Primary verifier ({request.PrimaryVerifierId}) and secondary verifier ({request.SecondaryVerifierId}) cannot be the same user.",
+                cancellationToken);
+
             throw new DuplicateVerifierException(
                 $"GxP Compliance Violation: Bedside verification requires dual signatures from two distinct staff members. " +
                 $"Primary verifier ({request.PrimaryVerifierId}) and secondary verifier ({request.SecondaryVerifierId}) cannot be the same user.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.PrimarySignatureToken) || string.IsNullOrWhiteSpace(request.SecondarySignatureToken))
+        {
+            await RecordFailedVerificationAuditAsync(
+                request,
+                "FAILED_BEDSIDE_VERIFICATION_MISSING_SIGNATURE",
+                "Bedside verification failed: Primary or secondary verifier electronic signature token is missing or blank.",
+                cancellationToken);
+
+            throw new MissingSignatureException(
+                "GxP Compliance Violation: Bedside verification requires valid electronic signature tokens for both primary and secondary verifiers.");
         }
 
         var (isValid, failureReason, _) = CgtBarcodeEngine.VerifyCryptoBarcode(
@@ -188,6 +221,22 @@ public sealed class CgtApplicationService(
         {
             throw new BarcodeVerificationException(
                 $"Bedside verification failed: patient wristband ID '{request.PatientWristbandId}' does not match expected subject ID '{request.SubjectId}'.");
+        }
+
+        var coc = await _dbContext.CGTChainsOfCustody
+            .FirstOrDefaultAsync(x => x.StudyId == request.StudyId && x.SubjectId == request.SubjectId, cancellationToken);
+
+        if (coc != null && string.Equals(coc.Status, "QUARANTINED", StringComparison.OrdinalIgnoreCase))
+        {
+            await RecordFailedVerificationAuditAsync(
+                request,
+                "FAILED_BEDSIDE_VERIFICATION_QUARANTINED",
+                $"Bedside verification rejected: Cell therapy product with DIN '{request.Din}' is currently QUARANTINED due to active quality hold or temperature excursion.",
+                cancellationToken);
+
+            throw new QuarantinedProductException(
+                $"Bedside verification rejected: Cell therapy product with DIN '{request.Din}' is currently QUARANTINED. " +
+                $"Verification and infusion unlock tokens are prohibited without Quality Assurance clearance.");
         }
 
         DateTimeOffset now = _clock.UtcNow;
@@ -218,9 +267,6 @@ public sealed class CgtApplicationService(
 
         _dbContext.CGTBedsideVerifications.Add(verification);
 
-        var coc = await _dbContext.CGTChainsOfCustody
-            .FirstOrDefaultAsync(x => x.StudyId == request.StudyId && x.SubjectId == request.SubjectId, cancellationToken);
-
         if (coc != null)
         {
             coc.SetBedsideVerified(unlockToken, request.PrimaryVerifierId ?? "system", "Bedside verification completed");
@@ -242,6 +288,31 @@ public sealed class CgtApplicationService(
             VerifiedAt: now,
             IsMatch: true,
             Status: "BEDSIDE_VERIFIED");
+    }
+
+    private async Task RecordFailedVerificationAuditAsync(
+        CgtBedsideVerificationRequest request,
+        string action,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        if (_auditLog != null)
+        {
+            string actor = !string.IsNullOrWhiteSpace(request.PrimaryVerifierId) ? request.PrimaryVerifierId : "system";
+            string subjectId = !string.IsNullOrWhiteSpace(request.SubjectId) ? request.SubjectId : request.Din ?? "UNKNOWN";
+
+            await _auditLog.WriteAsync(
+                nameof(CgtBedsideVerification),
+                subjectId,
+                action,
+                actor,
+                reason,
+                null,
+                null,
+                cancellationToken).ConfigureAwait(false);
+
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public async Task<CgtChainOfCustodyResponse> ExecuteInfusionAsync(CgtInfusionExecuteRequest request, CancellationToken cancellationToken = default)

@@ -7,6 +7,21 @@ public class DuplicateVerifierException : Exception
     public DuplicateVerifierException(string message) : base(message) { }
 }
 
+public class MissingVerifierException : Exception
+{
+    public MissingVerifierException(string message) : base(message) { }
+}
+
+public class MissingSignatureException : Exception
+{
+    public MissingSignatureException(string message) : base(message) { }
+}
+
+public class QuarantinedProductException : Exception
+{
+    public QuarantinedProductException(string message) : base(message) { }
+}
+
 public class DuplicateWitnessException : Exception
 {
     public DuplicateWitnessException(string message) : base(message) { }
