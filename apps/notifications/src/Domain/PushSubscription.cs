@@ -13,7 +13,7 @@ public class PushSubscription
 
     public string Endpoint { get; set; } = string.Empty;
 
-    public string P256dh { get; set; } = string.Empty;
+    public string P256dh { get; set; } = string.Empty; // deid-ignore: VAPID P-256 public key property
 
     public string Auth { get; set; } = string.Empty;
 
@@ -38,7 +38,7 @@ public class PushSubscription
 public record PushSubscriptionRequest(
     string SubjectId,
     string Endpoint,
-    string P256dh,
+    string P256dh, // deid-ignore: VAPID P-256 public key property
     string Auth,
     string? UserAgent = null);
 

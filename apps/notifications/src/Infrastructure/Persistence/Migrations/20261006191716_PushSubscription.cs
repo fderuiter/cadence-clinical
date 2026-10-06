@@ -19,7 +19,7 @@ public partial class PushSubscription : Migration
                 Id = table.Column<string>(type: "character varying(36)", maxLength: 36, nullable: false),
                 SubjectId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                 Endpoint = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: false),
-                P256dh = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                P256dh = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false), // deid-ignore: VAPID P-256 public key property
                 Auth = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
                 IsActive = table.Column<bool>(type: "boolean", nullable: false),
                 UserAgent = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),

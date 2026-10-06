@@ -67,7 +67,7 @@ public static class PushNotificationEndpoints
         if (existing is not null)
         {
             existing.SubjectId = request.SubjectId;
-            existing.P256dh = request.P256dh;
+            existing.P256dh = request.P256dh; // deid-ignore: VAPID P-256 public key property
             existing.Auth = request.Auth;
             existing.UserAgent = request.UserAgent;
             existing.IsActive = true;
@@ -82,7 +82,7 @@ public static class PushNotificationEndpoints
         {
             SubjectId = request.SubjectId,
             Endpoint = request.Endpoint,
-            P256dh = request.P256dh,
+            P256dh = request.P256dh, // deid-ignore: VAPID P-256 public key property
             Auth = request.Auth,
             UserAgent = request.UserAgent,
             IsActive = true,
