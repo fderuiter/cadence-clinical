@@ -45,6 +45,7 @@ public sealed class FormSubmissionApplicationService(
     IEditCheckEngine? editCheckEngine = null,
     IAutoQueryDispatchService? autoQueryDispatchService = null,
     IConfiguration? configuration = null,
+    IPublishedFormVersionRegistryRepository? formVersionRegistryRepository = null,
     IClock? clock = null) : IFormSubmissionApplicationService
 {
     private readonly IClock _clock = clock ?? SystemClock.Instance;
@@ -138,6 +139,30 @@ public sealed class FormSubmissionApplicationService(
             }
 
             resolvedProtocolVersion = suppliedVersion;
+        }
+
+        if (formVersionRegistryRepository is not null)
+        {
+            var registeredForms = await formVersionRegistryRepository
+                .ListByStudyAndVersionAsync(studyCode.Value, resolvedProtocolVersion, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (registeredForms.Count > 0)
+            {
+                var registered = registeredForms.FirstOrDefault(r => string.Equals(r.FormId, formId.Value, StringComparison.OrdinalIgnoreCase));
+                if (registered is null)
+                {
+                    return FormErrors.ProtocolVersionSchemaMismatch(
+                        $"Form '{formId.Value}' is not registered for study '{studyCode.Value}' and protocol version '{resolvedProtocolVersion}'.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.FormHash) &&
+                    !string.Equals(request.FormHash.Trim(), registered.FormHash.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return FormErrors.ProtocolVersionSchemaMismatch(
+                        $"Submitted form hash '{request.FormHash}' does not match registered form hash '{registered.FormHash}'.");
+                }
+            }
         }
 
         var initResult = FormSubmission.Initialize(
@@ -405,9 +430,13 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.InvalidPayloadHash();
         }
 
-        string secret = configuration?["GATEWAY_SECRET"]
-            ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET")
-            ?? string.Empty;
+        string? secret = configuration?["GATEWAY_SECRET"]
+            ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET");
+
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            throw new InvalidOperationException("GATEWAY_SECRET is not configured; e-signature verification cannot proceed.");
+        }
 
         if (!Cadence.Security.HmacSigner.VerifySignature(computedHash, secret, manifest.HmacSignature ?? string.Empty))
         {

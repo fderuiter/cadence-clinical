@@ -14,5 +14,6 @@ public sealed record FormSubmissionCreateRequest(
     [property: JsonPropertyName("site_id")] string? SiteId = null,
     [property: JsonPropertyName("visit_id")] string? VisitId = null,
     [property: JsonPropertyName("protocol_version")] string? ProtocolVersion = null,
-    [property: JsonPropertyName("payload")] string? Payload = null
+    [property: JsonPropertyName("payload")] string? Payload = null,
+    [property: JsonPropertyName("form_hash")] string? FormHash = null
 );
