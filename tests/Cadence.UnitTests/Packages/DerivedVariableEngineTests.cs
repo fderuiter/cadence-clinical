@@ -240,4 +240,41 @@ public class DerivedVariableEngineTests
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    /// <summary>Numeric zero values (0, 0.0, "0") are accepted as valid present inputs for primary alias keys.</summary>
+    [Theory]
+    [InlineData(0, 0, 0.0)]
+    [InlineData(0.0, 0.0, 0.0)]
+    [InlineData("0", "0", 0.0)]
+    public void Calculate_NumericZeroValues_AreTreatedAsPresentInputs(object sbp, object dbp, double expected)
+    {
+        var result = Calculate(DerivedFormulaType.Map, new() { ["systolic_bp"] = sbp, ["diastolic_bp"] = dbp });
+
+        result.IsValid.Should().BeTrue(result.ErrorMessage);
+        result.CalculatedValue.Should().Be(expected);
+    }
+
+    /// <summary>Zero value in primary alias overrides secondary fallback keys instead of being skipped as falsy.</summary>
+    [Fact]
+    public void Calculate_PrimaryAliasZeroValue_OverridesSecondaryAlias()
+    {
+        // weight_kg is 0 while weight (fallback) is 70; weight_kg must be used yielding BMI = 0
+        var result = Calculate(DerivedFormulaType.Bmi, new() { ["weight_kg"] = 0, ["weight"] = 70, ["height"] = 100 });
+
+        result.IsValid.Should().BeTrue(result.ErrorMessage);
+        result.CalculatedValue.Should().Be(0.0);
+    }
+
+    /// <summary>Missing, null, or whitespace-only primary alias keys correctly fall through to secondary keys.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Calculate_MissingOrWhitespacePrimaryKeys_FallThroughToSecondaryKeys(string? primarySbp)
+    {
+        var result = Calculate(DerivedFormulaType.Map, new() { ["systolic_bp"] = primarySbp, ["sbp"] = 120, ["diastolic_bp"] = 80 });
+
+        result.IsValid.Should().BeTrue(result.ErrorMessage);
+        result.CalculatedValue.Should().Be(93.3333);
+    }
 }
