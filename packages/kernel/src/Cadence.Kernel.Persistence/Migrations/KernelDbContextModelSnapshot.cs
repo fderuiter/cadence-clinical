@@ -783,6 +783,10 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("approval_attestation_id");
 
+                    b.Property<double?>("ConfidenceScore")
+                        .HasColumnType("double precision")
+                        .HasColumnName("confidence_score");
+
                     b.Property<string>("ContentHash")
                         .IsRequired()
                         .HasMaxLength(71)
@@ -818,6 +822,35 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("decision_reason");
 
+                    b.Property<DateTimeOffset?>("EscalatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("escalated_at");
+
+                    b.Property<string>("EscalatedById")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("escalated_by_id");
+
+                    b.Property<string>("EscalatedByKind")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("escalated_by_kind");
+
+                    b.Property<string>("EscalatedTo")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("escalated_to");
+
+                    b.Property<string>("EscalationPolicy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("escalation_policy");
+
+                    b.Property<string>("EscalationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("escalation_reason");
+
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
@@ -827,6 +860,10 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("intent");
+
+                    b.Property<bool>("IsEscalated")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_escalated");
 
                     b.Property<string>("ModelId")
                         .HasMaxLength(200)
@@ -901,6 +938,8 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.ToTable("proposals", "kernel", t =>
                         {
                             t.HasCheckConstraint("ck_proposals_affected", "cardinality(affected) <= 200");
+
+                            t.HasCheckConstraint("ck_proposals_confidence_score", "confidence_score IS NULL OR (confidence_score >= 0.0 AND confidence_score <= 1.0)");
 
                             t.HasCheckConstraint("ck_proposals_content_hash", "content_hash ~ '^sha256:[0-9a-f]{64}$'");
 
