@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -380,7 +381,7 @@ public class DsurCompilerEngine
         }).ToList();
     }
 
-    private static string MaskSubjectId(string rawSubjectId)
+    public static string MaskSubjectId(string rawSubjectId)
     {
         if (string.IsNullOrWhiteSpace(rawSubjectId))
         {
@@ -393,7 +394,10 @@ public class DsurCompilerEngine
             return rawSubjectId;
         }
 
-        return $"SUBJ-{rawSubjectId.GetHashCode():X8}";
+        var bytes = Encoding.UTF8.GetBytes(rawSubjectId);
+        var hash = SHA256.HashData(bytes);
+        var hex = Convert.ToHexString(hash, 0, 4);
+        return $"SUBJ-{hex}";
     }
 }
 

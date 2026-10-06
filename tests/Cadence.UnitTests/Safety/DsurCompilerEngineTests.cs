@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -252,5 +253,80 @@ public class DsurCompilerEngineTests
         updateResult.Should().BeOfType<ProblemHttpResult>();
         var problemResult = (ProblemHttpResult)updateResult;
         problemResult.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+    }
+
+    /// <summary>
+    /// Validates that MaskSubjectId uses deterministic SHA-256 hashing to generate subject pseudonyms.
+    /// @req:PRD-PVG-004
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-PVG-004")]
+    public void MaskSubjectId_UsesDeterministicSha256_ProducesConsistentPseudonyms()
+    {
+        // Arrange
+        var rawId = "PATIENT-98765";
+        var expectedHashHex = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(rawId)), 0, 4);
+        var expectedMaskedId = $"SUBJ-{expectedHashHex}";
+
+        // Act
+        var result1 = DsurCompilerEngine.MaskSubjectId(rawId);
+        var result2 = DsurCompilerEngine.MaskSubjectId(rawId);
+
+        // Assert
+        result1.Should().Be(expectedMaskedId);
+        result2.Should().Be(expectedMaskedId);
+        result1.Should().Be(result2);
+
+        // Verify edge cases
+        DsurCompilerEngine.MaskSubjectId(null!).Should().Be("SUBJ-DEID-ANON");
+        DsurCompilerEngine.MaskSubjectId("").Should().Be("SUBJ-DEID-ANON");
+        DsurCompilerEngine.MaskSubjectId("   ").Should().Be("SUBJ-DEID-ANON");
+        DsurCompilerEngine.MaskSubjectId("SUBJ-001").Should().Be("SUBJ-001");
+        DsurCompilerEngine.MaskSubjectId("PT-002").Should().Be("PT-002");
+        DsurCompilerEngine.MaskSubjectId("pt-003").Should().Be("pt-003");
+    }
+
+    /// <summary>
+    /// Validates that DSUR compilation de-identifies safety case subject IDs deterministically across separate engine instances.
+    /// @req:PRD-PVG-004
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-PVG-004")]
+    public async Task CompileDsur_DeidentifiesSubjectIdsDeterministicallyAcrossEngineInstances()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // Arrange
+        using var dbContext1 = CreateInMemoryDbContext();
+        using var dbContext2 = CreateInMemoryDbContext();
+        var engine1 = new DsurCompilerEngine(dbContext1);
+        var engine2 = new DsurCompilerEngine(dbContext2);
+
+        var request = new DsurCompileRequest(
+            CompoundName: "TestCompound",
+            StudyId: "STUDY-1",
+            PeriodStart: new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            PeriodEnd: new DateTimeOffset(2025, 12, 31, 0, 0, 0, TimeSpan.Zero),
+            ReasonForChange: "Testing deterministic masking",
+            SafetyCases:
+            [
+                new("CASE-001", "RAW-SUBJECT-ABC", "STUDY-1", new DateTimeOffset(2025, 5, 1, 0, 0, 0, TimeSpan.Zero), "Rash", "Rash", "Skin disorders", false, false, false, null, "CAUSAL", "UNEXPECTED", "Drug", "NONE", new DateTimeOffset(2025, 5, 1, 0, 0, 0, TimeSpan.Zero), null)
+            ]
+        );
+
+        // Act
+        var result1 = await engine1.CompileDsurAsync(request, "user1", cancellationToken);
+        var result2 = await engine2.CompileDsurAsync(request, "user2", cancellationToken);
+
+        // Assert
+        var subjectId1 = result1.Payload.LineListings[0].SubjectId;
+        var subjectId2 = result2.Payload.LineListings[0].SubjectId;
+
+        var expectedHex = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("RAW-SUBJECT-ABC")), 0, 4);
+        var expectedSubjectId = $"SUBJ-{expectedHex}";
+
+        subjectId1.Should().Be(expectedSubjectId);
+        subjectId2.Should().Be(expectedSubjectId);
+        subjectId1.Should().Be(subjectId2);
     }
 }
