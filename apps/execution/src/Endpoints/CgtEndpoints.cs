@@ -80,6 +80,18 @@ public static class CgtEndpoints
             {
                 return Results.UnprocessableEntity(new { detail = ex.Message });
             }
+            catch (MissingVerifierException ex)
+            {
+                return Results.BadRequest(new { detail = ex.Message });
+            }
+            catch (MissingSignatureException ex)
+            {
+                return Results.BadRequest(new { detail = ex.Message });
+            }
+            catch (QuarantinedProductException ex)
+            {
+                return Results.UnprocessableEntity(new { detail = ex.Message });
+            }
             catch (BarcodeVerificationException ex)
             {
                 return Results.BadRequest(new { detail = ex.Message });
