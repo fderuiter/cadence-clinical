@@ -239,6 +239,79 @@
 
       <!-- Main Viewport -->
       <main id="main-content" class="portal-main" tabindex="-1">
+        <!-- Web Push Notification Enrollment Card -->
+        <div
+          id="push-enrollment-card"
+          class="card push-enrollment-card"
+          style="
+            border: 1px solid var(--border-color);
+            background: var(--bg-card, #ffffff);
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 12px">
+            <span style="font-size: 24px">🔔</span>
+            <div>
+              <h3
+                style="
+                  margin: 0 0 4px 0;
+                  font-size: 16px;
+                  font-weight: 700;
+                  color: var(--text-color);
+                "
+              >
+                Web Push Reminders
+              </h3>
+              <p style="margin: 0; font-size: 14px; color: var(--text-muted)">
+                {{
+                  state.pushSubscribed
+                    ? "Push notifications enabled. You will receive alerts when visit windows open."
+                    : state.pushPermission === "denied"
+                    ? "Push notifications are blocked in your browser settings."
+                    : "Receive instant browser notifications when eCOA visit windows open."
+                }}
+              </p>
+            </div>
+          </div>
+          <div>
+            <button
+              v-if="!state.pushSubscribed && state.pushPermission !== 'denied'"
+              id="btn-enable-push"
+              type="button"
+              class="btn btn-primary"
+              :disabled="state.pushLoading"
+              style="white-space: nowrap"
+              @click="enablePushNotifications"
+            >
+              {{ state.pushLoading ? "Enrolling..." : "Enable Push Alerts" }}
+            </button>
+            <span
+              v-else-if="state.pushSubscribed"
+              id="push-subscribed-badge"
+              class="status-pill active"
+              style="
+                background-color: var(--semantic-color-success-bg, #d1fae5);
+                color: var(--semantic-color-success-text, #065f46);
+              "
+            >
+              ✓ Active
+            </span>
+            <span
+              v-else-if="state.pushPermission === 'denied'"
+              id="push-blocked-badge"
+              class="status-pill overdue"
+            >
+              Blocked
+            </span>
+          </div>
+        </div>
+
         <!-- Urgent Re-Consent Notification Banner -->
         <div
           v-if="state.pendingReconsent"
@@ -1446,6 +1519,7 @@ import {
   closeReconsentModal,
   submitReconsentSignature,
   describeQueuedSync,
+  enablePushNotifications,
 } from "./index.js";
 
 function handleReconsentModalKeyDown(e) {

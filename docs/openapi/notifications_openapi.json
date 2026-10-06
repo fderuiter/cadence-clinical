@@ -112,6 +112,128 @@
           }
         }
       }
+    },
+    "/api/v1/notifications/vapid-public-key": {
+      "get": {
+        "tags": [
+          "PushNotificationEndpoints"
+        ],
+        "summary": "Gets the VAPID public key for Web Push subscription negotiation.",
+        "operationId": "GetVapidPublicKey",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notifications_VapidPublicKeyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/subscriptions": {
+      "post": {
+        "tags": [
+          "PushNotificationEndpoints"
+        ],
+        "summary": "Registers or updates a participant device Web Push subscription.",
+        "operationId": "RegisterPushSubscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Notifications_PushSubscriptionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notifications_PushSubscription"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "PushNotificationEndpoints"
+        ],
+        "summary": "Deactivates or removes a device Web Push subscription.",
+        "operationId": "UnsubscribePushSubscription",
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/trigger-ecoa-job": {
+      "post": {
+        "tags": [
+          "PushNotificationEndpoints"
+        ],
+        "summary": "Manually triggers the background eCOA visit window push scheduler job.",
+        "operationId": "TriggerEcoaPushJob",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notifications_EcoaJobResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -134,6 +256,22 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Notifications_EcoaJobResponse": {
+        "required": [
+          "dispatchedCount"
+        ],
+        "type": "object",
+        "properties": {
+          "dispatchedCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -287,6 +425,89 @@
           }
         }
       },
+      "Notifications_PushSubscription": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "p256dh": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "userAgent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reasonForChange": {
+            "type": "string"
+          }
+        }
+      },
+      "Notifications_PushSubscriptionRequest": {
+        "required": [
+          "subjectId",
+          "endpoint",
+          "p256dh",
+          "auth"
+        ],
+        "type": "object",
+        "properties": {
+          "subjectId": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "p256dh": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "string"
+          },
+          "userAgent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Notifications_RenderedNotification": {
         "required": [
           "templateName",
@@ -301,6 +522,17 @@
             "type": "string"
           }
         }
+      },
+      "Notifications_VapidPublicKeyResponse": {
+        "required": [
+          "publicKey"
+        ],
+        "type": "object",
+        "properties": {
+          "publicKey": {
+            "type": "string"
+          }
+        }
       }
     }
   },
@@ -310,6 +542,9 @@
     },
     {
       "name": "NotificationTemplateEndpoints"
+    },
+    {
+      "name": "PushNotificationEndpoints"
     }
   ]
 }

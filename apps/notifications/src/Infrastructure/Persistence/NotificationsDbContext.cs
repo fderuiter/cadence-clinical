@@ -16,6 +16,7 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
     public DbSet<NotificationRecord> NotificationRecords => Set<NotificationRecord>();
     public DbSet<NotificationAuditLog> NotificationAuditLogs => Set<NotificationAuditLog>();
     public DbSet<NotificationDelivery> NotificationDeliveries => Set<NotificationDelivery>();
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -25,6 +26,7 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
         modelBuilder.ApplyConfiguration(new NotificationRecordConfiguration());
         modelBuilder.ApplyConfiguration(new NotificationAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new NotificationDeliveryConfiguration());
+        modelBuilder.ApplyConfiguration(new PushSubscriptionConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
     }
 }

@@ -3,6 +3,7 @@ using Cadence.Apps.Notifications.Endpoints;
 using Cadence.Apps.Notifications.Infrastructure;
 using Cadence.Apps.Notifications.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 using Cadence.Templating;
@@ -14,8 +15,14 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<NotificationsDbContext>();
 builder.Services.AddFluidTemplating();
+
+builder.Services.Configure<VapidOptions>(builder.Configuration.GetSection(VapidOptions.Position));
+builder.Services.AddHttpClient<IVapidPushService, VapidPushService>();
+builder.Services.AddSingleton<EcoaWindowSchedulerService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<EcoaWindowSchedulerService>());
 
 // The brand name and portal link notifications carry come from configuration, never the request (#4983).
 builder.Services.AddNotificationBranding(builder.Configuration);
@@ -33,6 +40,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Returns Notifications operational status.");
 
 app.MapGroup("/api/v1/notifications").MapNotificationTemplateEndpoints();
+app.MapGroup("/api/v1/notifications").MapPushNotificationEndpoints();
 
 await app.RunAsync();
 

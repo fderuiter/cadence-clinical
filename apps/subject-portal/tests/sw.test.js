@@ -28,6 +28,11 @@ describe("Subject Portal Service Worker (sw.js)", () => {
     };
 
     // Set up global mocks to simulate the service worker environment
+    const showNotificationMock = vi.fn().mockResolvedValue(undefined);
+    const mockClient = { focus: vi.fn().mockResolvedValue(undefined), navigate: vi.fn().mockResolvedValue(undefined) };
+    const matchAllMock = vi.fn().mockResolvedValue([mockClient]);
+    const openWindowMock = vi.fn().mockResolvedValue(undefined);
+
     globalThis.self = {
       location: {
         origin: "http://localhost:5174",
@@ -37,8 +42,13 @@ describe("Subject Portal Service Worker (sw.js)", () => {
         listeners[event] = callback;
       }),
       skipWaiting: vi.fn(),
+      registration: {
+        showNotification: showNotificationMock,
+      },
       clients: {
         claim: vi.fn(),
+        matchAll: matchAllMock,
+        openWindow: openWindowMock,
       },
     };
 
@@ -212,5 +222,61 @@ describe("Subject Portal Service Worker (sw.js)", () => {
     const response = await respondWithPromise;
     expect(response).toBe(cachedResponse);
     expect(mockCaches.match).toHaveBeenCalledWith(request);
+  });
+
+  it("should handle incoming push event and call registration.showNotification with eCOA details", async () => {
+    expect(listeners["push"]).toBeDefined();
+
+    const pushData = {
+      title: "eCOA Visit Window Open",
+      body: "Please complete your daily diary.",
+      targetUrl: "/subject-portal/#view-questionnaire",
+      assignmentId: "assign_01",
+    };
+
+    const mockEvent = {
+      data: {
+        json: () => pushData,
+        text: () => JSON.stringify(pushData),
+      },
+      waitUntil: vi.fn((promise) => promise),
+    };
+
+    await listeners["push"](mockEvent);
+
+    expect(globalThis.self.registration.showNotification).toHaveBeenCalledWith(
+      "eCOA Visit Window Open",
+      expect.objectContaining({
+        body: "Please complete your daily diary.",
+        icon: "/subject-portal/icon.png",
+        data: expect.objectContaining({
+          url: "/subject-portal/#view-questionnaire",
+          assignmentId: "assign_01",
+        }),
+      })
+    );
+  });
+
+  it("should handle notificationclick event by closing notification and navigating client window to target questionnaire", async () => {
+    expect(listeners["notificationclick"]).toBeDefined();
+
+    const closeMock = vi.fn();
+    const mockEvent = {
+      notification: {
+        close: closeMock,
+        data: {
+          url: "/subject-portal/#view-questionnaire",
+        },
+      },
+      waitUntil: vi.fn((promise) => promise),
+    };
+
+    await listeners["notificationclick"](mockEvent);
+
+    expect(closeMock).toHaveBeenCalled();
+    expect(globalThis.self.clients.matchAll).toHaveBeenCalledWith({
+      type: "window",
+      includeUncontrolled: true,
+    });
   });
 });

@@ -2,6 +2,24 @@ import { http, HttpResponse, passthrough } from "msw";
 import { isGatewayApiCall, validateGatewayRequest } from "ui";
 
 export const gatewayHandlers = [
+  http.get("*/api/v1/notifications/vapid-public-key", () => {
+    return HttpResponse.json({
+      publicKey:
+        "BCadeNCeVapiDPubliCKeYSeEd2026SecureKeyForSubjectPortalDemoPushNotificationEnrolment123456=",
+    });
+  }),
+
+  http.post("*/api/v1/notifications/subscriptions", async ({ request }) => {
+    const body = await request.json().catch(() => ({}));
+    return HttpResponse.json({
+      id: "sub_mock_123",
+      subjectId: body.subjectId || "subject_001",
+      endpoint: body.endpoint || "https://push.services.mozilla.com/mock", // deid-ignore
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    });
+  }),
+
   http.post("*/api/v1/payments/disburse", async ({ request }) => {
     const body = await request.json().catch(() => ({}));
     const subjectId = body.subject_id || "subject_001";

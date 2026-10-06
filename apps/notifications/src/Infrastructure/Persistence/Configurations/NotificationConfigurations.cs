@@ -58,3 +58,22 @@ public class NotificationDeliveryConfiguration : IEntityTypeConfiguration<Notifi
         builder.Property(x => x.LastError).HasMaxLength(1000);
     }
 }
+
+public class PushSubscriptionConfiguration : IEntityTypeConfiguration<PushSubscription>
+{
+    public void Configure(EntityTypeBuilder<PushSubscription> builder)
+    {
+        builder.ToTable("push_subscriptions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.SubjectId).HasMaxLength(255).IsRequired();
+        builder.HasIndex(x => x.SubjectId);
+        builder.Property(x => x.Endpoint).HasMaxLength(2048).IsRequired();
+        builder.HasIndex(x => x.Endpoint);
+        builder.Property(x => x.P256dh).HasMaxLength(512).IsRequired(); // deid-ignore
+        builder.Property(x => x.Auth).HasMaxLength(512).IsRequired();
+        builder.Property(x => x.UserAgent).HasMaxLength(512);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}

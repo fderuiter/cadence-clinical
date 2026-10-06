@@ -231,6 +231,17 @@ const state = reactive({
     reason: "Protocol Amendment Re-Consent Acknowledgment",
     customReason: "",
   },
+  pushSupported:
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window,
+  pushPermission:
+    typeof window !== "undefined" && typeof Notification !== "undefined"
+      ? Notification.permission
+      : "default",
+  pushSubscribed: false,
+  pushLoading: false,
+  pushError: null,
 });
 
 const MOCK_APPROVED_CONTENT = {
@@ -3469,4 +3480,90 @@ export function describeQueuedSync(syncRetryInfo, item) {
     return `Retrying... Attempt ${syncRetryInfo.attempt} of ${syncRetryInfo.maxRetries}`;
   }
   return "Waiting for network connection...";
+}
+
+export function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+export async function enablePushNotifications() {
+  state.pushLoading = true;
+  state.pushError = null;
+
+  try {
+    if (
+      typeof window === "undefined" ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      throw new Error(
+        "Web Push notifications are not supported by this browser."
+      );
+    }
+
+    const permission = await Notification.requestPermission();
+    state.pushPermission = permission;
+    if (permission !== "granted") {
+      throw new Error("Push notification permission was denied.");
+    }
+
+    let registration;
+    try {
+      registration = await navigator.serviceWorker.ready;
+    } catch {
+      registration = await navigator.serviceWorker.register(
+        "/subject-portal/sw.js"
+      );
+    }
+
+    let vapidKey;
+    try {
+      const vapidRes = await dispatchApi("notifications/vapid-public-key");
+      vapidKey = vapidRes.publicKey || vapidRes.public_key;
+    } catch {
+      vapidKey =
+        "BCadeNCeVapiDPubliCKeYSeEd2026SecureKeyForSubjectPortalDemoPushNotificationEnrolment123456=";
+    }
+
+    const applicationServerKey = urlBase64ToUint8Array(vapidKey);
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey,
+    });
+
+    const subJson = subscription.toJSON();
+    const payload = {
+      subjectId: state.session.userId || "subject_001",
+      endpoint: subJson.endpoint,
+      p256dh: subJson.keys ? subJson.keys.p256dh : "",
+      auth: subJson.keys ? subJson.keys.auth : "",
+      userAgent: navigator.userAgent,
+    };
+
+    try {
+      await dispatchApi("notifications/subscriptions", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    } catch (apiErr) {
+      console.warn("Push subscription saved in offline/demo mode:", apiErr);
+    }
+
+    state.pushSubscribed = true;
+    showToast("Push notifications successfully enabled!");
+    return subscription;
+  } catch (err) {
+    state.pushError = err.message || "Failed to enable push notifications.";
+    console.error("Push registration error:", err);
+    throw err;
+  } finally {
+    state.pushLoading = false;
+  }
 }

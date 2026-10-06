@@ -10,6 +10,7 @@ Generated from the EF Core model of `Cadence.Apps.Notifications.Infrastructure.P
 | [`notifications.notification_audit_logs`](#notificationsnotification_audit_logs) | `NotificationAuditLog` | 6 |
 | [`notifications.notification_deliveries`](#notificationsnotification_deliveries) | `NotificationDelivery` | 9 |
 | [`notifications.notification_records`](#notificationsnotification_records) | `NotificationRecord` | 16 |
+| [`notifications.push_subscriptions`](#notificationspush_subscriptions) | `PushSubscription` | 12 |
 
 ## notifications.audit_log_entries
 
@@ -98,3 +99,27 @@ Indexes:
 
 - `IX_notification_records_RecipientRoleId`: (`RecipientRoleId`)
 - `IX_notification_records_RecipientUserId`: (`RecipientUserId`)
+
+## notifications.push_subscriptions
+
+Entity: `PushSubscription`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `Auth` | `character varying(512)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `Endpoint` | `character varying(2048)` | no |  |  |
+| `IsActive` | `boolean` | no |  |  |
+| `P256dh` | `character varying(512)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+| `UpdatedAt` | `timestamp with time zone` | yes |  |  |
+| `UserAgent` | `character varying(512)` | yes |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+
+Indexes:
+
+- `IX_push_subscriptions_Endpoint`: (`Endpoint`)
+- `IX_push_subscriptions_SubjectId`: (`SubjectId`)
