@@ -191,6 +191,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { getActivePinia } from "pinia";
 import ReadabilityDrawer from "./ReadabilityDrawer.vue";
 import { useEconsentStore } from "../../stores/econsent.js";
 
@@ -203,10 +204,10 @@ const props = defineProps({
 
 const emit = defineEmits(["update"]);
 
-const econsentStore = useEconsentStore();
+const econsentStore = getActivePinia() ? useEconsentStore() : null;
 
 const sectionStatus = computed(() => {
-  const activeLang = econsentStore.activeLanguage;
+  const activeLang = econsentStore ? econsentStore.activeLanguage : "en";
   if (!props.section?.translations?.[activeLang]) return "";
   return props.section.translations[activeLang].status || "";
 });
