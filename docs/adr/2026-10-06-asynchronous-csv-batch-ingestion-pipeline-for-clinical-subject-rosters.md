@@ -53,3 +53,4 @@ Research coordinators and data managers require bulk subject roster ingestion fo
 
 - **Affected Repositories / Services:** `apps/execution`
 - **Verification Plan:** Automated unit tests in `tests/Cadence.UnitTests/Execution/Subjects/SubjectBatchIngestionTests.cs` and GxP compliance sync verification.
+
