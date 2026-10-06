@@ -4,7 +4,10 @@ import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "../../src/components/AppShell.vue";
 import OnboardingChecklistDrawer from "../../src/components/OnboardingChecklistDrawer.vue";
-import { useOnboardingStore, DEFAULT_SETUP_TASKS } from "../../src/stores/onboarding";
+import {
+  useOnboardingStore,
+  DEFAULT_SETUP_TASKS,
+} from "../../src/stores/onboarding";
 import { useAuthStore } from "../../src/stores/auth";
 
 vi.mock("../../src/router/availability", async (importOriginal) => ({

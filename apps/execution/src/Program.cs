@@ -3,6 +3,7 @@ using System;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cec;
 using Cadence.Apps.Execution.Application.Cgt;
+using Cadence.Apps.Execution.Application.Coding;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.EditChecks;
 using Cadence.Apps.Execution.Application.Forms;
@@ -198,6 +199,7 @@ builder.Services.AddScoped<IAutoQueryDispatchService, AutoQueryDispatchService>(
 builder.Services.AddScoped<ILabToxicityGovernanceService, LabToxicityGovernanceService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
 builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
+builder.Services.AddScoped<ISynonymImportService, SynonymImportService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -259,6 +261,7 @@ app.MapQueryEndpoints();
 app.MapLabToxicityEndpoints();
 app.MapCecEndpoints();
 app.MapCgtEndpoints();
+app.MapSynonymEndpoints();
 
 if (args.Contains("--seed"))
 {
