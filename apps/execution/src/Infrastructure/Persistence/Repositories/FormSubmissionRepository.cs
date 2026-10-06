@@ -70,6 +70,41 @@ public sealed class FormSubmissionRepository(ExecutionDbContext context, Resilie
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+    public async Task<IReadOnlyList<FormSubmission>> ListBySubjectsForUpdateAsync(
+        StudyCode studyId,
+        IEnumerable<SubjectCode> subjectIds,
+        CancellationToken cancellationToken)
+    {
+        var subjectList = subjectIds.ToList();
+        return await Context.FormSubmissions
+            .Where(f => f.StudyId == studyId && subjectList.Contains(f.SubjectId) && f.IsActive)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<FormSubmission>> ListByVisitsForUpdateAsync(
+        StudyCode studyId,
+        IEnumerable<string> visitIds,
+        CancellationToken cancellationToken)
+    {
+        var visitList = visitIds.Where(v => !string.IsNullOrEmpty(v)).ToList();
+        return await Context.FormSubmissions
+            .Where(f => f.StudyId == studyId && f.VisitId != null && visitList.Contains(f.VisitId) && f.IsActive)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<FormSubmission>> ListByIdsForUpdateAsync(
+        IEnumerable<FormSubmissionId> ids,
+        CancellationToken cancellationToken)
+    {
+        var idList = ids.ToList();
+        return await Context.FormSubmissions
+            .Where(f => idList.Contains(f.Id) && f.IsActive)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task AddAsync(FormSubmission submission, CancellationToken cancellationToken)
     {
         await Context.FormSubmissions.AddAsync(submission, cancellationToken).ConfigureAwait(false);

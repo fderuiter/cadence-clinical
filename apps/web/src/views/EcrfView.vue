@@ -174,12 +174,17 @@
           v-model:reauth-password="reauthPassword"
           v-model:reauth-totp="reauthTotp"
           v-model:simulate-delay="simulateDelay"
+          :selected-subject-ids="selectedSubjectIds"
+          :signature-result="lastSignatureResult"
           :available-subjects="availableSubjects"
           :available-visits="availableVisits"
           :available-form-submissions="availableFormSubmissions"
           :valid-signing-reasons="validSigningReasons"
           :show-reauth-modal="showReauthModal"
           :reauth-error="reauthError"
+          @toggle-select-all="toggleSelectAll"
+          @toggle-subject="toggleSubject"
+          @clear-cert="clearSignatureResult"
           @submit-signoff="handleSignOffSubmit"
           @cancel-reauth="cancelReauth"
           @confirm-reauth="confirmReauth"/><!-- pragma: allowlist secret -->
@@ -464,6 +469,11 @@ const {
   customTargetId,
   signoffReason,
   availableSubjects,
+  selectedSubjectIds,
+  toggleSelectAll,
+  toggleSubject,
+  lastSignatureResult,
+  clearSignatureResult,
   availableVisits,
   availableFormSubmissions,
   validSigningReasons,
@@ -985,13 +995,22 @@ async function confirmReauth() {
     try {
       reauthError.value = "";
 
-      const studyId = store.currentUsdm.studyId || "STUDY-USDM-001";
+      const studyId =
+        store.activeStudyId ||
+        store.currentStudyId ||
+        store.currentUsdm?.studyId ||
+        "STUDY-USDM-001";
       const targetType = signoffTargetType.value;
-      const targetId =
-        signoffTargetId.value === "custom"
-          ? customTargetId.value
-          : signoffTargetId.value;
-      const targetIds = [targetId];
+      let targetIds = [];
+      if (targetType === "SUBJECT") {
+        targetIds = selectedSubjectIds.value;
+      } else {
+        const targetId =
+          signoffTargetId.value === "custom"
+            ? customTargetId.value
+            : signoffTargetId.value;
+        targetIds = [targetId];
+      }
       const signingReason = signoffReason.value;
 
       const normStudy = studyId.trim();
@@ -1039,21 +1058,23 @@ async function confirmReauth() {
         authStore.accessToken
       );
 
+      lastSignatureResult.value = signoffRes;
+
       await store.addLedgerBlock(
         "BATCH_SIGN_OFF_SUCCESS",
         {
-          targetType: signoffTargetType.value,
-          targetIds: [targetId],
-          signingReason: signoffReason.value,
+          targetType,
+          targetIds,
+          signingReason,
           result: signoffRes,
         },
-        `PI electronic sign-off approved: ${signoffReason.value}`
+        `PI electronic sign-off approved: ${signingReason}`
       );
 
       showReauthModal.value = false;
       reauthTotp.value = "";
       alert(
-        `Signature Token obtained successfully.\nBatch sign-off completed for ${signoffTargetType.value} ${targetId}!`
+        `Signature Token obtained successfully.\nBatch sign-off completed for ${targetType} (${targetIds.length} target(s))!`
       );
     } catch (err) {
       reauthPassword.value = "";

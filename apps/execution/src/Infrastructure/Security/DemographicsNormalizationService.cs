@@ -44,7 +44,7 @@ public sealed class DemographicsNormalizationService(
         return (observationDate.Value.DayNumber - birthDate.Value.DayNumber) / 365.25;
     }
 
-    public SafeDemographics GetSafeDemographics(object? subject, bool preserveCustom = false)
+    public SafeDemographics GetSafeDemographics(object? subject, DateOnly? observationDate = null, bool preserveCustom = false)
     {
         string? ciphertext = ExtractCiphertext(subject);
         if (string.IsNullOrEmpty(ciphertext))
@@ -63,9 +63,9 @@ public sealed class DemographicsNormalizationService(
                 ?? ExtractString(decrypted, "date_of_birth")
                 ?? ExtractString(decrypted, "dob");
             DateOnly? birthDate = ParseDateString(rawBirthDate);
-            DateOnly observationDate = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+            DateOnly effectiveObservationDate = observationDate ?? DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
 
-            return new SafeDemographics(gender, CalculateAge(birthDate, observationDate));
+            return new SafeDemographics(gender, CalculateAge(birthDate, effectiveObservationDate));
         }
         catch (DemographicsDecryptionFailedException)
         {

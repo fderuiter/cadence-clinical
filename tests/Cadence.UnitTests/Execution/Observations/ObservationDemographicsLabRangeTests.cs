@@ -283,4 +283,65 @@ public sealed class ObservationDemographicsLabRangeTests
         trackingLabRange.CapturedSex.Should().Be("F");
         trackingLabRange.CapturedAgeYears.Should().Be(30);
     }
+
+    [Fact]
+    public async Task IngestObservation_WithBackdatedObservationDate_ComputesAgeRelativeToObservationDateNotCurrentClock()
+    {
+        var repo = new InMemoryObservationRepository();
+        var subjectRepo = new InMemorySubjectRepository();
+        var ucum = new UcumNormalizationService();
+        var trackingLabRange = new TrackingLabRangeService();
+        var editChecks = new AstEditCheckEngine();
+        var clock = new FakeClock(new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero)); // 2020-01-01
+        var audit = new FakeCurrentAuditContextAccessor();
+
+        // Subject born on 2000-01-01. Age at current clock (2020-01-01) is 20.
+        var payload = new Dictionary<string, object?>
+        {
+            ["gender"] = "MALE",
+            ["birthdate"] = "2000-01-01"
+        };
+
+        var encService = FakeDemographicsEncryptionService.ReturningPayload(payload);
+        var demographicsService = new DemographicsNormalizationService(encService, clock);
+
+        var service = new ObservationApplicationService(
+            repo,
+            subjectRepo,
+            ucum,
+            trackingLabRange,
+            editChecks,
+            clock,
+            audit,
+            demographicsNormalizationService: demographicsService);
+
+        var subject = ClinicalSubject.Create(
+            subjectCode: new SubjectCode("SUBJ-HIST-01"),
+            studyCode: new StudyCode("STUDY-101"),
+            siteCode: new SiteCode("SITE-01"),
+            enrollmentIndex: 5,
+            encryptedDemographics: "enc_ciphertext",
+            stratFactors: null);
+
+        await subjectRepo.AddAsync(subject, CancellationToken.None);
+
+        // Observation collected 4 years prior on 2016-01-01 (when subject was 16)
+        var backdatedObservationDate = new DateTime(2016, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var request = new ObservationCreateRequest(
+            StudyId: "STUDY-101",
+            SubjectId: "SUBJ-HIST-01",
+            Domain: "LB",
+            TestCode: "ALT",
+            TestName: "Alanine Aminotransferase",
+            ObservationDate: backdatedObservationDate,
+            Value: 38.0,
+            Unit: "U/L");
+
+        var response = await service.CreateAsync(request, CancellationToken.None);
+
+        response.IsSuccess.Should().BeTrue();
+        trackingLabRange.CapturedSex.Should().Be("M");
+        trackingLabRange.CapturedAgeYears.Should().Be(16);
+    }
 }
