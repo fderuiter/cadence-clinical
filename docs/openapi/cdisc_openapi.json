@@ -8635,6 +8635,12 @@
               "null",
               "string"
             ]
+          },
+          "form_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

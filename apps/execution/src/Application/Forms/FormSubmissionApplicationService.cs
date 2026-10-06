@@ -42,7 +42,8 @@ public sealed class FormSubmissionApplicationService(
     ISubjectRepository? subjectRepository = null,
     IEditCheckEngine? editCheckEngine = null,
     IAutoQueryDispatchService? autoQueryDispatchService = null,
-    IConfiguration? configuration = null) : IFormSubmissionApplicationService
+    IConfiguration? configuration = null,
+    IPublishedFormVersionRegistryRepository? formVersionRegistryRepository = null) : IFormSubmissionApplicationService
 {
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -134,6 +135,30 @@ public sealed class FormSubmissionApplicationService(
             }
 
             resolvedProtocolVersion = suppliedVersion;
+        }
+
+        if (formVersionRegistryRepository is not null)
+        {
+            var registeredForms = await formVersionRegistryRepository
+                .ListByStudyAndVersionAsync(studyCode.Value, resolvedProtocolVersion, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (registeredForms.Count > 0)
+            {
+                var registered = registeredForms.FirstOrDefault(r => string.Equals(r.FormId, formId.Value, StringComparison.OrdinalIgnoreCase));
+                if (registered is null)
+                {
+                    return FormErrors.ProtocolVersionSchemaMismatch(
+                        $"Form '{formId.Value}' is not registered for study '{studyCode.Value}' and protocol version '{resolvedProtocolVersion}'.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.FormHash) &&
+                    !string.Equals(request.FormHash.Trim(), registered.FormHash.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return FormErrors.ProtocolVersionSchemaMismatch(
+                        $"Submitted form hash '{request.FormHash}' does not match registered form hash '{registered.FormHash}'.");
+                }
+            }
         }
 
         var initResult = FormSubmission.Initialize(
