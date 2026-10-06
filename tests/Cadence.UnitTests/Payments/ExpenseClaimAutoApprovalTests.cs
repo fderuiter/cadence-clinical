@@ -131,7 +131,7 @@ public class ExpenseClaimAutoApprovalTests
         var claim = okResult.Value!;
 
         claim.Status.Should().Be("APPROVED");
-        claim.ReviewedBy.Should().Be("system_auto_approval");
+        claim.ReviewedBy.Should().Be("svc:system_auto_approval");
         claim.DisbursementReference.Should().StartWith("DISB-ACH-");
 
         var updatedWallet = await dbContext.ParticipantWallets.FirstOrDefaultAsync(w => w.Id == "wallet-subj-01", TestContext.Current.CancellationToken);
