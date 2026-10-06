@@ -53,7 +53,81 @@ export interface ListSubjectsQuery {
   offset?: number;
 }
 
-const client = createOpenApiClient<paths>();
+export interface WeeklyEnrollmentProjection {
+  weekIndex: number;
+  weekStartDate: string;
+  projectedCumulativeEnrolled: number;
+  lowerBoundCI: number;
+  upperBoundCI: number;
+  targetCumulative: number;
+  weeklyRate: number;
+}
+
+export interface SiteEnrollmentVelocity {
+  siteId: string;
+  siteName: string;
+  activeSubjects: number;
+  historicalWeeklyRate: number;
+  projectedWeeklyRate: number;
+  velocityRiskLevel: string;
+}
+
+export interface EnrollmentVelocityParams {
+  studyId?: string;
+  targetSubjects: number;
+  targetCompletionDate: string;
+  historicalWeeklyRate: number;
+  currentlyEnrolled: number;
+  activeSiteCount: number;
+  simulationHorizonWeeks: number;
+}
+
+export interface EnrollmentVelocityForecastResult {
+  studyId: string;
+  currentVelocityWeekly: number;
+  targetVelocityWeekly: number;
+  status: "ON_TRACK" | "AT_RISK" | "BEHIND" | "AHEAD" | string;
+  forecastedCompletionDate: string;
+  daysAheadOrBehind: number;
+  targetSubjects: number;
+  currentlyEnrolled: number;
+  weeklyProjections: WeeklyEnrollmentProjection[];
+  siteVelocities: SiteEnrollmentVelocity[];
+}
+
+export interface SiteRiskCategoryScore {
+  categoryKey: string;
+  categoryName: string;
+  riskScore: number;
+  riskTier: "LOW" | "MEDIUM" | "HIGH" | string;
+  triggeredMetricsCount: number;
+  details: string;
+}
+
+export interface SiteRiskHeatmapRow {
+  siteId: string;
+  siteName: string;
+  compositeRiskScore: number;
+  riskTier: "LOW" | "MEDIUM" | "HIGH" | string;
+  rank: number;
+  categoryScores: SiteRiskCategoryScore[];
+  activeQueriesCount: number;
+  activeDeviationsCount: number;
+  recommendedActions: string[];
+}
+
+export interface SiteRiskHeatmapMatrix {
+  studyId: string;
+  evaluatedAtUtc: string;
+  totalSites: number;
+  highRiskSitesCount: number;
+  mediumRiskSitesCount: number;
+  lowRiskSitesCount: number;
+  categories: string[];
+  rows: SiteRiskHeatmapRow[];
+}
+
+const client = createOpenApiClient<any>();
 
 export const executionApi = {
   /** One page of a study's subjects in enrollment order (GET /api/v1/execution/subjects). */
@@ -323,6 +397,50 @@ export const executionApi = {
         params: { path: { siteId } },
         body: { study_id: studyId },
         headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
+      })
+    );
+  },
+
+  /** Gets enrollment velocity forecasting for a study. */
+  getEnrollmentVelocity(studyId: string): Promise<EnrollmentVelocityForecastResult> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/studies/{studyId}/enrollment-velocity", {
+        params: { path: { studyId } },
+      })
+    );
+  },
+
+  /** Simulates predictive enrollment velocity with custom scenario parameters. */
+  simulateEnrollmentVelocity(
+    studyId: string,
+    params: Partial<EnrollmentVelocityParams>
+  ): Promise<EnrollmentVelocityForecastResult> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/studies/{studyId}/enrollment-velocity/forecast", {
+        params: { path: { studyId } },
+        body: params,
+      })
+    );
+  },
+
+  /** Retrieves site risk heatmap matrix from RBQM quality service. */
+  getSiteRiskHeatmap(studyId: string): Promise<SiteRiskHeatmapMatrix> {
+    return unwrapResponse(
+      client.GET("/api/v1/quality/rbqm/site-risk-heatmaps", {
+        params: { query: { study_id: studyId } },
+      })
+    );
+  },
+
+  /** Computes site risk heatmap matrix with updated metrics. */
+  computeSiteRiskHeatmap(
+    studyId: string,
+    siteCodes?: string[]
+  ): Promise<SiteRiskHeatmapMatrix> {
+    return unwrapResponse(
+      client.POST("/api/v1/quality/rbqm/site-risk-heatmaps/compute", {
+        params: { query: { study_id: studyId } },
+        body: { studyId, siteCodes },
       })
     );
   },

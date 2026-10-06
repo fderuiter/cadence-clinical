@@ -262,6 +262,7 @@ app.MapLabToxicityEndpoints();
 app.MapCecEndpoints();
 app.MapCgtEndpoints();
 app.MapSynonymEndpoints();
+app.MapEnrollmentVelocityEndpoints();
 
 if (args.Contains("--seed"))
 {

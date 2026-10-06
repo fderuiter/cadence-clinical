@@ -5,6 +5,9 @@ import {
   type FormSubmission,
   type Observation,
   type SubjectSummary,
+  type EnrollmentVelocityForecastResult,
+  type EnrollmentVelocityParams,
+  type SiteRiskHeatmapMatrix,
 } from "../api/executionApi";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
 import { useToastStore } from "./toasts.js";
@@ -80,6 +83,12 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     pulse: null as { total: number; byState: PulseCount[] } | null,
     pulseLoading: false,
     pulseError: false,
+    enrollmentVelocity: null as EnrollmentVelocityForecastResult | null,
+    enrollmentVelocityLoading: false,
+    enrollmentVelocityError: false,
+    siteRiskHeatmap: null as SiteRiskHeatmapMatrix | null,
+    siteRiskHeatmapLoading: false,
+    siteRiskHeatmapError: false,
     /** The open participant's record: what Execution holds for one participant, by subject code. */
     record: {
       subjectCode: "",
@@ -424,6 +433,94 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       } catch (err) {
         toasts.apiError(failed, err);
         return false;
+      }
+    },
+
+    /** Loads predictive enrollment velocity forecast data. */
+    async loadEnrollmentVelocity(): Promise<boolean> {
+      const studyId = this.studyCode;
+      if (!studyId) return false;
+      this.enrollmentVelocityLoading = true;
+      this.enrollmentVelocityError = false;
+      try {
+        const res = await executionApi.getEnrollmentVelocity(studyId);
+        this.enrollmentVelocity = res;
+        return true;
+      } catch (err) {
+        this.enrollmentVelocityError = true;
+        useToastStore().apiError("Couldn't load enrollment velocity forecast", err);
+        return false;
+      } finally {
+        this.enrollmentVelocityLoading = false;
+      }
+    },
+
+    /** Simulates predictive enrollment velocity with custom scenario parameters. */
+    async simulateEnrollmentVelocity(
+      params: Partial<EnrollmentVelocityParams>
+    ): Promise<boolean> {
+      const studyId = this.studyCode;
+      if (!studyId) return false;
+      this.enrollmentVelocityLoading = true;
+      this.enrollmentVelocityError = false;
+      try {
+        const res = await executionApi.simulateEnrollmentVelocity(studyId, params);
+        this.enrollmentVelocity = res;
+        useToastStore().push({
+          tone: "success",
+          title: "Velocity simulation recalculated",
+          message: "",
+        });
+        return true;
+      } catch (err) {
+        this.enrollmentVelocityError = true;
+        useToastStore().apiError("Couldn't run velocity simulation", err);
+        return false;
+      } finally {
+        this.enrollmentVelocityLoading = false;
+      }
+    },
+
+    /** Loads site risk heatmap matrix. */
+    async loadSiteRiskHeatmap(): Promise<boolean> {
+      const studyId = this.studyCode;
+      if (!studyId) return false;
+      this.siteRiskHeatmapLoading = true;
+      this.siteRiskHeatmapError = false;
+      try {
+        const res = await executionApi.getSiteRiskHeatmap(studyId);
+        this.siteRiskHeatmap = res;
+        return true;
+      } catch (err) {
+        this.siteRiskHeatmapError = true;
+        useToastStore().apiError("Couldn't load site risk heatmap", err);
+        return false;
+      } finally {
+        this.siteRiskHeatmapLoading = false;
+      }
+    },
+
+    /** Computes site risk heatmap matrix with updated metrics. */
+    async computeSiteRiskHeatmap(siteCodes?: string[]): Promise<boolean> {
+      const studyId = this.studyCode;
+      if (!studyId) return false;
+      this.siteRiskHeatmapLoading = true;
+      this.siteRiskHeatmapError = false;
+      try {
+        const res = await executionApi.computeSiteRiskHeatmap(studyId, siteCodes);
+        this.siteRiskHeatmap = res;
+        useToastStore().push({
+          tone: "success",
+          title: "Site risk heatmap updated",
+          message: "",
+        });
+        return true;
+      } catch (err) {
+        this.siteRiskHeatmapError = true;
+        useToastStore().apiError("Couldn't re-compute site risk heatmap", err);
+        return false;
+      } finally {
+        this.siteRiskHeatmapLoading = false;
       }
     },
   },

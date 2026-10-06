@@ -4,5 +4,7 @@ Generated from `docs/openapi/quality_openapi.json` by `pnpm cadence generate-api
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `GET` | `/api/v1/quality/rbqm/site-risk-heatmaps` | GetSiteRiskHeatmap |  |
+| `POST` | `/api/v1/quality/rbqm/site-risk-heatmaps/compute` | ComputeSiteRiskHeatmap |  |
 | `GET` | `/api/v1/quality/status` | QualityStatus | Returns Quality management operational status. |
 | `GET` | `/healthz` | QualityHealthCheck | Quality management health probe. |

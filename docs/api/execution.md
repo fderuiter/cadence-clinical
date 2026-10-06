@@ -47,6 +47,8 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/rtsm/cgt/verify-barcode` |  |  |
 | `POST` | `/api/v1/execution/sites/{siteId}/activate` | ActivateSite |  |
 | `GET` | `/api/v1/execution/sites/{siteId}/compliance-status` | GetSiteComplianceStatus |  |
+| `GET` | `/api/v1/execution/studies/{studyId}/enrollment-velocity` | GetEnrollmentVelocity |  |
+| `POST` | `/api/v1/execution/studies/{studyId}/enrollment-velocity/forecast` | ForecastEnrollmentVelocity |  |
 | `GET` | `/api/v1/execution/subjects` | ListSubjects | Lists one page of a study's subjects in enrollment order. |
 | `POST` | `/api/v1/execution/subjects` | CreateSubject |  |
 | `GET` | `/api/v1/execution/subjects/{subjectId}` | GetSubjectDetail |  |
