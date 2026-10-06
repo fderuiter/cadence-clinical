@@ -13,23 +13,25 @@ Plans large-scale initiatives that exceed what a single agent turn or session ca
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Exploratory Survey**| `invoke_subagent` | `Subagents=[{"TypeName": "research", "Role": "Roadmap Analyst", "Model": "flash"}]` | Survey multi-service dependencies concurrently |
-| **Risk Analysis** | `invoke_subagent` | `Subagents=[{"Role": "Architecture Risk Analyst", "Model": "pro"}]` | Evaluate deep coupling and migration risks |
-| **Visual Roadmap** | `generate_image` | `Prompt="Gantt-style milestone roadmap with dependency arrows for ..."`, `AspectRatio="16:9"` | Generate visual project milestone graphic |
-| **Interactive Sign-Off**| `ask_question` | `questions=[{"question": "Approve Phase 1 Milestone Scope", ...}]` | Align on sequential execution boundaries |
-| **Living Map Artifact**| `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/wayfinder_map.md` | Emit comprehensive roadmap and Mermaid DAG |
+| Phase                    | Antigravity Tool  | Invocation Pattern                                                                            | Objective                                      |
+| :----------------------- | :---------------- | :-------------------------------------------------------------------------------------------- | :--------------------------------------------- |
+| **Exploratory Survey**   | `invoke_subagent` | `Subagents=[{"TypeName": "research", "Role": "Roadmap Analyst", "Model": "flash"}]`           | Survey multi-service dependencies concurrently |
+| **Risk Analysis**        | `invoke_subagent` | `Subagents=[{"Role": "Architecture Risk Analyst", "Model": "pro"}]`                           | Evaluate deep coupling and migration risks     |
+| **Visual Roadmap**       | `generate_image`  | `Prompt="Gantt-style milestone roadmap with dependency arrows for ..."`, `AspectRatio="16:9"` | Generate visual project milestone graphic      |
+| **Interactive Sign-Off** | `ask_question`    | `questions=[{"question": "Approve Phase 1 Milestone Scope", ...}]`                            | Align on sequential execution boundaries       |
+| **Living Map Artifact**  | `write_to_file`   | Target: `<appDataDir>/brain/<conversation-id>/wayfinder_map.md`                               | Emit comprehensive roadmap and Mermaid DAG     |
 
 ---
 
 ## 1. Map the Architectural Terrain
+
 - Break the initiative into distinct phases and dependency layers (Database Schemas → Domain Core → REST APIs → Frontend UI → GxP Verification).
 - Identify critical decision forks that require user alignment or ADRs.
 
 ---
 
 ## 2. Dispatch Research Subagents
+
 When exploratory facts are needed across services, launch research subagents using `Model: "flash"` for rapid scans or `Model: "pro"` for deep risk analysis.
 
 ---
@@ -37,6 +39,7 @@ When exploratory facts are needed across services, launch research subagents usi
 ## 3. Generate Living Wayfinder Map Artifact
 
 Write to `<appDataDir>/brain/<conversation-id>/wayfinder_map.md` via `write_to_file`:
+
 - **Phase Breakdown**: Sequential milestones with explicit exit criteria.
 - **Dependency Graph (Mermaid)**: Visual DAG of blocking dependencies.
 - **Tracer-Bullet Tickets**: Actionable vertical slices.
@@ -47,6 +50,7 @@ Write to `<appDataDir>/brain/<conversation-id>/wayfinder_map.md` via `write_to_f
 ## 4. Milestone Sign-Off via `ask_question`
 
 Before transitioning across phases, prompt the user for interactive approval:
+
 ```json
 {
   "questions": [
@@ -62,6 +66,5 @@ Before transitioning across phases, prompt the user for interactive approval:
   ]
 }
 ```
+
 Work each slice iteratively using [`tdd`](../tdd/SKILL.md) and [`implement`](../implement/SKILL.md).
-
-

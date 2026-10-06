@@ -4,11 +4,11 @@ When applying TDD to CLI commands, the standard Red-Green-Refactor loop applies 
 
 ## The Testing Pyramid for CLIs
 
-| Level | Scope | Method | Goal |
-|---|---|---|---|
-| **Unit** (most tests) | Individual functions, services, commands | Mock dependencies (fs, network) | Verify logic and error handling |
-| **Integration** (fewer) | The compiled binary or entry point | Spawn child processes, capture stdout/stderr | Verify the "glue" code and startup |
-| **Interactive** (fewest) | Prompt-based UIs (inquirer, ink) | Start & Kill pattern or input injection | Ensure prompts start and don't crash |
+| Level                    | Scope                                    | Method                                       | Goal                                 |
+| ------------------------ | ---------------------------------------- | -------------------------------------------- | ------------------------------------ |
+| **Unit** (most tests)    | Individual functions, services, commands | Mock dependencies (fs, network)              | Verify logic and error handling      |
+| **Integration** (fewer)  | The compiled binary or entry point       | Spawn child processes, capture stdout/stderr | Verify the "glue" code and startup   |
+| **Interactive** (fewest) | Prompt-based UIs (inquirer, ink)         | Start & Kill pattern or input injection      | Ensure prompts start and don't crash |
 
 ## Behavior-Centric Test Naming
 
@@ -75,4 +75,4 @@ expect(meta.name).toBe("list");
 - **Subprocess timeouts:** Real CLI commands are slow. Use aggressive timeouts and mock heavy operations in unit tests. Reserve real subprocess tests for integration.
 - **`process.env` leakage:** Tests that read environment variables can interfere with each other. Use `vi.stubEnv()` and restore in `afterEach`.
 - **Stdout assertions are fragile:** Don't assert exact stdout strings (they break when formatting changes). Assert structured JSON output or use `toContain()` for key fragments.
-- **Exit code semantics:** Test both stdout/stderr *and* exit codes. A command can print correct output but exit with code 1, or vice versa.
+- **Exit code semantics:** Test both stdout/stderr _and_ exit codes. A command can print correct output but exit with code 1, or vice versa.

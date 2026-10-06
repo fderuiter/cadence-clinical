@@ -23,18 +23,18 @@ Direct in-memory code imports between the document management (`eTMF`) service a
 ### Option 1: Shared Database or In-Memory State Sync
 
 - **Overview:** Rely on shared SQL database or in-memory state sync across service boundaries.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Avoids extra HTTP API network hops.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Wrecks service isolation and decouples database architectures incorrectly.
   - ❌ Vulnerable to synchronization delay and desynchronization.
 
 ### Option 2: Secure Synchronous API Lock Propagation & Build-Time AST Validator
 
 - **Overview:** Decouple services by introducing synchronous API-driven lookups over HTTP with cryptographically signed authorization headers, and add a custom AST parser to scan Python imports during build/test phase to assert boundaries.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Real-time authoritative verification of lock state, fulfilling strict GxP requirements.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds minor latency overhead for inter-service communication.
 
 ## 4. Decision Outcome

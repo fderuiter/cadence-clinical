@@ -1,6 +1,7 @@
 # ADR-014: 2026-07-22 Compliance Tracing and Automated Trial Locks
 
 - **Status:** Accepted
+
 ## Status
 
 Accepted
@@ -28,20 +29,20 @@ This decision implements requirements under Trace-3.
 ### Option 1: Application-level auditing and soft locks
 
 - **Overview:** Rely on application logic and soft-delete flags for auditing, with application-level checks for trial locking.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Easier to implement.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Susceptible to bypass via direct database access or bugs.
   - ❌ Does not fully satisfy strict regulatory requirements for tamper-proof logs.
 
 ### Option 2: Database-level audit protection with threshold cryptography and global locks
 
 - **Overview:** Hard-delete blocks at the database flush listener level. Multi-party threshold cryptography for blinding keys. Immediate global read-only lock with multi-channel alerting.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Meets stringent regulatory standards for immutable audit logs.
   - ✅ Eliminates single point of failure for unblinding.
   - ✅ Ensures rapid response to safety compromises.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Increased complexity in database transaction management and cryptographic operations.
 
 ## 4. Decision Outcome

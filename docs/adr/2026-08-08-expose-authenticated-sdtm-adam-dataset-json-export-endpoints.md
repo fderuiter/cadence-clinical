@@ -26,14 +26,14 @@ This decision implements requirements under Trace-8.
 ### Option 1: On-the-fly serialization without database logging
 
 - **Overview:** Build endpoints that transform and serialize clinical data dynamically on demand but do not persist any history of the export event.
-- ***Pros:*** Simplest implementation, no database table required.
-- ***Cons:*** Violates GxP trace constraints. If data is exported, the clinical trial audit log must record who performed the export and whether it succeeded or failed.
+- _**Pros:**_ Simplest implementation, no database table required.
+- _**Cons:**_ Violates GxP trace constraints. If data is exported, the clinical trial audit log must record who performed the export and whether it succeeded or failed.
 
 ### Option 2: Transactional database logging via BiostatExport (Selected)
 
 - **Overview:** Build a dedicated `BiostatExport` database model extending `AuditedModel` to log all exports, with extraction helper pipelines bridging the gap between raw data models, pure derivations, and the strict Dataset-JSON validator.
-- ***Pros:*** Ensures full compliance, secure authenticated endpoints, robust error logging, and schema conformance validations.
-- ***Cons:*** Additional table definition and database migration.
+- _**Pros:**_ Ensures full compliance, secure authenticated endpoints, robust error logging, and schema conformance validations.
+- _**Cons:**_ Additional table definition and database migration.
 
 ## 4. Decision Outcome
 

@@ -36,6 +36,18 @@ public sealed record ProtocolVersionApproved(
     string ContentHash,
     AttestationId AttestationId);
 
+/// <summary>An immutable form schema snapshot was registered and published for an approved protocol version.</summary>
+[KernelEvent("FormVersionPublished", 1)]
+public sealed record FormVersionPublished(
+    TenantId TenantId,
+    StudyId StudyId,
+    ProtocolVersionId ProtocolVersionId,
+    string ProtocolVersion,
+    string FormId,
+    string FormHash,
+    string OpenRosaXml,
+    string DdfIr);
+
 /// <summary>A protocol version was withdrawn by the named attestation.</summary>
 [KernelEvent("ProtocolVersionWithdrawn", 1)]
 public sealed record ProtocolVersionWithdrawn(

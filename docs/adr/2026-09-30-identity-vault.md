@@ -72,13 +72,13 @@ it with a KMS-backed provider behind the same port.
 **Commands.** Every vault act is a kernel command with a capability, so the pipeline authorizes it, writes it to the
 tenant's audit chain and raises a Trust event:
 
-| Command | Capability | Verb class | Event |
-| --- | --- | --- | --- |
-| `RecordPersonIdentity`, `RecordSiteLocalIdentity` | `identity.record.person`, `identity.record.site_local` | Execute | `IdentityRecorded` |
-| `RevealPersonIdentity`, `RevealSiteLocalIdentity` | `identity.reveal.person`, `identity.reveal.site_local` | Execute | `IdentityRevealed` |
-| `ErasePersonIdentity`, `EraseSiteLocalIdentity` | `identity.erase.person`, `identity.erase.site_local` | Approve | `IdentityErased` |
-| `LinkParticipantToPerson` | `identity.link.cross_study` | Execute | `ParticipantLinked` |
-| `RevealPersonLinks` | `identity.reveal.links` | Execute | `PersonLinksRevealed` |
+| Command                                           | Capability                                             | Verb class | Event                 |
+| ------------------------------------------------- | ------------------------------------------------------ | ---------- | --------------------- |
+| `RecordPersonIdentity`, `RecordSiteLocalIdentity` | `identity.record.person`, `identity.record.site_local` | Execute    | `IdentityRecorded`    |
+| `RevealPersonIdentity`, `RevealSiteLocalIdentity` | `identity.reveal.person`, `identity.reveal.site_local` | Execute    | `IdentityRevealed`    |
+| `ErasePersonIdentity`, `EraseSiteLocalIdentity`   | `identity.erase.person`, `identity.erase.site_local`   | Approve    | `IdentityErased`      |
+| `LinkParticipantToPerson`                         | `identity.link.cross_study`                            | Execute    | `ParticipantLinked`   |
+| `RevealPersonLinks`                               | `identity.reveal.links`                                | Execute    | `PersonLinksRevealed` |
 
 Reveals are Execute, not Read: disclosing an identity is an act a person performs, and the evaluator refuses
 automation agents Execute and Approve, so an agent cannot decrypt an identity even when it holds a reveal grant.

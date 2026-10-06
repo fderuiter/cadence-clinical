@@ -11,7 +11,7 @@
 
 Following the .NET 10 migration (ADR-2243), the platform operated as 18 decoupled microservices. While this achieved runtime unification, it inherited conceptual fragmentation from the original topology: foundational clinical concepts—such as `Study`, `Site`, `Subject`/`Participant`, `Personnel`, and `AuditLog`—were duplicated across multiple service schemas (`apps/execution`, `apps/ctms`, `apps/org`, `apps/econsent`, `apps/tickets`). Maintaining consistency across service boundaries required complex distributed sagas, outbox synchronizations, and reconciliation workers, introducing failure windows under 21 CFR Part 11 (PRD-SYS-053) and ICH GCP E6(R2).
 
-In reality, a clinical trial has a single body of truth: a protocol specifies what *should* happen, sites and participants make things *actually* happen, and systems record that they happened. EDC, CTMS, eTMF, RTSM, Safety, and eCOA are **projections and workflows over one shared body of clinical truth**, not independent owners of it.
+In reality, a clinical trial has a single body of truth: a protocol specifies what _should_ happen, sites and participants make things _actually_ happen, and systems record that they happened. EDC, CTMS, eTMF, RTSM, Safety, and eCOA are **projections and workflows over one shared body of clinical truth**, not independent owners of it.
 
 ## 2. Decision Drivers & Constraints
 

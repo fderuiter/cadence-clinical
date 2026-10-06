@@ -26,20 +26,20 @@ This decision implements requirements under Trace-8.
 ### Option 1: Live PostgreSQL/SQLite Database Introspection (Legacy)
 
 - **Overview:** Initialize a database, apply migrations via Alembic, connect the introspection engine, inspect schemas from PG catalog, and output TS files.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Reflects the actual database state including any raw triggers or custom indexes.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires a running database, rendering CI/CD slow and fragile.
   - ❌ Does not support pure offline static validation workflows.
 
 ### Option 2: SQLModel Metadata-Driven Static Introspection (Chosen)
 
 - **Overview:** Load SQLAlchemy's `Base.metadata.tables` directly using offline-configured python model imports, avoiding active database connections entirely.
-- ***Pros:***
+- _**Pros:**_
   - ✅ 100% offline-capable, runs instantly without any service dependencies.
   - ✅ Precise type mapping from Python types to TypeScript.
   - ✅ High isolation, complying with GxP audit-trail requirements.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires maintaining mock/default environments during python model loading in the script.
 
 ## 4. Decision Outcome

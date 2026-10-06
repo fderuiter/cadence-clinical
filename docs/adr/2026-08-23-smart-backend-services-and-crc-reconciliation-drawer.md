@@ -13,6 +13,7 @@ Also known as: ADR-2199 (former number)
 Clinical research sites spend an estimated 40–60% of coordinator hours performing manual transcription of Electronic Health Record (EHR) data into electronic Case Report Forms (eCRF). Traditional Direct Data Ingestion approaches either rely on fragile manual batch file uploads or run the risk of uncontrolled background data overwrites that violate FDA regulations on electronic source data, investigator oversight, and GxP data integrity.
 
 To enable secure, automated EHR polling without manual screen scraping or batch file handling while maintaining strict 21 CFR Part 11 compliance and non-destructive review gating, Cadence Clinical requires:
+
 1. **Automated SMART on FHIR Backend Services Authentication**: Asymmetric private-key JWT OAuth2 client credentials (RFC 7523 / HL7 SMART Backend Services) for automated, server-to-server hospital EHR polling without user credentials.
 2. **Deterministic CDASH Domain Normalization**: Automated ingestion and mapping of FHIR `Patient`, `Observation` (vital-signs & laboratory), `Condition`, and `MedicationRequest`/`MedicationStatement` resources into CDISC CDASH domains (`DM`, `VS`, `LB`, `MH`, `CM`).
 3. **CRC Source Data Reconciliation Drawer**: A split-screen, non-destructive coordinator interface presenting candidate EHR data side-by-side with current eCRF values, extraction timestamps, and FHIR resource provenance.
@@ -30,19 +31,18 @@ To enable secure, automated EHR polling without manual screen scraping or batch 
 ### Option 1: **Option A (Selected)**: SMART on FHIR Backend Services with CDASH Mapping and Non-Destructive CRC Drawer
 
 - **Overview:** **Option A (Selected)**: SMART on FHIR Backend Services with CDASH Mapping and Non-Destructive CRC Drawer
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: **Option B**: Direct Background Database Merges without Human-in-the-Loop Gating (Rejected due to GxP risk)
 
 - **Overview:** **Option B**: Direct Background Database Merges without Human-in-the-Loop Gating (Rejected due to GxP risk)
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

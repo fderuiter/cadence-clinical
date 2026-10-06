@@ -23,19 +23,18 @@ Requirements: PRD-SYS-001
 ### Option 1: Option A (Selected): Extend `ROLE_PERMISSIONS` in `packages/security/rbac.py` with `ecoa_schedule`, `ecoa_diary`, and `ecoa_submission` resource permissions (`create`, `read`) for authorized staff roles, and restrict Subject to `read` on schedules/diaries and `create`, `read` on submissions.
 
 - **Overview:** Option A (Selected): Extend `ROLE_PERMISSIONS` in `packages/security/rbac.py` with `ecoa_schedule`, `ecoa_diary`, and `ecoa_submission` resource permissions (`create`, `read`) for authorized staff roles, and restrict Subject to `read` on schedules/diaries and `create`, `read` on submissions.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
 
 ### Option 2: Option B (Alternative): Ad-hoc inline role checks in FastAPI endpoint handlers.
 
 - **Overview:** Option B (Alternative): Ad-hoc inline role checks in FastAPI endpoint handlers.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Satisfies architectural requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires implementation and maintenance overhead
-
 
 ## 4. Decision Outcome
 

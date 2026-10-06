@@ -27,20 +27,20 @@ This decision implements requirements under PRD-QRY-001.
 ### Option 1: Monolithic Inline Input Component
 
 - **Overview:** Write a single, self-contained component bound directly to specific NCI EVS API lookup endpoints.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Quick to integrate in a single view.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Not reusable in other contexts.
   - ❌ Couples the UI rendering layer with specific API client libraries and credentials.
 
 ### Option 2: Pure-JS HTML Primitive and Decoupled Debounce Helper
 
 - **Overview:** Implement `createClinicalLookupInput` as a pure JavaScript function that returns accessible HTML strings, coupled with a pure `debounce` utility. The application is responsible for wiring the debounced keyup/input handler to execute the API call and update the visual status.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Highly flexible and independent of specific endpoints or OIDC authentication details.
   - ✅ Accessible states are fully distinguishable and styled under unified CSS variables.
   - ✅ Supports clean, standard asynchronous integration without disrupting synchronous form validation.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires the host application to write the small glue code to wire the event listener and the API client.
 
 ## 4. Decision Outcome

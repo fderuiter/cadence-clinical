@@ -13,21 +13,22 @@ Executes code implementation tasks adhering to .NET 10 Clean Architecture standa
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Context Review** | `find_by_name` / `view_file` | Read relevant spec, records, and tests via `AbsolutePath` | Map dependencies and domain invariants |
-| **Surgical Editing** | `replace_file_content` | Target: C# file, single contiguous chunk | Implement changes with strict nullable typing |
-| **File Creation** | `write_to_file` | Target: new module/test, with complete contents | Scaffold new records, services, or test suites |
-| **Format Check** | `run_command` | `CommandLine="dotnet format Cadence.sln --verify-no-changes"`, `WaitMsBeforeAsync=5000` | Verify .editorconfig styling |
-| **Auto-Remediate** | `run_command` | `CommandLine="dotnet format Cadence.sln"`, `WaitMsBeforeAsync=5000` | Auto-format whitespace & namespace order |
-| **Fast Tests** | `run_command` | `CommandLine="dotnet test --filter \"Category!=Integration\""`, `WaitMsBeforeAsync=10000` | Run fast unit tests |
-| **Architecture Sentinels** | `run_command` | `CommandLine="dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj"` | Verify Clean Architecture layer purity |
-| **Compliance Sync** | `run_command` | `CommandLine="dotnet cadence gxp sync"` | Sync RTM and IQ/OQ/PQ execution reports |
-| **Walkthrough Report** | `write_to_file` | Target: `<appDataDir>/brain/<conversation-id>/walkthrough.md` | Emit completion artifact with file links |
+| Phase                      | Antigravity Tool             | Invocation Pattern                                                                           | Objective                                      |
+| :------------------------- | :--------------------------- | :------------------------------------------------------------------------------------------- | :--------------------------------------------- |
+| **Context Review**         | `find_by_name` / `view_file` | Read relevant spec, records, and tests via `AbsolutePath`                                    | Map dependencies and domain invariants         |
+| **Surgical Editing**       | `replace_file_content`       | Target: C# file, single contiguous chunk                                                     | Implement changes with strict nullable typing  |
+| **File Creation**          | `write_to_file`              | Target: new module/test, with complete contents                                              | Scaffold new records, services, or test suites |
+| **Format Check**           | `run_command`                | `CommandLine="dotnet format Cadence.sln --verify-no-changes"`, `WaitMsBeforeAsync=5000`      | Verify .editorconfig styling                   |
+| **Auto-Remediate**         | `run_command`                | `CommandLine="dotnet format Cadence.sln"`, `WaitMsBeforeAsync=5000`                          | Auto-format whitespace & namespace order       |
+| **Fast Tests**             | `run_command`                | `CommandLine="dotnet test --filter \"Category!=Integration\""`, `WaitMsBeforeAsync=10000`    | Run fast unit tests                            |
+| **Architecture Sentinels** | `run_command`                | `CommandLine="dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj"` | Verify Clean Architecture layer purity         |
+| **Compliance Sync**        | `run_command`                | `CommandLine="dotnet cadence gxp sync"`                                                      | Sync RTM and IQ/OQ/PQ execution reports        |
+| **Walkthrough Report**     | `write_to_file`              | Target: `<appDataDir>/brain/<conversation-id>/walkthrough.md`                                | Emit completion artifact with file links       |
 
 ---
 
 ## 1. Pre-Implementation Review
+
 - Consult [`docs/MIGRATION_WORKFLOW.md`](../../../../docs/MIGRATION_WORKFLOW.md) and [`CONTEXT.md`](../../../../CONTEXT.md).
 - Target directories:
   - `apps/designer/`: Protocol design / CDISC USDM / Neo4j graph.
@@ -43,6 +44,7 @@ Executes code implementation tasks adhering to .NET 10 Clean Architecture standa
 ## 2. Implementation Execution Standards
 
 ### C# 14 / .NET 10 Coding Rules
+
 1. **File-Scoped Namespaces**: Always use `namespace Cadence.<Layer>;`.
 2. **Using Directives Ordering**:
    - `System` and `System.*` (alphabetical)
@@ -83,6 +85,7 @@ dotnet cadence gxp sync
 ## 4. Produce Antigravity Walkthrough Artifact (MANDATORY TOOL: `write_to_file`)
 
 Record changes in `<appDataDir>/brain/<conversation-id>/walkthrough.md` via `write_to_file`:
+
 - Multi-component summary of files created/modified with clickable `[basename](file:///path/to/file)` links.
 - Verification results table showing test outcomes and sentinel checks.
 - Key GxP requirement IDs satisfied (`PRD-SYS-xxx`).

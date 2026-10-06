@@ -165,6 +165,7 @@ builder.Services.AddScoped<IConsentRepository, ConsentRepository>();
 builder.Services.AddScoped<ISiteComplianceRepository, SiteComplianceRepository>();
 builder.Services.AddScoped<IObservationRepository, ObservationRepository>();
 builder.Services.AddScoped<IFormSubmissionRepository, FormSubmissionRepository>();
+builder.Services.AddScoped<IPublishedFormVersionRegistryRepository, PublishedFormVersionRegistryRepository>();
 builder.Services.AddScoped<IClinicalQueryRepository, ClinicalQueryRepository>();
 builder.Services.AddScoped<IStagedAdverseEventReviewRepository, StagedAdverseEventReviewRepository>();
 builder.Services.AddScoped<ICecRepository, CecRepository>();
@@ -241,6 +242,7 @@ builder.Services.AddMassTransit(x =>
     });
 
     x.AddConsumer<EConsentCompletedConsumer>();
+    x.AddConsumer<FormVersionPublishedConsumer>();
 
     x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
 });

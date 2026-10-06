@@ -1,4 +1,4 @@
-# ADR-2809: Asynchronous CSV Batch Ingestion Pipeline for Clinical Subject Rosters
+# ADR-2810: Asynchronous CSV Batch Ingestion Pipeline for Clinical Subject Rosters
 
 - **Status:** Accepted
 - **Date:** 2026-10-06
@@ -53,4 +53,3 @@ Research coordinators and data managers require bulk subject roster ingestion fo
 
 - **Affected Repositories / Services:** `apps/execution`
 - **Verification Plan:** Automated unit tests in `tests/Cadence.UnitTests/Execution/Subjects/SubjectBatchIngestionTests.cs` and GxP compliance sync verification.
-

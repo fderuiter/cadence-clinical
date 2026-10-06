@@ -24,7 +24,7 @@
 | :------------ | :--------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------- | :--------------------------- |
 | 0.1.0-DRAFT   | 2026-06-01 | Initial skeleton and placeholder generation                                                                                                                          | F. de Ruiter | SDLC Steering Group          |
 | 1.0.0-RELEASE | 2026-07-22 | Comprehensive expansion of all clinical modules, field-level validation, clinical state machines, unblinding protocols, and query lifecycles. Conforms to ISO 29148. | F. de Ruiter | F. de Ruiter, QA Directorate |
-| 1.1.0-DRAFT   | 2026-09-30 | Added platform edge, startup configuration and gateway resilience requirements (PRD-SYS-189 to PRD-SYS-191).                                                       | F. de Ruiter | F. de Ruiter                 |
+| 1.1.0-DRAFT   | 2026-09-30 | Added platform edge, startup configuration and gateway resilience requirements (PRD-SYS-189 to PRD-SYS-191).                                                         | F. de Ruiter | F. de Ruiter                 |
 
 ### 1.3 Signature & Approval Matrix
 
@@ -998,7 +998,6 @@ To provide a centralized, GxP-compliant, role-aware knowledge base, standard ope
 - Safety-critical notifications (`CRITICAL` tickets and SLA escalations) must bypass user opt-out preferences under regulatory compliance mandates.
 - In-page contextual help mappings must dynamically resolve relevant SOPs by route pattern and user persona.
 
-
 ---
 
 ## 8. Automated Site Financials, Investigator Grants & Payments Subsystem
@@ -1006,11 +1005,13 @@ To provide a centralized, GxP-compliant, role-aware knowledge base, standard ope
 To coordinate, track, and automate complex clinical trial site budgets, procedure-based fee matrices, split-payee disbursements, withholding reserves, and invoice generation triggered directly by EDC data capture and CRA monitoring verifications.
 
 #### PRD-PAY-001: Procedure-Based Fee Matrix & Investigator Grant Contract Engine
+
 - The system must support multi-tier investigator grant contract templates associated with specific sites and institutions.
 - The grant engine must model procedure-level fee matrices (linking specific visit activities and eCRF forms to agreed reimbursement rates), fixed startup/closeout fees, IRB submission fees, patient stipends, travel reimbursements, and institutional overhead rates (percentage-based additions).
 - Contract modifications during active studies must version the budget schedule (`version_index`), preserving historical fee schedules for visits completed prior to amendment execution.
 
 #### PRD-PAY-002: Real-Time EDC & Monitoring Trigger-to-Payable Automation
+
 - The system must operate a reactive financial evaluation listener that automatically generates pending payable line items based on configurable triggers:
   1. **EDC Form Submission:** Generation of visit/procedure payables upon successful completion of required eCRFs.
   2. **CRA Verification Gate:** Gating payables until a Clinical Research Associate (CRA) marks the visit or form as Source Data Verified (SDV).
@@ -1018,29 +1019,36 @@ To coordinate, track, and automate complex clinical trial site budgets, procedur
 - Payables generated must reference the exact subject ID, visit code, form ID, contract rate, and executing trigger.
 
 #### PRD-PAY-003: Multi-Party Split Payee & Withholding Holdback Governance
+
 - The system must support splitting a single earned payable across multiple recipient payees (e.g. 70% to Hospital Research Foundation, 20% to Principal Investigator Practice, 10% to Central Pharmacy).
 - The engine must enforce configurable holdback/withholding retention rules (e.g. retain 10% of all visit fees until final study closeout, database lock, and resolution of all outstanding data queries).
 - Releasing withheld funds must require formal Data Management and Quality sign-off confirming site query resolution.
 
 #### PRD-PAY-004: Automated Self-Billing Invoicing & Remittance Advice Dispatch
+
 - The system must execute automated monthly or quarterly billing cycles, compiling approved payable line items into standardized self-billing invoices and remittance advice statements.
 - Remittance advice documents must be generated in PDF format, cryptographically hashed with SHA-256, and dispatched to site financial contacts via automated email notifications.
 - The system must expose REST APIs for bidirectional ERP synchronization (e.g. SAP, NetSuite, Oracle Financials) to update payment execution statuses (`PENDING`, `APPROVED`, `PAID`, `RECONCILED`).
 
 #### PRD-PAY-005: Multi-Currency Conversion & Budget Adjustment Amendments
+
 - The payment engine must support multi-currency site budgets with automated conversion to sponsor base currency based on versioned exchange rate tables.
 - The system must support manual and automated adjustments (passthrough expense reimbursements, penalty deductions for out-of-window visits or protocol deviations) requiring mandatory 21 CFR Part 11 change justification.
 
 #### PRD-PAY-006: 21 CFR Part 11 Financial Disbursement Audit Ledger
+
 - Every budget configuration edit, payable generation, holdback calculation, invoice approval, and payment confirmation must record an append-only, immutable transaction record to `PaymentAuditLog` capturing user context, timestamps, before/after states, and electronic signature manifestations.
 
 #### PRD-SYS-161: Site Payments Budget Contracts, Fee Schedule Rate Matrices & Trigger-to-Payable Engine
+
 - The system must provide end-to-end management of investigator grant budget contracts, multi-tier fee schedule procedure rates, institutional overhead additions, and event-driven triggers (eCRF submission, CRA SDV verification gating, and milestone completions).
 
 #### PRD-SYS-162: Site Payments Multi-Party Split Payee Allocations & Holdback Retention Governance
+
 - The system must support configurable percentage-based disbursements across multi-party split payees (summing to 100%) and enforce 10% holdback retention escrow released only upon dual Data Management and Quality sign-off.
 
 #### PRD-SYS-163: Site Payments Self-Billing Invoicing, Cryptographic Remittance Advice & ERP Settlement Reconciliation
+
 - The system must automate monthly and quarterly self-billing invoice compilation, generate cryptographically signed SHA-256 PDF remittance advice statements with 21 CFR Part 11 manifests, and execute bidirectional enterprise ERP synchronization and settlement reconciliation.
 
 ---
@@ -1050,32 +1058,38 @@ To coordinate, track, and automate complex clinical trial site budgets, procedur
 To provide zero-footprint web-based medical imaging management, in-flight DICOM de-identification, standardized oncologic and volumetric measurement tools, and dual-blinded independent review charter (IRC) adjudication workflows.
 
 #### PRD-IMG-001: Zero-Footprint High-Performance Web DICOM & Multi-Planar Viewer
+
 - The system must provide a browser-native, zero-footprint DICOM viewer supporting multi-modality medical images (CT, MRI, PET, Digital X-Ray, Ultrasound).
 - The viewer must support real-time multi-planar reconstruction (MPR: Axial, Sagittal, Coronal), maximum intensity projection (MIP), window/level adjustments (Hounsfield units presets), zoom/pan, and cine playback for multi-frame cardiac and angiography sequences.
 
 #### PRD-IMG-002: In-Flight Pixel & Header De-Identification and PHI Scrubbing
+
 - During image upload at clinical sites, the system must execute dual-layer de-identification:
   1. **Header Metadata Scrubbing:** Automatically remove or pseudonymize all HIPAA Safe Harbor / 21 CFR Part 11 DICOM tags (Patient Name, Patient ID, Birth Date, Institution, Physician Name), replacing them with trial Subject UUID and Site Code.
   2. **Pixel-Level PHI Masking:** Detect and black-out burned-in text annotations in ultrasound, endoscopy, and secondary capture images before persistent storage.
 - An immutable SHA-256 de-identification certificate must be generated and stored with the imaging series envelope.
 
 #### PRD-IMG-003: Independent Review Charter (IRC) & Blinded Dual-Reader Workflow
+
 - The system must support blinded endpoint adjudication charters where imaging timepoints are independently routed to two certified central radiologists/readers.
 - The review workspace must completely blind readers to subject treatment arm, clinical adverse events, site identity, and the other reader's evaluations.
 - Reader evaluations must capture lesion selection, target/non-target designations, and standardized qualitative assessments.
 
 #### PRD-IMG-004: Automated RECIST 1.1, Cheson, Lugano & RANO Measurement Derivations
+
 - The imaging canvas must provide specialized caliper and volumetric tools that calculate standard response criteria:
   1. **RECIST 1.1 (Solid Tumors):** Sum of longest diameters (SLD), percentage change from baseline, nadir tracking, and automated response categorization (Complete Response `CR`, Partial Response `PR`, Stable Disease `SD`, Progressive Disease `PD`).
   2. **Lugano / Cheson (Lymphoma):** Bidimensional product of perpendicular diameters (PPD) and PET Deauville 5-point scale scoring.
   3. **RANO (High-Grade Glioma):** T1-gadolinium enhancing and T2/FLAIR non-enhancing tumor measurement evaluation.
 
 #### PRD-IMG-005: Adjudication Tie-Breaker Committee Escalation & Electronic Sign-off
+
 - If Reader 1 and Reader 2 evaluations produce discordant overall response assessments (e.g. Reader 1 = `PR`, Reader 2 = `PD`), the system must automatically escalate the case to an Adjudication Committee Chair / Tie-Breaker Reader.
 - The tie-breaker reader must be provided a consolidated comparison workspace and record final binding determination.
 - All adjudication sign-offs must require 21 CFR Part 11 compliant step-up electronic signatures.
 
 #### PRD-IMG-006: Direct EDC eCRF Measurement Binding & SDTM TU/TR/RS Auto-Population
+
 - Approved central imaging adjudication results must bind directly to corresponding EDC eCRF forms (e.g. Tumor Assessment Form) without manual re-keying.
 - The transformation pipeline must automatically format imaging measurements into CDISC SDTM domains: Tumor Identification (`TU`), Tumor Results (`TR`), and Disease Response (`RS`).
 
@@ -1086,6 +1100,7 @@ To provide zero-footprint web-based medical imaging management, in-flight DICOM 
 To provide comprehensive global adverse event safety management, multi-country expedited reporting rule evaluation, electronic B2B AS2 transmission of ICH E2B(R3) ICSR XML packages, statistical signal detection, and aggregate safety reports.
 
 #### PRD-PVG-001: Deterministic Multi-Country Expedited Regulatory Reporting Rules Engine
+
 - The safety engine (`apps/safety`) must evaluate Individual Case Safety Reports (ICSRs) against deterministic regulatory reporting rules across global health authorities:
   1. **US FDA (IND / NDA):** Fatal/Life-threatening unexpected SUSARs within 7 calendar days; all other serious unexpected suspected adverse reactions within 15 calendar days.
   2. **EMA (EudraVigilance / Clinical Trials Regulation EU No 536/2014):** 7-day fatal/life-threatening SUSARs; 15-day non-fatal SUSARs with direct transmission to EudraVigilance gateway.
@@ -1093,10 +1108,12 @@ To provide comprehensive global adverse event safety management, multi-country e
 - The system must maintain real-time countdown clocks from the initial receipt date (`Day 0`) and issue escalation alerts at 75% and 90% clock elapsed thresholds.
 
 #### PRD-PVG-002: Secure Applicability Statement 2 (AS2) B2B Gateway & MDN Verification
+
 - The platform must include an enterprise AS2 B2B communication client providing encrypted, digitally signed EDI transmission of ICH E2B(R3) XML messages directly to regulatory health authority gateways (FDA ESG, EMA EudraVigilance Gateway).
 - The AS2 gateway must enforce S/MIME encryption (AES-256), SHA-256 digital signatures, and automated parsing and verification of synchronous/asynchronous Message Disposition Notifications (MDN) and regulatory ACK packages (ACK A: Transmission receipt, ACK B: Syntactic validation, ACK C: Authority acceptance).
 
 #### PRD-PVG-003: Disproportionality Signal Detection Engine (PRR, ROR, EBGM / MGPS)
+
 - The safety subsystem must execute automated statistical signal detection algorithms across internal clinical trial databases and external safety benchmarks:
   1. **Proportional Reporting Ratio (PRR):** Calculate PRR, Chi-square with Yates' correction, and 95% confidence intervals for all Preferred Term (PT) and System Organ Class (SOC) pairs.
   2. **Reporting Odds Ratio (ROR):** Calculate ROR point estimates and lower/upper bounds.
@@ -1104,31 +1121,39 @@ To provide comprehensive global adverse event safety management, multi-country e
 - Statistical threshold breaches (e.g. PRR >= 2.0, Chi-square >= 4.0, N >= 3) must trigger automated Signal Review alerts.
 
 #### PRD-PVG-004: Automated Periodic Aggregate Safety Reporting (DSUR, PSUR, PBRER)
+
 - The system must aggregate clinical trial safety observations and automatically draft standardized periodic regulatory reports:
   1. **Development Safety Update Report (DSUR - ICH E2F):** Cumulative subject exposure, line listings of all SAEs, interval summary tabulations, and risk-benefit assessments.
   2. **Periodic Safety Update Report (PSUR) / PBRER (ICH E2C(R2)):** Post-market worldwide safety experience, sales volume exposure, and action taken for safety reasons.
 
 #### PRD-PVG-005: MedDRA / WHODrug Automated Auto-Coding & Upversioning Impact Analysis
+
 - The coding gateway (`apps/interop` / `apps/ai_gateway`) must execute hybrid lexical and dense-vector embedding matching against authoritative MedDRA (LLT, PT, HLT, HLGT, SOC) and WHODrug Global dictionaries.
 - When new dictionary releases are imported (quarterly/bi-annual), the system must execute an automated Upversioning Impact Analysis, identifying recoded terms, split codes, and obsolete concepts without silently mutating historical locked trial data.
 
 #### PRD-PVG-006: Literature Safety Surveillance & Regulatory Inquiry Tracking
+
 - The system must support automated weekly PubMed/Europe PMC literature queries for active investigational substances, scoring abstracts for ICSR reportability and safety signals.
 - The system must track regulatory authority inquiries, providing structured workflows for responding to safety questions within statutory deadlines.
 
 #### PRD-PVG-007: Blinded Safety Review & Unblinded Safety Officer Air-Gap
+
 - The safety module must enforce strict blinding firewalls: standard clinical study teams and CRAs view only blinded safety data, while designated Unblinded Safety Officers (USOs) and Independent Data Monitoring Committees (IDMC) operate within an isolated unblinded review workspace.
 
 #### PRD-PVG-008: 21 CFR Part 11 Physician Electronic Signatures on ICSR Packages
+
 - Finalizing medical causality assessments, approving expedited safety reporting packages, and transmitting E2B(R3) XML must require multi-factor re-authentication electronic signatures by a qualified Safety Physician or Medical Monitor.
 
 #### PRD-SYS-167: Multi-Country Expedited ICSR Regulatory Reporting Clocks & Rules Engine
+
 - The safety subsystem must evaluate Individual Case Safety Reports (ICSRs) against multi-country regulatory reporting rules (FDA 7/15-day fatal/serious SUSARs, EMA EudraVigilance, PMDA Japan, MHRA, Health Canada), maintain dynamic countdown clocks from Day 0, and trigger automated threshold alerts at 75% and 90% clock elapsed time.
 
 #### PRD-SYS-168: AS2 S/MIME B2B XML Gateway Transmission & Signed MDN Receipt Validation
+
 - The safety subsystem must provide secure AS2 S/MIME encrypted B2B transmission of ICH E2B(R3) XML safety packages to health authority gateways, validate Message Integrity Checks (MIC), parse and verify synchronous/asynchronous signed Message Disposition Notifications (MDN), and process regulatory acknowledgments (ACK A/B/C).
 
 #### PRD-SYS-169: Vectorized Disproportionality Signal Detection Engine & Aggregate Safety Reporting (DSUR/PSUR)
+
 - The safety subsystem must execute vectorized disproportionality signal detection calculations (PRR with Chi-square Yates correction, ROR, EBGM with 95% confidence intervals) across adverse event terms, evaluate safety threshold breaches, and compile standardized aggregate safety reports including Development Safety Update Reports (DSUR) with subject exposure stratifications and interval line listings.
 
 ---
@@ -1138,28 +1163,36 @@ To provide comprehensive global adverse event safety management, multi-country e
 To provide multi-echelon investigational product (IP) inventory tracking, automated predictive resupply, cold chain temperature excursion analytics, Bayesian dose-escalation adaptive algorithms, and vein-to-vein Chain of Custody / Identity (COC/COI).
 
 #### PRD-SCM-001: Multi-Echelon Depot Supply Chain Tracking & Predictive Resupply
+
 - The RTSM engine (`apps/execution`) must model a multi-echelon clinical supply hierarchy: Primary Manufacturer -> Central Depot -> Regional Depots -> Clinical Sites -> Subjects.
 - The system must run predictive resupply algorithms that continuously forecast site kit demand based on active enrollment velocity, screening pipeline, subject visit schedule, site storage capacity, and shipping transit lead times.
 - Automated resupply orders must trigger transfer orders and packing manifests with depot notification webhooks.
 
 #### PRD-SCM-002: Continuous Data Logger Ingestion & Mean Kinetic Temperature (MKT) Engine
+
 - The system must support direct ingestion of digital temperature data logger files (CSV, XML, JSON, PDF) from shipment containers and site storage units.
 - The cold chain engine must calculate Mean Kinetic Temperature (MKT) across the logged time series:
-  $$\Delta H / R = 10000 	ext{ K}, \quad T_{K} = rac{\Delta H / R}{-\ln \left( rac{1}{n} \sum_{i=1}^n e^{-rac{\Delta H / R}{T_i}} 
+  $$ \Delta H / R = 10000 	ext{ K}, \quad T_{K} = rac{\Delta H / R}{-\ln \left( rac{1}{n} \sum_{i=1}^n e^{-rac{\Delta H / R}{T_i}}
+  $$
+
 ight)}$$
+
 - If temperatures breach stability budget limits (e.g. cumulative hours above 8°C), the system must automatically transition affected drug kits to `QUARANTINED`, block dispensing in EDC, and notify the Supply Chain Manager.
 
 #### PRD-SCM-003: Automated Lot Expiration Management, Extension & Re-Labeling
+
 - The system must track expiration dates and shelf-life stability per investigational product lot/batch.
 - When stability testing extends lot expiry, the system must execute automated Lot Expiry Extension workflows, updating all non-dispensed kits across all depots and sites while generating required re-labeling action tasks.
 
 #### PRD-SCM-004: Dose-Escalation Bayesian BOIN / CRM Adaptive Trial Algorithms
+
 - The RTSM engine must support advanced adaptive oncology trial designs:
   1. **3+3 Standard Rule:** Automated cohort completion evaluation and escalation/expansion logic.
   2. **Bayesian Optimal Interval (BOIN) Design:** Real-time calculation of Dose-Limiting Toxicity (DLT) rates against target toxicity boundaries ($\lambda_e, \lambda_d$), generating automated recommendation flags (Escalate, Stay, De-escalate).
   3. **Continual Reassessment Method (CRM):** Adaptive model-based dose-toxicity curve updating upon each evaluated cohort.
 
 #### PRD-SCM-005: Cell & Gene Therapy Vein-to-Vein Chain of Custody / Identity (COC/COI)
+
 - For advanced cell and gene therapy (CGT) trials, the system must enforce unbroken Vein-to-Vein Chain of Custody and Chain of Identity:
   1. **Apheresis Collection:** Generation of tamper-evident cryptographic barcodes binding subject identity to initial cellular material.
   2. **Cryogenic Transit:** Real-time GPS and temperature tracking from site to manufacturing facility.
@@ -1167,11 +1200,13 @@ ight)}$$
   4. **Pre-Infusion Dual Verification:** Mandatory two-person electronic verification at the bedside (scanning subject wristband and drug bag barcode) before enabling infusion form completion.
 
 #### PRD-SCM-006: Investigational Product Returns, Accountability & Reconciliation Destruction
+
 - The system must track drug accountability across the full lifecycle: received, stored, dispensed, returned by patient, lost, damaged, and destroyed.
 - Returned kits must be logged with pill/vial counts, calculating patient adherence percentages.
 - Final drug reconciliation must generate formal Certificates of Destruction with dual witness electronic signatures.
 
 #### PRD-SCM-007: Real-Time Blinding Verification & Drug Dispensation Gating
+
 - The dispensing engine must enforce strict execution gates: dispensing is blocked if the subject is not randomized, if the visit is out of window, if required re-consent is missing, or if the kit is expired/quarantined.
 - The UI must maintain complete double-blind protection, presenting identical generic packaging labels to site coordinators while allocating specific blinded kit numbers from the inventory.
 
@@ -1182,47 +1217,59 @@ ight)}$$
 To provide automated statistical surveillance across clinical sites under ICH E6(R2)/(R3), detecting anomalous data patterns, digit preferences, variance shrinkage, multivariate correlations, data fabrication, and TransCelerate RACT risk factors.
 
 #### PRD-CSM-001: Cross-Site Digit Preference (Benford's Law) & Rounding Bias Analysis
+
 - The Quality Sentinels (`apps/quality`) must execute automated statistical tests on continuous clinical variables (Blood Pressure, Heart Rate, Laboratory Values, Tumor Measurements) across all trial sites:
   1. **Benford's Law Analysis:** Chi-square goodness-of-fit testing of leading and trailing digits against expected theoretical distributions.
   2. **Terminal Digit Rounding Bias:** Detection of excessive rounding (e.g. over-representation of 0 and 5 terminal digits) indicating estimated rather than measured clinical data.
 
 #### PRD-CSM-002: Multi-Variate Correlation Matrix & Variance Shrinkage Anomaly Detection
+
 - The CSM engine must compute multi-variate correlation matrices across related clinical variables for each site against the overall trial population distribution (Mahalanobis Distance and Kullback-Leibler Divergence).
 - Sites exhibiting anomalous variance shrinkage (unusually low standard deviation / "too perfect" data) or distorted inter-variable correlations must be flagged as statistical outliers with a calculated P-value ($P < 0.001$).
 
 #### PRD-CSM-003: Calendar & Timestamp Pattern Clustering (Weekend/Holiday Entry Inconsistencies)
+
 - The surveillance engine must analyze data entry timestamps and visit scheduling intervals:
   1. Detect clusters of clinical assessments entered on weekends, holidays, or midnight hours inconsistent with clinic operating hours.
   2. Identify identical elapsed times between consecutive visit procedures across multiple subjects at a single site.
 
 #### PRD-CSM-004: Duplicate Patient Record & Anatomical Fabrication Detection
+
 - The CSM engine must perform cross-site identity similarity matching:
   1. **Record Duplication Sentinels:** Detect identical baseline medical history, ECG interval vectors, or laboratory values across subjects within or across sites, identifying potential duplicate enrollment or fabricated records.
   2. **Image Hash Matching:** Detect identical photographic or radiological images uploaded across different subject visits using perceptual image hashing (pHash).
 
 #### PRD-CSM-005: Integrated TransCelerate RACT Matrix & Automated KRI Linkage
+
 - The platform must provide an interactive Risk Assessment and Categorization Tool (RACT) conforming to TransCelerate guidelines.
 - Protocol risks defined during study startup (e.g. Complex Dosing, Rare Biomarkers, Vulnerable Populations) must map directly to automated Key Risk Indicators (KRIs) with dynamic Green/Amber/Red thresholds and automated monitoring triggers.
 
 #### PRD-CSM-006: Automated Centralized Monitoring Anomaly Dossier & Inspection Snapshot
+
 - The system must compile an on-demand Centralized Monitoring Dossier summarizing site statistical distributions, KRI trends, anomaly flags, and CRA verification notes, cryptographically sealed for regulatory inspection.
 
 #### PRD-SYS-174: Centralized Statistical Monitoring & Forensic Fraud Detection Engine
+
 - The system must provide sample-gated Benford's Law analysis (first and second digit distributions, chi-squared goodness-of-fit, Nigrini conformity tiers) and cross-site variance shrinkage and repeated values analysis detecting fabricated or manipulated clinical data under ICH E6(R2)/(R3).
 
 #### PRD-SYS-175: Forensic Data Integrity Sentinels & Perceptual Image Hashing Tracer
+
 - The engine must execute multi-vector data integrity surveillance: cross-site patient vector cloning detection, temporal/behavioral timestamp clustering (off-hours/rapid burst/identical intervals), and perceptual image hashing (pHash/dHash) with transformation invariance (rotation, brightness) for duplicate medical image and document detection.
 
 #### PRD-SYS-176: TransCelerate RACT Dynamic Risk Scoring & Automated KRI Surveillance
+
 - The platform must implement dynamic TransCelerate RACT protocol risk scoring across all 6 risk categories, automated Key Risk Indicator (KRI) breach thresholds, weighted Site Risk Index (SRI) percentile ranking, and 1-click inspection-ready dossier compilation with cryptographic audit trails.
 
 #### PRD-SYS-177: Dynamic Multilingual Informed Consent Form (ICF) Builder & Tiered Modules
+
 - The eConsent subsystem (`apps/econsent`) must provide a multilingual dynamic Informed Consent Form (ICF) authoring and composition engine supporting modular reusable clauses, ISO 639-1 localized translation workflows, adaptive comprehension check quizzes with configurable passing score thresholds, and tiered optional consent modules (e.g. pharmacogenomics, future biomedical data sharing, re-contact permissions) with 21 CFR Part 11 compliant electronic signatures and CDISC ODM XML export.
 
 #### PRD-SYS-178: Automated Minor Age-of-Majority Milestone Detection & Adult Re-Consent Engine
+
 - The system must track minor subject birth dates against jurisdiction-specific legal age rules (e.g. 18 / 19 / 21 years), detect impending and reached age-of-majority milestones, and automatically generate and dispatch mandatory adult re-consent workflows transitioning subjects from pediatric assent and Legally Authorized Representative (LAR) parental representation to direct legal adult participant self-consent with 21 CFR Part 11 electronic signatures and immutable audit trails.
 
 #### PRD-SYS-179: Automated Protocol Amendment Re-Consent Distribution, Differential Redlines & Execution Gating
+
 - Upon protocol amendment or substantive ICF revisions, the system must automatically generate differential clause-level redlines (insertions, deletions, modifications), broadcast re-consent requirements to all active cohort participants, dispatch multi-channel notifications, and enforce programmatic execution gating on subsequent clinical visits until re-consent completion or verified paper override.
 
 ---
@@ -1232,6 +1279,7 @@ To provide automated statistical surveillance across clinical sites under ICH E6
 To provide a centralized clinical data lakehouse aggregating multi-source streams, automated continuous transformation into CDISC SDTM and ADaM models, and a 21 CFR Part 11 compliant containerized statistical computing environment for biostatisticians.
 
 #### PRD-CDR-001: Multi-Stream Clinical Lakehouse & Version-Pinned Data Pooling
+
 - The Clinical Data Repository (`apps/interop` / `apps/designer`) must aggregate and harmonize data across heterogeneous trial streams:
   1. Transactional EDC eCRFs
   2. Subject-Facing ePRO / eCOA Questionnaires
@@ -1242,22 +1290,27 @@ To provide a centralized clinical data lakehouse aggregating multi-source stream
 - The repository must maintain version-pinned data snapshots tied to specific database lock or interim analysis milestones.
 
 #### PRD-CDR-002: Automated CDISC SDTM & ADaM Data Pipeline Engine
+
 - The system must operate automated transformation pipelines that map raw clinical observations into standard CDISC Study Data Tabulation Model (SDTM v1.7 / v2.0) domains (e.g. `DM`, `AE`, `CM`, `VS`, `LB`, `EX`, `DS`, `TU`, `TR`, `RS`).
 - The pipeline must execute automated derivation rules generating Analysis Data Model (ADaM v1.3 / v2.1) datasets (e.g. Subject-Level Analysis Dataset `ADSL`, Adverse Events Analysis Dataset `ADAE`, Time-to-Event Analysis Dataset `ADTTE`, Basic Data Structure `BDS`).
 
 #### PRD-CDR-003: CDISC Dataset-JSON 1.1 / 2.0 & Define-XML 2.1 Compiler
+
 - The CDR pipeline must serialize all SDTM and ADaM datasets into official CDISC Dataset-JSON 1.1 / 2.0 formats with strict structural and referential schema validation.
 - The system must automatically compile and export standard CDISC Define-XML v2.1 metadata documents encapsulating dataset structures, variable codelists, value-level metadata, computational methods, and origin provenance.
 
 #### PRD-CDR-004: Validated Containerized Statistical Computing Environment (R & Python)
+
 - The platform must provide an isolated, 21 CFR Part 11 compliant analytical environment allowing qualified biostatisticians to author and execute R and Python analysis programs against versioned clinical data snapshots.
 - Statistical sessions must execute within isolated Docker/Linux containers with strictly bounded network and filesystem privileges.
 
 #### PRD-CDR-005: Package Lock Integrity, Script Versioning & Reproducible Run Manifests
+
 - Analytical runs in the SCE must enforce immutable package lockfiles (e.g. `renv` for R, `uv.lock` for Python), guaranteeing 100% reproducible statistical outputs across historical regulatory audits.
 - Every statistical execution must generate a cryptographically signed execution manifest capturing script hash, input dataset snapshot hash, runtime environment container image digest, output table/figure hashes, and executing statistician identity.
 
 #### PRD-CDR-006: Biostatistical Export Audit Trail & Blinded Interim Analysis Gating
+
 - Statistical data access and exports must be gated by study blinding roles: unblinded treatment arm variables must be masked from standard study statisticians until formal database lock or approved interim unblinding by the IDMC.
 - All export requests must write immutable audit records to `BiostatExportAuditLog`.
 
@@ -1268,18 +1321,22 @@ To provide a centralized clinical data lakehouse aggregating multi-source stream
 To provide integrated training management, automated curriculum mapping from protocol amendments and SOPs, and programmatic write-gating on EDC clinical data capture.
 
 #### PRD-TRN-001: Protocol Amendment & SOP Curriculum Mapping
+
 - The training subsystem (`apps/knowledge` / `apps/ctms`) must automatically map protocol amendments, study manuals, and SOP revisions into required training curricula assigned to study roles (Principal Investigator, Study Coordinator, CRA, Pharmacist).
 - Changes to protocol versions must automatically generate delta-training requirements targeting only modified clinical procedures and visit schedules.
 
 #### PRD-TRN-002: Automated EDC Write-Permission Gating Based on Training Compliance
+
 - The system must enforce programmatic qualification gates: if a site investigator or coordinator has outstanding, incomplete mandatory protocol training for an active protocol version, the Gateway and EDC engine must block eCRF edit and signature permissions, rendering forms in read-only mode with an inline training alert.
 - Completing training must instantly unlock EDC write permissions in real-time without administrative intervention.
 
 #### PRD-TRN-003: Interactive Training Modules, Comprehension Quizzes & Electronic Signatures
+
 - Training modules must support interactive video, document viewing with time-on-page tracking, and automated comprehension quizzes with configurable passing scores (e.g. >= 80%).
 - Training completion must require a 21 CFR Part 11 electronic signature confirming understanding of protocol requirements.
 
 #### PRD-TRN-004: Automated TMF Zone 5 Training Certificate Routing
+
 - Upon successful training completion and digital sign-off, the system must automatically generate a training certificate PDF, apply a cryptographic SHA-256 seal, and push the document directly to `apps/etmf` under DIA TMF Reference Model Zone 5 (Site Management - Artifact 05.02.04 Site Staff Training Records) and site eISF binders.
 
 ---
@@ -1289,33 +1346,41 @@ To provide integrated training management, automated curriculum mapping from pro
 To support hybrid and decentralized clinical trials via universal BYOD / PWA patient portals, continuous biometric sensor stream ingestion, direct-to-patient drug supply logistics, and GxP-compliant telehealth consultations.
 
 #### PRD-DCT-001: Universal BYOD / PWA Offline-First Patient Diary Architecture
+
 - The subject portal (`apps/subject-portal`) must operate as a responsive Progressive Web Application (PWA) supporting any modern smartphone, tablet, or desktop browser without requiring native app store installation.
 - Patient diaries, symptom scales, and questionnaires must support offline data entry using encrypted client-side IndexedDB storage with automatic background synchronization upon network reconnection.
 
 #### PRD-DCT-002: Continuous Biometric IoT Sensor Stream Ingestion (CGM, Actigraphy, Spirometry)
+
 - The interoperability gateway (`apps/interop`) must ingest continuous time-series data streams from approved medical IoT devices (Continuous Glucose Monitors `CGM`, actigraphy sleep/activity trackers, digital spirometers, pulse oximeters, Bluetooth blood pressure cuffs).
 - Device telemetry must be normalized into Open mHealth and HL7 FHIR Observation schemas, calculating summarized daily endpoints and flagging safety outlier excursions.
 
 #### PRD-DCT-003: Direct-to-Patient (DTP) Investigational Product Dispatch Tracking
+
 - The RTSM system must coordinate Direct-to-Patient (DTP) drug shipments: generating courier dispatch orders from central depots directly to subject residential addresses with temperature-controlled packaging and delivery signature confirmation.
 
 #### PRD-DCT-004: Decentralized In-Home Healthcare Nurse Visit Coordination
+
 - The CTMS system must manage mobile healthcare provider / in-home nurse visit scheduling, assigning protocol procedures (blood draws, vital signs, IP administration) to authorized visiting clinicians with mobile eCRF data entry.
 
 #### PRD-DCT-005: GxP-Compliant Telehealth Video Consultation & Encrypted Recording
+
 - The platform must provide integrated, end-to-end encrypted WebRTC telehealth video visits between investigators and study subjects.
 - Telehealth sessions must support synchronized co-viewing of eConsent documents, identity verification, and optional GxP-compliant session recording stored with 21 CFR Part 11 audit trails in `apps/fileshare`.
 
 #### PRD-DCT-006: Tiered Pediatric Assent & Legally Authorized Representative (LAR) Consent
+
 - The eConsent subsystem (`apps/econsent`) must support multi-tier consent workflows: age-appropriate multimedia pediatric assent (e.g. animated comprehension videos for ages 7-11, simplified text for ages 12-17) paired with simultaneous parent/guardian Legally Authorized Representative (LAR) electronic signatures.
 
 #### PRD-SYS-180: GxP-Compliant WebRTC Telehealth Video Consultations & Encrypted Recording Archival
+
 - The platform (`apps/interop`) must orchestrate end-to-end encrypted WebRTC telehealth consultations between clinical investigators and study subjects.
 - Enforce short-lived HMAC-SHA256 room authorization tokens with role-based capability gating (`can_present`, `can_annotate`, `can_sign`, `can_record`, `can_admit`) and DTLS-SRTP fingerprint validation.
 - Telehealth sessions must support synchronized interactive co-viewing of informed consent materials with presenter control locking.
 - Archiving sessions must apply a 21 CFR Part 11 SHA-256 recording digital seal with attributable certification statements and immutable audit trails.
 
 #### PRD-SYS-181: Direct-to-Patient (DTP) Clinical Supply Tracer & Cold-Chain IoT Ingestion
+
 - The logistics tracer (`apps/interop`) must coordinate Direct-to-Patient (DTP) investigational product shipments across multi-zone temperature envelopes (cryogenic, ultra-cold, frozen, refrigerated, controlled ambient).
 - Real-time continuous IoT data logger ingestion must calculate Arrhenius Mean Kinetic Temperature (MKT) per USP <1079> / PDA TR 39 and evaluate temperature excursion severity.
 - Automated quarantine workflows must place shipments in `TEMP_EXCURSION_HOLD` upon critical excursion violations.
@@ -1328,10 +1393,12 @@ To support hybrid and decentralized clinical trials via universal BYOD / PWA pat
 To provide comprehensive country-aware study startup workflows, ethics/IRB submission tracking, clinical trial agreement (CTA) redlining, and an un-bypassable cryptographic site activation gate preventing non-compliant trial execution.
 
 #### PRD-SSU-001: Dynamic Country-Specific Prerequisite Rules Matrix
+
 - The system (`apps/designer` and `apps/ctms`) must allow study authors to author and maintain country-level and study-wide prerequisite rule matrices governing site activation (e.g. FDA 1572 + IRB in the US; EU CTR Part I/II + EC in the EU; PMDA notification in Japan).
 - Rules matrices must support custom prerequisite types (regulatory approvals, site contract execution, eISF baseline certification, personnel qualification, training verification, depot drug availability).
 
 #### PRD-SSU-002: Multi-Factor Greenlight Site Activation Evaluator
+
 - The Greenlight engine (`apps/ctms`) must dynamically evaluate real-time site activation readiness across 6 key operational facets:
   1. Regulatory authority and IRB/Ethics Committee approval certificates.
   2. Executed Clinical Trial Agreement (CTA) and investigator budget schedules.
@@ -1342,6 +1409,7 @@ To provide comprehensive country-aware study startup workflows, ethics/IRB submi
 - GxP override exceptions must require executive sponsor dual-signature electronic authorization with mandatory Part 11 justification logging.
 
 #### PRD-SSU-003: Programmatic RTSM & EDC Execution Gating
+
 - Once all prerequisites are digitally verified, the system must issue an HMAC-signed cryptographic Site Activation Token and broadcast a `SiteGreenlightApproved` event across the event spine.
 - `apps/execution` (EDC) and RTSM must reject subject randomization, drug kit shipment release, and eCRF data entry for any non-greenlight site with an immutable audit log entry and HTTP 403 response.
 
@@ -1352,14 +1420,17 @@ To provide comprehensive country-aware study startup workflows, ethics/IRB submi
 To automate clinical data extraction from hospital Electronic Health Record (EHR) systems using HL7 FHIR USCDI standards, eliminating manual data transcription while maintaining strict source provenance.
 
 #### PRD-ESR-001: SMART Backend Services Automated Ingestion
+
 - The interoperability service (`apps/interop`) must implement SMART on FHIR Backend Services authentication (asymmetric private-key JWT OAuth2) to connect securely to hospital EHR systems (Epic, Cerner, Allscripts).
 - Ingestion pipelines must extract structured clinical resources (`Patient`, `Condition`, `MedicationRequest`, `MedicationStatement`, `Observation` vital signs and laboratory results) mapped to standardized CDASH domains.
 
 #### PRD-ESR-002: Clinical Research Coordinator (CRC) Reconciliation Drawer
+
 - The platform UI (`apps/web`) must provide a split-screen EHR reconciliation drawer displaying incoming EHR data side-by-side with current eCRF fields, source timestamps, and FHIR resource provenance identifiers.
 - The interface must support non-destructive 1-click actions: "Accept & Commit", "Reject with Reason", or "Raise Discrepancy Query", strictly prohibiting silent background data overwrites.
 
 #### PRD-ESR-003: Immutable Source Data Provenance & Part 11 Audit Attribution
+
 - Every committed eSource data value must record complete provenance metadata (source EHR system identifier, FHIR resource type and ID, extraction timestamp, and committing coordinator electronic signature) in the GxP audit ledger.
 
 ---
@@ -1369,21 +1440,26 @@ To automate clinical data extraction from hospital Electronic Health Record (EHR
 To provide centralized governance of central and local laboratory feeds, standardized unit conversions, and automated CTCAE/DAIDS toxicity grading with adverse event auto-drafting.
 
 #### PRD-LBM-001: Multi-Format Lab Ingestion & LOINC Standardization
+
 - The lab management engine must ingest central laboratory data feeds (HL7, CDISC LAB v1.0.1, CSV/sFTP) and manual local lab batch entry.
 - All lab analytes must map to standard LOINC concept codes with automated mathematical unit conversion between Conventional and SI units (e.g. mg/dL to mmol/L, g/dL to g/L).
 
 #### PRD-LBM-002: Age/Sex Reference Range Governance & Uncalibrated Safeguards
+
 - The system must enforce age-, sex-, and ethnicity-specific standard normal reference ranges (Lower Limit of Normal LLN and Upper Limit of Normal ULN).
 - Local hospital labs must maintain active, verified reference range certificates in the eISF; data entry for labs with uncalibrated or expired ranges must trigger an immediate uncalibrated range warning in the eCRF.
 
 #### PRD-LBM-003: Automated CTCAE / DAIDS Toxicity Grading & AE Auto-Drafting
+
 - Laboratory results must be evaluated in real-time against protocol-pinned toxicity scales (NCI-CTCAE v5.0 or DAIDS) to compute Grade 1–4 severity classifications.
 - Clinically significant Grade 3 or Grade 4 laboratory abnormalities must automatically trigger a staged Adverse Event eCRF draft routed directly to the Principal Investigator review queue.
 
 #### PRD-SYS-170: Central & Local Laboratory Batch Ingestion, Reference Range Governance & LOINC Unit Conversion
+
 - The lab management engine must provide high-throughput batch ingestion supporting CSV, HL7 v2.x (ORU^R01), FHIR JSON, CDISC LAB v1.0.1, and local manual entry with LOINC code standardization, age/sex/ethnicity/site-specific reference range matching, and uncalibrated local lab certification safeguards.
 
 #### PRD-SYS-171: NCI-CTCAE v5.0 / DAIDS Toxicity Grading Engine, Baseline Delta Checks & Automated AE Review Queue
+
 - The system must evaluate laboratory observations in real time against NCI-CTCAE v5.0 and DAIDS v2.1 criteria, detect Hy's Law DILI hepatotoxicity flags, calculate acute baseline shifts (>= 50% delta check alerts), and automatically draft staged Grade 3/4 Adverse Event eCRFs with discrepancy queries routed for investigator medical review.
 
 ---
@@ -1393,21 +1469,26 @@ To provide centralized governance of central and local laboratory feeds, standar
 To provide a blinded, chartered expert adjudication environment for major clinical endpoints (e.g. MACE, stroke, cause of death, disease progression) with automated dossier packaging and CDISC SDTM CE domain compilation.
 
 #### PRD-CEC-001: Automated Patient Event Dossier Compilation & PHI Redaction
+
 - When a candidate endpoint event is reported in EDC, the system must automatically assemble a comprehensive patient dossier bundling eCRFs, lab panels, ECGs, hospital discharge summaries, and imaging reports.
 - Outbound dossier packages must undergo in-flight de-identification, masking patient identifiers, site numbers, and treating physician names.
 
 #### PRD-CEC-002: 2+1 Independent Blinded Reader & Tie-Breaker Workflow
+
 - Dossiers must be assigned to two independent primary reviewers blinded to treatment arm.
 - If both reviewers agree (concordant diagnosis), the adjudication is finalized immediately. If discordant, the system must automatically escalate the dossier to a tie-breaker Committee Chair or schedule a virtual consensus committee meeting.
 
 #### PRD-CEC-003: Bi-Directional EDC Feedback & CDISC SDTM CE Domain Export
+
 - Approved consensus adjudication decisions must write back to the subject casebook and compile automatically into the CDISC SDTM CE (Clinical Events) dataset with full 21 CFR Part 11 electronic signature attribution.
 
 #### PRD-SYS-172: Blinded Clinical Endpoint Adjudication Committee (CEC) Dossier Compilation & Dual-Reader Engine
+
 - The system must provide automated multi-source clinical event dossier compilation bundling eCRFs, lab panels, 12-lead ECG findings, imaging reports, and medical narratives with deterministic date-shifting and tokenized patient/site anonymization (`[REDACTED_NAME]`, `[REDACTED_SITE]`, `[REDACTED_PHONE]`).
 - Outbound packages must enforce strict reader isolation at the API projection layer, keeping peer assessments completely blinded until consensus or escalation.
 
 #### PRD-SYS-173: CEC Committee Governance, Consensus Determination & 21 CFR Part 11 Electronic Signatures
+
 - The engine must support standardized endpoint criteria checklists, automated concordance evaluation, and discordance escalation to a Committee Chair tie-breaker panel.
 - Chair tie-breaker determinations and meeting quorum records must require 21 CFR Part 11 compliant electronic signatures with legal intent manifestations, immutable audit trailing via `AuditedModel`, and direct bidirectional synchronization into EDC observations and CDISC SDTM CE/SUPPCE datasets.
 
@@ -1418,12 +1499,15 @@ To provide a blinded, chartered expert adjudication environment for major clinic
 To automate the compilation of annual Development Safety Update Reports (DSUR), Periodic Safety Update Reports (PSUR), and investigator safety update packages from live trial data.
 
 #### PRD-AGG-001: Immutable Point-in-Time Regulatory Safety Snapshot
+
 - When compiling an annual DSUR or PSUR, the system must create a cryptographically sealed, immutable dataset snapshot of all SAEs, SUSARs, and exposure metrics for the reporting window (e.g. DIBD anniversary), guaranteeing 100% audit reproducibility.
 
 #### PRD-AGG-002: Cumulative & Interval Exposure Calculations
+
 - The engine must compute cumulative and interval patient-years of exposure stratified by treatment arm, demographic subgroup, age bracket, and dosage cohort.
 
 #### PRD-AGG-003: Automated MedDRA SOC/PT Summary Tabulations & QPPV Sign-off
+
 - The aggregate reporter must generate standard summary cross-tabulations of SAEs, fatal events, and adverse events of special interest (AESI) grouped by MedDRA System Organ Class and Preferred Term.
 - The compiled aggregate safety package must require formal electronic signature review and approval by the Qualified Person for Pharmacovigilance (QPPV).
 
@@ -1434,17 +1518,21 @@ To automate the compilation of annual Development Safety Update Reports (DSUR), 
 To provide specialized regulatory and operational support for medical device and IVD trials compliant with ISO 14155:2020, EU MDR (2017/745), and IVDR (2017/746).
 
 #### PRD-DEV-001: Unique Device Identifier (UDI) & Serialized Inventory Tracking
+
 - The system must track medical device inventory in RTSM using standard UDI barcodes, parsing Device Identifiers (DI) and Production Identifiers (PI: lot number, serial number, expiration date, manufacturing date).
 
 #### PRD-DEV-002: Device Deficiency & Malfunction eCRF Capture
+
 - eCRFs must support standardized device deficiency, malfunction, and usability error reporting workflows, capturing device return status and root-cause evaluations.
 
 #### PRD-DEV-003: Automated Adverse Device Effect (ADE) & RTSM Quarantine Triggers
+
 - Logging a device deficiency or malfunction must automatically:
   1. Trigger an Adverse Device Effect (ADE / SADE / USADE) safety investigation in `apps/safety`.
   2. Immediately quarantine the affected device serial number (and optionally the site's entire device lot) in RTSM, preventing further patient allocation.
 
 #### PRD-DEV-004: Regulatory Incident Reports & CDISC SDTM DD/DO Dataset Exports
+
 - The system must compile Manufacturer Incident Report (MIR v7.2 XML/JSON) forms compliant with EU MDR (2017/745 Articles 87-92), EU IVDR (2017/746 Articles 82-87), and ISO 14155:2020 Annex B.
 - The system must export standardized CDISC SDTM DD (Device Deficiencies) and DO (Device Tracking and Operations) domain datasets with 21 CFR Part 11 compliant audit metadata.
 
@@ -1455,26 +1543,32 @@ To provide specialized regulatory and operational support for medical device and
 To automate patient stipend and travel reimbursement disbursements and facilitate compliant distribution of lay summaries under EU CTR 536/2014.
 
 #### PRD-PAT-001: SoA-Linked Stipend Matrix & Automated Payable Credits
+
 - Protocol authors must configure participant visit compensation rules directly in the Schedule of Activities (SoA) matrix in `apps/designer`.
 - When an in-person or remote visit is marked verified in EDC, the subject's mobile wallet must automatically receive scheduled stipend credits.
 
 #### PRD-PAT-002: Mobile Travel Expense Submission & Receipt OCR
+
 - Participants must be able to photograph and submit travel/meal expense receipts via the Subject Portal mobile app.
 - Optical Character Recognition (OCR) must extract receipt date, merchant, and total amount, routing the expense claim to the site coordinator for 1-click review and digital disbursement via virtual card or ACH.
 
 #### PRD-PAT-003: Plain-Language Lay Summary Portal
+
 - The Subject Portal must provide a secure channel for delivering IRB/Ethics Committee approved Plain Language Summaries of trial results to consented trial participants per EU CTR Regulation No 536/2014 Article 37.
 
 #### PRD-SYS-182: Participant Wallet & Automated Stipend Micro-Ledger Tracer
+
 - The system must provide an automated participant stipend micro-ledger calculating visit completion milestones, mobile travel expense receipts (OCR parsing & receipt verification), and meal allowance disbursements.
 - The engine must monitor IRS Form 1099 tax reporting thresholds ($600.00 annual taxable stipend cap), providing early approaching warnings and triggering automated W-9 certification workflows.
 - The wallet must support automated reloadable debit card issuing, real-time balance inquiries, instant ACH payouts, and strict enforcement of IRB/ethics anti-coercion stipend caps per 45 CFR 46 and 21 CFR 50.
 
 #### PRD-SYS-183: Greenlight Site Activation Multi-Factor Engine Tracer
+
 - The system must evaluate multi-factor startup criteria (ethics approval, budget execution, essential regulatory documents, pharmacy readiness, trained staff delegations) before un-gating site patient enrollment and dispensation.
 - Provide cryptographic bypass token generation, HMAC verification, dual-signature GxP overrides, and transactional outbox event propagation upon site greenlight approval.
 
 #### PRD-SYS-184: Next-Gen RTSM, Bayesian BOIN & Cold Chain MKT Tracer
+
 - The system must provide Pocock-Simon covariate-adaptive minimization with configurable variance weights, marginal imbalance metrics, and biased coin allocation probabilities.
 - Provide Bayesian Optimal Interval (BOIN) and Continual Reassessment Method (CRM) Phase I dose-escalation engines with configurable target DLT rates and dose transition decision boundaries (ESCALATE, STAY, DE_ESCALATE, STOP).
 - Provide real-time IP kit dispensing, expiry/quarantine inventory fencing, cold-chain Arrhenius Mean Kinetic Temperature (MKT) excursion holds, stability budget evaluations, and 21 CFR Part 11 emergency code-break unblinding audit ledgers.
@@ -1486,10 +1580,12 @@ To automate patient stipend and travel reimbursement disbursements and facilitat
 To ensure reliable, resilient, and audit-compliant event propagation across all 20 platform microservices without cascading failures or sibling database coupling.
 
 #### PRD-EVT-001: Transactional Outbox Pattern & Zero Data Loss
+
 - All domain state transitions (`SiteGreenlightApproved`, `EhrDataIngested`, `Grade3ToxicityDetected`, `EndpointAdjudicated`, `DeviceMalfunctionReported`, `VisitCompletedPayableTriggered`) must be atomically written to a local `transactional_outbox` table within the same database transaction as the entity mutation.
 - Asynchronous relay workers must stream outbox events to the centralized event broker with exponential backoff and guaranteed at-least-once delivery.
 
 #### PRD-EVT-002: Deterministic Idempotency & Replay Auditability
+
 - Consuming microservices must process incoming events using deterministic idempotency keys (`{entity_type}:{entity_id}:{event_type}:{version_index}`), preventing duplicate operations during network redeliveries.
 - The event log must support full point-in-time replay for disaster recovery, simulation, and regulatory inspection audits.
 
@@ -1504,4 +1600,3 @@ This Product Requirements Document represents the definitive, legally compliant 
    - An automated unit, integration, or manual verification script in the **Quality Assurance (QA) & Validation Plan**.
 2. **Regulatory Conformity:** No features may be added or modified without updating this document and acquiring the necessary regulatory/QA signatures.
 3. **Audit Readiness:** All configurations are compiled in real-time. This PRD itself is cryptographically sealed in the software build pipeline to prevent retroactive tampering or undocumented requirement modifications.
-

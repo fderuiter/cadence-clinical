@@ -22,6 +22,7 @@ This decision implements requirements under Trace-1.
 ## 3. Options Considered
 
 ### Option 1: Inline Observation Verification State
+
 Extend the existing `ClinicalObservation` with verification columns and implement independent `SDVSignOff` and `TSDVConfig` models.
 
 - Pros:
@@ -31,9 +32,8 @@ Extend the existing `ClinicalObservation` with verification columns and implemen
 - Cons:
   - ❌ Moderately increases the size of the observation table.
 
-
-
 ### Option 2: Purely Dynamic Key-Value Verification Store
+
 Maintain a single generic key-value or EAV-style verification state table.
 
 - Pros:
@@ -41,8 +41,6 @@ Maintain a single generic key-value or EAV-style verification state table.
 - Cons:
   - ❌ Hard to query efficiently.
   - ❌ Complex audit trails and version index tracking.
-
-
 
 ## 4. Decision Outcome
 

@@ -75,6 +75,33 @@ public record ThreePlusThreeConfig(
     [property: JsonPropertyName("algorithm_type")] RandomizationAlgorithmType AlgorithmType = RandomizationAlgorithmType.THREE_PLUS_THREE
 );
 
+public record ResponseAdaptiveConfig(
+    [property: JsonPropertyName("prior_alpha")] double PriorAlpha = 1.0,
+    [property: JsonPropertyName("prior_beta")] double PriorBeta = 1.0,
+    [property: JsonPropertyName("burn_in_threshold")] int BurnInThreshold = 20,
+    [property: JsonPropertyName("power_tuning")] double PowerTuning = 0.5,
+    [property: JsonPropertyName("min_allocation_cap")] double MinAllocationCap = 0.10,
+    [property: JsonPropertyName("max_allocation_cap")] double MaxAllocationCap = 0.90,
+    [property: JsonPropertyName("futility_cutoff")] double FutilityCutoff = 0.05,
+    [property: JsonPropertyName("superiority_cutoff")] double SuperiorityCutoff = 0.95,
+    [property: JsonPropertyName("control_arm")] string? ControlArm = null,
+    [property: JsonPropertyName("seed")] int? Seed = null,
+    [property: JsonPropertyName("algorithm_type")] RandomizationAlgorithmType AlgorithmType = RandomizationAlgorithmType.RESPONSE_ADAPTIVE
+);
+
+public record ResponseArmState(
+    [property: JsonPropertyName("arm_id")] string ArmId,
+    [property: JsonPropertyName("evaluated_subjects")] int EvaluatedSubjects = 0,
+    [property: JsonPropertyName("observed_responses")] int ObservedResponses = 0,
+    [property: JsonPropertyName("is_dropped")] bool IsDropped = false,
+    [property: JsonPropertyName("is_graduated")] bool IsGraduated = false,
+    [property: JsonPropertyName("is_control")] bool IsControl = false
+)
+{
+    [JsonPropertyName("empirical_response_rate")]
+    public double EmpiricalResponseRate => EvaluatedSubjects == 0 ? 0.0 : Math.Round((double)ObservedResponses / EvaluatedSubjects, 4);
+}
+
 public record DoseCohortState(
     [property: JsonPropertyName("dose_index")] int DoseIndex,
     [property: JsonPropertyName("dose_amount")] double DoseAmount,

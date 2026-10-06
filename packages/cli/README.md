@@ -18,20 +18,20 @@ dotnet run --project packages/cli/src/Cadence.Cli.csproj -- --help
 
 Common commands:
 
-| Command                                                                       | Purpose                                                                                                             |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `check [gate] [files]`                                                        | Runs all quality gates, or one gate such as `readmes`, `markdown`, `adrs`, `arch-drift`, `imports`, `dependencies`. |
-| `fix`                                                                         | Runs the automatic fixers (`SelfHealService`).                                                                      |
-| `test`                                                                        | Test runner wrapper.                                                                                                |
-| `ci [--job <job>] [--allow-skip] [--list]`                                     | Runs the jobs of `.github/workflows/ci.yml` locally with the same commands (`Services/CiPlan.cs`, `Services/LocalCiRunner.cs`). |
-| `doctor`                                                                      | Checks the local toolchain and environment.                                                                         |
-| `db reset`, `db migrate`, `db status`, `db seed`                              | Database utilities.                                                                                                 |
-| `gxp sync`, `gxp validate`, `gxp verify`, `generate-rtm`                      | Requirements traceability and GxP reports.                                                                          |
-| `cdisc export`                                                                | Not implemented: prints a message and exits `1`.                                                                    |
-| `scaffold service`, `scaffold adr`                                            | Scaffolding.                                                                                                        |
-| `wizard onboarding`, `wizard migrate`, `wizard dotnet` | Interactive wizards.                                                                                                |
-| `mcp server`                                                                  | Not implemented: prints a message and exits `1`.                                                                    |
-| `hook pre-tool`, `hook post-write`, `hook pre-invocation`, `hook stop`        | Agent lifecycle hooks run by `.agents/hooks.json` from `bin/cadence` (PRD-SYS-053); exit `2` blocks the step.      |
+| Command                                                                | Purpose                                                                                                                         |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `check [gate] [files]`                                                 | Runs all quality gates, or one gate such as `readmes`, `markdown`, `adrs`, `arch-drift`, `imports`, `dependencies`.             |
+| `fix`                                                                  | Runs the automatic fixers (`SelfHealService`).                                                                                  |
+| `test`                                                                 | Test runner wrapper.                                                                                                            |
+| `ci [--job <job>] [--allow-skip] [--list]`                             | Runs the jobs of `.github/workflows/ci.yml` locally with the same commands (`Services/CiPlan.cs`, `Services/LocalCiRunner.cs`). |
+| `doctor`                                                               | Checks the local toolchain and environment.                                                                                     |
+| `db reset`, `db migrate`, `db status`, `db seed`                       | Database utilities.                                                                                                             |
+| `gxp sync`, `gxp validate`, `gxp verify`, `generate-rtm`               | Requirements traceability and GxP reports.                                                                                      |
+| `cdisc export`                                                         | Not implemented: prints a message and exits `1`.                                                                                |
+| `scaffold service`, `scaffold adr`                                     | Scaffolding.                                                                                                                    |
+| `wizard onboarding`, `wizard migrate`, `wizard dotnet`                 | Interactive wizards.                                                                                                            |
+| `mcp server`                                                           | Not implemented: prints a message and exits `1`.                                                                                |
+| `hook pre-tool`, `hook post-write`, `hook pre-invocation`, `hook stop` | Agent lifecycle hooks run by `.agents/hooks.json` from `bin/cadence` (PRD-SYS-053); exit `2` blocks the step.                   |
 
 Validation commands such as `validate-readmes`, `validate-markdown`, `validate-imports`, `sync-openapi-spec` and `check-ports` are also available as top-level commands.
 

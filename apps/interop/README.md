@@ -35,8 +35,8 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 
 ## Configuration and secrets at rest
 
-| Setting | Purpose |
-| --- | --- |
+| Setting                 | Purpose                                                                                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FIELD_LOOKUP_HASH_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) for device-token lookup hashes. The service refuses to start without a valid key; there is no default. |
 
 Wearable/sensor device tokens are never stored (#4770). `device_registrations`, `sensor_telemetry_streams`,

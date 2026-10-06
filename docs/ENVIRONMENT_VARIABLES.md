@@ -14,40 +14,40 @@ fallback credentials in any environment, Development included (ADR-2260).
 
 ## Hosting
 
-| Key | Read by | Default | Required |
-| --- | --- | --- | --- |
-| `ASPNETCORE_ENVIRONMENT` | every service (ASP.NET Core host); `packages/cli/src/Services/DatabaseResetService.cs:123` | `Production` | no |
-| `CADENCE_ENV` | `packages/cli/src/Services/DatabaseResetService.cs:122` (refuses `db reset` in Production) | `Development` | no |
-| `ENVIRONMENT` | `packages/cli/src/Services/DatabaseResetService.cs:124` | `Development` | no |
-| `CADENCE_TRUSTED_PROXIES` | every service (`packages/telemetry/src/CadenceHttpHardening.cs`, ADR-2491) | none; only loopback is trusted | set it behind a proxy. Comma-separated IP addresses or CIDR ranges of the front proxy and gateway. `X-Forwarded-For` and `X-Forwarded-Proto` from any other sender are ignored, and an entry that is not an address or range fails startup |
-| `AppHost__Profile` | `apps/apphost/src/Program.cs` (Aspire AppHost only) | `full` | no; `full` runs every service, `core` runs the gateway, execution, kernel and web only ([AppHost README](../apps/apphost/README.md#profiles-and-existing-infrastructure)). Any other value stops the AppHost |
-| `AppHost__OidcAuthority` | `apps/apphost/src/Program.cs` (Aspire AppHost only) | none; the AppHost runs a Keycloak container | no; an existing issuer URL ending in `/realms/<realm>` replaces the Keycloak container |
-| `ConnectionStrings__cadence` (AppHost) | `apps/apphost/src/Program.cs` | none; the AppHost runs a PostgreSQL container | no; an existing database replaces the PostgreSQL container and is passed to every service |
+| Key                                    | Read by                                                                                    | Default                                       | Required                                                                                                                                                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ASPNETCORE_ENVIRONMENT`               | every service (ASP.NET Core host); `packages/cli/src/Services/DatabaseResetService.cs:123` | `Production`                                  | no                                                                                                                                                                                                                                         |
+| `CADENCE_ENV`                          | `packages/cli/src/Services/DatabaseResetService.cs:122` (refuses `db reset` in Production) | `Development`                                 | no                                                                                                                                                                                                                                         |
+| `ENVIRONMENT`                          | `packages/cli/src/Services/DatabaseResetService.cs:124`                                    | `Development`                                 | no                                                                                                                                                                                                                                         |
+| `CADENCE_TRUSTED_PROXIES`              | every service (`packages/telemetry/src/CadenceHttpHardening.cs`, ADR-2491)                 | none; only loopback is trusted                | set it behind a proxy. Comma-separated IP addresses or CIDR ranges of the front proxy and gateway. `X-Forwarded-For` and `X-Forwarded-Proto` from any other sender are ignored, and an entry that is not an address or range fails startup |
+| `AppHost__Profile`                     | `apps/apphost/src/Program.cs` (Aspire AppHost only)                                        | `full`                                        | no; `full` runs every service, `core` runs the gateway, execution, kernel and web only ([AppHost README](../apps/apphost/README.md#profiles-and-existing-infrastructure)). Any other value stops the AppHost                               |
+| `AppHost__OidcAuthority`               | `apps/apphost/src/Program.cs` (Aspire AppHost only)                                        | none; the AppHost runs a Keycloak container   | no; an existing issuer URL ending in `/realms/<realm>` replaces the Keycloak container                                                                                                                                                     |
+| `ConnectionStrings__cadence` (AppHost) | `apps/apphost/src/Program.cs`                                                              | none; the AppHost runs a PostgreSQL container | no; an existing database replaces the PostgreSQL container and is passed to every service                                                                                                                                                  |
 
 ## Database
 
 All services share the `cadence` database, each in its own schema; see [OPERATIONAL_DATABASE.md](OPERATIONAL_DATABASE.md).
 
-| Key | Read by | Default | Required |
-| --- | --- | --- | --- |
-| `ConnectionStrings__cadence` | `packages/database/src/CadenceDatabaseExtensions.cs` (`ResolvePostgresConnectionString`), used by every service with a DbContext | none | yes (or `POSTGRES_CONNECTION_STRING`) |
-| `POSTGRES_CONNECTION_STRING` | same resolver, after `ConnectionStrings__cadence`; every design-time `*DbContextFactory.cs` (`dotnet ef`, via `ResolveDesignTimeConnectionString` or `-- --connection`); `packages/cli/src/Services/DatabaseResetService.cs` | none | yes (or `ConnectionStrings__cadence`); `dotnet ef` and `db reset` need it |
-| `Database__MigrateOnStartup` | `packages/database/src/CadenceMigrationHostedService.cs` (every service with a DbContext) | `false` | no; applies migrations before serving |
-| `Database__MigrateOnly` | same | `false` | no; applies migrations and exits 0 (deployment job) |
-| `DATABASE_URL` | `packages/cli/src/Services/DatabaseResetService.cs:174` (accepts `postgresql+asyncpg://` URLs) | none | no |
+| Key                          | Read by                                                                                                                                                                                                                      | Default | Required                                                                  |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------- |
+| `ConnectionStrings__cadence` | `packages/database/src/CadenceDatabaseExtensions.cs` (`ResolvePostgresConnectionString`), used by every service with a DbContext                                                                                             | none    | yes (or `POSTGRES_CONNECTION_STRING`)                                     |
+| `POSTGRES_CONNECTION_STRING` | same resolver, after `ConnectionStrings__cadence`; every design-time `*DbContextFactory.cs` (`dotnet ef`, via `ResolveDesignTimeConnectionString` or `-- --connection`); `packages/cli/src/Services/DatabaseResetService.cs` | none    | yes (or `ConnectionStrings__cadence`); `dotnet ef` and `db reset` need it |
+| `Database__MigrateOnStartup` | `packages/database/src/CadenceMigrationHostedService.cs` (every service with a DbContext)                                                                                                                                    | `false` | no; applies migrations before serving                                     |
+| `Database__MigrateOnly`      | same                                                                                                                                                                                                                         | `false` | no; applies migrations and exits 0 (deployment job)                       |
+| `DATABASE_URL`               | `packages/cli/src/Services/DatabaseResetService.cs:174` (accepts `postgresql+asyncpg://` URLs)                                                                                                                               | none    | no                                                                        |
 
 ## Execution service
 
-| Key | Read by | Default | Required |
-| --- | --- | --- | --- |
-| `DemographicsEncryption__KeyBase64` | `apps/execution/src/Program.cs:105` (`DemographicsEncryptionOptions`) | none | yes; Base64 of a 16, 24 or 32 byte AES key (`openssl rand -base64 32`). The service refuses to start without a valid key. Under the Aspire AppHost, set it as the `demographics-encryption-key` parameter |
+| Key                                 | Read by                                                               | Default | Required                                                                                                                                                                                                  |
+| ----------------------------------- | --------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DemographicsEncryption__KeyBase64` | `apps/execution/src/Program.cs:105` (`DemographicsEncryptionOptions`) | none    | yes; Base64 of a 16, 24 or 32 byte AES key (`openssl rand -base64 32`). The service refuses to start without a valid key. Under the Aspire AppHost, set it as the `demographics-encryption-key` parameter |
 
 ## Notifications service
 
-| Key | Read by | Default | Required |
-| --- | --- | --- | --- |
-| `Notifications__PortalUrl` | `apps/notifications/src/Program.cs:21` (`NotificationBrandingOptions`) | none | no; the participant portal's sign-in URL used by the "Log In" link. It must be an absolute `https` URL (`http` only on localhost), or the service refuses to start. Without it, notifications carry no portal link |
-| `Notifications__BrandName` | same | `Cadence Clinical Platform` | no; the platform name in notification footers. It must not be empty |
+| Key                        | Read by                                                                | Default                     | Required                                                                                                                                                                                                           |
+| -------------------------- | ---------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Notifications__PortalUrl` | `apps/notifications/src/Program.cs:21` (`NotificationBrandingOptions`) | none                        | no; the participant portal's sign-in URL used by the "Log In" link. It must be an absolute `https` URL (`http` only on localhost), or the service refuses to start. Without it, notifications carry no portal link |
+| `Notifications__BrandName` | same                                                                   | `Cadence Clinical Platform` | no; the platform name in notification footers. It must not be empty                                                                                                                                                |
 
 ## Field-level protection
 
@@ -56,116 +56,116 @@ Keys for `packages/security/src/FieldProtection` (#4770). Both are base64 encodi
 different keys. See [ADR-2494](adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md). Under the Aspire AppHost, set them as the
 `field-encryption-key` and `field-lookup-hash-key` parameters.
 
-| Key | Read by | Default | Required |
-| --- | --- | --- | --- |
-| `FIELD_ENCRYPTION_KEY` | `packages/security/src/FieldProtection/FieldProtectionServiceCollectionExtensions.cs` (`AddCadenceFieldEncryption`), called by `apps/payments/src/Program.cs` and `apps/econsent/src/Program.cs` | none | yes (payments, econsent); the service refuses to start without a valid key. Rotating it makes existing ciphertext unreadable |
-| `FIELD_LOOKUP_HASH_KEY` | same file (`AddCadenceLookupHashing`), called by `apps/interop/src/Program.cs` | none | yes (interop); the service refuses to start without a valid key. Rotating it orphans stored device-token hashes |
+| Key                     | Read by                                                                                                                                                                                          | Default | Required                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `FIELD_ENCRYPTION_KEY`  | `packages/security/src/FieldProtection/FieldProtectionServiceCollectionExtensions.cs` (`AddCadenceFieldEncryption`), called by `apps/payments/src/Program.cs` and `apps/econsent/src/Program.cs` | none    | yes (payments, econsent); the service refuses to start without a valid key. Rotating it makes existing ciphertext unreadable |
+| `FIELD_LOOKUP_HASH_KEY` | same file (`AddCadenceLookupHashing`), called by `apps/interop/src/Program.cs`                                                                                                                   | none    | yes (interop); the service refuses to start without a valid key. Rotating it orphans stored device-token hashes              |
 
 ## Object storage
 
 Read by `AddCadenceStorage` in `packages/storage/src/StorageServiceCollectionExtensions.cs`. No service calls it yet;
 a service that does fails at startup when a required key is missing.
 
-| Key | Read by | Default | Required |
-| --- | --- | --- | --- |
-| `Storage__Provider` | `AddCadenceStorage` | none | yes; `s3`, `minio`, `filesystem`, or `memory` (in-process, Development only) |
-| `Storage__BucketName` | same (`S3StorageOptions`) | none | yes for `s3` and `minio` |
-| `Storage__Region` | same | `us-east-1` | no |
-| `Storage__ServiceUrl` | same | none (Amazon S3) | yes for `minio`; an S3-compatible endpoint, which turns on path-style addressing |
-| `Storage__ForcePathStyle` | same | on when `Storage__ServiceUrl` is set | no |
-| `Storage__ServerSideEncryption` | same | `AES256` | no; `aws:kms` for KMS, empty to turn it off |
-| `Storage__RootPath` | same (`FileSystemStorageOptions`) | none | yes for `filesystem`; an absolute directory. The store keeps `objects/` and `meta/` under it |
-| `Storage__AccessKeyId`, `Storage__SecretAccessKey` | same | none; the AWS default credential chain (environment, profile, instance or task role) | no; set both or neither. There is no default key |
+| Key                                                | Read by                           | Default                                                                              | Required                                                                                     |
+| -------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `Storage__Provider`                                | `AddCadenceStorage`               | none                                                                                 | yes; `s3`, `minio`, `filesystem`, or `memory` (in-process, Development only)                 |
+| `Storage__BucketName`                              | same (`S3StorageOptions`)         | none                                                                                 | yes for `s3` and `minio`                                                                     |
+| `Storage__Region`                                  | same                              | `us-east-1`                                                                          | no                                                                                           |
+| `Storage__ServiceUrl`                              | same                              | none (Amazon S3)                                                                     | yes for `minio`; an S3-compatible endpoint, which turns on path-style addressing             |
+| `Storage__ForcePathStyle`                          | same                              | on when `Storage__ServiceUrl` is set                                                 | no                                                                                           |
+| `Storage__ServerSideEncryption`                    | same                              | `AES256`                                                                             | no; `aws:kms` for KMS, empty to turn it off                                                  |
+| `Storage__RootPath`                                | same (`FileSystemStorageOptions`) | none                                                                                 | yes for `filesystem`; an absolute directory. The store keeps `objects/` and `meta/` under it |
+| `Storage__AccessKeyId`, `Storage__SecretAccessKey` | same                              | none; the AWS default credential chain (environment, profile, instance or task role) | no; set both or neither. There is no default key                                             |
 
 ## Gateway routing
 
 Read by `apps/gateway/src/Program.cs:105-122`. In Development each defaults to `http://localhost:<port>`; in any other environment each is required and the gateway refuses to start without it. A value that is not an absolute http or https URL fails startup in every environment.
 
-| Key | Default port |
-| --- | --- |
-| `DESIGNER_SERVICE_URL` | 8001 |
-| `EXECUTION_SERVICE_URL` | 8002 |
-| `ETMF_SERVICE_URL` | 8003 |
-| `INTEROP_SERVICE_URL` | 8004 |
-| `QUALITY_SERVICE_URL` | 8005 |
-| `NOTIFICATIONS_SERVICE_URL` | 8006 |
-| `CTMS_SERVICE_URL` | 8007 |
-| `SAFETY_SERVICE_URL` | 8008 |
-| `TICKETS_SERVICE_URL` | 8009 |
-| `EISF_SERVICE_URL` | 8010 |
-| `ECONSENT_SERVICE_URL` | 8011 |
-| `ORG_SERVICE_URL` | 8012 |
-| `FILESHARE_SERVICE_URL` | 8013 |
-| `IMAGING_SERVICE_URL` | 8014 |
-| `KNOWLEDGE_SERVICE_URL` | 8015 |
-| `PAYMENTS_SERVICE_URL` | 8016 |
-| `AI_GATEWAY_SERVICE_URL` | 8017 |
-| `KERNEL_SERVICE_URL` | 8018 |
+| Key                         | Default port |
+| --------------------------- | ------------ |
+| `DESIGNER_SERVICE_URL`      | 8001         |
+| `EXECUTION_SERVICE_URL`     | 8002         |
+| `ETMF_SERVICE_URL`          | 8003         |
+| `INTEROP_SERVICE_URL`       | 8004         |
+| `QUALITY_SERVICE_URL`       | 8005         |
+| `NOTIFICATIONS_SERVICE_URL` | 8006         |
+| `CTMS_SERVICE_URL`          | 8007         |
+| `SAFETY_SERVICE_URL`        | 8008         |
+| `TICKETS_SERVICE_URL`       | 8009         |
+| `EISF_SERVICE_URL`          | 8010         |
+| `ECONSENT_SERVICE_URL`      | 8011         |
+| `ORG_SERVICE_URL`           | 8012         |
+| `FILESHARE_SERVICE_URL`     | 8013         |
+| `IMAGING_SERVICE_URL`       | 8014         |
+| `KNOWLEDGE_SERVICE_URL`     | 8015         |
+| `PAYMENTS_SERVICE_URL`      | 8016         |
+| `AI_GATEWAY_SERVICE_URL`    | 8017         |
+| `KERNEL_SERVICE_URL`        | 8018         |
 
 Timeouts and health checks for every route, read by `apps/gateway/src/GatewayClusters.cs` (ADR-2451). Each must be a positive number of seconds; the gateway refuses to start otherwise.
 
-| Key | Default | Purpose |
-| --- | --- | --- |
-| `GATEWAY_PROXY_TIMEOUT_SECONDS` | 30 | A proxied request fails with 504 once its service sends nothing for this long. |
-| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | 10 | How often the gateway probes each service's `/healthz/ready`. Two failures in a row make the gateway answer 503 for that service until a probe succeeds. |
-| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS` | 5 | How long one readiness probe may take before it counts as failed. |
+| Key                                     | Default | Purpose                                                                                                                                                  |
+| --------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GATEWAY_PROXY_TIMEOUT_SECONDS`         | 30      | A proxied request fails with 504 once its service sends nothing for this long.                                                                           |
+| `GATEWAY_HEALTH_CHECK_INTERVAL_SECONDS` | 10      | How often the gateway probes each service's `/healthz/ready`. Two failures in a row make the gateway answer 503 for that service until a probe succeeds. |
+| `GATEWAY_HEALTH_CHECK_TIMEOUT_SECONDS`  | 5       | How long one readiness probe may take before it counts as failed.                                                                                        |
 
 Per-caller rate limit, read by `apps/gateway/src/GatewayRateLimiting.cs` (ADR-2491). It must be a positive number; the gateway refuses to start otherwise.
 
-| Key | Default | Purpose |
-| --- | --- | --- |
-| `GATEWAY_RATE_LIMIT_PER_MINUTE` | 600 | Requests each caller may send per one-minute window, counted by token subject, or by client address for unauthenticated requests. Over the limit the gateway answers 429 with `Retry-After`. Health probes are not limited. |
+| Key                             | Default | Purpose                                                                                                                                                                                                                     |
+| ------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GATEWAY_RATE_LIMIT_PER_MINUTE` | 600     | Requests each caller may send per one-minute window, counted by token subject, or by client address for unauthenticated requests. Over the limit the gateway answers 429 with `Retry-After`. Health probes are not limited. |
 
 ## Authentication and audit
 
-| Key | Read by | Default | Required |
-| --- | --- | --- | --- |
-| `GATEWAY_SECRET` | `packages/security/src/DependencyInjection/CadenceSecurityServiceCollectionExtensions.cs` (every service), `apps/gateway/src/Program.cs:68`, `packages/security/src/Authentication/SigTokenVerifier.cs:130` | none | yes, 32+ characters; services refuse to start without it |
-| `OIDC_AUTHORITY` | `apps/gateway/src/Program.cs:30` | none | yes (gateway) |
-| `OIDC_METADATA_ADDRESS` | `apps/gateway/src/Program.cs:40` | none | no |
-| `OIDC_AUDIENCE` | `apps/gateway/src/Program.cs:33` | none; validated when set | yes outside Development (gateway); `cadence-api`, the audience the realm gives `cadence-web` tokens, so tokens from other realm clients are refused (#5037) |
-| `OIDC_REQUIRE_HTTPS_METADATA` | `apps/gateway/src/Program.cs:51` | `true` | no |
-| `OIDC_SIGNATURE_CLIENT_ID` | `apps/gateway/src/Program.cs:81` | `cadence-esignature` | no; Keycloak client with only direct access grants, used for e-signature re-authentication |
-| `OIDC_SIGNATURE_CLIENT_SECRET` | `apps/gateway/src/Program.cs:84` | none | only if that client is confidential |
-| `OIDC_TOKEN_ENDPOINT` | `apps/gateway/src/Program.cs:72` | `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY` | no |
-| `AUDIT_LOG_SECRET_KEY` | `packages/security/src/Audit/AuditSecretKey.cs` (the only resolver; used by `AuditDigestEngine`, both `AuditDigestCalculator`s and `AddCadenceSecurity`) | none | yes; signing or verifying the audit chain throws without it |
-| `GXP_SIGNER_ID` | `packages/compliance/src/GxPSigner.cs:67` (release signing with `SignGxpMarkdown` only; `gxp sync` stamps, it does not sign) | `cadence-validation-runner` | no |
+| Key                            | Read by                                                                                                                                                                                                     | Default                                                                                    | Required                                                                                                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GATEWAY_SECRET`               | `packages/security/src/DependencyInjection/CadenceSecurityServiceCollectionExtensions.cs` (every service), `apps/gateway/src/Program.cs:68`, `packages/security/src/Authentication/SigTokenVerifier.cs:130` | none                                                                                       | yes, 32+ characters; services refuse to start without it                                                                                                    |
+| `OIDC_AUTHORITY`               | `apps/gateway/src/Program.cs:30`                                                                                                                                                                            | none                                                                                       | yes (gateway)                                                                                                                                               |
+| `OIDC_METADATA_ADDRESS`        | `apps/gateway/src/Program.cs:40`                                                                                                                                                                            | none                                                                                       | no                                                                                                                                                          |
+| `OIDC_AUDIENCE`                | `apps/gateway/src/Program.cs:33`                                                                                                                                                                            | none; validated when set                                                                   | yes outside Development (gateway); `cadence-api`, the audience the realm gives `cadence-web` tokens, so tokens from other realm clients are refused (#5037) |
+| `OIDC_REQUIRE_HTTPS_METADATA`  | `apps/gateway/src/Program.cs:51`                                                                                                                                                                            | `true`                                                                                     | no                                                                                                                                                          |
+| `OIDC_SIGNATURE_CLIENT_ID`     | `apps/gateway/src/Program.cs:81`                                                                                                                                                                            | `cadence-esignature`                                                                       | no; Keycloak client with only direct access grants, used for e-signature re-authentication                                                                  |
+| `OIDC_SIGNATURE_CLIENT_SECRET` | `apps/gateway/src/Program.cs:84`                                                                                                                                                                            | none                                                                                       | only if that client is confidential                                                                                                                         |
+| `OIDC_TOKEN_ENDPOINT`          | `apps/gateway/src/Program.cs:72`                                                                                                                                                                            | `<realm>/protocol/openid-connect/token` beside `OIDC_METADATA_ADDRESS` or `OIDC_AUTHORITY` | no                                                                                                                                                          |
+| `AUDIT_LOG_SECRET_KEY`         | `packages/security/src/Audit/AuditSecretKey.cs` (the only resolver; used by `AuditDigestEngine`, both `AuditDigestCalculator`s and `AddCadenceSecurity`)                                                    | none                                                                                       | yes; signing or verifying the audit chain throws without it                                                                                                 |
+| `GXP_SIGNER_ID`                | `packages/compliance/src/GxPSigner.cs:67` (release signing with `SignGxpMarkdown` only; `gxp sync` stamps, it does not sign)                                                                                | `cadence-validation-runner`                                                                | no                                                                                                                                                          |
 
 ## Observability
 
-| Key | Read by | Default | Required |
-| --- | --- | --- | --- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `packages/telemetry/src/CadenceTelemetryExtensions.cs` (enables OTLP export of traces, metrics and logs); the OpenTelemetry SDK also honours the other standard `OTEL_EXPORTER_OTLP_*` keys | unset: nothing exported | no |
-| `OTEL_SERVICE_NAME` | `packages/telemetry/src/CadenceTelemetryExtensions.cs` | the service's assembly name | no |
+| Key                           | Read by                                                                                                                                                                                     | Default                     | Required |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | -------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `packages/telemetry/src/CadenceTelemetryExtensions.cs` (enables OTLP export of traces, metrics and logs); the OpenTelemetry SDK also honours the other standard `OTEL_EXPORTER_OTLP_*` keys | unset: nothing exported     | no       |
+| `OTEL_SERVICE_NAME`           | `packages/telemetry/src/CadenceTelemetryExtensions.cs`                                                                                                                                      | the service's assembly name | no       |
 
 ## Tooling
 
-| Key | Read by | Default |
-| --- | --- | --- |
-| `BRAND_DOMAIN` | `packages/tooling_core/src/OpenApiToolingService.cs:171` | `ccrsoft.com` |
-| `DOTNET_INSTALL_SH_SHA256` | `scripts/setup_dotnet_env.sh:50` | `082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e` |
-| `DOTNET_INSTALL_PS1_SHA256` | `scripts/setup_dotnet_env.ps1:63` | `e8b873e18a81e5c4cd8ab69d84dac8fead291d50b3c44633cd7fddad709a13d6` |
-| `GH_TOKEN`, `GITHUB_TOKEN` | `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10` | none |
-| `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:101-102` (honoured by `generate-rtm` and `check rtm`; `gxp sync` ignores them) | off |
-| `CADENCE_UPDATE_BASELINE` | `packages/tooling_core/src/Services/DeidComplianceService.cs` (`1` with `check deid` and no files rewrites `.deid-baseline.txt`) and `tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs` (rewrites the kernel boundary baseline) | off |
-| `RTM_STRICT_ALL` | `packages/compliance/src/RtmGeneratorService.cs:214` | off |
-| `CADENCE_TEST_POSTGRES` | `tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs` (Npgsql connection string to an existing PostgreSQL server; without it or `CADENCE_TEST_DOCKER`, PostgreSQL tests are skipped). `cadence ci` (`packages/cli/src/Services/LocalCiRunner.cs`) opens the connection string once before the .NET tests and fails when neither is usable, unless `--allow-skip` is given | none |
-| `CADENCE_TEST_DOCKER` | `tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs` (`1` starts a Testcontainers `postgres:16-alpine` container) | none |
-| `CADENCE_DOCS_SKIP_CHECKS` | `scripts/build-docs.js` (`1` skips its `cadence check` and Markdown validation; `cadence ci` sets it for the docs build step only when `Run Cadence quality sentinels` already passed in the same run) | unset |
-| `CADENCE_UPDATE_GOLDEN` | `tests/Cadence.UnitTests/Packages/UsdmDesignImporterTests.cs` (`1` rewrites the expected design of the USDM import golden test; review the diff before committing) | off |
+| Key                               | Read by                                                                                                                                                                                                                                                                                                                                                                                    | Default                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `BRAND_DOMAIN`                    | `packages/tooling_core/src/OpenApiToolingService.cs:171`                                                                                                                                                                                                                                                                                                                                   | `ccrsoft.com`                                                      |
+| `DOTNET_INSTALL_SH_SHA256`        | `scripts/setup_dotnet_env.sh:50`                                                                                                                                                                                                                                                                                                                                                           | `082f7685e156738a1b2e2ed8381a621870d4ce8e8c59278034556f05c186eb2e` |
+| `DOTNET_INSTALL_PS1_SHA256`       | `scripts/setup_dotnet_env.ps1:63`                                                                                                                                                                                                                                                                                                                                                          | `e8b873e18a81e5c4cd8ab69d84dac8fead291d50b3c44633cd7fddad709a13d6` |
+| `GH_TOKEN`, `GITHUB_TOKEN`        | `packages/tooling_core/src/Services/SyncGithubProjectService.cs:10`                                                                                                                                                                                                                                                                                                                        | none                                                               |
+| `RTM_DRAFT`, `GENERATE_RTM_DRAFT` | `packages/compliance/src/RtmGeneratorService.cs:101-102` (honoured by `generate-rtm` and `check rtm`; `gxp sync` ignores them)                                                                                                                                                                                                                                                             | off                                                                |
+| `CADENCE_UPDATE_BASELINE`         | `packages/tooling_core/src/Services/DeidComplianceService.cs` (`1` with `check deid` and no files rewrites `.deid-baseline.txt`) and `tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs` (rewrites the kernel boundary baseline)                                                                                                                                      | off                                                                |
+| `RTM_STRICT_ALL`                  | `packages/compliance/src/RtmGeneratorService.cs:214`                                                                                                                                                                                                                                                                                                                                       | off                                                                |
+| `CADENCE_TEST_POSTGRES`           | `tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs` (Npgsql connection string to an existing PostgreSQL server; without it or `CADENCE_TEST_DOCKER`, PostgreSQL tests are skipped). `cadence ci` (`packages/cli/src/Services/LocalCiRunner.cs`) opens the connection string once before the .NET tests and fails when neither is usable, unless `--allow-skip` is given | none                                                               |
+| `CADENCE_TEST_DOCKER`             | `tests/Cadence.IntegrationTests/Execution/ExecutionPostgresFixture.cs` (`1` starts a Testcontainers `postgres:16-alpine` container)                                                                                                                                                                                                                                                        | none                                                               |
+| `CADENCE_DOCS_SKIP_CHECKS`        | `scripts/build-docs.js` (`1` skips its `cadence check` and Markdown validation; `cadence ci` sets it for the docs build step only when `Run Cadence quality sentinels` already passed in the same run)                                                                                                                                                                                     | unset                                                              |
+| `CADENCE_UPDATE_GOLDEN`           | `tests/Cadence.UnitTests/Packages/UsdmDesignImporterTests.cs` (`1` rewrites the expected design of the USDM import golden test; review the diff before committing)                                                                                                                                                                                                                         | off                                                                |
 
 ## Web apps
 
 Vite inlines `VITE_*` values at build time. Put overrides in `apps/<app>/.env.local`.
 
-| Key | Read by | Default |
-| --- | --- | --- |
-| `VITE_API_BASE_URL` | `apps/web/src/api/authorization.js:18` (the only origin besides same-origin `/api/` that receives the bearer token), `apps/web/src/api/client.ts:7` | `http://localhost:8000` |
-| `VITE_BASE_PATH` | `apps/web/vite.config.js:11` | `/cadence-clinical/` |
-| `VITE_APP_TITLE` | `apps/web/vite.config.js:17`, `apps/subject-portal/vite.config.js:17` | app name |
-| `VITE_BRAND_NAME` | `apps/web/src/App.vue:22`, `apps/web/src/components/AppShell.vue:841`, `apps/subject-portal/src/App.vue:1491` | `Cadence Clinical` |
-| `VITE_KEYCLOAK_URL` | `apps/web/src/auth/keycloak.js`, `apps/subject-portal/src/index.js:2413` | `http://localhost:8080/` in dev and test builds; none in an `apps/web` production build, which shows the missing key on the sign-in page |
-| `VITE_KEYCLOAK_REALM` | `apps/web/src/auth/keycloak.js`, `apps/subject-portal/src/index.js:2414` | `cadence` in dev and test builds; none in an `apps/web` production build, which shows the missing key on the sign-in page |
-| `VITE_KEYCLOAK_CLIENT_ID` | `apps/web/src/auth/keycloak.js`, `apps/subject-portal/src/index.js:2415` | `cadence-web` in dev and test builds; none in an `apps/web` production build, which shows the missing key on the sign-in page |
-| `VITE_DEMO_MODE` | `apps/web/src/utils/demoMode.js` | off. `true` (or `vite --mode demo`, `pnpm build:demo`) makes a demo build: offline demo identity, MSW mock API and sample data. Any other build shows API failures as errors and never substitutes sample data |
-| `VITE_ENABLE_MSW` | `apps/web/src/main.js`, `apps/subject-portal/src/index.js:2331` | off. Web: starts the MSW mock worker without the rest of demo mode (demo builds start it anyway) |
+| Key                       | Read by                                                                                                                                             | Default                                                                                                                                                                                                        |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL`       | `apps/web/src/api/authorization.js:18` (the only origin besides same-origin `/api/` that receives the bearer token), `apps/web/src/api/client.ts:7` | `http://localhost:8000`                                                                                                                                                                                        |
+| `VITE_BASE_PATH`          | `apps/web/vite.config.js:11`                                                                                                                        | `/cadence-clinical/`                                                                                                                                                                                           |
+| `VITE_APP_TITLE`          | `apps/web/vite.config.js:17`, `apps/subject-portal/vite.config.js:17`                                                                               | app name                                                                                                                                                                                                       |
+| `VITE_BRAND_NAME`         | `apps/web/src/App.vue:22`, `apps/web/src/components/AppShell.vue:841`, `apps/subject-portal/src/App.vue:1491`                                       | `Cadence Clinical`                                                                                                                                                                                             |
+| `VITE_KEYCLOAK_URL`       | `apps/web/src/auth/keycloak.js`, `apps/subject-portal/src/index.js:2413`                                                                            | `http://localhost:8080/` in dev and test builds; none in an `apps/web` production build, which shows the missing key on the sign-in page                                                                       |
+| `VITE_KEYCLOAK_REALM`     | `apps/web/src/auth/keycloak.js`, `apps/subject-portal/src/index.js:2414`                                                                            | `cadence` in dev and test builds; none in an `apps/web` production build, which shows the missing key on the sign-in page                                                                                      |
+| `VITE_KEYCLOAK_CLIENT_ID` | `apps/web/src/auth/keycloak.js`, `apps/subject-portal/src/index.js:2415`                                                                            | `cadence-web` in dev and test builds; none in an `apps/web` production build, which shows the missing key on the sign-in page                                                                                  |
+| `VITE_DEMO_MODE`          | `apps/web/src/utils/demoMode.js`                                                                                                                    | off. `true` (or `vite --mode demo`, `pnpm build:demo`) makes a demo build: offline demo identity, MSW mock API and sample data. Any other build shows API failures as errors and never substitutes sample data |
+| `VITE_ENABLE_MSW`         | `apps/web/src/main.js`, `apps/subject-portal/src/index.js:2331`                                                                                     | off. Web: starts the MSW mock worker without the rest of demo mode (demo builds start it anyway)                                                                                                               |

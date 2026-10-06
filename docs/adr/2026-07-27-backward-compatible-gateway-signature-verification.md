@@ -23,18 +23,18 @@ This decision implements requirements under Trace-8.
 ### Option 1: Upversion All Test Cases Directly
 
 - **Overview:** Manually rewrite every test signature setup across the entire codebase.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Avoids adding fallback logic to the verification library.
-- ***Cons:***
+- _**Cons:**_
   - ❌ High development overhead and risk of breaking regression pipelines.
 
 ### Option 2: Backward-Compatible Verification Fallback
 
 - **Overview:** Check standard V2 signatures first, then fall back to the legacy 4-key v2 format if scope fields are falsy or omitted.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High backward compatibility and smooth migration.
   - ✅ Retains strong validation on requests that do define scopes.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Introduces a secondary logic path under signature verification.
 
 ## 4. Decision Outcome

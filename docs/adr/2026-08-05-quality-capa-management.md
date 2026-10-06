@@ -28,9 +28,9 @@ This decision implements requirements under Trace-7.
 ### Option 1: Monolithic Operational Workflows in `apps/execution`
 
 - **Overview:** Embed deviation, RCA, and CAPA tables directly inside the core trial execution PostgreSQL database.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simpler service topology with a single database to manage.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Severe relational coupling between temporary operational data (QA actions) and primary participant clinical values.
   - ❌ High risk of schema pollution and complex GxP validation cycles (a change to QA forms triggers validation for the entire EDC engine).
   - ❌ Difficult to scale, migrate, or selectively lock portions of the operational platform.
@@ -38,11 +38,11 @@ This decision implements requirements under Trace-7.
 ### Option 2: Standalone Quality Microservice with Isolated Relational Datastore (Selected)
 
 - **Overview:** Deploy an independent microservice under `apps/quality` exposed through a dedicated gateway path proxy, utilizing its own database context (SQLite for local sandbox/testing, PostgreSQL for production), and routing through standard authentication middlewares (`GatewayAuthMiddleware`).
-- ***Pros:***
+- _**Pros:**_
   - ✅ High modularity: Changes to Quality schemas have zero impact on clinical trial databases or CTMS.
   - ✅ Strong authorization controls: The gateway validates OIDC user tokens, allowing easy isolation of read-only, general write, and quality oversight boundaries.
   - ✅ Direct relational constraints: Uses strict database foreign keys to map Deviations to RCAs, and RCAs to CAPA Records.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Small operational overhead of maintaining independent server deployment boundaries and distinct database sessions.
 
 ## 4. Decision Outcome

@@ -79,7 +79,7 @@ Rules that implement the decision:
 
 1. **Roles.** Migrations run as `cadence_owner` (owns tables). The application connects as `cadence_app`, which is
    not the owner, has no `BYPASSRLS`, and has no `UPDATE`/`DELETE` on insert-only tables (spec §5.3). `FORCE ROW LEVEL
-   SECURITY` is set anyway so owner mistakes are caught.
+SECURITY` is set anyway so owner mistakes are caught.
 2. **One place sets the tenant.** A Kernel.Persistence connection/transaction interceptor runs
    `SELECT set_config('cadence.tenant_id', @tenant, true)` (transaction-local) at the start of every transaction,
    from the authenticated `Actor`'s tenant. No other code sets it. A transaction with no tenant set sees zero rows
@@ -87,7 +87,7 @@ Rules that implement the decision:
    connection holds after a transaction-local setting resets.
 3. **System work** (outbox relay, scheduled chain verification) runs as a named ServiceAccount per tenant and sets
    the tenant the same way. There is no "all tenants" application connection. Fleet jobs iterate tenants.
-4. **Cross-tenant exchange** uses an explicit `DataSharingAgreement` row in *both* tenants and a dedicated
+4. **Cross-tenant exchange** uses an explicit `DataSharingAgreement` row in _both_ tenants and a dedicated
    command that copies or projects data. Sharing is never implemented by relaxing a policy.
 5. **Indexes** lead with `tenant_id`. Observation partitioning is by `(tenant_id, study_id)` (spec §13).
 6. **Tenant routing** (Option 3 upgrade) is a `ITenantConnectionResolver` in Kernel.Persistence. The default returns

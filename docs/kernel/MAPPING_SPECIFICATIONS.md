@@ -25,7 +25,9 @@ A change is a new version of the same key. Approved content never changes.
 ```json
 {
   "title": "SDTMIG 3.4 vital signs and labs",
-  "controlledTerminology": [ { "codeSystem": "sdtmct", "version": "2024-09-27" } ],
+  "controlledTerminology": [
+    { "codeSystem": "sdtmct", "version": "2024-09-27" }
+  ],
   "units": [
     { "ucum": "mm[Hg]", "submissionValue": "mmHg" },
     { "ucum": "kPa", "submissionValue": "kPa" },
@@ -38,10 +40,15 @@ A change is a new version of the same key. Approved content never changes.
       "concept": { "id": "0192a6b1-0000-7000-8000-000000000001", "version": 1 },
       "dataset": "VS",
       "assign": { "VSTESTCD": "SYSBP", "VSTEST": "Systolic Blood Pressure" },
-      "result": { "original": "VSORRES", "originalUnit": "VSORRESU",
-                  "standardCharacter": "VSSTRESC", "standardNumeric": "VSSTRESN", "standardUnit": "VSSTRESU" },
+      "result": {
+        "original": "VSORRES",
+        "originalUnit": "VSORRESU",
+        "standardCharacter": "VSSTRESC",
+        "standardNumeric": "VSSTRESN",
+        "standardUnit": "VSSTRESU"
+      },
       "standardUnit": "mm[Hg]",
-      "conversions": [ { "from": "kPa", "to": "mm[Hg]", "factor": 7.50062 } ],
+      "conversions": [{ "from": "kPa", "to": "mm[Hg]", "factor": 7.50062 }],
       "decimals": 0
     },
     {
@@ -49,10 +56,15 @@ A change is a new version of the same key. Approved content never changes.
       "concept": { "id": "0192a6b1-0000-7000-8000-000000000002", "version": 2 },
       "dataset": "LB",
       "assign": { "LBTESTCD": "GLUC", "LBTEST": "Glucose" },
-      "result": { "original": "LBORRES", "originalUnit": "LBORRESU",
-                  "standardCharacter": "LBSTRESC", "standardNumeric": "LBSTRESN", "standardUnit": "LBSTRESU" },
+      "result": {
+        "original": "LBORRES",
+        "originalUnit": "LBORRESU",
+        "standardCharacter": "LBSTRESC",
+        "standardNumeric": "LBSTRESN",
+        "standardUnit": "LBSTRESU"
+      },
       "standardUnit": "mmol/L",
-      "conversions": [ { "from": "mg/dL", "to": "mmol/L", "factor": 0.0555 } ],
+      "conversions": [{ "from": "mg/dL", "to": "mmol/L", "factor": 0.0555 }],
       "decimals": 2
     },
     {
@@ -66,22 +78,22 @@ A change is a new version of the same key. Approved content never changes.
 }
 ```
 
-| Property | Meaning |
-| --- | --- |
-| `title` | What the specification maps, for people. |
-| `overrides` | Optional. The key of the base specification this one overrides (see [Study overrides](#study-overrides)). |
-| `controlledTerminology` | The CT versions the decodes and unit terms come from: a CDISC CT package type (`sdtmct`) or a code-system URI, with its version. One version per code system. |
-| `units` | Each UCUM unit the specification writes, with the standard's term for it (the CT UNIT submission value). |
-| `mappings` | One mapping per Concept, 1 to 5000. |
-| `mappings[].id` | The mapping's id within the specification. |
-| `mappings[].concept` | The Concept (`id`, a UUID) at the version the mapping was authored against. The mapping applies to every version of that Concept. |
-| `mappings[].dataset` | The dataset (SDTM domain, …) the record belongs to. |
-| `mappings[].assign` | Constant variables that identify the record, such as the test code. This is where value-level metadata goes. |
-| `mappings[].result` | Where the result goes: `original` (required) and optionally `originalUnit`, `standardCharacter`, `standardNumeric`, `standardUnit`. |
-| `mappings[].standardUnit` | The UCUM unit standardised results are expressed in. Required with `standardNumeric`, `standardUnit` or conversions. |
-| `mappings[].conversions` | Linear conversions into the standard unit: `standard = value × factor + offset` (`offset` defaults to 0). |
-| `mappings[].decimals` | Decimal places of the standardised result (0 to 10). Omit it to write the converted value exactly, without trailing zeros. |
-| `mappings[].codelist` | For a coded result: the NCI C-code of the codelist the code is decoded against. A coded result is not a quantity. |
+| Property                  | Meaning                                                                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`                   | What the specification maps, for people.                                                                                                                      |
+| `overrides`               | Optional. The key of the base specification this one overrides (see [Study overrides](#study-overrides)).                                                     |
+| `controlledTerminology`   | The CT versions the decodes and unit terms come from: a CDISC CT package type (`sdtmct`) or a code-system URI, with its version. One version per code system. |
+| `units`                   | Each UCUM unit the specification writes, with the standard's term for it (the CT UNIT submission value).                                                      |
+| `mappings`                | One mapping per Concept, 1 to 5000.                                                                                                                           |
+| `mappings[].id`           | The mapping's id within the specification.                                                                                                                    |
+| `mappings[].concept`      | The Concept (`id`, a UUID) at the version the mapping was authored against. The mapping applies to every version of that Concept.                             |
+| `mappings[].dataset`      | The dataset (SDTM domain, …) the record belongs to.                                                                                                           |
+| `mappings[].assign`       | Constant variables that identify the record, such as the test code. This is where value-level metadata goes.                                                  |
+| `mappings[].result`       | Where the result goes: `original` (required) and optionally `originalUnit`, `standardCharacter`, `standardNumeric`, `standardUnit`.                           |
+| `mappings[].standardUnit` | The UCUM unit standardised results are expressed in. Required with `standardNumeric`, `standardUnit` or conversions.                                          |
+| `mappings[].conversions`  | Linear conversions into the standard unit: `standard = value × factor + offset` (`offset` defaults to 0).                                                     |
+| `mappings[].decimals`     | Decimal places of the standardised result (0 to 10). Omit it to write the converted value exactly, without trailing zeros.                                    |
+| `mappings[].codelist`     | For a coded result: the NCI C-code of the codelist the code is decoded against. A coded result is not a quantity.                                             |
 
 Dataset and variable names are upper-case letters, digits and `_`, starting with a letter. Conversion factors are the
 sponsor's stated data: the engine never derives one from UCUM.

@@ -5,6 +5,7 @@ The core clinical domain modular monolith (`Cadence.Kernel.*`) providing the uni
 ## Architecture
 
 As formalized in [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and specified in [`CLINICAL_KERNEL_SPECIFICATION.md`](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md), the Clinical Kernel consolidates:
+
 - **Identity & Ownership**: Tenant, Organization, Person, Study, Site, StudySite
 - **Executable Protocol**: ProtocolVersion lifecycle with content-hash freezing, attested approval and amendments (ADR-2452); a typed protocol design document with stable element ids, a structural diff and design findings (ADR-2472)
 - **Clinical Subjects**: Participant, Enrollment, Cohort
@@ -71,12 +72,12 @@ never connect the application as one.
 
 The Knowledge engine's semantic layer (spec §6.1, ADR-2252). Types live in the `Knowledge` namespaces of each assembly.
 
-| Concept | Table | Changes |
-| --- | --- | --- |
-| `CodeSystem` (URI, publisher, `LicenseClass`) | `code_systems` | registered once per tenant and URI |
-| `CodeSystemVersion` with its entries | `code_system_versions`, `code_system_entries` | insert-only |
-| `Concept` (current version, status) and its versions | `concepts`, `concept_revisions` | revisions insert-only |
-| `ConceptMapping` (concept version → `Coding`, relation, status, evidence) | `concept_mappings` | review status only |
+| Concept                                                                   | Table                                         | Changes                            |
+| ------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------- |
+| `CodeSystem` (URI, publisher, `LicenseClass`)                             | `code_systems`                                | registered once per tenant and URI |
+| `CodeSystemVersion` with its entries                                      | `code_system_versions`, `code_system_entries` | insert-only                        |
+| `Concept` (current version, status) and its versions                      | `concepts`, `concept_revisions`               | revisions insert-only              |
+| `ConceptMapping` (concept version → `Coding`, relation, status, evidence) | `concept_mappings`                            | review status only                 |
 
 Every tenant loads the releases it adopts, public ones included; licensed content (MedDRA, WHODrug, SNOMED CT) is
 never in this repository. To load a release, register its code system once, then load the publisher's file:
@@ -250,12 +251,12 @@ To persist one:
    `migrationBuilder.CreateBitemporalGuards(KernelDbContext.Schema, "<table>", "<entity key column>", ...)` after
    `CreateTable` (and `DropBitemporalGuards` in `Down`). This adds:
    - **K-TIME-2:** a deferred `EXCLUDE USING gist (tenant_id WITH =, <keys> WITH =, valid_period WITH &&,
-     recorded_period WITH &&)`, so two versions of one fact can never both be true and known at the same instant.
+recorded_period WITH &&)`, so two versions of one fact can never both be true and known at the same instant.
      Because it is deferred, a correction can close the old row and insert the new one in the same save.
    - **K-TIME-1:** triggers that reject `DELETE`, `TRUNCATE` and any `UPDATE` other than closing an open
      `recorded_period` at a later instant (SQLSTATE `KT001`).
 3. Read with `AsOf(validAt, knownAt)` / `AsOfCurrent(now)`. They translate to `valid_period @> @validAt AND
-   recorded_period @> @knownAt`, which the GiST index serves. `TimeRange.Contains`/`Overlaps`/`Start`/`End`/`IsOpen`
+recorded_period @> @knownAt`, which the GiST index serves. `TimeRange.Contains`/`Overlaps`/`Start`/`End`/`IsOpen`
    translate to `@>`, `&&`, `lower`, `upper` and `upper_inf` in any kernel query.
 
 `KernelSchemaPostgresTests` fails if a mapped bitemporal table is missing its guards.
@@ -274,14 +275,14 @@ The pipeline validates the command (tenant, idempotency key, reason for change),
 `ICurrentActor` (no actor, no write: K-TX-5), authorizes with `IAuthorizer` (a denial is itself audited), replays or
 rejects a used idempotency key (K-TX-3), runs the handler, and commits in one PostgreSQL transaction:
 
-| Written in the same transaction | Table | Mutable? |
-| --- | --- | --- |
-| The one changed aggregate, with `CreatedAt`/`CreatedBy`/`ReasonForChange`/`VersionIndex` stamped | its own table | per its rules |
-| One provenance activity (K-PROV-1) | `provenance_activities` | insert-only |
-| Its events in the §5.2 envelope | `domain_events` | insert-only |
-| One link of the tenant's hash chain | `audit_entries` (+ `audit_chain_heads`) | insert-only (head advances) |
-| One outbox row per event | `outbox_messages` | delivery bookkeeping only |
-| The stored result for the key | `idempotency_records` | insert-only |
+| Written in the same transaction                                                                  | Table                                   | Mutable?                    |
+| ------------------------------------------------------------------------------------------------ | --------------------------------------- | --------------------------- |
+| The one changed aggregate, with `CreatedAt`/`CreatedBy`/`ReasonForChange`/`VersionIndex` stamped | its own table                           | per its rules               |
+| One provenance activity (K-PROV-1)                                                               | `provenance_activities`                 | insert-only                 |
+| Its events in the §5.2 envelope                                                                  | `domain_events`                         | insert-only                 |
+| One link of the tenant's hash chain                                                              | `audit_entries` (+ `audit_chain_heads`) | insert-only (head advances) |
+| One outbox row per event                                                                         | `outbox_messages`                       | delivery bookkeeping only   |
+| The stored result for the key                                                                    | `idempotency_records`                   | insert-only                 |
 
 Insert-only tables (these, plus `audit_chain_seals`, the terminology tables and `attestations`) reject `UPDATE`,
 `DELETE` and `TRUNCATE` with SQLSTATE `KA001`. `KernelAuditChainVerifier` re-derives a tenant's chain and reports the
@@ -345,13 +346,13 @@ Standard definitions and the governed library are tenant-scoped kernel data (spe
 `Standards/` in each layer; the read port `IStandardsRegistry` and the commands are in
 `Cadence.Kernel.Abstractions` (`Cadence.Kernel.Standards` namespace), so applications can use them.
 
-| Command | Does |
-| --- | --- |
-| `RegisterStandardVersion` | Registers a `StandardPackage` (datasets, variables, value-level definitions, CT bindings) once per `(tenant, code, version)`; optional `ExpectedContentHash` pins the content |
-| `ApproveStandardVersion`, `DeprecateStandardVersion` | Draft → Approved → Deprecated, each needing an attestation (`Approved`, `Responsibility`) |
-| `DraftLibraryItem` | Adds the next version of a keyed library item (collection spec, mapping spec, rule pack, codelist subset) |
-| `ApproveLibraryItem`, `DeprecateLibraryItem` | Same governance as standard versions |
-| `DeclareStudyStandards` | Sets a study's approved standard versions, CT versions and library pins (one profile per study, revised in place) |
+| Command                                              | Does                                                                                                                                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RegisterStandardVersion`                            | Registers a `StandardPackage` (datasets, variables, value-level definitions, CT bindings) once per `(tenant, code, version)`; optional `ExpectedContentHash` pins the content |
+| `ApproveStandardVersion`, `DeprecateStandardVersion` | Draft → Approved → Deprecated, each needing an attestation (`Approved`, `Responsibility`)                                                                                     |
+| `DraftLibraryItem`                                   | Adds the next version of a keyed library item (collection spec, mapping spec, rule pack, codelist subset)                                                                     |
+| `ApproveLibraryItem`, `DeprecateLibraryItem`         | Same governance as standard versions                                                                                                                                          |
+| `DeclareStudyStandards`                              | Sets a study's approved standard versions, CT versions and library pins (one profile per study, revised in place)                                                             |
 
 - The content hash (`sha256:` + 64 hex) is over canonical JSON: sorted keys, datasets and variables in ordinal order.
   `IStandardsRegistry.GetStandardPackageAsync` returns the package in that order, so it re-hashes to the stored hash.
@@ -389,11 +390,11 @@ a `RegisterStandardVersion` command.
 A validation run records what a study's pinned rule packs detected at one stage (spec §10.3). Send
 `RecordValidationRun`, or let `ValidationRunner` (`Cadence.Rules`) evaluate and send it:
 
-| Command | What it does |
-| --- | --- |
-| `RecordValidationRun` | Records a run: released pack versions, stage, as-of date, standard, agency, versioned inputs, datasets covered and detections |
-| `InvestigateFinding`, `ClassifyFinding`, `ReopenFinding` | Decisions on a finding's workflow; each reads the finding's derived status first |
-| `AcceptFinding`, `ExplainFinding` | Need a `Responsibility` or `Approved` attestation over `FindingDecisionContent.Hash(finding, last detecting run, decision, text)` |
+| Command                                                  | What it does                                                                                                                      |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `RecordValidationRun`                                    | Records a run: released pack versions, stage, as-of date, standard, agency, versioned inputs, datasets covered and detections     |
+| `InvestigateFinding`, `ClassifyFinding`, `ReopenFinding` | Decisions on a finding's workflow; each reads the finding's derived status first                                                  |
+| `AcceptFinding`, `ExplainFinding`                        | Need a `Responsibility` or `Approved` attestation over `FindingDecisionContent.Hash(finding, last detecting run, decision, text)` |
 
 - A finding's ID is `ValidationFindingId.For(tenant, identity)`: study, stage, pack key, rule ID and target, not the
   rule version. Targets that are kernel objects use a NodeRef without `@version`.

@@ -21,6 +21,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
 | [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
+| [`edc.published_form_version_registries`](#edcpublished_form_version_registries) | `PublishedFormVersionRegistry` | 10 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
 | [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 29 |
 | [`edc.subject_batch_imports`](#edcsubject_batch_imports) | `SubjectBatchImport` | 14 |
@@ -537,6 +538,27 @@ Indexes:
 
 - `idx_form_submissions_coords`: (`StudyId`, `SubjectId`, `VisitId`, `FormId`)
 - `ix_form_submissions_site_id`: (`SiteId`)
+
+## edc.published_form_version_registries
+
+Entity: `PublishedFormVersionRegistry`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `DdfIr` | `jsonb` | no |  |  |
+| `FormHash` | `character varying(255)` | no |  |  |
+| `FormId` | `character varying(255)` | no |  |  |
+| `OpenRosaXml` | `text` | no |  |  |
+| `ProtocolVersion` | `character varying(255)` | no |  |  |
+| `ProtocolVersionId` | `character varying(255)` | no |  |  |
+| `PublishedAt` | `timestamp with time zone` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `TenantId` | `character varying(255)` | no |  |  |
+
+Indexes:
+
+- `IX_published_form_version_registries_StudyId_ProtocolVersion_F~`: unique (`StudyId`, `ProtocolVersion`, `FormId`)
 
 ## edc.site_compliance_caches
 

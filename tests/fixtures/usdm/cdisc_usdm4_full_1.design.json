@@ -59,9 +59,7 @@
           }
         ],
         "summaryMeasure": "Survival of all patients",
-        "interventionIds": [
-          "StudyIntervention_1"
-        ]
+        "interventionIds": ["StudyIntervention_1"]
       },
       {
         "id": "Estimand_2",
@@ -77,9 +75,7 @@
           }
         ],
         "summaryMeasure": "Something else",
-        "interventionIds": [
-          "StudyIntervention_2"
-        ]
+        "interventionIds": ["StudyIntervention_2"]
       }
     ],
     "populations": [
@@ -214,14 +210,8 @@
         "id": "ScheduledActivityInstance_1",
         "name": "E1",
         "epochId": "StudyEpoch_1",
-        "locations": [
-          "Site"
-        ],
-        "collectionSpecIds": [
-          "Activity_1",
-          "Activity_2",
-          "Activity_3"
-        ],
+        "locations": ["Site"],
+        "collectionSpecIds": ["Activity_1", "Activity_2", "Activity_3"],
         "timing": {
           "day": -2,
           "windowBefore": 0,
@@ -232,12 +222,8 @@
         "id": "ScheduledActivityInstance_2",
         "name": "E2",
         "epochId": "StudyEpoch_2",
-        "locations": [
-          "Site"
-        ],
-        "collectionSpecIds": [
-          "Activity_2"
-        ],
+        "locations": ["Site"],
+        "collectionSpecIds": ["Activity_2"],
         "timing": {
           "day": 1,
           "windowBefore": 0,
@@ -248,12 +234,8 @@
         "id": "ScheduledActivityInstance_3",
         "name": "E3",
         "epochId": "StudyEpoch_3",
-        "locations": [
-          "Site"
-        ],
-        "collectionSpecIds": [
-          "Activity_2"
-        ],
+        "locations": ["Site"],
+        "collectionSpecIds": ["Activity_2"],
         "timing": {
           "day": 1,
           "windowBefore": 0,
@@ -264,13 +246,8 @@
         "id": "ScheduledActivityInstance_4",
         "name": "E4",
         "epochId": "StudyEpoch_3",
-        "locations": [
-          "Site"
-        ],
-        "collectionSpecIds": [
-          "Activity_2",
-          "Activity_3"
-        ],
+        "locations": ["Site"],
+        "collectionSpecIds": ["Activity_2", "Activity_3"],
         "timing": {
           "day": 15,
           "windowBefore": 1,
@@ -281,12 +258,8 @@
         "id": "ScheduledActivityInstance_5",
         "name": "E5",
         "epochId": "StudyEpoch_3",
-        "locations": [
-          "Site"
-        ],
-        "collectionSpecIds": [
-          "Activity_4"
-        ],
+        "locations": ["Site"],
+        "collectionSpecIds": ["Activity_4"],
         "timing": {
           "day": 29,
           "windowBefore": 1,
@@ -297,13 +270,8 @@
         "id": "ScheduledActivityInstance_6",
         "name": "E6",
         "epochId": "StudyEpoch_4",
-        "locations": [
-          "Home",
-          "Telehealth"
-        ],
-        "collectionSpecIds": [
-          "Activity_2"
-        ],
+        "locations": ["Home", "Telehealth"],
+        "collectionSpecIds": ["Activity_2"],
         "timing": {
           "day": 43,
           "windowBefore": 3,

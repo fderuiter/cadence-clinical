@@ -23,16 +23,16 @@ We need a unified, core-level, service-agnostic model representing a signature m
 
 ### Option 1: Ad-hoc Signature Models per Service
 
-- ***Pros:*** Simple to implement initially.
-- ***Cons:*** Leads to fragmentation, inconsistent schemas across service boundaries, and lacks standardized validation or cryptographic primitives.
+- _**Pros:**_ Simple to implement initially.
+- _**Cons:**_ Leads to fragmentation, inconsistent schemas across service boundaries, and lacks standardized validation or cryptographic primitives.
 
 ### Option 2: Unified, Lightweight Signature Manifestation and Cryptographic Primitives (Selected)
 
-- ***Pros:***
+- _**Pros:**_
   - ✅ Single, canonical `SignatureManifestation` model in `packages/core-models/` that satisfies all §11.50 requirements.
   - ✅ Robust, centralized asymmetric signing and verification routines utilizing `cryptography`.
   - ✅ Context-propagating context variables `current_signature_manifestation` seamlessly integrated into the `audit_context` stack.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires mapping of existing legacy fields to ensure backwards compatibility.
 
 ## 4. Decision Outcome

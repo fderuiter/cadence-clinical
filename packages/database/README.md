@@ -37,11 +37,11 @@ Each service owns its migrations under `apps/<service>/src/Infrastructure/Persis
 in the shared `cadence` database. The layout and the operations runbook are in
 [docs/OPERATIONAL_DATABASE.md](../../docs/OPERATIONAL_DATABASE.md).
 
-| Setting | Behaviour | Use for |
-| --- | --- | --- |
-| `Database__MigrateOnStartup=true` | applies pending migrations before the web server starts; a failure stops startup | local compose, single-instance environments |
-| `Database__MigrateOnly=true` | applies pending migrations, then exits with code 0 (non-zero on failure) | a deployment job or init container that runs before new replicas roll out |
-| neither (default) | never touches the schema | multi-replica production, where the job above owns migrations |
+| Setting                           | Behaviour                                                                        | Use for                                                                   |
+| --------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `Database__MigrateOnStartup=true` | applies pending migrations before the web server starts; a failure stops startup | local compose, single-instance environments                               |
+| `Database__MigrateOnly=true`      | applies pending migrations, then exits with code 0 (non-zero on failure)         | a deployment job or init container that runs before new replicas roll out |
+| neither (default)                 | never touches the schema                                                         | multi-replica production, where the job above owns migrations             |
 
 For DBA review and GxP qualification, generate an idempotent script instead:
 

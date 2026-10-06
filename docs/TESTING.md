@@ -6,14 +6,14 @@ requirement as qualified.
 
 ## Test projects
 
-| Project | What it holds | Run it with |
-| --- | --- | --- |
-| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database. | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` |
-| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj` | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`. | `dotnet cadence test --integration` |
-| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, suppression and test-layout policies, and the architecture sentinels. | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj` | Black-box HTTP tests against the execution service through `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj` |
-| `packages/ui/tests/` | Vitest suite for the shared JavaScript signing and UI helpers. | `pnpm --filter ui test` |
-| `apps/web/tests/` | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` are excluded. | `pnpm --filter web test` |
+| Project                                                            | What it holds                                                                                                                        | Run it with                                                                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database. | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                               | `dotnet cadence test --integration`                                            |
+| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, suppression and test-layout policies, and the architecture sentinels.   | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service through `WebApplicationFactory`.                                                  | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
+| `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                       | `pnpm --filter ui test`                                                        |
+| `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` are excluded.              | `pnpm --filter web test`                                                       |
 
 `dotnet test Cadence.sln` runs all four .NET test projects. `dotnet cadence test --fast` is the quick loop (every
 project, `Category!=Integration`), and `make verify` runs the quality gates plus every suite before you open a PR.
@@ -197,12 +197,12 @@ branches do not conflict on them (ADR-2287).
 Tests are found by scanning `tests/` for `[Fact]` and `[Theory]` methods and matched to TRX results by
 their fully qualified name. Theory cases are merged: a single failing case fails the test.
 
-| State | Meaning |
-| --- | --- |
-| **Qualified** | At least one test declaring the requirement ran and passed, and none failed. |
-| **Failed** | At least one test declaring the requirement failed, errored, timed out or aborted. |
+| State            | Meaning                                                                                      |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| **Qualified**    | At least one test declaring the requirement ran and passed, and none failed.                 |
+| **Failed**       | At least one test declaring the requirement failed, errored, timed out or aborted.           |
 | **Not verified** | Tests declare the requirement, but none of them passed: they were skipped or have no result. |
-| **Planned** | No test declares the requirement yet. |
+| **Planned**      | No test declares the requirement yet.                                                        |
 
 A test with no result is reported as **NOT RUN**. It is never assumed to have passed. Without any TRX
 results, generation stops with an error unless you run `dotnet cadence generate-rtm --draft` or set

@@ -1,5 +1,7 @@
 using System;
 using System.Text;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Econsent.Domain;
@@ -12,6 +14,8 @@ using Cadence.Testing.Security;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -90,6 +94,125 @@ public sealed class EconsentEndpointsTests : IDisposable
         var binding = new SigTokenBinding(ActionUrl, SemanticAction);
         Action verify = () => verifier.VerifyAndConsumeSigToken(token, "subj-001", binding, Secret);
         verify.Should().Throw<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
+    }
+
+    [Theory]
+    [InlineData(null, "STUDY-1", "SITE-1", "digest123", "sigdata123", "subject_pseudonym")]
+    [InlineData("", "STUDY-1", "SITE-1", "digest123", "sigdata123", "subject_pseudonym")]
+    [InlineData("SUBJ-1", null, "SITE-1", "digest123", "sigdata123", "study_id")]
+    [InlineData("SUBJ-1", "  ", "SITE-1", "digest123", "sigdata123", "study_id")]
+    [InlineData("SUBJ-1", "STUDY-1", null, "digest123", "sigdata123", "site_id")]
+    [InlineData("SUBJ-1", "STUDY-1", "SITE-1", null, "sigdata123", "digest_sha256")]
+    [InlineData("SUBJ-1", "STUDY-1", "SITE-1", "digest123", null, "signature_data")]
+    public async Task ProcessCaptureConsentAsync_IncompletePayload_ReturnsBadRequestValidationErrors(
+        string? subjectPseudonym,
+        string? studyId,
+        string? siteId,
+        string? digestSha256,
+        string? signatureData,
+        string expectedErrorKey)
+    {
+        using var context = CreateContext();
+        var request = new CaptureConsentRequest(
+            SubjectPseudonym: subjectPseudonym,
+            StudyId: studyId,
+            SiteId: siteId,
+            SignerName: "Test Signer",
+            SignerEmail: "test@example.com",
+            SignerRole: "Subject",
+            Meaning: "I agree",
+            SigningReason: null,
+            ProtocolVersion: "v1.0",
+            DigestSha256: digestSha256,
+            SignatureData: signatureData,
+            DeviceTimestamp: SystemClock.Instance.UtcNow);
+
+        var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-001", 1, request, context, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ValidationProblem>();
+        var valProblem = (ValidationProblem)result;
+        valProblem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        valProblem.ProblemDetails.Errors.Should().ContainKey(expectedErrorKey);
+
+        var consentsCount = await context.SubjectConsents.CountAsync(TestContext.Current.CancellationToken);
+        consentsCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ProcessCaptureConsentAsync_SpecialCharactersInSignerNameAndReason_SerializesValidJsonManifest()
+    {
+        using var context = CreateContext();
+        string signerName = "Jane \"The Doctor\" O'Connor\tSpecialist";
+        string meaning = "Reason with \"quotes\", newlines:\nLine 2\ttab and \\backslash.";
+
+        var request = new CaptureConsentRequest(
+            SubjectPseudonym: "SUBJ-999",
+            StudyId: "STUDY-100",
+            SiteId: "SITE-05",
+            SignerName: signerName,
+            SignerEmail: "jane@example.com",
+            SignerRole: "Subject",
+            Meaning: meaning,
+            SigningReason: null,
+            ProtocolVersion: "v2.0",
+            DigestSha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            SignatureData: "SIG_BINDING_DATA_001",
+            DeviceTimestamp: SystemClock.Instance.UtcNow);
+
+        var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-001", 2, request, context, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<Ok<CaptureConsentResponse>>();
+
+        var consentRecord = await context.SubjectConsents.FirstOrDefaultAsync(c => c.SubjectPseudonym == "SUBJ-999", TestContext.Current.CancellationToken);
+        consentRecord.Should().NotBeNull();
+
+        // Verify SignatureManifestJson is valid JSON and preserves original unescaped strings when parsed
+        Action parseAction = () => JsonDocument.Parse(consentRecord!.SignatureManifestJson);
+        parseAction.Should().NotThrow();
+
+        using var doc = JsonDocument.Parse(consentRecord!.SignatureManifestJson);
+        doc.RootElement.GetProperty("signer_name").GetString().Should().Be(signerName);
+        doc.RootElement.GetProperty("signer_role").GetString().Should().Be("Subject");
+        doc.RootElement.GetProperty("meaning").GetString().Should().Be(meaning);
+        doc.RootElement.GetProperty("digest").GetString().Should().Be("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    }
+
+    [Fact]
+    public async Task ProcessCaptureConsentAsync_ValidRequest_PersistsConsentAndSignatureRecords()
+    {
+        using var context = CreateContext();
+        var request = new CaptureConsentRequest(
+            SubjectPseudonym: "SUBJ-123",
+            StudyId: "STUDY-101",
+            SiteId: "SITE-01",
+            SignerName: "John Doe",
+            SignerEmail: "john@example.com",
+            SignerRole: "Subject",
+            Meaning: "I agree to participate",
+            SigningReason: null,
+            ProtocolVersion: "v1.0",
+            DigestSha256: "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289",
+            SignatureData: "DATA_BINDING_V1_SUBJ-123",
+            DeviceTimestamp: SystemClock.Instance.UtcNow);
+
+        var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-001", 1, request, context, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<Ok<CaptureConsentResponse>>();
+        var okResult = (Ok<CaptureConsentResponse>)result;
+        okResult.Value.Should().NotBeNull();
+        okResult.Value!.SubjectPseudonym.Should().Be("SUBJ-123");
+
+        var consentRecord = await context.SubjectConsents.FirstOrDefaultAsync(c => c.SubjectPseudonym == "SUBJ-123", TestContext.Current.CancellationToken);
+        consentRecord.Should().NotBeNull();
+        consentRecord!.StudyId.Should().Be("STUDY-101");
+        consentRecord.SiteId.Should().Be("SITE-01");
+
+        var signatureRecord = await context.ConsentSignatures.FirstOrDefaultAsync(s => s.SubjectPseudonym == "SUBJ-123", TestContext.Current.CancellationToken);
+        signatureRecord.Should().NotBeNull();
+        signatureRecord!.SignerName.Should().Be("John Doe");
     }
 
     private EconsentDbContext CreateContext() =>

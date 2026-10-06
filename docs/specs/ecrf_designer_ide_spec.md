@@ -60,6 +60,7 @@ graph TD
 ## 3. Detailed Technical Specifications
 
 ### 3.1 Pillar 1: The Tripartite JSON Schema Architecture
+
 Form definitions must never generate physical relational tables or columns in PostgreSQL. The form definition is strictly a tripartite JSON document conforming to `packages.ddf.tripartite.TripartiteFormDefinition`:
 
 1. **Data Schema (`schema.json`)**:
@@ -85,23 +86,25 @@ Form definitions must never generate physical relational tables or columns in Po
 ---
 
 ### 3.2 Pillar 2: UX Paradigm — "Figma for Clinical Trials"
-* **Real-Time Multiplayer Collaboration (Yjs CRDT & Ephemeral Server)**:
+
+- **Real-Time Multiplayer Collaboration (Yjs CRDT & Ephemeral Server)**:
   - Ephemeral in-memory Yjs doc server over WebSockets in `apps/designer`.
   - Debounced snapshot persistence to PostgreSQL JSONB upon session flush or manual checkpoint.
   - Field-level awareness, remote cursor rendering with persona color badges (`sponsor_designer`: Blue, `data_manager`: Purple, `medical_monitor`: Green).
   - Contextual collaborative commenting anchored to variable OIDs with `@mention` notifications.
-* **Omni-Channel WYSIWYG Preview**:
+- **Omni-Channel WYSIWYG Preview**:
   - Live toggle between Site EDC (dense 12-col desktop grid), ePRO/eDiary (single-column, 48px touch targets, high contrast), and eSource/eCOA (tablet layout).
-* **Contextual Properties Inspector**:
+- **Contextual Properties Inspector**:
   - Right-hand collapsible drawer exposing CDISC OIDs, SDV tiering, PHI masking, and electronic signature requirements.
 
 ---
 
 ### 3.3 Pillar 3: CDISC-Native Global Library & Smart Blocks
-* **Clinical Smart Blocks**:
+
+- **Clinical Smart Blocks**:
   - Pre-assembled panels from `packages/ddf/smart_blocks.py` (Vital Signs, Hematology Panel, ConMeds Log, Adverse Events).
   - Automatically binds CDASH variables, UCUM units, and default CTCAE reference intervals upon dropping onto the canvas.
-* **Smart Inheritance & Upstream Subscriptions**:
+- **Smart Inheritance & Upstream Subscriptions**:
   - Studies subscribe to Central Global Library blocks via `instantiated_from_oid` graph provenance.
   - When library templates update, active study drafts receive a Git-style notification (`Update Available: View Diff / Accept Update`).
   - Study-specific overrides are preserved in an isolated JSON delta layer.
@@ -109,39 +112,42 @@ Form definitions must never generate physical relational tables or columns in Po
 ---
 
 ### 3.4 Pillar 4: Visual Logic Studio (No-Code Rules Engine)
-* **Visual Scratch/Zapier-Style Canvas**:
+
+- **Visual Scratch/Zapier-Style Canvas**:
   - Data Managers visually construct conditions without coding:
     `IF [Visit 1.Adverse Event.Start Date] IS BEFORE [Visit 1.Informed Consent.Date]`  
     `THEN [Fire Hard Query: "AE cannot start before consent"] AND [Prevent Save]`
-* **Isomorphic AST Execution**:
+- **Isomorphic AST Execution**:
   - Logic compiles into portable AST format.
   - Evaluated in browser JavaScript via `apps/web/src/engine/rulesEvaluator.js` for instant sub-millisecond red-text feedback.
   - Evaluated on the backend by `packages/engine_core/src/Rules/RuleEvaluator.cs` for strict server-side validation during form submission.
-* **Cross-Visit Chronology Engine**:
+- **Cross-Visit Chronology Engine**:
   - Horizontal dependency mapping across patient timeline.
   - Dynamic visit spawning and schedule suppression.
 
 ---
 
 ### 3.5 Pillar 5: Automated UAT & Simulation Studio
-* **Integrated Split-Screen Playground**:
+
+- **Integrated Split-Screen Playground**:
   - Interactive test harness pairing visual designer canvas directly with a live rendered form.
-* **Agentic Edge-Case Generation (Fixed Minimum 500 Payloads)**:
+- **Agentic Edge-Case Generation (Fixed Minimum 500 Payloads)**:
   - `POST /api/v1/ai/crf/generate-uat` invokes AI Gateway to analyze the Tripartite Schema.
   - Synthesizes a minimum of 500 targeted boundary payloads (null values, out-of-range dates, extreme laboratory spikes, contradictory logical inputs) guaranteeing 100% AST branch coverage.
-* **Mathematical Compliance Proof & UAT Report**:
+- **Mathematical Compliance Proof & UAT Report**:
   - Executes payloads through the stateless `RulesEvaluator`.
   - Emits an immutable, 21 CFR Part 11 compliant **UAT Evidence Report (PDF)** with SHA-256 cryptographic digest, proving 100% edit check branch coverage in sub-30 seconds.
 
 ---
 
 ### 3.6 Pillar 6: Git-Style Version Control for Protocol Amendments
-* **Immutable Branching**:
+
+- **Immutable Branching**:
   - Published studies are strictly read-only.
   - Amendments create isolated branch records (`Amendment_2_Draft`).
-* **Visual Semantic Diffing**:
+- **Visual Semantic Diffing**:
   - Compares base vs. amendment Tripartite Schemas to produce visual PR diffs (Added fields, deleted variables, modified constraints, updated edit checks).
-* **In-Flight Patient Migration Matrix**:
+- **In-Flight Patient Migration Matrix**:
   - Data Managers define deployment policy per field/visit:
     - **Prospective**: Applied strictly to subjects enrolled after the amendment effective date.
     - **Retrospective**: Applied across all active subjects with automated missing-data queries dispatched for historical encounters.
@@ -150,21 +156,23 @@ Form definitions must never generate physical relational tables or columns in Po
 ---
 
 ### 3.7 Pillar 7: Native Advanced Clinical Widgets
-* **Medical Dictionary Auto-Coding (`MEDICAL_AUTOCODE`)**:
+
+- **Medical Dictionary Auto-Coding (`MEDICAL_AUTOCODE`)**:
   - Integrated MedDRA / WHODrug lookup with real-time term suggestions and background SOC/PT/ATC code binding.
-* **Interactive Body Maps & VAS (`BODY_MAP_COORDINATE`, `SLIDER_VAS`)**:
+- **Interactive Body Maps & VAS (`BODY_MAP_COORDINATE`, `SLIDER_VAS`)**:
   - Digital anatomical maps with coordinate recording and calibrated Visual Analog Scale sliders for ePRO/eCOA.
-* **Dynamic Repeating Log Grids (`REPEATING_LOG_GRID`)**:
+- **Dynamic Repeating Log Grids (`REPEATING_LOG_GRID`)**:
   - Multi-instance tabular logs (AEs, ConMeds) with reactive column math (e.g. cumulative daily dose).
-* **Sensor & EHR Data Bindings (`SENSOR_STREAM_CARD`)**:
+- **Sensor & EHR Data Bindings (`SENSOR_STREAM_CARD`)**:
   - Field binding overrides for SMART on FHIR pulls or Bluetooth IoT wearable streams.
 
 ---
 
 ### 3.8 Pillar 8: AI Copilot — Protocol-to-CRF Generation
-* **Document Ingestion**:
+
+- **Document Ingestion**:
   - Upload clinical protocol PDF / USDM JSON graph.
-* **Agentic Extraction & Scaffolding**:
+- **Agentic Extraction & Scaffolding**:
   - Extracts Schedule of Activities (SoA) matrix, trial endpoints, and inclusion/exclusion criteria.
   - Auto-populates visit schedules, instantiates Global Library Smart Blocks, and synthesizes initial AST edit checks.
   - Shifts Data Manager role from manual construction to supervisory review and approval.
@@ -174,6 +182,7 @@ Form definitions must never generate physical relational tables or columns in Po
 ## 4. API & Service Contracts
 
 ### 4.1 Schema Compilation & Simulation Endpoints (`apps/designer`)
+
 ```http
 POST /api/v1/designer/studies/{id}/forms/compile
 Content-Type: application/json
@@ -195,6 +204,7 @@ Response (200 OK): {
 ```
 
 ### 4.2 Automated Synthetic UAT Generation (`apps/ai_gateway`)
+
 ```http
 POST /api/v1/ai/crf/generate-uat
 Content-Type: application/json
@@ -218,6 +228,7 @@ Response (200 OK): {
 ```
 
 ### 4.3 Protocol Amendment Diff & Migration Matrix (`apps/designer`)
+
 ```http
 POST /api/v1/designer/studies/{id}/amendments/diff
 Content-Type: application/json

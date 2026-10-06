@@ -24,13 +24,8 @@
       "studyDay": -14,
       "windowBefore": 7,
       "windowAfter": 0,
-      "locations": [
-        "Telehealth"
-      ],
-      "footnotes": [
-        1,
-        2
-      ]
+      "locations": ["Telehealth"],
+      "footnotes": [1, 2]
     },
     {
       "activityId": "visit.baseline",
@@ -39,9 +34,7 @@
       "studyDay": 1,
       "windowBefore": 0,
       "windowAfter": 0,
-      "locations": [
-        "Site"
-      ],
+      "locations": ["Site"],
       "footnotes": []
     },
     {
@@ -51,14 +44,8 @@
       "studyDay": 29,
       "windowBefore": 3,
       "windowAfter": 3,
-      "locations": [
-        "Site",
-        "Home"
-      ],
-      "footnotes": [
-        3,
-        4
-      ]
+      "locations": ["Site", "Home"],
+      "footnotes": [3, 4]
     },
     {
       "activityId": "visit.week8",
@@ -67,12 +54,8 @@
       "studyDay": 57,
       "windowBefore": 3,
       "windowAfter": 3,
-      "locations": [
-        "Site"
-      ],
-      "footnotes": [
-        3
-      ]
+      "locations": ["Site"],
+      "footnotes": [3]
     },
     {
       "activityId": "visit.week12",
@@ -81,12 +64,8 @@
       "studyDay": 85,
       "windowBefore": 3,
       "windowAfter": 3,
-      "locations": [
-        "Site"
-      ],
-      "footnotes": [
-        3
-      ]
+      "locations": ["Site"],
+      "footnotes": [3]
     },
     {
       "activityId": "visit.et",
@@ -94,104 +73,71 @@
       "epochId": "epoch.treatment",
       "windowBefore": 0,
       "windowAfter": 0,
-      "locations": [
-        "Site"
-      ],
-      "footnotes": [
-        5
-      ]
+      "locations": ["Site"],
+      "footnotes": [5]
     }
   ],
   "rows": [
     {
       "collectionSpecId": "cs.consent",
       "name": "Informed consent",
-      "itemIds": [
-        "item.consent"
-      ],
+      "itemIds": ["item.consent"],
       "concepts": [
         {
           "conceptId": "0192f3c4-0000-7000-8000-00000000000d",
           "version": 1
         }
       ],
-      "columns": [
-        0
-      ],
-      "footnotes": [
-        6
-      ],
+      "columns": [0],
+      "footnotes": [6],
       "frequency": 1
     },
     {
       "collectionSpecId": "cs.vitals",
       "name": "Vital signs",
-      "itemIds": [
-        "item.sbp"
-      ],
+      "itemIds": ["item.sbp"],
       "concepts": [
         {
           "conceptId": "0192f3c4-0000-7000-8000-00000000000a",
           "version": 1
         }
       ],
-      "columns": [
-        0,
-        1,
-        2,
-        3,
-        4,
-        5
-      ],
+      "columns": [0, 1, 2, 3, 4, 5],
       "footnotes": [],
       "frequency": 6
     },
     {
       "collectionSpecId": "cs.labs",
       "name": "Laboratory",
-      "itemIds": [
-        "item.hba1c"
-      ],
+      "itemIds": ["item.hba1c"],
       "concepts": [
         {
           "conceptId": "0192f3c4-0000-7000-8000-00000000000b",
           "version": 2
         }
       ],
-      "columns": [
-        1,
-        3,
-        4,
-        5
-      ],
+      "columns": [1, 3, 4, 5],
       "footnotes": [],
       "frequency": 4
     },
     {
       "collectionSpecId": "cs.ecg",
       "name": "12-lead ECG",
-      "itemIds": [
-        "item.qt"
-      ],
+      "itemIds": ["item.qt"],
       "concepts": [
         {
           "conceptId": "0192f3c4-0000-7000-8000-00000000000c",
           "version": 1
         }
       ],
-      "columns": [
-        1,
-        4
-      ],
+      "columns": [1, 4],
       "footnotes": [],
       "frequency": 2
     },
     {
       "collectionSpecId": "cs.pk",
       "name": "Pharmacokinetics",
-      "itemIds": [
-        "item.pk"
-      ],
+      "itemIds": ["item.pk"],
       "concepts": [
         {
           "conceptId": "0192f3c4-0000-7000-8000-00000000000b",
@@ -199,9 +145,7 @@
         }
       ],
       "columns": [],
-      "footnotes": [
-        7
-      ],
+      "footnotes": [7],
       "frequency": 0
     }
   ],

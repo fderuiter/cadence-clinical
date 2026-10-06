@@ -55,8 +55,8 @@ The client then repeats the signature-gated request with the `X-Sig-Token` heade
 
 Signature-gated endpoints today:
 
-| Endpoint | `semantic_action` | `action` |
-| :------- | :---------------- | :------- |
+| Endpoint                                                                                  | `semantic_action`        | `action`                               |
+| :---------------------------------------------------------------------------------------- | :----------------------- | :------------------------------------- |
 | `POST /api/v1/execution/forms/{id}/approve` (and the legacy `/api/v1/forms/{id}/approve`) | `execution.form.approve` | `/api/v1/execution/forms/{id}/approve` |
 
 ---

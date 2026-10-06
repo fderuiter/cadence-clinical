@@ -30,20 +30,20 @@ This decision implements requirements under PRD-SYS-001.
 ### Option 1: Python Protocols checking only at runtime
 
 - **Overview:** Rely on manual code reviews and Python Protocols at runtime.
-- ***Pros:***
+- _**Pros:**_
   - ✅ No extra build steps.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Silent runtime failures are still possible.
   - ❌ No automated gate blocking unmatched signatures in the pipeline.
 
 ### Option 2: Automated Static Type Analysis via Mypy (Selected)
 
 - **Overview:** Use a focused `mypy` execution targeted specifically at the repository contracts and their implementations, and run it as an automated gate in `pnpm check`, the `Makefile`, and pre-commit hooks.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Catch mismatching signatures instantly at development time.
   - ✅ High execution speed (PRD-SUB-002 seconds) targeting the specific files.
   - ✅ Easy integration into the existing pre-push and PR pipelines.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires a small amount of configuration/setup overhead.
 
 ## 4. Decision Outcome

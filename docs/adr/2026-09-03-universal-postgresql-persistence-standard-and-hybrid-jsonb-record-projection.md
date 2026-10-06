@@ -28,23 +28,23 @@ Under 21 CFR Part 11 and ICH GCP E6(R2) (`PRD-SYS-053`), every entity mutation r
 ## 3. Options Considered
 
 ### Option 1: Universal PostgreSQL Persistence + Hybrid Strongly-Typed JSONB Record Projection (Selected)
+
 - Consolidate all 18 microservices on PostgreSQL 14+ with logical database or schema-level multi-tenant isolation.
 - Standardize on `Npgsql.EntityFrameworkCore.PostgreSQL` and the shared `GxPAuditInterceptor` from `Cadence.Database`.
 - Model dynamic clinical attributes as strongly-typed C# 14 record hierarchies mapped to PostgreSQL `jsonb` via `System.Text.Json` source generator converters, paired with an unmapped fallback dictionary (`Dictionary<string, JsonElement>`) for forward compatibility.
 - Adopt `MassTransit` with PostgreSQL Transactional Outbox for all cross-service asynchronous domain event dispatches.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Addresses requirements
-- ***Cons:***
+- _**Cons:**_
   - ❌ Trade-offs accepted
 
-
 ### Option 2: Retain SQLite for Edge Services + Dynamic JsonDocument
+
 - Keep SQLite for the 7 edge services via `Microsoft.EntityFrameworkCore.Sqlite`.
 - Use unconstrained `JsonDocument` properties for observation and form data.
 - Cons: Fractures persistence abstractions, prevents uniform database triggers and Merkle outbox integration, and forces dual-driver test configurations.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Addresses requirements
-
 
 ## 4. Decision Outcome
 

@@ -19,116 +19,83 @@
         "studyDay": 15,
         "windowBefore": 1,
         "windowAfter": 1,
-        "locations": [
-          "Site"
-        ]
+        "locations": ["Site"]
       },
       "after": {
         "epochId": "StudyEpoch_3",
         "studyDay": 15,
         "windowBefore": 2,
         "windowAfter": 2,
-        "locations": [
-          "Site"
-        ]
+        "locations": ["Site"]
       }
     },
     {
       "kind": "VisitMoved",
       "elementId": "ScheduledActivityInstance_6",
-      "impactedElements": [
-        "Activity_2",
-        "ScheduledActivityInstance_6"
-      ],
+      "impactedElements": ["Activity_2", "ScheduledActivityInstance_6"],
       "impactedConcepts": [],
       "before": {
         "epochId": "StudyEpoch_4",
         "studyDay": 43,
         "windowBefore": 3,
         "windowAfter": 3,
-        "locations": [
-          "Home",
-          "Telehealth"
-        ]
+        "locations": ["Home", "Telehealth"]
       },
       "after": {
         "epochId": "StudyEpoch_4",
         "studyDay": 57,
         "windowBefore": 3,
         "windowAfter": 3,
-        "locations": [
-          "Home"
-        ]
+        "locations": ["Home"]
       }
     },
     {
       "kind": "VisitLocationsChanged",
       "elementId": "ScheduledActivityInstance_6",
-      "impactedElements": [
-        "Activity_2",
-        "ScheduledActivityInstance_6"
-      ],
+      "impactedElements": ["Activity_2", "ScheduledActivityInstance_6"],
       "impactedConcepts": [],
       "before": {
         "epochId": "StudyEpoch_4",
         "studyDay": 43,
         "windowBefore": 3,
         "windowAfter": 3,
-        "locations": [
-          "Home",
-          "Telehealth"
-        ]
+        "locations": ["Home", "Telehealth"]
       },
       "after": {
         "epochId": "StudyEpoch_4",
         "studyDay": 57,
         "windowBefore": 3,
         "windowAfter": 3,
-        "locations": [
-          "Home"
-        ]
+        "locations": ["Home"]
       }
     },
     {
       "kind": "VisitAdded",
       "elementId": "ScheduledActivityInstance_7",
-      "impactedElements": [
-        "Activity_2",
-        "ScheduledActivityInstance_7"
-      ],
+      "impactedElements": ["Activity_2", "ScheduledActivityInstance_7"],
       "impactedConcepts": [],
       "after": {
         "epochId": "StudyEpoch_4",
         "studyDay": 71,
         "windowBefore": 3,
         "windowAfter": 3,
-        "locations": [
-          "Site"
-        ]
+        "locations": ["Site"]
       }
     },
     {
       "kind": "ActivityFrequencyChanged",
       "elementId": "Activity_2",
-      "impactedElements": [
-        "Activity_2",
-        "ScheduledActivityInstance_7"
-      ],
+      "impactedElements": ["Activity_2", "ScheduledActivityInstance_7"],
       "impactedConcepts": [],
       "frequencyBefore": 5,
       "frequencyAfter": 6,
-      "collectedAtAdded": [
-        "ScheduledActivityInstance_7"
-      ],
+      "collectedAtAdded": ["ScheduledActivityInstance_7"],
       "collectedAtRemoved": []
     },
     {
       "kind": "ActivityFrequencyChanged",
       "elementId": "Activity_3",
-      "impactedElements": [
-        "Activity_3",
-        "ScheduledActivityInstance_4"
-      ],
+      "impactedElements": ["Activity_3", "ScheduledActivityInstance_4"],
       "impactedConcepts": [
         {
           "conceptId": "00000000-0000-7000-8000-000000025208",
@@ -138,26 +105,18 @@
       "frequencyBefore": 2,
       "frequencyAfter": 1,
       "collectedAtAdded": [],
-      "collectedAtRemoved": [
-        "ScheduledActivityInstance_4"
-      ]
+      "collectedAtRemoved": ["ScheduledActivityInstance_4"]
     },
     {
       "kind": "CriterionChanged",
       "elementId": "EligibilityCriterion_4",
-      "impactedElements": [
-        "EligibilityCriterion_4",
-        "StudyDesignPopulation_1"
-      ],
+      "impactedElements": ["EligibilityCriterion_4", "StudyDesignPopulation_1"],
       "impactedConcepts": []
     },
     {
       "kind": "CriterionAdded",
       "elementId": "EligibilityCriterion_6",
-      "impactedElements": [
-        "EligibilityCriterion_6",
-        "StudyDesignPopulation_1"
-      ],
+      "impactedElements": ["EligibilityCriterion_6", "StudyDesignPopulation_1"],
       "impactedConcepts": []
     }
   ],

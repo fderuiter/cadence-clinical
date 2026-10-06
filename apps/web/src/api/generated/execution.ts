@@ -1310,6 +1310,7 @@ export interface components {
       visit_id?: null | string;
       protocol_version?: null | string;
       payload?: null | string;
+      form_hash?: null | string;
     };
     Execution_FormSubmissionResponse: {
       id: string;

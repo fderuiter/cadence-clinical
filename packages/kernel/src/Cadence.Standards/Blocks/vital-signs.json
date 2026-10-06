@@ -4,8 +4,18 @@
   "items": [
     { "id": "SYSBP", "concept": "C25298", "unit": "mm[Hg]", "required": true },
     { "id": "DIABP", "concept": "C25299", "unit": "mm[Hg]", "required": true },
-    { "id": "PULSE", "concept": "C49676", "unit": "{beats}/min", "required": true },
-    { "id": "RESP", "concept": "C49678", "unit": "{breaths}/min", "required": true },
+    {
+      "id": "PULSE",
+      "concept": "C49676",
+      "unit": "{beats}/min",
+      "required": true
+    },
+    {
+      "id": "RESP",
+      "concept": "C49678",
+      "unit": "{breaths}/min",
+      "required": true
+    },
     { "id": "TEMP", "concept": "C174446", "unit": "Cel", "required": true }
   ]
 }

@@ -53,6 +53,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<ProtocolVersion> ProtocolVersions => Set<ProtocolVersion>();
 
+    public DbSet<FormVersionSnapshot> FormVersionSnapshots => Set<FormVersionSnapshot>();
+
     public DbSet<Attestation> Attestations => Set<Attestation>();
 
     public DbSet<Participant> Participants => Set<Participant>();

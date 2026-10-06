@@ -679,7 +679,18 @@ jobs:
   automerge:
     name: Approve and Automerge
     needs:
-      [classify, actionlint, lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, compliance]
+      [
+        classify,
+        actionlint,
+        lint-and-static,
+        dotnet-quality,
+        native-aot-build,
+        docs-build,
+        security,
+        unit-tests,
+        dotnet-tests,
+        compliance,
+      ]
     if: github.event_name == 'pull_request' && needs.classify.outputs.is_safe == 'true'
     runs-on: ubuntu-latest
     permissions:

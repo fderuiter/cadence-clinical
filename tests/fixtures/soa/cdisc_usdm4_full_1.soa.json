@@ -38,9 +38,7 @@
       "studyDay": -2,
       "windowBefore": 0,
       "windowAfter": 0,
-      "locations": [
-        "Site"
-      ],
+      "locations": ["Site"],
       "footnotes": []
     },
     {
@@ -50,9 +48,7 @@
       "studyDay": 1,
       "windowBefore": 0,
       "windowAfter": 0,
-      "locations": [
-        "Site"
-      ],
+      "locations": ["Site"],
       "footnotes": []
     },
     {
@@ -62,9 +58,7 @@
       "studyDay": 1,
       "windowBefore": 0,
       "windowAfter": 0,
-      "locations": [
-        "Site"
-      ],
+      "locations": ["Site"],
       "footnotes": []
     },
     {
@@ -74,12 +68,8 @@
       "studyDay": 15,
       "windowBefore": 1,
       "windowAfter": 1,
-      "locations": [
-        "Site"
-      ],
-      "footnotes": [
-        1
-      ]
+      "locations": ["Site"],
+      "footnotes": [1]
     },
     {
       "activityId": "ScheduledActivityInstance_5",
@@ -88,12 +78,8 @@
       "studyDay": 29,
       "windowBefore": 1,
       "windowAfter": 1,
-      "locations": [
-        "Site"
-      ],
-      "footnotes": [
-        1
-      ]
+      "locations": ["Site"],
+      "footnotes": [1]
     },
     {
       "activityId": "ScheduledActivityInstance_6",
@@ -102,14 +88,8 @@
       "studyDay": 43,
       "windowBefore": 3,
       "windowAfter": 3,
-      "locations": [
-        "Home",
-        "Telehealth"
-      ],
-      "footnotes": [
-        2,
-        3
-      ]
+      "locations": ["Home", "Telehealth"],
+      "footnotes": [2, 3]
     }
   ],
   "rows": [
@@ -140,9 +120,7 @@
           "version": 1
         }
       ],
-      "columns": [
-        0
-      ],
+      "columns": [0],
       "footnotes": [],
       "frequency": 1
     },
@@ -151,32 +129,21 @@
       "name": "Procedures",
       "itemIds": [],
       "concepts": [],
-      "columns": [
-        0,
-        1,
-        2,
-        3,
-        5
-      ],
+      "columns": [0, 1, 2, 3, 5],
       "footnotes": [],
       "frequency": 5
     },
     {
       "collectionSpecId": "Activity_3",
       "name": "Optional Weight",
-      "itemIds": [
-        "Activity_3.BiomedicalConcept_5"
-      ],
+      "itemIds": ["Activity_3.BiomedicalConcept_5"],
       "concepts": [
         {
           "conceptId": "00000000-0000-7000-8000-000000025208",
           "version": 1
         }
       ],
-      "columns": [
-        0,
-        3
-      ],
+      "columns": [0, 3],
       "footnotes": [],
       "frequency": 2
     },
@@ -197,9 +164,7 @@
           "version": 1
         }
       ],
-      "columns": [
-        4
-      ],
+      "columns": [4],
       "footnotes": [],
       "frequency": 1
     }

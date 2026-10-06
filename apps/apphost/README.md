@@ -11,11 +11,11 @@
 
 ## Profiles and existing infrastructure
 
-| Setting | Values | Effect |
-| --- | --- | --- |
-| `AppHost:Profile` | `full` (default), `core` | `core` runs the gateway, the kernel API host, execution and the web app. `full` adds the other 15 services and MinIO. |
-| `ConnectionStrings:cadence` | an Npgsql connection string | Use this existing database instead of starting the PostgreSQL container. The services apply their migrations to it. |
-| `AppHost:OidcAuthority` | a Keycloak realm URL, `http(s)://host:port/realms/<realm>` | Use this issuer for the gateway and the web app instead of starting the Keycloak container. The realm needs the `cadence-web` client from `docker/cadence-realm.json`. |
+| Setting                     | Values                                                     | Effect                                                                                                                                                                 |
+| --------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AppHost:Profile`           | `full` (default), `core`                                   | `core` runs the gateway, the kernel API host, execution and the web app. `full` adds the other 15 services and MinIO.                                                  |
+| `ConnectionStrings:cadence` | an Npgsql connection string                                | Use this existing database instead of starting the PostgreSQL container. The services apply their migrations to it.                                                    |
+| `AppHost:OidcAuthority`     | a Keycloak realm URL, `http(s)://host:port/realms/<realm>` | Use this issuer for the gateway and the web app instead of starting the Keycloak container. The realm needs the `cadence-web` client from `docker/cadence-realm.json`. |
 
 Pass them on the command line after `--` (`-- --AppHost:Profile=core`) or as environment variables
 (`AppHost__Profile=core`). An unknown profile or a malformed authority stops the AppHost with a message. In the
@@ -33,15 +33,15 @@ routes answer as the service being down.
 - Projects, each on the host port docker compose publishes it on, so the gateway's Development defaults and the
   web apps' `VITE_API_BASE_URL=http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018):
 
-  | Port | Service | Port | Service | Port | Service |
-  | --- | --- | --- | --- | --- | --- |
-  | 8000 | gateway | 8006 | notifications | 8012 | org |
-  | 8001 | designer | 8007 | ctms | 8013 | fileshare |
-  | 8002 | execution | 8008 | safety | 8014 | imaging |
-  | 8003 | etmf | 8009 | tickets | 8015 | knowledge |
-  | 8004 | interop | 8010 | eisf | 8016 | payments |
-  | 8005 | quality | 8011 | econsent | 8017 | ai-gateway |
-  |  |  |  |  | 8018 | kernel |
+  | Port | Service   | Port | Service       | Port | Service    |
+  | ---- | --------- | ---- | ------------- | ---- | ---------- |
+  | 8000 | gateway   | 8006 | notifications | 8012 | org        |
+  | 8001 | designer  | 8007 | ctms          | 8013 | fileshare  |
+  | 8002 | execution | 8008 | safety        | 8014 | imaging    |
+  | 8003 | etmf      | 8009 | tickets       | 8015 | knowledge  |
+  | 8004 | interop   | 8010 | eisf          | 8016 | payments   |
+  | 8005 | quality   | 8011 | econsent      | 8017 | ai-gateway |
+  |      |           |      |               | 8018 | kernel     |
 
 - Every service except the gateway, designer and ai-gateway references the `cadence` database
   (`ConnectionStrings:cadence`), waits for PostgreSQL, and applies its own migrations on start
