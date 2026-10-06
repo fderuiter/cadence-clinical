@@ -36,8 +36,8 @@ public sealed class ExecutionWriteAuthorizationTests(ExecutionPostgresApiFactory
     private const string FormsPath = "/api/v1/execution/forms/";
     private const string SigningReason = "PI approval and sign-off.";
 
-    private static readonly GatewayIdentity Cra = TestSecurityContext.Identity("cra-01", "CRA");
-    private static readonly GatewayIdentity Investigator = TestSecurityContext.Identity("pi-01", "Site Investigator");
+    private static readonly GatewayIdentity Cra = TestSecurityContext.Identity("cra-01", "CRA") with { ChangeReason = "Authorization check" };
+    private static readonly GatewayIdentity Investigator = TestSecurityContext.Identity("pi-01", "Site Investigator") with { ChangeReason = "Authorization check" };
 
     [Fact]
     [Trait("Category", "GxP_OQ")]

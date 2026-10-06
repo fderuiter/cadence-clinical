@@ -45,18 +45,21 @@ public static class QueryEndpoints
             .WithName("RespondClinicalQuery")
             .Produces<ClinicalQueryResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/answer", AnswerQueryAsync)
             .WithName("AnswerClinicalQuery")
-            .ExcludeFromDescription();
+            .ExcludeFromDescription()
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/close", CloseQueryAsync)
             .WithName("CloseClinicalQuery")
             .Produces<ClinicalQueryResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status403Forbidden);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/reopen", ReopenQueryAsync)
             .WithName("ReopenClinicalQuery")
@@ -82,8 +85,8 @@ public static class QueryEndpoints
         legacyGroup.MapPost("/", CreateQueryAsync);
         legacyGroup.MapGet("/{id}", GetQueryByIdAsync);
         legacyGroup.MapGet("/", ListQueriesAsync);
-        legacyGroup.MapPost("/{id}/respond", AnswerQueryAsync);
-        legacyGroup.MapPost("/{id}/close", CloseQueryAsync);
+        legacyGroup.MapPost("/{id}/respond", AnswerQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/{id}/close", CloseQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
         legacyGroup.MapPost("/{id}/reopen", ReopenQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
         legacyGroup.MapPost("/{id}/cancel", CancelQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
