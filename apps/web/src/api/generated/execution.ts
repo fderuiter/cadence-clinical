@@ -438,6 +438,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/labs/toxicity/review-queue": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Staged Ae Review Queue
+     * @description Retrieve laboratory Grade 3/4 toxicity triggers staged for Investigator review.
+     */
+    get: operations["ListStagedAeReviewQueue"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/labs/toxicity/review/{review_id}/action": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Action Staged Ae Review
+     * @description Perform Investigator workflow action on a staged Grade 3/4 AE (Confirm, Dismiss, Escalate).
+     */
+    post: operations["ActionStagedAeReview"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/labs/toxicity/evaluate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Evaluate Lab Toxicity Endpoint
+     * @description Evaluate CTCAE v5.0 Grade, Hy's Law criteria, and delta checks for a single lab observation.
+     */
+    post: operations["EvaluateLabToxicityEndpoint"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
     parameters: {
       query?: never;
@@ -1240,6 +1300,36 @@ export interface components {
         [key: string]: string[];
       };
     };
+    Execution_LabToxicityEvaluateRequest: {
+      test_code: string;
+      /** Format: double */
+      value: number | string;
+      unit: string;
+      /** Format: double */
+      ref_low?: null | number | string;
+      /** Format: double */
+      ref_high?: null | number | string;
+      /** Format: double */
+      baseline_value?: null | number | string;
+      /** Format: date-time */
+      evaluated_at?: null | string;
+    };
+    Execution_LabToxicityEvaluateResponse: {
+      test_code: string;
+      test_name: string;
+      /** Format: double */
+      observed_value: number | string;
+      unit: string;
+      /** Format: int32 */
+      ctcae_grade: number | string;
+      grading_scale: string;
+      toxicity_description: string;
+      is_critical_ae_trigger: boolean;
+      is_hys_law_warning: boolean;
+      is_delta_check_alert: boolean;
+      /** Format: double */
+      delta_percentage: null | number | string;
+    };
     Execution_ObservationCreateRequest: {
       subject_id: string;
       domain: string;
@@ -1379,6 +1469,57 @@ export interface components {
       study_id: string;
     };
     Execution_SiteCode: string;
+    Execution_StagedAdverseEventActionRequest: {
+      action: string;
+      reason_for_change: string;
+      investigator_notes?: null | string;
+      causality_assessment?: null | string;
+      electronic_signature_password?: null | string;
+    };
+    Execution_StagedAdverseEventActionResponse: {
+      id: string;
+      review_status: string;
+      action_taken: string;
+      form_submission_id: null | string;
+      query_id: null | string;
+      message: string;
+      /** Format: date-time */
+      timestamp: string;
+    };
+    Execution_StagedAdverseEventReviewResponse: {
+      id: string;
+      study_id: string;
+      site_id: null | string;
+      subject_id: string;
+      visit_id: null | string;
+      observation_id: null | string;
+      form_submission_id: null | string;
+      query_id: null | string;
+      test_code: string;
+      test_name: string;
+      /** Format: double */
+      lab_value: number | string;
+      unit: string;
+      /** Format: int32 */
+      ctcae_grade: number | string;
+      grading_scale: string;
+      toxicity_term: string;
+      clinical_description: string;
+      is_hys_law_warning: boolean;
+      is_delta_check_alert: boolean;
+      /** Format: double */
+      delta_percentage: null | number | string;
+      review_status: string;
+      reviewed_by: null | string;
+      /** Format: date-time */
+      reviewed_at: null | string;
+      investigator_notes: null | string;
+      /** Format: int32 */
+      version: number | string;
+      is_deleted: boolean;
+      /** Format: date-time */
+      created_at: null | string;
+    };
     Execution_StudyCode: string;
     Execution_SubjectCode: string;
     Execution_SubjectConsentId: string;
@@ -2712,6 +2853,107 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListStagedAeReviewQueue: {
+    parameters: {
+      query?: {
+        study_id?: string;
+        site_id?: string;
+        review_status?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_StagedAdverseEventReviewResponse"][];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ActionStagedAeReview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        review_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_StagedAdverseEventActionRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_StagedAdverseEventActionResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  EvaluateLabToxicityEndpoint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_LabToxicityEvaluateRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_LabToxicityEvaluateResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
         headers: {
           [name: string]: unknown;
         };

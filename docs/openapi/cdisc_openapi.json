@@ -2584,6 +2584,158 @@
         }
       }
     },
+    "/api/v1/execution/labs/toxicity/review-queue": {
+      "get": {
+        "tags": [
+          "Laboratory Governance \u0026 Ingestion"
+        ],
+        "summary": "List Staged Ae Review Queue",
+        "description": "Retrieve laboratory Grade 3/4 toxicity triggers staged for Investigator review.",
+        "operationId": "ListStagedAeReviewQueue",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "review_status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_StagedAdverseEventReviewResponse"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/toxicity/review/{review_id}/action": {
+      "post": {
+        "tags": [
+          "Laboratory Governance \u0026 Ingestion"
+        ],
+        "summary": "Action Staged Ae Review",
+        "description": "Perform Investigator workflow action on a staged Grade 3/4 AE (Confirm, Dismiss, Escalate).",
+        "operationId": "ActionStagedAeReview",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_StagedAdverseEventActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_StagedAdverseEventActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/labs/toxicity/evaluate": {
+      "post": {
+        "tags": [
+          "Laboratory Governance \u0026 Ingestion"
+        ],
+        "summary": "Evaluate Lab Toxicity Endpoint",
+        "description": "Evaluate CTCAE v5.0 Grade, Hy\u0027s Law criteria, and delta checks for a single lab observation.",
+        "operationId": "EvaluateLabToxicityEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_LabToxicityEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_LabToxicityEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
       "post": {
         "tags": [
@@ -9249,6 +9401,131 @@
           }
         }
       },
+      "Execution_LabToxicityEvaluateRequest": {
+        "required": [
+          "test_code",
+          "value",
+          "unit"
+        ],
+        "type": "object",
+        "properties": {
+          "test_code": {
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "ref_low": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "ref_high": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "baseline_value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "evaluated_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_LabToxicityEvaluateResponse": {
+        "required": [
+          "test_code",
+          "test_name",
+          "observed_value",
+          "unit",
+          "ctcae_grade",
+          "grading_scale",
+          "toxicity_description",
+          "is_critical_ae_trigger",
+          "is_hys_law_warning",
+          "is_delta_check_alert",
+          "delta_percentage"
+        ],
+        "type": "object",
+        "properties": {
+          "test_code": {
+            "type": "string"
+          },
+          "test_name": {
+            "type": "string"
+          },
+          "observed_value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "ctcae_grade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "grading_scale": {
+            "type": "string"
+          },
+          "toxicity_description": {
+            "type": "string"
+          },
+          "is_critical_ae_trigger": {
+            "type": "boolean"
+          },
+          "is_hys_law_warning": {
+            "type": "boolean"
+          },
+          "is_delta_check_alert": {
+            "type": "boolean"
+          },
+          "delta_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "Execution_ObservationCreateRequest": {
         "required": [
           "subject_id",
@@ -9828,6 +10105,242 @@
       },
       "Execution_SiteCode": {
         "type": "string"
+      },
+      "Execution_StagedAdverseEventActionRequest": {
+        "required": [
+          "action",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "investigator_notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "causality_assessment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "electronic_signature_password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_StagedAdverseEventActionResponse": {
+        "required": [
+          "id",
+          "review_status",
+          "action_taken",
+          "form_submission_id",
+          "query_id",
+          "message",
+          "timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "review_status": {
+            "type": "string"
+          },
+          "action_taken": {
+            "type": "string"
+          },
+          "form_submission_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_StagedAdverseEventReviewResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_id",
+          "observation_id",
+          "form_submission_id",
+          "query_id",
+          "test_code",
+          "test_name",
+          "lab_value",
+          "unit",
+          "ctcae_grade",
+          "grading_scale",
+          "toxicity_term",
+          "clinical_description",
+          "is_hys_law_warning",
+          "is_delta_check_alert",
+          "delta_percentage",
+          "review_status",
+          "reviewed_by",
+          "reviewed_at",
+          "investigator_notes",
+          "version",
+          "is_deleted",
+          "created_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "visit_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observation_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_submission_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "test_code": {
+            "type": "string"
+          },
+          "test_name": {
+            "type": "string"
+          },
+          "lab_value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "ctcae_grade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "grading_scale": {
+            "type": "string"
+          },
+          "toxicity_term": {
+            "type": "string"
+          },
+          "clinical_description": {
+            "type": "string"
+          },
+          "is_hys_law_warning": {
+            "type": "boolean"
+          },
+          "is_delta_check_alert": {
+            "type": "boolean"
+          },
+          "delta_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "review_status": {
+            "type": "string"
+          },
+          "reviewed_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reviewed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "investigator_notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
       },
       "Execution_StudyCode": {
         "type": "string"
