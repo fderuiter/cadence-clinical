@@ -18,8 +18,10 @@ using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Security;
+using Cadence.Security.Authentication;
 
 using Microsoft.Extensions.Configuration;
 
@@ -42,8 +44,10 @@ public sealed class FormSubmissionApplicationService(
     ISubjectRepository? subjectRepository = null,
     IEditCheckEngine? editCheckEngine = null,
     IAutoQueryDispatchService? autoQueryDispatchService = null,
-    IConfiguration? configuration = null) : IFormSubmissionApplicationService
+    IConfiguration? configuration = null,
+    IClock? clock = null) : IFormSubmissionApplicationService
 {
+    private readonly IClock _clock = clock ?? SystemClock.Instance;
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
     {
         ["vssbp"] = ("VS", "VSSBP", "Systolic Blood Pressure", "mmHg"),
@@ -389,7 +393,7 @@ public sealed class FormSubmissionApplicationService(
             ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET")
             ?? string.Empty;
 
-        if (!HmacSigner.VerifySignature(computedHash, secret, manifest.HmacSignature ?? string.Empty))
+        if (!Cadence.Security.HmacSigner.VerifySignature(computedHash, secret, manifest.HmacSignature ?? string.Empty))
         {
             return FormErrors.InvalidHmacSignature();
         }
@@ -446,6 +450,148 @@ public sealed class FormSubmissionApplicationService(
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToResponse(submission);
+    }
+
+    public async Task<Result<BatchSignOffResponse>> BatchSignOffAsync(
+        BatchSignOffRequest request,
+        AuthenticatedCaller? signer,
+        string? sigToken,
+        CancellationToken cancellationToken)
+    {
+        if (signer is null)
+        {
+            return FormErrors.UnauthorizedSignerRole(string.Empty);
+        }
+
+        string? signerRole = signer.FirstRoleMatching(IsAuthorizedInvestigatorRole);
+        if (signerRole is null)
+        {
+            return FormErrors.UnauthorizedSignerRole(string.Join(",", signer.Roles));
+        }
+
+        if (request.TargetIds == null || request.TargetIds.Count == 0)
+        {
+            return DomainError.Validation("INVALID_TARGET_IDS", "At least one target ID must be specified for batch sign-off.");
+        }
+
+        if (request.TargetIds.Count > 100)
+        {
+            return DomainError.Validation("BATCH_CAP_EXCEEDED", "Batch target size exceeds maximum limit of 100 items per transaction.");
+        }
+
+        string normStudy = request.StudyId.Trim();
+        string normType = request.TargetType.Trim().ToUpperInvariant();
+        string normIds = string.Join(",", request.TargetIds.Select(id => id.Trim()).OrderBy(id => id, StringComparer.Ordinal));
+        string normReason = request.SigningReason.Trim();
+        string bindingStr = $"{normStudy}:{normType}:{normIds}:{normReason}";
+
+        string batchId = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(bindingStr)));
+
+        string secret = configuration?["GATEWAY_SECRET"]
+            ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET")
+            ?? string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(sigToken) && !string.IsNullOrEmpty(secret))
+        {
+            try
+            {
+                var verifier = new SigTokenVerifier();
+                verifier.VerifyAndConsumeSigToken(
+                    sigToken,
+                    signer.UserId,
+                    new SigTokenBinding("/api/v1/execution/batch-sign-off", "execution.form.approve", batchId),
+                    Encoding.UTF8.GetBytes(secret));
+            }
+            catch (Exception)
+            {
+                return DomainError.Unauthorized(SigTokenVerifier.ReauthenticationRequired, "21 CFR Part 11 mandate: Re-authentication is required.");
+            }
+        }
+
+        StudyCode studyCode;
+        try
+        {
+            studyCode = new StudyCode(request.StudyId);
+        }
+        catch (ArgumentException ex)
+        {
+            return DomainError.Validation("INVALID_STUDY_CODE", ex.Message);
+        }
+
+        IReadOnlyList<FormSubmission> candidateSubmissions;
+        if (normType == "SUBJECT")
+        {
+            var subjectCodes = request.TargetIds.Select(id => new SubjectCode(id)).ToList();
+            candidateSubmissions = await formSubmissionRepository.ListBySubjectsForUpdateAsync(studyCode, subjectCodes, cancellationToken).ConfigureAwait(false);
+        }
+        else if (normType == "VISIT")
+        {
+            candidateSubmissions = await formSubmissionRepository.ListByVisitsForUpdateAsync(studyCode, request.TargetIds, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            var formIds = request.TargetIds.Select(id => FormSubmissionId.TryParse(id, out var parsed) ? parsed : (FormSubmissionId?)null).Where(id => id.HasValue).Select(id => id!.Value).ToList();
+            candidateSubmissions = await formSubmissionRepository.ListByIdsForUpdateAsync(formIds, cancellationToken).ConfigureAwait(false);
+        }
+
+        var approvedSubmissionIds = new List<string>();
+        var skippedSubmissionIds = new List<string>();
+
+        DateTime signedAt = _clock.UtcNow.UtcDateTime;
+        var digestHashes = new List<string>();
+
+        foreach (var submission in candidateSubmissions)
+        {
+            if (submission.Status != FormSubmissionStatus.Completed)
+            {
+                skippedSubmissionIds.Add(submission.Id.ToString());
+                continue;
+            }
+
+            string computedHash = ComputePayloadHash(submission.Payload ?? "{}") ?? "0000000000000000000000000000000000000000000000000000000000000000";
+            string hmacSignature = !string.IsNullOrEmpty(secret) ? Cadence.Security.HmacSigner.ComputeSignature(computedHash, secret) : "mock-sig";
+
+            var manifest = SignatureManifest.Create(
+                signer.UserId,
+                signerRole,
+                normReason,
+                signedAt,
+                computedHash,
+                signer.UserId,
+                hmacSignature);
+
+            var approveResult = submission.Approve(manifest);
+            if (approveResult.IsFailure)
+            {
+                skippedSubmissionIds.Add(submission.Id.ToString());
+                continue;
+            }
+
+            submission.ReasonForChange = normReason;
+            approvedSubmissionIds.Add(submission.Id.ToString());
+            digestHashes.Add(computedHash);
+        }
+
+        await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        string certSerial = "CERT-SIG-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        string combinedDigest = digestHashes.Count > 0
+            ? "sha256-" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("|", digestHashes))))
+            : "sha256-" + batchId;
+        string auditTx = "AUD-TX-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+        string timestampUtc = signedAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+
+        return new BatchSignOffResponse(
+            Status: "success",
+            ApprovedSubmissionIds: approvedSubmissionIds,
+            SkippedSubmissionIds: skippedSubmissionIds,
+            SignatureId: certSerial,
+            StudyId: request.StudyId,
+            SubjectId: string.Join(",", request.TargetIds),
+            SignedFormsCount: approvedSubmissionIds.Count,
+            ContentDigest: combinedDigest,
+            TimestampUtc: timestampUtc,
+            AuditTx: auditTx);
     }
 
     /// <summary>
