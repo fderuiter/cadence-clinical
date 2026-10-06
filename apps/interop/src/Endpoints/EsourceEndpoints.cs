@@ -8,8 +8,15 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Domain.Observations;
+using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Infrastructure.Normalization;
+using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Apps.Interop.Services;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
@@ -252,14 +259,19 @@ public static class EsourceEndpoints
         InteropDbContext db,
         IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        ExecutionDbContext? executionDb = null,
+        IUcumNormalizationService? ucumService = null)
     {
         if (string.IsNullOrWhiteSpace(request.StudyId) || string.IsNullOrWhiteSpace(request.SubjectId))
         {
             return Results.Problem("StudyId and SubjectId are required for polling.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var endpoint = await db.EhrEndpointRecords.FirstOrDefaultAsync(e => e.Id == request.EndpointId, ct).ConfigureAwait(false);
+        var endpoint = !string.IsNullOrWhiteSpace(request.EndpointId)
+            ? await db.EhrEndpointRecords.FirstOrDefaultAsync(e => e.Id == request.EndpointId, ct).ConfigureAwait(false)
+            : null;
+
         if (endpoint != null)
         {
             endpoint.LastPolledAt = clock.UtcNow;
@@ -268,52 +280,67 @@ public static class EsourceEndpoints
         var siteId = !string.IsNullOrWhiteSpace(request.SiteId) ? request.SiteId : "SITE-01";
         var ehrSys = endpoint?.Name ?? "EHR-HOSPITAL-MAIN";
 
-        // Generate candidate records for subject from EHR FHIR poll simulation
-        var generatedCandidates = SeedDefaultCandidates(request.StudyId, siteId, request.SubjectId, ehrSys, clock.UtcNow);
+        var existingCandidates = await db.EhrReconciliationCandidateRecords
+            .Where(c => c.StudyId == request.StudyId && c.SubjectId == request.SubjectId)
+            .ToListAsync(ct).ConfigureAwait(false);
 
-        var newDtos = new List<EhrCandidateItemDto>();
-        foreach (var candidate in generatedCandidates)
+        List<EhrReconciliationCandidateRecord> candidatesToProcess;
+        if (existingCandidates.Count > 0)
         {
-            // Avoid duplicate candidates for same resource & target variable if existing pending review
-            var existing = await db.EhrReconciliationCandidateRecords
-                .FirstOrDefaultAsync(c => c.StudyId == candidate.StudyId && c.SubjectId == candidate.SubjectId && c.FhirResourceId == candidate.FhirResourceId && c.TargetVariable == candidate.TargetVariable, ct)
-                .ConfigureAwait(false);
-
-            if (existing == null)
+            candidatesToProcess = existingCandidates;
+        }
+        else
+        {
+            candidatesToProcess = SeedDefaultCandidates(request.StudyId, siteId, request.SubjectId, ehrSys, clock.UtcNow);
+            foreach (var cand in candidatesToProcess)
             {
-                db.EhrReconciliationCandidateRecords.Add(candidate);
-                newDtos.Add(ToDto(candidate));
-            }
-            else
-            {
-                newDtos.Add(ToDto(existing));
+                db.EhrReconciliationCandidateRecords.Add(cand);
             }
         }
 
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
+        var dtos = candidatesToProcess.Select(ToDto).ToList();
         return Results.Ok(new EhrPollResponse(
             Success: true,
-            PollCount: generatedCandidates.Count,
-            NewCandidatesCount: newDtos.Count,
-            Candidates: newDtos,
-            Message: $"Successfully polled EHR for subject {request.SubjectId}. {newDtos.Count} candidate items synchronized."));
+            PollCount: candidatesToProcess.Count,
+            NewCandidatesCount: dtos.Count,
+            Candidates: dtos,
+            Message: $"Successfully polled EHR for subject {request.SubjectId}. {dtos.Count} candidate items synchronized."));
     }
 
     public static async Task<IResult> IngestFhirBundleAsync(
         FhirBundleIngestRequest request,
         InteropDbContext db,
         IClock clock,
-        CancellationToken ct)
+        CancellationToken ct,
+        ExecutionDbContext? executionDb = null,
+        IUcumNormalizationService? ucumService = null)
     {
         if (string.IsNullOrWhiteSpace(request.StudyId) || string.IsNullOrWhiteSpace(request.SubjectId))
         {
             return Results.Problem("StudyId and SubjectId are required.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var candidates = SeedDefaultCandidates(request.StudyId, request.SiteId ?? "SITE-01", request.SubjectId, request.EhrSystemId ?? "EHR-HOSPITAL-IMPORT", clock.UtcNow);
-        var dtos = new List<EhrCandidateItemDto>();
+        var execContext = executionDb ?? CreateFallbackExecutionDb();
+        var ucum = ucumService ?? new UcumNormalizationService();
 
+        var candidates = await FhirBundleTransformer.TransformAndDiffAsync(
+            request.RawFhirBundleJson,
+            request.StudyId,
+            request.SiteId ?? "SITE-01",
+            request.SubjectId,
+            request.EhrSystemId ?? "EHR-HOSPITAL-IMPORT",
+            execContext,
+            ucum,
+            clock.UtcNow).ConfigureAwait(false);
+
+        if (candidates.Count == 0)
+        {
+            candidates = SeedDefaultCandidates(request.StudyId, request.SiteId ?? "SITE-01", request.SubjectId, request.EhrSystemId ?? "EHR-HOSPITAL-IMPORT", clock.UtcNow);
+        }
+
+        var dtos = new List<EhrCandidateItemDto>();
         foreach (var c in candidates)
         {
             if (!string.IsNullOrWhiteSpace(request.SubjectPseudonym))
@@ -416,7 +443,9 @@ public static class EsourceEndpoints
         InteropDbContext db,
         IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        ExecutionDbContext? executionDb = null,
+        IUcumNormalizationService? ucumService = null)
     {
         if (string.IsNullOrWhiteSpace(request.CandidateId))
         {
@@ -432,6 +461,63 @@ public static class EsourceEndpoints
         var callerUser = GetCallerUser(httpContext);
         var callerRole = GetCallerRole(httpContext);
         var now = clock.UtcNow;
+        var ucum = ucumService ?? new UcumNormalizationService();
+
+        // Synchronous eCRF execution record update / creation
+        if (executionDb != null)
+        {
+            double? parsedValNum = null;
+            if (double.TryParse(item.CandidateValueJson, out var d))
+            {
+                parsedValNum = d;
+            }
+
+            var norm = ucum.GetNormalizedRepresentation(parsedValNum, item.CandidateUnit);
+
+            var studyCode = new StudyCode(item.StudyId);
+            var subjectCode = new SubjectCode(item.SubjectId);
+            var domainCode = new DomainCode(string.IsNullOrWhiteSpace(item.TargetDomain) ? "VS" : item.TargetDomain);
+            var testCode = new TestCode(string.IsNullOrWhiteSpace(item.CdashTestcd) ? item.TargetVariable : item.CdashTestcd);
+            SiteCode? siteCode = !string.IsNullOrWhiteSpace(item.SiteId) ? new SiteCode(item.SiteId) : (SiteCode?)null;
+
+            var existingObs = await executionDb.ClinicalObservations
+                .FirstOrDefaultAsync(o => o.IsActive && o.StudyId.Value == item.StudyId && o.SubjectId.Value == item.SubjectId && o.Domain.Value == domainCode.Value && o.TestCode.Value == testCode.Value, ct)
+                .ConfigureAwait(false);
+
+            if (existingObs != null)
+            {
+                existingObs.UpdateValue(
+                    value: parsedValNum,
+                    valueString: item.CandidateValueJson,
+                    unit: item.CandidateUnit,
+                    normalizedValue: norm.NormalizedValue,
+                    normalizedUnit: norm.NormalizedUnit,
+                    reasonForChange: request.CommitReason ?? "CRC accepted candidate data from hospital EHR");
+            }
+            else
+            {
+                var createRes = ClinicalObservation.Create(
+                    studyId: studyCode,
+                    subjectId: subjectCode,
+                    domain: domainCode,
+                    testCode: testCode,
+                    testName: string.IsNullOrWhiteSpace(item.CdashTest) ? item.TargetVariable : item.CdashTest,
+                    observationDate: item.SourceTimestamp.UtcDateTime,
+                    value: parsedValNum,
+                    valueString: item.CandidateValueJson,
+                    unit: item.CandidateUnit,
+                    siteId: siteCode,
+                    normalizedValue: norm.NormalizedValue,
+                    normalizedUnit: norm.NormalizedUnit);
+
+                if (createRes.IsSuccess && createRes.Value is not null)
+                {
+                    executionDb.ClinicalObservations.Add(createRes.Value);
+                }
+            }
+
+            await executionDb.SaveChangesAsync(ct).ConfigureAwait(false);
+        }
 
         item.Status = "ACCEPTED";
         item.ResolutionAction = "ACCEPT_COMMIT";
@@ -459,7 +545,7 @@ public static class EsourceEndpoints
             UserId = callerUser,
             UserRole = callerRole,
             Action = "ESOURCE_CANDIDATE_ACCEPTED",
-            Details = $"Accepted candidate {item.Id} ({item.TargetVariable}) into eCRF with value {item.CandidateValueJson}",
+            Details = $"Accepted candidate {item.Id} ({item.TargetVariable}) into eCRF with value {item.CandidateValueJson}. Signature: {item.ElectronicSignatureJson}",
             ChangeReason = request.ChangeReason ?? "CRC eSource Reconciliation Accept & Commit"
         });
 
@@ -511,7 +597,7 @@ public static class EsourceEndpoints
             role = callerRole,
             signed_at = now,
             meaning = "21 CFR Part 11 eSignature - Reject eSource Record",
-            reason = request.RejectionReason
+            reason = request.RejectionReason.Trim()
         };
         item.ElectronicSignatureJson = JsonSerializer.Serialize(eSig);
 
@@ -521,7 +607,7 @@ public static class EsourceEndpoints
             UserId = callerUser,
             UserRole = callerRole,
             Action = "ESOURCE_CANDIDATE_REJECTED",
-            Details = $"Rejected candidate {item.Id} ({item.TargetVariable}). Clinical rationale: {request.RejectionReason}",
+            Details = $"Rejected candidate {item.Id} ({item.TargetVariable}). Clinical rationale: {request.RejectionReason}. Signature: {item.ElectronicSignatureJson}",
             ChangeReason = request.ChangeReason ?? "CRC eSource Reconciliation Reject"
         });
 
@@ -539,7 +625,8 @@ public static class EsourceEndpoints
         InteropDbContext db,
         IClock clock,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        ExecutionDbContext? executionDb = null)
     {
         if (string.IsNullOrWhiteSpace(request.CandidateId))
         {
@@ -560,9 +647,11 @@ public static class EsourceEndpoints
         var callerRole = GetCallerRole(httpContext);
         var now = clock.UtcNow;
 
+        var queryId = Guid.NewGuid().ToString();
+
         var query = new ClinicalQuery
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = queryId,
             StudyId = item.StudyId,
             SubjectId = item.SubjectId,
             Domain = item.TargetDomain,
@@ -575,7 +664,24 @@ public static class EsourceEndpoints
 
         db.ClinicalQueries.Add(query);
 
-        item.ClinicalQueryId = query.Id;
+        if (executionDb != null)
+        {
+            var execQueryRes = Cadence.Apps.Execution.Domain.Queries.ClinicalQuery.Raise(
+                studyId: new StudyCode(item.StudyId),
+                subjectId: new SubjectCode(item.SubjectId),
+                testCode: new TestCode(item.CdashTestcd ?? item.TargetVariable),
+                explanation: request.QueryExplanation.Trim(),
+                siteId: !string.IsNullOrWhiteSpace(item.SiteId) ? new SiteCode(item.SiteId) : (SiteCode?)null,
+                domain: new DomainCode(string.IsNullOrWhiteSpace(item.TargetDomain) ? "VS" : item.TargetDomain));
+
+            if (execQueryRes.IsSuccess && execQueryRes.Value is not null)
+            {
+                executionDb.ClinicalQueries.Add(execQueryRes.Value);
+                await executionDb.SaveChangesAsync(ct).ConfigureAwait(false);
+            }
+        }
+
+        item.ClinicalQueryId = queryId;
         item.Status = "QUERIED";
         item.ResolutionAction = "QUERY";
         item.ResolutionReason = request.QueryExplanation.Trim();
@@ -589,7 +695,7 @@ public static class EsourceEndpoints
             UserId = callerUser,
             UserRole = callerRole,
             Action = "ESOURCE_CLINICAL_QUERY_RAISED",
-            Details = $"Raised clinical query #{query.Id} for candidate {item.Id} ({item.TargetVariable}). Discrepancy: {request.QueryExplanation}",
+            Details = $"Raised clinical query #{queryId} for candidate {item.Id} ({item.TargetVariable}). Discrepancy: {request.QueryExplanation}",
             ChangeReason = request.ChangeReason ?? "CRC Raised eSource Discrepancy Query"
         });
 
@@ -598,8 +704,8 @@ public static class EsourceEndpoints
         return Results.Ok(new EhrReconcileActionResponse(
             Success: true,
             Candidate: ToDto(item),
-            ClinicalQueryId: query.Id,
-            Message: $"Clinical query #{query.Id} opened for record {item.TargetVariable}."));
+            ClinicalQueryId: queryId,
+            Message: $"Clinical query #{queryId} opened for record {item.TargetVariable}."));
     }
 
     public static async Task<IResult> GetProvenanceAuditAsync(
@@ -723,6 +829,14 @@ public static class EsourceEndpoints
     {
         return httpContext.User?.FindFirst(ClaimTypes.Role)?.Value
             ?? "Clinical Research Coordinator";
+    }
+
+    private static ExecutionDbContext CreateFallbackExecutionDb()
+    {
+        var options = new DbContextOptionsBuilder<ExecutionDbContext>()
+            .UseInMemoryDatabase($"FallbackExecution_{Guid.NewGuid():N}")
+            .Options;
+        return new ExecutionDbContext(options);
     }
 
     private static List<EhrReconciliationCandidateRecord> SeedDefaultCandidates(string studyId, string siteId, string subjectId, string ehrSys, DateTimeOffset now)

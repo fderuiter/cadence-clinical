@@ -1,3 +1,6 @@
+using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Infrastructure.Normalization;
+using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
@@ -20,6 +23,8 @@ builder.Services.AddSingleton<DeviceTokenHasher>();
 builder.Services.AddSingleton<ILockfileValidatorService, LockfileValidatorService>();
 builder.Services.AddSingleton<ISceDockerEngineDriver, SceDockerEngineDriver>();
 builder.AddCadencePostgresDbContext<InteropDbContext>();
+builder.AddCadencePostgresDbContext<ExecutionDbContext>();
+builder.Services.AddSingleton<IUcumNormalizationService, UcumNormalizationService>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
 var app = builder.Build();

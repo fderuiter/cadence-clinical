@@ -225,6 +225,19 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
         NormalizedUnit = normalizedUnit;
     }
 
+    public void UpdateValue(double? value, string? valueString, string? unit, double? normalizedValue, string? normalizedUnit, string? reasonForChange = null)
+    {
+        Value = value;
+        ValueString = valueString;
+        Unit = unit;
+        NormalizedValue = normalizedValue;
+        NormalizedUnit = normalizedUnit;
+        if (!string.IsNullOrWhiteSpace(reasonForChange))
+        {
+            ReasonForChange = reasonForChange.Trim();
+        }
+    }
+
     public void SetOutlier(bool isOutlier)
     {
         IsOutlier = isOutlier;

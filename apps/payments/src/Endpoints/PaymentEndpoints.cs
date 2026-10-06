@@ -1151,7 +1151,7 @@ public static class PaymentEndpoints
             Status = initialStatus,
             ReceiptImageName = request.ReceiptImageName ?? "receipt.jpg",
             ReceiptOcrDataJson = request.ReceiptOcrData != null ? JsonSerializer.Serialize(request.ReceiptOcrData) : null,
-            ReviewedBy = canAutoApprove ? "system_auto_approval" : null,
+            ReviewedBy = canAutoApprove ? "svc:payments_auto_approval" : null,
             ReviewedAt = canAutoApprove ? now : null,
             ReviewNotes = reviewNotes,
             CreatedAt = now,
@@ -1180,7 +1180,7 @@ public static class PaymentEndpoints
                 ReferenceId = claim.Id,
                 Description = $"Auto-approved reimbursement credit for {claim.Category} expense ({claim.MerchantName})",
                 CreatedAt = now,
-                CreatedBy = "system_auto_approval",
+                CreatedBy = "svc:payments_auto_approval",
                 VersionIndex = 1
             };
             dbContext.ParticipantTransactions.Add(creditTx);
@@ -1202,7 +1202,7 @@ public static class PaymentEndpoints
                 ReferenceNumber = achRef,
                 Status = "DISPATCHED",
                 CreatedAt = now,
-                CreatedBy = "system_auto_approval",
+                CreatedBy = "svc:payments_auto_approval",
                 VersionIndex = 1
             };
             dbContext.ParticipantDisbursements.Add(disbursement);
@@ -1219,7 +1219,7 @@ public static class PaymentEndpoints
                 ReferenceId = claim.Id,
                 Description = $"Automated direct ACH payout dispatch ({achRef})",
                 CreatedAt = now,
-                CreatedBy = "system_auto_approval",
+                CreatedBy = "svc:payments_auto_approval",
                 VersionIndex = 1
             };
             dbContext.ParticipantTransactions.Add(achTx);
