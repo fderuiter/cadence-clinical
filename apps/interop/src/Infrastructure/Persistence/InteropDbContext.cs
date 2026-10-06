@@ -28,6 +28,10 @@ public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options)
     public DbSet<SensorDailySummaryRecord> SensorDailySummaryRecords => Set<SensorDailySummaryRecord>();
     public DbSet<SensorSafetyAlertRecord> SensorSafetyAlertRecords => Set<SensorSafetyAlertRecord>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<StatisticalProgram> StatisticalPrograms => Set<StatisticalProgram>();
+    public DbSet<DatabaseLockAuthToken> DatabaseLockAuthTokens => Set<DatabaseLockAuthToken>();
+    public DbSet<ExecutionRunRecord> ExecutionRunRecords => Set<ExecutionRunRecord>();
+    public DbSet<BiostatExportAuditLog> BiostatExportAuditLogs => Set<BiostatExportAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,5 +52,9 @@ public sealed class InteropDbContext(DbContextOptions<InteropDbContext> options)
         modelBuilder.ApplyConfiguration(new SensorDailySummaryRecordConfiguration());
         modelBuilder.ApplyConfiguration(new SensorSafetyAlertRecordConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new StatisticalProgramConfiguration());
+        modelBuilder.ApplyConfiguration(new DatabaseLockAuthTokenConfiguration());
+        modelBuilder.ApplyConfiguration(new ExecutionRunRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new BiostatExportAuditLogConfiguration());
     }
 }

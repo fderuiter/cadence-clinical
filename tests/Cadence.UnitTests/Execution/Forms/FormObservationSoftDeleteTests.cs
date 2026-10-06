@@ -5,11 +5,15 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.EditChecks;
 using Cadence.Apps.Execution.Application.Forms;
+using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
+using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 using Cadence.TestSupport.Execution.Fakes;
 using Cadence.UnitTests.Fixtures.Execution;
 
@@ -261,5 +265,150 @@ public sealed class FormObservationSoftDeleteTests
         context.Observations[0].Id.Should().Be(activeObs.Id);
         context.GetObservationsByTestCode("PULSE").Should().HaveCount(1);
         context.GetObservationsByTestCode("PULSE")[0].Value.Should().Be(72);
+    }
+
+    [Fact]
+    public async Task UpdatePayloadAsync_WhenFieldRemoved_AutomaticallyCancelsOpenQueriesAndDeactivatesObservations()
+    {
+        // Arrange
+        await SeedSubjectAsync("SUBJ-201", "STUDY-001");
+
+        var queryRepo = new InMemoryClinicalQueryRepository();
+        var editCheckEngine = new AstEditCheckEngine();
+        var dispatchService = new AutoQueryDispatchService(queryRepo, new FakeClock(), _auditAccessor);
+        var service = new FormSubmissionApplicationService(
+            _formRepo,
+            _obsRepo,
+            _ucumService,
+            _auditAccessor,
+            _subjectRepo,
+            editCheckEngine,
+            dispatchService);
+
+        string initialPayload = """
+        {
+          "observation_date": "2026-10-01T10:00:00Z",
+          "observations": [
+            {
+              "domain": "VS",
+              "test_code": "VSSBP",
+              "test_name": "Systolic BP",
+              "value": 120,
+              "unit": "INVALID_UNIT"
+            },
+            {
+              "domain": "VS",
+              "test_code": "VSDPB",
+              "test_name": "Diastolic BP",
+              "value": 80,
+              "unit": "INVALID_UNIT"
+            }
+          ]
+        }
+        """;
+
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-201",
+            FormId: "VS_FORM",
+            Payload: initialPayload,
+            SiteId: "SITE-01",
+            VisitId: "VISIT-01"), CancellationToken.None);
+
+        createResult.IsSuccess.Should().BeTrue();
+        string submissionIdStr = createResult.Value!.Id;
+
+        var queriesBefore = await queryRepo.ListBySubjectAsync(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-201"), CancellationToken.None);
+        queriesBefore.Should().HaveCount(2);
+        var sbpQuery = queriesBefore.First(q => q.TestCode.Value.Equals("VSSBP", StringComparison.OrdinalIgnoreCase));
+        sbpQuery.Status.Should().Be(QueryStatus.Open);
+
+        // Act: Update form removing vssbp field (only vsdpb remains with corrected unit)
+        string updatedPayload = """
+        {
+          "observation_date": "2026-10-01T10:00:00Z",
+          "observations": [
+            {
+              "domain": "VS",
+              "test_code": "VSDPB",
+              "test_name": "Diastolic BP",
+              "value": 80,
+              "unit": "mmHg"
+            }
+          ]
+        }
+        """;
+
+        var updateResult = await service.UpdatePayloadAsync(submissionIdStr, updatedPayload, CancellationToken.None);
+        updateResult.IsSuccess.Should().BeTrue();
+
+        // Assert: SBP query should be cancelled and DBP query resolved (unit corrected)
+        sbpQuery.Status.Should().Be(QueryStatus.Cancelled);
+        sbpQuery.CancellationReason.Should().Contain("field removal");
+
+        var dbpQuery = queriesBefore.First(q => q.TestCode.Value.Equals("VSDPB", StringComparison.OrdinalIgnoreCase));
+        dbpQuery.Status.Should().Be(QueryStatus.Closed);
+
+        var activeObs = await _obsRepo.ListBySubjectAsync(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-201"), includeInactive: false, CancellationToken.None);
+        activeObs.Should().ContainSingle(o => o.TestCode.Value == "VSDPB");
+    }
+
+    [Fact]
+    public async Task UpdatePayloadAsync_WhenPayloadCleared_DeactivatesObservationsAndCancelsOpenQueries()
+    {
+        // Arrange
+        await SeedSubjectAsync("SUBJ-202", "STUDY-001");
+
+        var queryRepo = new InMemoryClinicalQueryRepository();
+        var editCheckEngine = new AstEditCheckEngine();
+        var dispatchService = new AutoQueryDispatchService(queryRepo, new FakeClock(), _auditAccessor);
+        var service = new FormSubmissionApplicationService(
+            _formRepo,
+            _obsRepo,
+            _ucumService,
+            _auditAccessor,
+            _subjectRepo,
+            editCheckEngine,
+            dispatchService);
+
+        string initialPayload = """
+        {
+          "observation_date": "2026-10-01T10:00:00Z",
+          "observations": [
+            {
+              "domain": "VS",
+              "test_code": "VSSBP",
+              "test_name": "Systolic BP",
+              "value": 120,
+              "unit": "INVALID_UNIT"
+            }
+          ]
+        }
+        """;
+
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-202",
+            FormId: "VS_FORM",
+            Payload: initialPayload,
+            SiteId: "SITE-01",
+            VisitId: "VISIT-01"), CancellationToken.None);
+
+        createResult.IsSuccess.Should().BeTrue();
+        string submissionIdStr = createResult.Value!.Id;
+
+        var queriesBefore = await queryRepo.ListBySubjectAsync(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-202"), CancellationToken.None);
+        var openQuery = queriesBefore.Single(q => q.Status == QueryStatus.Open);
+
+        // Act: Clear form payload (empty payload)
+        var updateResult = await service.UpdatePayloadAsync(submissionIdStr, "", CancellationToken.None);
+        updateResult.IsSuccess.Should().BeTrue();
+
+        // Assert: Observations deactivated, query cancelled
+        var activeObs = await _obsRepo.ListBySubjectAsync(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-202"), includeInactive: false, CancellationToken.None);
+        activeObs.Should().BeEmpty();
+
+        openQuery.Status.Should().Be(QueryStatus.Cancelled);
+        openQuery.CancellationReason.Should().Contain("field removal");
     }
 }
