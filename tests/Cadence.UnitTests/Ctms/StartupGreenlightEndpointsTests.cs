@@ -9,6 +9,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
@@ -16,7 +17,7 @@ using FluentAssertions;
 
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -26,7 +27,7 @@ public sealed class StartupGreenlightEndpointsTests
 {
     private readonly CtmsDbContext _db;
     private readonly FakeClock _clock;
-    private readonly IConfiguration _config;
+    private readonly IOptions<GatewayAuthenticationOptions> _gatewayOptions;
 
     public StartupGreenlightEndpointsTests()
     {
@@ -37,11 +38,10 @@ public sealed class StartupGreenlightEndpointsTests
 
         _clock = new FakeClock(new DateTimeOffset(2026, 10, 2, 9, 0, 0, TimeSpan.Zero));
 
-        var inMemorySettings = new Dictionary<string, string?>
+        _gatewayOptions = Options.Create(new GatewayAuthenticationOptions
         {
-            ["GATEWAY_SECRET"] = "test-gateway-secret-32-chars-long-12345"
-        };
-        _config = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
+            GatewaySecret = "test-gateway-secret-32-chars-long-12345"
+        });
     }
 
     /// <summary>
@@ -91,7 +91,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "21 CFR Part 11 Batch Certification", _db, _clock, _config, TestContext.Current.CancellationToken);
+            request, "21 CFR Part 11 Batch Certification", _db, _clock, _gatewayOptions, TestContext.Current.CancellationToken);
 
         // Assert
         result.Result.Should().BeOfType<BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>();
@@ -124,7 +124,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Batch activation approved", _db, _clock, _config, TestContext.Current.CancellationToken);
+            request, "Batch activation approved", _db, _clock, _gatewayOptions, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>().Subject;
@@ -194,12 +194,85 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Performance test batch certification", _db, _clock, _config, TestContext.Current.CancellationToken);
+            request, "Performance test batch certification", _db, _clock, _gatewayOptions, TestContext.Current.CancellationToken);
 
         sw.Stop();
 
         // Assert
         result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>();
         sw.ElapsedMilliseconds.Should().BeLessThan(5000); // Constraint < 5 seconds
+    }
+
+    /// <summary>
+    /// Verifies that single site certification generates valid HMAC token when configured with valid 32-character secret.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SSU-003")]
+    public async Task CertifySite_CertifiesCompliantSite_WhenValidSecretProvided()
+    {
+        // Act
+        var result = await StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
+            "SITE-101", "PROTOCOL-2026-01", "US", "Single site certified", _db, _clock, _gatewayOptions, TestContext.Current.CancellationToken);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<Ok<SiteGreenlightGateResponseDto>>().Subject;
+        var dto = okResult.Value!;
+        dto.OverallStatus.Should().Be("APPROVED");
+        dto.GreenlightToken.Should().NotBeNullOrEmpty();
+        dto.GreenlightToken.Should().Contain(".");
+    }
+
+    /// <summary>
+    /// Verifies that single-site certification throws InvalidOperationException when GATEWAY_SECRET is missing or under 32 characters.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("short-secret-under-32-chars")]
+    [GxPRequirement("PRD-SSU-003")]
+    public async Task CertifySite_ThrowsInvalidOperationException_WhenGatewaySecretMissingOrTooShort(string? invalidSecret)
+    {
+        // Arrange
+        var invalidOptions = Options.Create(new GatewayAuthenticationOptions { GatewaySecret = invalidSecret });
+
+        // Act
+        var act = () => StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
+            "SITE-101", "PROTOCOL-2026-01", "US", "Single site certified", _db, _clock, invalidOptions, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*GATEWAY_SECRET must be configured and be at least 32 characters.*");
+    }
+
+    /// <summary>
+    /// Verifies that batch certification throws InvalidOperationException when GATEWAY_SECRET is missing or under 32 characters.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("short-secret-under-32-chars")]
+    [GxPRequirement("PRD-SSU-003")]
+    public async Task BatchCertify_ThrowsInvalidOperationException_WhenGatewaySecretMissingOrTooShort(string? invalidSecret)
+    {
+        // Arrange
+        var invalidOptions = Options.Create(new GatewayAuthenticationOptions { GatewaySecret = invalidSecret });
+        var request = new BatchCertifyRequestDto(
+            StudyId: "PROTOCOL-2026-01",
+            CountryCode: "US",
+            SiteIds: new List<string> { "SITE-101" },
+            SignerName: "Dr. Eleanor Vance",
+            SignerRole: "VP of Regulatory & Clinical Operations",
+            Meaning: "Batch certifying greenlight activation"
+        );
+
+        // Act
+        var act = () => StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
+            request, "21 CFR Part 11 Batch Certification", _db, _clock, invalidOptions, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*GATEWAY_SECRET must be configured and be at least 32 characters.*");
     }
 }

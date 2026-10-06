@@ -56,6 +56,10 @@ public static class CadenceSecurityServiceCollectionExtensions
                 $"{GatewaySecretConfigurationKey} must be set to a secret of at least {GatewayAuthenticationOptions.MinimumSecretLength} characters.")
             .ValidateOnStart();
 
+        services.AddOptions<GatewayAuthenticationOptions>()
+            .Configure<IServiceProvider>((authOptions, sp) =>
+                authOptions.GatewaySecret ??= options.GatewaySecret ?? sp.GetService<IConfiguration>()?[GatewaySecretConfigurationKey]);
+
         services.AddTransient<AuditorWriteGuardMiddleware>();
         services.AddSingleton<ReplayCache>();
         services.AddSingleton<SigTokenVerifier>();

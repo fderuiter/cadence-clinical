@@ -20,6 +20,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using Cadence.Security.Authentication;
 
 namespace Cadence.Apps.Ctms.Endpoints;
 
@@ -82,9 +84,15 @@ public static class StartupGreenlightEndpoints
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
         [FromServices] IClock clock,
-        IConfiguration config,
+        IOptions<GatewayAuthenticationOptions> gatewayOptions,
         CancellationToken ct)
     {
+        string? secret = gatewayOptions.Value.GatewaySecret;
+        if (string.IsNullOrWhiteSpace(secret) || secret.Length < GatewayAuthenticationOptions.MinimumSecretLength)
+        {
+            throw new InvalidOperationException($"GATEWAY_SECRET must be configured and be at least {GatewayAuthenticationOptions.MinimumSecretLength} characters.");
+        }
+
         countryCode = (countryCode ?? "US").ToUpperInvariant();
         var gate = await GetOrCreateGateAsync(db, studyId, siteId, countryCode, ct);
 
@@ -99,7 +107,6 @@ public static class StartupGreenlightEndpoints
         }
 
         string signer = "Startup Manager";
-        string secret = config["GATEWAY_SECRET"] ?? "internal-gateway-secret-12345";
         DateTimeOffset now = clock.UtcNow;
         long issuedAt = now.ToUnixTimeSeconds();
         long expiresAt = issuedAt + (86400 * 365);
@@ -158,9 +165,15 @@ public static class StartupGreenlightEndpoints
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
         [FromServices] IClock clock,
-        IConfiguration config,
+        IOptions<GatewayAuthenticationOptions> gatewayOptions,
         CancellationToken ct)
     {
+        string? secret = gatewayOptions.Value.GatewaySecret;
+        if (string.IsNullOrWhiteSpace(secret) || secret.Length < GatewayAuthenticationOptions.MinimumSecretLength)
+        {
+            throw new InvalidOperationException($"GATEWAY_SECRET must be configured and be at least {GatewayAuthenticationOptions.MinimumSecretLength} characters.");
+        }
+
         if (request.SiteIds == null || request.SiteIds.Count == 0)
         {
             return TypedResults.BadRequest(new ProblemDetails
@@ -200,7 +213,6 @@ public static class StartupGreenlightEndpoints
 
         string signer = !string.IsNullOrWhiteSpace(request.SignerName) ? request.SignerName : "Startup Manager";
         string role = !string.IsNullOrWhiteSpace(request.SignerRole) ? request.SignerRole : "VP of Clinical Operations";
-        string secret = config["GATEWAY_SECRET"] ?? "internal-gateway-secret-12345";
         DateTimeOffset now = clock.UtcNow;
         long issuedAt = now.ToUnixTimeSeconds();
         long expiresAt = issuedAt + (86400 * 365);
