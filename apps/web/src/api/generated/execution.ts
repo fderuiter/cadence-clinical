@@ -150,6 +150,57 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/subjects/batch/upload": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Uploads a CSV subject roster file for background pre-enrollment validation. */
+    post: operations["UploadSubjectBatch"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/subjects/batch/{batchId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Retrieves status and row-level validation errors for a subject batch import job. */
+    get: operations["GetSubjectBatchDetail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/subjects/batch/{batchId}/commit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Transactionally commits valid subjects from a validated import batch. */
+    post: operations["CommitSubjectBatch"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/observations": {
     parameters: {
       query?: never;
@@ -1201,6 +1252,8 @@ export interface components {
         [key: string]: string[];
       };
     };
+    /** Format: binary */
+    Execution_IFormFile: string;
     Execution_ObservationCreateRequest: {
       subject_id: string;
       domain: string;
@@ -1341,6 +1394,56 @@ export interface components {
     };
     Execution_SiteCode: string;
     Execution_StudyCode: string;
+    Execution_SubjectBatchCommitResponse: {
+      batch_id: string;
+      /** Format: int32 */
+      committed_count: number | string;
+      subject_codes: string[];
+      /** Format: date-time */
+      committed_at: string;
+    };
+    Execution_SubjectBatchDetailResponse: {
+      batch_id: string;
+      study_id: components["schemas"]["Execution_StudyCode"];
+      file_name: string;
+      /** Format: int32 */
+      total_rows: number | string;
+      /** Format: int32 */
+      valid_rows: number | string;
+      /** Format: int32 */
+      invalid_rows: number | string;
+      status: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      completed_at: null | string;
+      /** Format: date-time */
+      committed_at: null | string;
+      rows: components["schemas"]["Execution_SubjectBatchRowResponse"][];
+    };
+    Execution_SubjectBatchRowResponse: {
+      /** Format: int32 */
+      row_number: number | string;
+      subject_id: string;
+      site_id: null | components["schemas"]["Execution_SiteCode"];
+      arm_id: null | string;
+      name: null | string;
+      birthdate: null | string;
+      gender: null | string;
+      race: null | string;
+      status: string;
+      error_message: null | string;
+    };
+    Execution_SubjectBatchUploadResponse: {
+      batch_id: string;
+      study_id: components["schemas"]["Execution_StudyCode"];
+      file_name: string;
+      /** Format: int32 */
+      total_rows: number | string;
+      status: string;
+      /** Format: date-time */
+      created_at: string;
+    };
     Execution_SubjectCode: string;
     Execution_SubjectConsentId: string;
     Execution_SubjectConsentRequest: {
@@ -1836,6 +1939,143 @@ export interface operations {
     responses: {
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  UploadSubjectBatch: {
+    parameters: {
+      query?: {
+        study_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          study_id?: string;
+        } & {
+          file?: components["schemas"]["Execution_IFormFile"];
+        };
+      };
+    };
+    responses: {
+      /** @description Accepted */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_SubjectBatchUploadResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetSubjectBatchDetail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        batchId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_SubjectBatchDetailResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  CommitSubjectBatch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        batchId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_SubjectBatchCommitResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

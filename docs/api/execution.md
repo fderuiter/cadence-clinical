@@ -40,6 +40,9 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `GET` | `/api/v1/execution/sites/{siteId}/compliance-status` | GetSiteComplianceStatus |  |
 | `GET` | `/api/v1/execution/subjects` | ListSubjects | Lists one page of a study's subjects in enrollment order. |
 | `POST` | `/api/v1/execution/subjects` | CreateSubject |  |
+| `POST` | `/api/v1/execution/subjects/batch/upload` | UploadSubjectBatch | Uploads a CSV subject roster file for background pre-enrollment validation. |
+| `GET` | `/api/v1/execution/subjects/batch/{batchId}` | GetSubjectBatchDetail | Retrieves status and row-level validation errors for a subject batch import job. |
+| `POST` | `/api/v1/execution/subjects/batch/{batchId}/commit` | CommitSubjectBatch | Transactionally commits valid subjects from a validated import batch. |
 | `GET` | `/api/v1/execution/subjects/{subjectId}` | GetSubjectDetail |  |
 | `POST` | `/api/v1/execution/subjects/{subjectId}/consent` | RecordSubjectConsent |  |
 | `PUT` | `/api/v1/execution/subjects/{subjectId}/demographics` | UpdateSubjectDemographics |  |
