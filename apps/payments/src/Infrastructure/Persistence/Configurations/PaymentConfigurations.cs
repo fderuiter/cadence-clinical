@@ -456,6 +456,7 @@ public class ParticipantExpenseClaimConfiguration : IEntityTypeConfiguration<Par
         builder.Property(x => x.ReceiptOcrDataJson).HasColumnType("jsonb");
         builder.Property(x => x.ReviewedBy).HasMaxLength(255);
         builder.Property(x => x.ReviewNotes).HasMaxLength(1000);
+        builder.Property(x => x.DisbursementReference).HasMaxLength(100);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000);
     }

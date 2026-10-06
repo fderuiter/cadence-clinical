@@ -1,4 +1,4 @@
-# ADR-2810: DSUR Relational Snapshot Ledger and Cryptographic Verification
+# ADR-2812: DSUR Relational Snapshot Ledger and Cryptographic Verification
 
 - **Status:** Accepted
 - **Date:** 2026-10-06
