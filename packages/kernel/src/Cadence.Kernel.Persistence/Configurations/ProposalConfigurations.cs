@@ -33,6 +33,7 @@ internal sealed class ProposalConfiguration : IEntityTypeConfiguration<Proposal>
                 + " OR (proposed_by_kind <> 'AutomationAgent' AND model_id IS NULL)");
             t.HasCheckConstraint("ck_proposals_content_hash", $"content_hash ~ '{ContentHash.Pattern}'");
             t.HasCheckConstraint("ck_proposals_simulated_impact", $"simulated_impact IS NULL OR simulated_impact ~ '{ContentHash.Pattern}'");
+            t.HasCheckConstraint("ck_proposals_confidence_score", "confidence_score IS NULL OR (confidence_score >= 0.0 AND confidence_score <= 1.0)");
             t.HasCheckConstraint(
                 "ck_proposals_decision",
                 "(status = 'Open' AND decided_at IS NULL AND decided_by_id IS NULL AND decided_by_kind IS NULL AND approval_attestation_id IS NULL AND decision_reason IS NULL)"
@@ -52,6 +53,14 @@ internal sealed class ProposalConfiguration : IEntityTypeConfiguration<Proposal>
         builder.Property(x => x.DecidedById).HasMaxLength(256);
         builder.Property(x => x.DecidedByKind).HasConversion<string>().HasMaxLength(32);
         builder.Property(x => x.DecisionReason).HasMaxLength(1000);
+        builder.Property(x => x.ConfidenceScore);
+        builder.Property(x => x.IsEscalated).IsRequired();
+        builder.Property(x => x.EscalatedById).HasMaxLength(256);
+        builder.Property(x => x.EscalatedByKind).HasConversion<string>().HasMaxLength(32);
+        builder.Property(x => x.EscalatedTo).HasMaxLength(256);
+        builder.Property(x => x.EscalationReason).HasMaxLength(1000);
+        builder.Property(x => x.EscalationPolicy).HasMaxLength(200);
+        builder.Ignore(x => x.ConfidenceTier);
         builder.Ignore(x => x.ProposedBy);
         builder.Ignore(x => x.SignableTarget);
         builder.HasIndex(x => new { x.TenantId, x.StudyId, x.Status });

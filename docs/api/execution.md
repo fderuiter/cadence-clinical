@@ -4,6 +4,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `POST` | `/api/v1/execution/batch-sign-off` | BatchSignOff |  |
 | `GET` | `/api/v1/execution/cec/dossiers/{id}` | GetCecDossierById |  |
 | `POST` | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate` | ChairAdjudicateDossier |  |
 | `GET` | `/api/v1/execution/coding/synonyms` | GetActiveSynonymRules | Retrieve active synonym rules for study auto-coding engine. |
@@ -18,6 +19,9 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/forms/{id}/approve` | ApproveFormSubmission |  |
 | `POST` | `/api/v1/execution/forms/{id}/complete` | CompleteFormSubmission |  |
 | `POST` | `/api/v1/execution/forms/{id}/unlock` | UnlockFormSubmission |  |
+| `POST` | `/api/v1/execution/labs/toxicity/evaluate` | EvaluateLabToxicityEndpoint | Evaluate Lab Toxicity Endpoint |
+| `GET` | `/api/v1/execution/labs/toxicity/review-queue` | ListStagedAeReviewQueue | List Staged Ae Review Queue |
+| `POST` | `/api/v1/execution/labs/toxicity/review/{review_id}/action` | ActionStagedAeReview | Action Staged Ae Review |
 | `POST` | `/api/v1/execution/observations` | CreateClinicalObservation |  |
 | `GET` | `/api/v1/execution/observations/subject/{studyId}/{subjectId}` | ListObservationsBySubject |  |
 | `GET` | `/api/v1/execution/observations/{id}` | GetObservationById |  |

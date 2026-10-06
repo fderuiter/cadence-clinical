@@ -11,8 +11,10 @@ using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Application.Subjects;
+using Cadence.Apps.Execution.Application.Toxicity;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
@@ -162,7 +164,9 @@ builder.Services.AddScoped<IConsentRepository, ConsentRepository>();
 builder.Services.AddScoped<ISiteComplianceRepository, SiteComplianceRepository>();
 builder.Services.AddScoped<IObservationRepository, ObservationRepository>();
 builder.Services.AddScoped<IFormSubmissionRepository, FormSubmissionRepository>();
+builder.Services.AddScoped<IPublishedFormVersionRegistryRepository, PublishedFormVersionRegistryRepository>();
 builder.Services.AddScoped<IClinicalQueryRepository, ClinicalQueryRepository>();
+builder.Services.AddScoped<IStagedAdverseEventReviewRepository, StagedAdverseEventReviewRepository>();
 builder.Services.AddScoped<ICecRepository, CecRepository>();
 
 // IAuditLogWriter (MIG-SUBJ-017's explicit-call audit seam, EfAuditLogWriter's own implementation
@@ -192,6 +196,7 @@ builder.Services.AddScoped<IObservationApplicationService, ObservationApplicatio
 builder.Services.AddScoped<IFormSubmissionApplicationService, FormSubmissionApplicationService>();
 builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplicationService>();
 builder.Services.AddScoped<IAutoQueryDispatchService, AutoQueryDispatchService>();
+builder.Services.AddScoped<ILabToxicityGovernanceService, LabToxicityGovernanceService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
 builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
 builder.Services.AddScoped<ISynonymImportService, SynonymImportService>();
@@ -232,6 +237,7 @@ builder.Services.AddMassTransit(x =>
     });
 
     x.AddConsumer<EConsentCompletedConsumer>();
+    x.AddConsumer<FormVersionPublishedConsumer>();
 
     x.UsingInMemory((context, cfg) => cfg.ConfigureEndpoints(context));
 });
@@ -252,6 +258,7 @@ app.MapSiteComplianceEndpoints();
 app.MapObservationEndpoints();
 app.MapFormEndpoints();
 app.MapQueryEndpoints();
+app.MapLabToxicityEndpoints();
 app.MapCecEndpoints();
 app.MapCgtEndpoints();
 app.MapSynonymEndpoints();

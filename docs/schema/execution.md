@@ -22,7 +22,9 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
 | [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
+| [`edc.published_form_version_registries`](#edcpublished_form_version_registries) | `PublishedFormVersionRegistry` | 10 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
+| [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 29 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
 | [`edc.synonym_rules`](#edcsynonym_rules) | `SynonymRule` | 15 |
 
@@ -562,6 +564,27 @@ Indexes:
 - `idx_form_submissions_coords`: (`StudyId`, `SubjectId`, `VisitId`, `FormId`)
 - `ix_form_submissions_site_id`: (`SiteId`)
 
+## edc.published_form_version_registries
+
+Entity: `PublishedFormVersionRegistry`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `DdfIr` | `jsonb` | no |  |  |
+| `FormHash` | `character varying(255)` | no |  |  |
+| `FormId` | `character varying(255)` | no |  |  |
+| `OpenRosaXml` | `text` | no |  |  |
+| `ProtocolVersion` | `character varying(255)` | no |  |  |
+| `ProtocolVersionId` | `character varying(255)` | no |  |  |
+| `PublishedAt` | `timestamp with time zone` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `TenantId` | `character varying(255)` | no |  |  |
+
+Indexes:
+
+- `IX_published_form_version_registries_StudyId_ProtocolVersion_F~`: unique (`StudyId`, `ProtocolVersion`, `FormId`)
+
 ## edc.site_compliance_caches
 
 Entity: `SiteComplianceCache`
@@ -580,6 +603,47 @@ Entity: `SiteComplianceCache`
 | `VersionIndex` | `bigint` | no |  |  |
 | `_version` | `bigint` | no | `0` |  |
 | `missing_documents` | `text[]` | no |  |  |
+
+## edc.staged_adverse_event_reviews
+
+Entity: `StagedAdverseEventReview`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `text` | no |  | PK |
+| `VersionIndex` | `bigint` | no |  |  |
+| `clinical_description` | `text` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `text` | no |  |  |
+| `ctcae_grade` | `integer` | no |  |  |
+| `delta_percentage` | `double precision` | yes |  |  |
+| `form_submission_id` | `text` | yes |  |  |
+| `grading_scale` | `text` | no |  |  |
+| `investigator_notes` | `text` | yes |  |  |
+| `is_deleted` | `boolean` | no |  |  |
+| `is_delta_check_alert` | `boolean` | no |  |  |
+| `is_hys_law_warning` | `boolean` | no |  |  |
+| `lab_value` | `double precision` | no |  |  |
+| `observation_id` | `text` | yes |  |  |
+| `query_id` | `text` | yes |  |  |
+| `reason_for_change` | `text` | no |  |  |
+| `review_status` | `text` | no |  |  |
+| `reviewed_at` | `timestamp with time zone` | yes |  |  |
+| `reviewed_by` | `text` | yes |  |  |
+| `site_id` | `text` | yes |  |  |
+| `study_id` | `text` | no |  |  |
+| `subject_id` | `text` | no |  |  |
+| `test_code` | `text` | no |  |  |
+| `test_name` | `text` | no |  |  |
+| `toxicity_term` | `text` | no |  |  |
+| `unit` | `text` | no |  |  |
+| `version` | `integer` | no |  |  |
+| `visit_id` | `text` | yes |  |  |
+
+Indexes:
+
+- `IX_staged_adverse_event_reviews_study_id_review_status`: (`study_id`, `review_status`)
+- `IX_staged_adverse_event_reviews_subject_id`: (`subject_id`)
 
 ## edc.subject_consents
 

@@ -17,7 +17,7 @@
         </data>
       </instance>
       {% for item in items %}
-      <bind nodeset="/data/{{ item.name }}" type="{{ item.type }}"{% if item.relevant != null and item.relevant != "" %} relevant="{{ item.relevant }}"{% endif %}{% if item.constraint != null and item.constraint != "" %} constraint="{{ item.constraint }}"{% endif %}{% if item.constraint_message != null and item.constraint_message != "" %} jr:constraintMsg="{{ item.constraint_message }}"{% endif %}/>
+      <bind nodeset="/data/{{ item.name }}" type="{{ item.type }}"{% if item.relevant != null and item.relevant != "" %} relevant="{{ item.relevant }}"{% endif %}{% if item.constraint != null and item.constraint != "" %} constraint="{{ item.constraint }}"{% endif %}{% if item.constraint_message != null and item.constraint_message != "" %} jr:constraintMsg="{{ item.constraint_message }}"{% endif %}{% if item.constraint_severity != null and item.constraint_severity != "" %} or:severity="{{ item.constraint_severity }}"{% endif %}{% if item.constraint_code != null and item.constraint_code != "" %} or:code="{{ item.constraint_code }}"{% endif %}/>
       {% endfor %}
     </model>
   </h:head>

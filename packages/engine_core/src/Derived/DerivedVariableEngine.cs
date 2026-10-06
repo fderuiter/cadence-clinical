@@ -248,7 +248,7 @@ public static class DerivedVariableEngine
     // The Python defaulted a missing sex to female and read any other value as male; the port requires F or M.
     private static bool IsFemale(Dictionary<string, object?> ctx)
     {
-        object? raw = Truthy(ctx.GetValueOrDefault("sex")) ? ctx["sex"] : ctx.GetValueOrDefault("gender");
+        object? raw = HasValue(ctx.GetValueOrDefault("sex")) ? ctx["sex"] : ctx.GetValueOrDefault("gender");
         string sex = (Convert.ToString(raw, CultureInfo.InvariantCulture) ?? string.Empty).Trim().ToUpperInvariant();
         return sex switch
         {
@@ -259,13 +259,13 @@ public static class DerivedVariableEngine
         };
     }
 
-    // Python's `ctx.get(a) or ctx.get(b) or ctx[c]`: the first truthy value of the leading keys, else the last key,
+    // Resolves input aliases: the first present value among the leading keys, else the last key,
     // which must be present.
     private static double Number(Dictionary<string, object?> ctx, params string[] keys)
     {
         for (int i = 0; i < keys.Length - 1; i++)
         {
-            if (ctx.TryGetValue(keys[i], out object? candidate) && Truthy(candidate))
+            if (ctx.TryGetValue(keys[i], out object? candidate) && HasValue(candidate))
             {
                 return ToNumber(keys[i], candidate);
             }
@@ -281,12 +281,11 @@ public static class DerivedVariableEngine
             ? number
             : throw new InvalidOperationException($"'{key}' must be numeric (got {Convert.ToString(value, CultureInfo.InvariantCulture)})");
 
-    private static bool Truthy(object? value) => value switch
+    private static bool HasValue(object? value) => value switch
     {
         null => false,
-        bool b => b,
-        string s => s.Length > 0,
-        _ => !TryToDouble(value, out double number) || Math.Abs(number) >= double.Epsilon,
+        string s => s.Trim().Length > 0,
+        _ => true,
     };
 
     private static string NotNumeric(string name, object? value) =>

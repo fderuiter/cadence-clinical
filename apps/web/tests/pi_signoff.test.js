@@ -162,8 +162,8 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     );
 
     // Open reauth modal
-    await wrapper.find("#signoff-target-type").setValue("SUBJECT");
-    await wrapper.find("#signoff-target-id").setValue("SUBJ-001");
+    await wrapper.find("#signoff-target-type").setValue("FORM");
+    await wrapper.find("#signoff-target-id").setValue("FSUB-001");
     await wrapper.find("#btn-pi-signoff").trigger("click");
 
     // Enter invalid credentials
@@ -184,5 +184,120 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
 
     // Ensure password gets completely wiped
     expect(wrapper.vm.reauthPassword).toBe("");
+  });
+
+  it("renders multi-subject worklist table and aggregate metrics when scope is SUBJECT", async () => {
+    const wrapper = mount(EcrfView, {
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    await wrapper.find("#signoff-target-type").setValue("SUBJECT");
+
+    expect(wrapper.find("#pi-multi-subject-table").exists()).toBe(true);
+    expect(wrapper.find("#select-all-eligible").exists()).toBe(true);
+    expect(wrapper.find(".subject-checkbox").exists()).toBe(true);
+    expect(wrapper.find(".batch-metrics-card").exists()).toBe(true);
+    expect(Number(wrapper.find("#metric-selected-subjects").text())).toBeGreaterThan(0);
+    expect(wrapper.find("#btn-pi-signoff").text()).toContain("Sign Off Selected Subjects");
+  });
+
+  it("toggles all subject row checkboxes using the #select-all-eligible header checkbox", async () => {
+    const wrapper = mount(EcrfView, {
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    await wrapper.find("#signoff-target-type").setValue("SUBJECT");
+    const headerCheckbox = wrapper.find("#select-all-eligible");
+    const initialSubjects = [...wrapper.vm.selectedSubjectIds];
+
+    // Uncheck select-all
+    await headerCheckbox.setChecked(false);
+    expect(wrapper.vm.selectedSubjectIds).toEqual([]);
+    expect(wrapper.find("#metric-selected-subjects").text()).toBe("0");
+
+    // Re-check select-all
+    await headerCheckbox.setChecked(true);
+    expect(wrapper.vm.selectedSubjectIds).toEqual(initialSubjects);
+    expect(Number(wrapper.find("#metric-selected-subjects").text())).toBe(initialSubjects.length);
+  });
+
+  it("executes multi-subject batch sign-off, purges credentials, and displays signature certification card", async () => {
+    const wrapper = mount(EcrfView, {
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    soaClient.verifySignature.mockResolvedValue({
+      sig_token: "mock-multi-subject-sig-token",
+    });
+    soaClient.batchSignOff.mockResolvedValue({
+      status: "SUCCESS",
+      approved_submission_ids: ["SUBJ-001:FORM", "SUBJ-002:FORM"],
+      skipped_submission_ids: [],
+      signature_id: "CERT-MULTI-SUBJ-12345",
+      timestamp_utc: "2026-10-06T12:00:00Z",
+      content_digest: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+      audit_tx: "TX-AUDIT-MULTI-SUBJ-8888",
+    });
+
+    await wrapper.find("#signoff-target-type").setValue("SUBJECT");
+    const selectedSubjects = [...wrapper.vm.selectedSubjectIds];
+    await wrapper.find("#btn-pi-signoff").trigger("click");
+
+    expect(wrapper.find("#reauth-modal").exists()).toBe(true);
+    await wrapper.find("#reauth-password").setValue("pi_secret_pass"); // pragma: allowlist secret
+
+    const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    await wrapper.find("#btn-confirm-reauth").trigger("click");
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await wrapper.vm.$nextTick();
+
+    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+      {
+        username: "pi_user",
+        password: "pi_secret_pass", // pragma: allowlist secret
+        totp: null,
+        action: "/api/v1/execution/batch-sign-off",
+        batchId: expect.any(String),
+      },
+      authStore.accessToken
+    );
+
+    expect(soaClient.batchSignOff).toHaveBeenCalledWith(
+      {
+        studyId: "STUDY-USDM-001",
+        targetType: "SUBJECT",
+        targetIds: selectedSubjects,
+        signingReason: "PI approval and sign-off.",
+      },
+      {
+        userId: "pi_user",
+        roles: "monitor,sponsor_admin",
+        changeReason: "PI approval and sign-off.",
+        sigToken: "mock-multi-subject-sig-token",
+      },
+      authStore.accessToken
+    );
+
+    // Verify credentials wiped from memory immediately
+    expect(wrapper.vm.reauthPassword).toBe("");
+
+    // Verify Signature Certification Summary Card rendered
+    expect(wrapper.find("#signature-cert-card").exists()).toBe(true);
+    expect(wrapper.find("#cert-serial-id").text()).toBe("CERT-MULTI-SUBJ-12345");
+    expect(wrapper.find("#cert-timestamp").text()).toBe("2026-10-06T12:00:00Z");
+    expect(wrapper.find("#cert-content-digest").text()).toBe(
+      "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+    );
+    expect(wrapper.find("#cert-audit-tx").text()).toBe("TX-AUDIT-MULTI-SUBJ-8888");
+
+    alertMock.mockRestore();
   });
 });
