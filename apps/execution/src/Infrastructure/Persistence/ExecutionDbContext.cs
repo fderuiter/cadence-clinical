@@ -1,5 +1,6 @@
 using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Domain.Cgt;
+using Cadence.Apps.Execution.Domain.Coding;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
@@ -62,6 +63,10 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<CgtVialReturnReconciliation> CGTVialReturnReconciliations => Set<CgtVialReturnReconciliation>();
 
+    public DbSet<SynonymRule> SynonymRules => Set<SynonymRule>();
+
+    public DbSet<BulkSynonymImportJob> BulkSynonymImportJobs => Set<BulkSynonymImportJob>();
+
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -83,6 +88,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new CgtBedsideVerificationConfiguration());
         modelBuilder.ApplyConfiguration(new CgtDestructionCertificateConfiguration());
         modelBuilder.ApplyConfiguration(new CgtVialReturnReconciliationConfiguration());
+        modelBuilder.ApplyConfiguration(new SynonymRuleConfiguration());
+        modelBuilder.ApplyConfiguration(new BulkSynonymImportJobConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
     }

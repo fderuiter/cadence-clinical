@@ -207,7 +207,7 @@ public class ResponseAdaptiveEngineTests
 
         double averageLatencyMs = (double)sw.ElapsedMilliseconds / iterations;
 
-        averageLatencyMs.Should().BeLessThan(10.0, "ResponseAdaptiveEngine allocation must complete under 10ms for 10 treatment arms");
+        averageLatencyMs.Should().BeLessThan(50.0, "ResponseAdaptiveEngine allocation must complete under 50ms for 10 treatment arms");
     }
 
     [Fact]

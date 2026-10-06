@@ -1,4 +1,4 @@
-# ADR-2810: Cryptographic Audit Binder Compiler and Regulatory Endpoints
+# ADR-2812: Cryptographic Audit Binder Compiler and Regulatory Endpoints
 
 - **Status:** Accepted
 - **Date:** 2026-10-06
