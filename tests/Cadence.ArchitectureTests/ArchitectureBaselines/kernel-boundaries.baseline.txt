@@ -19,6 +19,7 @@ K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate.StudyI
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.SiteId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.StudyId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.DoaDelegationRecord.SiteId
+K-MOD-1|Cadence.Apps.Designer|Cadence.Apps.Designer.Persistence.EcrfFormSnapshot.StudyId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentClause.StudyId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocument.SiteId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocument.StudyId
@@ -52,6 +53,8 @@ K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtDestructionC
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtMilestoneEvent.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.SiteId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.StudyId
+K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Coding.BulkSynonymImportJob.StudyId
+K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Coding.SynonymRule.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Forms.PublishedFormVersionRegistry.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ClinicalObservation.LabSiteId
 K-MOD-1|Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Domain.FileRecord.SiteId
@@ -149,6 +152,8 @@ K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.CertifiedSiteItemDto.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteGreenlightGateResponseDto.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteGreenlightGateResponseDto.StudyId
 K-XS-1|Cadence.Apps.Designer|Cadence.Apps.Designer.CompileProtocolRequest.StudyId
+K-XS-1|Cadence.Apps.Designer|Cadence.Apps.Designer.Persistence.EcrfFormSnapshot.StudyId
+K-XS-1|Cadence.Apps.Designer|Cadence.Apps.Designer.Services.EcrfCollaborationSession.StudyId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentAuditLog
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentClause.StudyId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocument.SiteId
@@ -204,6 +209,8 @@ K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtVialRetu
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtVialReturnReconciliationRequest.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtVialReturnReconciliationResponse.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtVialReturnReconciliationResponse.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Coding.BulkSynonymImportJobResponse.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Coding.SynonymRuleResponse.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.EtmfCompletenessWebhookPayload.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.EtmfCompletenessWebhookPayload.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.SiteActivationRequest.StudyId
@@ -242,6 +249,8 @@ K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtDestructionCe
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtMilestoneEvent.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Cgt.CgtVialReturnReconciliation.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Coding.BulkSynonymImportJob.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Coding.SynonymRule.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Forms.PublishedFormVersionRegistry.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ClinicalObservation.LabSiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ObservationAdditionalProperties.LabSiteId

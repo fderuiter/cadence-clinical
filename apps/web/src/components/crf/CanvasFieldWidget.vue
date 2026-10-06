@@ -7,6 +7,7 @@
     :class="{
       'is-selected': isSelected,
       'has-warning': hasWarning,
+      'remote-field-active': remoteEditors.length > 0,
     }"
     @click="selectField"
     @keydown.enter.prevent="selectField"
@@ -315,6 +316,18 @@
       </button>
     </div>
 
+    <!-- Remote Co-Author Focus Badges -->
+    <div v-if="remoteEditors.length > 0" class="remote-editors-bar">
+      <span
+        v-for="editor in remoteEditors"
+        :key="editor.userId || editor.userName"
+        class="remote-editor-badge"
+        :style="{ backgroundColor: editor.color || '#2563EB' }"
+      >
+        ✏️ {{ editor.userName }} ({{ editor.userRole }})
+      </span>
+    </div>
+
     <!-- Layout Warning Banner -->
     <div
       v-if="hasWarning"
@@ -397,6 +410,13 @@ const isSelected = computed(() => {
   return props.selectedFieldId === props.field.id;
 });
 
+const remoteEditors = computed(() => {
+  const users = designerStore.activeUsers || {};
+  return Object.values(users).filter(
+    (u) => u.selectedFieldId === props.field.id
+  );
+});
+
 function selectField() {
   emit("select-field", props.field.id);
 }
@@ -405,5 +425,30 @@ function selectField() {
 <style scoped>
 .canvas-field-widget {
   min-height: 100px;
+}
+
+.remote-field-active {
+  outline: 2px dashed #2563eb !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.35) !important;
+}
+
+.remote-editors-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.remote-editor-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 </style>

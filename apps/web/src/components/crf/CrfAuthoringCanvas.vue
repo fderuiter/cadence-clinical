@@ -37,6 +37,54 @@
             </button>
           </div>
 
+          <!-- Connection & Real-Time Sync Status Badge -->
+          <div
+            class="connection-sync-badge"
+            :class="designerStore.connectionState"
+            style="
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              font-size: 0.75rem;
+              font-weight: 700;
+              padding: 4px 10px;
+              border-radius: 12px;
+              background-color: var(--semantic-color-surface-muted);
+              border: 1px solid var(--semantic-color-border);
+            "
+          >
+            <span v-if="designerStore.connectionState === 'connected'">🟢 Connected (CRDT Sync Active)</span>
+            <span v-else-if="designerStore.connectionState === 'reconnecting'">🟡 Reconnecting...</span>
+            <span v-else-if="designerStore.connectionState === 'connecting'">🔵 Connecting...</span>
+            <span v-else>🔴 Offline (Local Edits Saved)</span>
+          </div>
+
+          <!-- Active Co-Authors Role Badges -->
+          <div
+            v-if="Object.keys(activeCoAuthors).length > 0"
+            class="active-coauthors-list"
+            style="display: flex; gap: 6px; align-items: center"
+          >
+            <span
+              v-for="(user, uid) in activeCoAuthors"
+              :key="uid"
+              class="coauthor-role-badge"
+              :style="{ backgroundColor: user.color || '#2563EB' }"
+              style="
+                color: #ffffff;
+                font-size: 0.72rem;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 10px;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+              "
+            >
+              👤 {{ user.userName }} ({{ user.userRole }})
+            </span>
+          </div>
+
           <div v-if="formSchema" class="form-schema-badge">
             Form: {{ formSchema.name || "Draft" }}
           </div>
@@ -46,12 +94,31 @@
       <!-- Resizable Canvas Stage wrapper -->
       <div class="canvas-stage-wrapper">
         <div
+          ref="canvasStageRef"
           class="authoring-canvas-stage"
           :class="{
             'touch-simulation-active': designerStore.viewport !== 'desktop',
           }"
-          :style="{ maxWidth: canvasMaxWidthStyle, margin: '0 auto' }"
+          :style="{ maxWidth: canvasMaxWidthStyle, margin: '0 auto', position: 'relative' }"
+          @mousemove="handleCanvasMouseMove"
         >
+          <!-- Remote Co-Author Cursors Overlay -->
+          <div
+            v-for="(user, userId) in activeCoAuthorsWithCursor"
+            :key="userId"
+            class="remote-cursor-badge"
+            :style="{
+              left: (user.cursorX || 0) + 'px',
+              top: (user.cursorY || 0) + 'px',
+              borderColor: user.color || '#2563EB',
+            }"
+          >
+            <span class="remote-cursor-pointer" :style="{ color: user.color || '#2563EB' }">↖</span>
+            <span class="remote-cursor-label" :style="{ backgroundColor: user.color || '#2563EB' }">
+              {{ user.userName }} ({{ user.userRole }})
+            </span>
+          </div>
+
           <draggable
             v-model="sections"
             item-key="id"
@@ -441,9 +508,10 @@
  *
  * Provides the interactive, real-time responsive authoring stage for the eCRF designer.
  * Integrates drag-and-drop sections/fields, a device switcher toolbar, real-time simulated column
- * width validation, property inspector synchronizations, and compiler quality gating rules.
+ * width validation, property inspector synchronizations, compiler quality gating rules,
+ * and decentralized CRDT document synchronization with live co-author presence tracking.
  */
-import { computed, ref } from "vue";
+import { computed, ref, onMounted } from "vue";
 import draggable from "vuedraggable";
 import FormSectionContainer from "./FormSectionContainer.vue";
 import { useDesignerStore } from "../../stores/designer.js";
@@ -463,6 +531,32 @@ const emit = defineEmits(["update-schema", "select-field"]);
 
 const designerStore = useDesignerStore();
 const compilationStatus = ref(null);
+const canvasStageRef = ref(null);
+
+onMounted(() => {
+  designerStore.initCollaboration(props.formSchema?.id);
+});
+
+const activeCoAuthors = computed(() => designerStore.activeUsers || {});
+
+const activeCoAuthorsWithCursor = computed(() => {
+  const users = designerStore.activeUsers || {};
+  const res = {};
+  for (const [id, user] of Object.entries(users)) {
+    if (user.cursorX !== null && user.cursorX !== undefined) {
+      res[id] = user;
+    }
+  }
+  return res;
+});
+
+function handleCanvasMouseMove(evt) {
+  if (!canvasStageRef.value) return;
+  const rect = canvasStageRef.value.getBoundingClientRect();
+  const x = evt.clientX - rect.left;
+  const y = evt.clientY - rect.top;
+  designerStore.sendCursorPosition(x, y);
+}
 
 const sections = computed({
   get: () => props.formSchema?.sections || [],
@@ -470,6 +564,7 @@ const sections = computed({
     emit("update-schema", { ...props.formSchema, sections: val });
     if (designerStore.activeForm) {
       designerStore.activeForm.sections = val;
+      designerStore.syncToCrdt();
     }
   },
 });
@@ -550,8 +645,8 @@ function updateSelectedFieldProp(propName, value) {
     emit("update-schema", { ...props.formSchema, sections: updatedSections });
     if (designerStore.activeForm) {
       designerStore.activeForm.sections = updatedSections;
+      designerStore.syncToCrdt();
     }
-    // Clear compiler success state on schema change to require re-compilation
     compilationStatus.value = null;
   }
 }
@@ -618,9 +713,11 @@ function compileForm() {
       compilationStatus.value = "blocked";
     } else {
       compilationStatus.value = "success";
+      designerStore.saveSnapshotToServer();
     }
   } else {
     compilationStatus.value = "success";
+    designerStore.saveSnapshotToServer();
   }
 }
 
@@ -669,7 +766,35 @@ function onUpdateSection(updatedSection) {
 .authoring-canvas-stage {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
+
 .text-xxs {
   font-size: 0.65rem;
+}
+
+.remote-cursor-badge {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: left 0.05s ease-out, top 0.05s ease-out;
+}
+
+.remote-cursor-pointer {
+  font-size: 1.2rem;
+  font-weight: bold;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.remote-cursor-label {
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 </style>

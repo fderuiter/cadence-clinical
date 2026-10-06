@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -110,6 +111,7 @@ public sealed class DesignerCompileAuthorityTests(DesignerCompileAuthorityTests.
     /// <summary>The Designer service with the test gateway secret.</summary>
     public sealed class DesignerApiFactory : WebApplicationFactory<Cadence.Apps.Designer.Program>
     {
-        protected override void ConfigureWebHost(IWebHostBuilder builder) => builder.UseTestGatewaySecret();
+        protected override void ConfigureWebHost(IWebHostBuilder builder) =>
+            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
     }
 }

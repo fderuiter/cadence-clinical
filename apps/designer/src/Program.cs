@@ -2,7 +2,12 @@ using System;
 using System.Collections.Generic;
 
 using Cadence.Apps.Designer;
+using Cadence.Apps.Designer.Hubs;
+using Cadence.Apps.Designer.Persistence;
+using Cadence.Apps.Designer.Services;
+using Cadence.Database;
 using Cadence.Ddf;
+using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -15,6 +20,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
 
+builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+builder.AddCadencePostgresDbContext<DesignerDbContext>();
+
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IEcrfSessionManager, EcrfSessionManager>();
+
 var app = builder.Build();
 app.UseCadenceWebDefaults();
 app.UseCadenceSecurity();
@@ -23,6 +34,8 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
     .WithName("DesignerHealthCheck")
     .WithSummary("Protocol designer metadata health probe.")
     .AllowAnonymous();
+
+app.MapHub<EcrfCollaborationHub>("/hubs/ecrf-collaboration");
 
 var api = app.MapGroup("/api/v1/studies");
 api.MapGet("/", () => TypedResults.Ok(Array.Empty<string>()))
