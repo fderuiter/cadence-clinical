@@ -17,7 +17,23 @@ public sealed record ProposalCreated(
     ArtifactVersionId PlanArtifactVersionId,
     IReadOnlyList<string> RequestedCapabilities,
     DateTimeOffset ExpiresAt,
-    string ContentHash);
+    string ContentHash,
+    double? ConfidenceScore = null,
+    string? EscalationPolicy = null,
+    bool IsEscalated = false);
+
+/// <summary>A proposal was escalated for human review (ADR-2489, Intelligence family).</summary>
+[KernelEvent("ProposalEscalated", 1)]
+public sealed record ProposalEscalated(
+    TenantId TenantId,
+    ProposalId ProposalId,
+    StudyId StudyId,
+    string EscalatedBy,
+    ActorKind EscalatedByKind,
+    string EscalateTo,
+    string Reason,
+    DateTimeOffset EscalatedAt,
+    string? EscalationPolicy = null);
 
 /// <summary>A person approved a proposal with an attestation over its content hash (ADR-2489, Intelligence family).</summary>
 [KernelEvent("ProposalApproved", 1)]

@@ -37,4 +37,13 @@ public interface IFormSubmissionApplicationService
         CancellationToken cancellationToken);
 
     Task<Result<FormSubmissionResponse>> UnlockAsync(string id, string reason, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Executes a Principal Investigator batch electronic sign-off across multiple form, visit, or subject targets.
+    /// </summary>
+    Task<Result<BatchSignOffResponse>> BatchSignOffAsync(
+        BatchSignOffRequest request,
+        AuthenticatedCaller? signer,
+        string? sigToken,
+        CancellationToken cancellationToken);
 }

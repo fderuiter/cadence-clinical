@@ -16,6 +16,10 @@ Generated from the EF Core model of `Cadence.Apps.Interop.Infrastructure.Persist
 | [`interop.epro_submissions`](#interopepro_submissions) | `EproSubmission` | 12 |
 | [`interop.instruments`](#interopinstruments) | `Instrument` | 10 |
 | [`interop.interop_audit_logs`](#interopinterop_audit_logs) | `InteropAuditLog` | 7 |
+| [`interop.sce_biostat_export_audit_logs`](#interopsce_biostat_export_audit_logs) | `BiostatExportAuditLog` | 13 |
+| [`interop.sce_database_lock_auth_tokens`](#interopsce_database_lock_auth_tokens) | `DatabaseLockAuthToken` | 18 |
+| [`interop.sce_execution_runs`](#interopsce_execution_runs) | `ExecutionRunRecord` | 33 |
+| [`interop.sce_statistical_programs`](#interopsce_statistical_programs) | `StatisticalProgram` | 17 |
 | [`interop.sensor_daily_summaries`](#interopsensor_daily_summaries) | `SensorDailySummaryRecord` | 38 |
 | [`interop.sensor_safety_alerts`](#interopsensor_safety_alerts) | `SensorSafetyAlertRecord` | 20 |
 | [`interop.sensor_telemetry_streams`](#interopsensor_telemetry_streams) | `SensorTelemetryStreamRecord` | 17 |
@@ -291,6 +295,137 @@ Indexes:
 
 - `IX_interop_audit_logs_Timestamp`: (`Timestamp`)
 - `IX_interop_audit_logs_UserId`: (`UserId`)
+
+## interop.sce_biostat_export_audit_logs
+
+Entity: `BiostatExportAuditLog`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `Action` | `character varying(100)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `DetailsJson` | `jsonb` | no |  |  |
+| `IsUnblinded` | `boolean` | no |  |  |
+| `LockTokenId` | `text` | yes |  |  |
+| `ProgramId` | `text` | yes |  |  |
+| `Sha256Hash` | `character varying(64)` | no |  |  |
+| `SnapshotId` | `text` | yes |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `Timestamp` | `timestamp with time zone` | no |  |  |
+| `UserId` | `character varying(255)` | no |  |  |
+| `UserRole` | `character varying(255)` | no |  |  |
+
+Indexes:
+
+- `IX_sce_biostat_export_audit_logs_StudyId`: (`StudyId`)
+- `IX_sce_biostat_export_audit_logs_Timestamp`: (`Timestamp`)
+- `IX_sce_biostat_export_audit_logs_UserId`: (`UserId`)
+
+## interop.sce_database_lock_auth_tokens
+
+Entity: `DatabaseLockAuthToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `AuthorizedRolesJson` | `jsonb` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `ExpiresAt` | `timestamp with time zone` | no |  |  |
+| `IsRevoked` | `boolean` | no |  |  |
+| `IssuedAt` | `timestamp with time zone` | no |  |  |
+| `IssuedTo` | `character varying(255)` | no |  |  |
+| `LockId` | `character varying(255)` | no |  |  |
+| `Milestone` | `character varying(255)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RevocationReason` | `text` | yes |  |  |
+| `RevokedAt` | `timestamp with time zone` | yes |  |  |
+| `RevokedBy` | `text` | yes |  |  |
+| `SignatureHash` | `character varying(128)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `TokenId` | `character varying(255)` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+
+Indexes:
+
+- `IX_sce_database_lock_auth_tokens_StudyId`: (`StudyId`)
+- `IX_sce_database_lock_auth_tokens_TokenId`: unique (`TokenId`)
+
+## interop.sce_execution_runs
+
+Entity: `ExecutionRunRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `ContainerImageDigest` | `character varying(255)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `DatabaseLockTokenId` | `text` | yes |  |  |
+| `DurationMs` | `double precision` | no |  |  |
+| `ExecutedBy` | `character varying(255)` | no |  |  |
+| `ExecutedByRole` | `text` | no |  |  |
+| `ExecutionEnd` | `timestamp with time zone` | no |  |  |
+| `ExecutionStart` | `timestamp with time zone` | no |  |  |
+| `ExitCode` | `integer` | no |  |  |
+| `IsUnblindedRun` | `boolean` | no |  |  |
+| `Language` | `character varying(50)` | no |  |  |
+| `LockfileDigest` | `character varying(64)` | no |  |  |
+| `ManifestId` | `text` | yes |  |  |
+| `ManifestSha256Seal` | `character varying(64)` | no |  |  |
+| `OutputArtifactsDigest` | `text` | no |  |  |
+| `OutputArtifactsJson` | `jsonb` | no |  |  |
+| `ProgramId` | `character varying(255)` | no |  |  |
+| `ProgramName` | `text` | no |  |  |
+| `ProgramVersion` | `text` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RunId` | `character varying(255)` | no |  |  |
+| `ScriptCodeDigest` | `character varying(64)` | no |  |  |
+| `SignatureBlockJson` | `jsonb` | no |  |  |
+| `SnapshotDigest` | `text` | no |  |  |
+| `SnapshotId` | `character varying(255)` | no |  |  |
+| `SnapshotVersionTag` | `text` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StderrCapture` | `text` | no |  |  |
+| `StdoutCapture` | `text` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+
+Indexes:
+
+- `IX_sce_execution_runs_ProgramId`: (`ProgramId`)
+- `IX_sce_execution_runs_RunId`: unique (`RunId`)
+- `IX_sce_execution_runs_SnapshotId`: (`SnapshotId`)
+- `IX_sce_execution_runs_StudyId`: (`StudyId`)
+
+## interop.sce_statistical_programs
+
+Entity: `StatisticalProgram`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `CodeHash` | `character varying(64)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `Description` | `text` | no |  |  |
+| `Language` | `character varying(50)` | no |  |  |
+| `LockDigest` | `character varying(64)` | no |  |  |
+| `LockType` | `character varying(50)` | no |  |  |
+| `LockfileContent` | `text` | yes |  |  |
+| `Name` | `character varying(255)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `SourceCode` | `text` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `TargetDomain` | `character varying(255)` | yes |  |  |
+| `Title` | `character varying(255)` | no |  |  |
+| `Version` | `character varying(50)` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+
+Indexes:
+
+- `IX_sce_statistical_programs_StudyId`: (`StudyId`)
 
 ## interop.sensor_daily_summaries
 

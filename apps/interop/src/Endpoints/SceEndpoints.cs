@@ -1,0 +1,815 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+
+using Cadence.Apps.Interop.Application.Services;
+using Cadence.Apps.Interop.Domain;
+using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Kernel.Time;
+
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+
+namespace Cadence.Apps.Interop.Endpoints;
+
+#region DTOs
+
+public record CreateProgramRequestDto(
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string? Description = null,
+    [property: JsonPropertyName("language")] string Language = "PYTHON",
+    [property: JsonPropertyName("version")] string Version = "1.0.0",
+    [property: JsonPropertyName("source_code")] string SourceCode = "",
+    [property: JsonPropertyName("lockfile_content")] string? LockfileContent = null,
+    [property: JsonPropertyName("lock_type")] string LockType = "UV_LOCK",
+    [property: JsonPropertyName("target_domain")] string? TargetDomain = null,
+    [property: JsonPropertyName("reason_for_change")] string ReasonForChange = "Initial program authoring"
+);
+
+public record StatisticalProgramDto(
+    [property: JsonPropertyName("program_id")] string ProgramId,
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string Description,
+    [property: JsonPropertyName("language")] string Language,
+    [property: JsonPropertyName("version")] string Version,
+    [property: JsonPropertyName("source_code")] string SourceCode,
+    [property: JsonPropertyName("code_hash")] string CodeHash,
+    [property: JsonPropertyName("lockfile_content")] string? LockfileContent,
+    [property: JsonPropertyName("lock_type")] string LockType,
+    [property: JsonPropertyName("lock_digest")] string LockDigest,
+    [property: JsonPropertyName("target_domain")] string? TargetDomain,
+    [property: JsonPropertyName("created_by")] string CreatedBy,
+    [property: JsonPropertyName("created_at")] string CreatedAt,
+    [property: JsonPropertyName("reason_for_change")] string ReasonForChange
+);
+
+public record ProgramResponseDto(
+    [property: JsonPropertyName("program")] StatisticalProgramDto Program
+);
+
+public record ProgramListResponseDto(
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("total")] int Total,
+    [property: JsonPropertyName("programs")] List<StatisticalProgramDto> Programs
+);
+
+public record ValidateLockfileRequestDto(
+    [property: JsonPropertyName("lock_type")] string LockType,
+    [property: JsonPropertyName("content")] string Content,
+    [property: JsonPropertyName("expected_digest")] string? ExpectedDigest = null,
+    [property: JsonPropertyName("strict_qualification")] bool StrictQualification = false
+);
+
+public record PackageEntrySchemaDto(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("version")] string Version,
+    [property: JsonPropertyName("checksum")] string? Checksum = null,
+    [property: JsonPropertyName("repository")] string? Repository = null,
+    [property: JsonPropertyName("is_qualified")] bool IsQualified = true
+);
+
+public record LockfileValidationResultSchemaDto(
+    [property: JsonPropertyName("lock_type")] string LockType,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("lock_digest")] string LockDigest,
+    [property: JsonPropertyName("package_count")] int PackageCount,
+    [property: JsonPropertyName("packages")] List<PackageEntrySchemaDto> Packages,
+    [property: JsonPropertyName("is_qualified")] bool IsQualified,
+    [property: JsonPropertyName("unqualified_packages")] List<string> UnqualifiedPackages,
+    [property: JsonPropertyName("details")] string Details
+);
+
+public record ValidateLockfileResponseDto(
+    [property: JsonPropertyName("result")] LockfileValidationResultSchemaDto Result
+);
+
+public record IssueLockTokenRequestDto(
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("lock_id")] string LockId,
+    [property: JsonPropertyName("milestone")] string Milestone,
+    [property: JsonPropertyName("issued_to")] string IssuedTo,
+    [property: JsonPropertyName("reason")] string Reason,
+    [property: JsonPropertyName("expires_in_hours")] double ExpiresInHours = 24.0,
+    [property: JsonPropertyName("authorized_roles")] List<string>? AuthorizedRoles = null
+);
+
+public record DatabaseLockAuthTokenDto(
+    [property: JsonPropertyName("token_id")] string TokenId,
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("lock_id")] string LockId,
+    [property: JsonPropertyName("milestone")] string Milestone,
+    [property: JsonPropertyName("issued_to")] string IssuedTo,
+    [property: JsonPropertyName("authorized_roles")] List<string> AuthorizedRoles,
+    [property: JsonPropertyName("issued_at")] string IssuedAt,
+    [property: JsonPropertyName("expires_at")] string ExpiresAt,
+    [property: JsonPropertyName("signature_hash")] string SignatureHash,
+    [property: JsonPropertyName("is_revoked")] bool IsRevoked
+);
+
+public record LockTokenResponseDto(
+    [property: JsonPropertyName("token")] DatabaseLockAuthTokenDto Token
+);
+
+public record LockTokenListResponseDto(
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("total")] int Total,
+    [property: JsonPropertyName("tokens")] List<DatabaseLockAuthTokenDto> Tokens
+);
+
+public record ExecutionSandboxConfigDto(
+    [property: JsonPropertyName("max_memory_mb")] int MaxMemoryMb = 2048,
+    [property: JsonPropertyName("timeout_seconds")] int TimeoutSeconds = 300,
+    [property: JsonPropertyName("network_isolated")] bool NetworkIsolated = true,
+    [property: JsonPropertyName("filesystem_readonly_root")] bool FilesystemReadonlyRoot = true,
+    [property: JsonPropertyName("max_output_bytes")] long MaxOutputBytes = 10485760,
+    [property: JsonPropertyName("docker_image_digest")] string DockerImageDigest = "sha256:cadence-sce-r4.4-py3.14-validated-base-2026",
+    [property: JsonPropertyName("python_version")] string PythonVersion = "3.14.0",
+    [property: JsonPropertyName("r_version")] string RVersion = "4.4.2"
+);
+
+public record ExecuteProgramRequestDto(
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("program_id")] string ProgramId,
+    [property: JsonPropertyName("snapshot_id")] string SnapshotId,
+    [property: JsonPropertyName("is_unblinded")] bool IsUnblinded = false,
+    [property: JsonPropertyName("database_lock_token_id")] string? DatabaseLockTokenId = null,
+    [property: JsonPropertyName("sandbox_config")] ExecutionSandboxConfigDto? SandboxConfig = null,
+    [property: JsonPropertyName("reason_for_execution")] string ReasonForExecution = "Statistical analysis execution run"
+);
+
+public record OutputArtifactSchemaDto(
+    [property: JsonPropertyName("artifact_id")] string ArtifactId,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("artifact_type")] string ArtifactType,
+    [property: JsonPropertyName("file_path")] string FilePath,
+    [property: JsonPropertyName("mime_type")] string MimeType,
+    [property: JsonPropertyName("size_bytes")] long SizeBytes,
+    [property: JsonPropertyName("sha256_digest")] string Sha256Digest,
+    [property: JsonPropertyName("content_preview")] string? ContentPreview = null
+);
+
+public record ElectronicSignatureBlockDto(
+    [property: JsonPropertyName("signer_id")] string SignerId,
+    [property: JsonPropertyName("signer_role")] string SignerRole,
+    [property: JsonPropertyName("signed_at")] string SignedAt,
+    [property: JsonPropertyName("signature_meaning")] string SignatureMeaning,
+    [property: JsonPropertyName("hmac_signature")] string HmacSignature
+);
+
+public record ExecutionRunManifestDto(
+    [property: JsonPropertyName("manifest_id")] string ManifestId,
+    [property: JsonPropertyName("run_id")] string RunId,
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("program_id")] string ProgramId,
+    [property: JsonPropertyName("program_name")] string ProgramName,
+    [property: JsonPropertyName("program_version")] string ProgramVersion,
+    [property: JsonPropertyName("snapshot_id")] string SnapshotId,
+    [property: JsonPropertyName("snapshot_version_tag")] string SnapshotVersionTag,
+    [property: JsonPropertyName("snapshot_digest")] string SnapshotDigest,
+    [property: JsonPropertyName("language")] string Language,
+    [property: JsonPropertyName("script_code_digest")] string ScriptCodeDigest,
+    [property: JsonPropertyName("lockfile_digest")] string LockfileDigest,
+    [property: JsonPropertyName("container_image_digest")] string ContainerImageDigest,
+    [property: JsonPropertyName("execution_start")] string ExecutionStart,
+    [property: JsonPropertyName("execution_end")] string ExecutionEnd,
+    [property: JsonPropertyName("duration_ms")] double DurationMs,
+    [property: JsonPropertyName("exit_code")] int ExitCode,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("stdout_capture")] string StdoutCapture,
+    [property: JsonPropertyName("stderr_capture")] string StderrCapture,
+    [property: JsonPropertyName("output_artifacts")] List<OutputArtifactSchemaDto> OutputArtifacts,
+    [property: JsonPropertyName("output_artifacts_digest")] string OutputArtifactsDigest,
+    [property: JsonPropertyName("is_unblinded_run")] bool IsUnblindedRun,
+    [property: JsonPropertyName("database_lock_token_id")] string? DatabaseLockTokenId,
+    [property: JsonPropertyName("executed_by")] string ExecutedBy,
+    [property: JsonPropertyName("executed_by_role")] string ExecutedByRole,
+    [property: JsonPropertyName("signature_block")] ElectronicSignatureBlockDto SignatureBlock,
+    [property: JsonPropertyName("manifest_sha256_seal")] string ManifestSha256Seal
+);
+
+public record ExecuteProgramResponseDto(
+    [property: JsonPropertyName("manifest")] ExecutionRunManifestDto Manifest
+);
+
+public record ExecutionRunListResponseDto(
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("total")] int Total,
+    [property: JsonPropertyName("runs")] List<ExecutionRunManifestDto> Runs
+);
+
+public record ExecutionRunDetailResponseDto(
+    [property: JsonPropertyName("run")] ExecutionRunManifestDto Run
+);
+
+public record VerifyManifestResponseDto(
+    [property: JsonPropertyName("result")] Dictionary<string, object> Result
+);
+
+#endregion
+
+public static class SceEndpoints
+{
+    public static IEndpointRouteBuilder MapSceEndpoints(this IEndpointRouteBuilder routes)
+    {
+        var group = routes.MapGroup("/api/v1/interop/sce");
+
+        // 1. List statistical programs
+        group.MapGet("/programs", async (string study_id, InteropDbContext db) =>
+        {
+            var programs = await db.StatisticalPrograms
+                .AsNoTracking()
+                .Where(p => p.StudyId == study_id)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+
+            var dtos = programs.Select(ToProgramDto).ToList();
+            return Results.Ok(new ProgramListResponseDto(study_id, dtos.Count, dtos));
+        });
+
+        // 2. Create / register statistical program
+        group.MapPost("/programs", async (CreateProgramRequestDto req, InteropDbContext db, IClock clock, HttpContext httpContext) =>
+        {
+            string userId = GetUserId(httpContext);
+            string codeHash = ComputeSha256(req.SourceCode ?? "");
+            string lockDigest = ComputeSha256(req.LockfileContent ?? "");
+
+            var entity = new StatisticalProgram
+            {
+                StudyId = req.StudyId,
+                Name = req.Name,
+                Title = req.Title,
+                Description = req.Description ?? "",
+                Language = req.Language.ToUpperInvariant(),
+                Version = req.Version ?? "1.0.0",
+                SourceCode = req.SourceCode ?? "",
+                CodeHash = codeHash,
+                LockfileContent = req.LockfileContent,
+                LockType = req.LockType.ToUpperInvariant(),
+                LockDigest = lockDigest,
+                TargetDomain = req.TargetDomain,
+                CreatedAt = clock.UtcNow,
+                CreatedBy = userId,
+                ReasonForChange = req.ReasonForChange ?? "Initial program authoring"
+            };
+
+            db.StatisticalPrograms.Add(entity);
+            await db.SaveChangesAsync();
+
+            var dto = ToProgramDto(entity);
+            return Results.Created($"/api/v1/interop/sce/programs/{entity.Id}", new ProgramResponseDto(dto));
+        });
+
+        // 3. Get statistical program by ID
+        group.MapGet("/programs/{program_id}", async (string program_id, InteropDbContext db) =>
+        {
+            var program = await db.StatisticalPrograms
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == program_id || p.Name == program_id);
+
+            if (program == null)
+            {
+                return Results.NotFound(new { error = $"Statistical program '{program_id}' not found." });
+            }
+
+            return Results.Ok(new ProgramResponseDto(ToProgramDto(program)));
+        });
+
+        // 4. Validate package lockfile
+        group.MapPost("/validate-lockfile", (ValidateLockfileRequestDto req, ILockfileValidatorService validator) =>
+        {
+            var result = validator.ValidateLockfile(req.LockType, req.Content, req.ExpectedDigest, req.StrictQualification);
+            var pkgs = result.Packages.Select(p => new PackageEntrySchemaDto(p.Name, p.Version, p.Checksum, p.Repository, p.IsQualified)).ToList();
+
+            var schemaResult = new LockfileValidationResultSchemaDto(
+                LockType: result.LockType,
+                Status: result.Status,
+                LockDigest: result.LockDigest,
+                PackageCount: result.PackageCount,
+                Packages: pkgs,
+                IsQualified: result.IsQualified,
+                UnqualifiedPackages: result.UnqualifiedPackages,
+                Details: result.Details
+            );
+
+            return Results.Ok(new ValidateLockfileResponseDto(schemaResult));
+        });
+
+        // 5. List active database lock tokens
+        group.MapGet("/lock-tokens", async (string study_id, InteropDbContext db, IClock clock) =>
+        {
+            var now = clock.UtcNow;
+            var tokens = await db.DatabaseLockAuthTokens
+                .AsNoTracking()
+                .Where(t => t.StudyId == study_id && !t.IsRevoked && t.ExpiresAt > now)
+                .OrderByDescending(t => t.IssuedAt)
+                .ToListAsync();
+
+            var dtos = tokens.Select(ToLockTokenDto).ToList();
+            return Results.Ok(new LockTokenListResponseDto(study_id, dtos.Count, dtos));
+        });
+
+        // 6. Issue database lock token
+        group.MapPost("/lock-tokens", async (IssueLockTokenRequestDto req, InteropDbContext db, IClock clock, HttpContext httpContext) =>
+        {
+            string userId = GetUserId(httpContext);
+            string userRole = GetUserRole(httpContext);
+            var now = clock.UtcNow;
+            var expiresAt = now.AddHours(req.ExpiresInHours <= 0 ? 24 : req.ExpiresInHours);
+            string tokenId = "DBLOCK-AUTH-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+            var roles = req.AuthorizedRoles ?? new List<string> { userRole, "UNBLINDED_STATISTICIAN", "IDMC_MEMBER" };
+
+            string claimsPayload = $"{tokenId}|{req.StudyId}|{req.LockId}|{req.IssuedTo}|{expiresAt:O}";
+            string sigHash = ComputeHmac(claimsPayload, "CADENCE_SCE_SIGNING_KEY");
+
+            var tokenEntity = new DatabaseLockAuthToken
+            {
+                TokenId = tokenId,
+                StudyId = req.StudyId,
+                LockId = req.LockId,
+                Milestone = req.Milestone,
+                IssuedTo = req.IssuedTo,
+                AuthorizedRolesJson = JsonSerializer.Serialize(roles),
+                IssuedAt = now,
+                ExpiresAt = expiresAt,
+                SignatureHash = sigHash,
+                IsRevoked = false,
+                CreatedAt = now,
+                CreatedBy = userId,
+                ReasonForChange = req.Reason
+            };
+
+            db.DatabaseLockAuthTokens.Add(tokenEntity);
+
+            // Immutable audit log
+            db.BiostatExportAuditLogs.Add(new BiostatExportAuditLog
+            {
+                Timestamp = now,
+                UserId = userId,
+                UserRole = userRole,
+                Action = "ISSUE_LOCK_TOKEN",
+                StudyId = req.StudyId,
+                IsUnblinded = true,
+                LockTokenId = tokenId,
+                DetailsJson = JsonSerializer.Serialize(new { lock_id = req.LockId, milestone = req.Milestone, reason = req.Reason }),
+                Sha256Hash = ComputeSha256($"{tokenId}|ISSUE_LOCK_TOKEN|{now:O}"),
+                CreatedAt = now
+            });
+
+            await db.SaveChangesAsync();
+
+            return Results.Created($"/api/v1/interop/sce/lock-tokens", new LockTokenResponseDto(ToLockTokenDto(tokenEntity)));
+        });
+
+        // 7. Revoke database lock token
+        group.MapPost("/lock-tokens/{token_id}/revoke", async (string token_id, string? reason, InteropDbContext db, IClock clock, HttpContext httpContext) =>
+        {
+            string userId = GetUserId(httpContext);
+            string userRole = GetUserRole(httpContext);
+            string revocationReason = string.IsNullOrWhiteSpace(reason) ? "Revocation" : reason;
+
+            var token = await db.DatabaseLockAuthTokens
+                .FirstOrDefaultAsync(t => t.TokenId == token_id || t.Id == token_id);
+
+            if (token == null)
+            {
+                return Results.NotFound(new { error = $"Database lock auth token '{token_id}' not found." });
+            }
+
+            var now = clock.UtcNow;
+            token.IsRevoked = true;
+            token.RevokedAt = now;
+            token.RevokedBy = userId;
+            token.RevocationReason = revocationReason;
+
+            db.BiostatExportAuditLogs.Add(new BiostatExportAuditLog
+            {
+                Timestamp = now,
+                UserId = userId,
+                UserRole = userRole,
+                Action = "REVOKE_LOCK_TOKEN",
+                StudyId = token.StudyId,
+                IsUnblinded = true,
+                LockTokenId = token.TokenId,
+                DetailsJson = JsonSerializer.Serialize(new { revocation_reason = revocationReason }),
+                Sha256Hash = ComputeSha256($"{token.TokenId}|REVOKE_LOCK_TOKEN|{now:O}"),
+                CreatedAt = now
+            });
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new Dictionary<string, object>
+            {
+                ["status"] = "REVOKED",
+                ["token_id"] = token.TokenId,
+                ["revoked_at"] = now.ToString("O"),
+                ["reason"] = revocationReason
+            });
+        });
+
+        // 8. Execute statistical program in sandbox
+        group.MapPost("/execute", async (ExecuteProgramRequestDto req, InteropDbContext db, ISceDockerEngineDriver driver, ILockfileValidatorService lockfileValidator, IClock clock, HttpContext httpContext) =>
+        {
+            string userId = GetUserId(httpContext);
+            string userRole = GetUserRole(httpContext);
+            var now = clock.UtcNow;
+
+            var program = await db.StatisticalPrograms
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == req.ProgramId || p.Name == req.ProgramId);
+
+            if (program == null)
+            {
+                return Results.NotFound(new { error = $"Statistical program '{req.ProgramId}' not found." });
+            }
+
+            // Role-gated database lock token validation if unblinded access requested
+            DatabaseLockAuthToken? lockToken = null;
+            if (req.IsUnblinded)
+            {
+                if (string.IsNullOrWhiteSpace(req.DatabaseLockTokenId))
+                {
+                    return Results.Json(new { error = "UNBLINDED_ACCESS_DENIED", details = "Unblinded analysis requires an active database lock authorization token ID." }, statusCode: 403);
+                }
+
+                lockToken = await db.DatabaseLockAuthTokens
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => (t.TokenId == req.DatabaseLockTokenId || t.Id == req.DatabaseLockTokenId) && t.StudyId == req.StudyId);
+
+                if (lockToken == null || lockToken.IsRevoked || lockToken.ExpiresAt <= now)
+                {
+                    return Results.Json(new { error = "UNBLINDED_ACCESS_DENIED", details = "Provided database lock token is invalid, expired, or revoked." }, statusCode: 403);
+                }
+            }
+
+            // Lockfile validation check
+            string lockfileContent = program.LockfileContent ?? "";
+            var lockValidation = lockfileValidator.ValidateLockfile(program.LockType, lockfileContent);
+            if (lockValidation.Status == "TAMPERED")
+            {
+                return Results.UnprocessableEntity(new { error = "LOCKFILE_TAMPERED", details = lockValidation.Details });
+            }
+
+            var sandboxConfig = req.SandboxConfig ?? new ExecutionSandboxConfigDto();
+            var sandboxReq = new SandboxExecutionRequest(
+                Language: program.Language,
+                SourceCode: program.SourceCode,
+                LockfileContent: lockfileContent,
+                LockType: program.LockType,
+                MaxMemoryMb: sandboxConfig.MaxMemoryMb,
+                TimeoutSeconds: sandboxConfig.TimeoutSeconds,
+                NetworkIsolated: sandboxConfig.NetworkIsolated,
+                FilesystemReadonlyRoot: sandboxConfig.FilesystemReadonlyRoot,
+                ContainerImageOverride: sandboxConfig.DockerImageDigest
+            );
+
+            var execResult = await driver.ExecuteInSandboxAsync(sandboxReq);
+            var execEnd = clock.UtcNow;
+
+            string runId = "run-" + Guid.NewGuid().ToString("N")[..12];
+            string manifestId = "man-" + Guid.NewGuid().ToString("N")[..12];
+            string snapshotVersionTag = "v" + req.SnapshotId;
+            string snapshotDigest = ComputeSha256(req.SnapshotId);
+            string scriptCodeDigest = program.CodeHash;
+            string lockfileDigest = program.LockDigest;
+
+            var artifactDtos = execResult.Artifacts.Select(a => new OutputArtifactSchemaDto(
+                ArtifactId: a.ArtifactId,
+                Name: a.Name,
+                ArtifactType: a.ArtifactType,
+                FilePath: a.FilePath,
+                MimeType: a.MimeType,
+                SizeBytes: a.SizeBytes,
+                Sha256Digest: a.Sha256Digest,
+                ContentPreview: a.ContentPreview
+            )).ToList();
+
+            string hmacSig = ComputeHmac($"{userId}|{runId}|{execEnd:O}", "CADENCE_SCE_SIGNING_KEY");
+            var sigBlockDto = new ElectronicSignatureBlockDto(
+                SignerId: userId,
+                SignerRole: userRole,
+                SignedAt: execEnd.ToString("O"),
+                SignatureMeaning: "Electronic signature confirming authoring, validation, and execution of statistical run",
+                HmacSignature: hmacSig
+            );
+
+            string sealPayload = $"{runId}|{req.StudyId}|{program.Id}|{req.SnapshotId}|{scriptCodeDigest}|{lockfileDigest}|{execResult.ContainerImageDigest}|{execResult.OutputArtifactsDigest}|{userId}";
+            string manifestSeal = ComputeSha256(sealPayload);
+
+            var manifestDto = new ExecutionRunManifestDto(
+                ManifestId: manifestId,
+                RunId: runId,
+                StudyId: req.StudyId,
+                ProgramId: program.Id,
+                ProgramName: program.Name,
+                ProgramVersion: program.Version,
+                SnapshotId: req.SnapshotId,
+                SnapshotVersionTag: snapshotVersionTag,
+                SnapshotDigest: snapshotDigest,
+                Language: program.Language,
+                ScriptCodeDigest: scriptCodeDigest,
+                LockfileDigest: lockfileDigest,
+                ContainerImageDigest: execResult.ContainerImageDigest,
+                ExecutionStart: now.ToString("O"),
+                ExecutionEnd: execEnd.ToString("O"),
+                DurationMs: execResult.DurationMs,
+                ExitCode: execResult.ExitCode,
+                Status: execResult.ExitCode == 0 ? "COMPLETED" : "FAILED",
+                StdoutCapture: execResult.Stdout,
+                StderrCapture: execResult.Stderr,
+                OutputArtifacts: artifactDtos,
+                OutputArtifactsDigest: execResult.OutputArtifactsDigest,
+                IsUnblindedRun: req.IsUnblinded,
+                DatabaseLockTokenId: lockToken?.TokenId ?? req.DatabaseLockTokenId,
+                ExecutedBy: userId,
+                ExecutedByRole: userRole,
+                SignatureBlock: sigBlockDto,
+                ManifestSha256Seal: manifestSeal
+            );
+
+            var record = new ExecutionRunRecord
+            {
+                RunId = runId,
+                ManifestId = manifestId,
+                StudyId = req.StudyId,
+                ProgramId = program.Id,
+                ProgramName = program.Name,
+                ProgramVersion = program.Version,
+                SnapshotId = req.SnapshotId,
+                SnapshotVersionTag = snapshotVersionTag,
+                SnapshotDigest = snapshotDigest,
+                Language = program.Language,
+                ScriptCodeDigest = scriptCodeDigest,
+                LockfileDigest = lockfileDigest,
+                ContainerImageDigest = execResult.ContainerImageDigest,
+                ExecutionStart = now,
+                ExecutionEnd = execEnd,
+                DurationMs = execResult.DurationMs,
+                ExitCode = execResult.ExitCode,
+                Status = execResult.ExitCode == 0 ? "COMPLETED" : "FAILED",
+                StdoutCapture = execResult.Stdout,
+                StderrCapture = execResult.Stderr,
+                OutputArtifactsJson = JsonSerializer.Serialize(artifactDtos),
+                OutputArtifactsDigest = execResult.OutputArtifactsDigest,
+                IsUnblindedRun = req.IsUnblinded,
+                DatabaseLockTokenId = lockToken?.TokenId ?? req.DatabaseLockTokenId,
+                ExecutedBy = userId,
+                ExecutedByRole = userRole,
+                SignatureBlockJson = JsonSerializer.Serialize(sigBlockDto),
+                ManifestSha256Seal = manifestSeal,
+                CreatedAt = now,
+                CreatedBy = userId,
+                ReasonForChange = req.ReasonForExecution
+            };
+
+            db.ExecutionRunRecords.Add(record);
+
+            db.BiostatExportAuditLogs.Add(new BiostatExportAuditLog
+            {
+                Timestamp = now,
+                UserId = userId,
+                UserRole = userRole,
+                Action = "EXECUTE_PROGRAM",
+                StudyId = req.StudyId,
+                ProgramId = program.Id,
+                SnapshotId = req.SnapshotId,
+                IsUnblinded = req.IsUnblinded,
+                LockTokenId = lockToken?.TokenId,
+                DetailsJson = JsonSerializer.Serialize(new { run_id = runId, exit_code = execResult.ExitCode, seal = manifestSeal }),
+                Sha256Hash = ComputeSha256($"{runId}|EXECUTE_PROGRAM|{now:O}"),
+                CreatedAt = now
+            });
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new ExecuteProgramResponseDto(manifestDto));
+        });
+
+        // 9. List historical execution runs for a study
+        group.MapGet("/runs", async (string study_id, string? program_id, string? snapshot_id, InteropDbContext db) =>
+        {
+            var query = db.ExecutionRunRecords
+                .AsNoTracking()
+                .Where(r => r.StudyId == study_id);
+
+            if (!string.IsNullOrWhiteSpace(program_id))
+            {
+                query = query.Where(r => r.ProgramId == program_id || r.ProgramName == program_id);
+            }
+            if (!string.IsNullOrWhiteSpace(snapshot_id))
+            {
+                query = query.Where(r => r.SnapshotId == snapshot_id);
+            }
+
+            var runs = await query.OrderByDescending(r => r.ExecutionStart).ToListAsync();
+            var manifests = runs.Select(ToManifestDto).ToList();
+
+            return Results.Ok(new ExecutionRunListResponseDto(study_id, manifests.Count, manifests));
+        });
+
+        // 10. Get execution run by ID
+        group.MapGet("/runs/{run_id}", async (string run_id, InteropDbContext db) =>
+        {
+            var run = await db.ExecutionRunRecords
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.RunId == run_id || r.Id == run_id);
+
+            if (run == null)
+            {
+                return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
+            }
+
+            return Results.Ok(new ExecutionRunDetailResponseDto(ToManifestDto(run)));
+        });
+
+        // 11. Verify execution run manifest seal
+        group.MapPost("/runs/{run_id}/verify", async (string run_id, InteropDbContext db, IClock clock) =>
+        {
+            var run = await db.ExecutionRunRecords
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.RunId == run_id || r.Id == run_id);
+
+            if (run == null)
+            {
+                return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
+            }
+
+            string sealPayload = $"{run.RunId}|{run.StudyId}|{run.ProgramId}|{run.SnapshotId}|{run.ScriptCodeDigest}|{run.LockfileDigest}|{run.ContainerImageDigest}|{run.OutputArtifactsDigest}|{run.ExecutedBy}";
+            string expectedSeal = ComputeSha256(sealPayload);
+            bool isValid = string.Equals(expectedSeal, run.ManifestSha256Seal, StringComparison.OrdinalIgnoreCase);
+
+            var verificationResult = new Dictionary<string, object>
+            {
+                ["is_valid"] = isValid,
+                ["run_id"] = run.RunId,
+                ["manifest_id"] = run.ManifestId ?? "",
+                ["manifest_sha256_seal"] = run.ManifestSha256Seal,
+                ["computed_sha256_seal"] = expectedSeal,
+                ["verification_timestamp"] = clock.UtcNow.ToString("O"),
+                ["status"] = isValid ? "VERIFIED_SEAL_INTACT" : "SEAL_CORRUPTED"
+            };
+
+            return Results.Ok(new VerifyManifestResponseDto(verificationResult));
+        });
+
+        // 12. Get generated artifact content & preview
+        group.MapGet("/runs/{run_id}/artifacts/{artifact_id}", async (string run_id, string artifact_id, InteropDbContext db) =>
+        {
+            var run = await db.ExecutionRunRecords
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.RunId == run_id || r.Id == run_id);
+
+            if (run == null)
+            {
+                return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
+            }
+
+            var artifacts = JsonSerializer.Deserialize<List<OutputArtifactSchemaDto>>(run.OutputArtifactsJson) ?? new();
+            var artifact = artifacts.FirstOrDefault(a => a.ArtifactId == artifact_id || a.Name == artifact_id);
+
+            if (artifact == null)
+            {
+                return Results.NotFound(new { error = $"Artifact '{artifact_id}' not found in run '{run_id}'." });
+            }
+
+            return Results.Ok(new Dictionary<string, object?>
+            {
+                ["artifact_id"] = artifact.ArtifactId,
+                ["run_id"] = run.RunId,
+                ["name"] = artifact.Name,
+                ["artifact_type"] = artifact.ArtifactType,
+                ["file_path"] = artifact.FilePath,
+                ["mime_type"] = artifact.MimeType,
+                ["size_bytes"] = artifact.SizeBytes,
+                ["sha256_digest"] = artifact.Sha256Digest,
+                ["content_preview"] = artifact.ContentPreview
+            });
+        });
+
+        return routes;
+    }
+
+    #region Helpers
+
+    private static StatisticalProgramDto ToProgramDto(StatisticalProgram p) =>
+        new StatisticalProgramDto(
+            ProgramId: p.Id,
+            StudyId: p.StudyId,
+            Name: p.Name,
+            Title: p.Title,
+            Description: p.Description,
+            Language: p.Language,
+            Version: p.Version,
+            SourceCode: p.SourceCode,
+            CodeHash: p.CodeHash,
+            LockfileContent: p.LockfileContent,
+            LockType: p.LockType,
+            LockDigest: p.LockDigest,
+            TargetDomain: p.TargetDomain,
+            CreatedBy: p.CreatedBy,
+            CreatedAt: p.CreatedAt.ToString("O"),
+            ReasonForChange: p.ReasonForChange
+        );
+
+    private static DatabaseLockAuthTokenDto ToLockTokenDto(DatabaseLockAuthToken t)
+    {
+        var roles = JsonSerializer.Deserialize<List<string>>(t.AuthorizedRolesJson) ?? new();
+        return new DatabaseLockAuthTokenDto(
+            TokenId: t.TokenId,
+            StudyId: t.StudyId,
+            LockId: t.LockId,
+            Milestone: t.Milestone,
+            IssuedTo: t.IssuedTo,
+            AuthorizedRoles: roles,
+            IssuedAt: t.IssuedAt.ToString("O"),
+            ExpiresAt: t.ExpiresAt.ToString("O"),
+            SignatureHash: t.SignatureHash,
+            IsRevoked: t.IsRevoked
+        );
+    }
+
+    private static ExecutionRunManifestDto ToManifestDto(ExecutionRunRecord r)
+    {
+        var artifacts = JsonSerializer.Deserialize<List<OutputArtifactSchemaDto>>(r.OutputArtifactsJson) ?? new();
+        var sigBlock = JsonSerializer.Deserialize<ElectronicSignatureBlockDto>(r.SignatureBlockJson) ?? new ElectronicSignatureBlockDto(
+            SignerId: r.ExecutedBy,
+            SignerRole: r.ExecutedByRole,
+            SignedAt: r.ExecutionEnd.ToString("O"),
+            SignatureMeaning: "Electronic signature confirming authoring, validation, and execution of statistical run",
+            HmacSignature: ""
+        );
+
+        return new ExecutionRunManifestDto(
+            ManifestId: r.ManifestId ?? r.Id,
+            RunId: r.RunId,
+            StudyId: r.StudyId,
+            ProgramId: r.ProgramId,
+            ProgramName: r.ProgramName,
+            ProgramVersion: r.ProgramVersion,
+            SnapshotId: r.SnapshotId,
+            SnapshotVersionTag: r.SnapshotVersionTag,
+            SnapshotDigest: r.SnapshotDigest,
+            Language: r.Language,
+            ScriptCodeDigest: r.ScriptCodeDigest,
+            LockfileDigest: r.LockfileDigest,
+            ContainerImageDigest: r.ContainerImageDigest,
+            ExecutionStart: r.ExecutionStart.ToString("O"),
+            ExecutionEnd: r.ExecutionEnd.ToString("O"),
+            DurationMs: r.DurationMs,
+            ExitCode: r.ExitCode,
+            Status: r.Status,
+            StdoutCapture: r.StdoutCapture,
+            StderrCapture: r.StderrCapture,
+            OutputArtifacts: artifacts,
+            OutputArtifactsDigest: r.OutputArtifactsDigest,
+            IsUnblindedRun: r.IsUnblindedRun,
+            DatabaseLockTokenId: r.DatabaseLockTokenId,
+            ExecutedBy: r.ExecutedBy,
+            ExecutedByRole: r.ExecutedByRole,
+            SignatureBlock: sigBlock,
+            ManifestSha256Seal: r.ManifestSha256Seal
+        );
+    }
+
+    private static string GetUserId(HttpContext context)
+    {
+        return context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? context.User.FindFirst("sub")?.Value
+            ?? "user:biostatistician";
+    }
+
+    private static string GetUserRole(HttpContext context)
+    {
+        return context.User.FindFirst(ClaimTypes.Role)?.Value
+            ?? "UNBLINDED_STATISTICIAN";
+    }
+
+    private static string ComputeSha256(string raw)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(raw);
+        byte[] hash = SHA256.HashData(bytes);
+        return Convert.ToHexStringLower(hash);
+    }
+
+    private static string ComputeHmac(string raw, string key)
+    {
+        byte[] keyBytes = Encoding.UTF8.GetBytes(key);
+        byte[] rawBytes = Encoding.UTF8.GetBytes(raw);
+        using var hmac = new HMACSHA256(keyBytes);
+        byte[] hash = hmac.ComputeHash(rawBytes);
+        return Convert.ToHexStringLower(hash);
+    }
+
+    #endregion
+}

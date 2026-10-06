@@ -54,7 +54,7 @@ public sealed class AutoQueryDispatchService(
         var existingQueries = await queryRepository.ListBySubjectAsync(studyId, subjectId, cancellationToken).ConfigureAwait(false);
 
         var activeQueries = existingQueries
-            .Where(q => q.Status is QueryStatus.Open or QueryStatus.Candidate or QueryStatus.Reopened)
+            .Where(q => q.Status is QueryStatus.Open or QueryStatus.Candidate or QueryStatus.Reopened or QueryStatus.Answered or QueryStatus.DraftAi)
             .ToList();
 
         // Map observations by test code for quick lookup
@@ -96,9 +96,9 @@ public sealed class AutoQueryDispatchService(
 
             // Check if active query already exists on coordinates
             var activeQuery = activeQueries.FirstOrDefault(q =>
-                q.RuleId == violation.RuleId ||
-                (q.TestCode.Value.Equals(testCode.Value, StringComparison.OrdinalIgnoreCase) &&
-                 (visitId == null || q.VisitId == visitId)));
+                q.TestCode.Value.Equals(testCode.Value, StringComparison.OrdinalIgnoreCase) &&
+                (visitId == null || string.Equals(q.VisitId, visitId, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrEmpty(violation.RuleId) || string.IsNullOrEmpty(q.RuleId) || string.Equals(q.RuleId, violation.RuleId, StringComparison.OrdinalIgnoreCase)));
 
             if (activeQuery is null)
             {
@@ -144,9 +144,21 @@ public sealed class AutoQueryDispatchService(
                     activeQueries.Add(query);
                 }
             }
+            else
+            {
+                if (obsId != null && activeQuery.ObservationId != obsId)
+                {
+                    activeQuery.UpdateObservationLink(obsId, domainCode);
+                    activeQuery.ReasonForChange = $"Observation link updated upon payload re-evaluation by {actingUserId}";
+                    if (!processedQueries.Contains(activeQuery))
+                    {
+                        processedQueries.Add(activeQuery);
+                    }
+                }
+            }
         }
 
-        // 3. Auto-Resolution: Close active queries whose target fields/rules were re-evaluated and NO LONGER have violations
+        // 3. Auto-Resolution and Cancellation: Reconcile active queries
         var activeViolatedRules = new HashSet<string>(violations.Select(v => v.RuleId), StringComparer.OrdinalIgnoreCase);
         var activeViolatedFields = new HashSet<string>(
             violations.Where(v => !string.IsNullOrEmpty(v.TargetField)).Select(v => v.TargetField!),
@@ -154,16 +166,20 @@ public sealed class AutoQueryDispatchService(
 
         foreach (var query in activeQueries)
         {
-            if (query.Status is not (QueryStatus.Open or QueryStatus.Candidate or QueryStatus.Reopened))
+            if (query.Status is not (QueryStatus.Open or QueryStatus.Candidate or QueryStatus.Reopened or QueryStatus.Answered or QueryStatus.DraftAi))
             {
                 continue;
             }
 
-            bool isRuleMatch = !string.IsNullOrEmpty(query.RuleId) && evaluatedRules.Contains(query.RuleId);
-            bool isFieldMatch = evaluatedFields.Contains(query.TestCode.Value) ||
+            bool matchesForm = !string.IsNullOrEmpty(formId) &&
+                !string.IsNullOrEmpty(query.FormId) &&
+                string.Equals(query.FormId, formId, StringComparison.OrdinalIgnoreCase);
+
+            bool matchesRule = !string.IsNullOrEmpty(query.RuleId) && evaluatedRules.Contains(query.RuleId);
+            bool matchesField = evaluatedFields.Contains(query.TestCode.Value) ||
                 (!string.IsNullOrEmpty(query.FieldId) && evaluatedFields.Contains(query.FieldId));
 
-            if (isRuleMatch || isFieldMatch)
+            if (matchesForm || matchesRule || matchesField)
             {
                 bool stillViolated = (!string.IsNullOrEmpty(query.RuleId) && activeViolatedRules.Contains(query.RuleId)) ||
                     activeViolatedFields.Contains(query.TestCode.Value) ||
@@ -171,12 +187,40 @@ public sealed class AutoQueryDispatchService(
 
                 if (!stillViolated)
                 {
-                    // Discrepancy has been corrected by site submission!
-                    var closeResult = query.Close(actingUserId, clock.UtcNow);
-                    if (closeResult.IsSuccess)
+                    var matchingObs = obsMap[query.TestCode.Value].FirstOrDefault() ??
+                        (!string.IsNullOrEmpty(query.FieldId) && obsMap.Contains(query.FieldId) ? obsMap[query.FieldId].FirstOrDefault() : null);
+
+                    if (matchingObs != null)
                     {
-                        query.ReasonForChange = $"Automated query auto-resolution upon site data correction by {actingUserId}";
-                        processedQueries.Add(query);
+                        // Data corrected: update observation link if needed, then auto-resolve
+                        if (query.ObservationId != matchingObs.Id)
+                        {
+                            query.UpdateObservationLink(matchingObs.Id, matchingObs.Domain);
+                        }
+
+                        var closeResult = query.Close(actingUserId, clock.UtcNow);
+                        if (closeResult.IsSuccess)
+                        {
+                            query.ReasonForChange = $"Automated query auto-resolution upon site data correction by {actingUserId}";
+                            if (!processedQueries.Contains(query))
+                            {
+                                processedQueries.Add(query);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Field removed or payload cleared: cancel open query
+                        string cancelReason = $"Automated query cancellation due to field removal by {actingUserId}";
+                        var cancelResult = query.Cancel(cancelReason, actingUserId);
+                        if (cancelResult.IsSuccess)
+                        {
+                            query.ReasonForChange = cancelReason;
+                            if (!processedQueries.Contains(query))
+                            {
+                                processedQueries.Add(query);
+                            }
+                        }
                     }
                 }
             }
