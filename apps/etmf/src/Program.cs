@@ -24,6 +24,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Returns eTMF operational status.");
 
 app.MapEtmfEndpoints();
+app.MapEtmfBinderEndpoints();
 
 await app.RunAsync();
 
