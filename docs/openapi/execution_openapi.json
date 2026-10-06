@@ -4808,6 +4808,242 @@
           }
         }
       },
+      "Execution_StagedAdverseEventActionRequest": {
+        "required": [
+          "action",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "investigator_notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "causality_assessment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "electronic_signature_password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_StagedAdverseEventActionResponse": {
+        "required": [
+          "id",
+          "review_status",
+          "action_taken",
+          "form_submission_id",
+          "query_id",
+          "message",
+          "timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "review_status": {
+            "type": "string"
+          },
+          "action_taken": {
+            "type": "string"
+          },
+          "form_submission_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_StagedAdverseEventReviewResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_id",
+          "observation_id",
+          "form_submission_id",
+          "query_id",
+          "test_code",
+          "test_name",
+          "lab_value",
+          "unit",
+          "ctcae_grade",
+          "grading_scale",
+          "toxicity_term",
+          "clinical_description",
+          "is_hys_law_warning",
+          "is_delta_check_alert",
+          "delta_percentage",
+          "review_status",
+          "reviewed_by",
+          "reviewed_at",
+          "investigator_notes",
+          "version",
+          "is_deleted",
+          "created_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "visit_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observation_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "form_submission_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "query_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "test_code": {
+            "type": "string"
+          },
+          "test_name": {
+            "type": "string"
+          },
+          "lab_value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "ctcae_grade": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "grading_scale": {
+            "type": "string"
+          },
+          "toxicity_term": {
+            "type": "string"
+          },
+          "clinical_description": {
+            "type": "string"
+          },
+          "is_hys_law_warning": {
+            "type": "boolean"
+          },
+          "is_delta_check_alert": {
+            "type": "boolean"
+          },
+          "delta_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "review_status": {
+            "type": "string"
+          },
+          "reviewed_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reviewed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "investigator_notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_deleted": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "Execution_StudyCode": {
         "type": "string"
       },

@@ -1605,6 +1605,57 @@ export interface components {
       /** Format: date-time */
       created_at: null | string;
     };
+    Execution_StagedAdverseEventActionRequest: {
+      action: string;
+      reason_for_change: string;
+      investigator_notes?: null | string;
+      causality_assessment?: null | string;
+      electronic_signature_password?: null | string;
+    };
+    Execution_StagedAdverseEventActionResponse: {
+      id: string;
+      review_status: string;
+      action_taken: string;
+      form_submission_id: null | string;
+      query_id: null | string;
+      message: string;
+      /** Format: date-time */
+      timestamp: string;
+    };
+    Execution_StagedAdverseEventReviewResponse: {
+      id: string;
+      study_id: string;
+      site_id: null | string;
+      subject_id: string;
+      visit_id: null | string;
+      observation_id: null | string;
+      form_submission_id: null | string;
+      query_id: null | string;
+      test_code: string;
+      test_name: string;
+      /** Format: double */
+      lab_value: number | string;
+      unit: string;
+      /** Format: int32 */
+      ctcae_grade: number | string;
+      grading_scale: string;
+      toxicity_term: string;
+      clinical_description: string;
+      is_hys_law_warning: boolean;
+      is_delta_check_alert: boolean;
+      /** Format: double */
+      delta_percentage: null | number | string;
+      review_status: string;
+      reviewed_by: null | string;
+      /** Format: date-time */
+      reviewed_at: null | string;
+      investigator_notes: null | string;
+      /** Format: int32 */
+      version: number | string;
+      is_deleted: boolean;
+      /** Format: date-time */
+      created_at: null | string;
+    };
     Execution_StudyCode: string;
     Execution_SubjectCode: string;
     Execution_SubjectConsentId: string;
