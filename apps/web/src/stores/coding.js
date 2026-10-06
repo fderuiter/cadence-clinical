@@ -18,6 +18,11 @@ export const useCodingStore = defineStore("coding", {
     batchAlert: null,
     auditLedger: [],
     synonymRules: [],
+    isSynonymDrawerOpen: false,
+    synonymPreflightReport: null,
+    synonymImportJobs: [],
+    synonymImportLoading: false,
+    synonymImportError: null,
     filters: {
       status: "ALL",
       dictionaryType: "ALL",
@@ -498,29 +503,77 @@ export const useCodingStore = defineStore("coding", {
           !item.is_locked &&
           !item.is_blocked
         ) {
-          const matchingRule = this.synonymRules.find(
+          const itemVerbatim = (item.verbatim_text || "").trim().toUpperCase();
+          const itemDict = (item.dictionary_type || "").toUpperCase();
+
+          // 1. Check for Study-level matching rule first (higher precedence)
+          let matchingRule = this.synonymRules.find(
             (rule) =>
-              rule.status === "ACTIVE" &&
-              rule.verbatim_text.toUpperCase() ===
-                (item.verbatim_text || "").trim().toUpperCase() &&
+              (rule.status === "ACTIVE" || rule.status === "active") &&
+              ((rule.scope || "").toUpperCase() === "STUDY" ||
+                rule.study_id ||
+                rule.studyId) &&
+              (rule.verbatim_text || rule.verbatimText || "")
+                .trim()
+                .toUpperCase() === itemVerbatim &&
               (!rule.dictionary_type ||
-                rule.dictionary_type.toUpperCase() ===
-                  (item.dictionary_type || "").toUpperCase())
+                !rule.dictionaryType ||
+                (rule.dictionary_type || rule.dictionaryType).toUpperCase() ===
+                  itemDict)
           );
 
+          // 2. Fall back to Enterprise-level matching rule
+          if (!matchingRule) {
+            matchingRule = this.synonymRules.find(
+              (rule) =>
+                (rule.status === "ACTIVE" || rule.status === "active") &&
+                (rule.scope || "").toUpperCase() === "ENTERPRISE" &&
+                (rule.verbatim_text || rule.verbatimText || "")
+                  .trim()
+                  .toUpperCase() === itemVerbatim &&
+                (!rule.dictionary_type ||
+                  !rule.dictionaryType ||
+                  (
+                    rule.dictionary_type || rule.dictionaryType
+                  ).toUpperCase() === itemDict)
+            );
+          }
+
+          // 3. Fall back to any active rule matching verbatim
+          if (!matchingRule) {
+            matchingRule = this.synonymRules.find(
+              (rule) =>
+                (rule.status === "ACTIVE" || rule.status === "active") &&
+                (rule.verbatim_text || rule.verbatimText || "")
+                  .trim()
+                  .toUpperCase() === itemVerbatim &&
+                (!rule.dictionary_type ||
+                  !rule.dictionaryType ||
+                  (
+                    rule.dictionary_type || rule.dictionaryType
+                  ).toUpperCase() === itemDict)
+            );
+          }
+
           if (matchingRule) {
+            const targetCode =
+              matchingRule.target_code || matchingRule.targetCode;
+            const targetTerm =
+              matchingRule.target_term || matchingRule.targetTerm;
             item.status = "AUTO_CODED";
-            item.coded_code = matchingRule.target_code;
-            item.coded_term = matchingRule.target_term;
+            item.coded_code = targetCode;
+            item.coded_term = targetTerm;
 
             this.auditLedger.push({
               assignment_id: item.id,
               verbatim_text: item.verbatim_text,
-              coded_code: matchingRule.target_code,
-              coded_term: matchingRule.target_term,
+              coded_code: targetCode,
+              coded_term: targetTerm,
               action: "ACCEPT",
               reason_for_change:
-                "Automated cross-study synonym rule propagation",
+                (matchingRule.scope || "").toUpperCase() === "STUDY"
+                  ? "Automated study-level synonym rule propagation"
+                  : "Automated cross-study enterprise synonym rule propagation",
               reviewer_identity: "Synonym Propagation Engine",
               ai_model_identity: item.model_id || "cadence-synonym-engine-v1.0",
               timestamp: new Date().toISOString(),
@@ -1176,6 +1229,174 @@ export const useCodingStore = defineStore("coding", {
 
     closeImpactDrawer() {
       this.impactAnalysis.isOpen = false;
+    },
+
+    openSynonymDrawer() {
+      this.isSynonymDrawerOpen = true;
+      this.synonymImportError = null;
+    },
+
+    closeSynonymDrawer() {
+      this.isSynonymDrawerOpen = false;
+      this.synonymPreflightReport = null;
+      this.synonymImportError = null;
+    },
+
+    async validateSynonymFile({ file, scope = "STUDY", studyId = null }) {
+      this.synonymImportLoading = true;
+      this.synonymImportError = null;
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("scope", scope);
+        if (studyId) {
+          formData.append("study_id", studyId);
+        }
+
+        const report = await apiClient.post(
+          "/api/v1/execution/coding/synonyms/validate",
+          formData,
+          {
+            changeReason: `Bulk synonym file preflight validation: ${file.name}`,
+          }
+        );
+
+        this.synonymPreflightReport = report;
+        return report;
+      } catch (err) {
+        this.synonymImportError =
+          err.message || "Failed to validate synonym dictionary file";
+        throw err;
+      } finally {
+        this.synonymImportLoading = false;
+      }
+    },
+
+    async importSynonymRules({
+      file,
+      scope = "STUDY",
+      studyId = null,
+      reasonForChange,
+    }) {
+      this.synonymImportLoading = true;
+      this.synonymImportError = null;
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("scope", scope);
+        if (studyId) {
+          formData.append("study_id", studyId);
+        }
+        if (reasonForChange) {
+          formData.append("reason_for_change", reasonForChange);
+        }
+
+        const res = await apiClient.post(
+          "/api/v1/execution/coding/synonyms/import",
+          formData,
+          {
+            changeReason:
+              reasonForChange ||
+              `Bulk synonym dictionary import execution: ${file.name}`,
+          }
+        );
+
+        await Promise.all([
+          this.fetchActiveSynonymRules(studyId),
+          this.fetchSynonymImportJobs(studyId),
+        ]);
+
+        this.synonymPreflightReport = null;
+        return res;
+      } catch (err) {
+        this.synonymImportError =
+          err.message || "Failed to import bulk synonym rules";
+        throw err;
+      } finally {
+        this.synonymImportLoading = false;
+      }
+    },
+
+    async fetchActiveSynonymRules(studyId = null) {
+      this.synonymImportError = null;
+      try {
+        const params = new URLSearchParams();
+        if (studyId) {
+          params.append("studyId", studyId);
+        }
+        const queryString = params.toString();
+        const url = `/api/v1/execution/coding/synonyms${
+          queryString ? "?" + queryString : ""
+        }`;
+
+        const rules = await apiClient.get(url, {
+          changeReason: "Fetch active synonym rules",
+        });
+
+        if (Array.isArray(rules)) {
+          this.synonymRules = rules;
+          this.applySynonymRulesToQueue();
+        } else {
+          this.synonymRules = [];
+        }
+        return rules;
+      } catch (err) {
+        this.synonymImportError =
+          err.message || "Failed to fetch active synonym rules";
+        return [];
+      }
+    },
+
+    async fetchSynonymImportJobs(studyId = null) {
+      try {
+        const params = new URLSearchParams();
+        if (studyId) {
+          params.append("studyId", studyId);
+        }
+        const queryString = params.toString();
+        const url = `/api/v1/execution/coding/synonyms/jobs${
+          queryString ? "?" + queryString : ""
+        }`;
+
+        const jobs = await apiClient.get(url, {
+          changeReason: "Fetch bulk synonym import job audit history",
+        });
+
+        if (Array.isArray(jobs)) {
+          this.synonymImportJobs = jobs;
+        } else {
+          this.synonymImportJobs = [];
+        }
+        return jobs;
+      } catch (err) {
+        this.synonymImportJobs = [];
+        return [];
+      }
+    },
+
+    async deactivateSynonymRule(ruleId, reasonForChange, studyId = null) {
+      this.synonymImportLoading = true;
+      this.synonymImportError = null;
+      try {
+        const params = new URLSearchParams();
+        if (reasonForChange) {
+          params.append("reason_for_change", reasonForChange);
+        }
+
+        const url = `/api/v1/execution/coding/synonyms/${ruleId}?${params.toString()}`;
+        const res = await apiClient.delete(url, {
+          changeReason: reasonForChange || `Deactivate synonym rule ${ruleId}`,
+        });
+
+        await this.fetchActiveSynonymRules(studyId);
+        return res;
+      } catch (err) {
+        this.synonymImportError =
+          err.message || "Failed to deactivate synonym rule";
+        throw err;
+      } finally {
+        this.synonymImportLoading = false;
+      }
     },
   },
 });

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,6 +17,8 @@ using Cadence.TestSupport.Execution.Fakes;
 using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
+
+using Microsoft.Extensions.Configuration;
 
 using Xunit;
 
@@ -342,5 +345,122 @@ public sealed class FormSubmissionStateTests
         var nullManifestResult = await service.ApproveAsync(formId, nullManifestRequest, PrincipalInvestigator, CancellationToken.None);
         nullManifestResult.IsFailure.Should().BeTrue();
         nullManifestResult.Error!.Code.Should().Be("SIGNATURE_MANIFEST_REQUIRED");
+    }
+
+    /// <summary>
+    /// Validates that approving an eCRF form submission throws an InvalidOperationException when GATEWAY_SECRET environment variable is unconfigured, empty, or whitespace.
+    /// @req:SRS-EDC-003
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task FormApplicationService_Approve_WithUnconfiguredSecret_ThrowsInvalidOperationException(string? secret)
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi_investigator_01", "PI approval");
+
+        var service = new FormSubmissionApplicationService(
+            formRepo,
+            obsRepo,
+            ucum,
+            audit);
+
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: payload), CancellationToken.None);
+
+        var formId = createResult.Value!.Id;
+        await service.CompleteAsync(formId, CancellationToken.None);
+
+        string? previousSecret = Environment.GetEnvironmentVariable("GATEWAY_SECRET");
+        try
+        {
+            Environment.SetEnvironmentVariable("GATEWAY_SECRET", secret);
+            var validHash = ComputeHash(payload);
+
+            var action = () => service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
+                SignerId: "pi-user-01",
+                SignerRole: "PRINCIPAL_INVESTIGATOR",
+                SigningReason: "I attest that I have reviewed and approved these clinical data.",
+                SignedAt: FakeClock.DefaultStart.UtcDateTime,
+                PayloadHash: validHash,
+                HmacSignature: "any-hmac"),
+                PrincipalInvestigator,
+                CancellationToken.None);
+
+            await action.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*GATEWAY_SECRET is not configured*");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("GATEWAY_SECRET", previousSecret);
+        }
+    }
+
+    /// <summary>
+    /// Validates that approving an eCRF form submission throws an InvalidOperationException when GATEWAY_SECRET in IConfiguration is unconfigured.
+    /// @req:SRS-EDC-003
+    /// </summary>
+    [Fact]
+    public async Task FormApplicationService_Approve_WithUnconfiguredConfigurationSecret_ThrowsInvalidOperationException()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi_investigator_01", "PI approval");
+
+        var inMemoryConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GATEWAY_SECRET"] = "   "
+            })
+            .Build();
+
+        var service = new FormSubmissionApplicationService(
+            formRepo,
+            obsRepo,
+            ucum,
+            audit,
+            configuration: inMemoryConfig);
+
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: payload), CancellationToken.None);
+
+        var formId = createResult.Value!.Id;
+        await service.CompleteAsync(formId, CancellationToken.None);
+
+        string? previousSecret = Environment.GetEnvironmentVariable("GATEWAY_SECRET");
+        try
+        {
+            Environment.SetEnvironmentVariable("GATEWAY_SECRET", null);
+            var validHash = ComputeHash(payload);
+
+            var action = () => service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
+                SignerId: "pi-user-01",
+                SignerRole: "PRINCIPAL_INVESTIGATOR",
+                SigningReason: "I attest that I have reviewed and approved these clinical data.",
+                SignedAt: FakeClock.DefaultStart.UtcDateTime,
+                PayloadHash: validHash,
+                HmacSignature: "any-hmac"),
+                PrincipalInvestigator,
+                CancellationToken.None);
+
+            await action.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage("*GATEWAY_SECRET is not configured*");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("GATEWAY_SECRET", previousSecret);
+        }
     }
 }

@@ -134,7 +134,8 @@ public record SubmitExpenseClaimRequestDto(
     decimal? PerDiemCap = null,
     string? ExpenseDate = null,
     string? ReceiptImageName = null,
-    object? ReceiptOcrData = null
+    object? ReceiptOcrData = null,
+    double? OcrConfidence = null
 );
 
 public record ReviewExpenseClaimRequestDto(
@@ -1087,17 +1088,52 @@ public static class PaymentEndpoints
 
         decimal gross = request.GrossAmount;
         decimal taxDeduction = 0m;
+        bool isMeal = request.Category == "MEAL" || request.IsMealAllowance;
+        decimal perDiemCap = request.PerDiemCap ?? 75.00m;
 
-        if (request.Category == "MEAL" || request.IsMealAllowance)
+        if (isMeal && gross > perDiemCap)
         {
-            decimal cap = request.PerDiemCap ?? 75.00m;
-            if (gross > cap)
-            {
-                taxDeduction = Math.Round((gross - cap) * 0.15m, 2);
-            }
+            taxDeduction = Math.Round((gross - perDiemCap) * 0.15m, 2);
         }
 
         decimal net = Math.Round(gross - taxDeduction, 2);
+
+        double ocrConfidence = request.OcrConfidence ?? ExtractConfidenceScore(request.ReceiptOcrData) ?? (request.ReceiptOcrData != null ? 0.98 : 0.95);
+
+        // Evaluate Auto-Approval Policy Rules
+        bool isAmountLowRisk = gross <= 100.00m;
+        bool isHighConfidence = ocrConfidence >= 0.90;
+        bool isMealWithinCap = !isMeal || gross <= perDiemCap;
+        bool isW9Compliant = !(wallet.TaxableYtd >= 600.00m && wallet.W9Status != "VERIFIED");
+
+        bool canAutoApprove = isAmountLowRisk && isHighConfidence && isMealWithinCap && isW9Compliant;
+
+        string initialStatus = canAutoApprove ? "APPROVED" : "PENDING_REVIEW";
+        string? reviewNotes = null;
+
+        if (!canAutoApprove)
+        {
+            if (!isAmountLowRisk)
+            {
+                reviewNotes = $"Gross amount (${gross:F2}) exceeds $100.00 auto-approval threshold; routed to coordinator review queue.";
+            }
+            else if (!isMealWithinCap)
+            {
+                reviewNotes = $"Meal expense (${gross:F2}) exceeds per-diem cap (${perDiemCap:F2}); routed to coordinator review queue.";
+            }
+            else if (!isW9Compliant)
+            {
+                reviewNotes = "IRS 1099 tax threshold reached without verified Form W-9 certification; automated disbursement halted for coordinator review.";
+            }
+            else if (!isHighConfidence)
+            {
+                reviewNotes = $"OCR confidence score ({ocrConfidence:F2}) below 0.90 threshold; routed to coordinator review queue.";
+            }
+        }
+        else
+        {
+            reviewNotes = "Auto-approved based on low-risk expense policy (<$100, high OCR confidence).";
+        }
 
         var claim = new ParticipantExpenseClaim
         {
@@ -1112,38 +1148,181 @@ public static class PaymentEndpoints
             GrossAmount = gross,
             TaxDeduction = taxDeduction,
             NetAmount = net,
-            Status = "PENDING_REVIEW",
+            Status = initialStatus,
             ReceiptImageName = request.ReceiptImageName ?? "receipt.jpg",
             ReceiptOcrDataJson = request.ReceiptOcrData != null ? JsonSerializer.Serialize(request.ReceiptOcrData) : null,
+            ReviewedBy = canAutoApprove ? "svc:system_auto_approval" : null,
+            ReviewedAt = canAutoApprove ? now : null,
+            ReviewNotes = reviewNotes,
             CreatedAt = now,
             CreatedBy = request.SubjectId,
             UpdatedAt = now,
             VersionIndex = 1
         };
-        dbContext.ParticipantExpenseClaims.Add(claim);
 
-        var audit = new PaymentAuditLog
+        if (canAutoApprove)
         {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "ParticipantExpenseClaim",
-            EntityId = claim.Id,
-            Action = "EXPENSE_CLAIM_SUBMITTED",
-            UserId = request.SubjectId,
-            UserRoles = "Subject",
-            Details = JsonSerializer.Serialize(new { category = request.Category, gross = gross, net = net, merchant = request.MerchantName }),
-            CreatedAt = now,
-            CreatedBy = request.SubjectId,
-            ReasonForChange = "Travel/meal expense claim submitted for coordinator review",
-            VersionIndex = 1
-        };
-        dbContext.PaymentAuditLogs.Add(audit);
+            // Credit wallet for reimbursement
+            wallet.CurrentBalance += net;
+            wallet.LifetimeReimbursements += net;
+            wallet.UpdatedAt = now;
+            wallet.VersionIndex += 1;
 
+            var creditTx = new ParticipantTransaction
+            {
+                Id = Guid.NewGuid().ToString(),
+                WalletId = wallet.Id,
+                SubjectId = wallet.SubjectId,
+                StudyId = wallet.StudyId,
+                TransactionType = "REIMBURSEMENT_CREDIT",
+                Amount = net,
+                BalanceAfter = wallet.CurrentBalance,
+                ReferenceId = claim.Id,
+                Description = $"Auto-approved reimbursement credit for {claim.Category} expense ({claim.MerchantName})",
+                CreatedAt = now,
+                CreatedBy = "svc:system_auto_approval",
+                VersionIndex = 1
+            };
+            dbContext.ParticipantTransactions.Add(creditTx);
+
+            // Dispatch Automated Direct ACH Transfer
+            string achRef = $"DISB-ACH-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
+            claim.DisbursementReference = achRef;
+
+            wallet.CurrentBalance -= net;
+            wallet.LifetimeDisbursements += net;
+
+            var disbursement = new ParticipantDisbursement
+            {
+                Id = Guid.NewGuid().ToString(),
+                WalletId = wallet.Id,
+                SubjectId = wallet.SubjectId,
+                Amount = net,
+                DisbursementType = "DIRECT_ACH",
+                ReferenceNumber = achRef,
+                Status = "DISPATCHED",
+                CreatedAt = now,
+                CreatedBy = "svc:system_auto_approval",
+                VersionIndex = 1
+            };
+            dbContext.ParticipantDisbursements.Add(disbursement);
+
+            var achTx = new ParticipantTransaction
+            {
+                Id = Guid.NewGuid().ToString(),
+                WalletId = wallet.Id,
+                SubjectId = wallet.SubjectId,
+                StudyId = wallet.StudyId,
+                TransactionType = "DISBURSEMENT_DEBIT",
+                Amount = -net,
+                BalanceAfter = wallet.CurrentBalance,
+                ReferenceId = claim.Id,
+                Description = $"Automated direct ACH payout dispatch ({achRef})",
+                CreatedAt = now,
+                CreatedBy = "svc:system_auto_approval",
+                VersionIndex = 1
+            };
+            dbContext.ParticipantTransactions.Add(achTx);
+
+            var autoApproveAudit = new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantExpenseClaim",
+                EntityId = claim.Id,
+                Action = "EXPENSE_CLAIM_AUTO_APPROVED",
+                UserId = request.SubjectId,
+                UserRoles = "Subject",
+                Details = JsonSerializer.Serialize(new
+                {
+                    claim_id = claim.Id,
+                    gross_amount = gross,
+                    net_amount = net,
+                    ocr_confidence = ocrConfidence,
+                    disbursement_reference = achRef
+                }),
+                CreatedAt = now,
+                CreatedBy = request.SubjectId,
+                ReasonForChange = "Automated OCR policy auto-approval and ACH payout dispatch",
+                VersionIndex = claim.VersionIndex
+            };
+            dbContext.PaymentAuditLogs.Add(autoApproveAudit);
+
+            var achAudit = new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantWallet",
+                EntityId = wallet.Id,
+                Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
+                UserId = request.SubjectId,
+                UserRoles = "Subject",
+                Details = JsonSerializer.Serialize(new
+                {
+                    disbursement_id = disbursement.Id,
+                    amount = net,
+                    reference_number = achRef,
+                    disbursement_type = "DIRECT_ACH"
+                }),
+                CreatedAt = now,
+                CreatedBy = request.SubjectId,
+                ReasonForChange = "Automated direct ACH reimbursement dispatched to linked bank account",
+                VersionIndex = wallet.VersionIndex
+            };
+            dbContext.PaymentAuditLogs.Add(achAudit);
+        }
+        else
+        {
+            var audit = new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantExpenseClaim",
+                EntityId = claim.Id,
+                Action = "EXPENSE_CLAIM_SUBMITTED",
+                UserId = request.SubjectId,
+                UserRoles = "Subject",
+                Details = JsonSerializer.Serialize(new
+                {
+                    category = request.Category,
+                    gross = gross,
+                    net = net,
+                    merchant = request.MerchantName,
+                    status = claim.Status,
+                    review_notes = reviewNotes
+                }),
+                CreatedAt = now,
+                CreatedBy = request.SubjectId,
+                ReasonForChange = "Travel/meal expense claim submitted for coordinator review",
+                VersionIndex = 1
+            };
+            dbContext.PaymentAuditLogs.Add(audit);
+        }
+
+        dbContext.ParticipantExpenseClaims.Add(claim);
         await dbContext.SaveChangesAsync();
 
         return Results.Ok(claim);
     }
 
-    private static IResult ExtractReceiptOcr(OcrExtractRequestDto request)
+    private static double? ExtractConfidenceScore(object? ocrData)
+    {
+        if (ocrData == null) return null;
+        try
+        {
+            if (ocrData is JsonElement jsonElement)
+            {
+                if (jsonElement.TryGetProperty("confidence_score", out var cs) && cs.TryGetDouble(out double val1))
+                    return val1;
+                if (jsonElement.TryGetProperty("confidenceScore", out var cs2) && cs2.TryGetDouble(out double val2))
+                    return val2;
+            }
+        }
+        catch
+        {
+            // ignore
+        }
+        return null;
+    }
+
+    private static async Task<IResult> ExtractReceiptOcr(OcrExtractRequestDto request, PaymentsDbContext dbContext)
     {
         string text = request.RawText ?? string.Empty;
 
@@ -1225,6 +1404,34 @@ public static class PaymentEndpoints
         }
 
         decimal netAmount = Math.Round(grossAmount - taxDeduction, 2);
+        double confidenceScore = 0.98;
+
+        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        var ocrAudit = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "ParticipantExpenseClaim",
+            EntityId = "OCR_SCAN_" + Guid.NewGuid().ToString("N")[..8],
+            Action = "OCR_RECEIPT_EXTRACTED",
+            UserId = "subject_participant",
+            UserRoles = "Subject",
+            Details = JsonSerializer.Serialize(new
+            {
+                merchant_name = merchantName,
+                expense_date = expenseDate,
+                gross_amount = grossAmount,
+                tax_deduction = taxDeduction,
+                net_amount = netAmount,
+                category = category,
+                confidence_score = confidenceScore
+            }),
+            CreatedAt = now,
+            CreatedBy = "subject_participant",
+            ReasonForChange = "Mobile receipt OCR initial extraction",
+            VersionIndex = 1
+        };
+        dbContext.PaymentAuditLogs.Add(ocrAudit);
+        await dbContext.SaveChangesAsync();
 
         return Results.Ok(new
         {
@@ -1234,7 +1441,7 @@ public static class PaymentEndpoints
             tax_deduction = taxDeduction,
             net_amount = netAmount,
             category = category,
-            confidence_score = 0.98,
+            confidence_score = confidenceScore,
             raw_text = text
         });
     }

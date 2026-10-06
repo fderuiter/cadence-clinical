@@ -430,9 +430,13 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.InvalidPayloadHash();
         }
 
-        string secret = configuration?["GATEWAY_SECRET"]
-            ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET")
-            ?? string.Empty;
+        string? secret = configuration?["GATEWAY_SECRET"]
+            ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET");
+
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            throw new InvalidOperationException("GATEWAY_SECRET is not configured; e-signature verification cannot proceed.");
+        }
 
         if (!Cadence.Security.HmacSigner.VerifySignature(computedHash, secret, manifest.HmacSignature ?? string.Empty))
         {

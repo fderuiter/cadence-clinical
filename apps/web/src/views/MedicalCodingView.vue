@@ -33,6 +33,13 @@
 
         <button
           type="button"
+          class="btn btn-secondary synonym-import-btn"
+          @click="codingStore.openSynonymDrawer()"
+        >
+          📥 Bulk Synonym Import
+        </button>
+        <button
+          type="button"
           class="btn btn-secondary"
           @click="codingStore.openImpactDrawer()"
         >
@@ -348,6 +355,7 @@
     <!-- Modals & Drawers -->
     <DictionaryBrowserModal />
     <UpversioningImpactDrawer />
+    <SynonymImportDrawer />
   </div>
 </template>
 
@@ -359,6 +367,7 @@ import { hasRequiredRole } from "../router";
 import CodingQueueTable from "../components/CodingQueueTable.vue";
 import DictionaryBrowserModal from "../components/DictionaryBrowserModal.vue";
 import UpversioningImpactDrawer from "../components/UpversioningImpactDrawer.vue";
+import SynonymImportDrawer from "../components/SynonymImportDrawer.vue";
 
 const authStore = useAuthStore();
 const codingStore = useCodingStore();

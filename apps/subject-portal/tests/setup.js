@@ -1,5 +1,13 @@
-import { vi, expect, afterEach } from "vitest";
+import { vi, expect, afterEach, beforeAll, afterAll } from "vitest";
 import { toBeAccessible } from "ui";
+import { setupServer } from "msw/node";
+import { gatewayHandlers } from "../src/mocks/handlers.js";
+
+export const server = setupServer(...gatewayHandlers);
+
+beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 expect.extend({
   toBeAccessible,
