@@ -262,23 +262,26 @@ public sealed class FormSubmissionApplicationService(
                 return persisted.Error!;
             }
 
-            if (editCheckEngine != null && autoQueryDispatchService != null && persisted.Value is not null)
+            if (autoQueryDispatchService != null && persisted.Value is not null)
             {
                 var observations = persisted.Value;
                 var violations = new List<EditCheckViolation>();
 
-                foreach (var obs in observations)
+                if (editCheckEngine != null)
                 {
-                    violations.AddRange(editCheckEngine.EvaluateInlineConstraints(obs));
+                    foreach (var obs in observations)
+                    {
+                        violations.AddRange(editCheckEngine.EvaluateInlineConstraints(obs));
+                    }
+
+                    var batchContext = new BatchEvaluationContext(
+                        submission.StudyId.Value,
+                        submission.SubjectId.Value,
+                        observations,
+                        [submission]);
+
+                    violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
                 }
-
-                var batchContext = new BatchEvaluationContext(
-                    submission.StudyId.Value,
-                    submission.SubjectId.Value,
-                    observations,
-                    [submission]);
-
-                violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
 
                 await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
                     submission.StudyId,
@@ -294,6 +297,19 @@ public sealed class FormSubmissionApplicationService(
         else
         {
             await observationRepository.DeactivateByFormSubmissionIdAsync(submission.Id, cancellationToken).ConfigureAwait(false);
+
+            if (autoQueryDispatchService != null)
+            {
+                await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
+                    submission.StudyId,
+                    submission.SubjectId,
+                    submission.SiteId,
+                    submission.VisitId,
+                    submission.FormId.Value,
+                    Array.Empty<ClinicalObservation>(),
+                    Array.Empty<EditCheckViolation>(),
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
 
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
