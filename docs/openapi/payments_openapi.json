@@ -929,7 +929,16 @@
               "string"
             ]
           },
-          "receiptOcrData": {}
+          "receiptOcrData": {},
+          "ocrConfidence": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
         }
       },
       "Payments_SubmitW9RequestDto": {
