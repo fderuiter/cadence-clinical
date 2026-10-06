@@ -82,6 +82,18 @@ public static class FormEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
+        app.MapPost("/api/v1/execution/batch-sign-off", BatchSignOffAsync)
+            .WithName("BatchSignOff")
+            .WithTags("Forms")
+            .Produces<BatchSignOffResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status423Locked);
+
+        app.MapPost("/api/v1/execution/signatures/batch-sign-off", BatchSignOffAsync)
+            .ExcludeFromDescription();
+
         // Undocumented alias for legacy Python router compatibility. The gateway proxies it, so every alias carries the
         // same filters as its documented route: a change without X-Change-Reason is refused here too (#5060).
         var legacyGroup = app.MapGroup("/api/v1/forms")
@@ -170,6 +182,17 @@ public static class FormEndpoints
     {
         string reason = !string.IsNullOrWhiteSpace(request?.Reason) ? request.Reason : auditContext.ChangeReason;
         var result = await svc.UnlockAsync(id, reason, ct).ConfigureAwait(false);
+        return result.Match(Results.Ok, e => e.ToProblemResult());
+    }
+
+    public static async Task<IResult> BatchSignOffAsync(
+        BatchSignOffRequest request,
+        HttpContext httpContext,
+        IFormSubmissionApplicationService svc,
+        CancellationToken ct)
+    {
+        string? sigToken = httpContext.Request.Headers[GatewayHeaders.SigToken].ToString();
+        var result = await svc.BatchSignOffAsync(request, httpContext.User.ToAuthenticatedCaller(), sigToken, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 }

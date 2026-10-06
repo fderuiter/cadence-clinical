@@ -32,7 +32,9 @@ public sealed class FormSubmission : AggregateRoot<FormSubmissionId>
         "I approve the accuracy and completeness of this casebook.",
         "I approve the accuracy and completeness of this form.",
         "I attest that I have reviewed and approved these clinical data.",
-        "Sign-off"
+        "Sign-off",
+        "Principal Investigator Approval",
+        "Principal Investigator Approval and Sign-Off"
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     public StudyCode StudyId { get; private set; }
