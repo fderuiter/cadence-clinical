@@ -205,6 +205,9 @@ export function openDatabase(userId) {
           if (!db.objectStoreNames.contains("drafts")) {
             db.createObjectStore("drafts", { keyPath: "assignment_id" });
           }
+          if (!db.objectStoreNames.contains("sensor_telemetry")) {
+            db.createObjectStore("sensor_telemetry", { keyPath: "id" });
+          }
         } catch (upgradeErr) {
           console.error("IndexedDB upgrade error:", upgradeErr);
           if (
@@ -885,4 +888,109 @@ export async function deleteDraft(assignmentId) {
   } catch (err) {
     console.error("Failed to delete draft:", err);
   }
+}
+
+export async function queueSensorTelemetryBatch(batchPayload) {
+  const db = await openDatabase();
+  const id =
+    batchPayload.id ||
+    batchPayload.batch_id ||
+    "sensor-batch-" +
+      Date.now() +
+      "-" +
+      Math.random().toString(36).substring(2, 9);
+  const created_at = new Date().toISOString();
+
+  const record = {
+    ...batchPayload,
+    id,
+    batch_id: batchPayload.batch_id || id,
+    status: batchPayload.status || "QUEUED",
+    created_at,
+  };
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("sensor_telemetry", "readwrite");
+    const store = tx.objectStore("sensor_telemetry");
+    store.put(record);
+    tx.oncomplete = () => {
+      resolve(record);
+    };
+    tx.onerror = () => {
+      reject(tx.error);
+    };
+  });
+}
+
+export async function saveSensorTelemetryBatch(batchPayload) {
+  return queueSensorTelemetryBatch(batchPayload);
+}
+
+export async function getQueuedSensorTelemetryBatches() {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("sensor_telemetry", "readonly");
+    const store = tx.objectStore("sensor_telemetry");
+    const req = store.getAll();
+    req.onsuccess = () => {
+      const all = req.result || [];
+      const queued = all.filter((item) => item.status === "QUEUED");
+      resolve(queued);
+    };
+    req.onerror = () => {
+      reject(req.error);
+    };
+  });
+}
+
+export async function getQueuedSensorBatches() {
+  return getQueuedSensorTelemetryBatches();
+}
+
+export async function updateSensorTelemetryBatchStatus(
+  id,
+  status,
+  additionalFields = {}
+) {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("sensor_telemetry", "readwrite");
+    const store = tx.objectStore("sensor_telemetry");
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const item = getReq.result;
+      if (!item) {
+        reject(new Error(`Sensor telemetry batch ${id} not found`));
+        return;
+      }
+      item.status = status;
+      item.resolved_at = new Date().toISOString();
+      Object.assign(item, additionalFields);
+      const putReq = store.put(item);
+      putReq.onsuccess = () => {
+        resolve(item);
+      };
+      putReq.onerror = () => {
+        reject(putReq.error);
+      };
+    };
+    getReq.onerror = () => {
+      reject(getReq.error);
+    };
+  });
+}
+
+export async function clearAllSensorTelemetryBatches() {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("sensor_telemetry", "readwrite");
+    const store = tx.objectStore("sensor_telemetry");
+    store.clear();
+    tx.oncomplete = () => {
+      resolve();
+    };
+    tx.onerror = () => {
+      reject(tx.error);
+    };
+  });
 }

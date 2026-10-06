@@ -30,7 +30,7 @@ namespace Cadence.UnitTests.Kernel;
 [Trait("Category", "Unit")]
 public sealed class IdentityVaultTests
 {
-    private static readonly TenantId Tenant = TenantId.New();
+    private static readonly TenantId Tenant = TenantId.Parse("01000000-0000-0000-0000-000000000001");
     private static readonly Guid Subject = Guid.CreateVersion7();
 
     private static readonly IdentityDetails Jane = new()

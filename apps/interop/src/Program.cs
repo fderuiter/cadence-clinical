@@ -1,4 +1,5 @@
 using Cadence.Apps.Interop.Endpoints;
+using Cadence.Apps.Interop.Infrastructure.Background;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Database;
@@ -18,6 +19,7 @@ builder.Services.AddCadenceLookupHashing();
 builder.Services.AddSingleton<DeviceTokenHasher>();
 builder.AddCadencePostgresDbContext<InteropDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+builder.Services.AddHostedService<TelemetryWindowingBackgroundService>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
@@ -29,6 +31,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Returns Interoperability operational status.");
 
 app.MapEsourceEndpoints();
+app.MapTelemetryEndpoints();
 
 await app.RunAsync();
 

@@ -592,6 +592,258 @@
           }
         }
       }
+    },
+    "/api/v1/interop/telemetry/stream": {
+      "post": {
+        "tags": [
+          "Biometric Sensor Telemetry \u0026 Safety Alerting"
+        ],
+        "operationId": "IngestTelemetryStream",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_TelemetryStreamIngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_TelemetryStreamIngestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/telemetry/summary": {
+      "get": {
+        "tags": [
+          "Biometric Sensor Telemetry \u0026 Safety Alerting"
+        ],
+        "operationId": "ListTelemetrySummaries",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_TelemetrySummaryListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/telemetry/alerts": {
+      "get": {
+        "tags": [
+          "Biometric Sensor Telemetry \u0026 Safety Alerting"
+        ],
+        "operationId": "ListSafetyAlerts",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unacknowledged_only",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_SafetyAlertsListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sensors/ingest": {
+      "post": {
+        "tags": [
+          "Biometric Sensors \u0026 DCT"
+        ],
+        "operationId": "IngestSensorsStream",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Interop_TelemetryStreamIngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_TelemetryStreamIngestResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/interop/sensors/summary": {
+      "get": {
+        "tags": [
+          "Biometric Sensors \u0026 DCT"
+        ],
+        "operationId": "ListSensorsSummary",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_TelemetrySummaryListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1445,6 +1697,544 @@
           }
         }
       },
+      "Interop_RawSensorReadingDto": {
+        "required": [
+          "timestamp",
+          "metric_name",
+          "metric",
+          "value",
+          "unit",
+          "flag"
+        ],
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "metric_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "metric": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "value": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "flag": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_SafetyAlertsListResponse": {
+        "required": [
+          "alerts",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_SensorSafetyAlertRecord"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Interop_SensorDailySummaryRecord": {
+        "required": [
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "summaryDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deviceType": {
+            "type": "string"
+          },
+          "deviceTokenHash": {
+            "type": "string"
+          },
+          "readingsCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activeWearHours": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tirPercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tbrLevel1Percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tbrLevel2Percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tarLevel1Percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tarLevel2Percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "meanGlucoseMgDl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "glucoseSd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "glucoseCvPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "glucoseManagementIndicator": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "totalSteps": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "meanCadenceSpm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "peakCadenceSpm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "activeMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sedentaryMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sleepDurationMinutes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sleepEfficiencyPercent": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "restingHeartRateBpm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "bestFev1Liters": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "bestFvcLiters": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fev1FvcRatio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fev1PercentPredicted": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "peakExpiratoryFlowLMin": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "meanSystolicMmhg": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "meanDiastolicMmhg": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "meanArterialPressureMmhg": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "summaryManifestJson": {
+            "type": "string"
+          },
+          "lakehouseRecordId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sha256Hash": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Interop_SensorSafetyAlertRecord": {
+        "required": [
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "alertId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "deviceType": {
+            "type": "string"
+          },
+          "deviceTokenHash": {
+            "type": "string"
+          },
+          "alertType": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "parameterName": {
+            "type": "string"
+          },
+          "observedValue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "thresholdValue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "triggeredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isAcknowledged": {
+            "type": "boolean"
+          },
+          "acknowledgedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "acknowledgedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "acknowledgmentNotes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "auditSignature": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Interop_SensorTelemetryStreamRecord": {
+        "required": [
+          "receivedAt",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "deviceTokenHash": {
+            "type": "string"
+          },
+          "deviceType": {
+            "type": "string"
+          },
+          "batchId": {
+            "type": "string"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "clockDriftOffsetMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "readingCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "startTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "omhPayloadJson": {
+            "type": "string"
+          },
+          "fhirObservationsJson": {
+            "type": "string"
+          },
+          "rawDataHash": {
+            "type": "string"
+          },
+          "feedLakehouseRecordIdsJson": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Interop_SmartAssertionRequest": {
         "required": [
           "clientId",
@@ -1569,6 +2359,177 @@
             ]
           }
         }
+      },
+      "Interop_TelemetryStreamIngestRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "device_type",
+          "vendor",
+          "model_name",
+          "device_token",
+          "raw_device_token",
+          "batch_id",
+          "clock_drift_offset_ms",
+          "reading_count",
+          "start_timestamp",
+          "end_timestamp",
+          "readings",
+          "omh_payload_json",
+          "fhir_observations_json"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "device_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vendor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "model_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "raw_device_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "batch_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clock_drift_offset_ms": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "reading_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "start_timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "end_timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "readings": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Interop_RawSensorReadingDto"
+            }
+          },
+          "omh_payload_json": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fhir_observations_json": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Interop_TelemetryStreamIngestResponse": {
+        "required": [
+          "success",
+          "streamRecord",
+          "safetyAlertsTriggered",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "streamRecord": {
+            "$ref": "#/components/schemas/Interop_SensorTelemetryStreamRecord"
+          },
+          "safetyAlertsTriggered": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_SensorSafetyAlertRecord"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_TelemetrySummaryListResponse": {
+        "required": [
+          "summaries",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "summaries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Interop_SensorDailySummaryRecord"
+            }
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       }
     }
   },
@@ -1578,6 +2539,12 @@
     },
     {
       "name": "eSource Reconciliation \u0026 SMART on FHIR"
+    },
+    {
+      "name": "Biometric Sensor Telemetry \u0026 Safety Alerting"
+    },
+    {
+      "name": "Biometric Sensors \u0026 DCT"
     }
   ]
 }
