@@ -782,4 +782,46 @@ public class RuleEvaluatorTests
 
         act.Should().Throw<UndefinedVariableException>();
     }
+
+    [Fact]
+    public void EvaluateFinding_PreservesSeverityAndRuleCodeMetadata()
+    {
+        var rule = new RuleDefinition
+        {
+            RuleId = "RULE-001",
+            Code = "CUSTOM-CODE-123",
+            Severity = "Warning",
+            StudyId = "S-1",
+            Name = "High SBP Check",
+            RuleType = "constraint",
+            QueryMessage = "Systolic BP exceeds threshold.",
+            TargetField = "SBP",
+            CreatedAt = AsOf,
+            Condition = new ExpressionNode
+            {
+                Type = "comparison",
+                Operator = ">",
+                Operands =
+                [
+                    new ExpressionNode { Type = "field_ref", FieldRef = new FieldReference("SBP") },
+                    new ExpressionNode { Type = "constant", Value = 140 },
+                ],
+            },
+        };
+
+        var evaluator = new RuleEvaluator(AsOf);
+        var findingFired = evaluator.EvaluateFinding(rule, new Dictionary<string, object?> { ["SBP"] = 150 });
+        var findingNotFired = evaluator.EvaluateFinding(rule, new Dictionary<string, object?> { ["SBP"] = 120 });
+
+        findingFired.Fired.Should().BeTrue();
+        findingFired.RuleId.Should().Be("RULE-001");
+        findingFired.Code.Should().Be("CUSTOM-CODE-123");
+        findingFired.Severity.Should().Be("Warning");
+        findingFired.QueryMessage.Should().Be("Systolic BP exceeds threshold.");
+        findingFired.TargetField.Should().Be("SBP");
+
+        findingNotFired.Fired.Should().BeFalse();
+        findingNotFired.Severity.Should().Be("Warning");
+        findingNotFired.Code.Should().Be("CUSTOM-CODE-123");
+    }
 }

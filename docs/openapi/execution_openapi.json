@@ -166,6 +166,76 @@
         }
       }
     },
+    "/api/v1/execution/batch-sign-off": {
+      "post": {
+        "tags": [
+          "Forms"
+        ],
+        "operationId": "BatchSignOff",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_BatchSignOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_BatchSignOffResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/subjects": {
       "post": {
         "tags": [
@@ -2027,6 +2097,102 @@
             ]
           },
           "engine": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_BatchSignOffRequest": {
+        "required": [
+          "study_id",
+          "target_type",
+          "target_ids",
+          "signing_reason"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "target_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "signing_reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Execution_BatchSignOffResponse": {
+        "required": [
+          "status",
+          "approved_submission_ids",
+          "skipped_submission_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "approved_submission_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skipped_submission_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "signature_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signed_forms_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "content_digest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timestamp_utc": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "audit_tx": {
             "type": [
               "null",
               "string"
@@ -4410,13 +4576,13 @@
       "name": "SiteCompliance"
     },
     {
+      "name": "Forms"
+    },
+    {
       "name": "Subjects"
     },
     {
       "name": "Observations"
-    },
-    {
-      "name": "Forms"
     },
     {
       "name": "Queries"
