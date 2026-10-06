@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -111,7 +112,7 @@ public static class EconsentEndpoints
         return await ProcessCaptureConsentAsync(template_id, 1, request, dbContext, timeProvider, cancellationToken);
     }
 
-    private static async Task<IResult> ProcessCaptureConsentAsync(
+    public static async Task<IResult> ProcessCaptureConsentAsync(
         string templateId,
         int versionIndex,
         CaptureConsentRequest request,
@@ -119,25 +120,92 @@ public static class EconsentEndpoints
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        DateTimeOffset now = timeProvider.GetUtcNow();
-        string subjectPseudonym = request.SubjectPseudonym ?? "SUBJ-PARTICIPANT-001";
-        string signerName = request.SignerName ?? request.SubjectPseudonym ?? "Participant Signer";
-        string signerRole = request.SignerRole ?? "Subject";
-        string meaning = request.Meaning ?? request.SigningReason ?? "I agree to participate";
-        string digestHash = request.DigestSha256 ?? "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289";
+        if (request is null)
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["request"] = ["Request body is required."]
+            });
+        }
 
-        var signatureData = request.SignatureData ?? $"DATA_BINDING_V1_{subjectPseudonym}_{now.ToUnixTimeMilliseconds()}";
+        var errors = new Dictionary<string, string[]>();
+
+        if (string.IsNullOrWhiteSpace(request.SubjectPseudonym))
+        {
+            errors["subject_pseudonym"] = ["SubjectPseudonym is required."];
+        }
+
+        if (string.IsNullOrWhiteSpace(request.StudyId))
+        {
+            errors["study_id"] = ["StudyId is required."];
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SiteId))
+        {
+            errors["site_id"] = ["SiteId is required."];
+        }
+
+        if (string.IsNullOrWhiteSpace(request.DigestSha256))
+        {
+            errors["digest_sha256"] = ["DigestSha256 is required."];
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SignatureData))
+        {
+            errors["signature_data"] = ["SignatureData is required."];
+        }
+
+        if (errors.Count > 0)
+        {
+            return TypedResults.ValidationProblem(errors);
+        }
+
+        DateTimeOffset now = timeProvider.GetUtcNow();
+        string subjectPseudonym = request.SubjectPseudonym!;
+        string studyId = request.StudyId!;
+        string siteId = request.SiteId!;
+        string digestHash = request.DigestSha256!;
+        string signatureData = request.SignatureData!;
+
+        string signerName = !string.IsNullOrWhiteSpace(request.SignerName) ? request.SignerName : subjectPseudonym;
+        string signerRole = !string.IsNullOrWhiteSpace(request.SignerRole) ? request.SignerRole : "Subject";
+
+        string meaning;
+        if (!string.IsNullOrWhiteSpace(request.Meaning))
+        {
+            meaning = request.Meaning;
+        }
+        else if (!string.IsNullOrWhiteSpace(request.SigningReason))
+        {
+            meaning = request.SigningReason;
+        }
+        else
+        {
+            meaning = "I agree to participate";
+        }
+
+        string protocolVersion = !string.IsNullOrWhiteSpace(request.ProtocolVersion) ? request.ProtocolVersion : "v1.0";
+
         var bindingSha256 = ConsentSignatureBinding.Compute(digestHash, signatureData);
+
+        var manifestData = new
+        {
+            signer_name = signerName,
+            signer_role = signerRole,
+            meaning = meaning,
+            digest = digestHash
+        };
+        string signatureManifestJson = JsonSerializer.Serialize(manifestData);
 
         var consentRecord = new SubjectConsent
         {
             Id = Guid.NewGuid().ToString(),
             SubjectPseudonym = subjectPseudonym,
-            StudyId = request.StudyId ?? "CADENCE-101",
-            SiteId = request.SiteId ?? "SITE-01",
+            StudyId = studyId,
+            SiteId = siteId,
             TemplateId = templateId,
             VersionIndex = versionIndex,
-            ProtocolVersion = request.ProtocolVersion ?? "v1.0",
+            ProtocolVersion = protocolVersion,
             SourceContentIdentity = digestHash,
             Status = "ACTIVE",
             ServerTimestamp = now,
@@ -145,7 +213,7 @@ public static class EconsentEndpoints
             CreatedAt = now,
             CreatedBy = signerName,
             ReasonForChange = meaning,
-            SignatureManifestJson = $"{{\"signer_name\":\"{signerName}\",\"signer_role\":\"{signerRole}\",\"meaning\":\"{meaning}\",\"digest\":\"{digestHash}\"}}"
+            SignatureManifestJson = signatureManifestJson
         };
 
         var signatureRecord = new ConsentSignature

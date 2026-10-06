@@ -128,7 +128,10 @@ public sealed class ObservationApplicationService(
 
         if (subject != null && demographicsNormalizationService != null)
         {
-            var safeDemo = demographicsNormalizationService.GetSafeDemographics(subject);
+            DateOnly? obsDateOnly = request.ObservationDate.HasValue
+                ? DateOnly.FromDateTime(request.ObservationDate.Value)
+                : null;
+            var safeDemo = demographicsNormalizationService.GetSafeDemographics(subject, observationDate: obsDateOnly);
             sex = safeDemo.Gender;
             if (safeDemo.Age is double decimalAge)
             {
