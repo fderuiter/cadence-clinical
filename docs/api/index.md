@@ -11,7 +11,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [designer](designer.md) | 3 |
 | [econsent](econsent.md) | 4 |
 | [eisf](eisf.md) | 2 |
-| [etmf](etmf.md) | 10 |
+| [etmf](etmf.md) | 20 |
 | [execution](execution.md) | 44 |
 | [fileshare](fileshare.md) | 2 |
 | [imaging](imaging.md) | 9 |
