@@ -36,6 +36,10 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<SubjectConsent> SubjectConsents => Set<SubjectConsent>();
 
+    public DbSet<SubjectBatchImport> SubjectBatchImports => Set<SubjectBatchImport>();
+
+    public DbSet<SubjectBatchRow> SubjectBatchRows => Set<SubjectBatchRow>();
+
     public DbSet<SiteComplianceCache> SiteComplianceCaches => Set<SiteComplianceCache>();
 
     public DbSet<ClinicalObservation> ClinicalObservations => Set<ClinicalObservation>();
@@ -68,6 +72,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
         modelBuilder.ApplyConfiguration(new ClinicalSubjectConfiguration());
         modelBuilder.ApplyConfiguration(new SubjectConsentConfiguration());
+        modelBuilder.ApplyConfiguration(new SubjectBatchImportConfiguration());
+        modelBuilder.ApplyConfiguration(new SubjectBatchRowConfiguration());
         modelBuilder.ApplyConfiguration(new SiteComplianceCacheConfiguration());
         modelBuilder.ApplyConfiguration(new ClinicalObservationConfiguration());
         modelBuilder.ApplyConfiguration(new FormSubmissionConfiguration());

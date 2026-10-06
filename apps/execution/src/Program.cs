@@ -16,6 +16,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure;
+using Cadence.Apps.Execution.Infrastructure.Background;
 using Cadence.Apps.Execution.Infrastructure.Consumers;
 using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
@@ -159,6 +160,7 @@ builder.Services.AddCadenceMigrations<ExecutionDbContext>(builder.Configuration)
 
 // The repository ports, Scoped to match ExecutionDbContext's own lifetime
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
+builder.Services.AddScoped<ISubjectBatchRepository, SubjectBatchRepository>();
 builder.Services.AddScoped<IConsentRepository, ConsentRepository>();
 builder.Services.AddScoped<ISiteComplianceRepository, SiteComplianceRepository>();
 builder.Services.AddScoped<IObservationRepository, ObservationRepository>();
@@ -188,7 +190,12 @@ builder.Services.AddScoped<IAuditActorScope>(sp => sp.GetRequiredService<Ambient
 // container resolves an unregistered parameter type via its declared default value, so this needs no
 // explicit registration; see that constructor's own doc comment for why a real evaluator does not exist in
 // this slice yet).
+builder.Services.AddSingleton<ISubjectBatchQueue, SubjectBatchQueue>();
+builder.Services.AddHostedService<SubjectBatchBackgroundWorker>();
+
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
+builder.Services.AddScoped<ISubjectBatchValidationService, SubjectBatchValidationService>();
+builder.Services.AddScoped<ISubjectBatchApplicationService, SubjectBatchApplicationService>();
 builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceApplicationService>();
 builder.Services.AddScoped<IObservationApplicationService, ObservationApplicationService>();
 builder.Services.AddScoped<IFormSubmissionApplicationService, FormSubmissionApplicationService>();
@@ -250,6 +257,7 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
 
 // Route-group registrations
 app.MapSubjectEndpoints();
+app.MapSubjectBatchEndpoints();
 app.MapSiteComplianceEndpoints();
 app.MapObservationEndpoints();
 app.MapFormEndpoints();

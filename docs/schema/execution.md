@@ -22,6 +22,8 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
 | [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
+| [`edc.subject_batch_imports`](#edcsubject_batch_imports) | `SubjectBatchImport` | 14 |
+| [`edc.subject_batch_rows`](#edcsubject_batch_rows) | `SubjectBatchRow` | 12 |
 | [`edc.subject_consents`](#edcsubject_consents) | `SubjectConsent` | 14 |
 
 ## edc.AuditLogEntries
@@ -553,6 +555,58 @@ Entity: `SiteComplianceCache`
 | `VersionIndex` | `bigint` | no |  |  |
 | `_version` | `bigint` | no | `0` |  |
 | `missing_documents` | `text[]` | no |  |  |
+
+## edc.subject_batch_imports
+
+Entity: `SubjectBatchImport`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `BatchId` | `character varying(255)` | no |  |  |
+| `CommittedAt` | `timestamp with time zone` | yes |  |  |
+| `CompletedAt` | `timestamp with time zone` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `FileName` | `character varying(255)` | no |  |  |
+| `InvalidRows` | `integer` | no |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `Status` | `character varying(32)` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `TotalRows` | `integer` | no |  |  |
+| `ValidRows` | `integer` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_subject_batch_imports_BatchId`: unique (`BatchId`)
+
+## edc.subject_batch_rows
+
+Entity: `SubjectBatchRow`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `ArmId` | `character varying(255)` | yes |  |  |
+| `BatchImportId` | `uuid` | no |  |  |
+| `Birthdate` | `character varying(64)` | yes |  |  |
+| `ErrorMessage` | `character varying(2000)` | yes |  |  |
+| `Gender` | `character varying(64)` | yes |  |  |
+| `Name` | `character varying(255)` | yes |  |  |
+| `Race` | `character varying(64)` | yes |  |  |
+| `RowNumber` | `integer` | no |  |  |
+| `SiteId` | `character varying(255)` | yes |  |  |
+| `Status` | `character varying(32)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+
+Foreign keys:
+
+- `FK_subject_batch_rows_subject_batch_imports_BatchImportId`: (`BatchImportId`) references `edc.subject_batch_imports` (`Id`), on delete cascade
+
+Indexes:
+
+- `IX_subject_batch_rows_BatchImportId_RowNumber`: unique (`BatchImportId`, `RowNumber`)
 
 ## edc.subject_consents
 
