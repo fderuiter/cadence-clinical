@@ -1,4 +1,4 @@
-# ADR-2810: Statistical Computing Environment (SCE) Database Migration
+# ADR-2812: Statistical Computing Environment (SCE) Database Migration
 
 - **Status:** Accepted
 - **Date:** 2026-10-06

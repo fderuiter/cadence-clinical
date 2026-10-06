@@ -33,6 +33,11 @@ public sealed class LegacyAliasChangeReasonTests(ExecutionApiFactory factory) : 
         { "POST", $"/api/v1/execution/queries/{Id}/reopen", """{"reason":"Needs re-check"}""" },
         { "POST", $"/api/v1/queries/{Id}/cancel", """{"reason":"Raised in error"}""" },
         { "POST", $"/api/v1/execution/queries/{Id}/cancel", """{"reason":"Raised in error"}""" },
+        { "POST", $"/api/v1/queries/{Id}/respond", """{"response":"Confirmed with source"}""" },
+        { "POST", $"/api/v1/execution/queries/{Id}/respond", """{"response":"Confirmed with source"}""" },
+        { "POST", $"/api/v1/execution/queries/{Id}/answer", """{"response":"Confirmed with source"}""" },
+        { "POST", $"/api/v1/queries/{Id}/close", """{"resolver":"cra-01"}""" },
+        { "POST", $"/api/v1/execution/queries/{Id}/close", """{"resolver":"cra-01"}""" },
     };
 
     /// <summary>A change through an alias or its documented route without a reason is refused before anything is read or written.</summary>
