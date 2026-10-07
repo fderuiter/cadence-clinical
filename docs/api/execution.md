@@ -12,6 +12,17 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `GET` | `/api/v1/execution/coding/synonyms/jobs` | GetSynonymImportJobs | Retrieve GxP audit ledger of bulk synonym import jobs. |
 | `POST` | `/api/v1/execution/coding/synonyms/validate` | ValidateSynonymFile | Pre-flight validation report for bulk synonym dictionary CSV/XLSX file. |
 | `DELETE` | `/api/v1/execution/coding/synonyms/{id}` | DeactivateSynonymRule | Deactivate an active synonym rule. |
+| `GET` | `/api/v1/execution/devices/deficiencies` | ListDeviceDeficiencies | List Device Deficiencies |
+| `POST` | `/api/v1/execution/devices/deficiencies` | LogDeviceDeficiency | Log Device Deficiency |
+| `GET` | `/api/v1/execution/devices/deficiencies/{deficiency_id}` | GetDeviceDeficiencyById | Get Device Deficiency |
+| `POST` | `/api/v1/execution/devices/dispense` | DispenseDevice | Dispense Device |
+| `GET` | `/api/v1/execution/devices/inventory` | ListDeviceInventory | List Device Inventory |
+| `POST` | `/api/v1/execution/devices/inventory` | RegisterDeviceInventory | Register Device Inventory |
+| `GET` | `/api/v1/execution/devices/investigation-summary` | GetDeviceInvestigationSummary | Get Investigation Summary |
+| `POST` | `/api/v1/execution/devices/parse-udi` | ParseUdi | Parse UDI Barcode |
+| `GET` | `/api/v1/execution/devices/quarantine` | ListDeviceQuarantines | List Device Quarantines |
+| `POST` | `/api/v1/execution/devices/quarantine` | InitiateDeviceQuarantine | Initiate Quarantine |
+| `POST` | `/api/v1/execution/devices/quarantine/release` | ReleaseDeviceQuarantine | Release Quarantine |
 | `POST` | `/api/v1/execution/forms` | CreateFormSubmission |  |
 | `GET` | `/api/v1/execution/forms/subject/{studyId}/{subjectId}` | ListFormSubmissionsBySubject |  |
 | `GET` | `/api/v1/execution/forms/{id}` | GetFormSubmissionById |  |

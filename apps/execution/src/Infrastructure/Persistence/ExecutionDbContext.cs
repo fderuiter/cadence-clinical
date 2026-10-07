@@ -2,6 +2,7 @@ using Cadence.Apps.Execution.Domain.Cec;
 using Cadence.Apps.Execution.Domain.Cgt;
 using Cadence.Apps.Execution.Domain.Coding;
 using Cadence.Apps.Execution.Domain.Compliance;
+using Cadence.Apps.Execution.Domain.Devices;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
@@ -18,8 +19,11 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 persistence gateway for the Execution bounded context.
-/// Exposes aggregates for subjects, observations, form submissions, clinical queries, CEC dossiers, CGT chain of custody records, and staged adverse event reviews.
+/// Exposes aggregates for subjects, observations, form submissions, clinical queries, CEC dossiers, CGT chain of custody records, devices, and staged adverse event reviews.
 /// @req:PRD-SUB-001
+/// @req:PRD-DEV-001
+/// @req:PRD-DEV-002
+/// @req:PRD-DEV-003
 /// @req:PRD-SYS-001
 /// @req:PRD-SYS-002
 /// @req:PRD-SYS-007
@@ -67,6 +71,12 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<BulkSynonymImportJob> BulkSynonymImportJobs => Set<BulkSynonymImportJob>();
 
+    public DbSet<DeviceInventoryItem> DeviceInventoryItems => Set<DeviceInventoryItem>();
+
+    public DbSet<DeviceDeficiency> DeviceDeficiencies => Set<DeviceDeficiency>();
+
+    public DbSet<DeviceQuarantineRecord> DeviceQuarantineRecords => Set<DeviceQuarantineRecord>();
+
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -90,6 +100,9 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new CgtVialReturnReconciliationConfiguration());
         modelBuilder.ApplyConfiguration(new SynonymRuleConfiguration());
         modelBuilder.ApplyConfiguration(new BulkSynonymImportJobConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceInventoryItemConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceDeficiencyConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceQuarantineRecordConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
     }

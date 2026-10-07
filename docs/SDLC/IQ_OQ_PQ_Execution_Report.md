@@ -16,8 +16,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Counts cover the requirement-tagged test methods in section 3. Whole-suite totals are in the TRX files under
 `TestResults/gxp/`, so this report only changes when a tagged test or its result changes.
 
-- **Requirement-Tagged Test Methods:** 212
-- **Passed:** 163 🟢
+- **Requirement-Tagged Test Methods:** 234
+- **Passed:** 185 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 49 ⚪
 - **Not Run:** 0
@@ -106,6 +106,28 @@ out so the report only changes when results change; they are in the TRX files un
 | `ActivateSiteAsync_GivenNoComplianceRow_FailsWithBlockedActivationAndWritesAuditEntryFirst` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
+| `DispenseDeviceAsync_ExpiredDevice_ThrowsExpiredError` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | 🟢 PASSED |
+| `DispenseDeviceAsync_QuarantinedDevice_ThrowsQuarantinedError` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | 🟢 PASSED |
+| `DispenseDeviceAsync_ValidAvailableDevice_DispensesSuccessfully` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | 🟢 PASSED |
+| `GetInvestigationSummaryAsync_CalculatesMetricsCorrectly` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-002 | 🟢 PASSED |
+| `LogDeficiencyAsync_TriggersQuarantineAndSafetyCaseAndOutboxEvents` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-002 | 🟢 PASSED |
+| `RegisterInventoryAsync_BulkQuantity_RegistersSerializedDevices` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-001 | 🟢 PASSED |
+| `RegisterInventoryAsync_WithRawBarcode_ParsesAndStoresAttributes` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-001 | 🟢 PASSED |
+| `ReleaseQuarantineAsync_ReleasesDeviceAndQuarantineRecord` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | 🟢 PASSED |
+| `DispenseDevice_Returns200OK` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-003 | 🟢 PASSED |
+| `GetInvestigationSummary_Returns200OK` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-003 | 🟢 PASSED |
+| `LogDeficiency_Returns201Created` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-002 | 🟢 PASSED |
+| `ParseUdi_Returns200WithParsedResult` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-001 | 🟢 PASSED |
+| `RegisterInventory_Returns201Created` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-001 | 🟢 PASSED |
+| `IsHibccMod43Valid_ValidAndInvalidCodes_EvaluatesCorrectly` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
+| `Parse_Gs1128SequentialWithoutParentheses_ParsesFields` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
+| `Parse_Gs1128WithParentheses_ReturnsParsedAttributes` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
+| `Parse_Gs1DataMatrixPrefix_ReturnsDataMatrixCarrierFormat` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
+| `Parse_Hibcc128PrimaryAndSecondary_ParsesComponents` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
+| `Parse_HibccDataMatrixWithPrefix_ParsesComponentsAndCarrierFormat` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
+| `Parse_HibccSecondarySerialNumber_ParsesSerialNumber` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
+| `Parse_NullOrEmptyBarcode_ReturnsInvalidResult` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
+| `ValidateGtinMod10_ValidAndInvalidGtins_EvaluatesCorrectly` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
 | `EvaluateInlineConstraints_FlagsReferenceRangeViolations` | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests` | SRS-EDC-002 | 🟢 PASSED |
 | `BatchSignOff_Exceeds100SubjectsCap_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
 | `BatchSignOff_NonPiRole_RejectsWithForbidden` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
@@ -249,7 +271,7 @@ out so the report only changes when results change; they are in the TRX files un
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
-Qualified Requirements: 24 of 195
+Qualified Requirements: 27 of 195
 
 ## 5. Qualification Review & Authorization
 
@@ -263,4 +285,4 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** 8f309f0ac71587d1aeecfa8ee687f644e30d648f3ddacdfb4dd12fa221f18aa6
+- **Content Hash (SHA-256):** 686783defa9b6a25e1ba6d644e7e69152e11b0f8143688bd741d4930681c6203

@@ -1,0 +1,231 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Cadence.Apps.Execution.Application.Devices;
+
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+
+namespace Cadence.Apps.Execution.Endpoints;
+
+/// <summary>
+/// Minimal API endpoints for investigational medical device UDI barcode parsing, RTSM inventory management,
+/// deficiency reporting, dispensation gating, and safety quarantine controls.
+/// @req:PRD-DEV-001
+/// @req:PRD-DEV-002
+/// @req:PRD-DEV-003
+/// </summary>
+public static class DeviceEndpoints
+{
+    public static IEndpointRouteBuilder MapDeviceEndpoints(this IEndpointRouteBuilder routes)
+    {
+        var group = routes.MapGroup("/api/v1/execution/devices");
+
+        group.MapPost("/parse-udi", ParseUdi)
+            .WithName("ParseUdi")
+            .WithSummary("Parse UDI Barcode")
+            .WithDescription("Parses and validates GS1-128, GS1-DataMatrix, and HIBCC barcode strings into structured UDI attributes.")
+            .Produces<ParsedUdiResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapPost("/inventory", RegisterInventoryAsync)
+            .WithName("RegisterDeviceInventory")
+            .WithSummary("Register Device Inventory")
+            .WithDescription("Registers serialized investigational medical device items in RTSM.")
+            .Produces<IReadOnlyList<DeviceInventoryResponse>>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapGet("/inventory", ListInventoryAsync)
+            .WithName("ListDeviceInventory")
+            .WithSummary("List Device Inventory")
+            .WithDescription("Retrieves investigational medical device inventory matching query filters.")
+            .Produces<IReadOnlyList<DeviceInventoryResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapPost("/dispense", DispenseDeviceAsync)
+            .WithName("DispenseDevice")
+            .WithSummary("Dispense Device")
+            .WithDescription("Dispenses an investigational device to a study subject while enforcing quarantine and expiration gating rules.")
+            .Produces<DeviceDispensationResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/deficiencies", LogDeficiencyAsync)
+            .WithName("LogDeviceDeficiency")
+            .WithSummary("Log Device Deficiency")
+            .WithDescription("Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.")
+            .Produces<DeviceDeficiencyResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapGet("/deficiencies", ListDeficienciesAsync)
+            .WithName("ListDeviceDeficiencies")
+            .WithSummary("List Device Deficiencies")
+            .Produces<IReadOnlyList<DeviceDeficiencyResponse>>(StatusCodes.Status200OK);
+
+        group.MapGet("/deficiencies/{deficiency_id}", GetDeficiencyByIdAsync)
+            .WithName("GetDeviceDeficiencyById")
+            .WithSummary("Get Device Deficiency")
+            .Produces<DeviceDeficiencyResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/quarantine", InitiateQuarantineAsync)
+            .WithName("InitiateDeviceQuarantine")
+            .WithSummary("Initiate Quarantine")
+            .Produces<DeviceQuarantineResponse>(StatusCodes.Status201Created);
+
+        group.MapGet("/quarantine", ListQuarantinesAsync)
+            .WithName("ListDeviceQuarantines")
+            .WithSummary("List Device Quarantines")
+            .Produces<IReadOnlyList<DeviceQuarantineResponse>>(StatusCodes.Status200OK);
+
+        group.MapPost("/quarantine/release", ReleaseQuarantineAsync)
+            .WithName("ReleaseDeviceQuarantine")
+            .WithSummary("Release Quarantine")
+            .Produces<DeviceQuarantineResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/investigation-summary", GetInvestigationSummaryAsync)
+            .WithName("GetDeviceInvestigationSummary")
+            .WithSummary("Get Investigation Summary")
+            .Produces<DeviceInvestigationSummaryResponse>(StatusCodes.Status200OK);
+
+        return routes;
+    }
+
+    private static IResult ParseUdi(UdiParseRequest request, IDeviceApplicationService deviceService)
+    {
+        var result = deviceService.ParseUdi(request);
+        return TypedResults.Ok(result);
+    }
+
+    private static async Task<IResult> RegisterInventoryAsync(
+        DeviceInventoryCreateRequest request,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        var result = await deviceService.RegisterInventoryAsync(request, ct).ConfigureAwait(false);
+        return TypedResults.Created("/api/v1/execution/devices/inventory", result);
+    }
+
+    private static async Task<IResult> ListInventoryAsync(
+        string study_id,
+        string? site_id,
+        string? status,
+        string? udi_di,
+        string? lot_number,
+        string? serial_number,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        var result = await deviceService.ListInventoryAsync(study_id, site_id, status, udi_di, lot_number, serial_number, ct).ConfigureAwait(false);
+        return TypedResults.Ok(result);
+    }
+
+    private static async Task<IResult> DispenseDeviceAsync(
+        DeviceDispensationRequest request,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await deviceService.DispenseDeviceAsync(request, ct).ConfigureAwait(false);
+            return TypedResults.Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return TypedResults.NotFound(new { code = "DEVICE_NOT_FOUND", detail = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return TypedResults.UnprocessableEntity(new { code = "DISPENSATION_BLOCKED", detail = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> LogDeficiencyAsync(
+        DeviceDeficiencyCreateRequest request,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        var result = await deviceService.LogDeficiencyAsync(request, ct).ConfigureAwait(false);
+        return TypedResults.Created($"/api/v1/execution/devices/deficiencies/{result.Id}", result);
+    }
+
+    private static async Task<IResult> ListDeficienciesAsync(
+        string study_id,
+        string? site_id,
+        string? status,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        var result = await deviceService.ListDeficienciesAsync(study_id, site_id, status, ct).ConfigureAwait(false);
+        return TypedResults.Ok(result);
+    }
+
+    private static async Task<IResult> GetDeficiencyByIdAsync(
+        string deficiency_id,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        if (!Guid.TryParse(deficiency_id, out var devGuid))
+        {
+            return TypedResults.NotFound(new { code = "DEFICIENCY_NOT_FOUND", detail = $"Deficiency '{deficiency_id}' not found." });
+        }
+
+        var result = await deviceService.GetDeficiencyByIdAsync(devGuid, ct).ConfigureAwait(false);
+        if (result is null)
+        {
+            return TypedResults.NotFound(new { code = "DEFICIENCY_NOT_FOUND", detail = $"Deficiency '{deficiency_id}' not found." });
+        }
+
+        return TypedResults.Ok(result);
+    }
+
+    private static async Task<IResult> InitiateQuarantineAsync(
+        DeviceQuarantineCreateRequest request,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        var result = await deviceService.InitiateQuarantineAsync(request, ct).ConfigureAwait(false);
+        return TypedResults.Created("/api/v1/execution/devices/quarantine", result);
+    }
+
+    private static async Task<IResult> ListQuarantinesAsync(
+        string study_id,
+        string? site_id,
+        string? status,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        var result = await deviceService.ListQuarantinesAsync(study_id, site_id, status, ct).ConfigureAwait(false);
+        return TypedResults.Ok(result);
+    }
+
+    private static async Task<IResult> ReleaseQuarantineAsync(
+        DeviceQuarantineReleaseRequest request,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await deviceService.ReleaseQuarantineAsync(request, ct).ConfigureAwait(false);
+            return TypedResults.Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return TypedResults.NotFound(new { code = "QUARANTINE_NOT_FOUND", detail = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> GetInvestigationSummaryAsync(
+        string study_id,
+        IDeviceApplicationService deviceService,
+        CancellationToken ct)
+    {
+        var result = await deviceService.GetInvestigationSummaryAsync(study_id, ct).ConfigureAwait(false);
+        return TypedResults.Ok(result);
+    }
+}

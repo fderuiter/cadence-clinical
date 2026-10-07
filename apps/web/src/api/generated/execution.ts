@@ -1017,6 +1017,160 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/devices/parse-udi": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Parse UDI Barcode
+     * @description Parses and validates GS1-128, GS1-DataMatrix, and HIBCC barcode strings into structured UDI attributes.
+     */
+    post: operations["ParseUdi"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/devices/inventory": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Device Inventory
+     * @description Retrieves investigational medical device inventory matching query filters.
+     */
+    get: operations["ListDeviceInventory"];
+    put?: never;
+    /**
+     * Register Device Inventory
+     * @description Registers serialized investigational medical device items in RTSM.
+     */
+    post: operations["RegisterDeviceInventory"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/devices/dispense": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Dispense Device
+     * @description Dispenses an investigational device to a study subject while enforcing quarantine and expiration gating rules.
+     */
+    post: operations["DispenseDevice"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/devices/deficiencies": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Device Deficiencies */
+    get: operations["ListDeviceDeficiencies"];
+    put?: never;
+    /**
+     * Log Device Deficiency
+     * @description Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.
+     */
+    post: operations["LogDeviceDeficiency"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/devices/deficiencies/{deficiency_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Device Deficiency */
+    get: operations["GetDeviceDeficiencyById"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/devices/quarantine": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Device Quarantines */
+    get: operations["ListDeviceQuarantines"];
+    put?: never;
+    /** Initiate Quarantine */
+    post: operations["InitiateDeviceQuarantine"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/devices/quarantine/release": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Release Quarantine */
+    post: operations["ReleaseDeviceQuarantine"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/devices/investigation-summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Investigation Summary */
+    get: operations["GetDeviceInvestigationSummary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1319,6 +1473,219 @@ export interface components {
       gender: null | string;
       race: null | string;
     };
+    Execution_DeviceDeficiencyCreateRequest: {
+      study_id: string;
+      site_id: string;
+      udi_di: string;
+      lot_number: string;
+      deficiency_description: string;
+      /** Format: date-time */
+      incident_date: string;
+      /** Format: date-time */
+      awareness_date: string;
+      subject_id?: null | string;
+      device_inventory_id?: null | string;
+      serial_number?: null | string;
+      /** @default Investigational Medical Device */
+      device_name: string;
+      /** @default MALFUNCTION */
+      deficiency_type: string;
+      /** @default false */
+      could_lead_to_sade: boolean;
+      /** @default false */
+      patient_involved: boolean;
+      /** @default NONE */
+      health_impact: string;
+      /** @default QUARANTINED_AT_SITE */
+      action_taken_device: string;
+      /** @default false */
+      device_returned_to_sponsor: boolean;
+      return_tracking_number?: null | string;
+      /** @default DEVICE_SERIAL */
+      quarantine_scope: string;
+      /** @default Report investigational medical device deficiency / malfunction */
+      reason_for_change: string;
+      signature_token?: null | string;
+    };
+    Execution_DeviceDeficiencyResponse: {
+      id: string;
+      study_id: string;
+      site_id: string;
+      subject_id: null | string;
+      device_inventory_id: null | string;
+      udi_di: string;
+      lot_number: string;
+      serial_number: null | string;
+      device_name: string;
+      deficiency_type: string;
+      deficiency_description: string;
+      /** Format: date-time */
+      incident_date: string;
+      /** Format: date-time */
+      awareness_date: string;
+      could_lead_to_sade: boolean;
+      patient_involved: boolean;
+      health_impact: string;
+      action_taken_device: string;
+      device_returned_to_sponsor: boolean;
+      return_tracking_number: null | string;
+      root_cause_analysis: null | string;
+      sponsor_evaluation: null | string;
+      quarantine_triggered: boolean;
+      quarantine_scope: string;
+      safety_case_id: null | string;
+      safety_classification: null | string;
+      investigation_status: string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
+      reason_for_change: string;
+      /** Format: int64 */
+      version_index: number | string;
+    };
+    Execution_DeviceDispensationRequest: {
+      study_id: string;
+      site_id: string;
+      subject_id: string;
+      device_inventory_id?: null | string;
+      serial_number?: null | string;
+      scanned_barcode?: null | string;
+      /** @default Investigational device dispensation to participant */
+      reason_for_change: string;
+    };
+    Execution_DeviceDispensationResponse: {
+      status: string;
+      message: string;
+      device: components["schemas"]["Execution_DeviceInventoryResponse"];
+      /** Format: date-time */
+      dispensed_at: string;
+    };
+    Execution_DeviceInventoryCreateRequest: {
+      study_id: string;
+      site_id: string;
+      brand_name: string;
+      udi_di: string;
+      lot_number: string;
+      serial_number?: null | string;
+      device_identifier?: null | string;
+      device_model?: null | string;
+      /** @default THERAPEUTIC */
+      device_type: string;
+      /** @default CLASS_IIA */
+      device_classification: string;
+      raw_barcode?: null | string;
+      /** Format: date-time */
+      expiration_date?: null | string;
+      /** Format: date-time */
+      manufacturing_date?: null | string;
+      software_version?: null | string;
+      /**
+       * Format: int32
+       * @default 1
+       */
+      quantity: number | string;
+      /** @default Investigational medical device inventory intake */
+      reason_for_change: string;
+    };
+    Execution_DeviceInventoryResponse: {
+      id: string;
+      study_id: string;
+      site_id: string;
+      device_identifier: string;
+      brand_name: string;
+      device_model: null | string;
+      device_type: string;
+      device_classification: string;
+      udi_di: string;
+      udi_pi: null | string;
+      udi_carrier_format: string;
+      lot_number: string;
+      serial_number: null | string;
+      /** Format: date-time */
+      expiration_date: null | string;
+      /** Format: date-time */
+      manufacturing_date: null | string;
+      software_version: null | string;
+      status: string;
+      is_dispensation_blocked: boolean;
+      allocated_subject_id: null | string;
+      /** Format: date-time */
+      dispensed_at: null | string;
+      dispensed_by: null | string;
+      /** Format: date-time */
+      quarantined_at: null | string;
+      quarantined_by: null | string;
+      quarantine_reason: null | string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
+      reason_for_change: string;
+      /** Format: int64 */
+      version_index: number | string;
+    };
+    Execution_DeviceInvestigationSummaryResponse: {
+      study_id: string;
+      /** Format: int32 */
+      total_devices: number | string;
+      /** Format: int32 */
+      available_devices: number | string;
+      /** Format: int32 */
+      dispensed_devices: number | string;
+      /** Format: int32 */
+      quarantined_devices: number | string;
+      /** Format: int32 */
+      total_deficiencies: number | string;
+      /** Format: int32 */
+      open_safety_cases: number | string;
+      /** Format: int32 */
+      sade_count: number | string;
+      /** Format: int32 */
+      active_quarantines: number | string;
+    };
+    Execution_DeviceQuarantineCreateRequest: {
+      study_id: string;
+      site_id: string;
+      reason: string;
+      /** @default DEVICE_SERIAL */
+      scope: string;
+      device_inventory_id?: null | string;
+      lot_number?: null | string;
+      serial_number?: null | string;
+      /** @default Initiate medical device quarantine */
+      reason_for_change: string;
+    };
+    Execution_DeviceQuarantineReleaseRequest: {
+      quarantine_id: string;
+      release_justification: string;
+      signature_token: string;
+      /** @default Authorized medical device quarantine release */
+      reason_for_change: string;
+    };
+    Execution_DeviceQuarantineResponse: {
+      id: string;
+      study_id: string;
+      site_id: string;
+      deficiency_id: null | string;
+      device_inventory_id: null | string;
+      scope: string;
+      lot_number: null | string;
+      serial_number: null | string;
+      reason: string;
+      status: string;
+      /** Format: date-time */
+      quarantined_at: string;
+      quarantined_by: string;
+      /** Format: date-time */
+      released_at: null | string;
+      released_by: null | string;
+      release_justification: null | string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
+      reason_for_change: string;
+      /** Format: int64 */
+      version_index: number | string;
+    };
     Execution_EtmfCompletenessWebhookPayload: {
       study_id: string;
       site_id: null | string;
@@ -1482,6 +1849,18 @@ export interface components {
     Execution_OperationEnvelopeResponse: {
       status: string;
       message: string;
+    };
+    Execution_ParsedUdiResponse: {
+      raw_barcode: string;
+      udi_carrier_format: string;
+      udi_di: string;
+      lot_number: null | string;
+      serial_number: null | string;
+      expiration_date: null | string;
+      manufacturing_date: null | string;
+      software_version: null | string;
+      is_valid: boolean;
+      validation_errors: string[];
     };
     Execution_ProblemDetails: {
       type?: null | string;
@@ -1689,6 +2068,9 @@ export interface components {
       active_protocol_version: string;
       /** Format: int32 */
       enrollment_index: number | string;
+    };
+    Execution_UdiParseRequest: {
+      raw_barcode: string;
     };
   };
   responses: never;
@@ -3236,6 +3618,350 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+    };
+  };
+  ParseUdi: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_UdiParseRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_ParsedUdiResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListDeviceInventory: {
+    parameters: {
+      query: {
+        study_id: string;
+        site_id?: string;
+        status?: string;
+        udi_di?: string;
+        lot_number?: string;
+        serial_number?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceInventoryResponse"][];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  RegisterDeviceInventory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_DeviceInventoryCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceInventoryResponse"][];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  DispenseDevice: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_DeviceDispensationRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceDispensationResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListDeviceDeficiencies: {
+    parameters: {
+      query: {
+        study_id: string;
+        site_id?: string;
+        status?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceDeficiencyResponse"][];
+        };
+      };
+    };
+  };
+  LogDeviceDeficiency: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_DeviceDeficiencyCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceDeficiencyResponse"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetDeviceDeficiencyById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        deficiency_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceDeficiencyResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListDeviceQuarantines: {
+    parameters: {
+      query: {
+        study_id: string;
+        site_id?: string;
+        status?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceQuarantineResponse"][];
+        };
+      };
+    };
+  };
+  InitiateDeviceQuarantine: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_DeviceQuarantineCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceQuarantineResponse"];
+        };
+      };
+    };
+  };
+  ReleaseDeviceQuarantine: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_DeviceQuarantineReleaseRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceQuarantineResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetDeviceInvestigationSummary: {
+    parameters: {
+      query: {
+        study_id: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_DeviceInvestigationSummaryResponse"];
+        };
       };
     };
   };

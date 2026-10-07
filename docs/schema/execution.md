@@ -21,6 +21,9 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 40 |
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
+| [`edc.device_deficiencies`](#edcdevice_deficiencies) | `DeviceDeficiency` | 30 |
+| [`edc.device_inventory_items`](#edcdevice_inventory_items) | `DeviceInventoryItem` | 28 |
+| [`edc.device_quarantine_records`](#edcdevice_quarantine_records) | `DeviceQuarantineRecord` | 19 |
 | [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
 | [`edc.published_form_version_registries`](#edcpublished_form_version_registries) | `PublishedFormVersionRegistry` | 10 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
@@ -533,6 +536,121 @@ Indexes:
 - `IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex`: (`StudyCode`, `SiteCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_StudyCode_Status_EnrollmentIndex`: (`StudyCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_SubjectCode`: unique (`SubjectCode`)
+
+## edc.device_deficiencies
+
+Entity: `DeviceDeficiency`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `ActionTakenDevice` | `character varying(64)` | no |  |  |
+| `AwarenessDate` | `timestamp with time zone` | no |  |  |
+| `CouldLeadToSade` | `boolean` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `DeficiencyDescription` | `character varying(4096)` | no |  |  |
+| `DeficiencyType` | `character varying(64)` | no |  |  |
+| `DeviceInventoryId` | `character varying(128)` | yes |  |  |
+| `DeviceName` | `character varying(256)` | no |  |  |
+| `DeviceReturnedToSponsor` | `boolean` | no |  |  |
+| `HealthImpact` | `character varying(64)` | no |  |  |
+| `IncidentDate` | `timestamp with time zone` | no |  |  |
+| `InvestigationStatus` | `character varying(64)` | no |  |  |
+| `LotNumber` | `character varying(128)` | no |  |  |
+| `PatientInvolved` | `boolean` | no |  |  |
+| `QuarantineScope` | `character varying(64)` | no |  |  |
+| `QuarantineTriggered` | `boolean` | no |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `ReturnTrackingNumber` | `character varying(128)` | yes |  |  |
+| `RootCauseAnalysis` | `text` | yes |  |  |
+| `SafetyCaseId` | `character varying(128)` | yes |  |  |
+| `SafetyClassification` | `character varying(128)` | yes |  |  |
+| `SerialNumber` | `character varying(128)` | yes |  |  |
+| `SiteId` | `character varying(128)` | no |  |  |
+| `SponsorEvaluation` | `text` | yes |  |  |
+| `StudyId` | `character varying(128)` | no |  |  |
+| `SubjectId` | `character varying(128)` | yes |  |  |
+| `UdiDi` | `character varying(128)` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_device_deficiencies_SafetyCaseId`: (`SafetyCaseId`)
+- `IX_device_deficiencies_StudyId_SiteId`: (`StudyId`, `SiteId`)
+
+## edc.device_inventory_items
+
+Entity: `DeviceInventoryItem`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AllocatedSubjectId` | `character varying(128)` | yes |  |  |
+| `BrandName` | `character varying(256)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `DeviceClassification` | `character varying(64)` | no |  |  |
+| `DeviceIdentifier` | `character varying(256)` | no |  |  |
+| `DeviceModel` | `character varying(128)` | yes |  |  |
+| `DeviceType` | `character varying(64)` | no |  |  |
+| `DispensedAt` | `timestamp with time zone` | yes |  |  |
+| `DispensedBy` | `character varying(128)` | yes |  |  |
+| `ExpirationDate` | `timestamp with time zone` | yes |  |  |
+| `IsDispensationBlocked` | `boolean` | no |  |  |
+| `LotNumber` | `character varying(128)` | no |  |  |
+| `ManufacturingDate` | `timestamp with time zone` | yes |  |  |
+| `QuarantineReason` | `text` | yes |  |  |
+| `QuarantinedAt` | `timestamp with time zone` | yes |  |  |
+| `QuarantinedBy` | `character varying(128)` | yes |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `SerialNumber` | `character varying(128)` | yes |  |  |
+| `SiteId` | `character varying(128)` | no |  |  |
+| `SoftwareVersion` | `character varying(64)` | yes |  |  |
+| `Status` | `character varying(64)` | no |  |  |
+| `StudyId` | `character varying(128)` | no |  |  |
+| `UdiCarrierFormat` | `character varying(64)` | no |  |  |
+| `UdiDi` | `character varying(128)` | no |  |  |
+| `UdiPi` | `character varying(256)` | yes |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_device_inventory_items_SerialNumber`: (`SerialNumber`)
+- `IX_device_inventory_items_StudyId_SiteId`: (`StudyId`, `SiteId`)
+- `IX_device_inventory_items_StudyId_Status`: (`StudyId`, `Status`)
+- `IX_device_inventory_items_UdiDi_LotNumber`: (`UdiDi`, `LotNumber`)
+
+## edc.device_quarantine_records
+
+Entity: `DeviceQuarantineRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `DeficiencyId` | `character varying(128)` | yes |  |  |
+| `DeviceInventoryId` | `character varying(128)` | yes |  |  |
+| `LotNumber` | `character varying(128)` | yes |  |  |
+| `QuarantinedAt` | `timestamp with time zone` | no |  |  |
+| `QuarantinedBy` | `character varying(128)` | no |  |  |
+| `Reason` | `character varying(2048)` | no |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `ReleaseJustification` | `character varying(2048)` | yes |  |  |
+| `ReleasedAt` | `timestamp with time zone` | yes |  |  |
+| `ReleasedBy` | `character varying(128)` | yes |  |  |
+| `Scope` | `character varying(64)` | no |  |  |
+| `SerialNumber` | `character varying(128)` | yes |  |  |
+| `SiteId` | `character varying(128)` | no |  |  |
+| `Status` | `character varying(64)` | no |  |  |
+| `StudyId` | `character varying(128)` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_device_quarantine_records_DeviceInventoryId`: (`DeviceInventoryId`)
+- `IX_device_quarantine_records_StudyId_Status`: (`StudyId`, `Status`)
 
 ## edc.form_submissions
 
