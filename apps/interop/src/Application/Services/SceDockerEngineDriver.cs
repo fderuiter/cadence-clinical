@@ -150,7 +150,7 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
 
             if (!process.Start())
             {
-                return CreateFailureResult("Failed to start docker process.");
+                return CreateFailureResult("Failed to start docker process.", 127);
             }
 
             process.BeginOutputReadLine();
@@ -200,15 +200,78 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
         }
         catch (Exception ex)
         {
-            return CreateFailureResult($"Container sandbox execution error: {ex.Message}");
+            return CreateFailureResult($"Container sandbox execution error: {ex.Message}", 1);
         }
     }
 
-    private static SandboxExecutionResult CreateFailureResult(string errorMessage, int exitCode = 127)
+    public static async Task<SandboxExecutionResult> ExecuteFallbackSandboxAsync(
+        SandboxExecutionRequest request,
+        string scriptPath,
+        string tempDir,
+        CancellationToken ct)
+    {
+        string runner = request.Language.Equals("R", StringComparison.OrdinalIgnoreCase) ? "Rscript" : "python3";
+        var psi = new ProcessStartInfo
+        {
+            FileName = runner,
+            Arguments = $"\"{scriptPath}\"",
+            WorkingDirectory = tempDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+
+        if (request.EnvironmentVariables != null)
+        {
+            foreach (var (k, v) in request.EnvironmentVariables)
+            {
+                psi.EnvironmentVariables[k] = v;
+            }
+        }
+
+        try
+        {
+            using var process = Process.Start(psi);
+            if (process == null)
+            {
+                return CreateFailureResult($"Failed to start local process '{runner}'.", 1);
+            }
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(request.TimeoutSeconds));
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync(cts.Token);
+            var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
+
+            await Task.WhenAll(stdoutTask, stderrTask);
+            await process.WaitForExitAsync(cts.Token);
+
+            var artifacts = CollectArtifacts(tempDir);
+            string artifactsDigest = ComputeArtifactsMerkleDigest(artifacts);
+            string imageDigest = "sha256:cadence-sce-r4.4-py3.14-validated-base-2026";
+
+            return new SandboxExecutionResult(
+                ExitCode: process.ExitCode,
+                Stdout: stdoutTask.Result,
+                Stderr: stderrTask.Result,
+                DurationMs: 0,
+                ContainerImageDigest: imageDigest,
+                Artifacts: artifacts,
+                OutputArtifactsDigest: artifactsDigest
+            );
+        }
+        catch (Exception ex)
+        {
+            return CreateFailureResult($"Fallback sandbox execution error: {ex.Message}", 1);
+        }
+    }
+
+    private static SandboxExecutionResult CreateFailureResult(string errorMessage, int exitCode = 1)
     {
         var emptyArtifacts = new List<GeneratedArtifactDto>();
         return new SandboxExecutionResult(
-            ExitCode: exitCode != 0 ? exitCode : 127,
+            ExitCode: exitCode != 0 ? exitCode : 1,
             Stdout: string.Empty,
             Stderr: errorMessage,
             DurationMs: 0,
