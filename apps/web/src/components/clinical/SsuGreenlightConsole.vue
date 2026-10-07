@@ -238,9 +238,9 @@
           <div>
             <h4>Batch Greenlight Certification Successfully Processed!</h4>
             <p>
-              Batch certified {{ batchSuccessData.certified_count }} site(s) in
-              {{ batchSuccessData.country_code }} for study
-              {{ batchSuccessData.study_id }}. Distinct HMAC-SHA256 activation
+              Batch certified {{ batchSuccessData.certified_count ?? batchSuccessData.certifiedCount }} site(s) in
+              {{ batchSuccessData.country_code ?? batchSuccessData.countryCode }} for study
+              {{ batchSuccessData.study_id ?? batchSuccessData.studyId }}. Distinct HMAC-SHA256 activation
               tokens generated and 21 CFR Part 11 audit records written.
             </p>
           </div>
@@ -254,14 +254,14 @@
         </div>
         <div class="banner-tokens-list">
           <div
-            v-for="site in batchSuccessData.certified_sites"
-            :key="site.site_id"
+            v-for="site in (batchSuccessData.certified_sites || batchSuccessData.certifiedSites)"
+            :key="site.site_id || site.siteId"
             class="token-item"
           >
             <span class="token-site-id"
-              ><strong>{{ site.site_id }}</strong> ({{ site.site_name }}):</span
+              ><strong>{{ site.site_id || site.siteId }}</strong> ({{ site.site_name || site.siteName }}):</span
             >
-            <code class="token-code">{{ site.greenlight_token }}</code>
+            <code class="token-code">{{ site.greenlight_token || site.greenlightToken }}</code>
           </div>
         </div>
       </div>
@@ -495,6 +495,14 @@
           </div>
 
           <div class="modal-body">
+            <div v-if="batchErrorMessage" class="alert alert-danger" role="alert">
+              <span class="alert-icon">⚠️</span>
+              <div>
+                <strong>Batch Certification Rejected:</strong>
+                {{ batchErrorMessage }}
+              </div>
+            </div>
+
             <div class="alert alert-info">
               <span class="alert-icon">🛡️</span>
               <div>
@@ -1006,6 +1014,7 @@ const matrixSearchQuery = ref("");
 const matrixStatusFilter = ref("ALL");
 const showBatchCertifyModal = ref(false);
 const batchSuccessData = ref(null);
+const batchErrorMessage = ref(null);
 
 // Modals
 const showCertifyModal = ref(false);
@@ -1227,6 +1236,7 @@ function toggleSiteSelection(siteId, isCompliant, status) {
 
 function openBatchCertifyModal() {
   if (selectedSiteIds.value.size > 0) {
+    batchErrorMessage.value = null;
     showBatchCertifyModal.value = true;
   }
 }
@@ -1269,6 +1279,7 @@ async function fetchCountryMatrix() {
 
 async function executeBatchCertification() {
   isSubmitting.value = true;
+  batchErrorMessage.value = null;
   const selectedIds = Array.from(selectedSiteIds.value);
   try {
     const res = await fetch("/api/v1/ctms/startup/matrix/batch-certify", {
@@ -1294,7 +1305,13 @@ async function executeBatchCertification() {
       selectedSiteIds.value.clear();
       await fetchCountryMatrix();
     } else {
-      executeFallbackBatchCertification(selectedIds);
+      const errData = await res.json().catch(() => null);
+      const detail = errData?.detail || errData?.title || `Batch certification rejected: HTTP ${res.status}`;
+      batchErrorMessage.value = detail;
+      useToastStore().addToast({
+        message: detail,
+        tone: "error",
+      });
     }
   } catch {
     executeFallbackBatchCertification(selectedIds);

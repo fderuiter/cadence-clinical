@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -252,12 +253,13 @@ public static class StartupGreenlightEndpoints
 
     private static bool IsFullyCompliant(CtmsSiteGreenlightGate gate)
     {
-        return gate.FacetRegulatoryIrb &&
+        return gate.IsOverridden || (
+               gate.FacetRegulatoryIrb &&
                gate.FacetCtaBudget &&
                gate.FacetEisfBaseline &&
                gate.FacetDoaLog &&
                gate.FacetStaffTraining &&
-               gate.FacetIpRelease;
+               gate.FacetIpRelease);
     }
 
     private static SiteGreenlightGateResponseDto ToResponseDto(CtmsSiteGreenlightGate gate)
@@ -271,15 +273,18 @@ public static class StartupGreenlightEndpoints
         if (gate.FacetStaffTraining) passed++;
         if (gate.FacetIpRelease) passed++;
 
-        int percentage = (int)Math.Round((passed / 6.0) * 100);
+        int percentage = gate.IsOverridden ? 100 : (int)Math.Round((passed / 6.0) * 100);
 
         var unfulfilled = new List<string>();
-        if (!gate.FacetRegulatoryIrb) unfulfilled.Add("Pending IRB/Regulatory Approval");
-        if (!gate.FacetCtaBudget) unfulfilled.Add("Missing Executed CTA & Budget");
-        if (!gate.FacetEisfBaseline) unfulfilled.Add("Incomplete eISF Baseline");
-        if (!gate.FacetDoaLog) unfulfilled.Add("Pending Delegation of Authority Log");
-        if (!gate.FacetStaffTraining) unfulfilled.Add("Incomplete Staff Protocol Training");
-        if (!gate.FacetIpRelease) unfulfilled.Add("Pending Investigational Product Depot Release");
+        if (!gate.IsOverridden)
+        {
+            if (!gate.FacetRegulatoryIrb) unfulfilled.Add("Pending IRB/Regulatory Approval");
+            if (!gate.FacetCtaBudget) unfulfilled.Add("Missing Executed CTA & Budget");
+            if (!gate.FacetEisfBaseline) unfulfilled.Add("Incomplete eISF Baseline");
+            if (!gate.FacetDoaLog) unfulfilled.Add("Pending Delegation of Authority Log");
+            if (!gate.FacetStaffTraining) unfulfilled.Add("Incomplete Staff Protocol Training");
+            if (!gate.FacetIpRelease) unfulfilled.Add("Pending Investigational Product Depot Release");
+        }
 
         return new SiteGreenlightGateResponseDto(
             Id: gate.Id,
@@ -418,50 +423,50 @@ public static class GreenlightTokenGenerator
 }
 
 public record SiteGreenlightGateResponseDto(
-    string Id,
-    string StudyId,
-    string SiteId,
-    string SiteName,
-    string CountryCode,
-    string OverallStatus,
-    int ReadinessPercentage,
-    bool FacetRegulatoryIrb,
-    bool FacetCtaBudget,
-    bool FacetEisfBaseline,
-    bool FacetDoaLog,
-    bool FacetStaffTraining,
-    bool FacetIpRelease,
-    bool IsCompliant,
-    string? GreenlightToken,
-    string? GreenlightCertifiedBy,
-    string? GreenlightCertifiedAt,
-    bool IsOverridden,
-    List<string>? UnfulfilledReasons
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("site_id")] string SiteId,
+    [property: JsonPropertyName("site_name")] string SiteName,
+    [property: JsonPropertyName("country_code")] string CountryCode,
+    [property: JsonPropertyName("overall_status")] string OverallStatus,
+    [property: JsonPropertyName("readiness_percentage")] int ReadinessPercentage,
+    [property: JsonPropertyName("facet_regulatory_irb")] bool FacetRegulatoryIrb,
+    [property: JsonPropertyName("facet_cta_budget")] bool FacetCtaBudget,
+    [property: JsonPropertyName("facet_eisf_baseline")] bool FacetEisfBaseline,
+    [property: JsonPropertyName("facet_doa_log")] bool FacetDoaLog,
+    [property: JsonPropertyName("facet_staff_training")] bool FacetStaffTraining,
+    [property: JsonPropertyName("facet_ip_release")] bool FacetIpRelease,
+    [property: JsonPropertyName("is_compliant")] bool IsCompliant,
+    [property: JsonPropertyName("greenlight_token")] string? GreenlightToken,
+    [property: JsonPropertyName("greenlight_certified_by")] string? GreenlightCertifiedBy,
+    [property: JsonPropertyName("greenlight_certified_at")] string? GreenlightCertifiedAt,
+    [property: JsonPropertyName("is_overridden")] bool IsOverridden,
+    [property: JsonPropertyName("unfulfilled_reasons")] List<string>? UnfulfilledReasons
 );
 
 public record BatchCertifyRequestDto(
-    string StudyId,
-    string CountryCode,
-    List<string> SiteIds,
-    string? SignerName,
-    string? SignerRole,
-    string? Meaning
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("country_code")] string CountryCode,
+    [property: JsonPropertyName("site_ids")] List<string> SiteIds,
+    [property: JsonPropertyName("signer_name")] string? SignerName,
+    [property: JsonPropertyName("signer_role")] string? SignerRole,
+    [property: JsonPropertyName("meaning")] string? Meaning
 );
 
 public record CertifiedSiteItemDto(
-    string SiteId,
-    string SiteName,
-    string GreenlightToken,
-    string CertifiedAt,
-    string CertifiedBy,
-    string Status
+    [property: JsonPropertyName("site_id")] string SiteId,
+    [property: JsonPropertyName("site_name")] string SiteName,
+    [property: JsonPropertyName("greenlight_token")] string GreenlightToken,
+    [property: JsonPropertyName("certified_at")] string CertifiedAt,
+    [property: JsonPropertyName("certified_by")] string CertifiedBy,
+    [property: JsonPropertyName("status")] string Status
 );
 
 public record BatchCertifyResponseDto(
-    bool Success,
-    int CertifiedCount,
-    string StudyId,
-    string CountryCode,
-    List<CertifiedSiteItemDto> CertifiedSites,
-    string Message
+    [property: JsonPropertyName("success")] bool Success,
+    [property: JsonPropertyName("certified_count")] int CertifiedCount,
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("country_code")] string CountryCode,
+    [property: JsonPropertyName("certified_sites")] List<CertifiedSiteItemDto> CertifiedSites,
+    [property: JsonPropertyName("message")] string Message
 );

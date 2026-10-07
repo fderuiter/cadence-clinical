@@ -202,4 +202,57 @@ public sealed class StartupGreenlightEndpointsTests
         result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>();
         sw.ElapsedMilliseconds.Should().BeLessThan(5000); // Constraint < 5 seconds
     }
+
+    /// <summary>
+    /// Verifies that batch certification allows sites with explicit GxP override even if unfulfilled facets exist.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SSU-002")]
+    public async Task BatchCertify_AllowsOverriddenSites()
+    {
+        // Arrange: Seed an overridden site with missing facets
+        string siteId = "OVERRIDE-SITE-001";
+        _db.CtmsSiteGreenlightGates.Add(new CtmsSiteGreenlightGate
+        {
+            StudyId = "PROTOCOL-2026-01",
+            SiteId = siteId,
+            SiteName = "Overridden Test Site",
+            CountryCode = "US",
+            OverallStatus = "PENDING",
+            ReadinessPercentage = 50,
+            FacetRegulatoryIrb = true,
+            FacetCtaBudget = false,
+            FacetEisfBaseline = false,
+            FacetDoaLog = true,
+            FacetStaffTraining = true,
+            FacetIpRelease = false,
+            IsOverridden = true,
+            OverrideSponsorUserId = "sponsor-1",
+            OverrideJustification = "Medical Officer GxP Exception Granted",
+            CreatedBy = "test-setup",
+            ReasonForChange = "Override setup"
+        });
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var request = new BatchCertifyRequestDto(
+            StudyId: "PROTOCOL-2026-01",
+            CountryCode: "US",
+            SiteIds: new List<string> { siteId },
+            SignerName: "Dr. Eleanor Vance",
+            SignerRole: "VP of Regulatory & Clinical Operations",
+            Meaning: "Batch certification with explicit GxP override"
+        );
+
+        // Act
+        var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
+            request, "Override batch certification", _db, _clock, _config, TestContext.Current.CancellationToken);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>().Subject;
+        var response = okResult.Value!;
+        response.Success.Should().BeTrue();
+        response.CertifiedCount.Should().Be(1);
+        response.CertifiedSites.Single().SiteId.Should().Be(siteId);
+        response.CertifiedSites.Single().GreenlightToken.Should().NotBeNullOrEmpty();
+    }
 }
