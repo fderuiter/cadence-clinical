@@ -165,7 +165,7 @@ public static partial class RtmGeneratorService
 
         if (unknownTags.Count > 0)
         {
-            Console.WriteLine($"[RTM ERROR] Tests declare requirement IDs that no requirement document defines ({unknownTags.Count}):");
+            Console.WriteLine($"[RTM ERROR] Tests declare requirement IDs that no requirement document defines ({unknownTags.Count}). Run `pnpm cadence gxp sync` or correct the requirement tags:");
             foreach (var kv in unknownTags)
             {
                 Console.WriteLine($"  {kv.Key}: {string.Join(", ", kv.Value.Select(t => $"{t.File}:{t.Line}"))}");
@@ -180,7 +180,7 @@ public static partial class RtmGeneratorService
             var drift = FindMappingDrift(File.ReadAllText(checkedInRtm), tests, allRequirements);
             if (drift.Count > 0)
             {
-                Console.WriteLine($"[RTM ERROR] {Path.GetRelativePath(repoRoot, checkedInRtm)} is out of date: its test mapping differs from the tags in tests/ ({drift.Count}). Run `dotnet cadence gxp sync`.");
+                Console.WriteLine($"[RTM ERROR] {Path.GetRelativePath(repoRoot, checkedInRtm)} is out of date: its test mapping differs from the tags in tests/ ({drift.Count}). Run `pnpm cadence gxp sync`.");
                 foreach (string entry in drift.Take(20))
                 {
                     Console.WriteLine($"  {entry}");
@@ -199,7 +199,7 @@ public static partial class RtmGeneratorService
         {
             if (File.Exists(generatedDoc) && !GxPSigner.VerifyStamp(File.ReadAllText(generatedDoc)))
             {
-                Console.WriteLine($"[RTM ERROR] {Path.GetRelativePath(repoRoot, generatedDoc)} does not match its integrity stamp: it was edited by hand or predates the stamp. Run `dotnet cadence gxp sync`.");
+                Console.WriteLine($"[RTM ERROR] {Path.GetRelativePath(repoRoot, generatedDoc)} does not match its integrity stamp: it was edited by hand or predates the stamp. Run `pnpm cadence gxp sync`.");
                 exitCode = 1;
             }
         }

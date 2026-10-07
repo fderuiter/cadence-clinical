@@ -1,4 +1,4 @@
-# ADR-2813: Standardize MassTransit EF Core Transactional Outbox Across Core Services
+# ADR-2814: Standardize MassTransit EF Core Transactional Outbox Across Core Services
 
 - **Status:** Accepted
 - **Date:** 2026-10-07

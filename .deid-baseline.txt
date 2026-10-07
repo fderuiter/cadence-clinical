@@ -3,6 +3,10 @@
 # Regenerate with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid (docs/cli.md).
 apps/apphost/src/Program.cs|urls|0dbf6a3a3204223b
 apps/apphost/src/Properties/launchSettings.json|urls|75a56978a4790517
+apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|52696c2bdd7c546c
+apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|52696c2bdd7c546c
+apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|52696c2bdd7c546c
+apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|67d0e9bf4a645a1f
 apps/execution/src/Infrastructure/Persistence/ExecutionDbContextFactory.cs|urls|d926d4cffcf30b90
 apps/execution/src/Infrastructure/Persistence/Migrations/20260905174215_AddExecutionSubjectsSlice.cs|telephone_fax|1bfdd74615111cb2
 apps/execution/src/Infrastructure/Security/AesGcmDemographicsEncryptionService.cs|device_serial|6027352f25ff3b89
@@ -135,6 +139,7 @@ apps/web/src/components/clinical/SensorTelemetryConsole.vue|zip_geographic|1c162
 apps/web/src/components/clinical/StatisticalComputingConsole.vue|telephone_fax|8d5ee30aff480dc1
 apps/web/src/components/clinical/StatisticalComputingConsole.vue|zip_geographic|4777f58bd433081f
 apps/web/src/components/clinical/TelehealthDtpConsole.vue|zip_geographic|9f53957d8044ffcb
+apps/web/src/components/crf/AstNodeTraceViewer.vue|zip_geographic|e5edcbfdc3c191cd
 apps/web/src/components/econsent/IcfSectionEditor.vue|urls|504490bbe276ee29
 apps/web/src/components/etmf/PdfPreviewModal.vue|email|938a9a4080776dae
 apps/web/src/components/etmf/PdfPreviewModal.vue|ssn_national_id|be2c1c1457cc705e
