@@ -109,7 +109,9 @@
                       "
                     />
                   </th>
-                  <th style="padding: 8px 12px; text-align: left">Subject ID</th>
+                  <th style="padding: 8px 12px; text-align: left">
+                    Subject ID
+                  </th>
                   <th style="padding: 8px 12px; text-align: right">
                     Completed eCRFs
                   </th>
@@ -166,9 +168,7 @@
               font-size: 0.82rem;
             "
           >
-            <div
-              style="font-weight: 700; color: #334155; margin-bottom: 6px"
-            >
+            <div style="font-weight: 700; color: #334155; margin-bottom: 6px">
               📊 Batch Signature Aggregate Metrics
             </div>
             <div style="display: flex; gap: 16px; margin-bottom: 8px">
@@ -345,7 +345,10 @@
           </div>
           <div style="grid-column: span 2">
             <strong>Audit Ledger Transaction ID:</strong>
-            <div id="cert-audit-tx" style="font-family: monospace; word-break: break-all">
+            <div
+              id="cert-audit-tx"
+              style="font-family: monospace; word-break: break-all"
+            >
               {{
                 signatureResult.audit_tx ||
                 signatureResult.auditTx ||
@@ -508,4 +511,3 @@ const digestPreview = computed(() => {
   return `SHA-256(STUDY-USDM-001:SUBJECT:${sorted}:${props.signoffReason || ""})`;
 });
 </script>
-
