@@ -210,7 +210,8 @@ out so the report only changes when results change; they are in the TRX files un
 | `RegisterAndListEndpoints_SuccessfullyManagesEhrEndpoints` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
 | `RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
 | `DatabaseLockToken_IssueAndRevoke_UpdatesTokenStateAndAuditTrail` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ExecuteInSandbox_ExecutesProgramAndGeneratesArtifactsAndManifestDigest` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ExecuteInSandbox_MockedDriver_ExecutesProgramAndGeneratesArtifactsAndManifestDigest` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ExecuteInSandbox_WhenContainerUnavailable_FailsClosedWithNonZeroExitCodeAndErrorOutput` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
 | `ExecutionManifest_VerifySeal_ReturnsValidWhenUntampered` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
 | `ValidateLockfile_TamperedDigest_ReturnsTamperedStatus` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
 | `ValidateLockfile_UnqualifiedPackageWithStrictQualification_RejectsPackage` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
