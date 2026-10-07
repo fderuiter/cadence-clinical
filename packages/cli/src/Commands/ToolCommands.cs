@@ -43,6 +43,13 @@ public static class ToolCommands
         command.SetAction(result => CliDocsGeneratorService.GenerateCliDocs(check: result.GetValue(check)));
     }
 
+    public static void ConfigureGenerateDocIndex(Command command)
+    {
+        var check = new Option<bool>("--check") { Description = "Only check that docs/DOCUMENTATION_INDEX.md is complete without modifying it" };
+        command.Options.Add(check);
+        command.SetAction(result => DocIndexSyncService.SyncDocIndex(check: result.GetValue(check)));
+    }
+
     public static void ConfigureGenerateRtm(Command command)
     {
         var validate = new Option<bool>("--validate") { Description = "Write nothing; fail if a mapped test failed" };

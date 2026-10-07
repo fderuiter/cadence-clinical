@@ -206,7 +206,7 @@ public static class QualityGateOrchestrator
         }
 
         // 21. Vulnerabilities & Dependencies
-        AnsiConsole.MarkupLine("\n21/21 Validating Dependencies & Vulnerabilities...");
+        AnsiConsole.MarkupLine("\n21/22 Validating Dependencies & Vulnerabilities...");
         if (VulnerabilityAuditorService.AuditVulnerabilities() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 21a (validate-vulnerabilities) failed![/]");
@@ -218,13 +218,21 @@ public static class QualityGateOrchestrator
             allPassed = false;
         }
 
+        // 22. Documentation Index
+        AnsiConsole.MarkupLine("\n22/22 Validating Documentation Index Completeness...");
+        if (DocIndexSyncService.SyncDocIndex(check: true) != 0)
+        {
+            AnsiConsole.MarkupLine("[red]Gate 22 (validate-doc-index) failed![/]");
+            allPassed = false;
+        }
+
         if (!allPassed)
         {
             AnsiConsole.MarkupLine("\n[bold red]One or more quality gate checks failed.[/]");
             return 1;
         }
 
-        AnsiConsole.MarkupLine("\n[bold green]All 21 native quality sentinels passed.[/]");
+        AnsiConsole.MarkupLine("\n[bold green]All 22 native quality sentinels passed.[/]");
         return 0;
     }
 
@@ -239,6 +247,7 @@ public static class QualityGateOrchestrator
             "clean-secrets-baseline" or "clean-secrets" => SecretsBaselineCleanerService.CleanSecretsBaseline() == 0,
             "detect-code-duplication" or "duplication" => DuplicationDetectorService.DetectDuplication(targetFiles) == 0,
             "validate-cli-docs" or "cli-docs" => CliDocsGeneratorService.GenerateCliDocs(check: true) == 0,
+            "validate-doc-index" or "doc-index" => DocIndexSyncService.SyncDocIndex(check: true) == 0,
             "validate-adrs" or "adrs" => Cadence.ToolingCore.Services.AdrValidatorService.ValidateAdrs(checkGitDiff: true),
             "validate-architecture-drift" or "arch-drift" => Cadence.ToolingCore.Services.ArchitectureDriftValidatorService.ValidateArchitectureDrift() == 0,
             "path-requirement-sanitizer" or "sanitizer" => ComplianceUtilityService.ExecuteComplianceUtility(sanitize: true, targetFiles: targetFiles) == 0,
