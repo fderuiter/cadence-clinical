@@ -293,4 +293,137 @@ public class EsourceReconciliationTests
         provObj.RawFhirResource.Should().NotBeNull();
         provObj.AuditTrail.Should().NotBeEmpty();
     }
+
+    [Fact]
+    [GxPRequirement("PRD-ESR-002")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task BatchAcceptCandidates_CommitsAllValidCandidatesAndWritesAuditLogs()
+    {
+        // Arrange
+        var dbName = $"EhrBatchAcceptTest_{Guid.NewGuid():N}";
+        using var db = CreateDbContext(dbName);
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var httpContext = CreateMockHttpContext("crc_sarah", "Clinical Research Coordinator");
+
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        var initialCandidates = await db.EhrReconciliationCandidateRecords.Take(2).ToListAsync(TestContext.Current.CancellationToken);
+        var idsToAccept = initialCandidates.Select(c => c.Id).ToList();
+
+        var batchReq = new EhrReconcileBatchAcceptRequest(
+            CandidateIds: idsToAccept,
+            CommitReason: "Batch verified against EHR source data",
+            ChangeReason: "CRC eSource Batch Accept");
+
+        // Act
+        var result = await EsourceEndpoints.BatchAcceptCandidatesAsync(batchReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+
+        // Assert
+        var batchObj = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrReconcileBatchActionResponse>>().Subject.Value;
+        batchObj.Should().NotBeNull();
+        batchObj!.Success.Should().BeTrue();
+        batchObj.ActionCount.Should().Be(2);
+        batchObj.Candidates.Should().OnlyContain(c => c.Status == "ACCEPTED");
+
+        var updatedRecords = await db.EhrReconciliationCandidateRecords.Where(c => idsToAccept.Contains(c.Id)).ToListAsync(TestContext.Current.CancellationToken);
+        updatedRecords.Should().OnlyContain(c => c.Status == "ACCEPTED" && c.ElectronicSignatureJson!.Contains("crc_sarah"));
+
+        var auditLogs = await db.InteropAuditLogs.Where(a => a.Action == "ESOURCE_CANDIDATE_BATCH_ACCEPTED").ToListAsync(TestContext.Current.CancellationToken);
+        auditLogs.Should().HaveCount(2);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-ESR-002")]
+    [GxPRequirement("PRD-ESR-003")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task BatchRejectCandidates_RequiresRationaleAndUpdatesStatus()
+    {
+        // Arrange
+        var dbName = $"EhrBatchRejectTest_{Guid.NewGuid():N}";
+        using var db = CreateDbContext(dbName);
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var httpContext = CreateMockHttpContext("crc_sarah", "Clinical Research Coordinator");
+
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        var initialCandidates = await db.EhrReconciliationCandidateRecords.Take(2).ToListAsync(TestContext.Current.CancellationToken);
+        var idsToReject = initialCandidates.Select(c => c.Id).ToList();
+
+        // 1. Empty rationale fails
+        var emptyReq = new EhrReconcileBatchRejectRequest(CandidateIds: idsToReject, RejectionReason: "", ChangeReason: "Reject");
+        var failResult = await EsourceEndpoints.BatchRejectCandidatesAsync(emptyReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+        failResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>();
+
+        // 2. Valid rationale succeeds
+        var validReq = new EhrReconcileBatchRejectRequest(
+            CandidateIds: idsToReject,
+            RejectionReason: "Out of visit window observations",
+            ChangeReason: "CRC eSource Batch Reject");
+
+        var successResult = await EsourceEndpoints.BatchRejectCandidatesAsync(validReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+
+        // Assert
+        var batchObj = successResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrReconcileBatchActionResponse>>().Subject.Value;
+        batchObj.Should().NotBeNull();
+        batchObj!.Success.Should().BeTrue();
+        batchObj.ActionCount.Should().Be(2);
+        batchObj.Candidates.Should().OnlyContain(c => c.Status == "REJECTED" && c.ResolutionReason == "Out of visit window observations");
+
+        var auditLogs = await db.InteropAuditLogs.Where(a => a.Action == "ESOURCE_CANDIDATE_BATCH_REJECTED").ToListAsync(TestContext.Current.CancellationToken);
+        auditLogs.Should().HaveCount(2);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-ESR-002")]
+    public async Task BatchAcceptCandidates_ExceedingLimit_ReturnsBadRequest()
+    {
+        // Arrange
+        var dbName = $"EhrBatchLimitTest_{Guid.NewGuid():N}";
+        using var db = CreateDbContext(dbName);
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var httpContext = CreateMockHttpContext();
+
+        var overLimitIds = new List<string>();
+        for (int i = 0; i < 101; i++)
+        {
+            overLimitIds.Add($"cand-limit-{i}");
+        }
+
+        var req = new EhrReconcileBatchAcceptRequest(CandidateIds: overLimitIds, CommitReason: "Batch accept", ChangeReason: null);
+
+        // Act
+        var result = await EsourceEndpoints.BatchAcceptCandidatesAsync(req, db, clock, httpContext, TestContext.Current.CancellationToken);
+
+        // Assert
+        var problem = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(400);
+        problem.ProblemDetails.Detail.Should().Contain("100 candidate items");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-ESR-002")]
+    public async Task BatchOperation_WithNonExistentCandidateId_RollsBackTransaction()
+    {
+        // Arrange
+        var dbName = $"EhrBatchRollbackTest_{Guid.NewGuid():N}";
+        using var db = CreateDbContext(dbName);
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var httpContext = CreateMockHttpContext();
+
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        var validCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(TestContext.Current.CancellationToken);
+
+        var mixedIds = new List<string> { validCandidate.Id, "non-existent-candidate-id-999" };
+        var batchReq = new EhrReconcileBatchAcceptRequest(CandidateIds: mixedIds, CommitReason: "Test rollback", ChangeReason: null);
+
+        // Act
+        var result = await EsourceEndpoints.BatchAcceptCandidatesAsync(batchReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+
+        // Assert
+        var problem = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(404);
+        problem.ProblemDetails.Detail.Should().Contain("non-existent-candidate-id-999");
+
+        // Verify valid candidate was NOT committed/changed
+        var unchangedCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(c => c.Id == validCandidate.Id, TestContext.Current.CancellationToken);
+        unchangedCandidate.Status.Should().Be("PENDING_REVIEW");
+    }
 }

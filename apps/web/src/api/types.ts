@@ -5036,12 +5036,26 @@ export interface paths {
      */
     post: operations["accept_candidate_api_v1_interop_esource_reconcile_accept_post"];
   };
+  "/api/v1/interop/esource/reconcile/batch-accept": {
+    /**
+     * Batch Accept Candidates
+     * @description Multi-item batch 'Accept & Commit' candidate EHR data into eCRF with Part 11 audit attribution.
+     */
+    post: operations["batch_accept_candidates_api_v1_interop_esource_reconcile_batch_accept_post"];
+  };
   "/api/v1/interop/esource/reconcile/reject": {
     /**
      * Reject Candidate
      * @description 1-Click 'Reject with Reason' to discard candidate EHR data with mandatory justification.
      */
     post: operations["reject_candidate_api_v1_interop_esource_reconcile_reject_post"];
+  };
+  "/api/v1/interop/esource/reconcile/batch-reject": {
+    /**
+     * Batch Reject Candidates
+     * @description Multi-item batch 'Reject with Reason' candidate EHR data with mandatory justification.
+     */
+    post: operations["batch_reject_candidates_api_v1_interop_esource_reconcile_batch_reject_post"];
   };
   "/api/v1/interop/esource/reconcile/query": {
     /**
@@ -32764,6 +32778,22 @@ export interface components {
        * @default CRC eSource Reconciliation Accept & Commit
        */
       change_reason?: string;
+    };
+    Interop_EhrReconcileBatchAcceptRequest: {
+      candidate_ids: string[];
+      commit_reason?: string | null;
+      change_reason?: string | null;
+    };
+    Interop_EhrReconcileBatchRejectRequest: {
+      candidate_ids: string[];
+      rejection_reason: string;
+      change_reason?: string | null;
+    };
+    Interop_EhrReconcileBatchActionResponse: {
+      success: boolean;
+      action_count: number;
+      candidates: components["schemas"]["Interop_EhrCandidateItemDTO"][];
+      message: string;
     };
     /**
      * EhrReconcileActionResponse
@@ -66962,6 +66992,27 @@ export interface operations {
       };
     };
   };
+  batch_accept_candidates_api_v1_interop_esource_reconcile_batch_accept_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_EhrReconcileBatchAcceptRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_EhrReconcileBatchActionResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
   /**
    * Reject Candidate
    * @description 1-Click 'Reject with Reason' to discard candidate EHR data with mandatory justification.
@@ -66977,6 +67028,27 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Interop_EhrReconcileActionResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["Interop_HTTPValidationError"];
+        };
+      };
+    };
+  };
+  batch_reject_candidates_api_v1_interop_esource_reconcile_batch_reject_post: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_EhrReconcileBatchRejectRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Interop_EhrReconcileBatchActionResponse"];
         };
       };
       /** @description Validation Error */

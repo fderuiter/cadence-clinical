@@ -7,7 +7,9 @@ vi.mock("../../src/api/interop", () => ({
   interopService: {
     listEhrCandidates: vi.fn(),
     acceptEhrCandidate: vi.fn(),
+    batchAcceptEhrCandidates: vi.fn(),
     rejectEhrCandidate: vi.fn(),
+    batchRejectEhrCandidates: vi.fn(),
     raiseEhrClinicalQuery: vi.fn(),
     getEhrProvenance: vi.fn(),
   },
@@ -282,5 +284,93 @@ describe("EhrReconciliationDrawer.vue", () => {
     expect(wrapper.text()).toContain("FHIR Resource Provenance & Audit Trail");
     expect(wrapper.text()).toContain("LOINC 8480-6 -> VS.SYSBP");
     expect(wrapper.text()).toContain("obs-sysbp-1");
+  });
+
+  it("selects high confidence items and triggers batchAcceptEhrCandidates", async () => {
+    const mockCandidates = getMockCandidates();
+    vi.mocked(interopService.batchAcceptEhrCandidates).mockResolvedValue({
+      success: true,
+      action_count: 3,
+      candidates: mockCandidates.map((c) => ({
+        ...c,
+        status: "ACCEPTED",
+        resolution_action: "ACCEPT_COMMIT",
+      })) as any,
+      message: "Batch accepted candidates",
+    });
+
+    const wrapper = mountDrawer();
+
+    await wrapper.vm.$nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const highConfBtn = wrapper.find(".btn-select-high-confidence");
+    expect(highConfBtn.exists()).toBe(true);
+
+    await highConfBtn.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const batchBar = wrapper.find(".floating-batch-bar");
+    expect(batchBar.exists()).toBe(true);
+    expect(batchBar.text()).toContain("3 item(s) selected");
+
+    const batchAcceptBtn = wrapper.find(".btn-batch-accept");
+    await batchAcceptBtn.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(interopService.batchAcceptEhrCandidates).toHaveBeenCalledWith({
+      candidate_ids: ["cand-1", "cand-2", "cand-3"],
+      commit_reason: "CRC batch accepted high-confidence candidate data",
+      change_reason: "CRC eSource Batch Reconciliation Accept & Commit",
+    });
+  });
+
+  it("opens batch reject modal and calls batchRejectEhrCandidates with mandatory rationale", async () => {
+    const mockCandidates = getMockCandidates();
+    vi.mocked(interopService.batchRejectEhrCandidates).mockResolvedValue({
+      success: true,
+      action_count: 2,
+      candidates: mockCandidates.slice(0, 2).map((c) => ({
+        ...c,
+        status: "REJECTED",
+        resolution_action: "REJECT",
+      })) as any,
+      message: "Batch rejected candidates",
+    });
+
+    const wrapper = mountDrawer();
+
+    await wrapper.vm.$nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const checkboxes = wrapper.findAll(".candidate-checkbox");
+    expect(checkboxes.length).toBeGreaterThanOrEqual(2);
+
+    await checkboxes[0].setValue(true);
+    await checkboxes[1].setValue(true);
+    await wrapper.vm.$nextTick();
+
+    const batchBar = wrapper.find(".floating-batch-bar");
+    expect(batchBar.text()).toContain("2 item(s) selected");
+
+    const batchRejectBtn = wrapper.find(".btn-batch-reject");
+    await batchRejectBtn.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Batch Reject EHR Candidate Data");
+
+    const textarea = wrapper.find("#batch-reject-reason");
+    await textarea.setValue("Out of visit window observations");
+    await wrapper.vm.$nextTick();
+
+    const submitBtn = wrapper.find(".btn-submit-batch-reject");
+    await submitBtn.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(interopService.batchRejectEhrCandidates).toHaveBeenCalledWith({
+      candidate_ids: ["cand-1", "cand-2"],
+      rejection_reason: "Out of visit window observations",
+      change_reason: "CRC eSource Batch Reconciliation Reject",
+    });
   });
 });

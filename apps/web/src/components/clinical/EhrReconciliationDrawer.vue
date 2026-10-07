@@ -108,6 +108,25 @@
           </button>
         </div>
 
+        <!-- Quick Select Toolbar Actions -->
+        <div class="quick-select-bar">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary btn-select-high-confidence"
+            @click="selectHighConfidence"
+            title="Select all pending items with confidence score >= 90%"
+          >
+            ⚡ Select High Confidence (≥90%)
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary btn-toggle-select-all"
+            @click="toggleSelectAllPending"
+          >
+            {{ isAllPendingSelected ? "Deselect All Pending" : "Select All Pending" }}
+          </button>
+        </div>
+
         <!-- Status Filter & Search Input -->
         <div class="toolbar-controls">
           <div class="filter-control">
@@ -134,6 +153,38 @@
               aria-label="Search candidate records"
             />
           </div>
+        </div>
+      </div>
+
+      <!-- Floating Action Bar for Selected Items -->
+      <div v-if="selectedCandidateIds.length > 0" class="floating-batch-bar">
+        <div class="batch-count-summary">
+          <span class="batch-count-badge">{{ selectedCandidateIds.length }}</span> item(s) selected
+        </div>
+        <div class="batch-actions">
+          <button
+            type="button"
+            class="btn btn-success btn-batch-accept"
+            :disabled="isSubmitting"
+            @click="handleBatchAccept"
+          >
+            ✓ Batch Accept ({{ selectedCandidateIds.length }})
+          </button>
+          <button
+            type="button"
+            class="btn btn-danger btn-batch-reject"
+            :disabled="isSubmitting"
+            @click="openBatchRejectModal"
+          >
+            ✕ Batch Reject ({{ selectedCandidateIds.length }})
+          </button>
+          <button
+            type="button"
+            class="btn btn-ghost btn-clear-selection"
+            @click="clearSelection"
+          >
+            Clear Selection
+          </button>
         </div>
       </div>
 
@@ -188,6 +239,17 @@
           >
             <!-- Card Header: Variable & Provenance Tag -->
             <div class="card-header">
+              <div class="card-selection-check">
+                <input
+                  type="checkbox"
+                  :id="`select-cand-${item.id}`"
+                  :value="item.id"
+                  v-model="selectedCandidateIds"
+                  :disabled="item.status !== 'PENDING_REVIEW'"
+                  class="candidate-checkbox"
+                  :aria-label="`Select candidate ${item.target_variable}`"
+                />
+              </div>
               <div class="card-meta-left">
                 <span class="domain-tag">{{ item.target_domain }}</span>
                 <span class="variable-tag mono">{{
@@ -576,6 +638,70 @@
           </div>
         </div>
       </div>
+
+      <!-- MODAL 4: Batch Reject Dialog -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+      <div
+        v-if="showBatchRejectModal"
+        class="modal-backdrop"
+        @click.self="closeBatchRejectModal"
+      >
+        <div
+          class="modal-card"
+          role="dialog"
+          aria-labelledby="batch-reject-modal-title"
+        >
+          <div class="modal-header">
+            <h3 id="batch-reject-modal-title">Batch Reject EHR Candidate Data</h3>
+            <button
+              type="button"
+              class="btn-close"
+              @click="closeBatchRejectModal"
+            >
+              ✕
+            </button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-instruction">
+              Under GxP and FDA Electronic Source Data guidelines, a clinical
+              justification is mandatory when rejecting candidate EHR records. The rationale below will be recorded in Part 11 audit trails across all {{ selectedCandidateIds.length }} selected items.
+            </p>
+            <div class="field-summary">
+              <strong>Selected Records:</strong> {{ selectedCandidateIds.length }} pending candidate record(s)
+            </div>
+            <div class="form-group">
+              <label for="batch-reject-reason" class="form-label"
+                >Clinical Rationale: *</label
+              >
+              <textarea
+                id="batch-reject-reason"
+                v-model="batchRejectReasonInput"
+                class="textarea-input"
+                rows="4"
+                placeholder="e.g., Outside visit window, duplicate observations, inconsistent with chart notes..."
+              />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="closeBatchRejectModal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger btn-submit-batch-reject"
+              :disabled="!batchRejectReasonInput.trim() || isSubmitting"
+              @click="submitBatchReject"
+            >
+              Confirm Batch Rejection ({{ selectedCandidateIds.length }})
+            </button>
+          </div>
+        </div>
+      </div>
     </aside>
   </div>
 </template>
@@ -635,11 +761,14 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "close"): void;
   (e: "commit", candidate: EhrCandidate): void;
+  (e: "batch-commit", candidates: EhrCandidate[]): void;
   (e: "reject", candidate: EhrCandidate): void;
+  (e: "batch-reject", candidates: EhrCandidate[]): void;
   (e: "query", candidate: EhrCandidate, queryId: string): void;
 }>();
 
 const candidates = ref<EhrCandidate[]>([]);
+const selectedCandidateIds = ref<string[]>([]);
 const isLoading = ref(false);
 const isSubmitting = ref(false);
 
@@ -656,9 +785,119 @@ function resetFilters() {
 const activeItem = ref<EhrCandidate | null>(null);
 const showRejectModal = ref(false);
 const rejectReasonInput = ref("");
+const showBatchRejectModal = ref(false);
+const batchRejectReasonInput = ref("");
 const showQueryModal = ref(false);
 const queryExplanationInput = ref("");
 const showProvenanceModal = ref(false);
+
+const isAllPendingSelected = computed(() => {
+  const pendingFiltered = filteredCandidates.value.filter(
+    (c) => c.status === "PENDING_REVIEW"
+  );
+  if (pendingFiltered.length === 0) return false;
+  return pendingFiltered.every((c) => selectedCandidateIds.value.includes(c.id));
+});
+
+function selectHighConfidence() {
+  const highConfPending = candidates.value
+    .filter((c) => c.status === "PENDING_REVIEW" && c.confidence_score >= 0.90)
+    .map((c) => c.id);
+  const set = new Set([...selectedCandidateIds.value, ...highConfPending]);
+  selectedCandidateIds.value = Array.from(set);
+}
+
+function toggleSelectAllPending() {
+  const pendingFiltered = filteredCandidates.value.filter(
+    (c) => c.status === "PENDING_REVIEW"
+  );
+  if (isAllPendingSelected.value) {
+    const pendingIds = new Set(pendingFiltered.map((c) => c.id));
+    selectedCandidateIds.value = selectedCandidateIds.value.filter(
+      (id) => !pendingIds.has(id)
+    );
+  } else {
+    const set = new Set([
+      ...selectedCandidateIds.value,
+      ...pendingFiltered.map((c) => c.id),
+    ]);
+    selectedCandidateIds.value = Array.from(set);
+  }
+}
+
+function clearSelection() {
+  selectedCandidateIds.value = [];
+}
+
+async function handleBatchAccept() {
+  if (selectedCandidateIds.value.length === 0) return;
+  isSubmitting.value = true;
+  try {
+    const payload = {
+      candidate_ids: selectedCandidateIds.value,
+      commit_reason: "CRC batch accepted high-confidence candidate data",
+      change_reason: "CRC eSource Batch Reconciliation Accept & Commit",
+    };
+    const resp = await interopService.batchAcceptEhrCandidates(payload);
+    if (resp.success && resp.candidates) {
+      resp.candidates.forEach((updated: EhrCandidate) => {
+        const idx = candidates.value.findIndex((c) => c.id === updated.id);
+        if (idx !== -1) {
+          candidates.value[idx] = updated;
+        }
+      });
+      emit("batch-commit", resp.candidates);
+      clearSelection();
+    }
+  } catch (err) {
+    console.error("Failed to batch accept candidates:", err);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+function openBatchRejectModal() {
+  if (selectedCandidateIds.value.length === 0) return;
+  batchRejectReasonInput.value = "";
+  showBatchRejectModal.value = true;
+}
+
+function closeBatchRejectModal() {
+  showBatchRejectModal.value = false;
+  batchRejectReasonInput.value = "";
+}
+
+async function submitBatchReject() {
+  if (
+    selectedCandidateIds.value.length === 0 ||
+    !batchRejectReasonInput.value.trim()
+  )
+    return;
+  isSubmitting.value = true;
+  try {
+    const payload = {
+      candidate_ids: selectedCandidateIds.value,
+      rejection_reason: batchRejectReasonInput.value.trim(),
+      change_reason: "CRC eSource Batch Reconciliation Reject",
+    };
+    const resp = await interopService.batchRejectEhrCandidates(payload);
+    if (resp.success && resp.candidates) {
+      resp.candidates.forEach((updated: EhrCandidate) => {
+        const idx = candidates.value.findIndex((c) => c.id === updated.id);
+        if (idx !== -1) {
+          candidates.value[idx] = updated;
+        }
+      });
+      emit("batch-reject", resp.candidates);
+      clearSelection();
+    }
+    closeBatchRejectModal();
+  } catch (err) {
+    console.error("Failed to batch reject candidates:", err);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
 
 const domainOptions = [
   { label: "All Domains", value: "ALL" },
@@ -1890,5 +2129,143 @@ function formatResolutionAction(act?: string): string {
   .provenance-summary-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Quick Select Bar & Floating Batch Action Bar */
+.quick-select-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.btn-outline-primary {
+  background-color: transparent;
+  border: 1px solid #0284c7;
+  color: #0284c7;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-outline-primary:hover {
+  background-color: #e0f2fe;
+}
+
+.btn-outline-secondary {
+  background-color: transparent;
+  border: 1px solid #64748b;
+  color: #475569;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-outline-secondary:hover {
+  background-color: #f1f5f9;
+}
+
+.floating-batch-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #0f172a;
+  color: #f8fafc;
+  border-bottom: 2px solid #1e293b;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideDown 0.2s ease-out;
+}
+
+.batch-count-summary {
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.batch-count-badge {
+  background-color: #38bdf8;
+  color: #0f172a;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-success {
+  background-color: #10b981;
+  color: #ffffff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.btn-danger {
+  background-color: #ef4444;
+  color: #ffffff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid #475569;
+  color: #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.card-selection-check {
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+}
+
+.candidate-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #0284c7;
+}
+
+.candidate-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 </style>

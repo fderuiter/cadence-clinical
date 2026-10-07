@@ -1,4 +1,4 @@
-# ADR-2810: Bulk Synonym Import Service & Hierarchy Rule Store
+# ADR-2811: Bulk Synonym Import Service & Hierarchy Rule Store
 
 - **Status:** Accepted
 - **Date:** 2026-10-06

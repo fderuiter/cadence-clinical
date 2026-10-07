@@ -12,6 +12,8 @@ Generated from `docs/openapi/interop_openapi.json` by `pnpm cadence generate-api
 | `POST` | `/api/v1/interop/esource/poll` | PollHospitalEhr |  |
 | `GET` | `/api/v1/interop/esource/provenance/{candidate_id}` | GetProvenanceAudit |  |
 | `POST` | `/api/v1/interop/esource/reconcile/accept` | AcceptCandidate |  |
+| `POST` | `/api/v1/interop/esource/reconcile/batch-accept` | BatchAcceptCandidates |  |
+| `POST` | `/api/v1/interop/esource/reconcile/batch-reject` | BatchRejectCandidates |  |
 | `POST` | `/api/v1/interop/esource/reconcile/query` | RaiseClinicalQuery |  |
 | `POST` | `/api/v1/interop/esource/reconcile/reject` | RejectCandidate |  |
 | `POST` | `/api/v1/interop/esource/smart/assertion` | GenerateClientAssertion |  |
