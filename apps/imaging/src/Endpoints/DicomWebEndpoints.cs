@@ -55,7 +55,7 @@ public static class DicomWebEndpoints
         return routes;
     }
 
-    private static async Task<IResult> StoreInstancesAsync(
+    public static async Task<IResult> StoreInstancesAsync(
         HttpRequest request,
         IDicomIngestionService ingestionService,
         CancellationToken cancellationToken)
@@ -83,7 +83,7 @@ public static class DicomWebEndpoints
 
         if (payloadBytes.Length == 0)
         {
-            payloadBytes = CreateSampleDicomBytes();
+            return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Request payload cannot be empty." });
         }
 
         try
@@ -104,7 +104,7 @@ public static class DicomWebEndpoints
         }
     }
 
-    private static async Task<IResult> StoreBatchInstancesAsync(
+    public static async Task<IResult> StoreBatchInstancesAsync(
         HttpRequest request,
         IDicomIngestionService ingestionService,
         CancellationToken cancellationToken)
@@ -166,7 +166,7 @@ public static class DicomWebEndpoints
 
         if (batchFiles.Count == 0)
         {
-            batchFiles.Add(new BatchFileItem("sample_slice_001.dcm", CreateSampleDicomBytes()));
+            return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Batch payload cannot be empty." });
         }
 
         var batchRequest = new BatchIngestionRequest(
@@ -273,34 +273,6 @@ public static class DicomWebEndpoints
         return TypedResults.Ok(new CertificateResponse(
             Certificate: cert,
             IsSignatureValid: isValid));
-    }
-
-    private static byte[] CreateSampleDicomBytes()
-    {
-        var dataset = new FellowOakDicom.DicomDataset
-        {
-            { FellowOakDicom.DicomTag.SOPClassUID, FellowOakDicom.DicomUID.CTImageStorage },
-            { FellowOakDicom.DicomTag.SOPInstanceUID, "1.2.840.10008.5.1.4.1.1.2.1001" }, // deid-ignore
-            { FellowOakDicom.DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.2.1000" }, // deid-ignore
-            { FellowOakDicom.DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.2.1000.1" }, // deid-ignore
-            { FellowOakDicom.DicomTag.PatientID, "ORIG-PATIENT-999" },
-            { FellowOakDicom.DicomTag.PatientName, "DOE^JOHN" },
-            { FellowOakDicom.DicomTag.PatientBirthDate, "19800101" },
-            { FellowOakDicom.DicomTag.Modality, "CT" },
-            { FellowOakDicom.DicomTag.Rows, (ushort)512 },
-            { FellowOakDicom.DicomTag.Columns, (ushort)512 },
-            { FellowOakDicom.DicomTag.BitsAllocated, (ushort)16 },
-            { FellowOakDicom.DicomTag.PixelSpacing, 0.7f, 0.7f },
-            { FellowOakDicom.DicomTag.SliceThickness, 2.5f }
-        };
-
-        byte[] pixels = new byte[512 * 512 * 2];
-        dataset.AddOrUpdate(FellowOakDicom.DicomTag.PixelData, new FellowOakDicom.IO.Buffer.MemoryByteBuffer(pixels));
-
-        var file = new FellowOakDicom.DicomFile(dataset);
-        using var ms = new MemoryStream();
-        file.Save(ms);
-        return ms.ToArray();
     }
 }
 

@@ -164,6 +164,112 @@ public sealed class DicomIngestionServiceTests
         seriesInDb!.InstanceCount.Should().Be(2);
     }
 
+    [Fact(DisplayName = "IngestInstanceAsync_AbortsDatabasePersistence_WhenDeidentificationFails")]
+    [Cadence.Testing.GxPRequirement("PRD-IMG-002")]
+    public async Task IngestInstanceAsync_AbortsDatabasePersistence_WhenDeidentificationFails()
+    {
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingAbortTest_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, SystemClock.Instance);
+
+        byte[] compressedDicom = CreateUnsupportedCompressedDicomBytes();
+
+        var act = async () => await service.IngestInstanceAsync(
+            compressedDicom,
+            subjectId: "SUBJ-FAIL-01",
+            siteId: "SITE-101",
+            studyId: "STUDY-FAIL-01",
+            operatorIdentity: "tester@cadence.org",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<Cadence.Deid.DicomPixelDeidException>();
+
+        (await dbContext.DeidentificationCertificates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        (await dbContext.ImagingStudyEnvelopes.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    [Fact(DisplayName = "IngestInstanceAsync_ThrowsArgumentException_WhenPayloadIsEmpty")]
+    public async Task IngestInstanceAsync_ThrowsArgumentException_WhenPayloadIsEmpty()
+    {
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingEmptyPayloadTest_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, SystemClock.Instance);
+
+        var act = async () => await service.IngestInstanceAsync(
+            Array.Empty<byte>(),
+            subjectId: "SUBJ-EMPTY",
+            siteId: "SITE-101",
+            studyId: "STUDY-EMPTY",
+            operatorIdentity: "tester@cadence.org",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("*cannot be empty*");
+    }
+
+    [Fact(DisplayName = "IngestBatchAsync_AbortsDatabasePersistence_WhenDeidentificationFails")]
+    [Cadence.Testing.GxPRequirement("PRD-IMG-002")]
+    public async Task IngestBatchAsync_AbortsDatabasePersistence_WhenDeidentificationFails()
+    {
+        var options = new DbContextOptionsBuilder<ImagingDbContext>()
+            .UseInMemoryDatabase($"ImagingBatchAbortTest_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var dbContext = new ImagingDbContext(options);
+        var service = new DicomIngestionService(dbContext, SystemClock.Instance);
+
+        var files = new List<BatchFileItem>
+        {
+            new("slice_001.dcm", CreateSampleDicomBytesWithPhi("80001")),
+            new("slice_corrupted.dcm", CreateUnsupportedCompressedDicomBytes())
+        };
+
+        var request = new BatchIngestionRequest(
+            Files: files,
+            SubjectId: "SUBJ-BATCH-FAIL",
+            SiteId: "SITE-101",
+            StudyId: "STUDY-BATCH-FAIL");
+
+        var act = async () => await service.IngestBatchAsync(request, TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<Cadence.Deid.DicomPixelDeidException>();
+
+        (await dbContext.DeidentificationCertificates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        (await dbContext.ImagingStudyEnvelopes.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    private static byte[] CreateUnsupportedCompressedDicomBytes()
+    {
+        var dataset = new DicomDataset
+        {
+            { DicomTag.SOPClassUID, DicomUID.SecondaryCaptureImageStorage },
+            { DicomTag.SOPInstanceUID, "1.2.840.10008.5.1.4.1.1.7.999" },
+            { DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.7.998" },
+            { DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.7.998.1" },
+            { DicomTag.PatientID, "COMPRESSED-PATIENT" },
+            { DicomTag.Modality, "SC" },
+            { DicomTag.Rows, (ushort)128 },
+            { DicomTag.Columns, (ushort)128 },
+            { DicomTag.BitsAllocated, (ushort)16 }
+        };
+
+        var fragment = new DicomOtherByteFragment(DicomTag.PixelData);
+        fragment.Fragments.Add(new MemoryByteBuffer(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10 }));
+        dataset.AddOrUpdate(fragment);
+
+        var dicomFile = new DicomFile(dataset);
+        dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.JPEG2000Lossless;
+        using var ms = new MemoryStream();
+        dicomFile.Save(ms);
+        return ms.ToArray();
+    }
+
     private static byte[] CreateSampleDicomBytesWithPhi(string sopSuffix = "99991")
     {
         var dataset = new DicomDataset
