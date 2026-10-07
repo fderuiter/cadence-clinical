@@ -31,7 +31,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 
 ## Quality gates
 
-`pnpm cadence check` runs all 21 quality gates. The pre-commit hook runs a quicker variant (below), and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
+`pnpm cadence check` runs all 22 quality gates. The pre-commit hook runs a quicker variant (below), and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
 
 | Gate (short name)     | What it checks                                                                                                                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -56,15 +56,16 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | `contracts`           | Hexagonal port/adapter contracts                                                                                                                                                                |
 | `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`)                                                                                                                             |
 | `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)                                                                                                                                       |
+| `rtm`                 | Requirement tag integrity and traceability matrix alignment                                                                                                                                    |
 
-`pnpm cadence check rtm` (not part of the 21) validates the traceability matrix without regenerating it.
+`pnpm cadence check rtm` (or `gxp-rtm-validate`) runs Gate 22 to validate the traceability matrix without regenerating it.
 
 ## Pre-commit hook
 
 `scripts/setup_wizard.sh` points git at `.githooks/` (`git config core.hooksPath .githooks`). The `pre-commit` hook (`pre-commit.ps1` on Windows) runs:
 
 1. `dotnet format Cadence.sln --verify-no-changes --include <staged .cs files>`, skipped when no C# file is staged.
-2. `pnpm cadence check --pre-commit`: all 21 gates, with two shortcuts. The two format gates are skipped because step 1 covers the staged files. The `openapi` gate only checks `docs/api` against the committed `docs/openapi` specs, because exporting the specs from the services takes minutes. `pnpm cadence check`, `make verify` and CI run every gate in full.
+2. `pnpm cadence check --pre-commit`: all 22 gates, with two shortcuts. The two format gates are skipped because step 1 covers the staged files. The `openapi` gate only checks `docs/api` against the committed `docs/openapi` specs, because exporting the specs from the services takes minutes. `pnpm cadence check`, `make verify` and CI run every gate in full.
 
 Additionally, `.pre-commit-config.yaml` configures `rhysd/actionlint` and local `action-pinning-check` (`scripts/check-action-pinning.py`) hooks to ensure all GitHub Actions references in `.github/workflows/` are syntax-checked and pinned to 40-character commit SHAs.
 
