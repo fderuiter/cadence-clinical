@@ -307,6 +307,8 @@ K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Domain.TumorResponseAssessment.
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Endpoints.AdjudicationSessionResponse.StudyId
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Endpoints.SubmitAdjudicationSessionRequest.SiteId
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Endpoints.SubmitAdjudicationSessionRequest.StudyId
+K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.BatchIngestionRequest.SiteId
+K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.BatchIngestionRequest.StudyId
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.IngestInstanceRequest.SiteId
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.IngestInstanceRequest.StudyId
 K-XS-1|Cadence.Apps.Interop|Cadence.Apps.Interop.Domain.BiostatExportAuditLog
@@ -456,5 +458,7 @@ K-XS-1|Cadence.Ddf|Cadence.Ddf.BatchCellMutationRequest.StudyId
 K-XS-1|Cadence.Ddf|Cadence.Ddf.BatchCellMutationResult.StudyId
 K-XS-1|Cadence.Ddf|Cadence.Ddf.DDFCompilationResult.StudyId
 K-XS-1|Cadence.Ddf|Cadence.Ddf.DDFStudyIR.StudyId
+K-XS-1|Cadence.Deid|Cadence.Deid.BatchDeidentificationManifest.SiteId
+K-XS-1|Cadence.Deid|Cadence.Deid.BatchDeidentificationManifest.StudyId
 K-XS-1|Cadence.Deid|Cadence.Deid.DicomDeidCertificate.SiteId
 K-XS-1|Cadence.Deid|Cadence.Deid.DicomDeidCertificate.StudyId
