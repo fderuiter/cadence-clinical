@@ -8004,34 +8004,34 @@
       },
       "Ctms_BatchCertifyRequestDto": {
         "required": [
-          "studyId",
-          "countryCode",
-          "siteIds",
-          "signerName",
-          "signerRole",
+          "study_id",
+          "country_code",
+          "site_ids",
+          "signer_name",
+          "signer_role",
           "meaning"
         ],
         "type": "object",
         "properties": {
-          "studyId": {
+          "study_id": {
             "type": "string"
           },
-          "countryCode": {
+          "country_code": {
             "type": "string"
           },
-          "siteIds": {
+          "site_ids": {
             "type": "array",
             "items": {
               "type": "string"
             }
           },
-          "signerName": {
+          "signer_name": {
             "type": [
               "null",
               "string"
             ]
           },
-          "signerRole": {
+          "signer_role": {
             "type": [
               "null",
               "string"
@@ -8048,10 +8048,10 @@
       "Ctms_BatchCertifyResponseDto": {
         "required": [
           "success",
-          "certifiedCount",
-          "studyId",
-          "countryCode",
-          "certifiedSites",
+          "certified_count",
+          "study_id",
+          "country_code",
+          "certified_sites",
           "message"
         ],
         "type": "object",
@@ -8059,7 +8059,7 @@
           "success": {
             "type": "boolean"
           },
-          "certifiedCount": {
+          "certified_count": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -8067,13 +8067,13 @@
             ],
             "format": "int32"
           },
-          "studyId": {
+          "study_id": {
             "type": "string"
           },
-          "countryCode": {
+          "country_code": {
             "type": "string"
           },
-          "certifiedSites": {
+          "certified_sites": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/Ctms_CertifiedSiteItemDto"
@@ -8086,28 +8086,28 @@
       },
       "Ctms_CertifiedSiteItemDto": {
         "required": [
-          "siteId",
-          "siteName",
-          "greenlightToken",
-          "certifiedAt",
-          "certifiedBy",
+          "site_id",
+          "site_name",
+          "greenlight_token",
+          "certified_at",
+          "certified_by",
           "status"
         ],
         "type": "object",
         "properties": {
-          "siteId": {
+          "site_id": {
             "type": "string"
           },
-          "siteName": {
+          "site_name": {
             "type": "string"
           },
-          "greenlightToken": {
+          "greenlight_token": {
             "type": "string"
           },
-          "certifiedAt": {
+          "certified_at": {
             "type": "string"
           },
-          "certifiedBy": {
+          "certified_by": {
             "type": "string"
           },
           "status": {
@@ -8156,46 +8156,46 @@
       "Ctms_SiteGreenlightGateResponseDto": {
         "required": [
           "id",
-          "studyId",
-          "siteId",
-          "siteName",
-          "countryCode",
-          "overallStatus",
-          "readinessPercentage",
-          "facetRegulatoryIrb",
-          "facetCtaBudget",
-          "facetEisfBaseline",
-          "facetDoaLog",
-          "facetStaffTraining",
-          "facetIpRelease",
-          "isCompliant",
-          "greenlightToken",
-          "greenlightCertifiedBy",
-          "greenlightCertifiedAt",
-          "isOverridden",
-          "unfulfilledReasons"
+          "study_id",
+          "site_id",
+          "site_name",
+          "country_code",
+          "overall_status",
+          "readiness_percentage",
+          "facet_regulatory_irb",
+          "facet_cta_budget",
+          "facet_eisf_baseline",
+          "facet_doa_log",
+          "facet_staff_training",
+          "facet_ip_release",
+          "is_compliant",
+          "greenlight_token",
+          "greenlight_certified_by",
+          "greenlight_certified_at",
+          "is_overridden",
+          "unfulfilled_reasons"
         ],
         "type": "object",
         "properties": {
           "id": {
             "type": "string"
           },
-          "studyId": {
+          "study_id": {
             "type": "string"
           },
-          "siteId": {
+          "site_id": {
             "type": "string"
           },
-          "siteName": {
+          "site_name": {
             "type": "string"
           },
-          "countryCode": {
+          "country_code": {
             "type": "string"
           },
-          "overallStatus": {
+          "overall_status": {
             "type": "string"
           },
-          "readinessPercentage": {
+          "readiness_percentage": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -8203,49 +8203,49 @@
             ],
             "format": "int32"
           },
-          "facetRegulatoryIrb": {
+          "facet_regulatory_irb": {
             "type": "boolean"
           },
-          "facetCtaBudget": {
+          "facet_cta_budget": {
             "type": "boolean"
           },
-          "facetEisfBaseline": {
+          "facet_eisf_baseline": {
             "type": "boolean"
           },
-          "facetDoaLog": {
+          "facet_doa_log": {
             "type": "boolean"
           },
-          "facetStaffTraining": {
+          "facet_staff_training": {
             "type": "boolean"
           },
-          "facetIpRelease": {
+          "facet_ip_release": {
             "type": "boolean"
           },
-          "isCompliant": {
+          "is_compliant": {
             "type": "boolean"
           },
-          "greenlightToken": {
+          "greenlight_token": {
             "type": [
               "null",
               "string"
             ]
           },
-          "greenlightCertifiedBy": {
+          "greenlight_certified_by": {
             "type": [
               "null",
               "string"
             ]
           },
-          "greenlightCertifiedAt": {
+          "greenlight_certified_at": {
             "type": [
               "null",
               "string"
             ]
           },
-          "isOverridden": {
+          "is_overridden": {
             "type": "boolean"
           },
-          "unfulfilledReasons": {
+          "unfulfilled_reasons": {
             "type": [
               "null",
               "array"
