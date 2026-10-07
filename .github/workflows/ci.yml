@@ -634,7 +634,7 @@ jobs:
       is_safe: ${{ steps.classify.outputs.is_safe }}
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: read
     steps:
       - name: Fetch list of changed files
         id: classify
@@ -677,7 +677,7 @@ jobs:
           gh pr edit ${{ github.event.pull_request && github.event.pull_request.number || '0' }} --repo ${{ github.repository }} --add-label "safe-change" || echo "Failed to apply label. Ignoring."
 
   automerge:
-    name: Approve and Automerge
+    name: Enable Automerge
     needs:
       [classify, actionlint, lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, compliance]
     if: github.event_name == 'pull_request' && needs.classify.outputs.is_safe == 'true'
@@ -686,19 +686,9 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - name: Approve Pull Request
-        env:
-          GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          gh pr review "$PR_NUMBER" \
-            --repo "${{ github.repository }}" \
-            --approve \
-            --body "Programmatic approval: Verified safe non-GxP change." || echo "::warning::Programmatic approval skipped or failed."
-
       - name: Enable Automerge
         env:
-          GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           gh pr merge "$PR_NUMBER" \

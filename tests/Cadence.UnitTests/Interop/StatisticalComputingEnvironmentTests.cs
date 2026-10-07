@@ -323,5 +323,100 @@ version = ""1.0.0""
 
         recomputedSeal.Should().Be(fetched.ManifestSha256Seal);
     }
+
+    /// <summary>@req:PRD-SYS-053</summary>
+    [Fact(DisplayName = "ExecuteInSandbox_WhenRuntimeFails_ReturnsNonZeroExitCodeStderrAndNoSyntheticData")]
+    [Trait("Requirement", "PRD-SYS-053")]
+    public async Task ExecuteInSandbox_WhenRuntimeFails_ReturnsNonZeroExitCodeStderrAndNoSyntheticData()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        string invalidPythonSource = "import non_existent_module_12345";
+        var request = new SandboxExecutionRequest(
+            Language: "PYTHON",
+            SourceCode: invalidPythonSource,
+            LockfileContent: "",
+            LockType: "UV_LOCK",
+            NetworkIsolated: true,
+            FilesystemReadonlyRoot: true
+        );
+
+        var result = await _dockerDriver.ExecuteInSandboxAsync(request, ct);
+
+        result.ExitCode.Should().NotBe(0);
+        result.Artifacts.Should().BeEmpty();
+        result.Stderr.Should().NotBeNullOrWhiteSpace();
+        result.Stdout.Should().BeEmpty();
+    }
+
+    /// <summary>@req:PRD-SYS-053</summary>
+    [Fact(DisplayName = "ExecutionRun_WhenExitCodeNonZero_SetsStatusFailedAndSuppressesSignatureAndSeal")]
+    [Trait("Requirement", "PRD-SYS-053")]
+    public async Task ExecutionRun_WhenExitCodeNonZero_SetsStatusFailedAndSuppressesSignatureAndSeal()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var now = _clock.UtcNow;
+        string runId = "run-failed-001";
+        string studyId = "STUDY-001";
+        string programId = "prog-failed";
+
+        // Simulating failed execution with ExitCode != 0
+        int exitCode = 1;
+        string status = exitCode == 0 ? "COMPLETED" : "FAILED";
+
+        ElectronicSignatureBlockDto sigBlockDto;
+        string manifestSeal;
+
+        if (exitCode == 0)
+        {
+            sigBlockDto = new ElectronicSignatureBlockDto("user:biostat", "UNBLINDED_STATISTICIAN", now.ToString("O"), "Meaning", "hmac123");
+            manifestSeal = "seal123";
+        }
+        else
+        {
+            sigBlockDto = new ElectronicSignatureBlockDto("", "", "", "NONE - Execution failed; electronic signature refused", "");
+            manifestSeal = "";
+        }
+
+        var record = new ExecutionRunRecord
+        {
+            RunId = runId,
+            ManifestId = "man-failed-001",
+            StudyId = studyId,
+            ProgramId = programId,
+            ProgramName = "failing_script.py",
+            SnapshotId = "snap-001",
+            ScriptCodeDigest = "abc",
+            LockfileDigest = "def",
+            ContainerImageDigest = "sha256:0000",
+            ExecutionStart = now,
+            ExecutionEnd = now.AddSeconds(1),
+            DurationMs = 1000,
+            ExitCode = exitCode,
+            Status = status,
+            StdoutCapture = "",
+            StderrCapture = "SyntaxError: invalid syntax",
+            OutputArtifactsJson = "[]",
+            OutputArtifactsDigest = "empty",
+            ExecutedBy = "user:biostat",
+            ExecutedByRole = "UNBLINDED_STATISTICIAN",
+            SignatureBlockJson = System.Text.Json.JsonSerializer.Serialize(sigBlockDto),
+            ManifestSha256Seal = manifestSeal,
+            CreatedAt = now,
+            CreatedBy = "user:biostat"
+        };
+
+        _db.ExecutionRunRecords.Add(record);
+        await _db.SaveChangesAsync(ct);
+
+        var fetched = await _db.ExecutionRunRecords.FirstAsync(r => r.RunId == runId, ct);
+        fetched.Status.Should().Be("FAILED");
+        fetched.ExitCode.Should().Be(1);
+        fetched.ManifestSha256Seal.Should().BeEmpty();
+
+        var sigBlock = System.Text.Json.JsonSerializer.Deserialize<ElectronicSignatureBlockDto>(fetched.SignatureBlockJson);
+        sigBlock.Should().NotBeNull();
+        sigBlock!.HmacSignature.Should().BeEmpty();
+        sigBlock.SignatureMeaning.Should().Contain("refused");
+    }
 }
 

@@ -22,19 +22,19 @@ public sealed class BatchEvaluationContextLoader(ExecutionDbContext context) : I
         SubjectCode subjectId,
         CancellationToken cancellationToken)
     {
-        var submissionsTask = context.FormSubmissions
+        var submissions = await context.FormSubmissions
             .AsNoTracking()
             .Where(f => f.StudyId == studyId && f.SubjectId == subjectId && f.IsActive)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        var observationsTask = context.ClinicalObservations
+        var observations = await context.ClinicalObservations
             .AsNoTracking()
             .Where(o => o.StudyId == studyId && o.SubjectId == subjectId && o.IsActive)
             .OrderByDescending(o => o.ObservationDate)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        await Task.WhenAll(submissionsTask, observationsTask).ConfigureAwait(false);
-
-        return new BatchEvaluationContext(submissionsTask.Result, observationsTask.Result);
+        return new BatchEvaluationContext(submissions, observations);
     }
 }

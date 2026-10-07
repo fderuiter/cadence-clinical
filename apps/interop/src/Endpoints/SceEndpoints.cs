@@ -495,17 +495,37 @@ public static class SceEndpoints
                 ContentPreview: a.ContentPreview
             )).ToList();
 
-            string hmacSig = ComputeHmac($"{userId}|{runId}|{execEnd:O}", "CADENCE_SCE_SIGNING_KEY");
-            var sigBlockDto = new ElectronicSignatureBlockDto(
-                SignerId: userId,
-                SignerRole: userRole,
-                SignedAt: execEnd.ToString("O"),
-                SignatureMeaning: "Electronic signature confirming authoring, validation, and execution of statistical run",
-                HmacSignature: hmacSig
-            );
+            bool isSuccess = execResult.ExitCode == 0;
+            string status = isSuccess ? "COMPLETED" : "FAILED";
 
-            string sealPayload = $"{runId}|{req.StudyId}|{program.Id}|{req.SnapshotId}|{scriptCodeDigest}|{lockfileDigest}|{execResult.ContainerImageDigest}|{execResult.OutputArtifactsDigest}|{userId}";
-            string manifestSeal = ComputeSha256(sealPayload);
+            ElectronicSignatureBlockDto sigBlockDto;
+            string manifestSeal;
+
+            if (isSuccess)
+            {
+                string hmacSig = ComputeHmac($"{userId}|{runId}|{execEnd:O}", "CADENCE_SCE_SIGNING_KEY");
+                sigBlockDto = new ElectronicSignatureBlockDto(
+                    SignerId: userId,
+                    SignerRole: userRole,
+                    SignedAt: execEnd.ToString("O"),
+                    SignatureMeaning: "Electronic signature confirming authoring, validation, and execution of statistical run",
+                    HmacSignature: hmacSig
+                );
+
+                string sealPayload = $"{runId}|{req.StudyId}|{program.Id}|{req.SnapshotId}|{scriptCodeDigest}|{lockfileDigest}|{execResult.ContainerImageDigest}|{execResult.OutputArtifactsDigest}|{userId}";
+                manifestSeal = ComputeSha256(sealPayload);
+            }
+            else
+            {
+                sigBlockDto = new ElectronicSignatureBlockDto(
+                    SignerId: "",
+                    SignerRole: "",
+                    SignedAt: "",
+                    SignatureMeaning: "NONE - Execution failed; electronic signature refused",
+                    HmacSignature: ""
+                );
+                manifestSeal = "";
+            }
 
             var manifestDto = new ExecutionRunManifestDto(
                 ManifestId: manifestId,
@@ -525,7 +545,7 @@ public static class SceEndpoints
                 ExecutionEnd: execEnd.ToString("O"),
                 DurationMs: execResult.DurationMs,
                 ExitCode: execResult.ExitCode,
-                Status: execResult.ExitCode == 0 ? "COMPLETED" : "FAILED",
+                Status: status,
                 StdoutCapture: execResult.Stdout,
                 StderrCapture: execResult.Stderr,
                 OutputArtifacts: artifactDtos,
@@ -557,7 +577,7 @@ public static class SceEndpoints
                 ExecutionEnd = execEnd,
                 DurationMs = execResult.DurationMs,
                 ExitCode = execResult.ExitCode,
-                Status = execResult.ExitCode == 0 ? "COMPLETED" : "FAILED",
+                Status = status,
                 StdoutCapture = execResult.Stdout,
                 StderrCapture = execResult.Stderr,
                 OutputArtifactsJson = JsonSerializer.Serialize(artifactDtos),
@@ -643,6 +663,21 @@ public static class SceEndpoints
             if (run == null)
             {
                 return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
+            }
+
+            if (run.ExitCode != 0 || run.Status == "FAILED" || string.IsNullOrEmpty(run.ManifestSha256Seal))
+            {
+                return Results.Ok(new VerifyManifestResponseDto(new Dictionary<string, object>
+                {
+                    ["is_valid"] = false,
+                    ["run_id"] = run.RunId,
+                    ["manifest_id"] = run.ManifestId ?? "",
+                    ["manifest_sha256_seal"] = run.ManifestSha256Seal,
+                    ["computed_sha256_seal"] = "",
+                    ["verification_timestamp"] = clock.UtcNow.ToString("O"),
+                    ["status"] = "SEAL_REFUSED_FAILED_RUN",
+                    ["reason"] = "Cryptographic seal was refused because the execution run failed."
+                }));
             }
 
             string sealPayload = $"{run.RunId}|{run.StudyId}|{run.ProgramId}|{run.SnapshotId}|{run.ScriptCodeDigest}|{run.LockfileDigest}|{run.ContainerImageDigest}|{run.OutputArtifactsDigest}|{run.ExecutedBy}";
