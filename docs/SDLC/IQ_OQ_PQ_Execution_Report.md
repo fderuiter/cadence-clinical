@@ -16,8 +16,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Counts cover the requirement-tagged test methods in section 3. Whole-suite totals are in the TRX files under
 `TestResults/gxp/`, so this report only changes when a tagged test or its result changes.
 
-- **Requirement-Tagged Test Methods:** 244
-- **Passed:** 195 🟢
+- **Requirement-Tagged Test Methods:** 245
+- **Passed:** 196 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 49 ⚪
 - **Not Run:** 0
@@ -89,6 +89,7 @@ out so the report only changes when results change; they are in the TRX files un
 | `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
 | `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
+| `BatchCertify_AllowsOverriddenSites` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-002 | 🟢 PASSED |
 | `BatchCertify_CertifiesCompliantSites_WithIndividualTokensAndAuditLogs` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-003 | 🟢 PASSED |
 | `BatchCertify_Performance_CompletesUnder5SecondsFor50Sites` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-001 | 🟢 PASSED |
 | `BatchCertify_RejectsNonCompliantSites` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-002 | 🟢 PASSED |
