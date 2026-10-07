@@ -402,6 +402,21 @@ public sealed class ProposalTests
         proposal.Escalate(Approver, "Safety Board", "Duplicate escalation", now).Should().Be(ProposalErrors.AlreadyEscalated);
     }
 
+    [Fact]
+    public void Escalate_MaintainsContentHash_WhenEscalatedWithCustomPolicy()
+    {
+        var proposal = Create(Command(), Proposer);
+        var initialHash = proposal.ContentHash;
+        var now = _clock.Advance(TimeSpan.FromMinutes(10));
+
+        var result = proposal.Escalate(Approver, "Medical Director", "Complex protocol change", now, policy: "CustomEscalationPolicy");
+
+        result.Should().BeNull();
+        proposal.EscalationPolicy.Should().Be("CustomEscalationPolicy");
+        proposal.ContentHash.Should().Be(initialHash);
+        Proposal.HashOf(proposal).Should().Be(proposal.ContentHash);
+    }
+
     private Propose Command() => new(
         Tenant,
         ProposalId.FromGuid(Guid.Parse("0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e")),

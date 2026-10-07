@@ -314,7 +314,6 @@ public class Proposal : AggregateRoot<ProposalId>
             },
             ["modelId"] = proposal.ModelId,
             ["confidenceScore"] = proposal.ConfidenceScore,
-            ["escalationPolicy"] = proposal.EscalationPolicy,
         };
         return Trust.ContentHash.Compute(document.ToJsonString());
     }
