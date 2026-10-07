@@ -20,6 +20,8 @@ vi.mock("../../src/api/executionApi", () => ({
     closeQuery: vi.fn(),
     reopenQuery: vi.fn(),
     cancelQuery: vi.fn(),
+    batchCloseQueries: vi.fn(),
+    batchCancelQueries: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -489,6 +491,96 @@ describe("Clinical Canvas: a participant's data", () => {
       await flushPromises();
 
       expect(wrapper.find("#btn-raise-query").exists()).toBe(false);
+    });
+
+    it("allows CRA to batch close multiple answered queries with a reason", async () => {
+      signInWith(["cra"]);
+      const q1 = query({
+        id: "q-1",
+        status: "ANSWERED",
+        response: "Checked 1",
+      });
+      const q2 = query({
+        id: "q-2",
+        status: "ANSWERED",
+        response: "Checked 2",
+      });
+      vi.mocked(executionApi.listQueries).mockResolvedValue([q1, q2]);
+      await openRecord();
+
+      expect(wrapper.find("#select-all-queries").exists()).toBe(true);
+      expect(wrapper.find("#btn-batch-close").attributes()).toHaveProperty(
+        "disabled"
+      );
+
+      await wrapper.find("#select-all-queries").setValue(true);
+      await wrapper.vm.$nextTick();
+
+      expect(
+        wrapper.find("#btn-batch-close").attributes("disabled")
+      ).toBeUndefined();
+
+      vi.mocked(executionApi.batchCloseQueries).mockResolvedValue({
+        queries: [
+          { ...q1, status: "CLOSED" },
+          { ...q2, status: "CLOSED" },
+        ],
+        count: 2,
+      });
+
+      await wrapper.find("#btn-batch-close").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      await wrapper
+        .find("#batch-query-reason")
+        .setValue("Verified batch resolution");
+      await wrapper.find("#btn-confirm-batch-close").trigger("click");
+      await flushPromises();
+
+      expect(executionApi.batchCloseQueries).toHaveBeenCalledWith(
+        ["q-1", "q-2"],
+        "Verified batch resolution"
+      );
+      expect(useToastStore().toasts.at(-1)).toMatchObject({
+        tone: "success",
+        title: "2 queries closed",
+      });
+      expect(wrapper.find("#query-q-1").text()).toContain("Closed");
+      expect(wrapper.find("#query-q-2").text()).toContain("Closed");
+    });
+
+    it("allows CRA to batch cancel multiple queries with a reason", async () => {
+      signInWith(["cra"]);
+      const q1 = query({ id: "q-1", status: "OPEN" });
+      const q2 = query({ id: "q-2", status: "ANSWERED" });
+      vi.mocked(executionApi.listQueries).mockResolvedValue([q1, q2]);
+      await openRecord();
+
+      await wrapper.find("#select-query-q-1").setValue(true);
+      await wrapper.find("#select-query-q-2").setValue(true);
+      await wrapper.vm.$nextTick();
+
+      vi.mocked(executionApi.batchCancelQueries).mockResolvedValue({
+        queries: [
+          { ...q1, status: "CANCELLED", cancellation_reason: "Obsolete" },
+          { ...q2, status: "CANCELLED", cancellation_reason: "Obsolete" },
+        ],
+        count: 2,
+      });
+
+      await wrapper.find("#btn-batch-cancel").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find("#batch-query-reason").setValue("Obsolete");
+      await wrapper.find("#btn-confirm-batch-cancel").trigger("click");
+      await flushPromises();
+
+      expect(executionApi.batchCancelQueries).toHaveBeenCalledWith(
+        ["q-1", "q-2"],
+        "Obsolete"
+      );
+      expect(wrapper.find("#query-q-1").text()).toContain("Cancelled");
+      expect(wrapper.find("#query-q-2").text()).toContain("Cancelled");
     });
   });
 });

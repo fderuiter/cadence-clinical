@@ -23,6 +23,16 @@ public interface IClinicalQueryRepository
     /// </summary>
     Task<ClinicalQuery?> GetForUpdateAsync(QueryId id, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Loads multiple aggregates with change tracking for batch mutation commands.
+    /// </summary>
+    Task<IReadOnlyList<ClinicalQuery>> GetForUpdateAsync(IEnumerable<QueryId> ids, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Starts an explicit database transaction for atomic batch operations, returning null for in-memory repositories.
+    /// </summary>
+    Task<System.IAsyncDisposable?> BeginTransactionAsync(CancellationToken cancellationToken);
+
     Task<ClinicalQuery?> GetActiveQueryOnCoordinatesAsync(
         StudyCode studyId,
         SubjectCode subjectId,

@@ -426,5 +426,43 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         return false;
       }
     },
+
+    /** Batch closes or cancels multiple queries, then updates Execution's results in place. */
+    async batchActOnQueries(
+      queryIds: string[],
+      action: "close" | "cancel",
+      reason: string
+    ): Promise<boolean> {
+      const toasts = useToastStore();
+      const isClose = action === "close";
+      const failedMsg = isClose
+        ? "The queries were not closed"
+        : "The queries were not cancelled";
+      try {
+        const response = isClose
+          ? await executionApi.batchCloseQueries(queryIds, reason)
+          : await executionApi.batchCancelQueries(queryIds, reason);
+
+        const updatedQueries = response.queries || [];
+        const count = response.count ?? updatedQueries.length;
+        const list = this.record.queries;
+        for (const updated of updatedQueries) {
+          const index = list.findIndex((q) => q.id === updated.id);
+          if (index >= 0) {
+            list.splice(index, 1, updated);
+          }
+        }
+
+        const title = isClose
+          ? `${count} ${count === 1 ? "query" : "queries"} closed`
+          : `${count} ${count === 1 ? "query" : "queries"} cancelled`;
+
+        toasts.push({ tone: "success", title, message: "" });
+        return true;
+      } catch (err) {
+        toasts.apiError(failedMsg, err);
+        return false;
+      }
+    },
   },
 });
