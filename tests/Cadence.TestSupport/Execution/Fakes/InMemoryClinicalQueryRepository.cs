@@ -30,6 +30,18 @@ public sealed class InMemoryClinicalQueryRepository : IClinicalQueryRepository
     public Task<ClinicalQuery?> GetForUpdateAsync(QueryId id, CancellationToken cancellationToken) =>
         GetByIdAsync(id, cancellationToken);
 
+    public Task<IReadOnlyList<ClinicalQuery>> GetForUpdateAsync(IEnumerable<QueryId> ids, CancellationToken cancellationToken)
+    {
+        var idSet = ids.ToHashSet();
+        IReadOnlyList<ClinicalQuery> list = _store.Values
+            .Where(q => idSet.Contains(q.Id))
+            .ToList();
+        return Task.FromResult(list);
+    }
+
+    public Task<System.IAsyncDisposable?> BeginTransactionAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<System.IAsyncDisposable?>(null);
+
     public Task<ClinicalQuery?> GetByIdAsync(QueryId id, CancellationToken cancellationToken)
     {
         _store.TryGetValue(id, out var query);

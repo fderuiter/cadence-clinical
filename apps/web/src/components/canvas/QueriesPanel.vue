@@ -8,72 +8,158 @@
     <p v-if="!queries.length" id="record-queries-empty" class="status-line">
       No queries on {{ subjectCode }}.
     </p>
-    <ul v-else class="query-list">
-      <li
-        v-for="query in queries"
-        :id="`query-${query.id}`"
-        :key="query.id"
-        class="query"
+    <template v-else>
+      <div
+        v-if="canManage && selectableQueries.length > 0"
+        class="batch-controls"
+        role="group"
+        aria-label="Batch query actions"
       >
-        <div class="query-head">
-          <span class="query-status" :data-status="query.status">{{
-            queryStatusLabel(query.status)
-          }}</span>
-          <span class="query-target">{{ targetLabel(query) }}</span>
-        </div>
-        <p class="query-text">
-          {{ query.explanation }}
-        </p>
-        <p v-if="query.response" class="query-response">
-          Answer: {{ query.response }}
-        </p>
-        <p v-if="query.cancellation_reason" class="query-response">
-          Cancelled: {{ query.cancellation_reason }}
-        </p>
-
-        <div
-          v-if="openAction?.queryId === query.id"
-          class="query-form"
-          role="group"
-          :aria-label="ACTION_TEXT[openAction.action].button"
-        >
-          <label :for="`query-text-${query.id}`">{{
-            ACTION_TEXT[openAction.action].label
-          }}</label>
-          <textarea
-            :id="`query-text-${query.id}`"
-            v-model="actionText"
-            rows="2"
+        <label class="select-all-label">
+          <input
+            id="select-all-queries"
+            type="checkbox"
+            :checked="allSelected"
+            aria-label="Select all queries"
+            @change="toggleSelectAll"
           />
-          <div class="query-buttons">
-            <button
-              :id="`btn-confirm-${openAction.action}-${query.id}`"
-              type="button"
-              class="btn btn-primary"
-              :disabled="busy || !actionText.trim()"
-              @click="confirm(query)"
-            >
-              {{ ACTION_TEXT[openAction.action].button }}
-            </button>
-            <button type="button" class="btn btn-secondary" @click="dismiss">
-              Back
-            </button>
-          </div>
-        </div>
-        <div v-else class="query-buttons">
+          <span>Select All</span>
+        </label>
+        <div class="batch-buttons">
           <button
-            v-for="action in actionsFor(query)"
-            :id="`btn-${action}-${query.id}`"
-            :key="action"
+            id="btn-batch-close"
             type="button"
             class="btn btn-secondary"
-            @click="begin(query, action)"
+            :disabled="selectedCloseableQueries.length === 0"
+            @click="startBatchAction('close')"
           >
-            {{ ACTION_TEXT[action].start }}
+            Batch Close
+          </button>
+          <button
+            id="btn-batch-cancel"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="selectedCancellableQueries.length === 0"
+            @click="startBatchAction('cancel')"
+          >
+            Batch Cancel
           </button>
         </div>
-      </li>
-    </ul>
+      </div>
+
+      <div
+        v-if="batchAction"
+        class="batch-form"
+        role="group"
+        :aria-label="
+          batchAction === 'close'
+            ? 'Batch close queries'
+            : 'Batch cancel queries'
+        "
+      >
+        <label for="batch-query-reason">{{
+          batchAction === "close"
+            ? `Reason for batch closing ${selectedCloseableQueries.length} query/queries`
+            : `Reason for batch cancelling ${selectedCancellableQueries.length} query/queries`
+        }}</label>
+        <textarea id="batch-query-reason" v-model="batchReason" rows="2" />
+        <div class="query-buttons">
+          <button
+            :id="`btn-confirm-batch-${batchAction}`"
+            type="button"
+            class="btn btn-primary"
+            :disabled="batchBusy || !batchReason.trim()"
+            @click="confirmBatchAction"
+          >
+            Confirm
+            {{ batchAction === "close" ? "Batch Close" : "Batch Cancel" }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="dismissBatchAction"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <ul class="query-list">
+        <li
+          v-for="query in queries"
+          :id="`query-${query.id}`"
+          :key="query.id"
+          class="query"
+        >
+          <div class="query-head">
+            <input
+              v-if="canManage && isQuerySelectable(query)"
+              :id="`select-query-${query.id}`"
+              v-model="selectedQueryIds"
+              type="checkbox"
+              :value="query.id"
+              :aria-label="`Select query ${query.id}`"
+              class="query-checkbox"
+            />
+            <span class="query-status" :data-status="query.status">{{
+              queryStatusLabel(query.status)
+            }}</span>
+            <span class="query-target">{{ targetLabel(query) }}</span>
+          </div>
+          <p class="query-text">
+            {{ query.explanation }}
+          </p>
+          <p v-if="query.response" class="query-response">
+            Answer: {{ query.response }}
+          </p>
+          <p v-if="query.cancellation_reason" class="query-response">
+            Cancelled: {{ query.cancellation_reason }}
+          </p>
+
+          <div
+            v-if="openAction?.queryId === query.id"
+            class="query-form"
+            role="group"
+            :aria-label="ACTION_TEXT[openAction.action].button"
+          >
+            <label :for="`query-text-${query.id}`">{{
+              ACTION_TEXT[openAction.action].label
+            }}</label>
+            <textarea
+              :id="`query-text-${query.id}`"
+              v-model="actionText"
+              rows="2"
+            />
+            <div class="query-buttons">
+              <button
+                :id="`btn-confirm-${openAction.action}-${query.id}`"
+                type="button"
+                class="btn btn-primary"
+                :disabled="busy || !actionText.trim()"
+                @click="confirm(query)"
+              >
+                {{ ACTION_TEXT[openAction.action].button }}
+              </button>
+              <button type="button" class="btn btn-secondary" @click="dismiss">
+                Back
+              </button>
+            </div>
+          </div>
+          <div v-else class="query-buttons">
+            <button
+              v-for="action in actionsFor(query)"
+              :id="`btn-${action}-${query.id}`"
+              :key="action"
+              type="button"
+              class="btn btn-secondary"
+              @click="begin(query, action)"
+            >
+              {{ ACTION_TEXT[action].start }}
+            </button>
+          </div>
+        </li>
+      </ul>
+    </template>
     <p v-if="!canManage" id="record-queries-note" class="status-line">
       A CRA or data manager closes, reopens and cancels queries.
     </p>
@@ -81,7 +167,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import type { ClinicalQuery, Observation } from "../../api/executionApi";
 import {
   useStudyCanvasStore,
@@ -139,6 +225,84 @@ const openAction = ref<{ queryId: string; action: QueryAction } | null>(null);
 const actionText = ref("");
 const busy = ref(false);
 
+const selectedQueryIds = ref<string[]>([]);
+const batchAction = ref<"close" | "cancel" | null>(null);
+const batchReason = ref("");
+const batchBusy = ref(false);
+
+function isQuerySelectable(query: ClinicalQuery): boolean {
+  return query.status !== "CLOSED" && query.status !== "CANCELLED";
+}
+
+const selectableQueries = computed(() => {
+  return props.queries.filter(isQuerySelectable);
+});
+
+const selectedCloseableQueries = computed(() => {
+  return props.queries.filter(
+    (q) => selectedQueryIds.value.includes(q.id) && q.status === "ANSWERED"
+  );
+});
+
+const selectedCancellableQueries = computed(() => {
+  return props.queries.filter(
+    (q) => selectedQueryIds.value.includes(q.id) && isQuerySelectable(q)
+  );
+});
+
+const allSelected = computed(() => {
+  return (
+    selectableQueries.value.length > 0 &&
+    selectedQueryIds.value.length === selectableQueries.value.length
+  );
+});
+
+function toggleSelectAll(event: Event) {
+  const checked = (event.target as HTMLInputElement).checked;
+  if (checked) {
+    selectedQueryIds.value = selectableQueries.value.map((q) => q.id);
+  } else {
+    selectedQueryIds.value = [];
+  }
+}
+
+function startBatchAction(action: "close" | "cancel") {
+  batchAction.value = action;
+  batchReason.value = "";
+}
+
+function dismissBatchAction() {
+  batchAction.value = null;
+  batchReason.value = "";
+}
+
+async function confirmBatchAction() {
+  const action = batchAction.value;
+  const reason = batchReason.value.trim();
+  if (!action || !reason) return;
+
+  const targetQueries =
+    action === "close"
+      ? selectedCloseableQueries.value
+      : selectedCancellableQueries.value;
+
+  const targetIds = targetQueries.map((q) => q.id);
+  if (targetIds.length === 0) return;
+
+  batchBusy.value = true;
+  try {
+    const success = await canvas.batchActOnQueries(targetIds, action, reason);
+    if (success) {
+      selectedQueryIds.value = selectedQueryIds.value.filter(
+        (id) => !targetIds.includes(id)
+      );
+      dismissBatchAction();
+    }
+  } finally {
+    batchBusy.value = false;
+  }
+}
+
 function queryStatusLabel(status: string): string {
   return STATUS_LABELS[status] ?? status;
 }
@@ -195,6 +359,56 @@ async function confirm(query: ClinicalQuery) {
   margin: 0;
   color: var(--neutral-dark);
   font-size: 0.85rem;
+}
+
+.batch-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--neutral-light);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.batch-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.batch-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.batch-form textarea {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.query-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 }
 
 .query-list {
