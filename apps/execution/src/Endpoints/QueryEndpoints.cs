@@ -77,6 +77,22 @@ public static class QueryEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
+        group.MapPost("/batch-close", BatchCloseQueryAsync)
+            .WithName("BatchCloseClinicalQueries")
+            .Produces<BatchQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        group.MapPost("/batch-cancel", BatchCancelQueryAsync)
+            .WithName("BatchCancelClinicalQueries")
+            .Produces<BatchQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
         // Undocumented alias for legacy Python router compatibility. The gateway proxies it, so every alias carries the
         // same filters as its documented route: a change without X-Change-Reason is refused here too (#5060).
         var legacyGroup = app.MapGroup("/api/v1/queries")
@@ -89,6 +105,8 @@ public static class QueryEndpoints
         legacyGroup.MapPost("/{id}/close", CloseQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
         legacyGroup.MapPost("/{id}/reopen", ReopenQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
         legacyGroup.MapPost("/{id}/cancel", CancelQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/batch-close", BatchCloseQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/batch-cancel", BatchCancelQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
     }
@@ -167,6 +185,28 @@ public static class QueryEndpoints
     {
         var role = GetCallerRole(httpContext);
         var result = await svc.CancelAsync(id, request, ct, role).ConfigureAwait(false);
+        return result.Match(Results.Ok, e => e.ToProblemResult());
+    }
+
+    public static async Task<IResult> BatchCloseQueryAsync(
+        BatchQueryRequest request,
+        HttpContext httpContext,
+        IClinicalQueryApplicationService svc,
+        CancellationToken ct)
+    {
+        var role = GetCallerRole(httpContext);
+        var result = await svc.BatchCloseAsync(request, ct, role).ConfigureAwait(false);
+        return result.Match(Results.Ok, e => e.ToProblemResult());
+    }
+
+    public static async Task<IResult> BatchCancelQueryAsync(
+        BatchQueryRequest request,
+        HttpContext httpContext,
+        IClinicalQueryApplicationService svc,
+        CancellationToken ct)
+    {
+        var role = GetCallerRole(httpContext);
+        var result = await svc.BatchCancelAsync(request, ct, role).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 

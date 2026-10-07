@@ -240,4 +240,155 @@ public sealed class QueryLifecycleTests
         cancel.Error!.Code.Should().Be("UNAUTHORIZED_QUERY_ROLE");
         query.Status.Should().Be(QueryStatus.Answered);
     }
+
+    /// <summary>
+    /// Validates that batch close updates all requested queries atomically for an authorized CRA or DM.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task BatchCloseAsync_WithAuthorizedRole_ClosesAllSelectedQueriesAtomically()
+    {
+        var repo = new InMemoryClinicalQueryRepository();
+        var auditAccessor = new FakeCurrentAuditContextAccessor("cra-user-01", "Batch closing verified answered queries");
+        var service = new ClinicalQueryApplicationService(repo, auditAccessor, new FakeClock());
+
+        var q1 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("SYSBP"), "Check 1").Value!;
+        q1.Answer("Answer 1", "crc-01");
+        var q2 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("DIABP"), "Check 2").Value!;
+        q2.Answer("Answer 2", "crc-01");
+
+        await repo.AddAsync(q1, CancellationToken.None);
+        await repo.AddAsync(q2, CancellationToken.None);
+
+        var request = new BatchQueryRequest(new[] { q1.Id.ToString(), q2.Id.ToString() }, "Batch closing verified answered queries");
+        var result = await service.BatchCloseAsync(request, CancellationToken.None, userRole: "cra");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Count.Should().Be(2);
+        result.Value.Queries.Should().HaveCount(2);
+
+        var updatedQ1 = await repo.GetByIdAsync(q1.Id, CancellationToken.None);
+        var updatedQ2 = await repo.GetByIdAsync(q2.Id, CancellationToken.None);
+
+        updatedQ1!.Status.Should().Be(QueryStatus.Closed);
+        updatedQ1.Resolver.Should().Be("cra-user-01");
+        updatedQ1.ReasonForChange.Should().Be("Batch closing verified answered queries");
+
+        updatedQ2!.Status.Should().Be(QueryStatus.Closed);
+        updatedQ2.Resolver.Should().Be("cra-user-01");
+        updatedQ2.ReasonForChange.Should().Be("Batch closing verified answered queries");
+    }
+
+    /// <summary>
+    /// Validates that batch cancel updates all requested queries atomically for an authorized CRA or DM.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task BatchCancelAsync_WithAuthorizedRole_CancelsAllSelectedQueriesAtomically()
+    {
+        var repo = new InMemoryClinicalQueryRepository();
+        var auditAccessor = new FakeCurrentAuditContextAccessor("dm-user-01", "Batch cancelling obsolete queries");
+        var service = new ClinicalQueryApplicationService(repo, auditAccessor, new FakeClock());
+
+        var q1 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("SYSBP"), "Obsolete 1").Value!;
+        var q2 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("DIABP"), "Obsolete 2").Value!;
+
+        await repo.AddAsync(q1, CancellationToken.None);
+        await repo.AddAsync(q2, CancellationToken.None);
+
+        var request = new BatchQueryRequest(new[] { q1.Id.ToString(), q2.Id.ToString() }, "Obsolete queries raised in error");
+        var result = await service.BatchCancelAsync(request, CancellationToken.None, userRole: "Data Manager");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Count.Should().Be(2);
+
+        var updatedQ1 = await repo.GetByIdAsync(q1.Id, CancellationToken.None);
+        var updatedQ2 = await repo.GetByIdAsync(q2.Id, CancellationToken.None);
+
+        updatedQ1!.Status.Should().Be(QueryStatus.Cancelled);
+        updatedQ1.CancellationReason.Should().Be("Obsolete queries raised in error");
+
+        updatedQ2!.Status.Should().Be(QueryStatus.Cancelled);
+        updatedQ2.CancellationReason.Should().Be("Obsolete queries raised in error");
+    }
+
+    /// <summary>
+    /// Validates that unauthorized roles (CRC, Auditor, empty) are rejected with HTTP 403 Forbidden.
+    /// </summary>
+    [Theory]
+    [InlineData("crc")]
+    [InlineData("auditor")]
+    [InlineData("")]
+    public async Task BatchQueryActions_WithUnauthorizedRole_ReturnsForbidden(string role)
+    {
+        var repo = new InMemoryClinicalQueryRepository();
+        var auditAccessor = new FakeCurrentAuditContextAccessor("site-crc", "Testing authorization");
+        var service = new ClinicalQueryApplicationService(repo, auditAccessor, new FakeClock());
+
+        var q1 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("SYSBP"), "Check").Value!;
+        q1.Answer("Answered", "crc");
+        await repo.AddAsync(q1, CancellationToken.None);
+
+        var request = new BatchQueryRequest(new[] { q1.Id.ToString() }, "Attempt action");
+
+        var closeResult = await service.BatchCloseAsync(request, CancellationToken.None, userRole: role);
+        closeResult.IsFailure.Should().BeTrue();
+        closeResult.Error!.Code.Should().Be("UNAUTHORIZED_QUERY_ROLE");
+
+        var cancelResult = await service.BatchCancelAsync(request, CancellationToken.None, userRole: role);
+        cancelResult.IsFailure.Should().BeTrue();
+        cancelResult.Error!.Code.Should().Be("UNAUTHORIZED_QUERY_ROLE");
+    }
+
+    /// <summary>
+    /// Validates that batch actions exceeding 100 queries are rejected with BATCH_CAP_EXCEEDED.
+    /// </summary>
+    [Fact]
+    public async Task BatchQueryActions_ExceedingLimit_ReturnsValidationError()
+    {
+        var repo = new InMemoryClinicalQueryRepository();
+        var service = new ClinicalQueryApplicationService(repo, new FakeCurrentAuditContextAccessor("cra-user", "Limit test"), new FakeClock());
+
+        var ids = new string[101];
+        for (int i = 0; i < 101; i++)
+        {
+            ids[i] = Guid.NewGuid().ToString();
+        }
+
+        var request = new BatchQueryRequest(ids, "Exceeding batch limit");
+        var result = await service.BatchCloseAsync(request, CancellationToken.None, userRole: "cra");
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("BATCH_CAP_EXCEEDED");
+    }
+
+    /// <summary>
+    /// Validates fail-closed behavior when any single query in the batch fails state transition or validation.
+    /// </summary>
+    [Fact]
+    public async Task BatchCloseAsync_WhenSingleQueryIneligible_FailsClosed()
+    {
+        var repo = new InMemoryClinicalQueryRepository();
+        var service = new ClinicalQueryApplicationService(repo, new FakeCurrentAuditContextAccessor("cra-user", "Fail-closed test"), new FakeClock());
+
+        var q1 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("SYSBP"), "Valid").Value!;
+        q1.Answer("Answer 1", "crc-01");
+
+        var q2 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("DIABP"), "Already Closed").Value!;
+        q2.Answer("Answer 2", "crc-01");
+        q2.Close("cra-01", FakeClock.DefaultStart); // q2 is already Closed!
+
+        await repo.AddAsync(q1, CancellationToken.None);
+        await repo.AddAsync(q2, CancellationToken.None);
+
+        var request = new BatchQueryRequest(new[] { q1.Id.ToString(), q2.Id.ToString() }, "Batch closing queries");
+        var result = await service.BatchCloseAsync(request, CancellationToken.None, userRole: "cra");
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("INVALID_QUERY_TRANSITION");
+
+        // Verify q1 was not closed (atomic rollback / fail-closed)
+        var q1Check = await repo.GetByIdAsync(q1.Id, CancellationToken.None);
+        q1Check!.Status.Should().Be(QueryStatus.Answered);
+    }
 }

@@ -48,4 +48,16 @@ public interface IClinicalQueryApplicationService
         QueryCancelRequest request,
         CancellationToken cancellationToken,
         string? userRole = null);
+
+    /// <summary>Batch closes up to 100 queries in an atomic database transaction (CRA or Data Manager).</summary>
+    Task<Result<BatchQueryResponse>> BatchCloseAsync(
+        BatchQueryRequest request,
+        CancellationToken cancellationToken,
+        string? userRole = null);
+
+    /// <summary>Batch cancels up to 100 queries in an atomic database transaction (CRA or Data Manager).</summary>
+    Task<Result<BatchQueryResponse>> BatchCancelAsync(
+        BatchQueryRequest request,
+        CancellationToken cancellationToken,
+        string? userRole = null);
 }
