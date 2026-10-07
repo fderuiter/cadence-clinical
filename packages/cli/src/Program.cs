@@ -69,6 +69,7 @@ public static class Program
         AddCommand(root, "pre-commit-openapi", "Runs the quick OpenAPI check used by the pre-commit hook", () => PreCommitOpenApiService.ExecutePreCommitOpenApi());
         AddCommand(root, "validate-api-clients", "Typechecks the web API clients against their OpenAPI types", () => ApiClientValidatorService.ValidateApiClients());
         AddCommand(root, "generate-cli-docs", "Checks that docs/cli.md documents every command", ToolCommands.ConfigureGenerateCliDocs);
+        AddCommand(root, "generate-doc-index", "Synchronizes docs/DOCUMENTATION_INDEX.md with all repository markdown documents", ToolCommands.ConfigureGenerateDocIndex);
         AddCommand(root, "generate-rtm", "Regenerates the Requirements Traceability Matrix", ToolCommands.ConfigureGenerateRtm);
         AddCommand(root, "compliance-utility", "Sanitizes document paths and requirement prefixes", ToolCommands.ConfigureComplianceUtility);
         AddCommand(root, "verify-gxp-signatures", "Not implemented yet: verifies electronic signatures on signed GxP reports", () => VerifyGxPSignaturesService.VerifySignatures());

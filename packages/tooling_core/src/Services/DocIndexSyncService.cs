@@ -1,0 +1,392 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+
+namespace Cadence.ToolingCore.Services;
+
+public static partial class DocIndexSyncService
+{
+    private static readonly HashSet<string> ExcludedDirectories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "node_modules",
+        ".vitepress",
+        "bin",
+        "obj",
+        ".git",
+        ".vs",
+        ".venv",
+        "runs"
+    };
+
+    private static readonly HashSet<string> ExcludedFiles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "DOCUMENTATION_INDEX.md"
+    };
+
+    [GeneratedRegex(@"\]\(([^)\r\n]+)\)")]
+    private static partial Regex MarkdownLinkRegex();
+
+    [GeneratedRegex(@"^\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|")]
+    private static partial Regex TableRow3ColRegex();
+
+    [GeneratedRegex(@"^\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|")]
+    private static partial Regex TableRow2ColRegex();
+
+    public static string FindRepoRoot()
+    {
+        string current = AppContext.BaseDirectory;
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (File.Exists(Path.Combine(current, "Cadence.sln")))
+            {
+                return current;
+            }
+            string? parent = Directory.GetParent(current)?.FullName;
+            if (parent == current) break;
+            current = parent ?? "";
+        }
+        return Directory.GetCurrentDirectory();
+    }
+
+    public static int SyncDocIndex(bool check = false, string? repoRoot = null)
+    {
+        repoRoot ??= FindRepoRoot();
+        string docsDir = Path.Combine(repoRoot, "docs");
+        string indexPath = Path.Combine(docsDir, "DOCUMENTATION_INDEX.md");
+
+        if (!Directory.Exists(docsDir) || !File.Exists(indexPath))
+        {
+            Console.WriteLine($"[ERROR] Documentation directory or index file not found at {indexPath}");
+            return 1;
+        }
+
+        string originalContent = File.ReadAllText(indexPath);
+
+        // 1. Scan filesystem for all valid markdown files in docs/
+        var diskFiles = ScanMarkdownFiles(docsDir);
+
+        // 2. Extract existing links and index mappings from DOCUMENTATION_INDEX.md
+        var indexedTargets = ExtractIndexedTargets(originalContent);
+
+        // 3. Find unindexed markdown files
+        var unindexedFiles = diskFiles
+            .Where(file => !indexedTargets.Contains(NormalizePath(file.RelativePath)))
+            .Select(file => file.RelativePath)
+            .ToList();
+
+        if (check)
+        {
+            if (unindexedFiles.Count > 0)
+            {
+                Console.WriteLine($"[ERROR] Documentation index 'docs/DOCUMENTATION_INDEX.md' is missing entries for {unindexedFiles.Count} markdown file(s):");
+                foreach (var unindexed in unindexedFiles.Take(20))
+                {
+                    Console.WriteLine($"  - docs/{unindexed}");
+                }
+                if (unindexedFiles.Count > 20)
+                {
+                    Console.WriteLine($"  ... and {unindexedFiles.Count - 20} more file(s).");
+                }
+                Console.WriteLine("\nRun 'pnpm cadence generate-doc-index' to update 'docs/DOCUMENTATION_INDEX.md'.");
+                return 1;
+            }
+
+            Console.WriteLine($"✔ Documentation index parity check passed cleanly ({diskFiles.Count} documents indexed).");
+            return 0;
+        }
+
+        if (unindexedFiles.Count == 0)
+        {
+            Console.WriteLine("✔ Documentation index is already up to date.");
+            return 0;
+        }
+
+        // 4. Update DOCUMENTATION_INDEX.md by adding unindexed files to appropriate categories
+        string updatedContent = GenerateUpdatedIndex(originalContent, diskFiles.Where(f => unindexedFiles.Contains(f.RelativePath)).ToList());
+
+        File.WriteAllText(indexPath, updatedContent);
+        Console.WriteLine($"✔ Successfully synchronized documentation index in 'docs/DOCUMENTATION_INDEX.md' ({unindexedFiles.Count} new documents indexed).");
+        return 0;
+    }
+
+    public record MarkdownDocInfo(string RelativePath, string FullPath);
+
+    public static List<MarkdownDocInfo> ScanMarkdownFiles(string docsDir)
+    {
+        var result = new List<MarkdownDocInfo>();
+        ScanDirRecursive(docsDir, docsDir, result);
+        return result.OrderBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private static void ScanDirRecursive(string currentDir, string docsDir, List<MarkdownDocInfo> result)
+    {
+        var dirName = Path.GetFileName(currentDir);
+        if (ExcludedDirectories.Contains(dirName))
+        {
+            return;
+        }
+
+        foreach (var file in Directory.GetFiles(currentDir, "*.md"))
+        {
+            string fileName = Path.GetFileName(file);
+            if (ExcludedFiles.Contains(fileName))
+            {
+                continue;
+            }
+
+            var fi = new FileInfo(file);
+            if (fi.Length == 0)
+            {
+                continue;
+            }
+
+            string relPath = Path.GetRelativePath(docsDir, file).Replace('\\', '/');
+            result.Add(new MarkdownDocInfo(relPath, file));
+        }
+
+        foreach (var subDir in Directory.GetDirectories(currentDir))
+        {
+            string subName = Path.GetFileName(subDir);
+            if (!ExcludedDirectories.Contains(subName))
+            {
+                ScanDirRecursive(subDir, docsDir, result);
+            }
+        }
+    }
+
+    public static HashSet<string> ExtractIndexedTargets(string content)
+    {
+        var targets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in MarkdownLinkRegex().Matches(content))
+        {
+            string target = match.Groups[1].Value;
+            int anchorIdx = target.IndexOf('#');
+            if (anchorIdx >= 0)
+            {
+                target = target[..anchorIdx];
+            }
+            target = target.Trim();
+            if (string.IsNullOrEmpty(target) || target.StartsWith("http://") || target.StartsWith("https://") || target.StartsWith("mailto:"))
+            {
+                continue;
+            }
+
+            string norm = NormalizePath(target);
+            targets.Add(norm);
+            targets.Add(target);
+        }
+        return targets;
+    }
+
+    private static string NormalizePath(string path)
+    {
+        path = path.Replace('\\', '/').Trim();
+        if (path.StartsWith("./"))
+        {
+            path = path[2..];
+        }
+        while (path.StartsWith("../"))
+        {
+            path = path[3..];
+        }
+        return path;
+    }
+
+    public static string DetermineCategory(string relPath)
+    {
+        if (relPath.StartsWith("kernel/", StringComparison.OrdinalIgnoreCase)) return "## Kernel and roadmap";
+        if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "## Architecture decision records";
+        if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("SRS.md", StringComparison.OrdinalIgnoreCase)) return "## Requirements, validation and GxP";
+        if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("PYTHON_REFERENCE_INVENTORY.md", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("MIGRATION_WORKFLOW.md", StringComparison.OrdinalIgnoreCase)) return "## Python-to-.NET port (completed)";
+        if (relPath.StartsWith("specs/", StringComparison.OrdinalIgnoreCase)) return "## Design proposals";
+        if (relPath.StartsWith("CDISC/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("NCI/", StringComparison.OrdinalIgnoreCase)) return "## Standards reference material";
+        if (relPath.StartsWith("agents/", StringComparison.OrdinalIgnoreCase)) return "## Repository policies";
+        if (relPath.Equals("FUNCTIONAL_PRODUCT_SPECIFICATION.md", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("FEATURE_MATRIX.md", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("COMPETITIVE_ANALYSIS_AND_MARKET_SUPERIORITY.md", StringComparison.OrdinalIgnoreCase)) return "## Product";
+
+        return "## Developing and running";
+    }
+
+    public static string DetermineStatus(string relPath, string fileContent)
+    {
+        if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "Current";
+        if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase)) return "Historical";
+        if (relPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase) || relPath.StartsWith("schema/", StringComparison.OrdinalIgnoreCase)) return "Generated";
+        if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase))
+        {
+            if (fileContent.Contains("Baseline", StringComparison.OrdinalIgnoreCase) || fileContent.Contains("Superseded", StringComparison.OrdinalIgnoreCase)) return "Baseline";
+            return "Current";
+        }
+        return "Current";
+    }
+
+    public static (string Title, string Description) ExtractDocMetadata(string fullPath, string relPath)
+    {
+        string title = string.Empty;
+        string description = string.Empty;
+
+        try
+        {
+            string[] lines = File.ReadAllLines(fullPath);
+            foreach (var line in lines)
+            {
+                string trimmed = line.Trim();
+                if (string.IsNullOrEmpty(title) && trimmed.StartsWith("# "))
+                {
+                    title = trimmed[2..].Trim();
+                }
+                else if (!string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description) &&
+                         !string.IsNullOrWhiteSpace(trimmed) &&
+                         !trimmed.StartsWith('#') &&
+                         !trimmed.StartsWith("---") &&
+                         !trimmed.StartsWith('|') &&
+                         !trimmed.StartsWith("```"))
+                {
+                    string cleaned = trimmed
+                        .Replace("> [!WARNING]", "")
+                        .Replace("> [!NOTE]", "")
+                        .Replace("> [!IMPORTANT]", "")
+                        .Replace("> [!TIP]", "")
+                        .Replace(">", "")
+                        .Replace("**", "")
+                        .Trim();
+
+                    if (!string.IsNullOrWhiteSpace(cleaned))
+                    {
+                        description = cleaned.Length > 120 ? cleaned[..117] + "..." : cleaned;
+                        break;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Fallback
+        }
+
+        if (string.IsNullOrEmpty(title))
+        {
+            title = Path.GetFileNameWithoutExtension(fullPath).Replace('-', ' ').Replace('_', ' ');
+            title = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(title);
+        }
+
+        if (string.IsNullOrEmpty(description))
+        {
+            description = title;
+        }
+
+        // Clean up markdown in title if any
+        title = title.Replace("`", "").Trim();
+
+        return (title, description);
+    }
+
+    private static string GenerateUpdatedIndex(string originalContent, List<MarkdownDocInfo> unindexedDocs)
+    {
+        var categoryGroups = new Dictionary<string, List<MarkdownDocInfo>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var doc in unindexedDocs)
+        {
+            string category = DetermineCategory(doc.RelativePath);
+            if (!categoryGroups.TryGetValue(category, out var list))
+            {
+                list = new List<MarkdownDocInfo>();
+                categoryGroups[category] = list;
+            }
+            list.Add(doc);
+        }
+
+        string[] lines = originalContent.Split('\n');
+        var sb = new StringBuilder();
+
+        string currentCategory = string.Empty;
+        bool inTable = false;
+        bool hasStatusCol = true;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i];
+            string trimmed = line.Trim();
+
+            if (trimmed.StartsWith("## "))
+            {
+                // If we were in a table in previous category, flush remaining docs for that category before entering new category
+                if (!string.IsNullOrEmpty(currentCategory) && categoryGroups.TryGetValue(currentCategory, out var pendingDocs) && pendingDocs.Count > 0)
+                {
+                    AppendDocsToTable(sb, pendingDocs, hasStatusCol);
+                    categoryGroups.Remove(currentCategory);
+                }
+
+                currentCategory = trimmed;
+                inTable = false;
+                hasStatusCol = true;
+            }
+
+            if (trimmed.StartsWith("| Document |") || trimmed.StartsWith("| Location |"))
+            {
+                inTable = true;
+                hasStatusCol = trimmed.Contains("Status");
+            }
+
+            // Detect end of table (blank line or line not starting with '|')
+            if (inTable && !trimmed.StartsWith('|') && !string.IsNullOrWhiteSpace(trimmed))
+            {
+                if (!string.IsNullOrEmpty(currentCategory) && categoryGroups.TryGetValue(currentCategory, out var pendingDocs) && pendingDocs.Count > 0)
+                {
+                    AppendDocsToTable(sb, pendingDocs, hasStatusCol);
+                    categoryGroups.Remove(currentCategory);
+                }
+                inTable = false;
+            }
+
+            sb.AppendLine(line);
+        }
+
+        // Flush any remaining category groups at end of file
+        foreach (var (cat, docs) in categoryGroups)
+        {
+            if (docs.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine(cat);
+                sb.AppendLine();
+                sb.AppendLine("| Document | Status | What it is |");
+                sb.AppendLine("| --- | --- | --- |");
+                AppendDocsToTable(sb, docs, hasStatusCol: true);
+            }
+        }
+
+        return sb.ToString().TrimEnd() + "\n";
+    }
+
+    private static void AppendDocsToTable(StringBuilder sb, List<MarkdownDocInfo> docs, bool hasStatusCol)
+    {
+        foreach (var doc in docs.OrderBy(d => d.RelativePath, StringComparer.OrdinalIgnoreCase))
+        {
+            string fileContent = File.Exists(doc.FullPath) ? File.ReadAllText(doc.FullPath) : "";
+            var (title, desc) = ExtractDocMetadata(doc.FullPath, doc.RelativePath);
+            string status = DetermineStatus(doc.RelativePath, fileContent);
+
+            // Escape pipe chars in title or desc
+            title = title.Replace("|", "\\|");
+            desc = desc.Replace("|", "\\|");
+
+            if (hasStatusCol)
+            {
+                sb.AppendLine($"| [{title}]({doc.RelativePath}) | {status} | {desc} |");
+            }
+            else
+            {
+                sb.AppendLine($"| [{title}]({doc.RelativePath}) | {desc} |");
+            }
+        }
+    }
+}

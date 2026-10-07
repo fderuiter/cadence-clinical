@@ -31,7 +31,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 
 ## Quality gates
 
-`pnpm cadence check` runs all 21 quality gates. The pre-commit hook runs a quicker variant (below), and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
+`pnpm cadence check` runs all 22 quality gates. The pre-commit hook runs a quicker variant (below), and CI runs each gate as well. Run one gate with `pnpm cadence check <gate>`; an unknown gate name fails.
 
 | Gate (short name)     | What it checks                                                                                                                                                                                  |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -44,6 +44,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | `arch-drift`          | Architecture diagrams match the solution                                                                                                                                                        |
 | `sanitizer`           | Requirement tag prefixes in tests                                                                                                                                                               |
 | `markdown`            | Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist                                                                                    |
+| `doc-index`           | Completeness of `docs/DOCUMENTATION_INDEX.md` across all repository markdown documents                                                                                                          |
 | `env-vars`            | Environment variables documented in `docs/ENVIRONMENT_VARIABLES.md`                                                                                                                             |
 | `readmes`             | Each project has a README                                                                                                                                                                       |
 | `imports`             | No cross-service persistence references                                                                                                                                                         |
