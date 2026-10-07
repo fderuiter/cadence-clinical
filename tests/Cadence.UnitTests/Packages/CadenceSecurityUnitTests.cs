@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
+using Cadence.Core.Domain.Randomization;
 using Cadence.Kernel.Time;
 using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
@@ -361,6 +362,67 @@ public class CadenceSecurityUnitTests
         var statObj = FieldMasker.MaskPayload(payload, stat) as IDictionary<string, object?>;
         statObj!["treatment_arm"].Should().Be("ARM-A");
         statObj["drug_code"].Should().Be("Obfuscated Kit");
+    }
+
+    [Fact]
+    public void FieldMasker_MasksUnblindedAuditRationale_ForNonUnblindedRoles_AndUnmasksForRtsmRoles()
+    {
+        var result = new SubjectAllocationResult(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-101",
+            AssignedArm: "ARM-A",
+            StratumKey: "STRATUM-1",
+            AlgorithmType: RandomizationAlgorithmType.RESPONSE_ADAPTIVE,
+            AllocationIndex: 1,
+            DeterministicChecksum: "abc123hash",
+            DecisionRationale: "Assigned to arm 'ARM-A' via Bayesian Response-Adaptive Randomization in stratum 'STRATUM-1' under Adaptive Phase.",
+            UnblindedAuditRationale: "Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]]."
+        );
+
+        var investigator = new Principal
+        {
+            UserId = "inv-01",
+            Roles = new[] { "investigator" },
+            UnblindedAccess = false
+        };
+
+        var maskedDict = FieldMasker.MaskPayload(result, investigator) as IDictionary<string, object?>;
+        maskedDict.Should().NotBeNull();
+        maskedDict!["UnblindedAuditRationale"].Should().Be("MASKED");
+        maskedDict!["DecisionRationale"].Should().Be("Assigned to arm 'ARM-A' via Bayesian Response-Adaptive Randomization in stratum 'STRATUM-1' under Adaptive Phase.");
+
+        var statistician = new Principal
+        {
+            UserId = "stat-01",
+            Roles = new[] { "unblinded_statistician" },
+            UnblindedAccess = false
+        };
+
+        var statDict = FieldMasker.MaskPayload(result, statistician) as IDictionary<string, object?>;
+        statDict.Should().NotBeNull();
+        statDict!["UnblindedAuditRationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
+
+        var idmc = new Principal
+        {
+            UserId = "idmc-01",
+            Roles = new[] { "idmc" },
+            UnblindedAccess = false
+        };
+
+        var idmcDict = FieldMasker.MaskPayload(result, idmc) as IDictionary<string, object?>;
+        idmcDict.Should().NotBeNull();
+        idmcDict!["UnblindedAuditRationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
+
+        var emergency = new Principal
+        {
+            UserId = "em-01",
+            Roles = new[] { "emergency_unblinder" },
+            UnblindedAccess = false
+        };
+
+        var emDict = FieldMasker.MaskPayload(result, emergency) as IDictionary<string, object?>;
+        emDict.Should().NotBeNull();
+        emDict!["UnblindedAuditRationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
     }
 
     [Fact]
