@@ -13,13 +13,13 @@ search: false
 ## 1. Traceability Summary
 
 - **Total Documented Requirements (PRD):** 195
-- **Qualified (mapped tests passed):** 24
+- **Qualified (mapped tests passed):** 27
 - **Failed (a mapped test failed):** 0
 - **Not Verified (mapped tests skipped or not run):** 2
-- **Planned (no mapped tests):** 169
+- **Planned (no mapped tests):** 166
 - **Traceability Aliases (Trace and SRS IDs):** 94
 - **Unknown Requirement IDs Declared by Tests:** 0
-- **Qualified Coverage:** 12.3%
+- **Qualified Coverage:** 13.8%
 
 ## 2. Requirements with Mapped Tests
 
@@ -32,6 +32,9 @@ search: false
 | PRD-CTMS-002 | PRD | **Monitoring Visit Reports (MVR) Correspondence Lifecycle** | `ConfirmationLetter_RendersHtmlTemplate_AndCompilesDraftPdf` (tests/Cadence.UnitTests/Ctms/VisitLetterPdfPipelineTests.cs) 🟢<br>`FollowUpLetter_WithFindings_RendersHtmlTable` (tests/Cadence.UnitTests/Ctms/VisitLetterPdfPipelineTests.cs) 🟢<br>`FinalizedLetter_AppliesPart11Pkcs7Signature_AndPassesVerification` (tests/Cadence.UnitTests/Ctms/VisitLetterPdfPipelineTests.cs) 🟢<br>`CompileEndpoint_FinalizesAndFilesToEtmf_AndDispatchesEmail` (tests/Cadence.UnitTests/Ctms/VisitLetterPdfPipelineTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-CTMS-005 | PRD | **Site Regulatory Greenlight & Essential Document Gatekeeper** | `StudySiteActivationNeedsAnEffectiveVersionOnApprovalEvidence` (tests/Cadence.IntegrationTests/Kernel/KernelEffectivityPostgresTests.cs) ⚪ (SKIPPED) | ⚠️ **Not Verified** |
 | PRD-CTMS-007 | PRD | **Risk-Based Quality Management (RBQM) & KRI Engine** | `IndicatorSet_ReleasedAndPinned_ComputesValuesAndFlagsABreachedLimit` (tests/Cadence.IntegrationTests/Kernel/IndicatorSetPostgresTests.cs) ⚪ (SKIPPED)<br>`StudyPulse_ReadsLiveKernelPopulationsAndCountsOnlyWhatTheReaderMaySee` (tests/Cadence.IntegrationTests/Kernel/IndicatorSetPostgresTests.cs) ⚪ (SKIPPED) | ⚠️ **Not Verified** |
+| PRD-DEV-001 | PRD | **Unique Device Identifier (UDI) & Serialized Inventory Tracking** | `RegisterInventoryAsync_BulkQuantity_RegistersSerializedDevices` (tests/Cadence.UnitTests/Execution/Devices/DeviceApplicationServiceTests.cs) 🟢<br>`RegisterInventoryAsync_WithRawBarcode_ParsesAndStoresAttributes` (tests/Cadence.UnitTests/Execution/Devices/DeviceApplicationServiceTests.cs) 🟢<br>`ParseUdi_Returns200WithParsedResult` (tests/Cadence.UnitTests/Execution/Devices/DeviceEndpointsTests.cs) 🟢<br>`RegisterInventory_Returns201Created` (tests/Cadence.UnitTests/Execution/Devices/DeviceEndpointsTests.cs) 🟢<br>`Parse_Gs1128WithParentheses_ReturnsParsedAttributes` (tests/Cadence.UnitTests/Execution/Devices/UdiParserTests.cs) 🟢<br>`Parse_Gs1DataMatrixPrefix_ReturnsDataMatrixCarrierFormat` (tests/Cadence.UnitTests/Execution/Devices/UdiParserTests.cs) 🟢<br>`Parse_Gs1128SequentialWithoutParentheses_ParsesFields` (tests/Cadence.UnitTests/Execution/Devices/UdiParserTests.cs) 🟢<br>`Parse_Hibcc128PrimaryAndSecondary_ParsesComponents` (tests/Cadence.UnitTests/Execution/Devices/UdiParserTests.cs) 🟢<br>`ValidateGtinMod10_ValidAndInvalidGtins_EvaluatesCorrectly` (tests/Cadence.UnitTests/Execution/Devices/UdiParserTests.cs) 🟢<br>`IsHibccMod43Valid_ValidAndInvalidCodes_EvaluatesCorrectly` (tests/Cadence.UnitTests/Execution/Devices/UdiParserTests.cs) 🟢<br>`Parse_HibccDataMatrixWithPrefix_ParsesComponentsAndCarrierFormat` (tests/Cadence.UnitTests/Execution/Devices/UdiParserTests.cs) 🟢<br>`Parse_HibccSecondarySerialNumber_ParsesSerialNumber` (tests/Cadence.UnitTests/Execution/Devices/UdiParserTests.cs) 🟢<br>`Parse_NullOrEmptyBarcode_ReturnsInvalidResult` (tests/Cadence.UnitTests/Execution/Devices/UdiParserTests.cs) 🟢 | ✅ **Qualified** |
+| PRD-DEV-002 | PRD | **Device Deficiency & Malfunction eCRF Capture** | `LogDeficiencyAsync_TriggersQuarantineAndSafetyCaseAndOutboxEvents` (tests/Cadence.UnitTests/Execution/Devices/DeviceApplicationServiceTests.cs) 🟢<br>`GetInvestigationSummaryAsync_CalculatesMetricsCorrectly` (tests/Cadence.UnitTests/Execution/Devices/DeviceApplicationServiceTests.cs) 🟢<br>`LogDeficiency_Returns201Created` (tests/Cadence.UnitTests/Execution/Devices/DeviceEndpointsTests.cs) 🟢 | ✅ **Qualified** |
+| PRD-DEV-003 | PRD | **Automated Adverse Device Effect (ADE) & RTSM Quarantine Triggers** | `DispenseDeviceAsync_ValidAvailableDevice_DispensesSuccessfully` (tests/Cadence.UnitTests/Execution/Devices/DeviceApplicationServiceTests.cs) 🟢<br>`DispenseDeviceAsync_QuarantinedDevice_ThrowsQuarantinedError` (tests/Cadence.UnitTests/Execution/Devices/DeviceApplicationServiceTests.cs) 🟢<br>`DispenseDeviceAsync_ExpiredDevice_ThrowsExpiredError` (tests/Cadence.UnitTests/Execution/Devices/DeviceApplicationServiceTests.cs) 🟢<br>`ReleaseQuarantineAsync_ReleasesDeviceAndQuarantineRecord` (tests/Cadence.UnitTests/Execution/Devices/DeviceApplicationServiceTests.cs) 🟢<br>`DispenseDevice_Returns200OK` (tests/Cadence.UnitTests/Execution/Devices/DeviceEndpointsTests.cs) 🟢<br>`GetInvestigationSummary_Returns200OK` (tests/Cadence.UnitTests/Execution/Devices/DeviceEndpointsTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-ESR-001 | PRD | **SMART Backend Services Automated Ingestion** | `RegisterAndListEndpoints_SuccessfullyManagesEhrEndpoints` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`GenerateAndVerifySmartAssertion_ValidatesOAuth2AssertionToken` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`PollHospitalEhr_IngestsCandidatesWithDiscrepancyClassification` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-ESR-002 | PRD | **Clinical Research Coordinator (CRC) Reconciliation Drawer** | `AcceptCandidate_CommitsValueAndWritesGxPAuditAndESignature` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`RaiseClinicalQuery_RegistersQueryAndUpdatesCandidateStatus` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchAcceptCandidates_CommitsAllValidCandidatesAndWritesAuditLogs` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchRejectCandidates_RequiresRationaleAndUpdatesStatus` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchAcceptCandidates_ExceedingLimit_ReturnsBadRequest` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchOperation_WithNonExistentCandidateId_RollsBackTransaction` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-ESR-003 | PRD | **Immutable Source Data Provenance & Part 11 Audit Attribution** | `RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`GetProvenanceAudit_ReturnsRawFhirPayloadAndAuditTrail` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchRejectCandidates_RequiresRationaleAndUpdatesStatus` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢 | ✅ **Qualified** |
@@ -99,9 +102,6 @@ search: false
 | PRD-DCT-005 | PRD | **GxP-Compliant Telehealth Video Consultation & Encrypted Recording** | Sprint Roadmap |
 | PRD-DCT-006 | PRD | **Tiered Pediatric Assent & Legally Authorized Representative (LAR) Consent** | Sprint Roadmap |
 | PRD-DDF-001 | PRD | **AI-Native USDM Protocol Digitization & Automated eCRF/SoA Synthesis Engine** | Sprint Roadmap |
-| PRD-DEV-001 | PRD | **Unique Device Identifier (UDI) & Serialized Inventory Tracking** | Sprint Roadmap |
-| PRD-DEV-002 | PRD | **Device Deficiency & Malfunction eCRF Capture** | Sprint Roadmap |
-| PRD-DEV-003 | PRD | **Automated Adverse Device Effect (ADE) & RTSM Quarantine Triggers** | Sprint Roadmap |
 | PRD-DEV-004 | PRD | **Regulatory Incident Reports & CDISC SDTM DD/DO Dataset Exports** | Sprint Roadmap |
 | PRD-DOC-001 | PRD | **Object Storage Adapter & Metadata Envelope Pattern** | Sprint Roadmap |
 | PRD-DOC-002 | PRD | **Cryptographic File Integrity & SHA-256 Checksum Verification** | Sprint Roadmap |
@@ -336,4 +336,4 @@ None. Every requirement ID declared by a test is defined in the PRD or SRS.
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** bfc7df2ca1f32d466fb727e823de8f8ea9c8dcca97acfde2c0e4a28e85d1d9c7
+- **Content Hash (SHA-256):** 64231e88828ae7273c16580736aa7e3fffea9e464e5e6001844c102ae0c5f731

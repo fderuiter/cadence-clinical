@@ -3339,6 +3339,511 @@
         }
       }
     },
+    "/api/v1/execution/devices/parse-udi": {
+      "post": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "Parse UDI Barcode",
+        "description": "Parses and validates GS1-128, GS1-DataMatrix, and HIBCC barcode strings into structured UDI attributes.",
+        "operationId": "ParseUdi",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_UdiParseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ParsedUdiResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/devices/inventory": {
+      "post": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "Register Device Inventory",
+        "description": "Registers serialized investigational medical device items in RTSM.",
+        "operationId": "RegisterDeviceInventory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_DeviceInventoryCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_DeviceInventoryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "List Device Inventory",
+        "description": "Retrieves investigational medical device inventory matching query filters.",
+        "operationId": "ListDeviceInventory",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "udi_di",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lot_number",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "serial_number",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_DeviceInventoryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/devices/dispense": {
+      "post": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "Dispense Device",
+        "description": "Dispenses an investigational device to a study subject while enforcing quarantine and expiration gating rules.",
+        "operationId": "DispenseDevice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_DeviceDispensationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_DeviceDispensationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/devices/deficiencies": {
+      "post": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "Log Device Deficiency",
+        "description": "Logs a device deficiency/malfunction and triggers automated quarantine \u002B safety cases.",
+        "operationId": "LogDeviceDeficiency",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_DeviceDeficiencyCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_DeviceDeficiencyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "List Device Deficiencies",
+        "operationId": "ListDeviceDeficiencies",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_DeviceDeficiencyResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/devices/deficiencies/{deficiency_id}": {
+      "get": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "Get Device Deficiency",
+        "operationId": "GetDeviceDeficiencyById",
+        "parameters": [
+          {
+            "name": "deficiency_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_DeviceDeficiencyResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/devices/quarantine": {
+      "post": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "Initiate Quarantine",
+        "operationId": "InitiateDeviceQuarantine",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_DeviceQuarantineCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_DeviceQuarantineResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "List Device Quarantines",
+        "operationId": "ListDeviceQuarantines",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_DeviceQuarantineResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/devices/quarantine/release": {
+      "post": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "Release Quarantine",
+        "operationId": "ReleaseDeviceQuarantine",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_DeviceQuarantineReleaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_DeviceQuarantineResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/devices/investigation-summary": {
+      "get": {
+        "tags": [
+          "DeviceEndpoints"
+        ],
+        "summary": "Get Investigation Summary",
+        "operationId": "GetDeviceInvestigationSummary",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_DeviceInvestigationSummaryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/fileshare/status": {
       "get": {
         "tags": [
@@ -9863,6 +10368,853 @@
           }
         }
       },
+      "Execution_DeviceDeficiencyCreateRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "udi_di",
+          "lot_number",
+          "deficiency_description",
+          "incident_date",
+          "awareness_date"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "udi_di": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "deficiency_description": {
+            "type": "string"
+          },
+          "incident_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "awareness_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_inventory_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "serial_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_name": {
+            "type": "string",
+            "default": "Investigational Medical Device"
+          },
+          "deficiency_type": {
+            "type": "string",
+            "default": "MALFUNCTION"
+          },
+          "could_lead_to_sade": {
+            "type": "boolean",
+            "default": false
+          },
+          "patient_involved": {
+            "type": "boolean",
+            "default": false
+          },
+          "health_impact": {
+            "type": "string",
+            "default": "NONE"
+          },
+          "action_taken_device": {
+            "type": "string",
+            "default": "QUARANTINED_AT_SITE"
+          },
+          "device_returned_to_sponsor": {
+            "type": "boolean",
+            "default": false
+          },
+          "return_tracking_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quarantine_scope": {
+            "type": "string",
+            "default": "DEVICE_SERIAL"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": "Report investigational medical device deficiency / malfunction"
+          },
+          "signature_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_DeviceDeficiencyResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "subject_id",
+          "device_inventory_id",
+          "udi_di",
+          "lot_number",
+          "serial_number",
+          "device_name",
+          "deficiency_type",
+          "deficiency_description",
+          "incident_date",
+          "awareness_date",
+          "could_lead_to_sade",
+          "patient_involved",
+          "health_impact",
+          "action_taken_device",
+          "device_returned_to_sponsor",
+          "return_tracking_number",
+          "root_cause_analysis",
+          "sponsor_evaluation",
+          "quarantine_triggered",
+          "quarantine_scope",
+          "safety_case_id",
+          "safety_classification",
+          "investigation_status",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_inventory_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "udi_di": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "serial_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "deficiency_type": {
+            "type": "string"
+          },
+          "deficiency_description": {
+            "type": "string"
+          },
+          "incident_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "awareness_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "could_lead_to_sade": {
+            "type": "boolean"
+          },
+          "patient_involved": {
+            "type": "boolean"
+          },
+          "health_impact": {
+            "type": "string"
+          },
+          "action_taken_device": {
+            "type": "string"
+          },
+          "device_returned_to_sponsor": {
+            "type": "boolean"
+          },
+          "return_tracking_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "root_cause_analysis": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sponsor_evaluation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quarantine_triggered": {
+            "type": "boolean"
+          },
+          "quarantine_scope": {
+            "type": "string"
+          },
+          "safety_case_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "safety_classification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "investigation_status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Execution_DeviceDispensationRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "device_inventory_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "serial_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scanned_barcode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": "Investigational device dispensation to participant"
+          }
+        }
+      },
+      "Execution_DeviceDispensationResponse": {
+        "required": [
+          "status",
+          "message",
+          "device",
+          "dispensed_at"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "device": {
+            "$ref": "#/components/schemas/Execution_DeviceInventoryResponse"
+          },
+          "dispensed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Execution_DeviceInventoryCreateRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "brand_name",
+          "udi_di",
+          "lot_number"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "brand_name": {
+            "type": "string"
+          },
+          "udi_di": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "serial_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_identifier": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_type": {
+            "type": "string",
+            "default": "THERAPEUTIC"
+          },
+          "device_classification": {
+            "type": "string",
+            "default": "CLASS_IIA"
+          },
+          "raw_barcode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expiration_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "manufacturing_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "software_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 1
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": "Investigational medical device inventory intake"
+          }
+        }
+      },
+      "Execution_DeviceInventoryResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "device_identifier",
+          "brand_name",
+          "device_model",
+          "device_type",
+          "device_classification",
+          "udi_di",
+          "udi_pi",
+          "udi_carrier_format",
+          "lot_number",
+          "serial_number",
+          "expiration_date",
+          "manufacturing_date",
+          "software_version",
+          "status",
+          "is_dispensation_blocked",
+          "allocated_subject_id",
+          "dispensed_at",
+          "dispensed_by",
+          "quarantined_at",
+          "quarantined_by",
+          "quarantine_reason",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "device_identifier": {
+            "type": "string"
+          },
+          "brand_name": {
+            "type": "string"
+          },
+          "device_model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_type": {
+            "type": "string"
+          },
+          "device_classification": {
+            "type": "string"
+          },
+          "udi_di": {
+            "type": "string"
+          },
+          "udi_pi": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "udi_carrier_format": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "serial_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expiration_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "manufacturing_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "software_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "is_dispensation_blocked": {
+            "type": "boolean"
+          },
+          "allocated_subject_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dispensed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "dispensed_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quarantined_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "quarantined_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quarantine_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "Execution_DeviceInvestigationSummaryResponse": {
+        "required": [
+          "study_id",
+          "total_devices",
+          "available_devices",
+          "dispensed_devices",
+          "quarantined_devices",
+          "total_deficiencies",
+          "open_safety_cases",
+          "sade_count",
+          "active_quarantines"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "total_devices": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "available_devices": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dispensed_devices": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quarantined_devices": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_deficiencies": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "open_safety_cases": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sade_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "active_quarantines": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Execution_DeviceQuarantineCreateRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "default": "DEVICE_SERIAL"
+          },
+          "device_inventory_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lot_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "serial_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": "Initiate medical device quarantine"
+          }
+        }
+      },
+      "Execution_DeviceQuarantineReleaseRequest": {
+        "required": [
+          "quarantine_id",
+          "release_justification",
+          "signature_token"
+        ],
+        "type": "object",
+        "properties": {
+          "quarantine_id": {
+            "type": "string"
+          },
+          "release_justification": {
+            "type": "string"
+          },
+          "signature_token": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": "Authorized medical device quarantine release"
+          }
+        }
+      },
+      "Execution_DeviceQuarantineResponse": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "deficiency_id",
+          "device_inventory_id",
+          "scope",
+          "lot_number",
+          "serial_number",
+          "reason",
+          "status",
+          "quarantined_at",
+          "quarantined_by",
+          "released_at",
+          "released_by",
+          "release_justification",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "deficiency_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_inventory_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "serial_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "quarantined_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "quarantined_by": {
+            "type": "string"
+          },
+          "released_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "released_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "release_justification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "Execution_EtmfCompletenessWebhookPayload": {
         "required": [
           "study_id",
@@ -10565,6 +11917,71 @@
           },
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "Execution_ParsedUdiResponse": {
+        "required": [
+          "raw_barcode",
+          "udi_carrier_format",
+          "udi_di",
+          "lot_number",
+          "serial_number",
+          "expiration_date",
+          "manufacturing_date",
+          "software_version",
+          "is_valid",
+          "validation_errors"
+        ],
+        "type": "object",
+        "properties": {
+          "raw_barcode": {
+            "type": "string"
+          },
+          "udi_carrier_format": {
+            "type": "string"
+          },
+          "udi_di": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "serial_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expiration_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "manufacturing_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "software_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_valid": {
+            "type": "boolean"
+          },
+          "validation_errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -11463,6 +12880,17 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "Execution_UdiParseRequest": {
+        "required": [
+          "raw_barcode"
+        ],
+        "type": "object",
+        "properties": {
+          "raw_barcode": {
+            "type": "string"
           }
         }
       },

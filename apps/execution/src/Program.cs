@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Application.Cec;
 using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Application.Coding;
 using Cadence.Apps.Execution.Application.Compliance;
+using Cadence.Apps.Execution.Application.Devices;
 using Cadence.Apps.Execution.Application.EditChecks;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Application.Observations;
@@ -168,6 +169,7 @@ builder.Services.AddScoped<IPublishedFormVersionRegistryRepository, PublishedFor
 builder.Services.AddScoped<IClinicalQueryRepository, ClinicalQueryRepository>();
 builder.Services.AddScoped<IStagedAdverseEventReviewRepository, StagedAdverseEventReviewRepository>();
 builder.Services.AddScoped<ICecRepository, CecRepository>();
+builder.Services.AddScoped<IDeviceRepository, DeviceRepository>();
 
 // IAuditLogWriter (MIG-SUBJ-017's explicit-call audit seam, EfAuditLogWriter's own implementation
 // MIG-SUBJ-018/019/020 all call): Scoped, since it appends directly to the scoped ExecutionDbContext's own
@@ -200,6 +202,7 @@ builder.Services.AddScoped<ILabToxicityGovernanceService, LabToxicityGovernanceS
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
 builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
 builder.Services.AddScoped<ISynonymImportService, SynonymImportService>();
+builder.Services.AddScoped<IDeviceApplicationService, DeviceApplicationService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -262,6 +265,7 @@ app.MapLabToxicityEndpoints();
 app.MapCecEndpoints();
 app.MapCgtEndpoints();
 app.MapSynonymEndpoints();
+app.MapDeviceEndpoints();
 
 if (args.Contains("--seed"))
 {
