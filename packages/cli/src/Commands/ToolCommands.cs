@@ -40,7 +40,7 @@ public static class ToolCommands
     {
         var check = new Option<bool>("--check") { Description = "Only check that docs/cli.md documents every command" };
         command.Options.Add(check);
-        command.SetAction(result => CliDocsGeneratorService.GenerateCliDocs(check: result.GetValue(check)));
+        command.SetAction(result => CliDocsGeneratorService.GenerateCliDocs(Program.BuildRootCommand(), check: result.GetValue(check)));
     }
 
     public static void ConfigureGenerateRtm(Command command)

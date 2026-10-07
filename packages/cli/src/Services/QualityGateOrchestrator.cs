@@ -75,7 +75,7 @@ public static class QualityGateOrchestrator
 
         // 5. CLI Docs
         AnsiConsole.MarkupLine("\n5/21 Validating CLI Docs Parity...");
-        if (CliDocsGeneratorService.GenerateCliDocs(check: true) != 0)
+        if (CliDocsGeneratorService.GenerateCliDocs(Program.BuildRootCommand(), check: true) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 5 (validate-cli-docs) failed![/]");
             allPassed = false;
@@ -238,7 +238,7 @@ public static class QualityGateOrchestrator
             "dotnet-format-style" => RunProcess("dotnet", "format style Cadence.sln --verify-no-changes --no-restore") == 0,
             "clean-secrets-baseline" or "clean-secrets" => SecretsBaselineCleanerService.CleanSecretsBaseline() == 0,
             "detect-code-duplication" or "duplication" => DuplicationDetectorService.DetectDuplication(targetFiles) == 0,
-            "validate-cli-docs" or "cli-docs" => CliDocsGeneratorService.GenerateCliDocs(check: true) == 0,
+            "validate-cli-docs" or "cli-docs" => CliDocsGeneratorService.GenerateCliDocs(Program.BuildRootCommand(), check: true) == 0,
             "validate-adrs" or "adrs" => Cadence.ToolingCore.Services.AdrValidatorService.ValidateAdrs(checkGitDiff: true),
             "validate-architecture-drift" or "arch-drift" => Cadence.ToolingCore.Services.ArchitectureDriftValidatorService.ValidateArchitectureDrift() == 0,
             "path-requirement-sanitizer" or "sanitizer" => ComplianceUtilityService.ExecuteComplianceUtility(sanitize: true, targetFiles: targetFiles) == 0,
