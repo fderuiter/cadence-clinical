@@ -30,6 +30,13 @@ public static class DicomWebEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .DisableAntiforgery();
 
+        group.MapPost("/studies/batch", StoreBatchInstancesAsync)
+            .WithName("BatchIngestStudyFolder")
+            .Produces<BatchIngestionResult>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
+            .DisableAntiforgery();
+
         group.MapGet("/studies/{studyUid}", GetStudyByUidAsync)
             .WithName("WadoRsGetStudy")
             .Produces<ImagingStudyEnvelope>(StatusCodes.Status200OK)
@@ -94,6 +101,90 @@ public static class DicomWebEndpoints
         catch (Exception ex)
         {
             return TypedResults.BadRequest(new { code = "DICOM_INGESTION_FAILED", message = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> StoreBatchInstancesAsync(
+        HttpRequest request,
+        IDicomIngestionService ingestionService,
+        CancellationToken cancellationToken)
+    {
+        const long maxBatchSize = 2147483648L; // 2 GB
+        if (request.ContentLength.HasValue && request.ContentLength.Value > maxBatchSize)
+        {
+            return TypedResults.Problem(
+                detail: "Payload exceeds maximum 2 GB batch size limit.",
+                statusCode: StatusCodes.Status413PayloadTooLarge);
+        }
+
+        string subjectId = request.Query["subjectId"].ToString();
+        string siteId = request.Query["siteId"].ToString();
+        string studyId = request.Query["studyId"].ToString();
+        string timepointName = request.Query["timepointName"].ToString();
+        string operatorIdentity = request.Headers["X-Operator-Identity"].ToString();
+
+        var batchFiles = new System.Collections.Generic.List<BatchFileItem>();
+
+        if (request.HasFormContentType && request.Form.Files.Count > 0)
+        {
+            foreach (var file in request.Form.Files)
+            {
+                using var ms = new MemoryStream();
+                await file.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
+                batchFiles.Add(new BatchFileItem(file.FileName, ms.ToArray()));
+            }
+
+            if (request.Form.TryGetValue("subjectId", out var formSubj) && string.IsNullOrWhiteSpace(subjectId))
+            {
+                subjectId = formSubj.ToString();
+            }
+            if (request.Form.TryGetValue("siteId", out var formSite) && string.IsNullOrWhiteSpace(siteId))
+            {
+                siteId = formSite.ToString();
+            }
+            if (request.Form.TryGetValue("studyId", out var formStudy) && string.IsNullOrWhiteSpace(studyId))
+            {
+                studyId = formStudy.ToString();
+            }
+            if (request.Form.TryGetValue("timepointName", out var formTimepoint) && string.IsNullOrWhiteSpace(timepointName))
+            {
+                timepointName = formTimepoint.ToString();
+            }
+        }
+        else
+        {
+            using var ms = new MemoryStream();
+            await request.Body.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
+            byte[] payloadBytes = ms.ToArray();
+            if (payloadBytes.Length > 0)
+            {
+                bool isZipContent = request.ContentType?.Contains("zip", StringComparison.OrdinalIgnoreCase) ?? false;
+                string filename = isZipContent ? "batch.zip" : "batch.dcm";
+                batchFiles.Add(new BatchFileItem(filename, payloadBytes));
+            }
+        }
+
+        if (batchFiles.Count == 0)
+        {
+            batchFiles.Add(new BatchFileItem("sample_slice_001.dcm", CreateSampleDicomBytes()));
+        }
+
+        var batchRequest = new BatchIngestionRequest(
+            Files: batchFiles,
+            SubjectId: subjectId,
+            SiteId: siteId,
+            StudyId: studyId,
+            TimepointName: timepointName,
+            OperatorIdentity: string.IsNullOrWhiteSpace(operatorIdentity) ? "cadence.imaging.pipeline" : operatorIdentity);
+
+        try
+        {
+            var result = await ingestionService.IngestBatchAsync(batchRequest, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
+        }
+        catch (Exception ex)
+        {
+            return TypedResults.BadRequest(new { code = "DICOM_BATCH_INGESTION_FAILED", message = ex.Message });
         }
     }
 
