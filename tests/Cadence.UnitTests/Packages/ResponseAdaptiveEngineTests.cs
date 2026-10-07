@@ -48,7 +48,10 @@ public class ResponseAdaptiveEngineTests
         result.Should().NotBeNull();
         result.AlgorithmType.Should().Be(RandomizationAlgorithmType.RESPONSE_ADAPTIVE);
         result.DecisionRationale.Should().Contain("Burn-In Phase");
-        result.DecisionRationale.Should().Contain("p=0.5000");
+        result.DecisionRationale.Should().NotContain("p=");
+        result.UnblindedAuditRationale.Should().NotBeNull();
+        result.UnblindedAuditRationale.Should().Contain("Burn-In Phase");
+        result.UnblindedAuditRationale.Should().Contain("p=0.5000");
     }
 
     [Fact]
@@ -73,8 +76,11 @@ public class ResponseAdaptiveEngineTests
 
         result.Should().NotBeNull();
         result.DecisionRationale.Should().Contain("Adaptive Phase");
-        result.DecisionRationale.Should().Contain("Beta(9.0,3.0)");
-        result.DecisionRationale.Should().Contain("Beta(3.0,9.0)");
+        result.DecisionRationale.Should().NotContain("Beta(");
+        result.UnblindedAuditRationale.Should().NotBeNull();
+        result.UnblindedAuditRationale.Should().Contain("Adaptive Phase");
+        result.UnblindedAuditRationale.Should().Contain("Beta(9.0,3.0)");
+        result.UnblindedAuditRationale.Should().Contain("Beta(3.0,9.0)");
 
         var posterior = ResponseAdaptiveEngine.CalculateSuperiorityProbabilities(
             config,
@@ -112,8 +118,10 @@ public class ResponseAdaptiveEngineTests
         var result = ResponseAdaptiveEngine.Allocate(config, armStates, request);
 
         result.Should().NotBeNull();
-        result.DecisionRationale.Should().Contain("p=0.8000"); // ArmA capped at max 0.80
-        result.DecisionRationale.Should().Contain("p=0.2000"); // ArmB receives remaining 0.20 mass (>= min 0.10)
+        result.DecisionRationale.Should().NotContain("p=");
+        result.UnblindedAuditRationale.Should().NotBeNull();
+        result.UnblindedAuditRationale.Should().Contain("p=0.8000"); // ArmA capped at max 0.80
+        result.UnblindedAuditRationale.Should().Contain("p=0.2000"); // ArmB receives remaining 0.20 mass (>= min 0.10)
     }
 
     [Fact]
@@ -138,10 +146,12 @@ public class ResponseAdaptiveEngineTests
         var result = ResponseAdaptiveEngine.Allocate(config, armStates, request);
 
         result.Should().NotBeNull();
-        result.DecisionRationale.Should().Contain("ArmB: ");
-        result.DecisionRationale.Should().Contain("[DROPPED]");
-        result.DecisionRationale.Should().Contain("ArmA: ");
-        result.DecisionRationale.Should().Contain("[GRADUATED]");
+        result.DecisionRationale.Should().NotContain("[DROPPED]");
+        result.UnblindedAuditRationale.Should().NotBeNull();
+        result.UnblindedAuditRationale.Should().Contain("ArmB: ");
+        result.UnblindedAuditRationale.Should().Contain("[DROPPED]");
+        result.UnblindedAuditRationale.Should().Contain("ArmA: ");
+        result.UnblindedAuditRationale.Should().Contain("[GRADUATED]");
     }
 
     [Fact]
@@ -232,5 +242,69 @@ public class ResponseAdaptiveEngineTests
         superiority.Should().ContainKey("Control");
         superiority.Should().ContainKey("ArmA");
         superiority["ArmA"].Should().BeGreaterThan(0.80);
+    }
+
+    [Fact]
+    public void Allocate_TwoTierRationale_SeparatesPublicAndUnblindedAuditRationale()
+    {
+        var config = new ResponseAdaptiveConfig(BurnInThreshold: 10);
+        var armStates = new List<ResponseArmState>
+        {
+            new("ArmA", EvaluatedSubjects: 12, ObservedResponses: 9),
+            new("ArmB", EvaluatedSubjects: 12, ObservedResponses: 3)
+        };
+        var request = CreateRequest();
+
+        var result = ResponseAdaptiveEngine.Allocate(config, armStates, request);
+
+        // DecisionRationale must be a clean public operational summary with zero numerical interim metrics
+        result.DecisionRationale.Should().Contain("Assigned to arm");
+        result.DecisionRationale.Should().Contain("Adaptive Phase");
+        result.DecisionRationale.Should().NotContain("n=");
+        result.DecisionRationale.Should().NotContain("y=");
+        result.DecisionRationale.Should().NotContain("Beta(");
+        result.DecisionRationale.Should().NotContain("V=");
+        result.DecisionRationale.Should().NotContain("p=");
+
+        // UnblindedAuditRationale must contain full posterior calculations
+        result.UnblindedAuditRationale.Should().NotBeNull();
+        result.UnblindedAuditRationale.Should().Contain("Beta(10.0,4.0)");
+        result.UnblindedAuditRationale.Should().Contain("Beta(4.0,10.0)");
+        result.UnblindedAuditRationale.Should().Contain("n=12");
+        result.UnblindedAuditRationale.Should().Contain("y=9");
+        result.UnblindedAuditRationale.Should().Contain("V=");
+        result.UnblindedAuditRationale.Should().Contain("p=");
+    }
+
+    [Fact]
+    public void FastBetaCdf_LargeSample_N1030_DoesNotOverflowOrReturnNaN()
+    {
+        // n = a + b - 1 = 550 + 550 - 1 = 1099 >= 1030
+        double cdf = ResponseAdaptiveEngine.FastBetaCdf(550, 550, 0.50);
+
+        double.IsNaN(cdf).Should().BeFalse();
+        double.IsInfinity(cdf).Should().BeFalse();
+        cdf.Should().BeApproximately(0.50, 1e-4);
+    }
+
+    [Fact]
+    public void Allocate_LargeSample_N1030_ProducesValidProbabilitiesAndNoNaN()
+    {
+        var config = new ResponseAdaptiveConfig(BurnInThreshold: 0, PowerTuning: 0.5);
+        var armStates = new List<ResponseArmState>
+        {
+            new("ArmA", EvaluatedSubjects: 1100, ObservedResponses: 700),
+            new("ArmB", EvaluatedSubjects: 1100, ObservedResponses: 500)
+        };
+        var request = CreateRequest();
+
+        var result = ResponseAdaptiveEngine.Allocate(config, armStates, request);
+
+        result.Should().NotBeNull();
+        result.ImbalanceScore.HasValue.Should().BeTrue();
+        double.IsNaN(result.ImbalanceScore!.Value).Should().BeFalse();
+        result.ImbalanceScore.Value.Should().BeGreaterThan(0.0);
+        result.UnblindedAuditRationale.Should().NotContain("NaN");
+        result.UnblindedAuditRationale.Should().NotContain("Infinity");
     }
 }

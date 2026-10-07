@@ -43,6 +43,24 @@ public sealed class ClinicalQueryRepository(ExecutionDbContext context, Resilien
             .FirstOrDefaultAsync(q => q.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
+    public async Task<IReadOnlyList<ClinicalQuery>> GetForUpdateAsync(IEnumerable<QueryId> ids, CancellationToken cancellationToken)
+    {
+        var idList = ids.ToList();
+        return await Context.ClinicalQueries
+            .Where(q => idList.Contains(q.Id))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<System.IAsyncDisposable?> BeginTransactionAsync(CancellationToken cancellationToken)
+    {
+        if (Context.Database.ProviderName?.Contains("InMemory") ?? false)
+        {
+            return null;
+        }
+        return await Context.Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<ClinicalQuery?> GetActiveQueryOnCoordinatesAsync(
         StudyCode studyId,
         SubjectCode subjectId,

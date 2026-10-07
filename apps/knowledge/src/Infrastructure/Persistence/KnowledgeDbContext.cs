@@ -19,6 +19,11 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
     public DbSet<KnowledgeArticleAuditLog> KnowledgeArticleAuditLogs => Set<KnowledgeArticleAuditLog>();
     public DbSet<ContextualHelpMapping> ContextualHelpMappings => Set<ContextualHelpMapping>();
     public DbSet<ProtocolKnowledgeChunk> ProtocolKnowledgeChunks => Set<ProtocolKnowledgeChunk>();
+    public DbSet<TrainingCurriculum> TrainingCurricula => Set<TrainingCurriculum>();
+    public DbSet<TrainingAssignment> TrainingAssignments => Set<TrainingAssignment>();
+    public DbSet<DelegationRecord> DelegationRecords => Set<DelegationRecord>();
+    public DbSet<OrgAuditLog> OrgAuditLogs => Set<OrgAuditLog>();
+    public DbSet<TrainingCertificate> TrainingCertificates => Set<TrainingCertificate>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
