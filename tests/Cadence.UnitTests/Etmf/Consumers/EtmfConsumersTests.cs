@@ -106,6 +106,7 @@ public class EtmfConsumersTests
 
         // Publish duplicate message
         await harness.Bus.Publish(message, ct);
+        await Task.Delay(100, ct);
 
         var count = await dbContext.TmfDocuments.CountAsync(d => d.Id == "DOC-2002" || d.IdempotencyKey == "DOC-2002", ct);
         count.Should().Be(1);
@@ -177,6 +178,7 @@ public class EtmfConsumersTests
 
         // Duplicate publish
         await harness.Bus.Publish(message, ct);
+        await Task.Delay(100, ct);
 
         var expectedKey = "SUBJ-100:STUDY-01:1";
         var count = await dbContext.TmfDocuments.CountAsync(d => d.IdempotencyKey == expectedKey, ct);
