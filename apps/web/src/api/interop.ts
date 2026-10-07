@@ -230,7 +230,10 @@ export const interopService = {
     );
   },
 
-  batchAcceptEhrCandidates(body: unknown, options: Record<string, unknown> = {}) {
+  batchAcceptEhrCandidates(
+    body: unknown,
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/esource/reconcile/batch-accept", {
         body: body as paths["/api/v1/interop/esource/reconcile/batch-accept"]["post"]["requestBody"]["content"]["application/json"],
@@ -248,7 +251,10 @@ export const interopService = {
     );
   },
 
-  batchRejectEhrCandidates(body: unknown, options: Record<string, unknown> = {}) {
+  batchRejectEhrCandidates(
+    body: unknown,
+    options: Record<string, unknown> = {}
+  ) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/interop/esource/reconcile/batch-reject", {
         body: body as paths["/api/v1/interop/esource/reconcile/batch-reject"]["post"]["requestBody"]["content"]["application/json"],

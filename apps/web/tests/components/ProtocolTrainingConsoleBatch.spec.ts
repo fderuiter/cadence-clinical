@@ -71,9 +71,15 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
     setActivePinia(createPinia());
     vi.useFakeTimers();
 
-    vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([mockAssignment]);
-    vi.spyOn(trainingApi, "getAssignmentDetail").mockResolvedValue(mockAssignment);
-    vi.spyOn(trainingApi, "recordProgress").mockResolvedValue({ success: true });
+    vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([
+      mockAssignment,
+    ]);
+    vi.spyOn(trainingApi, "getAssignmentDetail").mockResolvedValue(
+      mockAssignment
+    );
+    vi.spyOn(trainingApi, "recordProgress").mockResolvedValue({
+      success: true,
+    });
     vi.spyOn(trainingApi, "listDelegations").mockResolvedValue(mockDelegations);
   });
 
@@ -86,12 +92,16 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
     const wrapper = mount(ProtocolTrainingConsole);
     await vi.runOnlyPendingTimersAsync();
 
-    const batchTabBtn = wrapper.findAll(".tab-btn").find((btn) => btn.text().includes("Batch Assignments"));
+    const batchTabBtn = wrapper
+      .findAll(".tab-btn")
+      .find((btn) => btn.text().includes("Batch Assignments"));
     expect(batchTabBtn).toBeDefined();
     await batchTabBtn!.trigger("click");
 
     expect(wrapper.find(".batch-layout").exists()).toBe(true);
-    expect(wrapper.text()).toContain("Multi-Site & Role Batch Curriculum Assignment");
+    expect(wrapper.text()).toContain(
+      "Multi-Site & Role Batch Curriculum Assignment"
+    );
     expect(wrapper.text()).toContain("Target Scope: 6 personnel"); // 2 sites * 3 roles default selection
   });
 
@@ -109,18 +119,23 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
           user_id: "user_site-101_principal_investigator",
           site_id: "SITE-101",
           user_role: "Principal Investigator",
-          reason: "Active training assignment already exists for this curriculum",
+          reason:
+            "Active training assignment already exists for this curriculum",
         },
       ],
       executed_at: "2026-10-07T10:00:00Z",
     };
 
-    vi.spyOn(trainingApi, "batchAssignCurriculum").mockResolvedValue(mockBatchResponse);
+    vi.spyOn(trainingApi, "batchAssignCurriculum").mockResolvedValue(
+      mockBatchResponse
+    );
 
     const wrapper = mount(ProtocolTrainingConsole);
     await vi.runOnlyPendingTimersAsync();
 
-    const batchTabBtn = wrapper.findAll(".tab-btn").find((btn) => btn.text().includes("Batch Assignments"));
+    const batchTabBtn = wrapper
+      .findAll(".tab-btn")
+      .find((btn) => btn.text().includes("Batch Assignments"));
     await batchTabBtn!.trigger("click");
 
     // Open batch confirmation modal
@@ -131,21 +146,29 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
     expect(wrapper.text()).toContain("Confirm Batch Curriculum Assignment");
 
     // Click confirm in modal
-    const confirmBtn = wrapper.findAll(".modal-footer button").find((btn) => btn.text().includes("Confirm & Deploy Batch"));
+    const confirmBtn = wrapper
+      .findAll(".modal-footer button")
+      .find((btn) => btn.text().includes("Confirm & Deploy Batch"));
     await confirmBtn!.trigger("click");
 
     expect(trainingApi.batchAssignCurriculum).toHaveBeenCalledWith({
       curriculum_id: "curriculum-v3-delta",
       study_id: "CARDIO-2026",
       site_ids: ["SITE-101", "SITE-102"],
-      roles: ["Principal Investigator", "Sub-Investigator", "Clinical Research Coordinator"],
+      roles: [
+        "Principal Investigator",
+        "Sub-Investigator",
+        "Clinical Research Coordinator",
+      ],
       reason_for_change: "Protocol Amendment V3.0 Delta Deployment",
     });
 
     await wrapper.vm.$nextTick();
     expect(wrapper.text()).toContain("Tx ID: tx-batch-999");
     expect(wrapper.text()).toContain("Skipped Duplicates: 1");
-    expect(wrapper.text()).toContain("Active training assignment already exists");
+    expect(wrapper.text()).toContain(
+      "Active training assignment already exists"
+    );
   });
 
   it("renders Delegation Bulk Sign-Off tab and executes Part 11 signature with digital seal", async () => {
@@ -156,17 +179,22 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
       total_failed: 0,
       signed_delegations: [],
       failed_items: [],
-      sha256_seal: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      sha256_seal:
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       etmf_artifact_id: "05.02.04",
       executed_at: "2026-10-07T10:00:00Z",
     };
 
-    vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue(mockBulkSignResponse);
+    vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue(
+      mockBulkSignResponse
+    );
 
     const wrapper = mount(ProtocolTrainingConsole);
     await vi.runOnlyPendingTimersAsync();
 
-    const delTabBtn = wrapper.findAll(".tab-btn").find((btn) => btn.text().includes("Delegation Bulk Sign-Off"));
+    const delTabBtn = wrapper
+      .findAll(".tab-btn")
+      .find((btn) => btn.text().includes("Delegation Bulk Sign-Off"));
     await delTabBtn!.trigger("click");
 
     expect(trainingApi.listDelegations).toHaveBeenCalled();
@@ -183,14 +211,18 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
     await signBtn.trigger("click");
 
     expect(wrapper.find(".modal-card").exists()).toBe(true);
-    expect(wrapper.text()).toContain("21 CFR Part 11 Bulk Delegation Log Sign-Off");
+    expect(wrapper.text()).toContain(
+      "21 CFR Part 11 Bulk Delegation Log Sign-Off"
+    );
 
     // Fill password in modal
     const passwordInput = wrapper.find("#bulk-password");
     await passwordInput.setValue("SecurePassword123!");
 
     // Confirm bulk signature
-    const executeBtn = wrapper.findAll(".modal-footer button").find((btn) => btn.text().includes("Confirm & Execute Signature"));
+    const executeBtn = wrapper
+      .findAll(".modal-footer button")
+      .find((btn) => btn.text().includes("Confirm & Execute Signature"));
     await executeBtn!.trigger("click");
 
     expect(trainingApi.bulkSignOffDelegations).toHaveBeenCalledWith({
@@ -203,13 +235,18 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
         meaning:
           "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2).",
         password: "SecurePassword123!",
-        reason_for_change: "21 CFR Part 11 Principal Investigator bulk delegation sign-off",
+        reason_for_change:
+          "21 CFR Part 11 Principal Investigator bulk delegation sign-off",
       },
     });
 
     await wrapper.vm.$nextTick();
-    expect(wrapper.text()).toContain("Bulk Delegation Sign-Off Executed Successfully");
+    expect(wrapper.text()).toContain(
+      "Bulk Delegation Sign-Off Executed Successfully"
+    );
     expect(wrapper.text()).toContain("eTMF Artifact: Zone 5 (05.02.04)");
-    expect(wrapper.text()).toContain("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    expect(wrapper.text()).toContain(
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
   });
 });

@@ -16,24 +16,40 @@
           <div class="viewport-selector">
             <button
               class="btn-viewport btn-viewport-desktop"
-              :class="{ active: designerStore.viewport === 'desktop' }"
-              @click="designerStore.setViewport('desktop')"
+              :class="{
+                active:
+                  designerStore.viewport === 'desktop' && !isSimulationMode,
+              }"
+              @click="setViewport('desktop')"
             >
               🖥️ <span>Desktop (12-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-tablet"
-              :class="{ active: designerStore.viewport === 'tablet' }"
-              @click="designerStore.setViewport('tablet')"
+              :class="{
+                active:
+                  designerStore.viewport === 'tablet' && !isSimulationMode,
+              }"
+              @click="setViewport('tablet')"
             >
               📟 <span>Tablet (8-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-mobile"
-              :class="{ active: designerStore.viewport === 'mobile' }"
-              @click="designerStore.setViewport('mobile')"
+              :class="{
+                active:
+                  designerStore.viewport === 'mobile' && !isSimulationMode,
+              }"
+              @click="setViewport('mobile')"
             >
               📱 <span>Mobile (4-Col)</span>
+            </button>
+            <button
+              class="btn-viewport btn-viewport-simulation btn-simulation-mode"
+              :class="{ active: isSimulationMode }"
+              @click="toggleSimulationMode"
+            >
+              🧪 <span>Simulation Mode</span>
             </button>
           </div>
 
@@ -46,6 +62,7 @@
       <!-- Resizable Canvas Stage wrapper -->
       <div class="canvas-stage-wrapper">
         <div
+          v-if="!isSimulationMode"
           class="authoring-canvas-stage"
           :class="{
             'touch-simulation-active': designerStore.viewport !== 'desktop',
@@ -78,359 +95,398 @@
             </template>
           </draggable>
         </div>
+
+        <!-- Simulation Mode Live Embedded Preview Stage -->
+        <div
+          v-else
+          class="simulation-canvas-stage"
+          :style="{ maxWidth: canvasMaxWidthStyle, margin: '0 auto' }"
+        >
+          <div class="simulation-banner">
+            <span class="simulation-icon">🧪</span>
+            <div>
+              <strong>Rule Simulation Mode Active</strong>
+              <p>
+                Values entered here test AST skip logic and constraint rules in
+                memory without modifying draft form specifications.
+              </p>
+            </div>
+          </div>
+
+          <HeadlessFormRenderer
+            ref="headlessRendererRef"
+            :form-definition="simulationFormDefinition"
+            :initial-values="simulationFormData"
+            @data-changed="onSimulationDataChanged"
+          />
+        </div>
       </div>
     </div>
 
-    <!-- Right Side: Layout Inspector & Form Compiler Panel -->
+    <!-- Right Side: Layout Inspector & Form Compiler Panel (or Rule Tracer Panel in Simulation Mode) -->
     <div class="properties-inspector-pane">
-      <!-- 1. Viewport Warnings Section -->
-      <div class="warnings-section-card warnings-section">
-        <div class="inspector-section-title">
-          <span>Viewport Warnings</span>
-          <span class="warning-count-badge warning-count">
-            {{ layoutWarnings.length }}
-          </span>
+      <template v-if="!isSimulationMode">
+        <!-- 1. Viewport Warnings Section -->
+        <div class="warnings-section-card warnings-section">
+          <div class="inspector-section-title">
+            <span>Viewport Warnings</span>
+            <span class="warning-count-badge warning-count">
+              {{ layoutWarnings.length }}
+            </span>
+          </div>
+
+          <div v-if="layoutWarnings.length === 0" class="warnings-box-clean">
+            <span>✅</span> No layout warnings for this viewport.
+          </div>
+
+          <div
+            v-else
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+              max-height: 200px;
+              overflow-y: auto;
+            "
+          >
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <div
+              v-for="warning in layoutWarnings"
+              :key="warning.fieldId"
+              style="
+                border: 1px solid var(--semantic-color-warning-border);
+                background-color: var(--semantic-color-warning-bg-light);
+                border-radius: 6px;
+                padding: 8px;
+                cursor: pointer;
+              "
+              @click="onSelectField(warning.fieldId)"
+            >
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  font-weight: 700;
+                  font-size: 0.75rem;
+                  color: var(--semantic-color-warning-text);
+                  margin-bottom: 2px;
+                "
+              >
+                <span>{{ warning.label }}</span>
+                <span
+                  style="
+                    font-family: monospace;
+                    font-size: 0.7rem;
+                    background: var(--semantic-color-warning-bg-badge);
+                    padding: 1px 4px;
+                    border-radius: 4px;
+                  "
+                  >Span: {{ warning.gridSpan }}</span
+                >
+              </div>
+              <p
+                style="
+                  font-size: 0.72rem;
+                  color: var(--semantic-color-warning-action-border);
+                  margin: 0;
+                  line-height: 1.3;
+                "
+              >
+                {{ warning.message }}
+              </p>
+              <div
+                style="
+                  font-size: 0.68rem;
+                  color: var(--semantic-color-text-subtle);
+                  margin-top: 4px;
+                  font-style: italic;
+                "
+              >
+                In: {{ warning.sectionName }}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div v-if="layoutWarnings.length === 0" class="warnings-box-clean">
-          <span>✅</span> No layout warnings for this viewport.
-        </div>
-
+        <!-- 2. Properties Inspector Section -->
         <div
-          v-else
           style="
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 200px;
-            overflow-y: auto;
+            border-top: 1px solid var(--semantic-color-border);
+            padding-top: 16px;
           "
         >
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <div class="inspector-section-title">Properties Inspector</div>
+
           <div
-            v-for="warning in layoutWarnings"
-            :key="warning.fieldId"
+            v-if="!selectedField"
             style="
-              border: 1px solid var(--semantic-color-warning-border);
-              background-color: var(--semantic-color-warning-bg-light);
-              border-radius: 6px;
-              padding: 8px;
-              cursor: pointer;
+              font-size: 0.78rem;
+              color: var(--semantic-color-text-secondary);
+              font-style: italic;
+              background-color: var(--semantic-color-surface-muted);
+              border: 1px solid var(--semantic-color-border);
+              border-radius: 8px;
+              padding: 12px;
+              text-align: center;
             "
-            @click="onSelectField(warning.fieldId)"
+          >
+            Select a field widget on the canvas to inspect and edit its
+            attributes.
+          </div>
+
+          <div
+            v-else
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+              background-color: var(--semantic-color-surface-muted);
+              border: 1px solid var(--semantic-color-border);
+              border-radius: 8px;
+              padding: 14px;
+            "
           >
             <div
               style="
                 display: flex;
                 justify-content: space-between;
-                font-weight: 700;
-                font-size: 0.75rem;
-                color: var(--semantic-color-warning-text);
-                margin-bottom: 2px;
+                align-items: center;
+                border-bottom: 1px solid var(--semantic-color-border);
+                padding-bottom: 8px;
               "
             >
-              <span>{{ warning.label }}</span>
+              <span
+                style="
+                  font-weight: 700;
+                  font-size: 0.85rem;
+                  color: var(--semantic-color-text-dark);
+                "
+                >{{ selectedField.label }}</span
+              >
               <span
                 style="
                   font-family: monospace;
-                  font-size: 0.7rem;
-                  background: var(--semantic-color-warning-bg-badge);
-                  padding: 1px 4px;
+                  font-size: 0.72rem;
+                  background-color: var(--semantic-color-border);
+                  padding: 2px 6px;
                   border-radius: 4px;
+                  color: var(--semantic-color-text-muted);
                 "
-                >Span: {{ warning.gridSpan }}</span
+                >{{ selectedField.id }}</span
               >
             </div>
-            <p
-              style="
-                font-size: 0.72rem;
-                color: var(--semantic-color-warning-action-border);
-                margin: 0;
-                line-height: 1.3;
-              "
-            >
-              {{ warning.message }}
-            </p>
+
+            <div class="inspector-field-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Field Label</label>
+              <input
+                id="inspect-field-label"
+                v-model="selectedFieldLabel"
+                type="text"
+                class="inspector-input"
+              />
+            </div>
+
+            <div class="inspector-field-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Grid Span (1-12 Columns)</label>
+              <select
+                id="inspect-field-span"
+                v-model="selectedFieldGridSpan"
+                class="inspector-select"
+              >
+                <option v-for="n in 12" :key="n" :value="n">
+                  {{ n }}
+                  {{
+                    n === 12
+                      ? "Columns (Full Width)"
+                      : n === 6
+                        ? "Columns (Half Width)"
+                        : "Columns"
+                  }}
+                </option>
+              </select>
+            </div>
+
+            <div class="inspector-field-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Field Type</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <select v-model="selectedFieldType" class="inspector-select">
+                <option value="text">Text Input</option>
+                <option value="numeric">Numeric Input</option>
+                <option value="date">Date Picker</option>
+                <option value="select">Dropdown Select</option>
+                <option value="radio">Radio Buttons</option>
+                <option value="grid">Grid Layout</option>
+                <option value="file">File Upload</option>
+              </select>
+            </div>
+
             <div
               style="
-                font-size: 0.68rem;
-                color: var(--semantic-color-text-subtle);
+                display: flex;
+                align-items: center;
+                gap: 8px;
                 margin-top: 4px;
-                font-style: italic;
               "
             >
-              In: {{ warning.sectionName }}
+              <input
+                id="inspect-field-required"
+                v-model="selectedFieldRequired"
+                type="checkbox"
+                style="
+                  width: 16px;
+                  height: 16px;
+                  cursor: pointer;
+                  accent-color: var(--semantic-color-interactive-brand);
+                "
+              />
+              <label
+                for="inspect-field-required"
+                style="
+                  font-size: 0.8rem;
+                  font-weight: 600;
+                  color: var(--semantic-color-text-body);
+                  cursor: pointer;
+                "
+              >
+                Required Field
+              </label>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- 2. Properties Inspector Section -->
-      <div
-        style="
-          border-top: 1px solid var(--semantic-color-border);
-          padding-top: 16px;
-        "
-      >
-        <div class="inspector-section-title">Properties Inspector</div>
-
+        <!-- 3. Form Compiler Section -->
         <div
-          v-if="!selectedField"
           style="
-            font-size: 0.78rem;
-            color: var(--semantic-color-text-secondary);
-            font-style: italic;
-            background-color: var(--semantic-color-surface-muted);
-            border: 1px solid var(--semantic-color-border);
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
+            border-top: 1px solid var(--semantic-color-border);
+            padding-top: 16px;
           "
         >
-          Select a field widget on the canvas to inspect and edit its
-          attributes.
-        </div>
-
-        <div
-          v-else
-          style="
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background-color: var(--semantic-color-surface-muted);
-            border: 1px solid var(--semantic-color-border);
-            border-radius: 8px;
-            padding: 14px;
-          "
-        >
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-bottom: 1px solid var(--semantic-color-border);
-              padding-bottom: 8px;
-            "
-          >
-            <span
-              style="
-                font-weight: 700;
-                font-size: 0.85rem;
-                color: var(--semantic-color-text-dark);
-              "
-              >{{ selectedField.label }}</span
-            >
-            <span
-              style="
-                font-family: monospace;
-                font-size: 0.72rem;
-                background-color: var(--semantic-color-border);
-                padding: 2px 6px;
-                border-radius: 4px;
-                color: var(--semantic-color-text-muted);
-              "
-              >{{ selectedField.id }}</span
-            >
-          </div>
-
-          <div class="inspector-field-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Field Label</label>
-            <input
-              id="inspect-field-label"
-              v-model="selectedFieldLabel"
-              type="text"
-              class="inspector-input"
-            />
-          </div>
-
-          <div class="inspector-field-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Grid Span (1-12 Columns)</label>
-            <select
-              id="inspect-field-span"
-              v-model="selectedFieldGridSpan"
-              class="inspector-select"
-            >
-              <option v-for="n in 12" :key="n" :value="n">
-                {{ n }}
-                {{
-                  n === 12
-                    ? "Columns (Full Width)"
-                    : n === 6
-                      ? "Columns (Half Width)"
-                      : "Columns"
-                }}
-              </option>
-            </select>
-          </div>
-
-          <div class="inspector-field-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Field Type</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select v-model="selectedFieldType" class="inspector-select">
-              <option value="text">Text Input</option>
-              <option value="numeric">Numeric Input</option>
-              <option value="date">Date Picker</option>
-              <option value="select">Dropdown Select</option>
-              <option value="radio">Radio Buttons</option>
-              <option value="grid">Grid Layout</option>
-              <option value="file">File Upload</option>
-            </select>
-          </div>
+          <div class="inspector-section-title">Form Compiler</div>
 
           <div
             style="
               display: flex;
-              align-items: center;
-              gap: 8px;
-              margin-top: 4px;
+              flex-direction: column;
+              gap: 12px;
+              background-color: var(--semantic-color-surface-muted);
+              border: 1px solid var(--semantic-color-border);
+              border-radius: 8px;
+              padding: 14px;
             "
           >
-            <input
-              id="inspect-field-required"
-              v-model="selectedFieldRequired"
-              type="checkbox"
-              style="
-                width: 16px;
-                height: 16px;
-                cursor: pointer;
-                accent-color: var(--semantic-color-interactive-brand);
-              "
-            />
-            <label
-              for="inspect-field-required"
-              style="
-                font-size: 0.8rem;
-                font-weight: 600;
-                color: var(--semantic-color-text-body);
-                cursor: pointer;
-              "
-            >
-              Required Field
-            </label>
-          </div>
-        </div>
-      </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <input
+                id="dismiss-warnings-checkbox"
+                v-model="dismissedWarnings"
+                type="checkbox"
+                style="
+                  width: 16px;
+                  height: 16px;
+                  cursor: pointer;
+                  accent-color: var(--semantic-color-interactive-brand);
+                "
+              />
+              <label
+                for="dismiss-warnings-checkbox"
+                style="
+                  font-size: 0.8rem;
+                  font-weight: 600;
+                  color: var(--semantic-color-text-body);
+                  cursor: pointer;
+                "
+              >
+                Dismiss layout warnings
+              </label>
+            </div>
 
-      <!-- 3. Form Compiler Section -->
-      <div
-        style="
-          border-top: 1px solid var(--semantic-color-border);
-          padding-top: 16px;
-        "
-      >
-        <div class="inspector-section-title">Form Compiler</div>
-
-        <div
-          style="
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background-color: var(--semantic-color-surface-muted);
-            border: 1px solid var(--semantic-color-border);
-            border-radius: 8px;
-            padding: 14px;
-          "
-        >
-          <div style="display: flex; align-items: center; gap: 8px">
-            <input
-              id="dismiss-warnings-checkbox"
-              v-model="dismissedWarnings"
-              type="checkbox"
-              style="
-                width: 16px;
-                height: 16px;
-                cursor: pointer;
-                accent-color: var(--semantic-color-interactive-brand);
-              "
-            />
-            <label
-              for="dismiss-warnings-checkbox"
-              style="
-                font-size: 0.8rem;
-                font-weight: 600;
-                color: var(--semantic-color-text-body);
-                cursor: pointer;
-              "
+            <div
+              v-if="dismissedWarnings && layoutWarnings.length > 0"
+              class="layout-justification-box"
             >
-              Dismiss layout warnings
-            </label>
-          </div>
+              <label
+                for="layout-justification-input"
+                style="
+                  font-size: 0.72rem;
+                  font-weight: 700;
+                  color: var(--semantic-color-text-secondary);
+                  text-transform: uppercase;
+                  display: block;
+                  margin-bottom: 4px;
+                "
+              >
+                Clinical Justification (Required)
+              </label>
+              <textarea
+                id="layout-justification-input"
+                v-model="layoutJustification"
+                placeholder="Provide a clinical justification for this layout deviation..."
+                style="
+                  width: 100%;
+                  font-size: 0.8rem;
+                  padding: 8px;
+                  border: 1px solid var(--semantic-color-border-muted);
+                  border-radius: 6px;
+                  box-sizing: border-box;
+                "
+                rows="2"
+              />
+            </div>
 
-          <div
-            v-if="dismissedWarnings && layoutWarnings.length > 0"
-            class="layout-justification-box"
-          >
-            <label
-              for="layout-justification-input"
+            <button class="btn-compile-schema btn-compile" @click="compileForm">
+              Compile Form Schema
+            </button>
+
+            <!-- Compilation Feedback messages -->
+            <div
+              v-if="compilationStatus === 'blocked'"
+              class="compilation-error"
               style="
-                font-size: 0.72rem;
-                font-weight: 700;
-                color: var(--semantic-color-text-secondary);
-                text-transform: uppercase;
-                display: block;
-                margin-bottom: 4px;
-              "
-            >
-              Clinical Justification (Required)
-            </label>
-            <textarea
-              id="layout-justification-input"
-              v-model="layoutJustification"
-              placeholder="Provide a clinical justification for this layout deviation..."
-              style="
-                width: 100%;
-                font-size: 0.8rem;
-                padding: 8px;
-                border: 1px solid var(--semantic-color-border-muted);
+                color: var(--semantic-color-error);
+                background-color: var(--semantic-color-error-bg);
+                border: 1px solid var(--semantic-color-error-border);
+                padding: 10px;
                 border-radius: 6px;
-                box-sizing: border-box;
+                font-size: 0.78rem;
+                font-weight: 600;
               "
-              rows="2"
-            />
-          </div>
-
-          <button class="btn-compile-schema btn-compile" @click="compileForm">
-            Compile Form Schema
-          </button>
-
-          <!-- Compilation Feedback messages -->
-          <div
-            v-if="compilationStatus === 'blocked'"
-            class="compilation-error"
-            style="
-              color: var(--semantic-color-error);
-              background-color: var(--semantic-color-error-bg);
-              border: 1px solid var(--semantic-color-error-border);
-              padding: 10px;
-              border-radius: 6px;
-              font-size: 0.78rem;
-              font-weight: 600;
-            "
-          >
-            ❌ Compilation blocked: active layout warnings must be resolved or
-            explicitly dismissed!
-          </div>
-          <div
-            v-if="compilationStatus === 'success'"
-            class="compilation-success"
-            style="
-              color: var(--semantic-color-success);
-              background-color: var(--semantic-color-success-bg);
-              border: 1px solid var(--semantic-color-success-border);
-              padding: 10px;
-              border-radius: 6px;
-              font-size: 0.78rem;
-              font-weight: 600;
-            "
-          >
-            ✅ Form compiled successfully to valid CDISC USDM structure!
+            >
+              ❌ Compilation blocked: active layout warnings must be resolved or
+              explicitly dismissed!
+            </div>
+            <div
+              v-if="compilationStatus === 'success'"
+              class="compilation-success"
+              style="
+                color: var(--semantic-color-success);
+                background-color: var(--semantic-color-success-bg);
+                border: 1px solid var(--semantic-color-success-border);
+                padding: 10px;
+                border-radius: 6px;
+                font-size: 0.78rem;
+                font-weight: 600;
+              "
+            >
+              ✅ Form compiled successfully to valid CDISC USDM structure!
+            </div>
           </div>
         </div>
-      </div>
+      </template>
+
+      <!-- Rule Tracer Panel in Simulation Mode -->
+      <template v-else>
+        <RuleTracerPanel
+          :rules="activeSimulationRules"
+          :simulation-data="simulationFormData"
+          :field-errors="simulationFieldErrors"
+          :visible-fields="simulationVisibleFields"
+          @apply-profile="onApplyMockProfile"
+          @reset-simulation="onResetSimulation"
+        />
+      </template>
     </div>
   </div>
 </template>
@@ -443,9 +499,11 @@
  * Integrates drag-and-drop sections/fields, a device switcher toolbar, real-time simulated column
  * width validation, property inspector synchronizations, and compiler quality gating rules.
  */
-import { computed, ref } from "vue";
+import { computed, ref, reactive, watch } from "vue";
 import draggable from "vuedraggable";
 import FormSectionContainer from "./FormSectionContainer.vue";
+import HeadlessFormRenderer from "./HeadlessFormRenderer.vue";
+import RuleTracerPanel from "./RuleTracerPanel.vue";
 import { useDesignerStore } from "../../stores/designer.js";
 
 const props = defineProps({
@@ -661,6 +719,226 @@ function onUpdateSection(updatedSection) {
     currentSections[idx] = updatedSection;
     sections.value = currentSections;
     compilationStatus.value = null;
+  }
+}
+
+// ----------------------------------------------------------------------------
+// SIMULATION MODE & LIVE EXECUTION TRACER LOGIC
+// ----------------------------------------------------------------------------
+const isSimulationMode = ref(false);
+const simulationFormData = reactive({});
+const simulationFieldErrors = reactive({});
+const simulationVisibleFields = ref({});
+const headlessRendererRef = ref(null);
+
+function setViewport(vp) {
+  designerStore.setViewport(vp);
+}
+
+function toggleSimulationMode() {
+  isSimulationMode.value = !isSimulationMode.value;
+  if (isSimulationMode.value) {
+    initSimulationFormData();
+  } else {
+    onResetSimulation();
+  }
+}
+
+function initSimulationFormData() {
+  allFields.value.forEach((f) => {
+    if (simulationFormData[f.id] === undefined) {
+      simulationFormData[f.id] = f.type === "numeric" ? null : "";
+    }
+  });
+}
+
+const activeSimulationRules = computed(() => {
+  const schema = props.formSchema || {};
+  const rules = [];
+
+  if (schema.rules) {
+    rules.push(...schema.rules);
+  }
+  if (schema.logic_schema?.rules) {
+    rules.push(...schema.logic_schema.rules);
+  }
+  if (schema.logic_schema?.edit_checks) {
+    rules.push(...schema.logic_schema.edit_checks);
+  }
+  if (schema.logic_schema?.skip_logic) {
+    rules.push(...schema.logic_schema.skip_logic);
+  }
+
+  // Extract rules from field items
+  allFields.value.forEach((field) => {
+    if (field.relevant) {
+      rules.push({
+        id: `rule-skip-${field.id}`,
+        type: "skip_logic",
+        condition: field.relevant,
+        action: "show",
+        target_field: field.id,
+      });
+    }
+    if (field.rules && Array.isArray(field.rules)) {
+      rules.push(...field.rules);
+    }
+    if (field.constraints) {
+      rules.push({
+        id: `rule-constraint-${field.id}`,
+        type: "constraint",
+        condition: field.constraints.condition || field.constraints,
+        target_field: field.id,
+        query_message:
+          field.constraints.message ||
+          field.constraints.query_message ||
+          "Constraint rule violation.",
+      });
+    }
+  });
+
+  // Deduplicate by id
+  const uniqueMap = new Map();
+  rules.forEach((r) => {
+    const key = r.id || `${r.type}-${r.target_field}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, { ...r, id: key });
+    }
+  });
+
+  return Array.from(uniqueMap.values());
+});
+
+const simulationFormDefinition = computed(() => {
+  const schema = props.formSchema || {};
+
+  const variables = allFields.value.map((f) => ({
+    id: f.id,
+    name: f.label || f.id,
+    data_type: f.type === "numeric" ? "number" : "text",
+    constraints: { required: f.required },
+    relevant: f.relevant || null,
+  }));
+
+  const uiSections = (schema.sections || []).map((sec) => ({
+    id: sec.id,
+    title: sec.name || "Section",
+    columns: 12,
+    widgets: (sec.items || []).map((item) => ({
+      variable_id: item.id,
+      widget: item.type === "numeric" ? "number_input" : "text_input",
+      grid_column_span: item.gridSpan || 12,
+      placeholder: `Enter ${item.label || item.id}...`,
+    })),
+  }));
+
+  const rules = activeSimulationRules.value;
+
+  return {
+    form_id: schema.id || "draft-form",
+    version_tag: "1.0-draft",
+    data_schema: {
+      name: schema.name || "Draft Form",
+      variables,
+    },
+    ui_schema: {
+      sections: uiSections,
+    },
+    logic_schema: {
+      rules,
+      edit_checks: rules.filter(
+        (r) =>
+          r.type === "constraint" ||
+          r.type === "cross_form_check" ||
+          r.type === "edit_check"
+      ),
+      skip_logic: rules.filter((r) => r.type === "skip_logic"),
+    },
+  };
+});
+
+function onSimulationDataChanged(data) {
+  Object.keys(data).forEach((k) => {
+    simulationFormData[k] = data[k];
+  });
+  if (headlessRendererRef.value) {
+    Object.keys(simulationFieldErrors).forEach(
+      (k) => delete simulationFieldErrors[k]
+    );
+    Object.assign(simulationFieldErrors, headlessRendererRef.value.fieldErrors);
+    simulationVisibleFields.value = {
+      ...headlessRendererRef.value.visibleFields,
+    };
+  }
+}
+
+function onApplyMockProfile(profileName) {
+  allFields.value.forEach((f) => {
+    const isNum = f.type === "numeric";
+    if (profileName === "normal") {
+      if (
+        f.id.toLowerCase().includes("bp") ||
+        f.id.toLowerCase().includes("sys")
+      ) {
+        simulationFormData[f.id] = 120;
+      } else if (f.id.toLowerCase().includes("dia")) {
+        simulationFormData[f.id] = 80;
+      } else if (
+        f.id.toLowerCase().includes("hr") ||
+        f.id.toLowerCase().includes("pulse")
+      ) {
+        simulationFormData[f.id] = 72;
+      } else if (isNum) {
+        simulationFormData[f.id] = 25;
+      } else {
+        simulationFormData[f.id] = "Normal";
+      }
+    } else if (profileName === "hypertensive") {
+      if (
+        f.id.toLowerCase().includes("bp") ||
+        f.id.toLowerCase().includes("sys")
+      ) {
+        simulationFormData[f.id] = 165;
+      } else if (f.id.toLowerCase().includes("dia")) {
+        simulationFormData[f.id] = 105;
+      } else if (
+        f.id.toLowerCase().includes("hr") ||
+        f.id.toLowerCase().includes("pulse")
+      ) {
+        simulationFormData[f.id] = 95;
+      } else if (isNum) {
+        simulationFormData[f.id] = 180;
+      } else {
+        simulationFormData[f.id] = "Elevated Alert";
+      }
+    } else if (profileName === "edge_case") {
+      if (f.id.toLowerCase().includes("sys")) {
+        simulationFormData[f.id] = 70;
+      } else if (f.id.toLowerCase().includes("dia")) {
+        simulationFormData[f.id] = 110;
+      } else {
+        simulationFormData[f.id] = "";
+      }
+    }
+  });
+
+  if (headlessRendererRef.value) {
+    if (typeof headlessRendererRef.value.setFormData === "function") {
+      headlessRendererRef.value.setFormData(simulationFormData);
+    } else {
+      headlessRendererRef.value.evaluateRules();
+    }
+  }
+}
+
+function onResetSimulation() {
+  Object.keys(simulationFormData).forEach((k) => delete simulationFormData[k]);
+  Object.keys(simulationFieldErrors).forEach(
+    (k) => delete simulationFieldErrors[k]
+  );
+  simulationVisibleFields.value = {};
+  if (headlessRendererRef.value) {
+    headlessRendererRef.value.resetSimulation();
   }
 }
 </script>

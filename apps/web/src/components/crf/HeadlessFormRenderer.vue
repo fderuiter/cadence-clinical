@@ -57,6 +57,7 @@
             <div
               v-for="widget in section.widgets"
               :key="widget.variable_id"
+              v-show="visibleFields[widget.variable_id] !== false"
               class="grid-field-cell"
               :style="{
                 gridColumn:
@@ -143,8 +144,8 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive } from "vue";
-import { ClientRulesEvaluator } from "../../engine/rulesEvaluator.js";
+import { computed, ref, reactive, watch, onMounted } from "vue";
+import { evaluateAST, renderFormFromJSON } from "../../evaluator.js";
 import MedicalAutocodeWidget from "./widgets/MedicalAutocodeWidget.vue";
 import BodyMapWidget from "./widgets/BodyMapWidget.vue";
 import RepeatingLogGridWidget from "./widgets/RepeatingLogGridWidget.vue";
@@ -154,20 +155,32 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  initialValues: {
+    type: Object,
+    default: null,
+  },
 });
 
-const emit = defineEmits(["form-submitted"]);
+const emit = defineEmits(["form-submitted", "data-changed"]);
 
 const currentViewport = ref(
   props.formDefinition.ui_schema?.default_viewport || "desktop_edc"
 );
 const formData = reactive({});
 const fieldErrors = reactive({});
+const visibleFields = ref({});
 
 // Initialize form data model
-props.formDefinition.data_schema?.variables?.forEach((v) => {
-  formData[v.id] = v.data_type === "repeat_log" ? [] : "";
-});
+function initFormData() {
+  props.formDefinition.data_schema?.variables?.forEach((v) => {
+    if (props.initialValues && props.initialValues[v.id] !== undefined) {
+      formData[v.id] = props.initialValues[v.id];
+    } else {
+      formData[v.id] = v.data_type === "repeat_log" ? [] : "";
+    }
+  });
+}
+initFormData();
 
 const getVariable = (varId) => {
   return props.formDefinition.data_schema?.variables?.find(
@@ -179,23 +192,131 @@ const evaluateRules = () => {
   // Clear previous errors
   Object.keys(fieldErrors).forEach((key) => delete fieldErrors[key]);
 
-  // 1. Evaluate AST Edit Checks
-  props.formDefinition.logic_schema?.edit_checks?.forEach((check) => {
-    const passed = ClientRulesEvaluator.evaluate(
-      check.ast_expression,
-      formData
-    );
-    if (!passed) {
-      check.target_variable_ids.forEach((varId) => {
-        fieldErrors[varId] = check.query_message;
+  // 1. Prepare fields metadata for renderFormFromJSON
+  const variables = props.formDefinition.data_schema?.variables || [];
+  const rulesList = [
+    ...(props.formDefinition.logic_schema?.rules || []),
+    ...(props.formDefinition.logic_schema?.skip_logic || []),
+  ];
+
+  const fieldsMeta = variables.map((v) => {
+    let relevantExpr = v.relevant || null;
+    if (!relevantExpr) {
+      const skipRule = rulesList.find(
+        (r) => (r.type === "skip_logic" || r.action) && r.target_field === v.id
+      );
+      if (skipRule) {
+        relevantExpr = skipRule.condition || skipRule.ast_expression;
+      }
+    }
+    return {
+      id: v.id,
+      relevant: relevantExpr,
+    };
+  });
+
+  // Evaluate visibility & cascading nullification
+  const { visibleFields: vf, updatedValues } = renderFormFromJSON(
+    fieldsMeta,
+    formData
+  );
+  visibleFields.value = vf;
+
+  // Sync updated values back to formData if purged
+  Object.keys(updatedValues).forEach((key) => {
+    if (formData[key] !== updatedValues[key]) {
+      formData[key] = updatedValues[key];
+    }
+  });
+
+  // 2. Evaluate Edit Checks & Constraint Rules
+  const editChecks = [
+    ...(props.formDefinition.logic_schema?.edit_checks || []),
+    ...(props.formDefinition.logic_schema?.constraints || []),
+  ];
+
+  // Also include general rules array if specified
+  rulesList.forEach((r) => {
+    if (
+      r.type === "constraint" ||
+      r.type === "cross_form_check" ||
+      (r.query_message && r.type !== "skip_logic")
+    ) {
+      editChecks.push(r);
+    }
+  });
+
+  editChecks.forEach((check) => {
+    const expr = check.ast_expression || check.condition;
+    if (!expr) return;
+
+    const res = evaluateAST(expr, formData);
+    let isViolated = false;
+    if (check.is_violation_when === "true") {
+      isViolated = res === true;
+    } else if (check.is_violation_when === "false") {
+      isViolated = res === false;
+    } else {
+      // Auto-detect based on operator if condition represents error condition or validity check
+      const op = (expr.operator || expr.value || "").toLowerCase();
+      if (["+", ">", ">=", "!=", "not", "is_empty", "empty"].includes(op)) {
+        isViolated = res === true;
+      } else {
+        isViolated = res === false;
+      }
+    }
+
+    if (isViolated) {
+      const targetIds =
+        check.target_variable_ids ||
+        (check.target_field ? [check.target_field] : []);
+      targetIds.forEach((varId) => {
+        fieldErrors[varId] =
+          check.query_message || "Constraint rule violation.";
       });
     }
   });
+
+  emit("data-changed", { ...formData });
 };
+
+watch(
+  () => (props.initialValues ? JSON.stringify(props.initialValues) : ""),
+  () => {
+    if (props.initialValues) {
+      Object.keys(props.initialValues).forEach((k) => {
+        formData[k] = props.initialValues[k];
+      });
+      evaluateRules();
+    }
+  },
+  { immediate: true }
+);
+
+// Initial evaluation on mount
+onMounted(() => {
+  evaluateRules();
+});
 
 const hasHardErrors = computed(() => {
   return Object.keys(fieldErrors).length > 0;
 });
+
+const resetSimulation = () => {
+  props.formDefinition.data_schema?.variables?.forEach((v) => {
+    formData[v.id] = v.data_type === "repeat_log" ? [] : "";
+  });
+  evaluateRules();
+};
+
+const setFormData = (data) => {
+  if (data) {
+    Object.keys(data).forEach((k) => {
+      formData[k] = data[k];
+    });
+  }
+  evaluateRules();
+};
 
 const handleSubmit = () => {
   evaluateRules();
@@ -207,6 +328,15 @@ const handleSubmit = () => {
     });
   }
 };
+
+defineExpose({
+  formData,
+  fieldErrors,
+  visibleFields,
+  evaluateRules,
+  resetSimulation,
+  setFormData,
+});
 </script>
 
 <style scoped>

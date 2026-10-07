@@ -199,8 +199,12 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     expect(wrapper.find("#select-all-eligible").exists()).toBe(true);
     expect(wrapper.find(".subject-checkbox").exists()).toBe(true);
     expect(wrapper.find(".batch-metrics-card").exists()).toBe(true);
-    expect(Number(wrapper.find("#metric-selected-subjects").text())).toBeGreaterThan(0);
-    expect(wrapper.find("#btn-pi-signoff").text()).toContain("Sign Off Selected Subjects");
+    expect(
+      Number(wrapper.find("#metric-selected-subjects").text())
+    ).toBeGreaterThan(0);
+    expect(wrapper.find("#btn-pi-signoff").text()).toContain(
+      "Sign Off Selected Subjects"
+    );
   });
 
   it("toggles all subject row checkboxes using the #select-all-eligible header checkbox", async () => {
@@ -222,7 +226,9 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     // Re-check select-all
     await headerCheckbox.setChecked(true);
     expect(wrapper.vm.selectedSubjectIds).toEqual(initialSubjects);
-    expect(Number(wrapper.find("#metric-selected-subjects").text())).toBe(initialSubjects.length);
+    expect(Number(wrapper.find("#metric-selected-subjects").text())).toBe(
+      initialSubjects.length
+    );
   });
 
   it("executes multi-subject batch sign-off, purges credentials, and displays signature certification card", async () => {
@@ -241,7 +247,8 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
       skipped_submission_ids: [],
       signature_id: "CERT-MULTI-SUBJ-12345",
       timestamp_utc: "2026-10-06T12:00:00Z",
-      content_digest: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+      content_digest:
+        "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
       audit_tx: "TX-AUDIT-MULTI-SUBJ-8888",
     });
 
@@ -291,12 +298,16 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
 
     // Verify Signature Certification Summary Card rendered
     expect(wrapper.find("#signature-cert-card").exists()).toBe(true);
-    expect(wrapper.find("#cert-serial-id").text()).toBe("CERT-MULTI-SUBJ-12345");
+    expect(wrapper.find("#cert-serial-id").text()).toBe(
+      "CERT-MULTI-SUBJ-12345"
+    );
     expect(wrapper.find("#cert-timestamp").text()).toBe("2026-10-06T12:00:00Z");
     expect(wrapper.find("#cert-content-digest").text()).toBe(
       "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
     );
-    expect(wrapper.find("#cert-audit-tx").text()).toBe("TX-AUDIT-MULTI-SUBJ-8888");
+    expect(wrapper.find("#cert-audit-tx").text()).toBe(
+      "TX-AUDIT-MULTI-SUBJ-8888"
+    );
 
     alertMock.mockRestore();
   });

@@ -123,7 +123,11 @@
             class="btn btn-sm btn-outline-secondary btn-toggle-select-all"
             @click="toggleSelectAllPending"
           >
-            {{ isAllPendingSelected ? "Deselect All Pending" : "Select All Pending" }}
+            {{
+              isAllPendingSelected
+                ? "Deselect All Pending"
+                : "Select All Pending"
+            }}
           </button>
         </div>
 
@@ -159,7 +163,10 @@
       <!-- Floating Action Bar for Selected Items -->
       <div v-if="selectedCandidateIds.length > 0" class="floating-batch-bar">
         <div class="batch-count-summary">
-          <span class="batch-count-badge">{{ selectedCandidateIds.length }}</span> item(s) selected
+          <span class="batch-count-badge">{{
+            selectedCandidateIds.length
+          }}</span>
+          item(s) selected
         </div>
         <div class="batch-actions">
           <button
@@ -653,7 +660,9 @@
           aria-labelledby="batch-reject-modal-title"
         >
           <div class="modal-header">
-            <h3 id="batch-reject-modal-title">Batch Reject EHR Candidate Data</h3>
+            <h3 id="batch-reject-modal-title">
+              Batch Reject EHR Candidate Data
+            </h3>
             <button
               type="button"
               class="btn-close"
@@ -665,10 +674,13 @@
           <div class="modal-body">
             <p class="modal-instruction">
               Under GxP and FDA Electronic Source Data guidelines, a clinical
-              justification is mandatory when rejecting candidate EHR records. The rationale below will be recorded in Part 11 audit trails across all {{ selectedCandidateIds.length }} selected items.
+              justification is mandatory when rejecting candidate EHR records.
+              The rationale below will be recorded in Part 11 audit trails
+              across all {{ selectedCandidateIds.length }} selected items.
             </p>
             <div class="field-summary">
-              <strong>Selected Records:</strong> {{ selectedCandidateIds.length }} pending candidate record(s)
+              <strong>Selected Records:</strong>
+              {{ selectedCandidateIds.length }} pending candidate record(s)
             </div>
             <div class="form-group">
               <label for="batch-reject-reason" class="form-label"
@@ -796,12 +808,14 @@ const isAllPendingSelected = computed(() => {
     (c) => c.status === "PENDING_REVIEW"
   );
   if (pendingFiltered.length === 0) return false;
-  return pendingFiltered.every((c) => selectedCandidateIds.value.includes(c.id));
+  return pendingFiltered.every((c) =>
+    selectedCandidateIds.value.includes(c.id)
+  );
 });
 
 function selectHighConfidence() {
   const highConfPending = candidates.value
-    .filter((c) => c.status === "PENDING_REVIEW" && c.confidence_score >= 0.90)
+    .filter((c) => c.status === "PENDING_REVIEW" && c.confidence_score >= 0.9)
     .map((c) => c.id);
   const set = new Set([...selectedCandidateIds.value, ...highConfPending]);
   selectedCandidateIds.value = Array.from(set);
