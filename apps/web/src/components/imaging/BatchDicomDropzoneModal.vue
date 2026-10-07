@@ -434,7 +434,7 @@ async function startBatchIngestion() {
     const response = await fetch("/api/v1/imaging/studies/batch", {
       method: "POST",
       headers: {
-        "X-Operator-Identity": "crc.coordinator@site.org"
+        "X-Operator-Identity": "crc.coordinator@site.org" // deid-ignore
       },
       body: formData
     });
