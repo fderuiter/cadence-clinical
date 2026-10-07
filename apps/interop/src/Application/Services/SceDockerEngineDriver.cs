@@ -66,17 +66,10 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
             string imageName = request.ContainerImageOverride ??
                 (request.Language.Equals("R", StringComparison.OrdinalIgnoreCase) ? "cadence-sce-r:latest" : "cadence-sce-py:latest");
 
-            var dockerResult = await TryExecuteDockerContainerAsync(request, tempDir, imageName, ct);
+            var dockerResult = await ExecuteDockerContainerAsync(request, tempDir, imageName, ct);
             stopwatch.Stop();
 
-            if (dockerResult != null)
-            {
-                return dockerResult with { DurationMs = stopwatch.ElapsedMilliseconds };
-            }
-
-            var fallbackResult = await ExecuteFallbackSandboxAsync(request, scriptPath, tempDir, ct);
-            stopwatch.Stop();
-            return fallbackResult with { DurationMs = stopwatch.ElapsedMilliseconds };
+            return dockerResult with { DurationMs = stopwatch.ElapsedMilliseconds };
         }
         finally
         {
@@ -94,7 +87,7 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
         }
     }
 
-    private static async Task<SandboxExecutionResult?> TryExecuteDockerContainerAsync(
+    private static async Task<SandboxExecutionResult> ExecuteDockerContainerAsync(
         SandboxExecutionRequest request,
         string tempDir,
         string imageName,
@@ -155,7 +148,10 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
             process.OutputDataReceived += (_, e) => { if (e.Data != null) stdoutBuilder.AppendLine(e.Data); };
             process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderrBuilder.AppendLine(e.Data); };
 
-            if (!process.Start()) return null;
+            if (!process.Start())
+            {
+                return CreateFailureResult("Failed to start docker process.");
+            }
 
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
@@ -165,9 +161,27 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
 
             await process.WaitForExitAsync(cts.Token);
 
-            if (process.ExitCode == 125 || process.ExitCode == 127 || stdoutBuilder.ToString().Contains("Unable to find image") || stderrBuilder.ToString().Contains("Unable to find image"))
+            string stdout = stdoutBuilder.ToString();
+            string stderr = stderrBuilder.ToString();
+
+            if (process.ExitCode == 125 || process.ExitCode == 127 || stdout.Contains("Unable to find image") || stderr.Contains("Unable to find image"))
             {
-                return null;
+                string errorMsg;
+                if (!string.IsNullOrWhiteSpace(stderr))
+                {
+                    errorMsg = stderr.Trim();
+                }
+                else if (!string.IsNullOrWhiteSpace(stdout))
+                {
+                    errorMsg = stdout.Trim();
+                }
+                else
+                {
+                    errorMsg = $"Docker container execution failed with exit code {process.ExitCode}.";
+                }
+
+                int failureExitCode = process.ExitCode != 0 ? process.ExitCode : 127;
+                return CreateFailureResult($"Container runtime execution failed: {errorMsg}", failureExitCode);
             }
 
             var artifacts = CollectArtifacts(tempDir);
@@ -176,94 +190,31 @@ public class SceDockerEngineDriver : ISceDockerEngineDriver
 
             return new SandboxExecutionResult(
                 ExitCode: process.ExitCode,
-                Stdout: stdoutBuilder.ToString(),
-                Stderr: stderrBuilder.ToString(),
+                Stdout: stdout,
+                Stderr: stderr,
                 DurationMs: 0,
                 ContainerImageDigest: imageDigest,
                 Artifacts: artifacts,
                 OutputArtifactsDigest: artifactsDigest
             );
         }
-        catch
+        catch (Exception ex)
         {
-            return null;
+            return CreateFailureResult($"Container sandbox execution error: {ex.Message}");
         }
     }
 
-    private static async Task<SandboxExecutionResult> ExecuteFallbackSandboxAsync(
-        SandboxExecutionRequest request,
-        string scriptPath,
-        string tempDir,
-        CancellationToken ct)
+    private static SandboxExecutionResult CreateFailureResult(string errorMessage, int exitCode = 127)
     {
-        string runner = request.Language.Equals("R", StringComparison.OrdinalIgnoreCase) ? "Rscript" : "python3";
-        var psi = new ProcessStartInfo
-        {
-            FileName = runner,
-            Arguments = $"\"{scriptPath}\"",
-            WorkingDirectory = tempDir,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
-        if (request.EnvironmentVariables != null)
-        {
-            foreach (var (k, v) in request.EnvironmentVariables)
-            {
-                psi.EnvironmentVariables[k] = v;
-            }
-        }
-
-        int exitCode = 0;
-        string stdout = "";
-        string stderr = "";
-
-        try
-        {
-            using var process = Process.Start(psi);
-            if (process != null)
-            {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(TimeSpan.FromSeconds(request.TimeoutSeconds));
-
-                var stdoutTask = process.StandardOutput.ReadToEndAsync(cts.Token);
-                var stderrTask = process.StandardError.ReadToEndAsync(cts.Token);
-
-                await Task.WhenAll(stdoutTask, stderrTask);
-                await process.WaitForExitAsync(cts.Token);
-
-                exitCode = process.ExitCode;
-                stdout = stdoutTask.Result;
-                stderr = stderrTask.Result;
-            }
-        }
-        catch
-        {
-            exitCode = 0;
-            stdout = $"[SCE] Executed {request.Language} statistical program inside isolated sandbox.\n[SCE] Package lockfile verified ({request.LockType}). Output generated.";
-            stderr = "";
-
-            string sampleArtifactPath = Path.Combine(tempDir, "output_summary.csv");
-            if (!File.Exists(sampleArtifactPath))
-            {
-                await File.WriteAllTextAsync(sampleArtifactPath, "param,value\nmean_age,42.5\nsubject_count,100\n", ct);
-            }
-        }
-
-        var artifacts = CollectArtifacts(tempDir);
-        string artifactsDigest = ComputeArtifactsMerkleDigest(artifacts);
-        string imageDigest = "sha256:cadence-sce-r4.4-py3.14-validated-base-2026";
-
+        var emptyArtifacts = new List<GeneratedArtifactDto>();
         return new SandboxExecutionResult(
-            ExitCode: exitCode,
-            Stdout: stdout,
-            Stderr: stderr,
+            ExitCode: exitCode != 0 ? exitCode : 127,
+            Stdout: string.Empty,
+            Stderr: errorMessage,
             DurationMs: 0,
-            ContainerImageDigest: imageDigest,
-            Artifacts: artifacts,
-            OutputArtifactsDigest: artifactsDigest
+            ContainerImageDigest: "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            Artifacts: emptyArtifacts,
+            OutputArtifactsDigest: ComputeArtifactsMerkleDigest(emptyArtifacts)
         );
     }
 
