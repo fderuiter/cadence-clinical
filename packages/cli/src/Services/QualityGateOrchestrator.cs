@@ -121,6 +121,14 @@ public static class QualityGateOrchestrator
             allPassed = false;
         }
 
+        // 10b. Dev Environment
+        AnsiConsole.MarkupLine("\nValidating Dev Environment Documentation Parity...");
+        if (DevEnvironmentValidatorService.ValidateDevEnvironment() != 0)
+        {
+            AnsiConsole.MarkupLine("[red]Gate (validate-dev-environment) failed![/]");
+            allPassed = false;
+        }
+
         // 11. Readmes
         AnsiConsole.MarkupLine("\n11/21 Validating README Coverage...");
         if (ReadmeValidatorService.ValidateReadmes() != 0)
@@ -244,6 +252,7 @@ public static class QualityGateOrchestrator
             "path-requirement-sanitizer" or "sanitizer" => ComplianceUtilityService.ExecuteComplianceUtility(sanitize: true, targetFiles: targetFiles) == 0,
             "validate-markdown" or "markdown" => Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown(targetFiles) == 0,
             "validate-environment-variables" or "env-vars" => EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true) == 0,
+            "validate-dev-environment" or "dev-environment" or "dev-env" => DevEnvironmentValidatorService.ValidateDevEnvironment() == 0,
             "validate-readmes" or "readmes" => ReadmeValidatorService.ValidateReadmes() == 0,
             "validate-imports" or "imports" => ImportValidatorService.ValidateImports() == 0,
             "audit-security" or "security" => SecurityAuditorService.AuditSecurity(targetFiles) == 0,
