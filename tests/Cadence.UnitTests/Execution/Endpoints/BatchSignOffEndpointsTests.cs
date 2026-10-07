@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,6 +11,8 @@ using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
@@ -18,6 +23,7 @@ using FluentAssertions;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.Configuration;
 
 using Xunit;
 
@@ -35,17 +41,56 @@ public sealed class BatchSignOffEndpointsTests
         return new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal(username, role) };
     }
 
-    private static FormSubmissionApplicationService CreateService(InMemoryFormSubmissionRepository repo, FakeClock clock)
+    private static FormSubmissionApplicationService CreateService(
+        InMemoryFormSubmissionRepository repo,
+        FakeClock clock,
+        IConfiguration? configuration = null)
     {
         var obsRepo = new InMemoryObservationRepository();
         var ucum = new UcumNormalizationService();
         var audit = new FakeCurrentAuditContextAccessor();
+        var config = configuration ?? new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GATEWAY_SECRET"] = TestSecurityContext.GatewaySecret
+            })
+            .Build();
+
         return new FormSubmissionApplicationService(
             formSubmissionRepository: repo,
             observationRepository: obsRepo,
             ucumService: ucum,
             auditContextAccessor: audit,
+            configuration: config,
             clock: clock);
+    }
+
+    private static string ComputeBatchId(BatchSignOffRequest request)
+    {
+        string normStudy = request.StudyId.Trim();
+        string normType = request.TargetType.Trim().ToUpperInvariant();
+        string normIds = string.Join(",", request.TargetIds.Select(id => id.Trim()).OrderBy(id => id, StringComparer.Ordinal));
+        string normReason = request.SigningReason.Trim();
+        string bindingStr = $"{normStudy}:{normType}:{normIds}:{normReason}";
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(bindingStr)));
+    }
+
+    private static string CreateSigToken(
+        string username,
+        string role,
+        string batchId,
+        string secret = TestSecurityContext.GatewaySecret)
+    {
+        return SigTokenIssuer.Issue(
+            new SigTokenGrant(
+                Subject: username,
+                Username: username,
+                Roles: [role],
+                Action: "/api/v1/execution/batch-sign-off",
+                SemanticAction: FormEndpoints.ApproveSemanticAction,
+                BatchId: batchId),
+            SystemClock.Instance.UtcNow,
+            Encoding.UTF8.GetBytes(secret));
     }
 
     [Fact]
@@ -71,7 +116,11 @@ public sealed class BatchSignOffEndpointsTests
             TargetIds: new[] { "SUBJ-101", "SUBJ-102" },
             SigningReason: "Principal Investigator Approval");
 
-        var httpContext = CreateHttpContext(role: "pi");
+        var batchId = ComputeBatchId(batchReq);
+        var sigToken = CreateSigToken("dr_investigator", "pi", batchId);
+
+        var httpContext = CreateHttpContext(role: "pi", username: "dr_investigator");
+        httpContext.Request.Headers[GatewayHeaders.SigToken] = sigToken;
 
         var result = await FormEndpoints.BatchSignOffAsync(batchReq, httpContext, svc, CancellationToken.None);
 
@@ -139,5 +188,125 @@ public sealed class BatchSignOffEndpointsTests
         result.Should().BeOfType<ProblemHttpResult>();
         var problem = (ProblemHttpResult)result;
         problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-002")]
+    public async Task BatchSignOff_MissingSigToken_ReturnsUnauthorized()
+    {
+        var repo = new InMemoryFormSubmissionRepository();
+        var clock = new FakeClock();
+        var svc = CreateService(repo, clock);
+
+        var batchReq = new BatchSignOffRequest(
+            StudyId: "STUDY-001",
+            TargetType: "SUBJECT",
+            TargetIds: new[] { "SUBJ-101" },
+            SigningReason: "Principal Investigator Approval");
+
+        var httpContext = CreateHttpContext(role: "pi");
+
+        var result = await FormEndpoints.BatchSignOffAsync(batchReq, httpContext, svc, CancellationToken.None);
+
+        result.Should().BeOfType<ProblemHttpResult>();
+        var problem = (ProblemHttpResult)result;
+        problem.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-002")]
+    public async Task BatchSignOff_MismatchedBatchId_ReturnsUnauthorized()
+    {
+        var repo = new InMemoryFormSubmissionRepository();
+        var clock = new FakeClock();
+        var svc = CreateService(repo, clock);
+
+        var batchReq = new BatchSignOffRequest(
+            StudyId: "STUDY-001",
+            TargetType: "SUBJECT",
+            TargetIds: new[] { "SUBJ-101" },
+            SigningReason: "Principal Investigator Approval");
+
+        var wrongBatchId = "0000000000000000000000000000000000000000000000000000000000000000";
+        var sigToken = CreateSigToken("dr_investigator", "pi", wrongBatchId);
+
+        var httpContext = CreateHttpContext(role: "pi", username: "dr_investigator");
+        httpContext.Request.Headers[GatewayHeaders.SigToken] = sigToken;
+
+        var result = await FormEndpoints.BatchSignOffAsync(batchReq, httpContext, svc, CancellationToken.None);
+
+        result.Should().BeOfType<ProblemHttpResult>();
+        var problem = (ProblemHttpResult)result;
+        problem.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-002")]
+    public async Task BatchSignOff_MissingGatewaySecret_ReturnsUnauthorized()
+    {
+        var repo = new InMemoryFormSubmissionRepository();
+        var clock = new FakeClock();
+        var emptyConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GATEWAY_SECRET"] = ""
+            })
+            .Build();
+        var svc = CreateService(repo, clock, emptyConfig);
+
+        var batchReq = new BatchSignOffRequest(
+            StudyId: "STUDY-001",
+            TargetType: "SUBJECT",
+            TargetIds: new[] { "SUBJ-101" },
+            SigningReason: "Principal Investigator Approval");
+
+        var batchId = ComputeBatchId(batchReq);
+        var sigToken = CreateSigToken("dr_investigator", "pi", batchId);
+
+        var httpContext = CreateHttpContext(role: "pi", username: "dr_investigator");
+        httpContext.Request.Headers[GatewayHeaders.SigToken] = sigToken;
+
+        var result = await FormEndpoints.BatchSignOffAsync(batchReq, httpContext, svc, CancellationToken.None);
+
+        result.Should().BeOfType<ProblemHttpResult>();
+        var problem = (ProblemHttpResult)result;
+        problem.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-002")]
+    public async Task BatchSignOff_ReusedSigToken_ReturnsUnauthorized()
+    {
+        var repo = new InMemoryFormSubmissionRepository();
+        var clock = new FakeClock();
+        var svc = CreateService(repo, clock);
+
+        var createReq = new FormSubmissionCreateRequest("STUDY-001", "SUBJ-101", "FORM-VS", "SITE-01", "VISIT-01", "1.0.0", "{\"vssbp\": 120, \"observation_date\": \"2026-10-06T10:00:00Z\"}");
+        var sub = (await svc.CreateAsync(createReq, CancellationToken.None)).Value!;
+        await svc.CompleteAsync(sub.Id, CancellationToken.None);
+
+        var batchReq = new BatchSignOffRequest(
+            StudyId: "STUDY-001",
+            TargetType: "SUBJECT",
+            TargetIds: new[] { "SUBJ-101" },
+            SigningReason: "Principal Investigator Approval");
+
+        var batchId = ComputeBatchId(batchReq);
+        var sigToken = CreateSigToken("dr_investigator", "pi", batchId);
+
+        var httpContext1 = CreateHttpContext(role: "pi", username: "dr_investigator");
+        httpContext1.Request.Headers[GatewayHeaders.SigToken] = sigToken;
+
+        var firstResult = await FormEndpoints.BatchSignOffAsync(batchReq, httpContext1, svc, CancellationToken.None);
+        firstResult.Should().BeOfType<Ok<BatchSignOffResponse>>();
+
+        // Reusing the same sigToken must fail
+        var httpContext2 = CreateHttpContext(role: "pi", username: "dr_investigator");
+        httpContext2.Request.Headers[GatewayHeaders.SigToken] = sigToken;
+
+        var secondResult = await FormEndpoints.BatchSignOffAsync(batchReq, httpContext2, svc, CancellationToken.None);
+        secondResult.Should().BeOfType<ProblemHttpResult>();
+        var problem = (ProblemHttpResult)secondResult;
+        problem.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
     }
 }

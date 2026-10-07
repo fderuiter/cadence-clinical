@@ -46,9 +46,11 @@ public sealed class FormSubmissionApplicationService(
     IAutoQueryDispatchService? autoQueryDispatchService = null,
     IConfiguration? configuration = null,
     IPublishedFormVersionRegistryRepository? formVersionRegistryRepository = null,
-    IClock? clock = null) : IFormSubmissionApplicationService
+    IClock? clock = null,
+    SigTokenVerifier? sigTokenVerifier = null) : IFormSubmissionApplicationService
 {
     private readonly IClock _clock = clock ?? SystemClock.Instance;
+    private readonly SigTokenVerifier _sigTokenVerifier = sigTokenVerifier ?? new SigTokenVerifier();
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
     {
         ["vssbp"] = ("VS", "VSSBP", "Systolic Blood Pressure", "mmHg"),
@@ -536,21 +538,22 @@ public sealed class FormSubmissionApplicationService(
             ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET")
             ?? string.Empty;
 
-        if (!string.IsNullOrWhiteSpace(sigToken) && !string.IsNullOrEmpty(secret))
+        if (string.IsNullOrWhiteSpace(sigToken) || string.IsNullOrEmpty(secret))
         {
-            try
-            {
-                var verifier = new SigTokenVerifier();
-                verifier.VerifyAndConsumeSigToken(
-                    sigToken,
-                    signer.UserId,
-                    new SigTokenBinding("/api/v1/execution/batch-sign-off", "execution.form.approve", batchId),
-                    Encoding.UTF8.GetBytes(secret));
-            }
-            catch (Exception)
-            {
-                return DomainError.Unauthorized(SigTokenVerifier.ReauthenticationRequired, "21 CFR Part 11 mandate: Re-authentication is required.");
-            }
+            return DomainError.Unauthorized(SigTokenVerifier.ReauthenticationRequired, "21 CFR Part 11 mandate: Re-authentication is required.");
+        }
+
+        try
+        {
+            _sigTokenVerifier.VerifyAndConsumeSigToken(
+                sigToken,
+                signer.UserId,
+                new SigTokenBinding("/api/v1/execution/batch-sign-off", "execution.form.approve", batchId),
+                Encoding.UTF8.GetBytes(secret));
+        }
+        catch (Exception)
+        {
+            return DomainError.Unauthorized(SigTokenVerifier.ReauthenticationRequired, "21 CFR Part 11 mandate: Re-authentication is required.");
         }
 
         StudyCode studyCode;
