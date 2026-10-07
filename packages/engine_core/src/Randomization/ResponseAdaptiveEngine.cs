@@ -93,7 +93,10 @@ public static class ResponseAdaptiveEngine
         string checksum = Convert.ToHexString(csBytes).ToLowerInvariant();
 
         // 8. Decision Rationale Construction
-        string phaseName = isBurnInPhase
+        string publicPhaseName = isBurnInPhase ? "Burn-In Phase" : "Adaptive Phase";
+        string decisionRationale = $"Assigned to arm '{assignedArm}' via Bayesian Response-Adaptive Randomization in stratum '{stratumKey}' under {publicPhaseName}.";
+
+        string unblindedPhaseName = isBurnInPhase
             ? $"Burn-In Phase ({totalEvaluatedSubjects}/{config.BurnInThreshold} subjects evaluated)"
             : $"Adaptive Phase (Power c={config.PowerTuning})";
 
@@ -115,8 +118,8 @@ public static class ResponseAdaptiveEngine
             return $"{a.ArmId}: n={a.EvaluatedSubjects}, y={a.ObservedResponses}, Beta({alpha:F1},{beta:F1}), V={v:F4}, p={p:F4} [{status}]";
         });
 
-        string rationale = $"Assigned to arm '{assignedArm}' via Bayesian Response-Adaptive Randomization under {phaseName}. " +
-                          $"Arm Metrics: [{string.Join("; ", armDetails)}].";
+        string unblindedAuditRationale = $"Assigned to arm '{assignedArm}' via Bayesian Response-Adaptive Randomization under {unblindedPhaseName}. " +
+                                        $"Arm Metrics: [{string.Join("; ", armDetails)}].";
 
         return new SubjectAllocationResult(
             StudyId: request.StudyId,
@@ -128,7 +131,8 @@ public static class ResponseAdaptiveEngine
             BlockIndex: null,
             ImbalanceScore: Math.Round(posteriorSuperiority[assignedArm], 4),
             DeterministicChecksum: checksum,
-            DecisionRationale: rationale
+            DecisionRationale: decisionRationale,
+            UnblindedAuditRationale: unblindedAuditRationale
         );
     }
 
@@ -373,28 +377,26 @@ public static class ResponseAdaptiveEngine
             int ia = (int)a;
             int ib = (int)b;
             int n = ia + ib - 1;
-            double total = 0.0;
-            for (int k = ia; k <= n; k++)
+
+            double logTerm = LogGamma(n + 1.0) - LogGamma(ia + 1.0) - LogGamma(ib)
+                           + ia * Math.Log(x) + (ib - 1.0) * Math.Log(1.0 - x);
+            double currentTerm = Math.Exp(logTerm);
+            double total = currentTerm;
+
+            double ratioFactor = x / (1.0 - x);
+            for (int k = ia; k < n; k++)
             {
-                total += Combination(n, k) * Math.Pow(x, k) * Math.Pow(1.0 - x, n - k);
+                currentTerm *= ((double)(n - k) / (k + 1)) * ratioFactor;
+                if (currentTerm <= 0.0)
+                {
+                    break;
+                }
+                total += currentTerm;
             }
             return Math.Clamp(total, 0.0, 1.0);
         }
 
         return BoinEngine.BetaInc(a, b, x);
-    }
-
-    private static double Combination(int n, int k)
-    {
-        if (k < 0 || k > n) return 0;
-        if (k == 0 || k == n) return 1;
-        if (k > n / 2) k = n - k;
-        double result = 1;
-        for (int i = 1; i <= k; i++)
-        {
-            result = result * (n - i + 1) / i;
-        }
-        return result;
     }
 
     public static double BetaPdf(double a, double b, double x)

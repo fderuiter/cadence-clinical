@@ -6,6 +6,11 @@ Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persi
 
 | Table | Entity | Columns |
 | --- | --- | --- |
+| [`knowledge.DelegationRecords`](#knowledgedelegationrecords) | `DelegationRecord` | 15 |
+| [`knowledge.OrgAuditLogs`](#knowledgeorgauditlogs) | `OrgAuditLog` | 9 |
+| [`knowledge.TrainingAssignments`](#knowledgetrainingassignments) | `TrainingAssignment` | 15 |
+| [`knowledge.TrainingCertificates`](#knowledgetrainingcertificates) | `TrainingCertificate` | 9 |
+| [`knowledge.TrainingCurricula`](#knowledgetrainingcurricula) | `TrainingCurriculum` | 9 |
 | [`knowledge.audit_log_entries`](#knowledgeaudit_log_entries) | `AuditLogEntry` | 11 |
 | [`knowledge.knowledge_article_audit_logs`](#knowledgeknowledge_article_audit_logs) | `KnowledgeArticleAuditLog` | 12 |
 | [`knowledge.knowledge_article_versions`](#knowledgeknowledge_article_versions) | `KnowledgeArticleVersion` | 11 |
@@ -13,6 +18,98 @@ Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persi
 | [`knowledge.knowledge_categories`](#knowledgeknowledge_categories) | `KnowledgeCategory` | 11 |
 | [`knowledge.knowledge_contextual_help_mappings`](#knowledgeknowledge_contextual_help_mappings) | `ContextualHelpMapping` | 11 |
 | [`knowledge.protocol_knowledge_chunks`](#knowledgeprotocol_knowledge_chunks) | `ProtocolKnowledgeChunk` | 17 |
+
+## knowledge.DelegationRecords
+
+Entity: `DelegationRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `text` | no |  | PK |
+| `BatchTransactionId` | `text` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `Duties` | `text` | no |  |  |
+| `PiApprovedAt` | `timestamp with time zone` | yes |  |  |
+| `PiSignatureHash` | `text` | yes |  |  |
+| `Role` | `text` | no |  |  |
+| `SignedOff` | `boolean` | no |  |  |
+| `SiteId` | `text` | no |  |  |
+| `StaffName` | `text` | no |  |  |
+| `StaffUserId` | `text` | no |  |  |
+| `Status` | `text` | no |  |  |
+| `StudyId` | `text` | no |  |  |
+| `TaskCode` | `text` | no |  |  |
+
+## knowledge.OrgAuditLogs
+
+Entity: `OrgAuditLog`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `text` | no |  | PK |
+| `Action` | `text` | no |  |  |
+| `ActorId` | `text` | no |  |  |
+| `ActorRole` | `text` | no |  |  |
+| `BatchTransactionId` | `text` | yes |  |  |
+| `Details` | `text` | no |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `RecordId` | `text` | yes |  |  |
+| `Timestamp` | `timestamp with time zone` | no |  |  |
+
+## knowledge.TrainingAssignments
+
+Entity: `TrainingAssignment`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `text` | no |  | PK |
+| `BatchTransactionId` | `text` | yes |  |  |
+| `CompletedAt` | `timestamp with time zone` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `CurriculumId` | `text` | no |  |  |
+| `QuizScore` | `double precision` | yes |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `SiteId` | `text` | no |  |  |
+| `Status` | `text` | no |  |  |
+| `StudyId` | `text` | no |  |  |
+| `TimeSpentSeconds` | `integer` | no |  |  |
+| `UserId` | `text` | no |  |  |
+| `UserName` | `text` | no |  |  |
+| `UserRole` | `text` | no |  |  |
+
+## knowledge.TrainingCertificates
+
+Entity: `TrainingCertificate`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `text` | no |  | PK |
+| `AssignmentId` | `text` | no |  |  |
+| `BatchTransactionId` | `text` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `EtmfArtifactId` | `text` | no |  |  |
+| `Meaning` | `text` | no |  |  |
+| `Sha256Seal` | `text` | no |  |  |
+| `SignerName` | `text` | no |  |  |
+| `SignerRole` | `text` | no |  |  |
+
+## knowledge.TrainingCurricula
+
+Entity: `TrainingCurriculum`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `text` | no |  | PK |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `text` | no |  |  |
+| `Description` | `text` | yes |  |  |
+| `IsActive` | `boolean` | no |  |  |
+| `ProtocolVersion` | `text` | no |  |  |
+| `ReasonForChange` | `text` | no |  |  |
+| `StudyId` | `text` | no |  |  |
+| `Title` | `text` | no |  |  |
 
 ## knowledge.audit_log_entries
 

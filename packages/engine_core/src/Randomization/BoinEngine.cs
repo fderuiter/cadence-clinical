@@ -26,19 +26,6 @@ public static class BoinEngine
         return (Math.Round(lambdaE, 4), Math.Round(lambdaD, 4));
     }
 
-    private static double Combination(int n, int k)
-    {
-        if (k < 0 || k > n) return 0;
-        if (k == 0 || k == n) return 1;
-        if (k > n / 2) k = n - k;
-        double result = 1;
-        for (int i = 1; i <= k; i++)
-        {
-            result = result * (n - i + 1) / i;
-        }
-        return result;
-    }
-
     public static double BetaInc(double a, double b, double x)
     {
         if (x <= 0.0) return 0.0;
@@ -49,12 +36,23 @@ public static class BoinEngine
             int ia = (int)a;
             int ib = (int)b;
             int n = ia + ib - 1;
-            double total = 0.0;
-            for (int k = ia; k <= n; k++)
+
+            double logTerm = LogGamma(n + 1.0) - LogGamma(ia + 1.0) - LogGamma(ib)
+                           + ia * Math.Log(x) + (ib - 1.0) * Math.Log(1.0 - x);
+            double currentTerm = Math.Exp(logTerm);
+            double total = currentTerm;
+
+            double ratioFactor = x / (1.0 - x);
+            for (int k = ia; k < n; k++)
             {
-                total += Combination(n, k) * Math.Pow(x, k) * Math.Pow(1.0 - x, n - k);
+                currentTerm *= ((double)(n - k) / (k + 1)) * ratioFactor;
+                if (currentTerm <= 0.0)
+                {
+                    break;
+                }
+                total += currentTerm;
             }
-            return Math.Round(total, 6);
+            return Math.Round(Math.Clamp(total, 0.0, 1.0), 6);
         }
 
         double lbeta = LogGamma(a) + LogGamma(b) - LogGamma(a + b);

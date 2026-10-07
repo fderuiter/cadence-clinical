@@ -100,6 +100,10 @@ out so the report only changes when results change; they are in the TRX files un
 | `SigTokenVerifier_ReusedTokenForEconsent_FailsClosedWithReauthenticationRequired` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | 🟢 PASSED |
 | `SigTokenVerifier_TokenForDifferentActionUrl_FailsClosedWithReauthenticationRequired` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | 🟢 PASSED |
 | `SigTokenVerifier_ValidTokenForEconsent_VerifiesAndConsumesSuccessfully` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | 🟢 PASSED |
+| `Consume_EConsentCompleted_FilesICFDocumentInEtmf` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | 🟢 PASSED |
+| `Consume_EConsentCompleted_IsIdempotent` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | 🟢 PASSED |
+| `Consume_EtmfDocumentFilingRequested_FilesDocument` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | 🟢 PASSED |
+| `Consume_EtmfDocumentFilingRequested_IsIdempotent` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
@@ -166,6 +170,7 @@ out so the report only changes when results change; they are in the TRX files un
 | `SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SaveChanges_Synchronously_WithAnAuditedChange_FailsInsteadOfSkippingTheAudit` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `CreateAsync_WhenQueryRaised_PublishesClinicalQueryRaisedEvent` | `Cadence.UnitTests.Execution.Queries.ClinicalQueryApplicationServiceOutboxTests` | PRD-SYS-001 | 🟢 PASSED |
 | `RunAs_OverridesTheAmbientCaller` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
 | `RunAs_WithNoHttpContext_AttributesToTheServiceAccount` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ServiceAccount_WithoutANamedSvcId_IsRejected` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
@@ -227,7 +232,8 @@ out so the report only changes when results change; they are in the TRX files un
 | `RegisterAndListEndpoints_SuccessfullyManagesEhrEndpoints` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
 | `RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
 | `DatabaseLockToken_IssueAndRevoke_UpdatesTokenStateAndAuditTrail` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ExecuteInSandbox_ExecutesProgramAndGeneratesArtifactsAndManifestDigest` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ExecuteInSandbox_MockedDriver_ExecutesProgramAndGeneratesArtifactsAndManifestDigest` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
+| `ExecuteInSandbox_WhenContainerUnavailable_FailsClosedWithNonZeroExitCodeAndErrorOutput` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
 | `ExecutionManifest_VerifySeal_ReturnsValidWhenUntampered` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
 | `ValidateLockfile_TamperedDigest_ReturnsTamperedStatus` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
 | `ValidateLockfile_UnqualifiedPackageWithStrictQualification_RejectsPackage` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
@@ -245,6 +251,8 @@ out so the report only changes when results change; they are in the TRX files un
 | `Map_SystolicBloodPressure_WritesOriginalAndStandardResults` | `Cadence.UnitTests.Kernel.Standards.MappingSpecificationTests` | PRD-CDR-002 | 🟢 PASSED |
 | `LedgerGeneratedHistoriesResolveExactlyWhenTheLatestRunMissesTheFinding` | `Cadence.UnitTests.Kernel.Validation.ValidationFindingTests` | PRD-CRF-004 | 🟢 PASSED |
 | `LedgerRerunWithoutDetectionResolvesWithTheRunAsEvidence` | `Cadence.UnitTests.Kernel.Validation.ValidationFindingTests` | PRD-CRF-004 | 🟢 PASSED |
+| `Consume_DuplicateClinicalQueryRaised_IsIdempotent` | `Cadence.UnitTests.Notifications.Consumers.ClinicalQueryRaisedConsumerTests` | PRD-SYS-001 | 🟢 PASSED |
+| `Consume_ValidClinicalQueryRaised_CreatesNotificationRecord` | `Cadence.UnitTests.Notifications.Consumers.ClinicalQueryRaisedConsumerTests` | PRD-SYS-001 | 🟢 PASSED |
 | `PreTool_RefusesDestructiveCommands` | `Cadence.UnitTests.Packages.AgentHookGuardTests` | PRD-SYS-053 | 🟢 PASSED |
 | `PreTool_RefusesPayloads` | `Cadence.UnitTests.Packages.AgentHookGuardTests` | PRD-SYS-053 | 🟢 PASSED |
 | `ForwardedHttps_FromATrustedProxyOnly_GetsHsts` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | 🟢 PASSED |

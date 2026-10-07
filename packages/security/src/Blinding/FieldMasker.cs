@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json.Serialization;
 
 using Cadence.Security.Rbac;
 
@@ -23,7 +24,8 @@ public static class FieldMasker
         "encrypted_allocation",
         "stratum_key",
         "randomization_id",
-        "encrypted_sequence"
+        "encrypted_sequence",
+        "unblinded_audit_rationale"
     };
 
     public static IReadOnlySet<string> UNMASKED_SUPPLY_FIELDS { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -58,6 +60,7 @@ public static class FieldMasker
         ["stratum_key"] = val => val != null ? "MASKED" : val,
         ["randomization_id"] = val => val != null ? "MASKED" : val,
         ["encrypted_sequence"] = val => val != null ? "MASKED" : val,
+        ["unblinded_audit_rationale"] = val => val != null ? "MASKED" : val,
     };
 
     public static object? MaskPayload(object? payload, Principal? principal)
@@ -70,7 +73,9 @@ public static class FieldMasker
         {
             foreach (var r in principal.Roles)
             {
-                if (ROLE_UNMASKED_FIELDS.TryGetValue(r, out var fields))
+                string normRole = RoleNormalization.NormalizeRole(r);
+                if (ROLE_UNMASKED_FIELDS.TryGetValue(normRole, out var fields) ||
+                    ROLE_UNMASKED_FIELDS.TryGetValue(r, out fields))
                 {
                     foreach (var f in fields) unmaskedFields.Add(f);
                 }
@@ -130,15 +135,19 @@ public static class FieldMasker
             if (!prop.CanRead) continue;
             string propName = prop.Name;
             string propLower = propName.ToLowerInvariant();
+            var jsonAttr = prop.GetCustomAttribute<JsonPropertyNameAttribute>();
+            string jsonNameLower = jsonAttr?.Name.ToLowerInvariant() ?? propLower;
+
             object? val = prop.GetValue(target);
 
             var blindAttr = prop.GetCustomAttribute<BlindedFieldAttribute>();
+            bool isUnmasked = unmaskedFields.Contains(propLower) || unmaskedFields.Contains(jsonNameLower);
 
-            if (blindAttr != null && !unmaskedFields.Contains(propLower))
+            if (blindAttr != null && !isUnmasked)
             {
                 maskedDict[propName] = val != null ? blindAttr.MaskedValue : null;
             }
-            else if (MASKING_RULES.TryGetValue(propLower, out var maskFunc) && !unmaskedFields.Contains(propLower))
+            else if ((MASKING_RULES.TryGetValue(jsonNameLower, out var maskFunc) || MASKING_RULES.TryGetValue(propLower, out maskFunc)) && !isUnmasked)
             {
                 maskedDict[propName] = maskFunc(val);
             }

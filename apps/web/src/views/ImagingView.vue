@@ -71,6 +71,17 @@
             <option value="LUGANO_2014">Lugano 2014 (Lymphoma)</option>
           </select>
         </div>
+
+        <!-- Batch Ingest Button -->
+        <div class="selector-box">
+          <button
+            type="button"
+            class="btn-batch-upload"
+            @click="isBatchModalOpen = true"
+          >
+            📁 Batch Ingest DICOM Folder
+          </button>
+        </div>
       </div>
     </div>
 
@@ -226,6 +237,15 @@
         </table>
       </div>
     </section>
+
+    <!-- Batch Ingestion Dropzone Modal -->
+    <BatchDicomDropzoneModal
+      :is-open="isBatchModalOpen"
+      :subject-id="selectedSubjectId"
+      :timepoint="selectedTimepoint"
+      @close="isBatchModalOpen = false"
+      @ingested="handleBatchIngested"
+    />
   </div>
 </template>
 
@@ -234,7 +254,9 @@ import { ref, computed } from "vue";
 import DicomMprViewer from "../components/imaging/DicomMprViewer.vue";
 import OncologyCalipers from "../components/imaging/OncologyCalipers.vue";
 import DualReaderAdjudicationPanel from "../components/imaging/DualReaderAdjudicationPanel.vue";
+import BatchDicomDropzoneModal from "../components/imaging/BatchDicomDropzoneModal.vue";
 
+const isBatchModalOpen = ref(false);
 const selectedSubjectId = ref("SUBJ-ONC-001");
 const selectedTimepoint = ref("CYCLE_2_DAY_1");
 const selectedCriteria = ref("RECIST_1_1");
@@ -406,6 +428,38 @@ function handleAdjudicationCompleted(_event) {
     created_at:
       new Date().toISOString().replace("T", " ").substring(0, 19) + " UTC",
   });
+}
+
+function handleBatchIngested(result) {
+  if (result && result.seriesSummary && result.seriesSummary.length > 0) {
+    result.seriesSummary.forEach((s) => {
+      const seriesUid = s.anonymizedSeriesUid || s.AnonymizedSeriesUid || `1.2.840.113619.2.${Date.now()}`;
+      const modality = s.modality || s.Modality || "CT";
+      const sliceCount = s.instanceCount || s.InstanceCount || result.ingestedSliceCount || 120;
+
+      const existing = availableSeries.value.find((a) => a.seriesUid === seriesUid);
+      if (existing) {
+        existing.instancesCount = sliceCount;
+      } else {
+        availableSeries.value.unshift({
+          seriesUid: seriesUid,
+          description: `Batch Ingested ${modality} Series (${selectedTimepoint.value})`,
+          modality: modality,
+          instancesCount: sliceCount,
+        });
+      }
+      activeSeriesUid.value = seriesUid;
+    });
+  } else if (result) {
+    const newUid = result.anonymizedStudyUid ? `${result.anonymizedStudyUid}.1` : `1.2.840.113619.2.${Date.now()}`;
+    availableSeries.value.unshift({
+      seriesUid: newUid,
+      description: `Batch Ingested CT Series (${selectedTimepoint.value})`,
+      modality: "CT",
+      instancesCount: result.ingestedSliceCount || 120,
+    });
+    activeSeriesUid.value = newUid;
+  }
 }
 </script>
 

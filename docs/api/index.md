@@ -14,10 +14,10 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [etmf](etmf.md) | 10 |
 | [execution](execution.md) | 63 |
 | [fileshare](fileshare.md) | 2 |
-| [imaging](imaging.md) | 9 |
+| [imaging](imaging.md) | 10 |
 | [interop](interop.md) | 28 |
 | [kernel](kernel.md) | 18 |
-| [knowledge](knowledge.md) | 2 |
+| [knowledge](knowledge.md) | 9 |
 | [notifications](notifications.md) | 3 |
 | [org](org.md) | 2 |
 | [payments](payments.md) | 23 |

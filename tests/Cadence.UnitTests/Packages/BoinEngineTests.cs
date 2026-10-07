@@ -402,4 +402,26 @@ public class BoinEngineTests
         rec.CurrentDoseUnit.Should().Be("mg/kg");
         rec.RecommendedDoseAmount.Should().Be(80.0);
     }
+
+    [Fact]
+    public void BetaInc_LargeSample_N1030_ReturnsValidProbabilityWithoutOverflow()
+    {
+        // n = a + b - 1 = 520 + 520 - 1 = 1039 >= 1030
+        double result = BoinEngine.BetaInc(520, 520, 0.50);
+
+        double.IsNaN(result).Should().BeFalse();
+        double.IsInfinity(result).Should().BeFalse();
+        result.Should().BeApproximately(0.50, 1e-4);
+    }
+
+    [Fact]
+    public void CalculatePosteriorProbToxic_LargeCohort_N1030_ReturnsValidProbability()
+    {
+        // evaluatedSubjects = 1200, observedDlts = 360 => a = 361, b = 841, n = 1201 >= 1030
+        double prob = BoinEngine.CalculatePosteriorProbToxic(360, 1200, 0.30);
+
+        double.IsNaN(prob).Should().BeFalse();
+        double.IsInfinity(prob).Should().BeFalse();
+        prob.Should().BeInRange(0.0, 1.0);
+    }
 }
