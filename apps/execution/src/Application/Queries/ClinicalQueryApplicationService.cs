@@ -10,9 +10,12 @@ using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Queries.Errors;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Contracts;
 using Cadence.Core.Domain;
 using Cadence.Kernel;
 using Cadence.Kernel.Time;
+
+using MassTransit;
 
 namespace Cadence.Apps.Execution.Application.Queries;
 
@@ -25,7 +28,8 @@ namespace Cadence.Apps.Execution.Application.Queries;
 public sealed class ClinicalQueryApplicationService(
     IClinicalQueryRepository queryRepository,
     ICurrentAuditContextAccessor auditContextAccessor,
-    IClock clock) : IClinicalQueryApplicationService
+    IClock clock,
+    IPublishEndpoint? publishEndpoint = null) : IClinicalQueryApplicationService
 {
     public async Task<Result<ClinicalQueryResponse>> CreateAsync(
         QueryCreateRequest request,
@@ -149,6 +153,24 @@ public sealed class ClinicalQueryApplicationService(
         query.ReasonForChange = auditContextAccessor.ChangeReason;
 
         await queryRepository.AddAsync(query, cancellationToken);
+
+        if (publishEndpoint is not null)
+        {
+            var raisedAt = query.CreatedAt == default ? clock.UtcNow : new DateTimeOffset(DateTime.SpecifyKind(query.CreatedAt, DateTimeKind.Utc));
+            await publishEndpoint.Publish(new ClinicalQueryRaised(
+                QueryId: query.Id.ToString(),
+                StudyId: query.StudyId.Value,
+                SubjectId: query.SubjectId.Value,
+                SiteId: query.SiteId?.Value,
+                TestCode: query.TestCode.Value,
+                Explanation: query.Explanation ?? request.Explanation,
+                RaisedBy: string.IsNullOrWhiteSpace(query.CreatedBy) ? auditContextAccessor.UserId : query.CreatedBy,
+                RaisedAt: raisedAt,
+                QueryType: query.QueryType,
+                Priority: query.Priority
+            ), cancellationToken);
+        }
+
         await queryRepository.SaveChangesAsync(cancellationToken);
 
         return MapToResponse(query);
