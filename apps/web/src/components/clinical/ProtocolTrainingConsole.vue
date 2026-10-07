@@ -147,6 +147,20 @@
         >
           📜 21 CFR Part 11 Certificate
         </button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'batch' }"
+          @click="activeTab = 'batch'"
+        >
+          👥 Batch Assignments
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeTab === 'delegations' }"
+          @click="loadDelegations(); activeTab = 'delegations'"
+        >
+          ✍️ Delegation Bulk Sign-Off
+        </button>
       </div>
 
       <!-- TAB 1: MODULES -->
@@ -444,6 +458,176 @@
           </div>
         </div>
       </div>
+
+      <!-- TAB 4: BATCH ASSIGNMENT WORKSPACE -->
+      <div v-if="activeTab === 'batch'" class="tab-content batch-layout">
+        <div class="batch-card card">
+          <div class="batch-header">
+            <h3>Multi-Site &amp; Role Batch Curriculum Assignment</h3>
+            <p class="section-desc">
+              Select target clinical trial sites and roles to batch-assign training curricula. Bypasses duplicate active assignments automatically with a 200 target personnel limit.
+            </p>
+          </div>
+
+          <div class="batch-filter-grid">
+            <div class="filter-col">
+              <label class="filter-title">Target Sites (Multi-Select):</label>
+              <div class="checkbox-group">
+                <label v-for="site in availableSites" :key="site" class="checkbox-label">
+                  <input type="checkbox" :value="site" v-model="batchForm.selectedSites" />
+                  <span>{{ site }}</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="filter-col">
+              <label class="filter-title">Clinical Roles (Multi-Select):</label>
+              <div class="checkbox-group">
+                <label v-for="role in availableRoles" :key="role" class="checkbox-label">
+                  <input type="checkbox" :value="role" v-model="batchForm.selectedRoles" />
+                  <span>{{ role }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="batch-preview-bar">
+            <div class="preview-info">
+              <span>Target Scope: <strong>{{ computedBatchCount }} personnel</strong> ({{ batchForm.selectedSites.length }} sites &times; {{ batchForm.selectedRoles.length }} roles)</span>
+              <span v-if="computedBatchCount > 200" class="badge badge-error">⚠️ Exceeds 200 Synchronous Limit</span>
+            </div>
+            <button
+              class="btn btn-primary"
+              :disabled="computedBatchCount === 0 || computedBatchCount > 200 || submittingBatch"
+              @click="showBatchModal = true"
+            >
+              <span>Execute Batch Assignment 🚀</span>
+            </button>
+          </div>
+
+          <!-- Batch Execution Result Manifest -->
+          <div v-if="batchResult" class="batch-result-card">
+            <div class="result-header">
+              <h4>Batch Execution Manifest</h4>
+              <span class="badge badge-gxp">Tx ID: {{ batchResult.batch_transaction_id }}</span>
+            </div>
+            <div class="result-stats">
+              <div class="stat-pill success-pill">Assigned: {{ batchResult.total_assigned }}</div>
+              <div class="stat-pill warning-pill">Skipped Duplicates: {{ batchResult.total_skipped }}</div>
+              <div class="stat-pill info-pill">Total Eligible: {{ batchResult.total_eligible }}</div>
+            </div>
+            <div v-if="batchResult.skipped_items &amp;&amp; batchResult.skipped_items.length > 0" class="skipped-table-wrapper">
+              <h5>Skipped Duplicate Assignments</h5>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>Site</th>
+                    <th>Role</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(item, idx) in batchResult.skipped_items" :key="idx">
+                    <td>{{ item.user_id }}</td>
+                    <td>{{ item.site_id }}</td>
+                    <td>{{ item.user_role }}</td>
+                    <td><span class="badge badge-warning">{{ item.reason }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: DELEGATION BULK SIGN-OFF WORKSPACE -->
+      <div v-if="activeTab === 'delegations'" class="tab-content delegations-layout">
+        <div class="delegations-card card">
+          <div class="delegation-header">
+            <div>
+              <h3>21 CFR Part 11 Principal Investigator Delegation Log Sign-Off</h3>
+              <p class="section-desc">
+                Review pending site staff delegation duties and execute legally binding electronic bulk signatures with digital seals (SHA-256) routed to eTMF Zone 5 (Artifact 05.02.04).
+              </p>
+            </div>
+            <button class="btn btn-secondary btn-sm" @click="loadDelegations">
+              🔄 Refresh Log
+            </button>
+          </div>
+
+          <div class="delegations-table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px">
+                    <input type="checkbox" :checked="isAllDelegationsSelected" @change="toggleSelectAllDelegations" />
+                  </th>
+                  <th>Staff Member</th>
+                  <th>Role</th>
+                  <th>Site ID</th>
+                  <th>Task &amp; Duties</th>
+                  <th>Status</th>
+                  <th>Digital Seal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="del in delegations" :key="del.id">
+                  <td>
+                    <input
+                      type="checkbox"
+                      :value="del.id"
+                      v-model="selectedDelegationIds"
+                      :disabled="del.status === 'COMPLETED'"
+                    />
+                  </td>
+                  <td><strong>{{ del.staff_name }}</strong><br /><small class="text-muted">{{ del.staff_user_id }}</small></td>
+                  <td><span class="badge badge-role">{{ del.role }}</span></td>
+                  <td>{{ del.site_id }}</td>
+                  <td><strong>{{ del.task_code }}</strong><br /><small>{{ del.duties }}</small></td>
+                  <td>
+                    <span class="badge" :class="del.status === 'COMPLETED' ? 'badge-success' : 'badge-warning'">
+                      {{ del.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <code v-if="del.pi_signature_hash" class="seal-hash">{{ del.pi_signature_hash.substring(0, 12) }}...</code>
+                    <span v-else class="text-muted">Unsigned</span>
+                  </td>
+                </tr>
+                <tr v-if="delegations.length === 0">
+                  <td colspan="7" class="text-center">No delegation records found.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="delegation-actions-bar">
+            <span>Selected for Sign-Off: <strong>{{ selectedDelegationIds.length }} records</strong></span>
+            <button
+              class="btn btn-success"
+              :disabled="selectedDelegationIds.length === 0"
+              @click="showBulkSignModal = true"
+            >
+              ✍️ Execute Part 11 Bulk Signature
+            </button>
+          </div>
+
+          <!-- Last Bulk Sign Response Manifest -->
+          <div v-if="bulkSignResult" class="bulk-sign-result alert-banner success-banner">
+            <div class="banner-content">
+              <span class="banner-icon">✅</span>
+              <div>
+                <strong>Bulk Delegation Sign-Off Executed Successfully</strong><br />
+                <small>
+                  Batch Tx: {{ bulkSignResult.batch_transaction_id }} | Signed Records: {{ bulkSignResult.total_signed }} | eTMF Artifact: Zone 5 ({{ bulkSignResult.etmf_artifact_id }})<br />
+                  SHA-256 Digital Seal: <code>{{ bulkSignResult.sha256_seal }}</code>
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 21 CFR Part 11 Electronic Signature Modal -->
@@ -507,6 +691,100 @@
             @click="handleSignOff"
           >
             <span v-if="signing">Signing &amp; Sealing...</span>
+            <span v-else>Confirm &amp; Execute Signature ✍️</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Assignment Modal -->
+    <div v-if="showBatchModal" class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Confirm Batch Curriculum Assignment</h3>
+          <button class="modal-close-btn" @click="showBatchModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">
+            You are about to assign curriculum <strong>{{ activeCurriculum?.title || 'Protocol Training' }}</strong> across <strong>{{ batchForm.selectedSites.length }} sites</strong> and <strong>{{ batchForm.selectedRoles.length }} roles</strong> ({{ computedBatchCount }} target personnel).
+          </p>
+          <div class="form-group">
+            <label for="batch-reason">Reason for Change / Audit Note:</label>
+            <input
+              id="batch-reason"
+              v-model="batchForm.reasonForChange"
+              type="text"
+              class="text-input"
+              placeholder="e.g. Protocol Amendment V3.0 Deployment"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showBatchModal = false">Cancel</button>
+          <button class="btn btn-primary" :disabled="submittingBatch" @click="handleExecuteBatchAssign">
+            <span v-if="submittingBatch">Deploying Batch...</span>
+            <span v-else>Confirm &amp; Deploy Batch 🚀</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Delegation Sign-Off Modal -->
+    <div v-if="showBulkSignModal" class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>21 CFR Part 11 Bulk Delegation Log Sign-Off</h3>
+          <button class="modal-close-btn" @click="showBulkSignModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">
+            Executing bulk electronic sign-off for <strong>{{ selectedDelegationIds.length }} pending delegation records</strong>. This operation generates an immutable SHA-256 digital seal and routes signed records to eTMF Zone 5 (Artifact 05.02.04).
+          </p>
+          <div class="form-group">
+            <label for="bulk-signer-name">Signer Printed Name:</label>
+            <input
+              id="bulk-signer-name"
+              v-model="bulkSignForm.signerName"
+              type="text"
+              class="text-input"
+              placeholder="Dr. Eleanor Vance, MD"
+            />
+          </div>
+          <div class="form-group">
+            <label for="bulk-signer-role">Clinical Authority Role:</label>
+            <input
+              id="bulk-signer-role"
+              v-model="bulkSignForm.signerRole"
+              type="text"
+              class="text-input"
+              placeholder="Principal Investigator"
+            />
+          </div>
+          <div class="form-group">
+            <label for="bulk-password">21 CFR Part 11 Password Credential:</label>
+            <input
+              id="bulk-password"
+              v-model="bulkSignForm.password"
+              type="password"
+              class="text-input"
+              placeholder="Enter password to verify identity"
+            />
+          </div>
+          <div class="form-group">
+            <label>Legal Attestation Statement:</label>
+            <div class="statement-box">
+              "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2)."
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showBulkSignModal = false">Cancel</button>
+          <button
+            class="btn btn-success"
+            :disabled="submittingBulkSign || !bulkSignForm.password || !bulkSignForm.signerName"
+            @click="handleExecuteBulkSignOff"
+          >
+            <span v-if="submittingBulkSign">Executing Part 11 Signature...</span>
             <span v-else>Confirm &amp; Execute Signature ✍️</span>
           </button>
         </div>
@@ -747,6 +1025,118 @@ onMounted(() => {
   refreshData();
   startTimer();
 });
+
+// Batch Curriculum Assignment State
+const availableSites = ref(["SITE-101", "SITE-102", "SITE-103", "SITE-104", "SITE-105"]);
+const availableRoles = ref([
+  "Principal Investigator",
+  "Sub-Investigator",
+  "Clinical Research Coordinator",
+  "Study Nurse",
+]);
+const batchForm = ref({
+  selectedSites: ["SITE-101", "SITE-102"],
+  selectedRoles: ["Principal Investigator", "Sub-Investigator", "Clinical Research Coordinator"],
+  reasonForChange: "Protocol Amendment V3.0 Delta Deployment",
+});
+const showBatchModal = ref(false);
+const submittingBatch = ref(false);
+const batchResult = ref(null);
+
+const computedBatchCount = computed(() => {
+  return batchForm.value.selectedSites.length * batchForm.value.selectedRoles.length;
+});
+
+async function handleExecuteBatchAssign() {
+  submittingBatch.value = true;
+  try {
+    const curriculumId = activeCurriculum.value?.id || "curriculum-v3-delta";
+    const studyId = activeCurriculum.value?.study_id || "CARDIO-2026";
+    const res = await trainingApi.batchAssignCurriculum({
+      curriculum_id: curriculumId,
+      study_id: studyId,
+      site_ids: batchForm.value.selectedSites,
+      roles: batchForm.value.selectedRoles,
+      reason_for_change: batchForm.value.reasonForChange,
+    });
+    batchResult.value = res;
+    showBatchModal.value = false;
+    await refreshData();
+  } catch (err) {
+    console.error("Batch assignment error:", err);
+  } finally {
+    submittingBatch.value = false;
+  }
+}
+
+// Bulk Delegation Log Sign-Off State
+const delegations = ref([]);
+const selectedDelegationIds = ref([]);
+const loadingDelegations = ref(false);
+const showBulkSignModal = ref(false);
+const submittingBulkSign = ref(false);
+const bulkSignResult = ref(null);
+const bulkSignForm = ref({
+  signerName: authStore.identity?.username || "Dr. Eleanor Vance",
+  signerRole: authStore.activeRole || "Principal Investigator",
+  password: "",
+  reasonForChange: "21 CFR Part 11 Principal Investigator bulk delegation sign-off",
+});
+
+const isAllDelegationsSelected = computed(() => {
+  const pending = delegations.value.filter((d) => d.status !== "COMPLETED");
+  return pending.length > 0 && selectedDelegationIds.value.length === pending.length;
+});
+
+function toggleSelectAllDelegations() {
+  const pending = delegations.value.filter((d) => d.status !== "COMPLETED");
+  if (selectedDelegationIds.value.length === pending.length) {
+    selectedDelegationIds.value = [];
+  } else {
+    selectedDelegationIds.value = pending.map((d) => d.id);
+  }
+}
+
+async function loadDelegations() {
+  loadingDelegations.value = true;
+  try {
+    const studyId = activeCurriculum.value?.study_id || "CARDIO-2026";
+    const res = await trainingApi.listDelegations({ study_id: studyId });
+    delegations.value = res;
+  } catch (err) {
+    console.error("Failed to load delegations:", err);
+  } finally {
+    loadingDelegations.value = false;
+  }
+}
+
+async function handleExecuteBulkSignOff() {
+  if (selectedDelegationIds.value.length === 0) return;
+  submittingBulkSign.value = true;
+  try {
+    const res = await trainingApi.bulkSignOffDelegations({
+      delegation_ids: selectedDelegationIds.value,
+      study_id: activeCurriculum.value?.study_id || "CARDIO-2026",
+      site_id: "SITE-101",
+      signature_payload: {
+        signer_name: bulkSignForm.value.signerName,
+        signer_role: bulkSignForm.value.signerRole,
+        meaning:
+          "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2).",
+        password: bulkSignForm.value.password,
+        reason_for_change: bulkSignForm.value.reasonForChange,
+      },
+    });
+    bulkSignResult.value = res;
+    showBulkSignModal.value = false;
+    selectedDelegationIds.value = [];
+    await loadDelegations();
+  } catch (err) {
+    console.error("Bulk sign-off error:", err);
+  } finally {
+    submittingBulkSign.value = false;
+  }
+}
 
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval);
@@ -1336,5 +1726,155 @@ onUnmounted(() => {
 .btn-retry:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Batch & Delegation Layouts */
+.batch-layout, .delegations-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.batch-card, .delegations-card {
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section-desc {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.batch-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.filter-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #334155;
+  cursor: pointer;
+}
+
+.batch-preview-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 12px 16px;
+  border-radius: 6px;
+}
+
+.preview-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: #1e3a8a;
+}
+
+.badge-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.batch-result-card {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  padding: 16px;
+  border-radius: 6px;
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.result-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.stat-pill {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.success-pill { background: #dcfce7; color: #166534; }
+.warning-pill { background: #fef3c7; color: #92400e; }
+.info-pill { background: #e0f2fe; color: #075985; }
+
+.skipped-table-wrapper {
+  margin-top: 12px;
+}
+
+.delegation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.delegation-actions-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.seal-hash {
+  background: #f1f5f9;
+  color: #0284c7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+.badge-role {
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.75rem;
 }
 </style>

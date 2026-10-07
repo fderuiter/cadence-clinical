@@ -876,6 +876,7 @@ MASKING_RULES: dict[str, Callable[[Any], Any]] = {
     "stratum_key": lambda val: "MASKED" if val else val,
     "randomization_id": lambda val: "MASKED" if val else val,
     "encrypted_sequence": lambda val: "MASKED" if val else val,
+    "unblinded_audit_rationale": lambda val: "MASKED" if val is not None else val,
 }
 
 # Canonical set of site-scoped trial personas
@@ -899,6 +900,7 @@ UNMASKED_ALLOCATION_FIELDS: set[str] = {
     "stratum_key",
     "randomization_id",
     "encrypted_sequence",
+    "unblinded_audit_rationale",
 }
 
 UNMASKED_SUPPLY_FIELDS: set[str] = {

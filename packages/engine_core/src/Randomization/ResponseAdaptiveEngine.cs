@@ -93,7 +93,10 @@ public static class ResponseAdaptiveEngine
         string checksum = Convert.ToHexString(csBytes).ToLowerInvariant();
 
         // 8. Decision Rationale Construction
-        string phaseName = isBurnInPhase
+        string publicPhaseName = isBurnInPhase ? "Burn-In Phase" : "Adaptive Phase";
+        string decisionRationale = $"Assigned to arm '{assignedArm}' via Bayesian Response-Adaptive Randomization in stratum '{stratumKey}' under {publicPhaseName}.";
+
+        string unblindedPhaseName = isBurnInPhase
             ? $"Burn-In Phase ({totalEvaluatedSubjects}/{config.BurnInThreshold} subjects evaluated)"
             : $"Adaptive Phase (Power c={config.PowerTuning})";
 
@@ -115,8 +118,8 @@ public static class ResponseAdaptiveEngine
             return $"{a.ArmId}: n={a.EvaluatedSubjects}, y={a.ObservedResponses}, Beta({alpha:F1},{beta:F1}), V={v:F4}, p={p:F4} [{status}]";
         });
 
-        string rationale = $"Assigned to arm '{assignedArm}' via Bayesian Response-Adaptive Randomization under {phaseName}. " +
-                          $"Arm Metrics: [{string.Join("; ", armDetails)}].";
+        string unblindedAuditRationale = $"Assigned to arm '{assignedArm}' via Bayesian Response-Adaptive Randomization under {unblindedPhaseName}. " +
+                                        $"Arm Metrics: [{string.Join("; ", armDetails)}].";
 
         return new SubjectAllocationResult(
             StudyId: request.StudyId,
@@ -128,7 +131,8 @@ public static class ResponseAdaptiveEngine
             BlockIndex: null,
             ImbalanceScore: Math.Round(posteriorSuperiority[assignedArm], 4),
             DeterministicChecksum: checksum,
-            DecisionRationale: rationale
+            DecisionRationale: decisionRationale,
+            UnblindedAuditRationale: unblindedAuditRationale
         );
     }
 
