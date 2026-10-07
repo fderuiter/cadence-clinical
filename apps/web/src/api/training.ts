@@ -21,6 +21,63 @@ export interface GatingStatusQueryParams {
   user_role?: string | null;
 }
 
+export interface BatchAssignCurriculumPayload {
+  curriculum_id: string;
+  study_id: string;
+  site_ids?: string[];
+  roles?: string[];
+  target_personnel_ids?: string[];
+  reason_for_change?: string;
+}
+
+export interface BatchAssignmentResponse {
+  batch_transaction_id: string;
+  curriculum_id: string;
+  study_id: string;
+  total_eligible: number;
+  total_assigned: number;
+  total_skipped: number;
+  assignments: Array<any>;
+  skipped_items: Array<{
+    user_id: string;
+    site_id: string;
+    user_role: string;
+    reason: string;
+  }>;
+  executed_at: string;
+}
+
+export interface DelegationQueryParams {
+  study_id?: string;
+  site_id?: string;
+  status?: string;
+}
+
+export interface BulkDelegationSignOffPayload {
+  delegation_ids: string[];
+  study_id?: string;
+  site_id?: string;
+  signature_payload: {
+    signer_name: string;
+    signer_role: string;
+    meaning: string;
+    password: string;
+    reason_for_change?: string;
+  };
+}
+
+export interface BulkDelegationSignOffResponse {
+  batch_transaction_id: string;
+  total_requested: number;
+  total_signed: number;
+  total_failed: number;
+  signed_delegations: Array<any>;
+  failed_items: Array<{ delegation_id: string; reason: string }>;
+  sha256_seal: string;
+  etmf_artifact_id: string;
+  executed_at: string;
+}
+
 export const trainingApi = {
   /**
    * Fetch active training curricula for a study and protocol version.
@@ -29,6 +86,39 @@ export const trainingApi = {
     return unwrapResponse(
       openApiClient.GET("/api/v1/training/curricula", {
         params: { query: params },
+      })
+    );
+  },
+
+  /**
+   * Synchronous batch assignment of curriculum to site personnel.
+   */
+  batchAssignCurriculum(payload: BatchAssignCurriculumPayload) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/training/curricula/batch-assign" as any, {
+        body: payload as any,
+      })
+    );
+  },
+
+  /**
+   * List site delegation records.
+   */
+  listDelegations(params: DelegationQueryParams = {}) {
+    return unwrapResponse(
+      openApiClient.GET("/api/v1/training/delegations" as any, {
+        params: { query: params },
+      })
+    );
+  },
+
+  /**
+   * Execute 21 CFR Part 11 bulk delegation sign-off.
+   */
+  bulkSignOffDelegations(payload: BulkDelegationSignOffPayload) {
+    return unwrapResponse(
+      openApiClient.POST("/api/v1/training/delegations/bulk-signoff" as any, {
+        body: payload as any,
       })
     );
   },

@@ -1,0 +1,222 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Cadence.Apps.Knowledge.Domain;
+using Cadence.Apps.Knowledge.Endpoints;
+using Cadence.Apps.Knowledge.Infrastructure.Persistence;
+
+using FluentAssertions;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
+
+using Xunit;
+
+namespace Cadence.UnitTests.Knowledge;
+
+public class TrainingEndpointsTests
+{
+    private sealed class TestTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private readonly TestTimeProvider _timeProvider = new(new DateTimeOffset(2026, 10, 7, 10, 0, 0, TimeSpan.Zero));
+
+    private static KnowledgeDbContext CreateDbContext(string dbName)
+    {
+        var options = new DbContextOptionsBuilder<KnowledgeDbContext>()
+            .UseInMemoryDatabase(dbName)
+            .Options;
+        var db = new KnowledgeDbContext(options);
+        db.Database.EnsureCreated();
+        return db;
+    }
+
+    [Fact]
+    public async Task BatchAssign_EnforcesMaxBatchLimitGuardrail()
+    {
+        // Arrange
+        using var db = CreateDbContext(nameof(BatchAssign_EnforcesMaxBatchLimitGuardrail));
+        var targetPersonnel = Enumerable.Range(1, 205).Select(i => $"user_{i}").ToList();
+        var request = new BatchAssignCurriculumRequest(
+            CurriculumId: "curriculum-v3-delta",
+            StudyId: "CARDIO-2026",
+            SiteIds: ["SITE-101"],
+            Roles: ["Sub-Investigator"],
+            TargetPersonnelIds: targetPersonnel,
+            ReasonForChange: "Protocol amendment deployment");
+
+        // Act
+        var endpointMethod = typeof(TrainingEndpoints).GetMethod("BatchAssignCurriculumAsync", BindingFlags.NonPublic | BindingFlags.Static);
+        var result = await (Task<IResult>)endpointMethod!.Invoke(null, [request, db, _timeProvider, TestContext.Current.CancellationToken])!;
+
+        // Assert
+        result.Should().BeOfType<ProblemHttpResult>();
+        var problem = (ProblemHttpResult)result;
+        problem.StatusCode.Should().Be(400);
+        problem.ProblemDetails.Detail.Should().Contain("limit of 200 target personnel");
+    }
+
+    [Fact]
+    public async Task BatchAssign_CreatesAssignmentsAndSkipsDuplicates()
+    {
+        // Arrange
+        using var db = CreateDbContext(nameof(BatchAssign_CreatesAssignmentsAndSkipsDuplicates));
+
+        // Seed an active assignment for user_1
+        db.TrainingAssignments.Add(new TrainingAssignment
+        {
+            Id = "existing-asn-1",
+            CurriculumId = "curriculum-v3-delta",
+            StudyId = "CARDIO-2026",
+            SiteId = "SITE-101",
+            UserId = "user_1",
+            UserName = "Personnel user_1",
+            UserRole = "Clinical Research Coordinator",
+            Status = "PENDING",
+            CreatedAt = _timeProvider.GetUtcNow()
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var request = new BatchAssignCurriculumRequest(
+            CurriculumId: "curriculum-v3-delta",
+            StudyId: "CARDIO-2026",
+            SiteIds: ["SITE-101"],
+            Roles: ["Clinical Research Coordinator"],
+            TargetPersonnelIds: ["user_1", "user_2", "user_3"],
+            ReasonForChange: "Bulk assignment for site launch");
+
+        // Act
+        var endpointMethod = typeof(TrainingEndpoints).GetMethod("BatchAssignCurriculumAsync", BindingFlags.NonPublic | BindingFlags.Static);
+        var result = await (Task<IResult>)endpointMethod!.Invoke(null, [request, db, _timeProvider, TestContext.Current.CancellationToken])!;
+
+        // Assert
+        result.Should().BeOfType<Created<BatchAssignmentResponse>>();
+        var createdResult = (Created<BatchAssignmentResponse>)result;
+        var response = createdResult.Value!;
+
+        response.TotalEligible.Should().Be(3);
+        response.TotalAssigned.Should().Be(2);
+        response.TotalSkipped.Should().Be(1);
+        response.SkippedItems.Should().ContainSingle(s => s.UserId == "user_1");
+        response.Assignments.Should().HaveCount(2);
+
+        var dbAssignments = await db.TrainingAssignments.ToListAsync(TestContext.Current.CancellationToken);
+        dbAssignments.Should().HaveCount(3); // 1 pre-existing + 2 newly assigned
+    }
+
+    [Fact]
+    public async Task BulkSignOff_RequiresPart11PasswordVerification()
+    {
+        // Arrange
+        using var db = CreateDbContext(nameof(BulkSignOff_RequiresPart11PasswordVerification));
+        var request = new BulkDelegationSignOffRequest(
+            DelegationIds: ["del-001", "del-002"],
+            StudyId: "CARDIO-2026",
+            SiteId: "SITE-101",
+            SignaturePayload: new SignaturePayloadDto(
+                SignerName: "Dr. Eleanor Vance",
+                SignerRole: "Principal Investigator",
+                Meaning: "I approve these site staff delegations",
+                Password: "", // Missing password
+                ReasonForChange: "21 CFR Part 11 sign-off"));
+
+        // Act
+        var endpointMethod = typeof(TrainingEndpoints).GetMethod("BulkSignOffDelegationsAsync", BindingFlags.NonPublic | BindingFlags.Static);
+        var result = await (Task<IResult>)endpointMethod!.Invoke(null, [request, db, _timeProvider, TestContext.Current.CancellationToken])!;
+
+        // Assert
+        result.Should().BeOfType<ProblemHttpResult>();
+        var problem = (ProblemHttpResult)result;
+        problem.StatusCode.Should().Be(401);
+        problem.ProblemDetails.Detail.Should().Contain("21 CFR Part 11 credential verification failed");
+    }
+
+    [Fact]
+    public async Task BulkSignOff_SuccessfullyExecutesPart11SignOffAndRoutesToEtmfZone5()
+    {
+        // Arrange
+        using var db = CreateDbContext(nameof(BulkSignOff_SuccessfullyExecutesPart11SignOffAndRoutesToEtmfZone5));
+
+        db.DelegationRecords.AddRange(
+            new DelegationRecord
+            {
+                Id = "del-01",
+                StudyId = "CARDIO-2026",
+                SiteId = "SITE-101",
+                StaffUserId = "usr-01",
+                StaffName = "Marcus Vance",
+                Role = "Sub-Investigator",
+                TaskCode = "INFORMED_CONSENT",
+                Duties = "Informed Consent Administration",
+                Status = "PENDING",
+                CreatedAt = _timeProvider.GetUtcNow(),
+                CreatedBy = "PI"
+            },
+            new DelegationRecord
+            {
+                Id = "del-02",
+                StudyId = "CARDIO-2026",
+                SiteId = "SITE-101",
+                StaffUserId = "usr-02",
+                StaffName = "Sarah Jenkins",
+                Role = "Clinical Research Coordinator",
+                TaskCode = "EDC_DATA_ENTRY",
+                Duties = "eCRF Data Entry",
+                Status = "PENDING",
+                CreatedAt = _timeProvider.GetUtcNow(),
+                CreatedBy = "PI"
+            }
+        );
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var request = new BulkDelegationSignOffRequest(
+            DelegationIds: ["del-01", "del-02"],
+            StudyId: "CARDIO-2026",
+            SiteId: "SITE-101",
+            SignaturePayload: new SignaturePayloadDto(
+                SignerName: "Dr. Eleanor Vance",
+                SignerRole: "Principal Investigator",
+                Meaning: "I approve these site staff delegations",
+                Password: "SecurePassword123!",
+                ReasonForChange: "Site greenlight delegation log approval"));
+
+        // Act
+        var endpointMethod = typeof(TrainingEndpoints).GetMethod("BulkSignOffDelegationsAsync", BindingFlags.NonPublic | BindingFlags.Static);
+        var result = await (Task<IResult>)endpointMethod!.Invoke(null, [request, db, _timeProvider, TestContext.Current.CancellationToken])!;
+
+        // Assert
+        result.Should().BeOfType<Ok<BulkDelegationSignOffResponse>>();
+        var okResult = (Ok<BulkDelegationSignOffResponse>)result;
+        var response = okResult.Value!;
+
+        response.TotalRequested.Should().Be(2);
+        response.TotalSigned.Should().Be(2);
+        response.TotalFailed.Should().Be(0);
+        response.EtmfArtifactId.Should().Be("05.02.04");
+        response.Sha256Seal.Should().NotBeNullOrEmpty();
+
+        // Verify Delegation Records updated in DB
+        var updatedDelegations = await db.DelegationRecords.Where(d => d.StudyId == "CARDIO-2026").ToListAsync(TestContext.Current.CancellationToken);
+        updatedDelegations.Should().OnlyContain(d => d.Status == "COMPLETED" && d.SignedOff && d.PiSignatureHash == response.Sha256Seal);
+
+        // Verify OrgAuditLog created
+        var audit = await db.OrgAuditLogs.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+        audit.Should().NotBeNull();
+        audit!.Action.Should().Be("training.delegation.bulk_signoff");
+        audit.ActorId.Should().Be("Dr. Eleanor Vance");
+        audit.ActorRole.Should().Be("Principal Investigator");
+
+        // Verify TrainingCertificate created with eTMF artifact 05.02.04
+        var cert = await db.TrainingCertificates.FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+        cert.Should().NotBeNull();
+        cert!.EtmfArtifactId.Should().Be("05.02.04");
+        cert.Sha256Seal.Should().Be(response.Sha256Seal);
+    }
+}
