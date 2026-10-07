@@ -6,6 +6,9 @@ Generated from the EF Core model of `Cadence.Apps.Etmf.Infrastructure.Persistenc
 
 | Table | Entity | Columns |
 | --- | --- | --- |
+| [`etmf.InboxState`](#etmfinboxstate) | `InboxState` | 11 |
+| [`etmf.OutboxMessage`](#etmfoutboxmessage) | `OutboxMessage` | 21 |
+| [`etmf.OutboxState`](#etmfoutboxstate) | `OutboxState` | 6 |
 | [`etmf.audit_log_entries`](#etmfaudit_log_entries) | `AuditLogEntry` | 11 |
 | [`etmf.tmf_audit_ledger_seals`](#etmftmf_audit_ledger_seals) | `TmfAuditLedgerSeal` | 6 |
 | [`etmf.tmf_audit_logs`](#etmftmf_audit_logs) | `TmfAuditLog` | 12 |
@@ -13,6 +16,86 @@ Generated from the EF Core model of `Cadence.Apps.Etmf.Infrastructure.Persistenc
 | [`etmf.tmf_document_qc_transitions`](#etmftmf_document_qc_transitions) | `TmfDocumentQcTransition` | 9 |
 | [`etmf.tmf_documents`](#etmftmf_documents) | `TmfDocument` | 37 |
 | [`etmf.tmf_expected_documents`](#etmftmf_expected_documents) | `TmfExpectedDocument` | 12 |
+
+## etmf.InboxState
+
+Entity: `InboxState`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `bigint` | no |  | PK |
+| `Consumed` | `timestamp with time zone` | yes |  |  |
+| `ConsumerId` | `uuid` | no |  |  |
+| `Delivered` | `timestamp with time zone` | yes |  |  |
+| `ExpirationTime` | `timestamp with time zone` | yes |  |  |
+| `LastSequenceNumber` | `bigint` | yes |  |  |
+| `LockId` | `uuid` | no |  |  |
+| `MessageId` | `uuid` | no |  |  |
+| `ReceiveCount` | `integer` | no |  |  |
+| `Received` | `timestamp with time zone` | no |  |  |
+| `RowVersion` | `bytea` | yes |  |  |
+
+Indexes:
+
+- `AK_InboxState_MessageId_ConsumerId`: unique constraint (`MessageId`, `ConsumerId`)
+- `IX_InboxState_Delivered`: (`Delivered`)
+
+## etmf.OutboxMessage
+
+Entity: `OutboxMessage`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `SequenceNumber` | `bigint` | no |  | PK |
+| `Body` | `text` | no |  |  |
+| `ContentType` | `character varying(256)` | no |  |  |
+| `ConversationId` | `uuid` | yes |  |  |
+| `CorrelationId` | `uuid` | yes |  |  |
+| `DestinationAddress` | `character varying(256)` | yes |  |  |
+| `EnqueueTime` | `timestamp with time zone` | yes |  |  |
+| `ExpirationTime` | `timestamp with time zone` | yes |  |  |
+| `FaultAddress` | `character varying(256)` | yes |  |  |
+| `Headers` | `text` | yes |  |  |
+| `InboxConsumerId` | `uuid` | yes |  |  |
+| `InboxMessageId` | `uuid` | yes |  |  |
+| `InitiatorId` | `uuid` | yes |  |  |
+| `MessageId` | `uuid` | no |  |  |
+| `MessageType` | `text` | no |  |  |
+| `OutboxId` | `uuid` | yes |  |  |
+| `Properties` | `text` | yes |  |  |
+| `RequestId` | `uuid` | yes |  |  |
+| `ResponseAddress` | `character varying(256)` | yes |  |  |
+| `SentTime` | `timestamp with time zone` | no |  |  |
+| `SourceAddress` | `character varying(256)` | yes |  |  |
+
+Foreign keys:
+
+- `FK_OutboxMessage_InboxState_InboxMessageId_InboxConsumerId`: (`InboxMessageId`, `InboxConsumerId`) references `etmf.InboxState` (`MessageId`, `ConsumerId`), on delete no action
+- `FK_OutboxMessage_OutboxState_OutboxId`: (`OutboxId`) references `etmf.OutboxState` (`OutboxId`), on delete no action
+
+Indexes:
+
+- `IX_OutboxMessage_EnqueueTime`: (`EnqueueTime`)
+- `IX_OutboxMessage_ExpirationTime`: (`ExpirationTime`)
+- `IX_OutboxMessage_InboxMessageId_InboxConsumerId_SequenceNumber`: unique (`InboxMessageId`, `InboxConsumerId`, `SequenceNumber`)
+- `IX_OutboxMessage_OutboxId_SequenceNumber`: unique (`OutboxId`, `SequenceNumber`)
+
+## etmf.OutboxState
+
+Entity: `OutboxState`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `OutboxId` | `uuid` | no |  | PK |
+| `Created` | `timestamp with time zone` | no |  |  |
+| `Delivered` | `timestamp with time zone` | yes |  |  |
+| `LastSequenceNumber` | `bigint` | yes |  |  |
+| `LockId` | `uuid` | no |  |  |
+| `RowVersion` | `bytea` | yes |  |  |
+
+Indexes:
+
+- `IX_OutboxState_Created`: (`Created`)
 
 ## etmf.audit_log_entries
 

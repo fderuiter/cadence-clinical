@@ -3,6 +3,8 @@ using Cadence.Apps.Etmf.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 
+using MassTransit;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Etmf.Infrastructure.Persistence;
@@ -32,5 +34,7 @@ public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new TmfDocumentExpirationAlertStateConfiguration());
         modelBuilder.ApplyConfiguration(new TmfDocumentQcTransitionConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+
+        modelBuilder.AddTransactionalOutboxEntities();
     }
 }
