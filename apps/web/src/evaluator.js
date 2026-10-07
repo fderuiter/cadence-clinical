@@ -266,6 +266,20 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       return context[indexedPath] !== undefined ? context[indexedPath] : null;
     }
 
+    if (["sum", "avg", "min", "max", "count"].includes(funcName)) {
+      const vals = rawChildren
+        .map((c) => evaluateAST(c, context, currentIndices))
+        .filter((v) => v !== null && v !== undefined && v !== "");
+      if (funcName === "count") return vals.length;
+      const nums = vals.map((v) => parseFloat(v)).filter((n) => !isNaN(n));
+      if (nums.length === 0) return null;
+      if (funcName === "sum") return nums.reduce((acc, curr) => acc + curr, 0);
+      if (funcName === "avg")
+        return nums.reduce((acc, curr) => acc + curr, 0) / nums.length;
+      if (funcName === "min") return Math.min(...nums);
+      if (funcName === "max") return Math.max(...nums);
+    }
+
     return null;
   }
 
@@ -355,4 +369,115 @@ export function renderFormFromJSON(fields, currentValues, logPurge = null) {
  */
 export function validateField(fieldMeta, val, context = {}) {
   return uiValidateField(fieldMeta, val, context, evaluateAST);
+}
+
+/**
+ * Traces AST evaluation recursively and produces a detailed execution tree with
+ * intermediate truth values, operand evaluations, and referenced field dependencies.
+ *
+ * @param {Object} node - AST ExpressionNode
+ * @param {Object} context - Data payload (field_id -> value)
+ * @param {Object} currentIndices - Map of repeat indices
+ * @returns {Object} Trace node { type, val, operator, children, description, referencedFields }
+ */
+export function traceASTEvaluation(node, context = {}, currentIndices = {}) {
+  if (!node) {
+    return {
+      type: "null",
+      val: null,
+      description: "Empty node",
+      referencedFields: [],
+    };
+  }
+
+  const type = node.node_type || node.type || "";
+  const valAttr = node.value;
+  const rawChildren = node.children || node.operands || [];
+  const fieldRef = node.field_ref;
+
+  // 1. LITERAL / CONSTANT
+  if (type === "LITERAL" || type === "constant") {
+    const val = valAttr !== undefined ? valAttr : null;
+    return {
+      type: "constant",
+      val,
+      description: `Constant: ${JSON.stringify(val)}`,
+      referencedFields: [],
+    };
+  }
+
+  // 2. XPATH / FIELD_REF
+  if (type === "XPATH" || type === "field_ref") {
+    let fieldId = "";
+    if (fieldRef && fieldRef.field_id) {
+      fieldId = fieldRef.field_id;
+    } else if (typeof valAttr === "string") {
+      fieldId = valAttr;
+    }
+
+    const val = evaluateAST(node, context, currentIndices);
+    return {
+      type: "field_ref",
+      fieldId,
+      val,
+      description: `Field '${fieldId}': ${val === null || val === undefined ? "(empty)" : JSON.stringify(val)}`,
+      referencedFields: fieldId ? [fieldId] : [],
+    };
+  }
+
+  // 3. OPERATOR / LOGICAL / COMPARISON
+  if (type === "OPERATOR" || type === "logical" || type === "comparison") {
+    const operator = (
+      typeof valAttr === "string" ? valAttr : node.operator || ""
+    ).toLowerCase();
+
+    const childrenTraces = rawChildren.map((c) =>
+      traceASTEvaluation(c, context, currentIndices)
+    );
+    const referencedFields = [
+      ...new Set(childrenTraces.flatMap((t) => t.referencedFields || [])),
+    ];
+    const val = evaluateAST(node, context, currentIndices);
+
+    return {
+      type: type === "logical" ? "logical" : "comparison",
+      operator,
+      val,
+      children: childrenTraces,
+      description: `${operator.toUpperCase()} [${childrenTraces.map((c) => c.val).join(", ")}] => ${val}`,
+      referencedFields,
+    };
+  }
+
+  // 4. FUNCTION
+  if (type === "FUNCTION" || type === "function") {
+    const operator = (
+      typeof valAttr === "string" ? valAttr : node.operator || ""
+    ).toLowerCase();
+
+    const childrenTraces = rawChildren.map((c) =>
+      traceASTEvaluation(c, context, currentIndices)
+    );
+    const referencedFields = [
+      ...new Set(childrenTraces.flatMap((t) => t.referencedFields || [])),
+    ];
+    const val = evaluateAST(node, context, currentIndices);
+
+    return {
+      type: "function",
+      operator,
+      val,
+      children: childrenTraces,
+      description: `fn:${operator}(${childrenTraces.map((c) => c.val).join(", ")}) => ${val}`,
+      referencedFields,
+    };
+  }
+
+  const val = evaluateAST(node, context, currentIndices);
+  return {
+    type: "unknown",
+    val,
+    description: `Evaluated => ${val}`,
+    referencedFields: [],
+  };
 }
