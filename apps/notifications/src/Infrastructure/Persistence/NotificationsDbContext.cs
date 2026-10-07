@@ -3,6 +3,8 @@ using Cadence.Apps.Notifications.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 
+using MassTransit;
+
 using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Notifications.Infrastructure.Persistence;
@@ -26,5 +28,7 @@ public sealed class NotificationsDbContext(DbContextOptions<NotificationsDbConte
         modelBuilder.ApplyConfiguration(new NotificationAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new NotificationDeliveryConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+
+        modelBuilder.AddTransactionalOutboxEntities();
     }
 }

@@ -14,6 +14,8 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
+using NSubstitute;
+
 using Xunit;
 
 namespace Cadence.UnitTests.Interop;
@@ -132,9 +134,9 @@ version = ""1.0.0""
     }
 
     /// <summary>@req:PRD-SYS-053</summary>
-    [Fact(DisplayName = "ExecuteInSandbox_ExecutesProgramAndGeneratesArtifactsAndManifestDigest")]
+    [Fact(DisplayName = "ExecuteInSandbox_WhenContainerUnavailable_FailsClosedWithNonZeroExitCodeAndErrorOutput")]
     [Trait("Requirement", "PRD-SYS-053")]
-    public async Task ExecuteInSandbox_ExecutesProgramAndGeneratesArtifactsAndManifestDigest()
+    public async Task ExecuteInSandbox_WhenContainerUnavailable_FailsClosedWithNonZeroExitCodeAndErrorOutput()
     {
         var ct = TestContext.Current.CancellationToken;
         string pythonSource = "print('Generating ADaM summary...')\nwith open('output_table.csv', 'w') as f:\n    f.write('ARM,SUBJECT_COUNT\\nARM_A,50\\nARM_B,50\\n')\n";
@@ -149,9 +151,59 @@ version = ""1.0.0""
 
         var result = await _dockerDriver.ExecuteInSandboxAsync(request, ct);
 
+        result.ExitCode.Should().NotBe(0);
+        result.Artifacts.Should().BeEmpty();
+        result.Stderr.Should().NotBeNullOrWhiteSpace();
+        result.ContainerImageDigest.Should().NotBeNullOrWhiteSpace();
+    }
+
+    /// <summary>@req:PRD-SYS-053</summary>
+    [Fact(DisplayName = "ExecuteInSandbox_MockedDriver_ExecutesProgramAndGeneratesArtifactsAndManifestDigest")]
+    [Trait("Requirement", "PRD-SYS-053")]
+    public async Task ExecuteInSandbox_MockedDriver_ExecutesProgramAndGeneratesArtifactsAndManifestDigest()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        string pythonSource = "print('Generating ADaM summary...')\nwith open('output_table.csv', 'w') as f:\n    f.write('ARM,SUBJECT_COUNT\\nARM_A,50\\nARM_B,50\\n')\n";
+        var request = new SandboxExecutionRequest(
+            Language: "PYTHON",
+            SourceCode: pythonSource,
+            LockfileContent: "[[package]]\nname = \"pandas\"\nversion = \"2.2.0\"\n",
+            LockType: "UV_LOCK",
+            NetworkIsolated: true,
+            FilesystemReadonlyRoot: true
+        );
+
+        var mockArtifacts = new List<GeneratedArtifactDto>
+        {
+            new(
+                ArtifactId: "art-001",
+                Name: "output_table.csv",
+                ArtifactType: "DATASET",
+                FilePath: "output_table.csv",
+                MimeType: "text/csv",
+                SizeBytes: 42,
+                Sha256Digest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                ContentPreview: "ARM,SUBJECT_COUNT\nARM_A,50\nARM_B,50\n"
+            )
+        };
+
+        var mockDriver = Substitute.For<ISceDockerEngineDriver>();
+        mockDriver.ExecuteInSandboxAsync(Arg.Any<SandboxExecutionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new SandboxExecutionResult(
+                ExitCode: 0,
+                Stdout: "Generating ADaM summary...",
+                Stderr: string.Empty,
+                DurationMs: 150,
+                ContainerImageDigest: "sha256:11223344556677889900aabbccddeeff",
+                Artifacts: mockArtifacts,
+                OutputArtifactsDigest: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            )));
+
+        var result = await mockDriver.ExecuteInSandboxAsync(request, ct);
+
         result.ExitCode.Should().Be(0);
         result.Artifacts.Should().NotBeEmpty();
-        result.Artifacts.Select(a => a.Name).Should().Contain(name => name.Contains("output_table") || name.Contains("output_summary"));
+        result.Artifacts.Select(a => a.Name).Should().Contain("output_table.csv");
         result.OutputArtifactsDigest.Should().NotBeNullOrWhiteSpace();
         result.ContainerImageDigest.Should().StartWith("sha256:");
     }
