@@ -2,6 +2,9 @@
 search: false
 ---
 
+> ⚠️ **DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT** ⚠️
+> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*
+
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
 *Execution Date:* 2026-07-23 22:38:25 UTC
@@ -16,12 +19,12 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Counts cover the requirement-tagged test methods in section 3. Whole-suite totals are in the TRX files under
 `TestResults/gxp/`, so this report only changes when a tagged test or its result changes.
 
-- **Requirement-Tagged Test Methods:** 234
-- **Passed:** 185 🟢
+- **Requirement-Tagged Test Methods:** 242
+- **Passed:** 0 🟢
 - **Failed/Errors:** 0 🔴
-- **Skipped:** 49 ⚪
-- **Not Run:** 0
-- **Pass Rate (of executed):** 100.00%
+- **Skipped:** 0 ⚪
+- **Not Run:** 242
+- **Pass Rate (of executed):** 0.00%
 
 ## 2. Installation Qualification (IQ)
 
@@ -34,252 +37,252 @@ out so the report only changes when results change; they are in the TRX files un
 
 | Test Case Name | Class | Target Req | Status |
 | :--- | :--- | :--- | :--- |
-| `AuditTrailEntitiesMustNotBeDependentOfCascadeDelete` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ChainWrittenToPostgres_VerifiesWhenReadBack` | `Cadence.IntegrationTests.Execution.AuditChainPostgresRoundTripTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `EtmfComplianceUpdate_StoresTheTypedReasonInTheAuditEntry` | `Cadence.IntegrationTests.Execution.ChangeReasonEncodingTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `SubjectStateChange_StoresTheTypedReasonInTheAuditEntry` | `Cadence.IntegrationTests.Execution.ChangeReasonEncodingTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `FormWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `ObservationWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `QueryWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `SiteComplianceWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `SubjectWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `ApproveForm_ReplayingAUsedToken_Returns401` | `Cadence.IntegrationTests.Execution.ExecutionWriteAuthorizationTests` | SRS-SYS-005 | ⚪ (SKIPPED) SKIPPED |
-| `ApproveForm_WithATokenIssuedForSomethingElse_Returns401` | `Cadence.IntegrationTests.Execution.ExecutionWriteAuthorizationTests` | SRS-SYS-005 | ⚪ (SKIPPED) SKIPPED |
-| `ApproveForm_WithoutESignatureToken_Returns401AndLeavesTheFormUnsigned` | `Cadence.IntegrationTests.Execution.ExecutionWriteAuthorizationTests` | SRS-SYS-005 | ⚪ (SKIPPED) SKIPPED |
-| `EdgeCaseScenario_MatchesGoldenMaster` | `Cadence.IntegrationTests.Execution.SubjectGoldenMasterTests` | PRD-SUB-001 | ⚪ (SKIPPED) SKIPPED |
-| `ErrorScenario_MatchesExpectedStatusAndDetail` | `Cadence.IntegrationTests.Execution.SubjectGoldenMasterTests` | PRD-SUB-001 | ⚪ (SKIPPED) SKIPPED |
-| `NominalScenario_MatchesGoldenMaster` | `Cadence.IntegrationTests.Execution.SubjectGoldenMasterTests` | PRD-SUB-001 | ⚪ (SKIPPED) SKIPPED |
-| `StateChange_AlongAForbiddenPath_Returns422_AndLeavesTheStateUnchanged` | `Cadence.IntegrationTests.Execution.SubjectRouteAuthorityTests` | PRD-SUB-001 | ⚪ (SKIPPED) SKIPPED |
-| `CdiscCtPackageLoadsAsOnePinnedVersionWithAuditedDigest` | `Cadence.IntegrationTests.Kernel.ConceptRegistryPostgresTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `IndicatorSet_ReleasedAndPinned_ComputesValuesAndFlagsABreachedLimit` | `Cadence.IntegrationTests.Kernel.IndicatorSetPostgresTests` | PRD-CTMS-007 | ⚪ (SKIPPED) SKIPPED |
-| `StudyPulse_ReadsLiveKernelPopulationsAndCountsOnlyWhatTheReaderMaySee` | `Cadence.IntegrationTests.Kernel.IndicatorSetPostgresTests` | PRD-CTMS-007 | ⚪ (SKIPPED) SKIPPED |
-| `ReadNeverReturnsAnotherTenantsActivity` | `Cadence.IntegrationTests.Kernel.KernelActivityPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `Scenario3ActOutsideDelegationDeniedAuditedRetroactiveDoaDoesNotValidate` | `Cadence.IntegrationTests.Kernel.KernelAuthorityPostgresTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `StudySiteActivationNeedsAnEffectiveVersionOnApprovalEvidence` | `Cadence.IntegrationTests.Kernel.KernelEffectivityPostgresTests` | PRD-CTMS-005 | ⚪ (SKIPPED) SKIPPED |
-| `ChangeStatusRefusesIllegalMovesAndTimes` | `Cadence.IntegrationTests.Kernel.KernelEnrollmentPostgresTests` | PRD-SUB-001 | ⚪ (SKIPPED) SKIPPED |
-| `EnrollmentsDatabaseGuardsEnforceTheLifecycleForEveryDatabaseUser` | `Cadence.IntegrationTests.Kernel.KernelEnrollmentPostgresTests` | PRD-SUB-001 | ⚪ (SKIPPED) SKIPPED |
-| `DenialIsExplainedAndAuditedWithItsConditions` | `Cadence.IntegrationTests.Kernel.KernelExplanationPostgresTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `ApplicationRoleCannotReadTheVaultTablesAndReachesThemOnlyThroughItsFunctions` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `RecordAndRevealDisclosesOnlyAfterAnAuditedRevealAndNoKernelTableHoldsIdentifiers` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `RevealByAnAutomationAgentIsDeniedEvenWithTheGrant` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `RevealWithoutTheLayersCapabilityIsDeniedAuditedAndDisclosesNothing` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `VaultRecordsAreIsolatedByTenant` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `NavigationNeverCrossesTenants` | `Cadence.IntegrationTests.Kernel.KernelNavigationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `ForkKeepsTheParentApprovedNumbersTheDraftAndStoresTheAmendment` | `Cadence.IntegrationTests.Kernel.KernelProtocolVersionPostgresTests` | PRD-CRF-012 | ⚪ (SKIPPED) SKIPPED |
-| `ProtocolVersionsTriggerFreezesApprovedContentForEveryDatabaseUser` | `Cadence.IntegrationTests.Kernel.KernelProtocolVersionPostgresTests` | PRD-CRF-012 | ⚪ (SKIPPED) SKIPPED |
-| `SearchNeverReturnsAnotherTenantsObjects` | `Cadence.IntegrationTests.Kernel.KernelSearchPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `SimulateCannotReachAnotherTenantsVersions` | `Cadence.IntegrationTests.Kernel.KernelSimulationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `CrossTenantReadReturnsNothing` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `EveryKernelTableHasTenantIdAndForcedRowLevelSecurity` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `NoTenantCannotConnectAndSeesNothing` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `PersonIsVisibleOnlyToTenantsWithAMembership` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `WorkQueueCannotReachAnotherTenant` | `Cadence.IntegrationTests.Kernel.KernelWorkQueuePostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `TraceFromAnotherTenantSeesNoEdges` | `Cadence.IntegrationTests.Kernel.LineagePostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `RulePackDraftedAndReleasedAtRuntimeLoadsAndEvaluates` | `Cadence.IntegrationTests.Kernel.RulePackPostgresTests` | PRD-CRF-004 | ⚪ (SKIPPED) SKIPPED |
-| `RegisterAndApproveStandardVersionAreAuditedAndReadBackExactly` | `Cadence.IntegrationTests.Kernel.StandardsRegistryPostgresTests` | PRD-SYS-001 | ⚪ (SKIPPED) SKIPPED |
-| `TerminologyResolutionIsTenantScoped` | `Cadence.IntegrationTests.Kernel.StandardsRegistryPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `FindingsAreIsolatedByTenant` | `Cadence.IntegrationTests.Kernel.ValidationFindingPostgresTests` | PRD-CRF-013 | ⚪ (SKIPPED) SKIPPED |
-| `RerunAfterMappingFixResolvesTheFindingInsteadOfDuplicatingIt` | `Cadence.IntegrationTests.Kernel.ValidationFindingPostgresTests` | PRD-CRF-004 | ⚪ (SKIPPED) SKIPPED |
-| `CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
-| `EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
-| `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
-| `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | 🟢 PASSED |
-| `BatchCertify_CertifiesCompliantSites_WithIndividualTokensAndAuditLogs` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-003 | 🟢 PASSED |
-| `BatchCertify_Performance_CompletesUnder5SecondsFor50Sites` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-001 | 🟢 PASSED |
-| `BatchCertify_RejectsNonCompliantSites` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-002 | 🟢 PASSED |
-| `GetCountryMatrix_ReturnsSixFacetReadinessForAllSites` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-001 | 🟢 PASSED |
-| `CompileEndpoint_FinalizesAndFilesToEtmf_AndDispatchesEmail` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | 🟢 PASSED |
-| `ConfirmationLetter_RendersHtmlTemplate_AndCompilesDraftPdf` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | 🟢 PASSED |
-| `FinalizedLetter_AppliesPart11Pkcs7Signature_AndPassesVerification` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | 🟢 PASSED |
-| `FollowUpLetter_WithFindings_RendersHtmlTable` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | 🟢 PASSED |
-| `SigTokenVerifier_ReusedTokenForEconsent_FailsClosedWithReauthenticationRequired` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | 🟢 PASSED |
-| `SigTokenVerifier_TokenForDifferentActionUrl_FailsClosedWithReauthenticationRequired` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | 🟢 PASSED |
-| `SigTokenVerifier_ValidTokenForEconsent_VerifiesAndConsumesSuccessfully` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | 🟢 PASSED |
-| `Consume_EConsentCompleted_FilesICFDocumentInEtmf` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | 🟢 PASSED |
-| `Consume_EConsentCompleted_IsIdempotent` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | 🟢 PASSED |
-| `Consume_EtmfDocumentFilingRequested_FilesDocument` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | 🟢 PASSED |
-| `Consume_EtmfDocumentFilingRequested_IsIdempotent` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ActivateSiteAsync_GivenNoComplianceRow_FailsWithBlockedActivationAndWritesAuditEntryFirst` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | 🟢 PASSED |
-| `DispenseDeviceAsync_ExpiredDevice_ThrowsExpiredError` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | 🟢 PASSED |
-| `DispenseDeviceAsync_QuarantinedDevice_ThrowsQuarantinedError` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | 🟢 PASSED |
-| `DispenseDeviceAsync_ValidAvailableDevice_DispensesSuccessfully` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | 🟢 PASSED |
-| `GetInvestigationSummaryAsync_CalculatesMetricsCorrectly` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-002 | 🟢 PASSED |
-| `LogDeficiencyAsync_TriggersQuarantineAndSafetyCaseAndOutboxEvents` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-002 | 🟢 PASSED |
-| `RegisterInventoryAsync_BulkQuantity_RegistersSerializedDevices` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-001 | 🟢 PASSED |
-| `RegisterInventoryAsync_WithRawBarcode_ParsesAndStoresAttributes` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-001 | 🟢 PASSED |
-| `ReleaseQuarantineAsync_ReleasesDeviceAndQuarantineRecord` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | 🟢 PASSED |
-| `DispenseDevice_Returns200OK` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-003 | 🟢 PASSED |
-| `GetInvestigationSummary_Returns200OK` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-003 | 🟢 PASSED |
-| `LogDeficiency_Returns201Created` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-002 | 🟢 PASSED |
-| `ParseUdi_Returns200WithParsedResult` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-001 | 🟢 PASSED |
-| `RegisterInventory_Returns201Created` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-001 | 🟢 PASSED |
-| `IsHibccMod43Valid_ValidAndInvalidCodes_EvaluatesCorrectly` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
-| `Parse_Gs1128SequentialWithoutParentheses_ParsesFields` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
-| `Parse_Gs1128WithParentheses_ReturnsParsedAttributes` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
-| `Parse_Gs1DataMatrixPrefix_ReturnsDataMatrixCarrierFormat` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
-| `Parse_Hibcc128PrimaryAndSecondary_ParsesComponents` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
-| `Parse_HibccDataMatrixWithPrefix_ParsesComponentsAndCarrierFormat` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
-| `Parse_HibccSecondarySerialNumber_ParsesSerialNumber` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
-| `Parse_NullOrEmptyBarcode_ReturnsInvalidResult` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
-| `ValidateGtinMod10_ValidAndInvalidGtins_EvaluatesCorrectly` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
-| `EvaluateInlineConstraints_FlagsReferenceRangeViolations` | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests` | SRS-EDC-002 | 🟢 PASSED |
-| `BatchSignOff_Exceeds100SubjectsCap_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
-| `BatchSignOff_NonPiRole_RejectsWithForbidden` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
-| `BatchSignOff_SubjectLevel_ApprovesCompletedSubmissionsAndReturnsSummary` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
-| `ChangingRoute_WithoutAChangeReason_Returns400` | `Cadence.UnitTests.Execution.Endpoints.LegacyAliasChangeReasonTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ApproveFormSubmission_Handler_WithInvalidHmac_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
-| `ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
-| `ApproveFormSubmission_Handler_WithValidSignature_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
-| `UnlockFormSubmission_Handler_WithAuditReason_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
-| `NominalFormSubmission_ApprovalAndUnlock_MaintainsRegulatoryIntegrity` | `Cadence.UnitTests.Execution.Forms.FormSubmissionGoldenMasterTests` | SRS-EDC-003 | 🟢 PASSED |
-| `ApproveForm_WithInvalidSigningReason_ReturnsInvalidSigningReasonError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
-| `CompleteAndApprove_LocksFormInReadOnlyState` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
-| `FormApplicationService_Approve_ValidatesSha256PayloadHash` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
-| `FormApplicationService_Approve_WithUnauthorizedSignerRole_ReturnsUnauthorizedError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
-| `FormApplicationService_Approve_WithUnconfiguredConfigurationSecret_ThrowsInvalidOperationException` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
-| `FormApplicationService_Approve_WithUnconfiguredSecret_ThrowsInvalidOperationException` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
-| `UnlockForm_WithReason_RevertsToDraftAndUnlocks` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
-| `UpdatePayload_WhenFormIsApproved_ReturnsForbiddenLockedError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
-| `ActionWithNoEntityChange_IsWrittenAsAnActionOnlyEntryOnTheSameChain` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ChangeWithoutARecordedAction_IsStillAudited_WithTheEntityStateAsAction` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SubjectUpdate_WritesOneEntryPerChange_AndTheChainVerifies` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
-| `Verifier_DetectsAFork` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
-| `Verifier_DetectsATamperedEntry` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
-| `Verifier_VerifiesLegacyTableNameChainsAlongsideNewOnes_WithoutRewritingThem` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
-| `WriteAsync_DoesNotItselfSave` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_AfterATransientFailure_RetriesAndWritesEachAuditEntryOnce` | `Cadence.UnitTests.Execution.Persistence.ExecutionRepositoryBaseTests` | PRD-SYS-001 | 🟢 PASSED |
-| `TwoConcurrentFormUpdates_OneSucceeds_TheOtherConflicts_AndTheAuditShowsOneChange` | `Cadence.UnitTests.Execution.Persistence.ExecutionRepositoryBaseTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenClinicalSubjectAndSiteComplianceCacheModifiedInSameCall_ChainsEachRealAggregateTypeIndependently` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenClinicalSubjectPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenSiteComplianceCachePersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenSubjectConsentPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenIGxPAuditableEntityNotInheritingAggregateRootBase_WritesAuditLogEntryWithoutFieldStamping` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenModifiedAggregate_IncrementsVersionIndexWithoutOverwritingCreatedBy` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenNonStringTIdAggregate_StampsCreatedFields` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
-| `SaveChanges_Synchronously_WithAnAuditedChange_FailsInsteadOfSkippingTheAudit` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | 🟢 PASSED |
-| `CreateAsync_WhenQueryRaised_PublishesClinicalQueryRaisedEvent` | `Cadence.UnitTests.Execution.Queries.ClinicalQueryApplicationServiceOutboxTests` | PRD-SYS-001 | 🟢 PASSED |
-| `RunAs_OverridesTheAmbientCaller` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
-| `RunAs_WithNoHttpContext_AttributesToTheServiceAccount` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
-| `ServiceAccount_WithoutANamedSvcId_IsRejected` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
-| `UserId_GivenEmptySubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
-| `UserId_GivenNoHttpContext_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
-| `UserId_GivenNoSubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
-| `UserId_GivenWhitespaceOnlySubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | 🟢 PASSED |
-| `HostStartup_WithoutAValidDemographicsKey_FailsFast` | `Cadence.UnitTests.Execution.Security.DemographicsKeyStartupValidationTests` | PRD-SYS-190 | 🟢 PASSED |
-| `Create_ProducesSubjectInScreeningWithSuppliedFields` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
-| `TransitionTo_IllegalTransition_LeavesStatusUnchangedAndReturnsGuardFailure` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
-| `TransitionTo_LegalTransition_UpdatesStatusAndReturnsSuccess` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
-| `TransitionTo_SameState_NoOpSucceedsViaGuard` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
-| `Withdraw_AfterUnblinding_SetsWithdrawalFieldsFromClock` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
-| `Withdraw_CalledTwiceOnAlreadyWithdrawnSubject_SucceedsSilentlyAsNoOp` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
-| `Withdraw_OnScreenFailedSubject_ReturnsFailureWithoutThrowing` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | 🟢 PASSED |
-| `DeleteDemographicsAsync_OnSuccess_WritesDeleteDemographicsAuditEntry` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests` | PRD-SYS-001 | 🟢 PASSED |
-| `AdvanceStateAsync_GivenCompliantSite_TargetingEnrolled_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
-| `AdvanceStateAsync_GivenForbiddenTransition_ReturnsInvalidStateTransitionAndDoesNotMutate` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
-| `AdvanceStateAsync_GivenLegalTransition_SucceedsAndPersistsNewStatus` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
-| `AdvanceStateAsync_GivenLegalTransition_WritesTransitionAuditEntryNamedForTargetState` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
-| `AdvanceStateAsync_GivenNeitherStatusNorState_ReturnsInvalidStateTransitionRatherThanThrowing` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
-| `AdvanceStateAsync_GivenSuccessfulTransitionToEnrolled_ResponseAndStoredStatusAreEnrolled` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
-| `AdvanceStateAsync_GivenUnmappedStateString_ReturnsInvalidStateTransition_SameCodeAsForbiddenTransition` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
-| `EvaluateAndTransitionScreeningAsync_GivenEligible_TransitionsToEnrolled` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
-| `EvaluateAndTransitionScreeningAsync_GivenIneligible_TransitionsToScreenFailed` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | 🟢 PASSED |
-| `Guard_FullTransitionMatrix_MatchesSpecGraph` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
-| `Guard_NullCurrentTargetingNonScreening_FailsWithInvalidStateTransition` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
-| `Guard_NullCurrentTargetingScreening_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
-| `Guard_ReconsentRequiredFanOut_CoversEveryOtherState` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
-| `Guard_SameStateNoOp_AlwaysSucceeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | 🟢 PASSED |
-| `HostStartup_OutsideDevelopment_WithoutOidcAudience_FailsFast` | `Cadence.UnitTests.Gateway.GatewayAudienceTests` | PRD-SYS-190 | 🟢 PASSED |
-| `CallerOverTheLimit_Gets429WithRetryAfter_WhileOtherCallersAreServed` | `Cadence.UnitTests.Gateway.GatewayRateLimitingTests` | PRD-SYS-189 | 🟢 PASSED |
-| `HealthProbes_AreNeverRateLimited` | `Cadence.UnitTests.Gateway.GatewayRateLimitingTests` | PRD-SYS-189 | 🟢 PASSED |
-| `EveryCluster_HasTimeoutAndActiveAndPassiveHealthChecks` | `Cadence.UnitTests.Gateway.GatewayResilienceTests` | PRD-SYS-191 | 🟢 PASSED |
-| `ServiceThatIsNotReady_Gets503WithoutForwarding_UntilItIsReadyAgain` | `Cadence.UnitTests.Gateway.GatewayResilienceTests` | PRD-SYS-191 | 🟢 PASSED |
-| `ServiceThatStopsResponding_Gets504AfterTheProxyTimeout` | `Cadence.UnitTests.Gateway.GatewayResilienceTests` | PRD-SYS-191 | 🟢 PASSED |
-| `EveryRoute_LeadsToMappedEndpoints_AndEveryServiceApiIsRouted` | `Cadence.UnitTests.Gateway.GatewayRouteCoverageTests` | PRD-SYS-191 | 🟢 PASSED |
-| `HostStartup_OutsideDevelopment_WithoutServiceUrls_FailsFast` | `Cadence.UnitTests.Gateway.GatewayServiceUrlValidationTests` | PRD-SYS-190 | 🟢 PASSED |
-| `HostStartup_WithARelativeServiceUrl_FailsFast` | `Cadence.UnitTests.Gateway.GatewayServiceUrlValidationTests` | PRD-SYS-190 | 🟢 PASSED |
-| `KeycloakVerifier_MapsIdentityProviderAnswers` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `KeycloakVerifier_UsesADirectGrantThenEndsThatSession` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `SignatureVerification_ForAnAuditor_Returns403WithoutCheckingCredentials` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `SignatureVerification_NamingAnotherUser_Returns403` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `SignatureVerification_RepeatedAttempts_AreRateLimitedPerSigner` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `SignatureVerification_WithAWrongPassword_Returns401WithoutAToken` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `SignatureVerification_WithTheCallersPassword_IssuesAVerifiableSingleUseToken` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `SignatureVerification_WithoutABoundAction_Returns400` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `SignatureVerification_WithoutSignIn_Returns401` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `TokenEndpoint_IsDerivedFromTheOidcSettings` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | 🟢 PASSED |
-| `AcceptCandidate_CommitsValueAndWritesGxPAuditAndESignature` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-SYS-001 | 🟢 PASSED |
-| `BatchAcceptCandidates_CommitsAllValidCandidatesAndWritesAuditLogs` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-SYS-001 | 🟢 PASSED |
-| `BatchAcceptCandidates_ExceedingLimit_ReturnsBadRequest` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | 🟢 PASSED |
-| `BatchOperation_WithNonExistentCandidateId_RollsBackTransaction` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | 🟢 PASSED |
-| `BatchRejectCandidates_RequiresRationaleAndUpdatesStatus` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
-| `GenerateAndVerifySmartAssertion_ValidatesOAuth2AssertionToken` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
-| `GetProvenanceAudit_ReturnsRawFhirPayloadAndAuditTrail` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
-| `PollHospitalEhr_IngestsCandidatesWithDiscrepancyClassification` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
-| `RaiseClinicalQuery_RegistersQueryAndUpdatesCandidateStatus` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | 🟢 PASSED |
-| `RegisterAndListEndpoints_SuccessfullyManagesEhrEndpoints` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | 🟢 PASSED |
-| `RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-ESR-003, PRD-SYS-001 | 🟢 PASSED |
-| `DatabaseLockToken_IssueAndRevoke_UpdatesTokenStateAndAuditTrail` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ExecuteInSandbox_MockedDriver_ExecutesProgramAndGeneratesArtifactsAndManifestDigest` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ExecuteInSandbox_WhenContainerUnavailable_FailsClosedWithNonZeroExitCodeAndErrorOutput` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ExecutionManifest_VerifySeal_ReturnsValidWhenUntampered` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ValidateLockfile_TamperedDigest_ReturnsTamperedStatus` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ValidateLockfile_UnqualifiedPackageWithStrictQualification_RejectsPackage` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ValidateLockfile_ValidRenvLock_ParsesRPackages` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ValidateLockfile_ValidUvLock_ReturnsValidStatusAndParsedPackages` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | 🟢 PASSED |
-| `EveryRead_IsRefused_WhenTheSignedTenantIsNotAKernelTenant` | `Cadence.UnitTests.Kernel.Api.KernelApiHostTests` | PRD-CRF-013 | 🟢 PASSED |
-| `Navigation_ReadsInTheCallersTenant` | `Cadence.UnitTests.Kernel.Api.KernelApiHostTests` | PRD-CRF-013 | 🟢 PASSED |
-| `EnrollmentTransitionsFollowTheLifecycle` | `Cadence.UnitTests.Kernel.EnrollmentTests` | PRD-SUB-001 | 🟢 PASSED |
-| `KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys` | `Cadence.UnitTests.Kernel.KernelDbContextModelTests` | PRD-CRF-013 | 🟢 PASSED |
-| `ForkLeavesTheParentApprovedAndStartsAnAmendedDraft` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | 🟢 PASSED |
-| `LifecycleAllowsOnlyTheSpecifiedTransitions` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | 🟢 PASSED |
-| `SubmitForReviewSetsTheContentHashReturnToDraftClearsIt` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | 🟢 PASSED |
-| `EvaluatorIsDeterministicOverGeneratedPacksAndRecords` | `Cadence.UnitTests.Kernel.Rules.RulePackTests` | PRD-CRF-004 | 🟢 PASSED |
-| `Map_GlucoseInConventionalUnits_ConvertsToSi` | `Cadence.UnitTests.Kernel.Standards.MappingSpecificationTests` | PRD-LBM-001 | 🟢 PASSED |
-| `Map_SystolicBloodPressure_WritesOriginalAndStandardResults` | `Cadence.UnitTests.Kernel.Standards.MappingSpecificationTests` | PRD-CDR-002 | 🟢 PASSED |
-| `LedgerGeneratedHistoriesResolveExactlyWhenTheLatestRunMissesTheFinding` | `Cadence.UnitTests.Kernel.Validation.ValidationFindingTests` | PRD-CRF-004 | 🟢 PASSED |
-| `LedgerRerunWithoutDetectionResolvesWithTheRunAsEvidence` | `Cadence.UnitTests.Kernel.Validation.ValidationFindingTests` | PRD-CRF-004 | 🟢 PASSED |
-| `Consume_DuplicateClinicalQueryRaised_IsIdempotent` | `Cadence.UnitTests.Notifications.Consumers.ClinicalQueryRaisedConsumerTests` | PRD-SYS-001 | 🟢 PASSED |
-| `Consume_ValidClinicalQueryRaised_CreatesNotificationRecord` | `Cadence.UnitTests.Notifications.Consumers.ClinicalQueryRaisedConsumerTests` | PRD-SYS-001 | 🟢 PASSED |
-| `PreTool_RefusesDestructiveCommands` | `Cadence.UnitTests.Packages.AgentHookGuardTests` | PRD-SYS-053 | 🟢 PASSED |
-| `PreTool_RefusesPayloads` | `Cadence.UnitTests.Packages.AgentHookGuardTests` | PRD-SYS-053 | 🟢 PASSED |
-| `ForwardedHttps_FromATrustedProxyOnly_GetsHsts` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | 🟢 PASSED |
-| `HttpsResponses_CarryHsts_OutsideDevelopment` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | 🟢 PASSED |
-| `TrustedProxies_AcceptAddressesAndCidrRanges` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | 🟢 PASSED |
-| `TrustedProxies_WithAnInvalidEntry_Throw` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | 🟢 PASSED |
-| `Issue_ForAnAuditor_IsRefused` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
-| `Issue_WritesTheV3ContractClaims_WithASixtySecondLifetime` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
-| `Verify_AcceptsABoundTokenOnce` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
-| `Verify_ExpiredToken_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
-| `Verify_TokenSignedWithAnotherSecret_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
-| `Verify_TokensOutsideTheV3Contract_AreRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
-| `Verify_WithAnotherSignerActionOrBatch_IsRejectedWithoutConsumingTheToken` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
-| `ExtractReceiptOcr_ParsesMetadataAndRecordsAudit` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-PAT-002 | 🟢 PASSED |
-| `SubmitExpenseClaim_Exceeding100Threshold_RoutesToPendingReview` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-PAT-002 | 🟢 PASSED |
-| `SubmitExpenseClaim_MealSurpassingPerDiemCap_RoutesToPendingReview` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-PAT-002 | 🟢 PASSED |
-| `SubmitExpenseClaim_Under100WithHighConfidence_AutoApprovesAndDispatchesACH` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-PAT-002, PRD-PAY-006, PRD-SYS-182 | 🟢 PASSED |
-| `SubmitExpenseClaim_UnverifiedW9Over600Ytd_RoutesToPendingReview` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-SYS-182 | 🟢 PASSED |
-| `ApproveDsur_AppliesPart11SignatureBlock_AndLocksRecord` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-008 | 🟢 PASSED |
-| `CompileDsur_CalculatesPatientYearsExposureAndMedDraCrossTabulation` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-004 | 🟢 PASSED |
-| `Endpoints_CompileAndApprove_ReturnCreatedAndOkWithValidSignature` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-004 | 🟢 PASSED |
-| `UpdateDsur_GivenLockedRecord_Returns409Conflict` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-004 | 🟢 PASSED |
-| `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | PRD-SYS-001 | 🟢 PASSED |
+| `AuditTrailEntitiesMustNotBeDependentOfCascadeDelete` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ChainWrittenToPostgres_VerifiesWhenReadBack` | `Cadence.IntegrationTests.Execution.AuditChainPostgresRoundTripTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EtmfComplianceUpdate_StoresTheTypedReasonInTheAuditEntry` | `Cadence.IntegrationTests.Execution.ChangeReasonEncodingTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SubjectStateChange_StoresTheTypedReasonInTheAuditEntry` | `Cadence.IntegrationTests.Execution.ChangeReasonEncodingTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `FormWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ObservationWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `QueryWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SiteComplianceWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SubjectWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApproveForm_ReplayingAUsedToken_Returns401` | `Cadence.IntegrationTests.Execution.ExecutionWriteAuthorizationTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApproveForm_WithATokenIssuedForSomethingElse_Returns401` | `Cadence.IntegrationTests.Execution.ExecutionWriteAuthorizationTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApproveForm_WithoutESignatureToken_Returns401AndLeavesTheFormUnsigned` | `Cadence.IntegrationTests.Execution.ExecutionWriteAuthorizationTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EdgeCaseScenario_MatchesGoldenMaster` | `Cadence.IntegrationTests.Execution.SubjectGoldenMasterTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ErrorScenario_MatchesExpectedStatusAndDetail` | `Cadence.IntegrationTests.Execution.SubjectGoldenMasterTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `NominalScenario_MatchesGoldenMaster` | `Cadence.IntegrationTests.Execution.SubjectGoldenMasterTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `StateChange_AlongAForbiddenPath_Returns422_AndLeavesTheStateUnchanged` | `Cadence.IntegrationTests.Execution.SubjectRouteAuthorityTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `CdiscCtPackageLoadsAsOnePinnedVersionWithAuditedDigest` | `Cadence.IntegrationTests.Kernel.ConceptRegistryPostgresTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `IndicatorSet_ReleasedAndPinned_ComputesValuesAndFlagsABreachedLimit` | `Cadence.IntegrationTests.Kernel.IndicatorSetPostgresTests` | PRD-CTMS-007 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `StudyPulse_ReadsLiveKernelPopulationsAndCountsOnlyWhatTheReaderMaySee` | `Cadence.IntegrationTests.Kernel.IndicatorSetPostgresTests` | PRD-CTMS-007 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ReadNeverReturnsAnotherTenantsActivity` | `Cadence.IntegrationTests.Kernel.KernelActivityPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Scenario3ActOutsideDelegationDeniedAuditedRetroactiveDoaDoesNotValidate` | `Cadence.IntegrationTests.Kernel.KernelAuthorityPostgresTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `StudySiteActivationNeedsAnEffectiveVersionOnApprovalEvidence` | `Cadence.IntegrationTests.Kernel.KernelEffectivityPostgresTests` | PRD-CTMS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ChangeStatusRefusesIllegalMovesAndTimes` | `Cadence.IntegrationTests.Kernel.KernelEnrollmentPostgresTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EnrollmentsDatabaseGuardsEnforceTheLifecycleForEveryDatabaseUser` | `Cadence.IntegrationTests.Kernel.KernelEnrollmentPostgresTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `DenialIsExplainedAndAuditedWithItsConditions` | `Cadence.IntegrationTests.Kernel.KernelExplanationPostgresTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApplicationRoleCannotReadTheVaultTablesAndReachesThemOnlyThroughItsFunctions` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RecordAndRevealDisclosesOnlyAfterAnAuditedRevealAndNoKernelTableHoldsIdentifiers` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RevealByAnAutomationAgentIsDeniedEvenWithTheGrant` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RevealWithoutTheLayersCapabilityIsDeniedAuditedAndDisclosesNothing` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `VaultRecordsAreIsolatedByTenant` | `Cadence.IntegrationTests.Kernel.KernelIdentityVaultPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `NavigationNeverCrossesTenants` | `Cadence.IntegrationTests.Kernel.KernelNavigationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ForkKeepsTheParentApprovedNumbersTheDraftAndStoresTheAmendment` | `Cadence.IntegrationTests.Kernel.KernelProtocolVersionPostgresTests` | PRD-CRF-012 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ProtocolVersionsTriggerFreezesApprovedContentForEveryDatabaseUser` | `Cadence.IntegrationTests.Kernel.KernelProtocolVersionPostgresTests` | PRD-CRF-012 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SearchNeverReturnsAnotherTenantsObjects` | `Cadence.IntegrationTests.Kernel.KernelSearchPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SimulateCannotReachAnotherTenantsVersions` | `Cadence.IntegrationTests.Kernel.KernelSimulationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `CrossTenantReadReturnsNothing` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EveryKernelTableHasTenantIdAndForcedRowLevelSecurity` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `NoTenantCannotConnectAndSeesNothing` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `PersonIsVisibleOnlyToTenantsWithAMembership` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction` | `Cadence.IntegrationTests.Kernel.KernelTenantIsolationPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `WorkQueueCannotReachAnotherTenant` | `Cadence.IntegrationTests.Kernel.KernelWorkQueuePostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TraceFromAnotherTenantSeesNoEdges` | `Cadence.IntegrationTests.Kernel.LineagePostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RulePackDraftedAndReleasedAtRuntimeLoadsAndEvaluates` | `Cadence.IntegrationTests.Kernel.RulePackPostgresTests` | PRD-CRF-004 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RegisterAndApproveStandardVersionAreAuditedAndReadBackExactly` | `Cadence.IntegrationTests.Kernel.StandardsRegistryPostgresTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TerminologyResolutionIsTenantScoped` | `Cadence.IntegrationTests.Kernel.StandardsRegistryPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `FindingsAreIsolatedByTenant` | `Cadence.IntegrationTests.Kernel.ValidationFindingPostgresTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RerunAfterMappingFixResolvesTheFindingInsteadOfDuplicatingIt` | `Cadence.IntegrationTests.Kernel.ValidationFindingPostgresTests` | PRD-CRF-004 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `CtmsDbContext_GivenEntityMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EtmfDbContext_GivenDocumentMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `FileshareDbContext_GivenFileRecordMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `QualityDbContext_GivenDeviationMutations_GeneratesMerkleChainedAuditLogEntries` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChanges_WithAnAuditedChangeAndNoActor_FailsWithoutWriting` | `Cadence.UnitTests.Audit.GxPAuditTrailGenerationTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchCertify_CertifiesCompliantSites_WithIndividualTokensAndAuditLogs` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchCertify_Performance_CompletesUnder5SecondsFor50Sites` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchCertify_RejectsNonCompliantSites` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `GetCountryMatrix_ReturnsSixFacetReadinessForAllSites` | `Cadence.UnitTests.Ctms.StartupGreenlightEndpointsTests` | PRD-SSU-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `CompileEndpoint_FinalizesAndFilesToEtmf_AndDispatchesEmail` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ConfirmationLetter_RendersHtmlTemplate_AndCompilesDraftPdf` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `FinalizedLetter_AppliesPart11Pkcs7Signature_AndPassesVerification` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `FollowUpLetter_WithFindings_RendersHtmlTable` | `Cadence.UnitTests.Ctms.VisitLetterPdfPipelineTests` | PRD-CTMS-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SigTokenVerifier_ReusedTokenForEconsent_FailsClosedWithReauthenticationRequired` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SigTokenVerifier_TokenForDifferentActionUrl_FailsClosedWithReauthenticationRequired` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SigTokenVerifier_ValidTokenForEconsent_VerifiesAndConsumesSuccessfully` | `Cadence.UnitTests.Econsent.EconsentEndpointsTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Consume_EConsentCompleted_FilesICFDocumentInEtmf` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Consume_EConsentCompleted_IsIdempotent` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Consume_EtmfDocumentFilingRequested_FilesDocument` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Consume_EtmfDocumentFilingRequested_IsIdempotent` | `Cadence.UnitTests.Etmf.Consumers.EtmfConsumersTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ActivateSiteAsync_BlockedPath_AuditEntryIsDurablyCommittedBeforeTheFailureIsObservedByTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ActivateSiteAsync_GivenCompliantSite_SucceedsWritesSiteActivationAuditEntryAndDoesNotFlipIsComplete` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ActivateSiteAsync_GivenIncompleteComplianceRow_FailsWithBlockedActivationAndWritesAuditEntry` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ActivateSiteAsync_GivenNoComplianceRow_FailsWithBlockedActivationAndWritesAuditEntryFirst` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApplyEtmfWebhookAsync_GivenExistingRowForSameKey_IncrementsVersionAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApplyEtmfWebhookAsync_GivenNoExistingRow_CreatesNewRowWithVersionOneAndAuditsTheCaller` | `Cadence.UnitTests.Execution.Compliance.SiteComplianceApplicationServiceTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `DispenseDeviceAsync_ExpiredDevice_ThrowsExpiredError` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `DispenseDeviceAsync_QuarantinedDevice_ThrowsQuarantinedError` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `DispenseDeviceAsync_ValidAvailableDevice_DispensesSuccessfully` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `GetInvestigationSummaryAsync_CalculatesMetricsCorrectly` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `LogDeficiencyAsync_TriggersQuarantineAndSafetyCaseAndOutboxEvents` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RegisterInventoryAsync_BulkQuantity_RegistersSerializedDevices` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RegisterInventoryAsync_WithRawBarcode_ParsesAndStoresAttributes` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ReleaseQuarantineAsync_ReleasesDeviceAndQuarantineRecord` | `Cadence.UnitTests.Execution.Devices.DeviceApplicationServiceTests` | PRD-DEV-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `DispenseDevice_Returns200OK` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `GetInvestigationSummary_Returns200OK` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `LogDeficiency_Returns201Created` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ParseUdi_Returns200WithParsedResult` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RegisterInventory_Returns201Created` | `Cadence.UnitTests.Execution.Devices.DeviceEndpointsTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `IsHibccMod43Valid_ValidAndInvalidCodes_EvaluatesCorrectly` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Parse_Gs1128SequentialWithoutParentheses_ParsesFields` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Parse_Gs1128WithParentheses_ReturnsParsedAttributes` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Parse_Gs1DataMatrixPrefix_ReturnsDataMatrixCarrierFormat` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Parse_Hibcc128PrimaryAndSecondary_ParsesComponents` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Parse_HibccDataMatrixWithPrefix_ParsesComponentsAndCarrierFormat` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Parse_HibccSecondarySerialNumber_ParsesSerialNumber` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Parse_NullOrEmptyBarcode_ReturnsInvalidResult` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ValidateGtinMod10_ValidAndInvalidGtins_EvaluatesCorrectly` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EvaluateInlineConstraints_FlagsReferenceRangeViolations` | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests` | SRS-EDC-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchSignOff_Exceeds100SubjectsCap_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchSignOff_NonPiRole_RejectsWithForbidden` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchSignOff_SubjectLevel_ApprovesCompletedSubmissionsAndReturnsSummary` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ChangingRoute_WithoutAChangeReason_Returns400` | `Cadence.UnitTests.Execution.Endpoints.LegacyAliasChangeReasonTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApproveFormSubmission_Handler_WithInvalidHmac_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApproveFormSubmission_Handler_WithValidSignature_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `UnlockFormSubmission_Handler_WithAuditReason_ReturnsOkResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `NominalFormSubmission_ApprovalAndUnlock_MaintainsRegulatoryIntegrity` | `Cadence.UnitTests.Execution.Forms.FormSubmissionGoldenMasterTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApproveForm_WithInvalidSigningReason_ReturnsInvalidSigningReasonError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `CompleteAndApprove_LocksFormInReadOnlyState` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `FormApplicationService_Approve_ValidatesSha256PayloadHash` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `FormApplicationService_Approve_WithUnauthorizedSignerRole_ReturnsUnauthorizedError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `FormApplicationService_Approve_WithUnconfiguredConfigurationSecret_ThrowsInvalidOperationException` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `FormApplicationService_Approve_WithUnconfiguredSecret_ThrowsInvalidOperationException` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `UnlockForm_WithReason_RevertsToDraftAndUnlocks` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `UpdatePayload_WhenFormIsApproved_ReturnsForbiddenLockedError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ActionWithNoEntityChange_IsWrittenAsAnActionOnlyEntryOnTheSameChain` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ChangeWithoutARecordedAction_IsStillAudited_WithTheEntityStateAsAction` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SubjectUpdate_WritesOneEntryPerChange_AndTheChainVerifies` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Verifier_DetectsAFork` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Verifier_DetectsATamperedEntry` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Verifier_VerifiesLegacyTableNameChainsAlongsideNewOnes_WithoutRewritingThem` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `WriteAsync_DoesNotItselfSave` | `Cadence.UnitTests.Execution.Persistence.EfAuditLogWriterTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_AfterATransientFailure_RetriesAndWritesEachAuditEntryOnce` | `Cadence.UnitTests.Execution.Persistence.ExecutionRepositoryBaseTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TwoConcurrentFormUpdates_OneSucceeds_TheOtherConflicts_AndTheAuditShowsOneChange` | `Cadence.UnitTests.Execution.Persistence.ExecutionRepositoryBaseTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenClinicalSubjectAndSiteComplianceCacheModifiedInSameCall_ChainsEachRealAggregateTypeIndependently` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenClinicalSubjectPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenSiteComplianceCachePersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenSubjectConsentPersistedTwiceInSequence_ChainsSecondEntrysPredecessorHashToFirstsBlockHash` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainIntegrationTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenIGxPAuditableEntityNotInheritingAggregateRootBase_WritesAuditLogEntryWithoutFieldStamping` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenModifiedAggregate_IncrementsVersionIndexWithoutOverwritingCreatedBy` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenNonStringTIdAggregate_StampsCreatedFields` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenSequentialSavesWithIdenticalTimestamps_ProducesValidMerkleChain` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenTwoEntityTypesModifiedInSameCall_ChainsEachEntityTypeIndependently` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChangesAsync_GivenTwoSequentialSaves_ChainsPredecessorHashForSameEntityType` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SaveChanges_Synchronously_WithAnAuditedChange_FailsInsteadOfSkippingTheAudit` | `Cadence.UnitTests.Execution.Persistence.GxPAuditInterceptorMerkleChainTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `CreateAsync_WhenQueryRaised_PublishesClinicalQueryRaisedEvent` | `Cadence.UnitTests.Execution.Queries.ClinicalQueryApplicationServiceOutboxTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RunAs_OverridesTheAmbientCaller` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RunAs_WithNoHttpContext_AttributesToTheServiceAccount` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ServiceAccount_WithoutANamedSvcId_IsRejected` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `UserId_GivenEmptySubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `UserId_GivenNoHttpContext_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `UserId_GivenNoSubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `UserId_GivenWhitespaceOnlySubClaim_Throws` | `Cadence.UnitTests.Execution.Security.CurrentAuditContextAccessorTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `HostStartup_WithoutAValidDemographicsKey_FailsFast` | `Cadence.UnitTests.Execution.Security.DemographicsKeyStartupValidationTests` | PRD-SYS-190 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Create_ProducesSubjectInScreeningWithSuppliedFields` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TransitionTo_IllegalTransition_LeavesStatusUnchangedAndReturnsGuardFailure` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TransitionTo_LegalTransition_UpdatesStatusAndReturnsSuccess` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TransitionTo_SameState_NoOpSucceedsViaGuard` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Withdraw_AfterUnblinding_SetsWithdrawalFieldsFromClock` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Withdraw_CalledTwiceOnAlreadyWithdrawnSubject_SucceedsSilentlyAsNoOp` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Withdraw_OnScreenFailedSubject_ReturnsFailureWithoutThrowing` | `Cadence.UnitTests.Execution.Subjects.ClinicalSubjectTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `DeleteDemographicsAsync_OnSuccess_WritesDeleteDemographicsAuditEntry` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceDemographicsTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `AdvanceStateAsync_GivenCompliantSite_TargetingEnrolled_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `AdvanceStateAsync_GivenForbiddenTransition_ReturnsInvalidStateTransitionAndDoesNotMutate` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `AdvanceStateAsync_GivenLegalTransition_SucceedsAndPersistsNewStatus` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `AdvanceStateAsync_GivenLegalTransition_WritesTransitionAuditEntryNamedForTargetState` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `AdvanceStateAsync_GivenNeitherStatusNorState_ReturnsInvalidStateTransitionRatherThanThrowing` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `AdvanceStateAsync_GivenSuccessfulTransitionToEnrolled_ResponseAndStoredStatusAreEnrolled` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `AdvanceStateAsync_GivenUnmappedStateString_ReturnsInvalidStateTransition_SameCodeAsForbiddenTransition` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EvaluateAndTransitionScreeningAsync_GivenEligible_TransitionsToEnrolled` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EvaluateAndTransitionScreeningAsync_GivenIneligible_TransitionsToScreenFailed` | `Cadence.UnitTests.Execution.Subjects.SubjectApplicationServiceStateTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Guard_FullTransitionMatrix_MatchesSpecGraph` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Guard_NullCurrentTargetingNonScreening_FailsWithInvalidStateTransition` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Guard_NullCurrentTargetingScreening_Succeeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Guard_ReconsentRequiredFanOut_CoversEveryOtherState` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Guard_SameStateNoOp_AlwaysSucceeds` | `Cadence.UnitTests.Execution.Subjects.SubjectTransitionGraphTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `HostStartup_OutsideDevelopment_WithoutOidcAudience_FailsFast` | `Cadence.UnitTests.Gateway.GatewayAudienceTests` | PRD-SYS-190 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `CallerOverTheLimit_Gets429WithRetryAfter_WhileOtherCallersAreServed` | `Cadence.UnitTests.Gateway.GatewayRateLimitingTests` | PRD-SYS-189 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `HealthProbes_AreNeverRateLimited` | `Cadence.UnitTests.Gateway.GatewayRateLimitingTests` | PRD-SYS-189 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EveryCluster_HasTimeoutAndActiveAndPassiveHealthChecks` | `Cadence.UnitTests.Gateway.GatewayResilienceTests` | PRD-SYS-191 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ServiceThatIsNotReady_Gets503WithoutForwarding_UntilItIsReadyAgain` | `Cadence.UnitTests.Gateway.GatewayResilienceTests` | PRD-SYS-191 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ServiceThatStopsResponding_Gets504AfterTheProxyTimeout` | `Cadence.UnitTests.Gateway.GatewayResilienceTests` | PRD-SYS-191 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EveryRoute_LeadsToMappedEndpoints_AndEveryServiceApiIsRouted` | `Cadence.UnitTests.Gateway.GatewayRouteCoverageTests` | PRD-SYS-191 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `HostStartup_OutsideDevelopment_WithoutServiceUrls_FailsFast` | `Cadence.UnitTests.Gateway.GatewayServiceUrlValidationTests` | PRD-SYS-190 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `HostStartup_WithARelativeServiceUrl_FailsFast` | `Cadence.UnitTests.Gateway.GatewayServiceUrlValidationTests` | PRD-SYS-190 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `KeycloakVerifier_MapsIdentityProviderAnswers` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `KeycloakVerifier_UsesADirectGrantThenEndsThatSession` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SignatureVerification_ForAnAuditor_Returns403WithoutCheckingCredentials` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SignatureVerification_NamingAnotherUser_Returns403` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SignatureVerification_RepeatedAttempts_AreRateLimitedPerSigner` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SignatureVerification_WithAWrongPassword_Returns401WithoutAToken` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SignatureVerification_WithTheCallersPassword_IssuesAVerifiableSingleUseToken` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SignatureVerification_WithoutABoundAction_Returns400` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SignatureVerification_WithoutSignIn_Returns401` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TokenEndpoint_IsDerivedFromTheOidcSettings` | `Cadence.UnitTests.Gateway.SignatureTokenEndpointTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `AcceptCandidate_CommitsValueAndWritesGxPAuditAndESignature` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchAcceptCandidates_CommitsAllValidCandidatesAndWritesAuditLogs` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchAcceptCandidates_ExceedingLimit_ReturnsBadRequest` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchOperation_WithNonExistentCandidateId_RollsBackTransaction` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `BatchRejectCandidates_RequiresRationaleAndUpdatesStatus` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-ESR-003, PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `GenerateAndVerifySmartAssertion_ValidatesOAuth2AssertionToken` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `GetProvenanceAudit_ReturnsRawFhirPayloadAndAuditTrail` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-003, PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `PollHospitalEhr_IngestsCandidatesWithDiscrepancyClassification` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RaiseClinicalQuery_RegistersQueryAndUpdatesCandidateStatus` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RegisterAndListEndpoints_SuccessfullyManagesEhrEndpoints` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` | `Cadence.UnitTests.Interop.EsourceReconciliationTests` | PRD-ESR-002, PRD-ESR-003, PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `DatabaseLockToken_IssueAndRevoke_UpdatesTokenStateAndAuditTrail` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ExecuteInSandbox_MockedDriver_ExecutesProgramAndGeneratesArtifactsAndManifestDigest` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ExecuteInSandbox_WhenContainerUnavailable_FailsClosedWithNonZeroExitCodeAndErrorOutput` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ExecutionManifest_VerifySeal_ReturnsValidWhenUntampered` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ValidateLockfile_TamperedDigest_ReturnsTamperedStatus` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ValidateLockfile_UnqualifiedPackageWithStrictQualification_RejectsPackage` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ValidateLockfile_ValidRenvLock_ParsesRPackages` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ValidateLockfile_ValidUvLock_ReturnsValidStatusAndParsedPackages` | `Cadence.UnitTests.Interop.StatisticalComputingEnvironmentTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EveryRead_IsRefused_WhenTheSignedTenantIsNotAKernelTenant` | `Cadence.UnitTests.Kernel.Api.KernelApiHostTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Navigation_ReadsInTheCallersTenant` | `Cadence.UnitTests.Kernel.Api.KernelApiHostTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EnrollmentTransitionsFollowTheLifecycle` | `Cadence.UnitTests.Kernel.EnrollmentTests` | PRD-SUB-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys` | `Cadence.UnitTests.Kernel.KernelDbContextModelTests` | PRD-CRF-013 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ForkLeavesTheParentApprovedAndStartsAnAmendedDraft` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `LifecycleAllowsOnlyTheSpecifiedTransitions` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SubmitForReviewSetsTheContentHashReturnToDraftClearsIt` | `Cadence.UnitTests.Kernel.ProtocolVersionTests` | PRD-CRF-012 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `EvaluatorIsDeterministicOverGeneratedPacksAndRecords` | `Cadence.UnitTests.Kernel.Rules.RulePackTests` | PRD-CRF-004 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Map_GlucoseInConventionalUnits_ConvertsToSi` | `Cadence.UnitTests.Kernel.Standards.MappingSpecificationTests` | PRD-LBM-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Map_SystolicBloodPressure_WritesOriginalAndStandardResults` | `Cadence.UnitTests.Kernel.Standards.MappingSpecificationTests` | PRD-CDR-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `LedgerGeneratedHistoriesResolveExactlyWhenTheLatestRunMissesTheFinding` | `Cadence.UnitTests.Kernel.Validation.ValidationFindingTests` | PRD-CRF-004 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `LedgerRerunWithoutDetectionResolvesWithTheRunAsEvidence` | `Cadence.UnitTests.Kernel.Validation.ValidationFindingTests` | PRD-CRF-004 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Consume_DuplicateClinicalQueryRaised_IsIdempotent` | `Cadence.UnitTests.Notifications.Consumers.ClinicalQueryRaisedConsumerTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Consume_ValidClinicalQueryRaised_CreatesNotificationRecord` | `Cadence.UnitTests.Notifications.Consumers.ClinicalQueryRaisedConsumerTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `PreTool_RefusesDestructiveCommands` | `Cadence.UnitTests.Packages.AgentHookGuardTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `PreTool_RefusesPayloads` | `Cadence.UnitTests.Packages.AgentHookGuardTests` | PRD-SYS-053 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ForwardedHttps_FromATrustedProxyOnly_GetsHsts` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `HttpsResponses_CarryHsts_OutsideDevelopment` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TrustedProxies_AcceptAddressesAndCidrRanges` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `TrustedProxies_WithAnInvalidEntry_Throw` | `Cadence.UnitTests.Packages.HttpHardeningTests` | PRD-SYS-189 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Issue_ForAnAuditor_IsRefused` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Issue_WritesTheV3ContractClaims_WithASixtySecondLifetime` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Verify_AcceptsABoundTokenOnce` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Verify_ExpiredToken_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Verify_TokenSignedWithAnotherSecret_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Verify_TokensOutsideTheV3Contract_AreRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Verify_WithAnotherSignerActionOrBatch_IsRejectedWithoutConsumingTheToken` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ExtractReceiptOcr_ParsesMetadataAndRecordsAudit` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-PAT-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SubmitExpenseClaim_Exceeding100Threshold_RoutesToPendingReview` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-PAT-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SubmitExpenseClaim_MealSurpassingPerDiemCap_RoutesToPendingReview` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-PAT-002 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SubmitExpenseClaim_Under100WithHighConfidence_AutoApprovesAndDispatchesACH` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-PAT-002, PRD-PAY-006, PRD-SYS-182 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `SubmitExpenseClaim_UnverifiedW9Over600Ytd_RoutesToPendingReview` | `Cadence.UnitTests.Payments.ExpenseClaimAutoApprovalTests` | PRD-SYS-182 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `ApproveDsur_AppliesPart11SignatureBlock_AndLocksRecord` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-008 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `CompileDsur_CalculatesPatientYearsExposureAndMedDraCrossTabulation` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-004 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `Endpoints_CompileAndApprove_ReturnCreatedAndOkWithValidSignature` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-004 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `UpdateDsur_GivenLockedRecord_Returns409Conflict` | `Cadence.UnitTests.Safety.DsurCompilerEngineTests` | PRD-PVG-004 | ⚪ (UNVERIFIED) UNVERIFIED |
+| `AuditLogEntryComputesDeterministicMerkleHashChainedToPredecessor` | `Cadence.UnitTests.SecurityAndDomainTests` | PRD-SYS-001 | ⚪ (UNVERIFIED) UNVERIFIED |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
-Qualified Requirements: 27 of 195
+Qualified Requirements: 0 of 195
 
 ## 5. Qualification Review & Authorization
 
@@ -293,4 +296,4 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** 686783defa9b6a25e1ba6d644e7e69152e11b0f8143688bd741d4930681c6203
+- **Content Hash (SHA-256):** 27cf45a7300edb5029d810a8cbe778c4075b5087618f67ae8d43cf5123c97b9d

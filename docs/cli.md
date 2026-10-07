@@ -66,7 +66,7 @@ It always exits `0`.
 Runs the quality gates.
 
 ```bash
-pnpm cadence check                 # all 21 gates
+pnpm cadence check                 # all 22 gates
 pnpm cadence check <gate>          # one gate
 pnpm cadence check <gate> <files>  # one gate, limited to these files
 pnpm cadence check --pre-commit    # what the pre-commit hook runs
@@ -78,11 +78,10 @@ pnpm cadence check --pre-commit    # what the pre-commit hook runs
 | `[files]`      | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).                                                                                                               |
 | `--pre-commit` | Quick variants for the pre-commit hook: the two format gates are skipped (the hook formats the staged files itself), and the `openapi` gate checks `docs/api` against the committed specs instead of exporting specs from the services. |
 
-With no gate, all 21 gates run in order. A failing gate does not stop the run. The command exits `1` if any gate failed.
+With no gate, all 22 gates run in order. A failing gate does not stop the run. The command exits `1` if any gate failed.
 
-An unknown gate name prints an error and exits `1`. Two extra names are accepted:
+An unknown gate name prints an error and exits `1`. Extra alias accepted:
 
-- `rtm` (or `gxp-rtm-validate`) validates the traceability matrix without writing it. It is not one of the 21.
 - `prettier-check` always passes. It runs nothing.
 
 The `deid` gate scans the given files, or every file git tracks, with the full de-identification detector

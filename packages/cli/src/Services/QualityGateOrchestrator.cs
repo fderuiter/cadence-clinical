@@ -30,11 +30,11 @@ public static class QualityGateOrchestrator
             return RunSingleGate(gateName, targetFiles, preCommit);
         }
 
-        // Run all 21 pre-commit quality gates natively in C# via ToolingCore services
+        // Run all 22 pre-commit quality gates natively in C# via ToolingCore services
         bool allPassed = true;
 
         // 1. Formatting
-        AnsiConsole.MarkupLine("1/21 Validating C# Code Formatting (.editorconfig)...");
+        AnsiConsole.MarkupLine("1/22 Validating C# Code Formatting (.editorconfig)...");
         if (preCommit)
         {
             AnsiConsole.MarkupLine("Skipped: the pre-commit hook runs 'dotnet format' on the staged files.");
@@ -46,7 +46,7 @@ public static class QualityGateOrchestrator
         }
 
         // 2. Roslyn Style
-        AnsiConsole.MarkupLine("\n2/21 Validating Roslyn Analyzer Rules...");
+        AnsiConsole.MarkupLine("\n2/22 Validating Roslyn Analyzer Rules...");
         if (preCommit)
         {
             AnsiConsole.MarkupLine("Skipped: the pre-commit hook runs 'dotnet format' on the staged files.");
@@ -58,7 +58,7 @@ public static class QualityGateOrchestrator
         }
 
         // 3. Clean Secrets Baseline
-        AnsiConsole.MarkupLine("\n3/21 Cleaning Secrets Baseline...");
+        AnsiConsole.MarkupLine("\n3/22 Cleaning Secrets Baseline...");
         if (SecretsBaselineCleanerService.CleanSecretsBaseline() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 3 (clean-secrets-baseline) failed![/]");
@@ -66,7 +66,7 @@ public static class QualityGateOrchestrator
         }
 
         // 4. Code Duplication
-        AnsiConsole.MarkupLine("\n4/21 Detecting Code Duplication...");
+        AnsiConsole.MarkupLine("\n4/22 Detecting Code Duplication...");
         if (DuplicationDetectorService.DetectDuplication(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 4 (detect-code-duplication) failed![/]");
@@ -74,7 +74,7 @@ public static class QualityGateOrchestrator
         }
 
         // 5. CLI Docs
-        AnsiConsole.MarkupLine("\n5/21 Validating CLI Docs Parity...");
+        AnsiConsole.MarkupLine("\n5/22 Validating CLI Docs Parity...");
         if (CliDocsGeneratorService.GenerateCliDocs(check: true) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 5 (validate-cli-docs) failed![/]");
@@ -82,7 +82,7 @@ public static class QualityGateOrchestrator
         }
 
         // 6. ADRs
-        AnsiConsole.MarkupLine("\n6/21 Validating ADR Integrity...");
+        AnsiConsole.MarkupLine("\n6/22 Validating ADR Integrity...");
         if (!Cadence.ToolingCore.Services.AdrValidatorService.ValidateAdrs(checkGitDiff: true))
         {
             AnsiConsole.MarkupLine("[red]Gate 6 (validate-adrs) failed![/]");
@@ -90,7 +90,7 @@ public static class QualityGateOrchestrator
         }
 
         // 7. Architecture Drift
-        AnsiConsole.MarkupLine("\n7/21 Validating Architecture Drift...");
+        AnsiConsole.MarkupLine("\n7/22 Validating Architecture Drift...");
         if (Cadence.ToolingCore.Services.ArchitectureDriftValidatorService.ValidateArchitectureDrift() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 7 (validate-architecture-drift) failed![/]");
@@ -98,7 +98,7 @@ public static class QualityGateOrchestrator
         }
 
         // 8. Path Requirement Sanitizer
-        AnsiConsole.MarkupLine("\n8/21 Sanitizing Requirement Tag Prefixes...");
+        AnsiConsole.MarkupLine("\n8/22 Sanitizing Requirement Tag Prefixes...");
         if (ComplianceUtilityService.ExecuteComplianceUtility(sanitize: true, targetFiles: targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 8 (path-requirement-sanitizer) failed![/]");
@@ -106,7 +106,7 @@ public static class QualityGateOrchestrator
         }
 
         // 9. Markdown Validation
-        AnsiConsole.MarkupLine("\n9/21 Validating Markdown Workspaces & Links...");
+        AnsiConsole.MarkupLine("\n9/22 Validating Markdown Workspaces & Links...");
         if (Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 9 (validate-markdown) failed![/]");
@@ -114,7 +114,7 @@ public static class QualityGateOrchestrator
         }
 
         // 10. Environment Variables
-        AnsiConsole.MarkupLine("\n10/21 Validating Environment Variables Synchronization...");
+        AnsiConsole.MarkupLine("\n10/22 Validating Environment Variables Synchronization...");
         if (EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 10 (validate-environment-variables) failed![/]");
@@ -130,7 +130,7 @@ public static class QualityGateOrchestrator
         }
 
         // 11. Readmes
-        AnsiConsole.MarkupLine("\n11/21 Validating README Coverage...");
+        AnsiConsole.MarkupLine("\n11/22 Validating README Coverage...");
         if (ReadmeValidatorService.ValidateReadmes() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 11 (validate-readmes) failed![/]");
@@ -138,7 +138,7 @@ public static class QualityGateOrchestrator
         }
 
         // 12. Imports
-        AnsiConsole.MarkupLine("\n12/21 Validating Cross-Service Imports...");
+        AnsiConsole.MarkupLine("\n12/22 Validating Cross-Service Imports...");
         if (ImportValidatorService.ValidateImports() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 12 (validate-imports) failed![/]");
@@ -146,7 +146,7 @@ public static class QualityGateOrchestrator
         }
 
         // 13. Audit Security
-        AnsiConsole.MarkupLine("\n13/21 Executing Security Audit & Secret Scanner...");
+        AnsiConsole.MarkupLine("\n13/22 Executing Security Audit & Secret Scanner...");
         if (SecurityAuditorService.AuditSecurity(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 13 (audit-security) failed![/]");
@@ -154,7 +154,7 @@ public static class QualityGateOrchestrator
         }
 
         // 14. DEID Scan
-        AnsiConsole.MarkupLine("\n14/21 Executing DEID Compliance Scan...");
+        AnsiConsole.MarkupLine("\n14/22 Executing DEID Compliance Scan...");
         if (Cadence.ToolingCore.Services.DeidComplianceService.ScanDeidCompliance(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 14 (deid-compliance-scan) failed![/]");
@@ -162,7 +162,7 @@ public static class QualityGateOrchestrator
         }
 
         // 15. Auto-stage OpenAPI
-        AnsiConsole.MarkupLine("\n15/21 Staging & Validating OpenAPI Schemas...");
+        AnsiConsole.MarkupLine("\n15/22 Staging & Validating OpenAPI Schemas...");
         if (PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: preCommit, targetFiles: targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 15 (auto-stage-openapi) failed![/]");
@@ -170,7 +170,7 @@ public static class QualityGateOrchestrator
         }
 
         // 16. API Clients
-        AnsiConsole.MarkupLine("\n16/21 Validating Frontend API Clients AST Contract...");
+        AnsiConsole.MarkupLine("\n16/22 Validating Frontend API Clients AST Contract...");
         if (ApiClientValidatorService.ValidateApiClients() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 16 (validate-api-clients) failed![/]");
@@ -178,7 +178,7 @@ public static class QualityGateOrchestrator
         }
 
         // 17. Schema Doc
-        AnsiConsole.MarkupLine("\n17/21 Validating Database Schema Documentation...");
+        AnsiConsole.MarkupLine("\n17/22 Validating Database Schema Documentation...");
         if (preCommit)
         {
             AnsiConsole.MarkupLine("Skipped: rendering every module's EF Core model runs in 'cadence check' and CI.");
@@ -190,7 +190,7 @@ public static class QualityGateOrchestrator
         }
 
         // 18. Path Patterns
-        AnsiConsole.MarkupLine("\n18/21 Validating Path Patterns...");
+        AnsiConsole.MarkupLine("\n18/22 Validating Path Patterns...");
         if (PathPatternValidatorService.ValidatePathPatterns(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 18 (validate-path-patterns) failed![/]");
@@ -198,7 +198,7 @@ public static class QualityGateOrchestrator
         }
 
         // 19. Backend Static Verify
-        AnsiConsole.MarkupLine("\n19/21 Verifying Backend Contracts...");
+        AnsiConsole.MarkupLine("\n19/22 Verifying Backend Contracts...");
         if (ContractVerifierService.VerifyContracts() != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 19 (backend-static-verify) failed![/]");
@@ -206,7 +206,7 @@ public static class QualityGateOrchestrator
         }
 
         // 20. Query Style Linter
-        AnsiConsole.MarkupLine("\n20/21 Executing Query Style Linter...");
+        AnsiConsole.MarkupLine("\n20/22 Executing Query Style Linter...");
         if (QueryLinterService.LintQueries(targetFiles) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 20 (query-style-linter) failed![/]");
@@ -231,6 +231,14 @@ public static class QualityGateOrchestrator
         if (DocIndexSyncService.SyncDocIndex(check: true) != 0)
         {
             AnsiConsole.MarkupLine("[red]Gate 22 (validate-doc-index) failed![/]");
+            allPassed = false;
+        }
+
+        // 22b. GxP RTM Validation
+        AnsiConsole.MarkupLine("\nValidating GxP Requirements Traceability Matrix...");
+        if (!GxpRtmValidatorService.ValidateGxpRtm())
+        {
+            AnsiConsole.MarkupLine("[red]Gate (gxp-rtm-validate) failed![/]");
             allPassed = false;
         }
 
@@ -274,7 +282,7 @@ public static class QualityGateOrchestrator
             "query-style-linter" or "query-linter" => QueryLinterService.LintQueries(targetFiles) == 0,
             "validate-vulnerabilities" or "vulnerabilities" => VulnerabilityAuditorService.AuditVulnerabilities() == 0,
             "validate-dependencies" or "dependencies" => DependencyValidatorService.ValidateDependencies() == 0,
-            "gxp-rtm-validate" or "rtm" => RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true) == 0,
+            "gxp-rtm-validate" or "rtm" => GxpRtmValidatorService.ValidateGxpRtm(),
             _ => ReportUnknownGate(gateName)
         };
 
