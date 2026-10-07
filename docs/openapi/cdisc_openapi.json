@@ -3916,6 +3916,46 @@
         }
       }
     },
+    "/api/v1/imaging/studies/batch": {
+      "post": {
+        "tags": [
+          "DICOMweb Integration"
+        ],
+        "operationId": "BatchIngestStudyFolder",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_BatchIngestionResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Imaging_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/imaging/studies/{studyUid}": {
       "get": {
         "tags": [
@@ -12978,6 +13018,159 @@
           }
         }
       },
+      "Imaging_BatchDeidentificationManifest": {
+        "type": "object",
+        "properties": {
+          "manifest_id": {
+            "type": "string"
+          },
+          "study_envelope_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "subject_id": {
+            "type": "string"
+          },
+          "total_files_processed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ingested_slice_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skipped_non_dicom_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skipped_non_dicom_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "scrubbed_tags_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "scrubbed_tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pixel_mask_applied": {
+            "type": "boolean"
+          },
+          "pixel_masks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Imaging_PixelMaskBoundingBox"
+            }
+          },
+          "operator_identity": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "signature": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Imaging_BatchIngestionResult": {
+        "required": [
+          "studyEnvelopeId",
+          "certificateId",
+          "anonymizedStudyUid",
+          "totalFilesReceived",
+          "ingestedSliceCount",
+          "skippedNonDicomCount",
+          "skippedNonDicomFiles",
+          "seriesSummary",
+          "manifest",
+          "signature"
+        ],
+        "type": "object",
+        "properties": {
+          "studyEnvelopeId": {
+            "type": "string"
+          },
+          "certificateId": {
+            "type": "string"
+          },
+          "anonymizedStudyUid": {
+            "type": "string"
+          },
+          "totalFilesReceived": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ingestedSliceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skippedNonDicomCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "skippedNonDicomFiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "seriesSummary": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Imaging_SeriesIngestionSummary"
+            }
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/Imaging_BatchDeidentificationManifest"
+          },
+          "signature": {
+            "type": "string"
+          }
+        }
+      },
       "Imaging_CertificateResponse": {
         "required": [
           "certificate",
@@ -13445,6 +13638,49 @@
           }
         }
       },
+      "Imaging_PixelMaskBoundingBox": {
+        "required": [
+          "x_min",
+          "y_min",
+          "x_max",
+          "y_max"
+        ],
+        "type": "object",
+        "properties": {
+          "x_min": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "y_min": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "x_max": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "y_max": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "Imaging_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -13525,6 +13761,34 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Imaging_SeriesIngestionSummary": {
+        "required": [
+          "seriesEnvelopeId",
+          "anonymizedSeriesUid",
+          "modality",
+          "instanceCount"
+        ],
+        "type": "object",
+        "properties": {
+          "seriesEnvelopeId": {
+            "type": "string"
+          },
+          "anonymizedSeriesUid": {
+            "type": "string"
+          },
+          "modality": {
+            "type": "string"
+          },
+          "instanceCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },

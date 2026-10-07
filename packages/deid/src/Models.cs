@@ -147,6 +147,57 @@ public class DicomDeidCertificate
     public string? Signature { get; set; }
 }
 
+public class BatchDeidentificationManifest
+{
+    [JsonPropertyName("manifest_id")]
+    public string ManifestId { get; set; } = Guid.NewGuid().ToString();
+
+    [JsonPropertyName("study_envelope_id")]
+    public string StudyEnvelopeId { get; set; } = string.Empty;
+
+    [JsonPropertyName("study_id")]
+    public string StudyId { get; set; } = string.Empty;
+
+    [JsonPropertyName("site_id")]
+    public string SiteId { get; set; } = string.Empty;
+
+    [JsonPropertyName("subject_id")]
+    public string SubjectId { get; set; } = string.Empty;
+
+    [JsonPropertyName("total_files_processed")]
+    public int TotalFilesProcessed { get; set; }
+
+    [JsonPropertyName("ingested_slice_count")]
+    public int IngestedSliceCount { get; set; }
+
+    [JsonPropertyName("skipped_non_dicom_count")]
+    public int SkippedNonDicomCount { get; set; }
+
+    [JsonPropertyName("skipped_non_dicom_files")]
+    public List<string> SkippedNonDicomFiles { get; set; } = [];
+
+    [JsonPropertyName("scrubbed_tags_count")]
+    public int ScrubbedTagsCount { get; set; }
+
+    [JsonPropertyName("scrubbed_tags")]
+    public List<string> ScrubbedTags { get; set; } = [];
+
+    [JsonPropertyName("pixel_mask_applied")]
+    public bool PixelMaskApplied { get; set; }
+
+    [JsonPropertyName("pixel_masks")]
+    public List<PixelMaskBoundingBox> PixelMasks { get; set; } = [];
+
+    [JsonPropertyName("operator_identity")]
+    public string OperatorIdentity { get; set; } = "cadence.imaging.pipeline";
+
+    [JsonPropertyName("timestamp")]
+    public string Timestamp { get; set; } = string.Empty;
+
+    [JsonPropertyName("signature")]
+    public string? Signature { get; set; }
+}
+
 public record DicomDeidResult(
     byte[] DeidentifiedBytes,
     DicomDeidCertificate Certificate,
