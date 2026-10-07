@@ -10,6 +10,7 @@ Generated from `docs/openapi/imaging_openapi.json` by `pnpm cadence generate-api
 | `GET` | `/api/v1/imaging/certificates/{certificateId}` | GetDeidCertificate |  |
 | `GET` | `/api/v1/imaging/status` | ImagingStatus | Returns Medical Imaging operational status. |
 | `POST` | `/api/v1/imaging/studies` | StowRsStoreInstances |  |
+| `POST` | `/api/v1/imaging/studies/batch` | BatchIngestStudyFolder |  |
 | `GET` | `/api/v1/imaging/studies/{studyUid}` | WadoRsGetStudy |  |
 | `GET` | `/api/v1/imaging/studies/{studyUid}/series/{seriesUid}/instances/{instanceUid}/frames/{frameList}` | WadoRsGetInstanceFrames |  |
 | `GET` | `/healthz` | ImagingHealthCheck | Medical Imaging DICOM service health probe. |
