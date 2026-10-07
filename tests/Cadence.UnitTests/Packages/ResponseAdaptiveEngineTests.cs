@@ -275,4 +275,36 @@ public class ResponseAdaptiveEngineTests
         result.UnblindedAuditRationale.Should().Contain("V=");
         result.UnblindedAuditRationale.Should().Contain("p=");
     }
+
+    [Fact]
+    public void FastBetaCdf_LargeSample_N1030_DoesNotOverflowOrReturnNaN()
+    {
+        // n = a + b - 1 = 550 + 550 - 1 = 1099 >= 1030
+        double cdf = ResponseAdaptiveEngine.FastBetaCdf(550, 550, 0.50);
+
+        double.IsNaN(cdf).Should().BeFalse();
+        double.IsInfinity(cdf).Should().BeFalse();
+        cdf.Should().BeApproximately(0.50, 1e-4);
+    }
+
+    [Fact]
+    public void Allocate_LargeSample_N1030_ProducesValidProbabilitiesAndNoNaN()
+    {
+        var config = new ResponseAdaptiveConfig(BurnInThreshold: 0, PowerTuning: 0.5);
+        var armStates = new List<ResponseArmState>
+        {
+            new("ArmA", EvaluatedSubjects: 1100, ObservedResponses: 700),
+            new("ArmB", EvaluatedSubjects: 1100, ObservedResponses: 500)
+        };
+        var request = CreateRequest();
+
+        var result = ResponseAdaptiveEngine.Allocate(config, armStates, request);
+
+        result.Should().NotBeNull();
+        result.ImbalanceScore.HasValue.Should().BeTrue();
+        double.IsNaN(result.ImbalanceScore!.Value).Should().BeFalse();
+        result.ImbalanceScore.Value.Should().BeGreaterThan(0.0);
+        result.UnblindedAuditRationale.Should().NotContain("NaN");
+        result.UnblindedAuditRationale.Should().NotContain("Infinity");
+    }
 }

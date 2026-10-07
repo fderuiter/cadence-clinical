@@ -1,4 +1,4 @@
-# ADR-2812: Synchronous Batch Assignment and Multi Role Delegation Sign Off Architecture
+# ADR-2813: Synchronous Batch Assignment and Multi Role Delegation Sign Off Architecture
 
 - **Status:** Accepted
 - **Date:** 2026-10-07

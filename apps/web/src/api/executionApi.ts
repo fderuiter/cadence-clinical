@@ -20,6 +20,7 @@ export type OperationEnvelope = Schemas["Execution_OperationEnvelopeResponse"];
 export type Observation = Schemas["Execution_ObservationResponse"];
 export type FormSubmission = Schemas["Execution_FormSubmissionResponse"];
 export type ClinicalQuery = Schemas["Execution_ClinicalQueryResponse"];
+export type BatchQueryResponse = Schemas["Execution_BatchQueryResponse"];
 
 export interface RaiseQuery {
   studyId: string;
@@ -303,6 +304,32 @@ export const executionApi = {
       client.POST("/api/v1/execution/queries/{id}/cancel", {
         params: { path: { id } },
         body: { reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+      })
+    );
+  },
+
+  /** Batch closes multiple queries (CRA or data manager), with the reason as X-Change-Reason. */
+  batchCloseQueries(
+    queryIds: string[],
+    reason: string
+  ): Promise<BatchQueryResponse> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/queries/batch-close", {
+        body: { query_ids: queryIds, reason },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+      })
+    );
+  },
+
+  /** Batch cancels multiple queries (CRA or data manager), with the reason as X-Change-Reason. */
+  batchCancelQueries(
+    queryIds: string[],
+    reason: string
+  ): Promise<BatchQueryResponse> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/queries/batch-cancel", {
+        body: { query_ids: queryIds, reason },
         headers: { "X-Change-Reason": encodeChangeReason(reason) },
       })
     );
