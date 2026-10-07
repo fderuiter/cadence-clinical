@@ -51,6 +51,324 @@
           }
         }
       }
+    },
+    "/api/v1/training/curricula": {
+      "get": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "ListCurricula",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "protocol_version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_TrainingCurriculumDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training/curricula/{curriculum_id}": {
+      "get": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "GetCurriculum",
+        "parameters": [
+          {
+            "name": "curriculum_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingCurriculumDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training/curricula/batch-assign": {
+      "post": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "BatchAssignCurriculum",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_BatchAssignCurriculumRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_BatchAssignmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training/assignments": {
+      "get": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "ListAssignments",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_TrainingAssignmentDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training/assignments/{assignment_id}": {
+      "get": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "GetAssignmentDetail",
+        "parameters": [
+          {
+            "name": "assignment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_TrainingAssignmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training/delegations": {
+      "get": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "ListDelegations",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_DelegationSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/training/delegations/bulk-signoff": {
+      "post": {
+        "tags": [
+          "Study Training \u0026 Gating"
+        ],
+        "operationId": "BulkSignOffDelegations",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_BulkDelegationSignOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_BulkDelegationSignOffResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -75,12 +393,521 @@
             ]
           }
         }
+      },
+      "Knowledge_BatchAssignCurriculumRequest": {
+        "required": [
+          "curriculum_id",
+          "study_id",
+          "site_ids",
+          "roles",
+          "target_personnel_ids",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "curriculum_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "roles": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "target_personnel_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Knowledge_BatchAssignmentResponse": {
+        "required": [
+          "batch_transaction_id",
+          "curriculum_id",
+          "study_id",
+          "total_eligible",
+          "total_assigned",
+          "total_skipped",
+          "assignments",
+          "skipped_items",
+          "executed_at"
+        ],
+        "type": "object",
+        "properties": {
+          "batch_transaction_id": {
+            "type": "string"
+          },
+          "curriculum_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "total_eligible": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_assigned": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_skipped": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_TrainingAssignmentDto"
+            }
+          },
+          "skipped_items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_SkippedAssignmentItemDto"
+            }
+          },
+          "executed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Knowledge_BulkDelegationSignOffRequest": {
+        "required": [
+          "delegation_ids",
+          "study_id",
+          "site_id",
+          "signature_payload"
+        ],
+        "type": "object",
+        "properties": {
+          "delegation_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_payload": {
+            "$ref": "#/components/schemas/Knowledge_SignaturePayloadDto"
+          }
+        }
+      },
+      "Knowledge_BulkDelegationSignOffResponse": {
+        "required": [
+          "batch_transaction_id",
+          "total_requested",
+          "total_signed",
+          "total_failed",
+          "signed_delegations",
+          "failed_items",
+          "sha256_seal",
+          "etmf_artifact_id",
+          "executed_at"
+        ],
+        "type": "object",
+        "properties": {
+          "batch_transaction_id": {
+            "type": "string"
+          },
+          "total_requested": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_signed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_failed": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "signed_delegations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_DelegationSummaryDto"
+            }
+          },
+          "failed_items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Knowledge_FailedDelegationItemDto"
+            }
+          },
+          "sha256_seal": {
+            "type": "string"
+          },
+          "etmf_artifact_id": {
+            "type": "string"
+          },
+          "executed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Knowledge_DelegationSummaryDto": {
+        "required": [
+          "id",
+          "study_id",
+          "site_id",
+          "staff_user_id",
+          "staff_name",
+          "role",
+          "task_code",
+          "duties",
+          "status",
+          "signed_off",
+          "pi_signature_hash",
+          "pi_approved_at",
+          "batch_transaction_id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "staff_user_id": {
+            "type": "string"
+          },
+          "staff_name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "task_code": {
+            "type": "string"
+          },
+          "duties": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "signed_off": {
+            "type": "boolean"
+          },
+          "pi_signature_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pi_approved_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "batch_transaction_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Knowledge_FailedDelegationItemDto": {
+        "required": [
+          "delegation_id",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "delegation_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Knowledge_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Knowledge_SignaturePayloadDto": {
+        "required": [
+          "signer_name",
+          "signer_role",
+          "meaning",
+          "password",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "signer_name": {
+            "type": "string"
+          },
+          "signer_role": {
+            "type": "string"
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Knowledge_SkippedAssignmentItemDto": {
+        "required": [
+          "user_id",
+          "site_id",
+          "user_role",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "user_role": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Knowledge_TrainingAssignmentDto": {
+        "required": [
+          "id",
+          "curriculum_id",
+          "study_id",
+          "site_id",
+          "user_id",
+          "user_name",
+          "user_role",
+          "status",
+          "batch_transaction_id",
+          "quiz_score",
+          "time_spent_seconds",
+          "completed_at",
+          "created_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "curriculum_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "user_role": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "batch_transaction_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quiz_score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "time_spent_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "completed_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Knowledge_TrainingCurriculumDto": {
+        "required": [
+          "id",
+          "study_id",
+          "protocol_version",
+          "title",
+          "description",
+          "is_active",
+          "created_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "protocol_version": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Cadence.Apps.Knowledge"
+    },
+    {
+      "name": "Study Training \u0026 Gating"
     }
   ]
 }

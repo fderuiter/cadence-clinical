@@ -151,6 +151,7 @@ var routes = new[]
     new RouteConfig { RouteId = "fileshare-route", ClusterId = "fileshare-cluster", Match = new RouteMatch { Path = "/api/v1/fileshare/{**catch-all}" } },
     new RouteConfig { RouteId = "imaging-route", ClusterId = "imaging-cluster", Match = new RouteMatch { Path = "/api/v1/imaging/{**catch-all}" } },
     new RouteConfig { RouteId = "knowledge-route", ClusterId = "knowledge-cluster", Match = new RouteMatch { Path = "/api/v1/knowledge/{**catch-all}" } },
+    new RouteConfig { RouteId = "training-route", ClusterId = "knowledge-cluster", Match = new RouteMatch { Path = "/api/v1/training/{**catch-all}" } },
     new RouteConfig { RouteId = "payments-route", ClusterId = "payments-cluster", Match = new RouteMatch { Path = "/api/v1/payments/{**catch-all}" } },
     new RouteConfig { RouteId = "ai-gateway-route", ClusterId = "ai-gateway-cluster", Match = new RouteMatch { Path = "/api/v1/ai/{**catch-all}" } },
     new RouteConfig { RouteId = "kernel-route", ClusterId = "kernel-cluster", Match = new RouteMatch { Path = "/api/v1/kernel/{**catch-all}" } }

@@ -8,7 +8,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
+namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
+{
     [DbContext(typeof(KnowledgeDbContext))]
     partial class KnowledgeDbContextModelSnapshot : ModelSnapshot
     {
@@ -32,7 +33,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -78,6 +79,67 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
                     b.ToTable("knowledge_contextual_help_mappings", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.DelegationRecord", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BatchTransactionId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Duties")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("PiApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PiSignatureHash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("SignedOff")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SiteId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StaffName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StaffUserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaskCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DelegationRecords");
+                });
+
             modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.KnowledgeArticle", b =>
                 {
                     b.Property<string>("Id")
@@ -98,7 +160,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -177,7 +239,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -243,7 +305,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -287,7 +349,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
                         .HasMaxLength(36)
                         .HasColumnType("character varying(36)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -340,6 +402,45 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
                     b.ToTable("knowledge_categories", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.OrgAuditLog", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ActorRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BatchTransactionId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RecordId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrgAuditLogs");
+                });
+
             modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.ProtocolKnowledgeChunk", b =>
                 {
                     b.Property<string>("Id")
@@ -353,7 +454,7 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedBy")
@@ -423,6 +524,146 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
                     b.ToTable("protocol_knowledge_chunks", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.TrainingAssignment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BatchTransactionId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CurriculumId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<double?>("QuizScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SiteId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TimeSpentSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TrainingAssignments");
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.TrainingCertificate", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AssignmentId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BatchTransactionId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EtmfArtifactId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Meaning")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Sha256Seal")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignerName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SignerRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TrainingCertificates");
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.TrainingCurriculum", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ProtocolVersion")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StudyId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TrainingCurricula");
+                });
+
             modelBuilder.Entity("Cadence.Core.Domain.Audit.AuditLogEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -482,3 +723,4 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations;
 #pragma warning restore 612, 618
         }
     }
+}
