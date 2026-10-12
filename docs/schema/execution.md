@@ -10,6 +10,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.InboxState`](#edcinboxstate) | `InboxState` | 11 |
 | [`edc.OutboxMessage`](#edcoutboxmessage) | `OutboxMessage` | 21 |
 | [`edc.OutboxState`](#edcoutboxstate) | `OutboxState` | 6 |
+| [`edc.bulk_lab_range_import_jobs`](#edcbulk_lab_range_import_jobs) | `BulkLabRangeImportJob` | 18 |
 | [`edc.bulk_synonym_import_jobs`](#edcbulk_synonym_import_jobs) | `BulkSynonymImportJob` | 14 |
 | [`edc.cec_chair_adjudications`](#edccec_chair_adjudications) | `CecChairAdjudication` | 17 |
 | [`edc.cec_dossiers`](#edccec_dossiers) | `CecDossier` | 26 |
@@ -25,6 +26,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.device_inventory_items`](#edcdevice_inventory_items) | `DeviceInventoryItem` | 28 |
 | [`edc.device_quarantine_records`](#edcdevice_quarantine_records) | `DeviceQuarantineRecord` | 19 |
 | [`edc.form_submissions`](#edcform_submissions) | `FormSubmission` | 18 |
+| [`edc.lab_reference_ranges`](#edclab_reference_ranges) | `LabReferenceRange` | 22 |
 | [`edc.published_form_version_registries`](#edcpublished_form_version_registries) | `PublishedFormVersionRegistry` | 10 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
 | [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 29 |
@@ -128,6 +130,36 @@ Entity: `OutboxState`
 Indexes:
 
 - `IX_OutboxState_Created`: (`Created`)
+
+## edc.bulk_lab_range_import_jobs
+
+Entity: `BulkLabRangeImportJob`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `CompletedAt` | `timestamp with time zone` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `ErrorRows` | `integer` | no |  |  |
+| `ErrorSummaryJson` | `text` | yes |  |  |
+| `FileName` | `character varying(500)` | no |  |  |
+| `FileType` | `character varying(50)` | no |  |  |
+| `JobId` | `character varying(100)` | no |  |  |
+| `PreviewSummaryJson` | `text` | yes |  |  |
+| `ReasonForChange` | `character varying(2000)` | no |  |  |
+| `SiteId` | `character varying(255)` | yes |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubmittedAt` | `timestamp with time zone` | no |  |  |
+| `SuccessRows` | `integer` | no |  |  |
+| `TotalRows` | `integer` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_bulk_lab_range_import_jobs_JobId`: unique (`JobId`)
+- `IX_bulk_lab_range_import_jobs_StudyId_SubmittedAt`: (`StudyId`, `SubmittedAt`)
 
 ## edc.bulk_synonym_import_jobs
 
@@ -681,6 +713,40 @@ Indexes:
 
 - `idx_form_submissions_coords`: (`StudyId`, `SubjectId`, `VisitId`, `FormId`)
 - `ix_form_submissions_site_id`: (`SiteId`)
+
+## edc.lab_reference_ranges
+
+Entity: `LabReferenceRange`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AgeHigh` | `double precision` | yes |  |  |
+| `AgeLow` | `double precision` | yes |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `CriticalHigh` | `double precision` | yes |  |  |
+| `CriticalLow` | `double precision` | yes |  |  |
+| `HighBound` | `double precision` | yes |  |  |
+| `IsActive` | `boolean` | no |  |  |
+| `IsDeleted` | `boolean` | no |  |  |
+| `LoincCode` | `character varying(100)` | yes |  |  |
+| `LowBound` | `double precision` | yes |  |  |
+| `NormalizedUnit` | `character varying(100)` | no |  |  |
+| `ReasonForChange` | `character varying(2000)` | no |  |  |
+| `SexApplicability` | `character varying(50)` | no |  |  |
+| `SiteId` | `character varying(255)` | yes |  |  |
+| `Source` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `TestCode` | `character varying(100)` | no |  |  |
+| `TestName` | `character varying(500)` | no |  |  |
+| `Unit` | `character varying(100)` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_lab_reference_ranges_StudyId_IsActive`: (`StudyId`, `IsActive`)
+- `IX_lab_reference_ranges_StudyId_TestCode_Source_SiteId_IsActive`: (`StudyId`, `TestCode`, `Source`, `SiteId`, `IsActive`)
 
 ## edc.published_form_version_registries
 

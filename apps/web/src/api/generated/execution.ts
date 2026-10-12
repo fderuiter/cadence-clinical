@@ -530,6 +530,145 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/lab-ranges": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get reference ranges for study/site */
+    get: operations["GetReferenceRanges"];
+    put?: never;
+    /** Create laboratory reference range */
+    post: operations["CreateReferenceRange"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/lab-ranges/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get reference range by ID */
+    get: operations["GetReferenceRangeById"];
+    /** Update laboratory reference range */
+    put: operations["UpdateReferenceRange"];
+    post?: never;
+    /** Deactivate laboratory reference range */
+    delete: operations["DeleteReferenceRange"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/labs/import/dry-run": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Pre-flight validation preview for bulk lab range CSV/XLSX file */
+    post: operations["DryRunLabRangeImport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/labs/import/commit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Commit validated bulk lab ranges into persistent store with Part 11 audit logging */
+    post: operations["CommitLabRangeImport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/labs/batch-status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Retrieve batch status history for bulk lab range imports */
+    get: operations["GetLabBatchStatus"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/labs/batch-status/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get lab batch import job status by ID */
+    get: operations["GetLabBatchStatusById"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/labs/convert-unit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Convert clinical laboratory unit via UCUM SI formulas */
+    post: operations["ConvertLabUnit"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/labs/loinc-catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Retrieve standardized LOINC catalog mappings */
+    get: operations["GetLoincCatalog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/cec/dossiers/{id}/chair-adjudicate": {
     parameters: {
       query?: never;
@@ -1243,6 +1382,77 @@ export interface components {
       timestamp_utc?: null | string;
       audit_tx?: null | string;
     };
+    Execution_BulkLabRangeDryRunResponse: {
+      is_success: boolean;
+      /** Format: int32 */
+      total_rows: number | string;
+      /** Format: int32 */
+      valid_rows: number | string;
+      /** Format: int32 */
+      invalid_rows: number | string;
+      /** Format: int32 */
+      loinc_mapped_count: number | string;
+      /** Format: int32 */
+      unit_converted_count: number | string;
+      rows: components["schemas"]["Execution_BulkLabRangeRowPreview"][];
+      summary: string;
+      dry_run_id: string;
+    };
+    Execution_BulkLabRangeImportJobResponse: {
+      job_id: string;
+      study_id: string;
+      site_id: null | string;
+      file_name: string;
+      file_type: string;
+      status: string;
+      /** Format: int32 */
+      total_rows: number | string;
+      /** Format: int32 */
+      success_rows: number | string;
+      /** Format: int32 */
+      error_rows: number | string;
+      error_summary_json: null | string;
+      preview_summary_json: null | string;
+      reason_for_change: string;
+      submitted_by: string;
+      /** Format: date-time */
+      submitted_at: string;
+      /** Format: date-time */
+      completed_at: null | string;
+    };
+    Execution_BulkLabRangeRowPreview: {
+      /** Format: int32 */
+      row_number: number | string;
+      is_valid: boolean;
+      test_code: string;
+      test_name: string;
+      source: string;
+      site_id: null | string;
+      sex_applicability: string;
+      /** Format: double */
+      age_low: null | number | string;
+      /** Format: double */
+      age_high: null | number | string;
+      unit: string;
+      normalized_unit: string;
+      /** Format: double */
+      low_bound: null | number | string;
+      /** Format: double */
+      high_bound: null | number | string;
+      /** Format: double */
+      converted_low_bound: null | number | string;
+      /** Format: double */
+      converted_high_bound: null | number | string;
+      /** Format: double */
+      critical_low: null | number | string;
+      /** Format: double */
+      critical_high: null | number | string;
+      loinc_code: null | string;
+      /** Format: double */
+      conversion_factor: null | number | string;
+      errors: string[];
+      warnings: string[];
+    };
     Execution_CecDossier: {
       event_id?: string;
       study_id?: string;
@@ -1793,6 +2003,85 @@ export interface components {
         [key: string]: string[];
       };
     };
+    Execution_LabReferenceRangeCreateRequest: {
+      study_id: string;
+      test_code: string;
+      test_name: string;
+      /** @default CENTRAL */
+      source: string;
+      site_id?: null | string;
+      /** @default  */
+      unit: string;
+      normalized_unit?: null | string;
+      /** @default ALL */
+      sex_applicability: string;
+      /** Format: double */
+      age_low?: null | number | string;
+      /** Format: double */
+      age_high?: null | number | string;
+      /** Format: double */
+      low_bound?: null | number | string;
+      /** Format: double */
+      high_bound?: null | number | string;
+      /** Format: double */
+      critical_low?: null | number | string;
+      /** Format: double */
+      critical_high?: null | number | string;
+      loinc_code?: null | string;
+      /** @default Creating lab reference range */
+      reason_for_change: string;
+    };
+    Execution_LabReferenceRangeResponse: {
+      id: string;
+      study_id: string;
+      test_code: string;
+      test_name: string;
+      source: string;
+      site_id: null | string;
+      unit: string;
+      normalized_unit: string;
+      sex_applicability: string;
+      /** Format: double */
+      age_low: null | number | string;
+      /** Format: double */
+      age_high: null | number | string;
+      /** Format: double */
+      low_bound: null | number | string;
+      /** Format: double */
+      high_bound: null | number | string;
+      /** Format: double */
+      critical_low: null | number | string;
+      /** Format: double */
+      critical_high: null | number | string;
+      loinc_code: null | string;
+      is_active: boolean;
+      /** Format: int64 */
+      version: number | string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
+    };
+    Execution_LabReferenceRangeUpdateRequest: {
+      test_name?: null | string;
+      unit?: null | string;
+      normalized_unit?: null | string;
+      sex_applicability?: null | string;
+      /** Format: double */
+      age_low?: null | number | string;
+      /** Format: double */
+      age_high?: null | number | string;
+      /** Format: double */
+      low_bound?: null | number | string;
+      /** Format: double */
+      high_bound?: null | number | string;
+      /** Format: double */
+      critical_low?: null | number | string;
+      /** Format: double */
+      critical_high?: null | number | string;
+      loinc_code?: null | string;
+      /** @default Updating lab reference range */
+      reason_for_change: string;
+    };
     Execution_LabToxicityEvaluateRequest: {
       test_code: string;
       /** Format: double */
@@ -1822,6 +2111,20 @@ export interface components {
       is_delta_check_alert: boolean;
       /** Format: double */
       delta_percentage: null | number | string;
+    };
+    Execution_LoincCatalogItemResponse: {
+      test_code: string;
+      test_name: string;
+      loinc_code: string;
+      standard_unit: string;
+      category: string;
+      /** Format: double */
+      molecular_weight: null | number | string;
+    };
+    Execution_LoincCatalogResponse: {
+      items: components["schemas"]["Execution_LoincCatalogItemResponse"][];
+      /** Format: int32 */
+      total_count: number | string;
     };
     Execution_ObservationCreateRequest: {
       subject_id: string;
@@ -2112,6 +2415,25 @@ export interface components {
     };
     Execution_UdiParseRequest: {
       raw_barcode: string;
+    };
+    Execution_UnitConversionRequest: {
+      test_code: string;
+      /** Format: double */
+      value: number | string;
+      from_unit: string;
+      to_unit: string;
+    };
+    Execution_UnitConversionResponse: {
+      test_code: string;
+      /** Format: double */
+      input_value: number | string;
+      /** Format: double */
+      converted_value: number | string;
+      from_unit: string;
+      to_unit: string;
+      /** Format: double */
+      factor: number | string;
+      loinc_code: null | string;
     };
   };
   responses: never;
@@ -3569,6 +3891,317 @@ export interface operations {
         };
         content: {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetReferenceRanges: {
+    parameters: {
+      query?: {
+        study_id?: string;
+        studyId?: string;
+        site_id?: string;
+        siteId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_LabReferenceRangeResponse"][];
+        };
+      };
+    };
+  };
+  CreateReferenceRange: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_LabReferenceRangeCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_LabReferenceRangeResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetReferenceRangeById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_LabReferenceRangeResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  UpdateReferenceRange: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_LabReferenceRangeUpdateRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_LabReferenceRangeResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  DeleteReferenceRange: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  DryRunLabRangeImport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_BulkLabRangeDryRunResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  CommitLabRangeImport: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_BulkLabRangeImportJobResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetLabBatchStatus: {
+    parameters: {
+      query?: {
+        study_id?: string;
+        studyId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_BulkLabRangeImportJobResponse"][];
+        };
+      };
+    };
+  };
+  GetLabBatchStatusById: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_BulkLabRangeImportJobResponse"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ConvertLabUnit: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_UnitConversionRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_UnitConversionResponse"];
+        };
+      };
+    };
+  };
+  GetLoincCatalog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_LoincCatalogResponse"];
         };
       };
     };

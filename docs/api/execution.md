@@ -30,6 +30,17 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/forms/{id}/approve` | ApproveFormSubmission |  |
 | `POST` | `/api/v1/execution/forms/{id}/complete` | CompleteFormSubmission |  |
 | `POST` | `/api/v1/execution/forms/{id}/unlock` | UnlockFormSubmission |  |
+| `GET` | `/api/v1/execution/lab-ranges` | GetReferenceRanges | Get reference ranges for study/site |
+| `POST` | `/api/v1/execution/lab-ranges` | CreateReferenceRange | Create laboratory reference range |
+| `GET` | `/api/v1/execution/lab-ranges/{id}` | GetReferenceRangeById | Get reference range by ID |
+| `PUT` | `/api/v1/execution/lab-ranges/{id}` | UpdateReferenceRange | Update laboratory reference range |
+| `DELETE` | `/api/v1/execution/lab-ranges/{id}` | DeleteReferenceRange | Deactivate laboratory reference range |
+| `GET` | `/api/v1/execution/labs/batch-status` | GetLabBatchStatus | Retrieve batch status history for bulk lab range imports |
+| `GET` | `/api/v1/execution/labs/batch-status/{id}` | GetLabBatchStatusById | Get lab batch import job status by ID |
+| `POST` | `/api/v1/execution/labs/convert-unit` | ConvertLabUnit | Convert clinical laboratory unit via UCUM SI formulas |
+| `POST` | `/api/v1/execution/labs/import/commit` | CommitLabRangeImport | Commit validated bulk lab ranges into persistent store with Part 11 audit logging |
+| `POST` | `/api/v1/execution/labs/import/dry-run` | DryRunLabRangeImport | Pre-flight validation preview for bulk lab range CSV/XLSX file |
+| `GET` | `/api/v1/execution/labs/loinc-catalog` | GetLoincCatalog | Retrieve standardized LOINC catalog mappings |
 | `POST` | `/api/v1/execution/labs/toxicity/evaluate` | EvaluateLabToxicityEndpoint | Evaluate Lab Toxicity Endpoint |
 | `GET` | `/api/v1/execution/labs/toxicity/review-queue` | ListStagedAeReviewQueue | List Staged Ae Review Queue |
 | `POST` | `/api/v1/execution/labs/toxicity/review/{review_id}/action` | ActionStagedAeReview | Action Staged Ae Review |
