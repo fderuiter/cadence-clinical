@@ -48,11 +48,16 @@ public sealed record RulePackLoadResult(LoadedRulePack? Pack, KernelError? Error
 /// library item is approved, which needs an attestation; a deprecated pack still loads, because studies that pinned
 /// it keep validating against it (ADR-2460). A draft never loads.
 /// </summary>
-public sealed class RulePackLoader(IStandardsRegistry registry)
+public sealed class RulePackLoader(IStandardsRegistry? registry = null)
 {
     /// <summary>Loads one released pack by its library item id.</summary>
     public async Task<RulePackLoadResult> LoadAsync(TenantId tenant, LibraryItemId id, CancellationToken cancellationToken = default)
     {
+        if (registry is null)
+        {
+            return new(null, RuleErrors.PackUnknown);
+        }
+
         var item = await registry.FindLibraryItemAsync(tenant, id, cancellationToken).ConfigureAwait(false);
         if (item is null)
         {
@@ -81,6 +86,11 @@ public sealed class RulePackLoader(IStandardsRegistry registry)
     /// <exception cref="InvalidOperationException">A pinned pack can no longer be read, which the registry's guards prevent.</exception>
     public async Task<IReadOnlyList<LoadedRulePack>> LoadForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken = default)
     {
+        if (registry is null)
+        {
+            return [];
+        }
+
         var profile = await registry.FindStudyStandardsAsync(tenant, study, cancellationToken).ConfigureAwait(false);
         if (profile is null)
         {

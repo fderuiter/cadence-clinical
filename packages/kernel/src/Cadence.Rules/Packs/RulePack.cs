@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Validation;
@@ -70,6 +71,7 @@ public sealed record Rule(
 /// <see cref="LibraryItemKind.RulePack"/>: its version and release Attestation are the library item's, so a pack
 /// changes only by drafting and approving a new version (K-RULE-1).
 /// </summary>
+[JsonConverter(typeof(RulePackJsonConverter))]
 public sealed record RulePack(RuleAuthority Authority, string Title, IReadOnlyList<Rule> Rules);
 
 /// <summary>A released rule pack together with the library item version it was read from.</summary>
