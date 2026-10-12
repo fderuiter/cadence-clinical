@@ -147,6 +147,7 @@
           <thead>
             <tr>
               <th>ID</th>
+              <th>Timepoint</th>
               <th>Site</th>
               <th>Type</th>
               <th>Longest (mm)</th>
@@ -162,6 +163,14 @@
             >
               <td class="font-bold">
                 {{ a.lesion_id }}
+              </td>
+              <td>
+                <span
+                  class="timepoint-pill"
+                  :class="getTimepointClass(a.timepoint)"
+                >
+                  {{ formatTimepoint(a.timepoint) }}
+                </span>
               </td>
               <td>{{ a.organ_site }}</td>
               <td>
@@ -411,6 +420,24 @@ function pctChangeClass(val) {
   if (val >= 20) return "text-danger";
   return "text-neutral";
 }
+
+function formatTimepoint(tp) {
+  if (!tp) return "Baseline";
+  const map = {
+    BASELINE: "Baseline",
+    CYCLE_2_DAY_1: "Cycle 2 Day 1",
+    CYCLE_4_DAY_1: "Cycle 4 Day 1",
+    END_OF_TREATMENT: "EOT",
+  };
+  return map[tp] || tp;
+}
+
+function getTimepointClass(tp) {
+  if (!tp || tp === "BASELINE") return "tp-baseline";
+  if (tp === "CYCLE_2_DAY_1") return "tp-c2d1";
+  if (tp === "CYCLE_4_DAY_1") return "tp-c4d1";
+  return "tp-followup";
+}
 </script>
 
 <style scoped>
@@ -574,6 +601,29 @@ function pctChangeClass(val) {
 .annotations-table td {
   padding: 6px 8px;
   border-bottom: 1px solid #1e293b;
+}
+
+.timepoint-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.tp-baseline {
+  background-color: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.tp-c2d1,
+.tp-c4d1,
+.tp-followup {
+  background-color: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
 .type-pill {

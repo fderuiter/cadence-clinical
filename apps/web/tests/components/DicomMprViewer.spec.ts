@@ -181,6 +181,91 @@ describe("DicomMprViewer.vue - Mobile Single-Column Vertical Stack and Canvas Sc
         { x: 150, y: 100 },
       ],
       sliceIndex: 24,
+      timepoint: "",
+      viewportLabel: "",
     });
+  });
+
+  it("renders viewport identity banner with timepoint badge when viewportLabel or timepoint prop is provided", () => {
+    const wrapper = mount(DicomMprViewer, {
+      props: {
+        seriesUid: "1.2.840.113619.2.55.3.200.1",
+        viewportLabel: "Viewport A (Baseline)",
+        timepoint: "BASELINE",
+        isSynced: true,
+      },
+    });
+
+    const banner = wrapper.find(".viewport-identity-banner");
+    expect(banner.exists()).toBe(true);
+    expect(wrapper.find(".viewport-name-tag").text()).toBe(
+      "Viewport A (Baseline)"
+    );
+    expect(wrapper.find(".timepoint-tag").text()).toBe("Baseline Screening");
+    expect(wrapper.find(".sync-status-badge").text()).toContain(
+      "Crosshairs & Scroll Linked"
+    );
+  });
+
+  it("synchronizes slice position and window level preset when isSynced is true and syncedState updates", async () => {
+    const wrapper = mount(DicomMprViewer, {
+      props: {
+        seriesUid: "1.2.840.113619.2.55.3.200.1",
+        isSynced: true,
+        syncedState: {
+          axialSlice: 10,
+          sagittalSlice: 120,
+          coronalSlice: 180,
+          selectedPreset: "LUNG",
+        },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+
+    const text = wrapper.text();
+    expect(text).toContain("AXIAL (Z: 11 / 48)");
+    expect(text).toContain("SAGITTAL (X: 121 / 512)");
+    expect(text).toContain("CORONAL (Y: 181 / 512)");
+
+    const presetSelect = wrapper.find("#window-preset-select")
+      .element as HTMLSelectElement;
+    expect(presetSelect.value).toBe("LUNG");
+  });
+
+  it("emits update:syncedState and syncStateChange when wheel scrolling in synced mode", async () => {
+    const wrapper = mount(DicomMprViewer, {
+      props: {
+        seriesUid: "1.2.840.113619.2.55.3.200.1",
+        isSynced: true,
+      },
+    });
+
+    const axialCanvas = wrapper.find({ ref: "axialCanvasRef" });
+    await axialCanvas.trigger("wheel", { deltaY: 100 });
+
+    const emittedSync = wrapper.emitted("update:syncedState");
+    expect(emittedSync).toBeTruthy();
+    expect(emittedSync![0][0]).toEqual({
+      axialSlice: 25,
+      sagittalSlice: 256,
+      coronalSlice: 256,
+      selectedPreset: "SOFT_TISSUE",
+    });
+  });
+
+  it("does NOT emit sync events when isSynced is false during wheel scrolling", async () => {
+    const wrapper = mount(DicomMprViewer, {
+      props: {
+        seriesUid: "1.2.840.113619.2.55.3.200.1",
+        isSynced: false,
+      },
+    });
+
+    const axialCanvas = wrapper.find({ ref: "axialCanvasRef" });
+    await axialCanvas.trigger("wheel", { deltaY: 100 });
+
+    const emittedSync = wrapper.emitted("update:syncedState");
+    expect(emittedSync).toBeFalsy();
   });
 });

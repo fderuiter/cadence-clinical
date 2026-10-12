@@ -793,12 +793,439 @@
         </form>
       </div>
     </div>
+
+    <!-- 4. Transit Milestone & Telemetry Upload Modal -->
+    <div v-if="showMilestoneModal" class="modal-overlay">
+      <div class="modal-card modal-xl">
+        <header class="modal-header">
+          <div>
+            <h3>Log Transit Milestone &amp; Telemetry Upload</h3>
+            <p class="modal-subtitle">
+              Upload Sensitech or TempTale logger file and review cryogenic excursion details.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showMilestoneModal = false"
+          >
+            &times;
+          </button>
+        </header>
+
+        <div class="milestone-modal-content">
+          <!-- File Dropzone Section -->
+          <div class="dropzone-section">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label class="section-label">Logger Telemetry Upload (Sensitech / TempTale CSV or JSON)</label>
+            <div
+              class="dropzone-box"
+              :class="{ 'dropzone-active': isDragging, 'dropzone-has-file': parsedTelemetry !== null }"
+              @dragover.prevent="isDragging = true"
+              @dragenter.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleFileDrop"
+              @click="triggerFileInput"
+              @keydown.enter="triggerFileInput"
+              @keydown.space="triggerFileInput"
+              tabindex="0"
+              role="button"
+              aria-label="Upload logger file"
+            >
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                ref="fileInputRef"
+                type="file"
+                accept=".csv,.json,.txt"
+                class="hidden-file-input"
+                @change="handleFileSelect"
+              />
+              <div v-if="isParsing" class="dropzone-status">
+                <p><strong>Parsing time-series telemetry data off main thread...</strong></p>
+              </div>
+              <div v-else-if="parsedTelemetry" class="dropzone-status text-success">
+                <p>
+                  <strong>Loaded: {{ parsedTelemetry.fileName }}</strong>
+                  ({{ parsedTelemetry.totalSamples }} readings, Vendor: {{ parsedTelemetry.vendor }})
+                </p>
+                <button
+                  type="button"
+                  class="btn btn-xs btn-secondary"
+                  @click.stop="triggerFileInput"
+                >
+                  Replace File
+                </button>
+              </div>
+              <div v-else class="dropzone-prompt">
+                <p class="dropzone-text">
+                  Drag &amp; drop Sensitech or TempTale telemetry export file here, or <strong>click to browse</strong>
+                </p>
+                <p class="dropzone-sub">
+                  Supports cryogenic temperature validation (-196.0°C to -70.0°C safe range)
+                </p>
+              </div>
+            </div>
+
+            <div v-if="parsingError" class="alert alert-danger" role="alert">
+              <strong>Parsing Error:</strong> {{ parsingError }}
+            </div>
+          </div>
+
+          <!-- Excursion Preview Drawer Card -->
+          <section v-if="parsedTelemetry" class="excursion-drawer card">
+            <div class="drawer-header">
+              <div class="drawer-title-group">
+                <h4 class="drawer-title">Excursion Preview Drawer</h4>
+                <span class="badge badge-stage">
+                  {{ parsedTelemetry.isDownsampled ? `Downsampled Keypoints (${parsedTelemetry.keypoints.length} / ${parsedTelemetry.totalSamples})` : `Full Resolution (${parsedTelemetry.totalSamples} readings)` }}
+                </span>
+              </div>
+              <span
+                class="badge"
+                :class="parsedTelemetry.excursionCount > 0 ? 'badge-quarantine' : 'badge-unlocked'"
+              >
+                {{ parsedTelemetry.excursionCount > 0 ? `EXCURSION (${parsedTelemetry.excursionCount} Readings Out of Range)` : 'OPTIMAL (0 Excursions)' }}
+              </span>
+            </div>
+
+            <!-- Drawer Key Statistics -->
+            <div class="drawer-stats-grid">
+              <div class="drawer-stat">
+                <span class="stat-label">Min Temperature</span>
+                <span
+                  class="stat-value code-font"
+                  :class="parsedTelemetry.minTemperature < -196.0 ? 'text-danger' : 'text-success'"
+                >
+                  {{ parsedTelemetry.minTemperature.toFixed(1) }}°C
+                </span>
+              </div>
+              <div class="drawer-stat">
+                <span class="stat-label">Max Temperature</span>
+                <span
+                  class="stat-value code-font"
+                  :class="parsedTelemetry.maxTemperature > -70.0 ? 'text-danger' : 'text-success'"
+                >
+                  {{ parsedTelemetry.maxTemperature.toFixed(1) }}°C
+                </span>
+              </div>
+              <div class="drawer-stat">
+                <span class="stat-label">Total Sample Count</span>
+                <span class="stat-value code-font">{{ parsedTelemetry.totalSamples.toLocaleString() }}</span>
+              </div>
+              <div class="drawer-stat">
+                <span class="stat-label">Excursion Reading Points</span>
+                <span
+                  class="stat-value code-font"
+                  :class="parsedTelemetry.excursionCount > 0 ? 'text-danger font-bold' : 'text-success'"
+                >
+                  {{ parsedTelemetry.excursionCount }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Excursion Range Events List -->
+            <div v-if="parsedTelemetry.excursionEvents.length > 0" class="excursion-events-box">
+              <h5 class="sub-title text-danger">Detected Excursion Events</h5>
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Event ID</th>
+                      <th>Excursion Type</th>
+                      <th>Start Time (UTC)</th>
+                      <th>End Time (UTC)</th>
+                      <th>Duration</th>
+                      <th>Peak Temp</th>
+                      <th>Readings</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="evt in parsedTelemetry.excursionEvents" :key="evt.id" class="row-excursion-event">
+                      <td class="code-font font-bold">{{ evt.id }}</td>
+                      <td>
+                        <span class="badge badge-quarantine">
+                          {{ evt.type === 'WARM_EXCURSION' ? 'WARM EXCURSION (> -70.0°C)' : 'COLD EXCURSION (< -196.0°C)' }}
+                        </span>
+                      </td>
+                      <td class="code-font">{{ formatDateTime(evt.startTime) }}</td>
+                      <td class="code-font">{{ formatDateTime(evt.endTime) }}</td>
+                      <td class="code-font font-bold">{{ evt.durationFormatted }}</td>
+                      <td class="code-font font-bold text-danger">{{ evt.peakTemperature.toFixed(1) }}°C</td>
+                      <td>{{ evt.sampleCount }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Time-Series Keypoint Samples Preview Table -->
+            <div class="telemetry-samples-box">
+              <h5 class="sub-title">Time-Series Keypoint Readings</h5>
+              <div class="table-responsive preview-scroll">
+                <table class="table table-xs">
+                  <thead>
+                    <tr>
+                      <th>Timestamp (UTC)</th>
+                      <th>Temperature (°C)</th>
+                      <th>Thermal Zone</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(reading, idx) in parsedTelemetry.sampleReadings"
+                      :key="idx"
+                      :class="{ 'row-excursion-highlight': reading.isExcursion }"
+                    >
+                      <td class="code-font">{{ formatDateTime(reading.timestamp) }}</td>
+                      <td
+                        class="code-font"
+                        :class="reading.isExcursion ? 'text-danger font-bold' : 'text-success'"
+                      >
+                        {{ reading.temperatureCelsius.toFixed(1) }}°C
+                      </td>
+                      <td>
+                        <span :class="reading.isExcursion ? 'badge badge-quarantine' : 'badge badge-unlocked'">
+                          {{ reading.isExcursion ? 'EXCURSION' : 'OPTIMAL' }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Milestone Form -->
+          <form @submit.prevent="submitMilestone" class="milestone-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Transit Stage</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <select v-model="milestoneForm.stage" required>
+                  <option value="APHERESIS_COLLECTION">1. Apheresis Collection</option>
+                  <option value="CRYOPRESERVATION">2. Cryopreservation</option>
+                  <option value="COURIER_TRANSIT_OUTBOUND">3. Outbound Courier Transit</option>
+                  <option value="MANUFACTURING_PROCESSING">4. Manufacturing Processing</option>
+                  <option value="COURIER_TRANSIT_RETURN">5. Return Courier Transit</option>
+                  <option value="SITE_RECEIPT_AND_STORAGE">6. Site Storage</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Milestone Event Type</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <select v-model="milestoneForm.milestone_type" required>
+                  <option value="TRANSIT_CHECKPOINT">Transit Checkpoint</option>
+                  <option value="FACILITY_HANDOVER">Facility Handover</option>
+                  <option value="TEMPERATURE_AUDIT">Temperature Audit</option>
+                  <option value="DEWAR_RECEIPT">Dewar Receipt</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Location / Waypoint</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model="milestoneForm.location_name"
+                  type="text"
+                  required
+                  placeholder="e.g. Frankfurt Cryo Hub"
+                />
+              </div>
+
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Recorded Checkpoint Temp (°C)</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input
+                  v-model.number="milestoneForm.temperature_celsius"
+                  type="number"
+                  step="0.1"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Custodian User ID</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input v-model="milestoneForm.custodian_id" type="text" required />
+              </div>
+
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Custodian Full Name</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input v-model="milestoneForm.custodian_name" type="text" required />
+              </div>
+
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Courier / Carrier</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input v-model="milestoneForm.carrier" type="text" placeholder="e.g. WorldCourier Cryo" />
+              </div>
+
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Tracking Number</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input v-model="milestoneForm.tracking_number" type="text" placeholder="e.g. WC-8839210" />
+              </div>
+
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Dry Shipper / Dewar ID</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input v-model="milestoneForm.dry_shipper_id" type="text" placeholder="e.g. DEWAR-LN2-9901" />
+              </div>
+
+              <div class="form-group">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>Tamper Seal ID</label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <input v-model="milestoneForm.seal_id" type="text" placeholder="e.g. SEAL-4482" />
+              </div>
+
+              <div class="form-group col-full">
+                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+                <label>
+                  GxP Justification Notes &amp; Observations
+                  <span v-if="parsedTelemetry && parsedTelemetry.excursionCount > 0" class="text-danger">* (Required for Excursion)</span>
+                </label>
+                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <textarea
+                  v-model="milestoneForm.notes"
+                  rows="3"
+                  :required="parsedTelemetry != null && parsedTelemetry.excursionCount > 0"
+                  placeholder="Enter GxP justification notes, courier comments, or excursion investigation references..."
+                />
+              </div>
+            </div>
+
+            <footer class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                @click="showMilestoneModal = false"
+              >
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary">
+                Log Milestone &amp; Update Ledger
+              </button>
+            </footer>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Bind Manufacturing Batch Modal -->
+    <div v-if="showManufacturingModal" class="modal-overlay">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3>Bind Manufacturing Batch</h3>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showManufacturingModal = false"
+          >
+            &times;
+          </button>
+        </header>
+        <form @submit.prevent="submitManufacturingBind">
+          <div class="form-grid">
+            <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Manufacturing Batch ID</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="manufacturingForm.batch_id" type="text" required />
+            </div>
+            <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Manufacturing Facility ID</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="manufacturingForm.manufacturing_facility_id" type="text" required />
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="showManufacturingModal = false"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Bind Batch to Chain of Custody
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- 6. Administer Infusion Modal -->
+    <div v-if="showInfusionModal" class="modal-overlay">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h3>Administer Cellular Infusion</h3>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showInfusionModal = false"
+          >
+            &times;
+          </button>
+        </header>
+        <form @submit.prevent="submitInfusion">
+          <div class="form-grid">
+            <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Administrator ID</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="infusionForm.administrator_id" type="text" required />
+            </div>
+            <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Administrator Name</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="infusionForm.administrator_name" type="text" required />
+            </div>
+            <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>E-Signature Step-Up Token</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input v-model="infusionForm.signature_token" type="password" required />
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="showInfusionModal = false"
+            >
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-infuse">
+              Confirm Infusion Administration
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
 import { useDomainFormatter } from "@/composables/useDomainFormatter";
+import {
+  parseCryoLoggerFile,
+  type ParsedCryoLoggerResult,
+} from "@/utils/cryoLoggerParser";
 
 const { formatLabel, formatDatabaseKey, formatFacilityCode } =
   useDomainFormatter();
@@ -880,10 +1307,57 @@ const scanResult = ref<{ is_valid: boolean; failure_reason?: string } | null>(
 const showApheresisModal = ref(false);
 const showBedsideModal = ref(false);
 const showDestructionModal = ref(false);
-const _showMilestoneModal = ref(false);
-const _showManufacturingModal = ref(false);
+const showMilestoneModal = ref(false);
+const showManufacturingModal = ref(false);
+const showInfusionModal = ref(false);
+
+// Telemetry File Upload State
+const isDragging = ref(false);
+const isParsing = ref(false);
+const parsingError = ref<string | null>(null);
+const parsedTelemetry = ref<ParsedCryoLoggerResult | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
 
 // Forms
+const milestoneForm = reactive({
+  study_id: "STUDY-CGT-801",
+  chain_of_custody_id: "",
+  stage: "COURIER_TRANSIT_OUTBOUND",
+  milestone_type: "TRANSIT_CHECKPOINT",
+  timestamp: "",
+  location_name: "In Transit Waypoint",
+  facility_id: "WAYPOINT-01",
+  latitude: 50.1109,
+  longitude: 8.6821,
+  temperature_celsius: -196.0,
+  custodian_id: "courier_mark",
+  custodian_name: "Mark Courier",
+  custodian_role: "Specialized Cryo Courier",
+  carrier: "WorldCourier Cryo Express",
+  tracking_number: "WC-8839210",
+  seal_intact: true,
+  seal_id: "SEAL-4482",
+  dry_shipper_id: "DEWAR-LN2-9901",
+  notes: "",
+});
+
+const manufacturingForm = reactive({
+  study_id: "STUDY-CGT-801",
+  chain_of_custody_id: "",
+  batch_id: "BATCH-CAR-T-2026-A9",
+  manufacturing_facility_id: "CMO-BIO-CENTRAL",
+});
+
+const infusionForm = reactive({
+  study_id: "STUDY-CGT-801",
+  chain_of_custody_id: "",
+  site_id: "SITE-101",
+  subject_id: "SUBJ-101-0042",
+  administrator_id: "dr_johnson_pi",
+  administrator_name: "Dr. Robert Johnson, MD",
+  signature_token: "pi-sig-token-999",
+  notes: "Infusion administered without acute immediate reaction.",
+});
 const apheresisForm = reactive({
   study_id: "STUDY-CGT-801",
   site_id: "SITE-101",
@@ -1095,6 +1569,165 @@ async function submitDestruction() {
     }
   } catch (err) {
     console.error("Destruction certification failed", err);
+  }
+}
+
+function openMilestoneModal() {
+  milestoneForm.study_id = filters.studyId;
+  milestoneForm.chain_of_custody_id = cocData.value?.id || "";
+  milestoneForm.stage = cocData.value?.current_stage || "COURIER_TRANSIT_OUTBOUND";
+  milestoneForm.temperature_celsius = cocData.value?.lowest_temp_celsius ?? -196.0;
+  milestoneForm.timestamp = new Date().toISOString();
+  milestoneForm.notes = "";
+
+  parsedTelemetry.value = null;
+  parsingError.value = null;
+  isParsing.value = false;
+  isDragging.value = false;
+  showMilestoneModal.value = true;
+}
+
+function triggerFileInput() {
+  fileInputRef.value?.click();
+}
+
+function handleFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement;
+  if (target.files && target.files.length > 0) {
+    handleFileUpload(target.files[0]);
+  }
+}
+
+function handleFileDrop(event: DragEvent) {
+  isDragging.value = false;
+  if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
+    handleFileUpload(event.dataTransfer.files[0]);
+  }
+}
+
+async function handleFileUpload(file: File) {
+  isParsing.value = true;
+  parsingError.value = null;
+  try {
+    const text = await file.text();
+    const result = await parseCryoLoggerFile(text, file.name);
+    parsedTelemetry.value = result;
+
+    milestoneForm.temperature_celsius = result.minTemperature;
+
+    if (result.excursionCount > 0) {
+      milestoneForm.notes = `[AUTOMATED TELEMETRY AUDIT] Telemetry log '${file.name}' processed (${result.totalSamples} samples, Vendor: ${result.vendor}). ${result.excursionCount} excursion readings detected. Max temperature reached: ${result.maxTemperature.toFixed(1)}°C. GxP Excursion Review required.`;
+    } else {
+      milestoneForm.notes = `[AUTOMATED TELEMETRY AUDIT] Telemetry log '${file.name}' processed (${result.totalSamples} samples, Vendor: ${result.vendor}). Cryogenic integrity maintained (Min: ${result.minTemperature.toFixed(1)}°C, Max: ${result.maxTemperature.toFixed(1)}°C).`;
+    }
+  } catch (err: any) {
+    parsedTelemetry.value = null;
+    parsingError.value = err.message || "Failed to parse telemetry file.";
+  } finally {
+    isParsing.value = false;
+  }
+}
+
+async function submitMilestone() {
+  if (!milestoneForm.chain_of_custody_id && cocData.value) {
+    milestoneForm.chain_of_custody_id = cocData.value.id;
+  }
+
+  try {
+    const res = await fetch("/api/v1/execution/rtsm/cgt/milestone", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-change-justification": milestoneForm.notes || "Log transit milestone",
+      },
+      body: JSON.stringify({
+        study_id: milestoneForm.study_id,
+        chain_of_custody_id: milestoneForm.chain_of_custody_id,
+        stage: milestoneForm.stage,
+        milestone_type: milestoneForm.milestone_type,
+        timestamp: milestoneForm.timestamp || new Date().toISOString(),
+        location_name: milestoneForm.location_name,
+        facility_id: milestoneForm.facility_id,
+        latitude: milestoneForm.latitude,
+        longitude: milestoneForm.longitude,
+        temperature_celsius: milestoneForm.temperature_celsius,
+        custodian_id: milestoneForm.custodian_id,
+        custodian_name: milestoneForm.custodian_name,
+        custodian_role: milestoneForm.custodian_role,
+        carrier: milestoneForm.carrier,
+        tracking_number: milestoneForm.tracking_number,
+        seal_intact: milestoneForm.seal_intact,
+        seal_id: milestoneForm.seal_id,
+        dry_shipper_id: milestoneForm.dry_shipper_id,
+        notes: milestoneForm.notes,
+      }),
+    });
+
+    if (res.ok) {
+      showMilestoneModal.value = false;
+      await fetchTraceability();
+    } else {
+      const errData = await res.json().catch(() => null);
+      parsingError.value = errData?.detail || "Failed to log transit milestone.";
+    }
+  } catch (err: any) {
+    console.error("Milestone log submission failed", err);
+    parsingError.value = "Network error submitting milestone.";
+  }
+}
+
+function openManufacturingModal() {
+  if (cocData.value) {
+    manufacturingForm.study_id = cocData.value.study_id;
+    manufacturingForm.chain_of_custody_id = cocData.value.id;
+  }
+  showManufacturingModal.value = true;
+}
+
+async function submitManufacturingBind() {
+  try {
+    const res = await fetch("/api/v1/execution/rtsm/cgt/manufacturing-bind", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-change-justification": "Bind manufacturing batch",
+      },
+      body: JSON.stringify(manufacturingForm),
+    });
+    if (res.ok) {
+      showManufacturingModal.value = false;
+      await fetchTraceability();
+    }
+  } catch (err) {
+    console.error("Manufacturing bind failed", err);
+  }
+}
+
+function openInfusionModal() {
+  if (cocData.value) {
+    infusionForm.study_id = cocData.value.study_id;
+    infusionForm.chain_of_custody_id = cocData.value.id;
+    infusionForm.subject_id = cocData.value.subject_id;
+  }
+  showInfusionModal.value = true;
+}
+
+async function submitInfusion() {
+  try {
+    const res = await fetch("/api/v1/execution/rtsm/cgt/infuse", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-change-justification": "Administer infusion",
+      },
+      body: JSON.stringify(infusionForm),
+    });
+    if (res.ok) {
+      showInfusionModal.value = false;
+      await fetchTraceability();
+    }
+  } catch (err) {
+    console.error("Infusion administration failed", err);
   }
 }
 
@@ -1566,4 +2199,169 @@ onMounted(() => {
 .font-bold {
   font-weight: 700;
 }
+
+.modal-xl {
+  max-width: 900px;
+}
+
+.modal-subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #64748b);
+  margin: 0.2rem 0 0 0;
+}
+
+.milestone-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.dropzone-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted, #64748b);
+  text-transform: uppercase;
+}
+
+.dropzone-box {
+  border: 2px dashed var(--color-border, #cbd5e1);
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  background: var(--color-bg-base, #f8fafc);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropzone-box:hover,
+.dropzone-active {
+  border-color: var(--color-primary, #3b82f6);
+  background: #eff6ff;
+}
+
+.dropzone-has-file {
+  border-style: solid;
+  border-color: var(--color-success, #16a34a);
+  background: #f0fdf4;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.dropzone-prompt .dropzone-text {
+  font-size: 0.9rem;
+  margin: 0 0 0.25rem 0;
+  color: var(--color-text-main, #0f172a);
+}
+
+.dropzone-prompt .dropzone-sub {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #64748b);
+  margin: 0;
+}
+
+.excursion-drawer {
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-left: 4px solid var(--color-primary, #3b82f6);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drawer-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.drawer-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  background: var(--color-bg-base, #f8fafc);
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.drawer-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-muted, #64748b);
+}
+
+.stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.sub-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.row-excursion-event {
+  background: #fef2f2;
+}
+
+.row-excursion-highlight {
+  background: #fff1f2;
+}
+
+.preview-scroll {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.alert-danger {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.alert-info {
+  background: #e0f2fe;
+  color: #075985;
+  border: 1px solid #7dd3fc;
+}
+
+.btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
 </style>
+
