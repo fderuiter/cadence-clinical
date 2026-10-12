@@ -1823,6 +1823,56 @@
         }
       }
     },
+    "/api/v1/execution/queries/batch-respond": {
+      "post": {
+        "tags": [
+          "Queries"
+        ],
+        "operationId": "BatchRespondClinicalQueries",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_BatchQueryRespondRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_BatchQueryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/labs/toxicity/review-queue": {
       "get": {
         "tags": [
@@ -3381,6 +3431,124 @@
           }
         }
       }
+    },
+    "/api/v1/execution/rtsm/kits/validate-scan": {
+      "post": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_IpKitScanValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/reconcile-batch": {
+      "post": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_IpKitBatchReconciliationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/certificates/{certificateId}": {
+      "get": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "parameters": [
+          {
+            "name": "certificateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}": {
+      "get": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/seed-inventory": {
+      "post": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_SeedInventoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3424,6 +3592,30 @@
             "items": {
               "type": "string"
             }
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_BatchQueryRespondRequest": {
+        "required": [
+          "query_ids",
+          "response"
+        ],
+        "type": "object",
+        "properties": {
+          "query_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "response": {
+            "type": "string"
           },
           "reason": {
             "type": [
@@ -6130,6 +6322,172 @@
           }
         }
       },
+      "Execution_IpKitBatchReconciliationRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_IpKitItemReconcileRequest"
+            }
+          },
+          "processed_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": "Batch IP kit reconciliation"
+          }
+        }
+      },
+      "Execution_IpKitInventoryResponse": {
+        "required": [
+          "kit_number",
+          "study_id",
+          "site_id",
+          "lot_number",
+          "expiration_date",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "expiration_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "residual_volume_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Execution_IpKitItemReconcileRequest": {
+        "required": [
+          "kit_number",
+          "lot_number",
+          "expected_lot_number",
+          "residual_volume_ml",
+          "residual_volume_percentage",
+          "disposition",
+          "disposition_reason"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "expected_lot_number": {
+            "type": "string"
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "residual_volume_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "disposition": {
+            "type": "string"
+          },
+          "disposition_reason": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_IpKitScanValidateRequest": {
+        "required": [
+          "kit_number",
+          "study_id",
+          "site_id"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "scanned_lot_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Execution_LabReferenceRangeCreateRequest": {
         "required": [
           "study_id",
@@ -7242,6 +7600,28 @@
         ],
         "type": "string"
       },
+      "Execution_SeedInventoryRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "kits"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "kits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_IpKitInventoryResponse"
+            }
+          }
+        }
+      },
       "Execution_SignatureManifest": {
         "required": [
           "signer_id",
@@ -8054,6 +8434,9 @@
     },
     {
       "name": "DeviceEndpoints"
+    },
+    {
+      "name": "IP Kit Reconciliation"
     }
   ]
 }

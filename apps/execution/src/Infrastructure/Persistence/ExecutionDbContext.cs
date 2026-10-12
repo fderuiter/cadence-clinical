@@ -7,6 +7,7 @@ using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Domain.Supply;
 using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
@@ -19,7 +20,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core 10 persistence gateway for the Execution bounded context.
-/// Exposes aggregates for subjects, observations, form submissions, clinical queries, CEC dossiers, CGT chain of custody records, devices, and staged adverse event reviews.
+/// Exposes aggregates for subjects, observations, form submissions, clinical queries, CEC dossiers, CGT chain of custody records, devices, staged adverse event reviews, and IP kit batch reconciliations.
 /// @req:PRD-SUB-001
 /// @req:PRD-DEV-001
 /// @req:PRD-DEV-002
@@ -31,6 +32,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// @req:PRD-CEC-001
 /// @req:PRD-CEC-002
 /// @req:PRD-SCM-005
+/// @req:PRD-SCM-006
 /// @req:SRS-EDC-001
 /// @req:SRS-EDC-002
 /// @req:SRS-EDC-004
@@ -77,6 +79,12 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<DeviceQuarantineRecord> DeviceQuarantineRecords => Set<DeviceQuarantineRecord>();
 
+    public DbSet<IpKitInventoryItem> IpKitInventoryItems => Set<IpKitInventoryItem>();
+
+    public DbSet<IpKitReconciliationBatch> IpKitReconciliationBatches => Set<IpKitReconciliationBatch>();
+
+    public DbSet<IpKitReconciliationCertificate> IpKitReconciliationCertificates => Set<IpKitReconciliationCertificate>();
+
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     public DbSet<LabReferenceRange> LabReferenceRanges => Set<LabReferenceRange>();
@@ -107,6 +115,9 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new DeviceInventoryItemConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceDeficiencyConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceQuarantineRecordConfiguration());
+        modelBuilder.ApplyConfiguration(new IpKitInventoryItemConfiguration());
+        modelBuilder.ApplyConfiguration(new IpKitReconciliationBatchConfiguration());
+        modelBuilder.ApplyConfiguration(new IpKitReconciliationCertificateConfiguration());
         modelBuilder.ApplyConfiguration(new LabReferenceRangeConfiguration());
         modelBuilder.ApplyConfiguration(new BulkLabRangeImportJobConfiguration());
 

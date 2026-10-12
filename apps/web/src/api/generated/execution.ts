@@ -470,6 +470,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/queries/batch-respond": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["BatchRespondClinicalQueries"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/labs/toxicity/review-queue": {
     parameters: {
       query?: never;
@@ -1342,6 +1358,188 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/rtsm/kits/validate-scan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_IpKitScanValidateRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/kits/reconcile-batch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_IpKitBatchReconciliationRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/kits/certificates/{certificateId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          certificateId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          studyId: string;
+          siteId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/rtsm/kits/seed-inventory": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          "application/json": components["schemas"]["Execution_SeedInventoryRequest"];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1353,6 +1551,11 @@ export interface components {
     };
     Execution_BatchQueryRequest: {
       query_ids: string[];
+      reason?: null | string;
+    };
+    Execution_BatchQueryRespondRequest: {
+      query_ids: string[];
+      response: string;
       reason?: null | string;
     };
     Execution_BatchQueryResponse: {
@@ -2003,6 +2206,46 @@ export interface components {
         [key: string]: string[];
       };
     };
+    Execution_IpKitBatchReconciliationRequest: {
+      study_id: string;
+      site_id: string;
+      items: components["schemas"]["Execution_IpKitItemReconcileRequest"][];
+      processed_by?: null | string;
+      notes?: null | string;
+      /** @default Batch IP kit reconciliation */
+      reason_for_change: string;
+    };
+    Execution_IpKitInventoryResponse: {
+      kit_number: string;
+      study_id: string;
+      site_id: string;
+      lot_number: string;
+      /** Format: date-time */
+      expiration_date: string;
+      status: string;
+      /** Format: double */
+      residual_volume_ml?: null | number | string;
+      /** Format: double */
+      residual_volume_percentage?: null | number | string;
+    };
+    Execution_IpKitItemReconcileRequest: {
+      kit_number: string;
+      lot_number: string;
+      expected_lot_number: string;
+      /** Format: double */
+      residual_volume_ml: null | number | string;
+      /** Format: double */
+      residual_volume_percentage: null | number | string;
+      disposition: string;
+      disposition_reason: string;
+      notes?: null | string;
+    };
+    Execution_IpKitScanValidateRequest: {
+      kit_number: string;
+      study_id: string;
+      site_id: string;
+      scanned_lot_number?: null | string;
+    };
     Execution_LabReferenceRangeCreateRequest: {
       study_id: string;
       test_code: string;
@@ -2263,6 +2506,11 @@ export interface components {
       | "CLOSED"
       | "REOPENED"
       | "CANCELLED";
+    Execution_SeedInventoryRequest: {
+      study_id: string;
+      site_id: string;
+      kits: components["schemas"]["Execution_IpKitInventoryResponse"][];
+    };
     Execution_SignatureManifest: {
       signer_id: string;
       signer_name: string;
@@ -3776,6 +4024,48 @@ export interface operations {
       };
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  BatchRespondClinicalQueries: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_BatchQueryRespondRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_BatchQueryResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
         headers: {
           [name: string]: unknown;
         };

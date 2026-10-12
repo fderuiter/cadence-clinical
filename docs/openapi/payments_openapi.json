@@ -607,6 +607,284 @@
           }
         }
       }
+    },
+    "/api/v1/payments/invoices": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Lists compiled self-billing invoices matching filter criteria.",
+        "operationId": "ListInvoices",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "billing_cycle",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "erp_sync_status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "batch_execution_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve single self-billing invoice details with line items.",
+        "operationId": "GetInvoiceById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/compile": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Automates single-site billing cycle compilation into a self-billing invoice.",
+        "operationId": "CompileBillingCycle",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_BillingCycleCompilationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/batch-compile": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Executes study-wide batch milestone invoice compilation across all active trial sites.",
+        "operationId": "BatchCompileBillingCycles",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_BatchBillingCycleCompilationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/approve": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Approve draft self-billing invoice for ERP export and settlement.",
+        "operationId": "ApproveInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/remittance-advice/sign": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.",
+        "operationId": "SignRemittanceAdvice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SignRemittanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/remittance-advice/pdf": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Downloads cryptographic PDF remittance statement.",
+        "operationId": "DownloadRemittancePdf",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/reconcile": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Reconciles invoice settlement against bank wire or ERP clearing statement.",
+        "operationId": "ReconcileInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_ReconcileInvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/erp-export": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Exports self-billing invoice to ERP gateway (e.g. SAP).",
+        "operationId": "ExportInvoiceToErp",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "erp_system",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "SAP"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -629,6 +907,81 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Payments_BatchBillingCycleCompilationRequest": {
+        "required": [
+          "study_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "billing_cycle": {
+            "type": "string",
+            "default": "MONTHLY"
+          },
+          "period_start": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "period_end": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "auto_approve": {
+            "type": "boolean",
+            "default": false
+          },
+          "site_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Payments_BillingCycleCompilationRequest": {
+        "required": [
+          "study_id",
+          "site_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "billing_cycle": {
+            "type": "string",
+            "default": "MONTHLY"
+          },
+          "period_start": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "period_end": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "auto_approve": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -844,6 +1197,45 @@
           }
         }
       },
+      "Payments_ReconcileInvoiceRequest": {
+        "required": [
+          "payment_reference"
+        ],
+        "type": "object",
+        "properties": {
+          "payment_reference": {
+            "type": "string"
+          },
+          "erp_system": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "SAP"
+          },
+          "amount_paid": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "payment_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Payments_ReviewExpenseClaimRequestDto": {
         "required": [
           "status"
@@ -867,6 +1259,27 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "Payments_SignRemittanceRequest": {
+        "required": [
+          "signer_name",
+          "signer_role"
+        ],
+        "type": "object",
+        "properties": {
+          "signer_name": {
+            "type": "string"
+          },
+          "signer_role": {
+            "type": "string"
+          },
+          "signature_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

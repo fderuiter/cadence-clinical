@@ -256,6 +256,46 @@ export const useEconsentStore = defineStore("econsent", {
       };
     },
 
+    batchImportQuizQuestions(selectedTemplates = []) {
+      if (!Array.isArray(selectedTemplates) || selectedTemplates.length === 0) {
+        return [];
+      }
+
+      const timestamp = Date.now();
+      const importedQuestions = selectedTemplates.map((template, index) => {
+        const uniqueId = `q-template-${timestamp}-${index}`;
+        const options = Array.isArray(template.options)
+          ? [...template.options]
+          : [];
+
+        const translations = template.translations
+          ? JSON.parse(JSON.stringify(template.translations))
+          : {
+              en: {
+                text: template.text || "",
+                options: [...options],
+                hint: template.hint || "",
+              },
+            };
+
+        return {
+          id: uniqueId,
+          text: template.text || "",
+          options,
+          correctAnswerIndex:
+            typeof template.correctAnswerIndex === "number"
+              ? template.correctAnswerIndex
+              : 0,
+          hint: template.hint || "",
+          domain: template.domain || "General",
+          translations,
+        };
+      });
+
+      this.quizQuestions.push(...importedQuestions);
+      return importedQuestions;
+    },
+
     resetQuiz() {
       this.quizPassed = false;
       this.quizScore = 0;

@@ -22,6 +22,7 @@ vi.mock("../../src/api/executionApi", () => ({
     cancelQuery: vi.fn(),
     batchCloseQueries: vi.fn(),
     batchCancelQueries: vi.fn(),
+    batchRespondQueries: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -581,6 +582,55 @@ describe("Clinical Canvas: a participant's data", () => {
       );
       expect(wrapper.find("#query-q-1").text()).toContain("Cancelled");
       expect(wrapper.find("#query-q-2").text()).toContain("Cancelled");
+    });
+
+    it("allows clinical coordinator to batch answer multiple open or reopened queries", async () => {
+      signInWith(["crc"]);
+      const q1 = query({ id: "q-1", status: "OPEN" });
+      const q2 = query({ id: "q-2", status: "REOPENED" });
+      vi.mocked(executionApi.listQueries).mockResolvedValue([q1, q2]);
+      await openRecord();
+
+      expect(wrapper.find("#select-all-queries").exists()).toBe(true);
+      expect(wrapper.find("#btn-batch-respond").attributes()).toHaveProperty(
+        "disabled"
+      );
+
+      await wrapper.find("#select-all-queries").setValue(true);
+      await wrapper.vm.$nextTick();
+
+      expect(
+        wrapper.find("#btn-batch-respond").attributes("disabled")
+      ).toBeUndefined();
+
+      vi.mocked(executionApi.batchRespondQueries).mockResolvedValue({
+        queries: [
+          { ...q1, status: "ANSWERED", response: "Updated per protocol v2" },
+          { ...q2, status: "ANSWERED", response: "Updated per protocol v2" },
+        ],
+        count: 2,
+      });
+
+      await wrapper.find("#btn-batch-respond").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      await wrapper
+        .find("#batch-query-reason")
+        .setValue("Updated per protocol v2");
+      await wrapper.find("#btn-confirm-batch-respond").trigger("click");
+      await flushPromises();
+
+      expect(executionApi.batchRespondQueries).toHaveBeenCalledWith(
+        ["q-1", "q-2"],
+        "Updated per protocol v2",
+        undefined
+      );
+      expect(useToastStore().toasts.at(-1)).toMatchObject({
+        tone: "success",
+        title: "2 queries answered",
+      });
+      expect(wrapper.find("#query-q-1").text()).toContain("Answered");
+      expect(wrapper.find("#query-q-2").text()).toContain("Answered");
     });
   });
 });

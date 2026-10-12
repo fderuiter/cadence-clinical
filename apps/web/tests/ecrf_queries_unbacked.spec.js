@@ -7,6 +7,7 @@ import EcrfView from "../src/views/EcrfView.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 
 vi.mock("vue-router", () => ({
+  onBeforeRouteLeave: () => {},
   useRouter: () => ({ push: vi.fn() }),
   useRoute: () => ({ query: {} }),
 }));

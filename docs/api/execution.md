@@ -53,6 +53,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/queries` | CreateClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/batch-cancel` | BatchCancelClinicalQueries |  |
 | `POST` | `/api/v1/execution/queries/batch-close` | BatchCloseClinicalQueries |  |
+| `POST` | `/api/v1/execution/queries/batch-respond` | BatchRespondClinicalQueries |  |
 | `GET` | `/api/v1/execution/queries/{id}` | GetClinicalQueryById |  |
 | `POST` | `/api/v1/execution/queries/{id}/cancel` | CancelClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/{id}/close` | CloseClinicalQuery |  |
@@ -69,6 +70,11 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `GET` | `/api/v1/execution/rtsm/cgt/reconciliations/{studyId}` |  |  |
 | `POST` | `/api/v1/execution/rtsm/cgt/returns` |  |  |
 | `POST` | `/api/v1/execution/rtsm/cgt/verify-barcode` |  |  |
+| `GET` | `/api/v1/execution/rtsm/kits/certificates/{certificateId}` |  |  |
+| `GET` | `/api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}` |  |  |
+| `POST` | `/api/v1/execution/rtsm/kits/reconcile-batch` |  |  |
+| `POST` | `/api/v1/execution/rtsm/kits/seed-inventory` |  |  |
+| `POST` | `/api/v1/execution/rtsm/kits/validate-scan` |  |  |
 | `POST` | `/api/v1/execution/sites/{siteId}/activate` | ActivateSite |  |
 | `GET` | `/api/v1/execution/sites/{siteId}/compliance-status` | GetSiteComplianceStatus |  |
 | `GET` | `/api/v1/execution/subjects` | ListSubjects | Lists one page of a study's subjects in enrollment order. |

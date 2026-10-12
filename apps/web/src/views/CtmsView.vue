@@ -2319,8 +2319,23 @@
           gap: 24px;
         "
       >
+        <div class="rtsm-action-bar" style="display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 16px 20px; border-radius: 8px;">
+          <div>
+            <h3 style="margin: 0; color: #f8fafc; font-size: 16px;">RTSM Site Inventory &amp; Return Accountability</h3>
+            <p style="margin: 4px 0 0; color: #94a3b8; font-size: 13px;">Manage site IP kit returns, barcode scanning, residual volumes, and Part 11 e-signatures.</p>
+          </div>
+          <button type="button" class="btn btn-primary" @click="isIpKitReconciliationDrawerOpen = true">
+            🔍 Launch Bulk Kit Reconciliation Drawer
+          </button>
+        </div>
         <AdaptiveDoseEscalationConsole :study-id="studyId" />
         <CellGeneTherapyCocConsole />
+        <BulkIpKitReconciliationDrawer
+          :is-open="isIpKitReconciliationDrawerOpen"
+          :study-id="studyId"
+          :site-id="siteId"
+          @close="isIpKitReconciliationDrawerOpen = false"
+        />
       </div>
     </template>
   </div>
@@ -2335,6 +2350,7 @@ import CraVerificationConsole from "../components/persona/CraVerificationConsole
 import SsuGreenlightConsole from "../components/clinical/SsuGreenlightConsole.vue";
 import AdaptiveDoseEscalationConsole from "../components/clinical/AdaptiveDoseEscalationConsole.vue";
 import CellGeneTherapyCocConsole from "../components/clinical/CellGeneTherapyCocConsole.vue";
+import BulkIpKitReconciliationDrawer from "../components/clinical/BulkIpKitReconciliationDrawer.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import { isDemoBuild } from "../utils/demoMode.js";
 import apiClient from "../services/api";
@@ -2345,6 +2361,7 @@ import { useToastStore } from "../stores/toasts.js";
 const store = useClinicalStore();
 const route = useRoute();
 const demoBuild = isDemoBuild();
+const isIpKitReconciliationDrawerOpen = ref(false);
 
 // Scope comes from the route; apply it before the first render so the site activation panel sees it.
 if (route && route.query) {

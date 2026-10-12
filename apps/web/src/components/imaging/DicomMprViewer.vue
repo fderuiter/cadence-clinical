@@ -1,5 +1,26 @@
 <template>
   <div class="mpr-viewer-container">
+    <!-- Viewport Identity Banner -->
+    <div v-if="viewportLabel || timepoint" class="viewport-identity-banner">
+      <div class="banner-title-group">
+        <span v-if="viewportLabel" class="viewport-name-tag">{{
+          viewportLabel
+        }}</span>
+        <span v-if="timepoint" class="timepoint-tag">{{
+          formatTimepointLabel(timepoint)
+        }}</span>
+      </div>
+      <div
+        class="sync-status-badge"
+        :class="{ synced: isSynced, unlinked: !isSynced }"
+      >
+        <span class="status-icon">{{ isSynced ? "🔗" : "🔓" }}</span>
+        <span class="status-text">{{
+          isSynced ? "Crosshairs & Scroll Linked" : "Independent Control"
+        }}</span>
+      </div>
+    </div>
+
     <!-- Viewer Toolbar -->
     <div class="mpr-toolbar">
       <div class="toolbar-group">
@@ -222,9 +243,31 @@ const props = defineProps({
     type: String,
     default: "POINTER",
   },
+  timepoint: {
+    type: String,
+    default: "",
+  },
+  viewportLabel: {
+    type: String,
+    default: "",
+  },
+  isSynced: {
+    type: Boolean,
+    default: false,
+  },
+  syncedState: {
+    type: Object,
+    default: null,
+  },
 });
 
-const emit = defineEmits(["caliperCreated", "coordinateSelected"]);
+const emit = defineEmits([
+  "caliperCreated",
+  "coordinateSelected",
+  "update:syncedState",
+  "syncStateChange",
+  "update:isSynced",
+]);
 
 const layoutMode = ref("mpr-tri-view");
 const selectedPreset = ref("SOFT_TISSUE");
@@ -245,6 +288,7 @@ const coronalCanvasRef = ref(null);
 let cineInterval = null;
 const isDrawing = ref(false);
 const drawStart = ref(null);
+let isUpdatingFromProp = false;
 
 const PRESET_MAP = {
   SOFT_TISSUE: { center: 40, width: 350 },
@@ -254,10 +298,73 @@ const PRESET_MAP = {
   LIVER: { center: 30, width: 150 },
 };
 
+function formatTimepointLabel(tp) {
+  if (!tp) return "";
+  const map = {
+    BASELINE: "Baseline Screening",
+    CYCLE_2_DAY_1: "Cycle 2 Day 1",
+    CYCLE_4_DAY_1: "Cycle 4 Day 1",
+    END_OF_TREATMENT: "End of Treatment",
+  };
+  return map[tp] || tp;
+}
+
+function notifySyncStateChange() {
+  if (props.isSynced && !isUpdatingFromProp) {
+    const currentState = {
+      axialSlice: axialSlice.value,
+      sagittalSlice: sagittalSlice.value,
+      coronalSlice: coronalSlice.value,
+      selectedPreset: selectedPreset.value,
+    };
+    emit("update:syncedState", currentState);
+    emit("syncStateChange", currentState);
+  }
+}
+
+watch(
+  () => props.syncedState,
+  (newSync) => {
+    if (props.isSynced && newSync) {
+      isUpdatingFromProp = true;
+      if (
+        typeof newSync.axialSlice === "number" &&
+        newSync.axialSlice !== axialSlice.value
+      ) {
+        axialSlice.value = Math.max(
+          0,
+          Math.min(maxSlices.value - 1, newSync.axialSlice)
+        );
+      }
+      if (
+        typeof newSync.sagittalSlice === "number" &&
+        newSync.sagittalSlice !== sagittalSlice.value
+      ) {
+        sagittalSlice.value = Math.max(0, Math.min(511, newSync.sagittalSlice));
+      }
+      if (
+        typeof newSync.coronalSlice === "number" &&
+        newSync.coronalSlice !== coronalSlice.value
+      ) {
+        coronalSlice.value = Math.max(0, Math.min(511, newSync.coronalSlice));
+      }
+      if (
+        newSync.selectedPreset &&
+        newSync.selectedPreset !== selectedPreset.value
+      ) {
+        selectedPreset.value = newSync.selectedPreset;
+      }
+      isUpdatingFromProp = false;
+    }
+  },
+  { deep: true, immediate: true }
+);
+
 function applyWindowPreset() {
   if (selectedPreset.value !== "CUSTOM" && PRESET_MAP[selectedPreset.value]) {
     renderAllViewports();
   }
+  notifySyncStateChange();
 }
 
 function resetView() {
@@ -265,6 +372,7 @@ function resetView() {
   sagittalSlice.value = 256;
   coronalSlice.value = 256;
   renderAllViewports();
+  notifySyncStateChange();
 }
 
 function toggleCine() {
@@ -272,6 +380,7 @@ function toggleCine() {
   if (isCinePlaying.value) {
     cineInterval = setInterval(() => {
       axialSlice.value = (axialSlice.value + 1) % maxSlices.value;
+      notifySyncStateChange();
     }, 1000 / cineFps.value);
   } else if (cineInterval) {
     clearInterval(cineInterval);
@@ -297,6 +406,7 @@ function onWheelScroll(event, plane) {
       Math.min(511, coronalSlice.value + delta * 4)
     );
   }
+  notifySyncStateChange();
 }
 
 function getCanvasCoordinates(event, canvas) {
@@ -338,6 +448,7 @@ function startPanOrMeasure(event, plane) {
     if (plane === "AXIAL") {
       sagittalSlice.value = Math.floor((x / canvas.width) * 512);
       coronalSlice.value = Math.floor((y / canvas.height) * 512);
+      notifySyncStateChange();
     }
   }
 }
@@ -357,6 +468,7 @@ function onCanvasMouseMove(event, plane) {
         0,
         Math.min(511, Math.floor((currentY / canvas.height) * 512))
       );
+      notifySyncStateChange();
     }
   }
 }
@@ -385,6 +497,8 @@ function stopPanOrMeasure(event) {
           { x: endX, y: endY },
         ],
         sliceIndex: axialSlice.value,
+        timepoint: props.timepoint || "",
+        viewportLabel: props.viewportLabel || "",
       });
     }
   }
@@ -537,6 +651,59 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border, #334155);
   overflow: hidden;
   height: 100%;
+}
+
+.viewport-identity-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background-color: #0b1329;
+  border-bottom: 1px solid #1e293b;
+}
+
+.banner-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewport-name-tag {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.timepoint-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background-color: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.sync-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.sync-status-badge.synced {
+  background-color: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.sync-status-badge.unlinked {
+  background-color: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.3);
 }
 
 .mpr-toolbar {

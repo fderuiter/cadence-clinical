@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 
 using Cadence.Apps.Designer;
+using Cadence.Apps.Designer.Endpoints;
 using Cadence.Ddf;
+using Cadence.Rules;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -14,10 +16,12 @@ using Microsoft.Extensions.DependencyInjection;
 var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
+builder.Services.AddCadenceRules();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
 app.UseCadenceSecurity();
+app.MapRuleBatchEndpoints();
 
 app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Designer", primaryDatastore = "PostgreSQL", compiler = "Cadence.Ddf" }))
     .WithName("DesignerHealthCheck")

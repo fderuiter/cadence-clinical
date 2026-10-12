@@ -21,6 +21,7 @@ public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbC
     public DbSet<TmfAuditLog> TmfAuditLogs => Set<TmfAuditLog>();
     public DbSet<TmfDocumentExpirationAlertState> TmfDocumentExpirationAlertStates => Set<TmfDocumentExpirationAlertState>();
     public DbSet<TmfDocumentQcTransition> TmfDocumentQcTransitions => Set<TmfDocumentQcTransition>();
+    public DbSet<TmfExportJob> TmfExportJobs => Set<TmfExportJob>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -33,6 +34,7 @@ public sealed class EtmfDbContext(DbContextOptions<EtmfDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new TmfAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new TmfDocumentExpirationAlertStateConfiguration());
         modelBuilder.ApplyConfiguration(new TmfDocumentQcTransitionConfiguration());
+        modelBuilder.ApplyConfiguration(new TmfExportJobConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();

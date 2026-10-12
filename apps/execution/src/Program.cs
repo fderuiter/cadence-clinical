@@ -12,6 +12,7 @@ using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Application.Subjects;
+using Cadence.Apps.Execution.Application.Supply;
 using Cadence.Apps.Execution.Application.Toxicity;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -204,6 +205,7 @@ builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
 builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
 builder.Services.AddScoped<ISynonymImportService, SynonymImportService>();
 builder.Services.AddScoped<IDeviceApplicationService, DeviceApplicationService>();
+builder.Services.AddScoped<IIpKitApplicationService, IpKitApplicationService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -268,6 +270,7 @@ app.MapCecEndpoints();
 app.MapCgtEndpoints();
 app.MapSynonymEndpoints();
 app.MapDeviceEndpoints();
+app.MapIpKitEndpoints();
 
 if (args.Contains("--seed"))
 {

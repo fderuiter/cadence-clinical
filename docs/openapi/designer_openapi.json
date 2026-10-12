@@ -31,6 +31,142 @@
         }
       }
     },
+    "/api/v1/studies/{id}/rules/batch-validate": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Designer"
+        ],
+        "summary": "Executes study-wide parallel batch compilation and validation across pinned edit check rule packs.",
+        "operationId": "BatchValidateRules",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Designer_BatchValidateApiRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_BatchValidationReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{id}/rules/batch-validate/{jobId}": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Designer"
+        ],
+        "summary": "Retrieves the aggregated report for an asynchronous batch validation job.",
+        "operationId": "GetBatchValidationJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_BatchValidationReport"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{id}/rules/amendment-regression": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Designer"
+        ],
+        "summary": "Compares baseline and target rule pack versions during protocol amendments to highlight rule diffs and broken dependencies.",
+        "operationId": "AmendmentRegression",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Designer_AmendmentRegressionApiRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_AmendmentRegressionReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies": {
       "get": {
         "tags": [
@@ -177,6 +313,78 @@
           }
         }
       },
+      "Designer_AmendmentRegressionApiRequest": {
+        "type": "object",
+        "properties": {
+          "baselineVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "baselinePack": {},
+          "targetPack": {},
+          "records": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Designer_RuleRecord"
+            }
+          }
+        }
+      },
+      "Designer_AmendmentRegressionReport": {
+        "required": [
+          "baselineVersion",
+          "targetVersion",
+          "ruleDiffs",
+          "brokenAstReferences",
+          "newViolations",
+          "resolvedFindings",
+          "timing"
+        ],
+        "type": "object",
+        "properties": {
+          "baselineVersion": {
+            "type": "string"
+          },
+          "targetVersion": {
+            "type": "string"
+          },
+          "ruleDiffs": {
+            "$ref": "#/components/schemas/Designer_RuleDiffSummary"
+          },
+          "brokenAstReferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_BrokenAstReference"
+            }
+          },
+          "newViolations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_ValidationDetection"
+            }
+          },
+          "resolvedFindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_ValidationDetection"
+            }
+          },
+          "timing": {
+            "$ref": "#/components/schemas/Designer_ValidationTimingMetrics"
+          }
+        }
+      },
       "Designer_AnonymousTypeOfstringAndstringAndstringAndstring": {
         "required": [
           "status",
@@ -209,6 +417,124 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Designer_BatchValidateApiRequest": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Designer_RuleRecord"
+            }
+          },
+          "rulePacks": {
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "isDryRun": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "asyncThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Designer_BatchValidationReport": {
+        "required": [
+          "jobId",
+          "study",
+          "isAsync",
+          "status",
+          "timing",
+          "syntaxErrors",
+          "circularDependencies",
+          "conflictingRules",
+          "detections"
+        ],
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string"
+          },
+          "study": {
+            "$ref": "#/components/schemas/Designer_StudyId"
+          },
+          "isAsync": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/Designer_ValidationTimingMetrics"
+          },
+          "syntaxErrors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "circularDependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conflictingRules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "detections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_ValidationDetection"
+            }
+          }
+        }
+      },
+      "Designer_BrokenAstReference": {
+        "required": [
+          "ruleId",
+          "ruleVersion",
+          "referencedVariable",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string"
+          },
+          "ruleVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "referencedVariable": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
           }
         }
       },
@@ -285,6 +611,79 @@
           }
         }
       },
+      "Designer_EffectivePeriod": {
+        "required": [
+          "from",
+          "until"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "until": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "Designer_FindingTarget": {
+        "required": [
+          "kind",
+          "dataset",
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/Designer_FindingTargetKind"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "variable": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "node": {
+            "$ref": "#/components/schemas/Designer_NodeRef"
+          }
+        }
+      },
+      "Designer_FindingTargetKind": {
+        "type": "integer"
+      },
+      "Designer_NodeRef": {},
+      "Designer_ObservedVariable": {
+        "required": [
+          "variable",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Designer_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -320,6 +719,286 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Designer_Rule": {
+        "required": [
+          "id",
+          "version",
+          "authority",
+          "citation",
+          "applicability",
+          "severity",
+          "condition",
+          "explanation",
+          "remediationGuidance",
+          "effective"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "authority": {
+            "$ref": "#/components/schemas/Designer_RuleAuthority"
+          },
+          "citation": {
+            "$ref": "#/components/schemas/Designer_SourceCitation"
+          },
+          "applicability": {
+            "$ref": "#/components/schemas/Designer_RuleApplicability"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Designer_ValidationSeverity"
+          },
+          "condition": {
+            "$ref": "#/components/schemas/Designer_RuleExpression"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "remediationGuidance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "effective": {
+            "$ref": "#/components/schemas/Designer_EffectivePeriod"
+          }
+        }
+      },
+      "Designer_RuleApplicability": {
+        "required": [
+          "stage",
+          "standard",
+          "standardVersion",
+          "agency",
+          "dataset"
+        ],
+        "type": "object",
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/Designer_ValidationStage"
+          },
+          "standard": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "standardVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "agency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dataset": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Designer_RuleAuthority": {
+        "type": "integer"
+      },
+      "Designer_RuleDiffSummary": {
+        "required": [
+          "addedRules",
+          "removedRules",
+          "modifiedRules"
+        ],
+        "type": "object",
+        "properties": {
+          "addedRules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_Rule"
+            }
+          },
+          "removedRules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_Rule"
+            }
+          },
+          "modifiedRules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_Rule"
+            }
+          }
+        }
+      },
+      "Designer_RuleExpression": {},
+      "Designer_RuleRecord": {
+        "required": [
+          "dataset",
+          "key",
+          "values"
+        ],
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "values": {
+            "type": "object"
+          }
+        }
+      },
+      "Designer_SourceCitation": {
+        "required": [
+          "document",
+          "section",
+          "uri"
+        ],
+        "type": "object",
+        "properties": {
+          "document": {
+            "type": "string"
+          },
+          "section": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "uri": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Designer_StudyId": {},
+      "Designer_ValidationDetection": {
+        "required": [
+          "packKey",
+          "ruleId",
+          "ruleVersion",
+          "severity",
+          "target",
+          "message",
+          "expected",
+          "observed"
+        ],
+        "type": "object",
+        "properties": {
+          "packKey": {
+            "type": "string"
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "ruleVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Designer_ValidationSeverity"
+          },
+          "target": {
+            "$ref": "#/components/schemas/Designer_FindingTarget"
+          },
+          "message": {
+            "type": "string"
+          },
+          "expected": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_ObservedVariable"
+            }
+          }
+        }
+      },
+      "Designer_ValidationSeverity": {
+        "type": "integer"
+      },
+      "Designer_ValidationStage": {
+        "type": "integer"
+      },
+      "Designer_ValidationTimingMetrics": {
+        "required": [
+          "startedAt",
+          "completedAt",
+          "durationMs",
+          "rulesEvaluated",
+          "recordsEvaluated",
+          "parallelWorkerCount"
+        ],
+        "type": "object",
+        "properties": {
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "rulesEvaluated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "recordsEvaluated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "parallelWorkerCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       }

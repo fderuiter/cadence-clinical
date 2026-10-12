@@ -120,7 +120,11 @@
       "realtimeEvaluationActive": "Real-time rule evaluation active",
       "clearForm": "Clear Form",
       "submitEcrfSession": "Submit eCRF Session",
-      "lockedReconsent": "Locked (Re-Consent Required)"
+      "lockedReconsent": "Locked (Re-Consent Required)",
+      "unsavedDraftChanges": "Unsaved Draft Changes",
+      "draftRecoveryActive": "Local Draft Recovery Active",
+      "draftAutoSaving": "Auto-saving to local storage...",
+      "draftRestoredMsg": "Loaded unsaved draft from local storage"
     },
     "enrollModal": {
       "header": "Enroll New Clinical Subject",

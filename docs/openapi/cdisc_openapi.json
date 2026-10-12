@@ -436,6 +436,142 @@
         }
       }
     },
+    "/api/v1/studies/{id}/rules/batch-validate": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Designer"
+        ],
+        "summary": "Executes study-wide parallel batch compilation and validation across pinned edit check rule packs.",
+        "operationId": "BatchValidateRules",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Designer_BatchValidateApiRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_BatchValidationReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{id}/rules/batch-validate/{jobId}": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Designer"
+        ],
+        "summary": "Retrieves the aggregated report for an asynchronous batch validation job.",
+        "operationId": "GetBatchValidationJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_BatchValidationReport"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{id}/rules/amendment-regression": {
+      "post": {
+        "tags": [
+          "Cadence.Apps.Designer"
+        ],
+        "summary": "Compares baseline and target rule pack versions during protocol amendments to highlight rule diffs and broken dependencies.",
+        "operationId": "AmendmentRegression",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Designer_AmendmentRegressionApiRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_AmendmentRegressionReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies": {
       "get": {
         "tags": [
@@ -857,6 +993,93 @@
             "name": "document_id",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/export": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_ExportDocumentsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/export-jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/export-jobs/{job_id}/download": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/export-jobs": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
             "schema": {
               "type": "string"
             }
@@ -2704,6 +2927,56 @@
         }
       }
     },
+    "/api/v1/execution/queries/batch-respond": {
+      "post": {
+        "tags": [
+          "Queries"
+        ],
+        "operationId": "BatchRespondClinicalQueries",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_BatchQueryRespondRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_BatchQueryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/labs/toxicity/review-queue": {
       "get": {
         "tags": [
@@ -4259,6 +4532,124 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/validate-scan": {
+      "post": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_IpKitScanValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/reconcile-batch": {
+      "post": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_IpKitBatchReconciliationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/certificates/{certificateId}": {
+      "get": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "parameters": [
+          {
+            "name": "certificateId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}": {
+      "get": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "parameters": [
+          {
+            "name": "studyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "siteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/rtsm/kits/seed-inventory": {
+      "post": {
+        "tags": [
+          "IP Kit Reconciliation"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_SeedInventoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -7882,6 +8273,284 @@
         }
       }
     },
+    "/api/v1/payments/invoices": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Lists compiled self-billing invoices matching filter criteria.",
+        "operationId": "ListInvoices",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "billing_cycle",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "erp_sync_status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "batch_execution_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve single self-billing invoice details with line items.",
+        "operationId": "GetInvoiceById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/compile": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Automates single-site billing cycle compilation into a self-billing invoice.",
+        "operationId": "CompileBillingCycle",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_BillingCycleCompilationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/batch-compile": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Executes study-wide batch milestone invoice compilation across all active trial sites.",
+        "operationId": "BatchCompileBillingCycles",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_BatchBillingCycleCompilationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/approve": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Approve draft self-billing invoice for ERP export and settlement.",
+        "operationId": "ApproveInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/remittance-advice/sign": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.",
+        "operationId": "SignRemittanceAdvice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SignRemittanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/remittance-advice/pdf": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Downloads cryptographic PDF remittance statement.",
+        "operationId": "DownloadRemittancePdf",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/reconcile": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Reconciles invoice settlement against bank wire or ERP clearing statement.",
+        "operationId": "ReconcileInvoice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_ReconcileInvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/invoices/{id}/erp-export": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Exports self-billing invoice to ERP gateway (e.g. SAP).",
+        "operationId": "ExportInvoiceToErp",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "erp_system",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "SAP"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/quality/status": {
       "get": {
         "tags": [
@@ -8896,6 +9565,78 @@
           }
         }
       },
+      "Designer_AmendmentRegressionApiRequest": {
+        "type": "object",
+        "properties": {
+          "baselineVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "baselinePack": {},
+          "targetPack": {},
+          "records": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Designer_RuleRecord"
+            }
+          }
+        }
+      },
+      "Designer_AmendmentRegressionReport": {
+        "required": [
+          "baselineVersion",
+          "targetVersion",
+          "ruleDiffs",
+          "brokenAstReferences",
+          "newViolations",
+          "resolvedFindings",
+          "timing"
+        ],
+        "type": "object",
+        "properties": {
+          "baselineVersion": {
+            "type": "string"
+          },
+          "targetVersion": {
+            "type": "string"
+          },
+          "ruleDiffs": {
+            "$ref": "#/components/schemas/Designer_RuleDiffSummary"
+          },
+          "brokenAstReferences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_BrokenAstReference"
+            }
+          },
+          "newViolations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_ValidationDetection"
+            }
+          },
+          "resolvedFindings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_ValidationDetection"
+            }
+          },
+          "timing": {
+            "$ref": "#/components/schemas/Designer_ValidationTimingMetrics"
+          }
+        }
+      },
       "Designer_AnonymousTypeOfstringAndstringAndstringAndstring": {
         "required": [
           "status",
@@ -8928,6 +9669,124 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Designer_BatchValidateApiRequest": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Designer_RuleRecord"
+            }
+          },
+          "rulePacks": {
+            "type": [
+              "null",
+              "array"
+            ]
+          },
+          "isDryRun": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "asyncThreshold": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Designer_BatchValidationReport": {
+        "required": [
+          "jobId",
+          "study",
+          "isAsync",
+          "status",
+          "timing",
+          "syntaxErrors",
+          "circularDependencies",
+          "conflictingRules",
+          "detections"
+        ],
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string"
+          },
+          "study": {
+            "$ref": "#/components/schemas/Designer_StudyId"
+          },
+          "isAsync": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "timing": {
+            "$ref": "#/components/schemas/Designer_ValidationTimingMetrics"
+          },
+          "syntaxErrors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "circularDependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conflictingRules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "detections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_ValidationDetection"
+            }
+          }
+        }
+      },
+      "Designer_BrokenAstReference": {
+        "required": [
+          "ruleId",
+          "ruleVersion",
+          "referencedVariable",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string"
+          },
+          "ruleVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "referencedVariable": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
           }
         }
       },
@@ -9004,6 +9863,79 @@
           }
         }
       },
+      "Designer_EffectivePeriod": {
+        "required": [
+          "from",
+          "until"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "until": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "Designer_FindingTarget": {
+        "required": [
+          "kind",
+          "dataset",
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/Designer_FindingTargetKind"
+          },
+          "dataset": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "variable": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "node": {
+            "$ref": "#/components/schemas/Designer_NodeRef"
+          }
+        }
+      },
+      "Designer_FindingTargetKind": {
+        "type": "integer"
+      },
+      "Designer_NodeRef": {},
+      "Designer_ObservedVariable": {
+        "required": [
+          "variable",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "variable": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Designer_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -9039,6 +9971,286 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Designer_Rule": {
+        "required": [
+          "id",
+          "version",
+          "authority",
+          "citation",
+          "applicability",
+          "severity",
+          "condition",
+          "explanation",
+          "remediationGuidance",
+          "effective"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "authority": {
+            "$ref": "#/components/schemas/Designer_RuleAuthority"
+          },
+          "citation": {
+            "$ref": "#/components/schemas/Designer_SourceCitation"
+          },
+          "applicability": {
+            "$ref": "#/components/schemas/Designer_RuleApplicability"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Designer_ValidationSeverity"
+          },
+          "condition": {
+            "$ref": "#/components/schemas/Designer_RuleExpression"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "remediationGuidance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "effective": {
+            "$ref": "#/components/schemas/Designer_EffectivePeriod"
+          }
+        }
+      },
+      "Designer_RuleApplicability": {
+        "required": [
+          "stage",
+          "standard",
+          "standardVersion",
+          "agency",
+          "dataset"
+        ],
+        "type": "object",
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/Designer_ValidationStage"
+          },
+          "standard": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "standardVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "agency": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dataset": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Designer_RuleAuthority": {
+        "type": "integer"
+      },
+      "Designer_RuleDiffSummary": {
+        "required": [
+          "addedRules",
+          "removedRules",
+          "modifiedRules"
+        ],
+        "type": "object",
+        "properties": {
+          "addedRules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_Rule"
+            }
+          },
+          "removedRules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_Rule"
+            }
+          },
+          "modifiedRules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_Rule"
+            }
+          }
+        }
+      },
+      "Designer_RuleExpression": {},
+      "Designer_RuleRecord": {
+        "required": [
+          "dataset",
+          "key",
+          "values"
+        ],
+        "type": "object",
+        "properties": {
+          "dataset": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "values": {
+            "type": "object"
+          }
+        }
+      },
+      "Designer_SourceCitation": {
+        "required": [
+          "document",
+          "section",
+          "uri"
+        ],
+        "type": "object",
+        "properties": {
+          "document": {
+            "type": "string"
+          },
+          "section": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "uri": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Designer_StudyId": {},
+      "Designer_ValidationDetection": {
+        "required": [
+          "packKey",
+          "ruleId",
+          "ruleVersion",
+          "severity",
+          "target",
+          "message",
+          "expected",
+          "observed"
+        ],
+        "type": "object",
+        "properties": {
+          "packKey": {
+            "type": "string"
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "ruleVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Designer_ValidationSeverity"
+          },
+          "target": {
+            "$ref": "#/components/schemas/Designer_FindingTarget"
+          },
+          "message": {
+            "type": "string"
+          },
+          "expected": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_ObservedVariable"
+            }
+          }
+        }
+      },
+      "Designer_ValidationSeverity": {
+        "type": "integer"
+      },
+      "Designer_ValidationStage": {
+        "type": "integer"
+      },
+      "Designer_ValidationTimingMetrics": {
+        "required": [
+          "startedAt",
+          "completedAt",
+          "durationMs",
+          "rulesEvaluated",
+          "recordsEvaluated",
+          "parallelWorkerCount"
+        ],
+        "type": "object",
+        "properties": {
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "durationMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "rulesEvaluated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "recordsEvaluated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "parallelWorkerCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -9352,6 +10564,51 @@
           }
         }
       },
+      "Etmf_ExportDocumentsRequest": {
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "document_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "zone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "section": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifact_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_full_binder": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "Etmf_IngestDocumentRequest": {
         "required": [
           "filename",
@@ -9529,6 +10786,30 @@
             "items": {
               "type": "string"
             }
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_BatchQueryRespondRequest": {
+        "required": [
+          "query_ids",
+          "response"
+        ],
+        "type": "object",
+        "properties": {
+          "query_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "response": {
+            "type": "string"
           },
           "reason": {
             "type": [
@@ -12235,6 +13516,172 @@
           }
         }
       },
+      "Execution_IpKitBatchReconciliationRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_IpKitItemReconcileRequest"
+            }
+          },
+          "processed_by": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reason_for_change": {
+            "type": "string",
+            "default": "Batch IP kit reconciliation"
+          }
+        }
+      },
+      "Execution_IpKitInventoryResponse": {
+        "required": [
+          "kit_number",
+          "study_id",
+          "site_id",
+          "lot_number",
+          "expiration_date",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "expiration_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "residual_volume_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "Execution_IpKitItemReconcileRequest": {
+        "required": [
+          "kit_number",
+          "lot_number",
+          "expected_lot_number",
+          "residual_volume_ml",
+          "residual_volume_percentage",
+          "disposition",
+          "disposition_reason"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "lot_number": {
+            "type": "string"
+          },
+          "expected_lot_number": {
+            "type": "string"
+          },
+          "residual_volume_ml": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "residual_volume_percentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "disposition": {
+            "type": "string"
+          },
+          "disposition_reason": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_IpKitScanValidateRequest": {
+        "required": [
+          "kit_number",
+          "study_id",
+          "site_id"
+        ],
+        "type": "object",
+        "properties": {
+          "kit_number": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "scanned_lot_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Execution_LabReferenceRangeCreateRequest": {
         "required": [
           "study_id",
@@ -13346,6 +14793,28 @@
           "CANCELLED"
         ],
         "type": "string"
+      },
+      "Execution_SeedInventoryRequest": {
+        "required": [
+          "study_id",
+          "site_id",
+          "kits"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "kits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_IpKitInventoryResponse"
+            }
+          }
+        }
       },
       "Execution_SignatureManifest": {
         "required": [
@@ -19658,6 +21127,81 @@
           }
         }
       },
+      "Payments_BatchBillingCycleCompilationRequest": {
+        "required": [
+          "study_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "billing_cycle": {
+            "type": "string",
+            "default": "MONTHLY"
+          },
+          "period_start": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "period_end": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "auto_approve": {
+            "type": "boolean",
+            "default": false
+          },
+          "site_ids": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Payments_BillingCycleCompilationRequest": {
+        "required": [
+          "study_id",
+          "site_id"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": "string"
+          },
+          "billing_cycle": {
+            "type": "string",
+            "default": "MONTHLY"
+          },
+          "period_start": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "period_end": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "auto_approve": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "Payments_DisburseFundsRequestDto": {
         "required": [
           "disbursementType",
@@ -19870,6 +21414,45 @@
           }
         }
       },
+      "Payments_ReconcileInvoiceRequest": {
+        "required": [
+          "payment_reference"
+        ],
+        "type": "object",
+        "properties": {
+          "payment_reference": {
+            "type": "string"
+          },
+          "erp_system": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "SAP"
+          },
+          "amount_paid": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "payment_date": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Payments_ReviewExpenseClaimRequestDto": {
         "required": [
           "status"
@@ -19893,6 +21476,27 @@
               "string"
             ],
             "format": "double"
+          }
+        }
+      },
+      "Payments_SignRemittanceRequest": {
+        "required": [
+          "signer_name",
+          "signer_role"
+        ],
+        "type": "object",
+        "properties": {
+          "signer_name": {
+            "type": "string"
+          },
+          "signer_role": {
+            "type": "string"
+          },
+          "signature_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

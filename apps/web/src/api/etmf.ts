@@ -36,7 +36,76 @@ export interface SignOptions {
   sigToken?: string;
 }
 
+export interface ExportDocumentsPayload {
+  study_id?: string;
+  document_ids?: string[];
+  zone?: number;
+  section?: string;
+  artifact_code?: string;
+  is_full_binder?: boolean;
+}
+
+export interface ExportJobStatus {
+  job_id: string;
+  study_id: string;
+  requested_by: string;
+  status: "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
+  progress_percentage: number;
+  total_documents: number;
+  processed_documents: number;
+  download_url?: string;
+  expires_at?: string;
+  created_at: string;
+}
+
 export const etmfService = {
+  async exportDocuments(payload: ExportDocumentsPayload) {
+    const response = await fetch("/api/v1/etmf/documents/export", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.status === 200) {
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get("content-disposition");
+      let filename = `etmf_export_${payload.study_id || "study"}.zip`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+      return { mode: "stream" as const, blob, filename };
+    } else if (response.status === 202) {
+      const jobData = await response.json();
+      return { mode: "job" as const, job: jobData as ExportJobStatus };
+    } else {
+      const errorText = await response.text();
+      throw new Error(`Export failed (${response.status}): ${errorText}`);
+    }
+  },
+
+  async getExportJob(jobId: string): Promise<ExportJobStatus> {
+    const response = await fetch(`/api/v1/etmf/export-jobs/${jobId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch job status: ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  async listExportJobs(studyId?: string): Promise<ExportJobStatus[]> {
+    const url = studyId
+      ? `/api/v1/etmf/export-jobs?study_id=${encodeURIComponent(studyId)}`
+      : "/api/v1/etmf/export-jobs";
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to list export jobs: ${response.statusText}`);
+    }
+    return response.json();
+  },
   getDocuments(
     params: EtmfDocumentParams = {},
     options: Record<string, unknown> = {}
