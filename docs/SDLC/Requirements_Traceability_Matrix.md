@@ -13,13 +13,13 @@ search: false
 ## 1. Traceability Summary
 
 - **Total Documented Requirements (PRD):** 195
-- **Qualified (mapped tests passed):** 28
+- **Qualified (mapped tests passed):** 29
 - **Failed (a mapped test failed):** 0
 - **Not Verified (mapped tests skipped or not run):** 2
-- **Planned (no mapped tests):** 165
+- **Planned (no mapped tests):** 164
 - **Traceability Aliases (Trace and SRS IDs):** 94
 - **Unknown Requirement IDs Declared by Tests:** 0
-- **Qualified Coverage:** 14.4%
+- **Qualified Coverage:** 14.9%
 
 ## 2. Requirements with Mapped Tests
 
@@ -42,8 +42,9 @@ search: false
 | PRD-LBM-001 | PRD | **Multi-Format Lab Ingestion & LOINC Standardization** | `Map_GlucoseInConventionalUnits_ConvertsToSi` (tests/Cadence.UnitTests/Kernel/Standards/MappingSpecificationTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-PAT-002 | PRD | **Mobile Travel Expense Submission & Receipt OCR** | `ExtractReceiptOcr_ParsesMetadataAndRecordsAudit` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢<br>`SubmitExpenseClaim_Under100WithHighConfidence_AutoApprovesAndDispatchesACH` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢<br>`SubmitExpenseClaim_Exceeding100Threshold_RoutesToPendingReview` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢<br>`SubmitExpenseClaim_MealSurpassingPerDiemCap_RoutesToPendingReview` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-PAY-006 | PRD | **21 CFR Part 11 Financial Disbursement Audit Ledger** | `SubmitExpenseClaim_Under100WithHighConfidence_AutoApprovesAndDispatchesACH` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢 | ✅ **Qualified** |
+| PRD-PVG-003 | PRD | **Disproportionality Signal Detection Engine (PRR, ROR, EBGM / MGPS)** | `BulkSignSignalAlerts_AppliesEsignatureAndCreatesAuditTrailPerAlert` (tests/Cadence.UnitTests/Safety/SignalAlertEndpointsTests.cs) 🟢<br>`BulkSignSignalAlerts_DetectsStateConflictAndReturns409Conflict` (tests/Cadence.UnitTests/Safety/SignalAlertEndpointsTests.cs) 🟢<br>`BulkSignSignalAlerts_EnforcesMaxBatchLimitOf100Alerts` (tests/Cadence.UnitTests/Safety/SignalAlertEndpointsTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-PVG-004 | PRD | **Automated Periodic Aggregate Safety Reporting (DSUR, PSUR, PBRER)** | `CompileDsur_CalculatesPatientYearsExposureAndMedDraCrossTabulation` (tests/Cadence.UnitTests/Safety/DsurCompilerEngineTests.cs) 🟢<br>`UpdateDsur_GivenLockedRecord_Returns409Conflict` (tests/Cadence.UnitTests/Safety/DsurCompilerEngineTests.cs) 🟢<br>`Endpoints_CompileAndApprove_ReturnCreatedAndOkWithValidSignature` (tests/Cadence.UnitTests/Safety/DsurCompilerEngineTests.cs) 🟢 | ✅ **Qualified** |
-| PRD-PVG-008 | PRD | **21 CFR Part 11 Physician Electronic Signatures on ICSR Packages** | `ApproveDsur_AppliesPart11SignatureBlock_AndLocksRecord` (tests/Cadence.UnitTests/Safety/DsurCompilerEngineTests.cs) 🟢 | ✅ **Qualified** |
+| PRD-PVG-008 | PRD | **21 CFR Part 11 Physician Electronic Signatures on ICSR Packages** | `ApproveDsur_AppliesPart11SignatureBlock_AndLocksRecord` (tests/Cadence.UnitTests/Safety/DsurCompilerEngineTests.cs) 🟢<br>`BulkSignSignalAlerts_RejectsInvalidCredentialsWith401AndNoMutation` (tests/Cadence.UnitTests/Safety/SignalAlertEndpointsTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-SSU-001 | PRD | **Dynamic Country-Specific Prerequisite Rules Matrix** | `GetCountryMatrix_ReturnsSixFacetReadinessForAllSites` (tests/Cadence.UnitTests/Ctms/StartupGreenlightEndpointsTests.cs) 🟢<br>`BatchCertify_Performance_CompletesUnder5SecondsFor50Sites` (tests/Cadence.UnitTests/Ctms/StartupGreenlightEndpointsTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-SSU-002 | PRD | **Multi-Factor Greenlight Site Activation Evaluator** | `BatchCertify_RejectsNonCompliantSites` (tests/Cadence.UnitTests/Ctms/StartupGreenlightEndpointsTests.cs) 🟢<br>`BatchCertify_AllowsOverriddenSites` (tests/Cadence.UnitTests/Ctms/StartupGreenlightEndpointsTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-SSU-003 | PRD | **Programmatic RTSM & EDC Execution Gating** | `BatchCertify_CertifiesCompliantSites_WithIndividualTokensAndAuditLogs` (tests/Cadence.UnitTests/Ctms/StartupGreenlightEndpointsTests.cs) 🟢 | ✅ **Qualified** |
@@ -146,7 +147,6 @@ search: false
 | PRD-PAY-005 | PRD | **Multi-Currency Conversion & Budget Adjustment Amendments** | Sprint Roadmap |
 | PRD-PVG-001 | PRD | **Deterministic Multi-Country Expedited Regulatory Reporting Rules Engine** | Sprint Roadmap |
 | PRD-PVG-002 | PRD | **Secure Applicability Statement 2 (AS2) B2B Gateway & MDN Verification** | Sprint Roadmap |
-| PRD-PVG-003 | PRD | **Disproportionality Signal Detection Engine (PRR, ROR, EBGM / MGPS)** | Sprint Roadmap |
 | PRD-PVG-005 | PRD | **MedDRA / WHODrug Automated Auto-Coding & Upversioning Impact Analysis** | Sprint Roadmap |
 | PRD-PVG-006 | PRD | **Literature Safety Surveillance & Regulatory Inquiry Tracking** | Sprint Roadmap |
 | PRD-PVG-007 | PRD | **Blinded Safety Review & Unblinded Safety Officer Air-Gap** | Sprint Roadmap |
@@ -336,4 +336,4 @@ None. Every requirement ID declared by a test is defined in the PRD or SRS.
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** 7926777f5648cd936d1ae9dbdeba9b23f52487cb6700e839bc3b2aba06543263
+- **Content Hash (SHA-256):** 08f97b2e1cfe7c88372bb2f7dbf1d0759c687cccceab54258601cb6d837ad9bb

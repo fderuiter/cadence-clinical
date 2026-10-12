@@ -242,6 +242,16 @@
           <table class="data-table" aria-label="Signal Review Alerts Queue">
             <thead>
               <tr>
+                <th class="checkbox-col">
+                  <input
+                    type="checkbox"
+                    :checked="isAllActiveSelected"
+                    :indeterminate="isSomeActiveSelected"
+                    :disabled="activeAlerts.length === 0"
+                    aria-label="Select all active signal alerts"
+                    @change="toggleSelectAll"
+                  />
+                </th>
                 <th>Alert ID</th>
                 <th>Target Drug</th>
                 <th>MedDRA Term</th>
@@ -257,8 +267,24 @@
               <tr
                 v-for="alert in alertsList"
                 :key="alert.id"
-                :class="['alert-row', alert.severity.toLowerCase()]"
+                :class="[
+                  'alert-row',
+                  alert.severity.toLowerCase(),
+                  { selected: selectedAlertIds.includes(alert.id) },
+                ]"
               >
+                <td class="checkbox-col">
+                  <input
+                    type="checkbox"
+                    :checked="selectedAlertIds.includes(alert.id)"
+                    :disabled="
+                      alert.status !== 'TRIGGERED' &&
+                      alert.status !== 'UNDER_REVIEW'
+                    "
+                    :aria-label="`Select alert ${alert.id}`"
+                    @change="toggleSelectAlert(alert.id)"
+                  />
+                </td>
                 <td>
                   <code>{{ alert.id }}</code>
                 </td>
@@ -304,12 +330,32 @@
                 </td>
               </tr>
               <tr v-if="alertsList.length === 0">
-                <td colspan="9" class="empty-state">
+                <td colspan="10" class="empty-state">
                   No safety signal alerts currently triggered.
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Floating Bulk Action Toolbar -->
+        <div
+          v-if="selectedAlertIds.length > 0"
+          class="floating-bulk-bar"
+          role="toolbar"
+          aria-label="Bulk alert disposition toolbar"
+        >
+          <span class="bulk-count">
+            <strong>{{ selectedAlertIds.length }}</strong> active alert(s) selected
+          </span>
+          <div class="bulk-actions">
+            <button class="btn btn-primary" @click="openBulkSignModal">
+              ✍️ Bulk Sign & Decide ({{ selectedAlertIds.length }})
+            </button>
+            <button class="btn btn-secondary" @click="clearSelection">
+              Deselect All
+            </button>
+          </div>
         </div>
       </section>
 
@@ -493,18 +539,131 @@
         </footer>
       </div>
     </div>
+
+    <!-- Part 11 Bulk Electronic Signature Modal for Signal Review Alerts -->
+    <div
+      v-if="isBulkSignModalOpen"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="bulk-sign-modal-title"
+    >
+      <div class="modal-box">
+        <header class="modal-header">
+          <h3 id="bulk-sign-modal-title">
+            21 CFR Part 11 Bulk Signal Review Disposition
+          </h3>
+          <button
+            class="close-btn"
+            aria-label="Close modal"
+            @click="isBulkSignModalOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div class="modal-body">
+          <p>
+            <strong>Selected Alerts ({{ selectedAlertIds.length }}):</strong>
+            <span class="selected-ids-list">{{ selectedAlertIds.join(", ") }}</span>
+          </p>
+
+          <div class="form-group">
+            <label for="bulk-review-decision">Clinical Review Decision *</label>
+            <select
+              id="bulk-review-decision"
+              v-model="bulkSignForm.decision"
+              class="select-input"
+            >
+              <option value="CONFIRM_SIGNAL">
+                CONFIRM_SIGNAL (Escalate to Safety Board)
+              </option>
+              <option value="REFUTE_SIGNAL">
+                REFUTE_SIGNAL (Known event / Background noise)
+              </option>
+              <option value="REQUEST_SAFETY_INQUIRY">
+                REQUEST_SAFETY_INQUIRY (Request CRA / Site Query)
+              </option>
+              <option value="CLOSE_ALERT">
+                CLOSE_ALERT (Triage Complete)
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="bulk-review-justification">Medical Justification *</label>
+            <textarea
+              id="bulk-review-justification"
+              v-model="bulkSignForm.justification"
+              class="textarea-input"
+              placeholder="Document clinical rationale for batch signal determination..."
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="bulk-user-id">Physician / Reviewer User ID *</label>
+            <input
+              id="bulk-user-id"
+              v-model="bulkSignForm.user_id"
+              type="text"
+              class="text-input"
+              placeholder="Enter user identifier"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="bulk-sign-secret"
+              >Safety Physician Signing Key / Secret *</label
+            >
+            <input
+              id="bulk-sign-secret"
+              v-model="bulkSignForm.signature_secret"
+              type="password"
+              class="text-input"
+              placeholder="Enter cryptographic signing credential"
+            />
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button
+            class="btn btn-secondary"
+            @click="isBulkSignModalOpen = false"
+          >
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="
+              !bulkSignForm.justification ||
+              !bulkSignForm.signature_secret ||
+              isSubmittingBulkSign
+            "
+            @click="submitBulkSignature"
+          >
+            {{
+              isSubmittingBulkSign
+                ? "Signing..."
+                : "Apply Part 11 Batch Signature"
+            }}
+          </button>
+        </footer>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { safetyApi } from "../../api/safety";
+import { useToastStore } from "../../stores/toasts.js";
 
 interface DisproportionalityMetric {
   drug_name: string;
   meddra_pt: string;
   meddra_soc: string | null;
   term_level: "PT" | "SOC";
-  case_count_a: int;
+  case_count_a: number;
   expected_count_e: number;
   prr: number;
   prr_ci_lower: number;
@@ -755,6 +914,132 @@ const signForm = ref({
   signature_secret: "",
 });
 
+const selectedAlertIds = ref<string[]>([]);
+const isBulkSignModalOpen = ref(false);
+const isSubmittingBulkSign = ref(false);
+const bulkSignForm = ref({
+  decision: "CONFIRM_SIGNAL",
+  justification: "",
+  user_id: "safety_physician_01",
+  signature_secret: "",
+});
+
+const activeAlerts = computed(() =>
+  alertsList.value.filter(
+    (a) => a.status === "TRIGGERED" || a.status === "UNDER_REVIEW"
+  )
+);
+
+const isAllActiveSelected = computed(
+  () =>
+    activeAlerts.value.length > 0 &&
+    activeAlerts.value.every((a) => selectedAlertIds.value.includes(a.id))
+);
+
+const isSomeActiveSelected = computed(
+  () =>
+    selectedAlertIds.value.length > 0 &&
+    !isAllActiveSelected.value
+);
+
+function toggleSelectAll(event: Event) {
+  const target = event.target as HTMLInputElement;
+  if (target.checked) {
+    selectedAlertIds.value = activeAlerts.value.map((a) => a.id);
+  } else {
+    selectedAlertIds.value = [];
+  }
+}
+
+function toggleSelectAlert(id: string) {
+  const index = selectedAlertIds.value.indexOf(id);
+  if (index > -1) {
+    selectedAlertIds.value.splice(index, 1);
+  } else {
+    selectedAlertIds.value.push(id);
+  }
+}
+
+function clearSelection() {
+  selectedAlertIds.value = [];
+}
+
+function openBulkSignModal() {
+  if (selectedAlertIds.value.length === 0) return;
+  bulkSignForm.value = {
+    decision: "CONFIRM_SIGNAL",
+    justification: "",
+    user_id: "safety_physician_01",
+    signature_secret: "",
+  };
+  isBulkSignModalOpen.value = true;
+}
+
+async function submitBulkSignature() {
+  if (
+    !bulkSignForm.value.justification ||
+    !bulkSignForm.value.signature_secret ||
+    selectedAlertIds.value.length === 0
+  ) {
+    return;
+  }
+  isSubmittingBulkSign.value = true;
+  try {
+    const resp = await safetyApi.bulkSignAlerts({
+      alert_ids: selectedAlertIds.value,
+      user_id: bulkSignForm.value.user_id || "safety_physician_01",
+      signature_secret: bulkSignForm.value.signature_secret,
+      decision: bulkSignForm.value.decision,
+      justification: bulkSignForm.value.justification,
+    });
+
+    const statusFromDecision = (dec: string) => {
+      switch (dec) {
+        case "CONFIRM_SIGNAL":
+          return "CONFIRMED_SIGNAL";
+        case "REFUTE_SIGNAL":
+          return "REFUTED_SIGNAL";
+        case "CLOSE_ALERT":
+          return "CLOSED";
+        case "REQUEST_SAFETY_INQUIRY":
+          return "UNDER_REVIEW";
+        default:
+          return "UNDER_REVIEW";
+      }
+    };
+
+    if (resp && resp.alerts && Array.isArray(resp.alerts)) {
+      for (const updatedAlert of resp.alerts) {
+        const idx = alertsList.value.findIndex((a) => a.id === updatedAlert.id);
+        if (idx !== -1) {
+          alertsList.value[idx] = {
+            ...alertsList.value[idx],
+            status: updatedAlert.status,
+            review_decision:
+              updatedAlert.review_decision ?? bulkSignForm.value.decision,
+          };
+        }
+      }
+    } else {
+      const newStatus = statusFromDecision(bulkSignForm.value.decision);
+      for (const id of selectedAlertIds.value) {
+        const item = alertsList.value.find((a) => a.id === id);
+        if (item) {
+          item.status = newStatus;
+          item.review_decision = bulkSignForm.value.decision;
+        }
+      }
+    }
+
+    selectedAlertIds.value = [];
+    isBulkSignModalOpen.value = false;
+  } catch (err) {
+    useToastStore().apiError("Bulk alert signature failed", err);
+  } finally {
+    isSubmittingBulkSign.value = false;
+  }
+}
+
 function executeScan() {
   isScanning.value = true;
   setTimeout(() => {
@@ -783,11 +1068,49 @@ function openReportSignModal(report: PeriodicReport) {
   alert(`Signing for ${report.id} opened.`);
 }
 
-function submitAlertSignature() {
-  if (selectedAlertForSigning.value) {
-    selectedAlertForSigning.value.status = "CONFIRMED_SIGNAL";
-    selectedAlertForSigning.value.review_decision = signForm.value.decision;
+async function submitAlertSignature() {
+  if (
+    !selectedAlertForSigning.value ||
+    !signForm.value.justification ||
+    !signForm.value.signature_secret
+  ) {
+    return;
+  }
+  const alertId = selectedAlertForSigning.value.id;
+  try {
+    const resp = await safetyApi.bulkSignAlerts({
+      alert_ids: [alertId],
+      user_id: "safety_physician_01",
+      signature_secret: signForm.value.signature_secret,
+      decision: signForm.value.decision,
+      justification: signForm.value.justification,
+    });
+
+    const statusFromDecision = (dec: string) => {
+      switch (dec) {
+        case "CONFIRM_SIGNAL":
+          return "CONFIRMED_SIGNAL";
+        case "REFUTE_SIGNAL":
+          return "REFUTED_SIGNAL";
+        case "CLOSE_ALERT":
+          return "CLOSED";
+        case "REQUEST_SAFETY_INQUIRY":
+          return "UNDER_REVIEW";
+        default:
+          return "UNDER_REVIEW";
+      }
+    };
+
+    const newStatus =
+      resp?.alerts?.[0]?.status || statusFromDecision(signForm.value.decision);
+    const item = alertsList.value.find((a) => a.id === alertId);
+    if (item) {
+      item.status = newStatus;
+      item.review_decision = signForm.value.decision;
+    }
     selectedAlertForSigning.value = null;
+  } catch (err) {
+    useToastStore().apiError("Alert signature failed", err);
   }
 }
 </script>
@@ -1112,5 +1435,46 @@ function submitAlertSignature() {
   text-align: center;
   color: #64748b;
   padding: 2rem;
+}
+
+.checkbox-col {
+  width: 40px;
+  text-align: center;
+}
+
+.alert-row.selected {
+  background-color: #eff6ff;
+}
+
+.floating-bulk-bar {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--color-surface-subtle, #1e293b);
+  color: #ffffff;
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  margin-top: 1rem;
+}
+
+.bulk-count {
+  font-size: 0.875rem;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.selected-ids-list {
+  font-family: monospace;
+  word-break: break-all;
+  background-color: #f1f5f9;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
 }
 </style>

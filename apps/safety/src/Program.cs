@@ -38,6 +38,7 @@ app.MapCadenceHealthAndStatusEndpoints(
 var safetyGroup = app.MapGroup("/api/v1/safety");
 safetyGroup.MapIcsrTemplateEndpoints();
 safetyGroup.MapDsurEndpoints();
+safetyGroup.MapSignalAlertEndpoints();
 
 await app.RunAsync();
 
