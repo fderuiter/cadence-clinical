@@ -107,3 +107,20 @@ public sealed class TmfDocumentQcTransition
     public string ReasonForChange { get; set; } = string.Empty;
     public required DateTimeOffset Timestamp { get; set; }
 }
+
+public sealed class TmfExportJob : AggregateRoot<string>
+{
+    public string JobId { get => Id; set => Id = value; }
+    public string StudyId { get; set; } = string.Empty;
+    public string RequestedBy { get => CreatedBy; set => CreatedBy = value; }
+    public string Status { get; set; } = "QUEUED";
+    public double ProgressPercentage { get; set; }
+    public int TotalDocuments { get; set; }
+    public int ProcessedDocuments { get; set; }
+    public string? DownloadUrl { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
+
+    public TmfExportJob() : base("JOB-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()) { }
+    public TmfExportJob(string id) : base(id) { }
+}
+

@@ -5,11 +5,14 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
+using Cadence.Apps.Etmf.Services;
+using Cadence.Apps.Etmf.Workers;
 using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
@@ -33,6 +36,11 @@ public static class EtmfIntelligenceEndpoints
 
         group.MapGet("/documents", GetDocuments);
         group.MapGet("/documents/{document_id}", GetDocumentById);
+        group.MapPost("/documents/export", ExportDocuments);
+        group.MapGet("/export-jobs/{job_id}", GetExportJob);
+        group.MapGet("/export-jobs/{job_id}/download", DownloadExportJob);
+        group.MapGet("/export-jobs", ListExportJobs);
+
         group.MapPost("/ingest", IngestDocument);
         group.MapGet("/taxonomy", GetTaxonomy);
     }
@@ -486,7 +494,207 @@ public static class EtmfIntelligenceEndpoints
             new { zone = 11, zone_name = "Statistics", section = "11.01", section_name = "Statistical Analysis", artifact_code = "11.01.01", artifact_name = "Statistical Analysis Plan" }
         ];
     }
+
+    public static async Task<IResult> ExportDocuments(
+        [FromBody] ExportDocumentsRequest request,
+        [FromServices] EtmfDbContext dbContext,
+        [FromServices] EtmfExportQueue exportQueue,
+        [FromServices] IClock clock,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = dbContext.TmfDocuments.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(request.StudyId))
+        {
+            query = query.Where(d => d.StudyId == request.StudyId);
+        }
+
+        if (request.DocumentIds != null && request.DocumentIds.Count > 0)
+        {
+            query = query.Where(d => request.DocumentIds.Contains(d.Id));
+        }
+        else if (!string.IsNullOrWhiteSpace(request.ArtifactCode))
+        {
+            query = query.Where(d => d.ArtifactCode == request.ArtifactCode);
+        }
+        else if (!string.IsNullOrWhiteSpace(request.Section))
+        {
+            query = query.Where(d => d.Section == request.Section);
+        }
+        else if (request.Zone.HasValue)
+        {
+            query = query.Where(d => d.Zone == request.Zone.Value);
+        }
+
+        var matchingDocs = await query
+            .OrderBy(d => d.Zone)
+            .ThenBy(d => d.Section)
+            .ThenBy(d => d.Filename)
+            .ToListAsync(ct);
+
+        int count = matchingDocs.Count;
+        var studyId = request.StudyId ?? "STUDY-USDM-001";
+
+        // Requirement 2:
+        // If count <= 50 and IsFullBinder == false -> stream ZIP synchronously (200 OK)
+        // If count > 50 or IsFullBinder == true -> enqueue background job and return 202 Accepted
+        if (count <= 50 && !request.IsFullBinder)
+        {
+            var exportId = "EXP-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+            var now = clock.UtcNow;
+            var zipBytes = EtmfExportPackager.CreateZipArchive(
+                exportId,
+                studyId,
+                matchingDocs,
+                now);
+
+            var filename = $"etmf_export_{studyId}_{now:yyyyMMdd_HHmmss}.zip";
+            return TypedResults.File(zipBytes, "application/zip", filename);
+        }
+        else
+        {
+            var jobId = "JOB-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+            var user = httpContext.User?.Identity?.Name ?? "crc.user";
+            var now = clock.UtcNow;
+
+            var job = new TmfExportJob(jobId)
+            {
+                StudyId = studyId,
+                RequestedBy = user,
+                Status = "QUEUED",
+                ProgressPercentage = 0.0,
+                TotalDocuments = count,
+                ProcessedDocuments = 0,
+                CreatedAt = now.UtcDateTime,
+                ReasonForChange = "Study binder bulk export request"
+            };
+
+            dbContext.TmfExportJobs.Add(job);
+            await dbContext.SaveChangesAsync(ct);
+
+            await exportQueue.EnqueueAsync(jobId, ct);
+
+            return TypedResults.Accepted(
+                uri: $"/api/v1/etmf/export-jobs/{jobId}",
+                value: new
+                {
+                    job_id = jobId,
+                    study_id = job.StudyId,
+                    requested_by = user,
+                    status = "QUEUED",
+                    progress_percentage = 0.0,
+                    total_documents = count,
+                    processed_documents = 0,
+                    download_url = (string?)null,
+                    expires_at = (DateTimeOffset?)null,
+                    created_at = job.CreatedAt,
+                    status_url = $"/api/v1/etmf/export-jobs/{jobId}",
+                    message = "Export job enqueued successfully for background processing."
+                }
+            );
+        }
+    }
+
+    public static async Task<IResult> GetExportJob(
+        [FromRoute] string job_id,
+        [FromServices] EtmfDbContext dbContext,
+        CancellationToken ct)
+    {
+        var job = await dbContext.TmfExportJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == job_id, ct);
+        if (job == null)
+        {
+            return TypedResults.NotFound(new { error = $"Export job '{job_id}' not found." });
+        }
+
+        return TypedResults.Ok(new
+        {
+            job_id = job.Id,
+            study_id = job.StudyId,
+            requested_by = job.RequestedBy,
+            status = job.Status,
+            progress_percentage = job.ProgressPercentage,
+            total_documents = job.TotalDocuments,
+            processed_documents = job.ProcessedDocuments,
+            download_url = job.DownloadUrl,
+            expires_at = job.ExpiresAt,
+            created_at = job.CreatedAt
+        });
+    }
+
+    public static async Task<IResult> DownloadExportJob(
+        [FromRoute] string job_id,
+        [FromServices] EtmfDbContext dbContext,
+        [FromServices] IClock clock,
+        CancellationToken ct)
+    {
+        var job = await dbContext.TmfExportJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == job_id, ct);
+        if (job == null)
+        {
+            return TypedResults.NotFound(new { error = $"Export job '{job_id}' not found." });
+        }
+
+        if (job.Status != "COMPLETED")
+        {
+            return TypedResults.BadRequest(new { error = $"Export job '{job_id}' is not in COMPLETED status (Current status: {job.Status})." });
+        }
+
+        if (job.ExpiresAt.HasValue && clock.UtcNow > job.ExpiresAt.Value)
+        {
+            return TypedResults.StatusCode(StatusCodes.Status410Gone);
+        }
+
+        var filePath = Path.Combine(Path.GetTempPath(), "etmf_exports", $"{job_id}.zip");
+        if (!File.Exists(filePath))
+        {
+            var docs = await dbContext.TmfDocuments
+                .AsNoTracking()
+                .Where(d => d.StudyId == job.StudyId)
+                .OrderBy(d => d.Zone)
+                .ThenBy(d => d.Section)
+                .ThenBy(d => d.Filename)
+                .ToListAsync(ct);
+
+            var zipBytes = EtmfExportPackager.CreateZipArchive(job.Id, job.StudyId, docs, clock.UtcNow);
+            return TypedResults.File(zipBytes, "application/zip", $"etmf_export_{job.StudyId}_{job.Id}.zip");
+        }
+
+        var fileStream = File.OpenRead(filePath);
+        return TypedResults.File(fileStream, "application/zip", $"etmf_export_{job.StudyId}_{job.Id}.zip");
+    }
+
+    public static async Task<IResult> ListExportJobs(
+        [FromQuery] string? study_id,
+        [FromServices] EtmfDbContext dbContext,
+        CancellationToken ct)
+    {
+        var query = dbContext.TmfExportJobs.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(study_id))
+        {
+            query = query.Where(j => j.StudyId == study_id);
+        }
+
+        var jobs = await query
+            .OrderByDescending(j => j.CreatedAt)
+            .Select(job => new
+            {
+                job_id = job.Id,
+                study_id = job.StudyId,
+                requested_by = job.RequestedBy,
+                status = job.Status,
+                progress_percentage = job.ProgressPercentage,
+                total_documents = job.TotalDocuments,
+                processed_documents = job.ProcessedDocuments,
+                download_url = job.DownloadUrl,
+                expires_at = job.ExpiresAt,
+                created_at = job.CreatedAt
+            })
+            .ToListAsync(ct);
+
+        return TypedResults.Ok(jobs);
+    }
 }
+
 
 public record ClassifyRequest(
     string Filename,
@@ -562,3 +770,13 @@ public record CraqcStagingItem(
     string? QcAssignedTo,
     List<string> DiscrepancyNotes
 );
+
+public record ExportDocumentsRequest(
+    [property: JsonPropertyName("study_id")] string? StudyId = null,
+    [property: JsonPropertyName("document_ids")] List<string>? DocumentIds = null,
+    [property: JsonPropertyName("zone")] int? Zone = null,
+    [property: JsonPropertyName("section")] string? Section = null,
+    [property: JsonPropertyName("artifact_code")] string? ArtifactCode = null,
+    [property: JsonPropertyName("is_full_binder")] bool IsFullBinder = false
+);
+
