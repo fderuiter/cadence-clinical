@@ -93,6 +93,13 @@ public static class QueryEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
+        group.MapPost("/batch-respond", BatchRespondQueryAsync)
+            .WithName("BatchRespondClinicalQueries")
+            .Produces<BatchQueryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
         // Undocumented alias for legacy Python router compatibility. The gateway proxies it, so every alias carries the
         // same filters as its documented route: a change without X-Change-Reason is refused here too (#5060).
         var legacyGroup = app.MapGroup("/api/v1/queries")
@@ -107,6 +114,7 @@ public static class QueryEndpoints
         legacyGroup.MapPost("/{id}/cancel", CancelQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
         legacyGroup.MapPost("/batch-close", BatchCloseQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
         legacyGroup.MapPost("/batch-cancel", BatchCancelQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/batch-respond", BatchRespondQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
     }
@@ -207,6 +215,15 @@ public static class QueryEndpoints
     {
         var role = GetCallerRole(httpContext);
         var result = await svc.BatchCancelAsync(request, ct, role).ConfigureAwait(false);
+        return result.Match(Results.Ok, e => e.ToProblemResult());
+    }
+
+    public static async Task<IResult> BatchRespondQueryAsync(
+        BatchQueryRespondRequest request,
+        IClinicalQueryApplicationService svc,
+        CancellationToken ct)
+    {
+        var result = await svc.BatchRespondAsync(request, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 

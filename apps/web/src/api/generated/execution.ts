@@ -470,6 +470,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/queries/batch-respond": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["BatchRespondClinicalQueries"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/labs/toxicity/review-queue": {
     parameters: {
       query?: never;
@@ -1214,6 +1230,11 @@ export interface components {
     };
     Execution_BatchQueryRequest: {
       query_ids: string[];
+      reason?: null | string;
+    };
+    Execution_BatchQueryRespondRequest: {
+      query_ids: string[];
+      response: string;
       reason?: null | string;
     };
     Execution_BatchQueryResponse: {
@@ -3454,6 +3475,48 @@ export interface operations {
       };
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  BatchRespondClinicalQueries: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_BatchQueryRespondRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_BatchQueryResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
         headers: {
           [name: string]: unknown;
         };
