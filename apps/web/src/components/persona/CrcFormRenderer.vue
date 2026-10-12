@@ -453,6 +453,7 @@
                 @respond-query="$emit('respond-query', field.id, $event)"
                 @close-query="$emit('close-query', field.id)"
                 @reopen-query="$emit('reopen-query', field.id)"
+                @open-audit="handleOpenFieldAudit(field.id, field.label)"
               />
 
               <!-- Live Edit Check Inline Banner -->
@@ -951,13 +952,25 @@
         </div>
       </div>
     </div>
+
+    <!-- eCRF Field Audit History Modal Dialog -->
+    <EcrfFieldAuditModal
+      :is-open="showAuditModal"
+      :field-id="auditFieldId"
+      :field-label="auditFieldLabel"
+      :audit-history="auditHistoryData"
+      :loading="auditLoading"
+      :error="auditError"
+      @close="showAuditModal = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { computed, reactive, ref } from "vue";
-import { ClinicalFormField } from "ui";
+import { ClinicalFormField, EcrfFieldAuditModal } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
+import { executionApi } from "../../api/executionApi";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
 const clinicalStore = useClinicalStore();
@@ -1015,6 +1028,14 @@ const emit = defineEmits([
 // Subject Enrollment Modal State
 const showEnrollModal = ref(false);
 const showReconsentGateModal = ref(false);
+
+// eCRF Field Audit History Modal State
+const showAuditModal = ref(false);
+const auditFieldId = ref("");
+const auditFieldLabel = ref("");
+const auditHistoryData = ref([]);
+const auditLoading = ref(false);
+const auditError = ref(null);
 const enrollForm = reactive({
   subjectId: "",
   siteId: "SITE-101",
@@ -1189,5 +1210,37 @@ function toggleBatchField(fieldId, checked) {
     if (idx !== -1) updated.splice(idx, 1);
   }
   emit("update:selectedBatchFields", updated);
+}
+
+async function handleOpenFieldAudit(fieldId, fieldLabel) {
+  auditFieldId.value = fieldId;
+  auditFieldLabel.value = fieldLabel || fieldId;
+  showAuditModal.value = true;
+  auditLoading.value = true;
+  auditError.value = null;
+  auditHistoryData.value = [];
+
+  const formSubmissionId =
+    currentStore.value?.activeFormSubmissionId ||
+    currentStore.value?.formSubmissionId ||
+    props.selectedSubjectId ||
+    "VS_DEMO";
+
+  try {
+    const history = await executionApi.getFieldAuditHistory(
+      formSubmissionId,
+      fieldId
+    );
+    auditHistoryData.value = history || [];
+  } catch (err) {
+    if (typeof currentStore.value?.getFieldAuditHistory === "function") {
+      auditHistoryData.value = currentStore.value.getFieldAuditHistory(fieldId) || [];
+    } else {
+      auditError.value =
+        err?.message || "Unable to fetch field audit history for this record.";
+    }
+  } finally {
+    auditLoading.value = false;
+  }
 }
 </script>

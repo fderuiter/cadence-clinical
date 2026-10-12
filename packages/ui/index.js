@@ -760,6 +760,7 @@ export { toBeAccessible } from "./accessibility-matcher.js";
 
 import AiActionButton from "./src/components/clinical/AiActionButton.vue";
 import AiSuggestionDrawer from "./src/components/clinical/AiSuggestionDrawer.vue";
+import ClinicalFieldAuditFlag from "./src/components/clinical/ClinicalFieldAuditFlag.vue";
 import ClinicalFormField from "./src/components/clinical/ClinicalFormField.vue";
 import ClinicalInput from "./src/components/clinical/ClinicalInput.vue";
 import ClinicalRadioGroup from "./src/components/clinical/ClinicalRadioGroup.vue";
@@ -768,6 +769,7 @@ import ClinicalModal from "./src/components/clinical/ClinicalModal.vue";
 import ClinicalQueryFlag from "./src/components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./src/components/clinical/ClinicalQueryPanel.vue";
 import ConfidenceBadge from "./src/components/clinical/ConfidenceBadge.vue";
+import EcrfFieldAuditModal from "./src/components/clinical/EcrfFieldAuditModal.vue";
 import FileUploadModal from "./src/components/FileUploadModal.vue";
 import ModalErrorAlert from "./src/components/ModalErrorAlert.vue";
 import { useAsyncRetry } from "./src/composables/useAsyncRetry.js";
@@ -775,6 +777,7 @@ import { useAsyncRetry } from "./src/composables/useAsyncRetry.js";
 export {
   AiActionButton,
   AiSuggestionDrawer,
+  ClinicalFieldAuditFlag,
   ClinicalFormField,
   ClinicalInput,
   ClinicalRadioGroup,
@@ -783,6 +786,7 @@ export {
   ClinicalQueryFlag,
   ClinicalQueryPanel,
   ConfidenceBadge,
+  EcrfFieldAuditModal,
   FileUploadModal,
   ModalErrorAlert,
   useAsyncRetry,

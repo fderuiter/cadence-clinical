@@ -471,4 +471,55 @@ public sealed class ObservationAndFormEndpointsTests
         ok.Value!.Status.Should().Be(FormSubmissionStatus.Draft);
         ok.Value!.IsReadonly.Should().BeFalse();
     }
+
+    /// <summary>
+    /// Validates that FormEndpoints.GetFieldAuditHistoryAsync returns 404 when submission does not exist.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task GetFieldAuditHistory_Handler_WhenNotFound_ReturnsNotFoundResult()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor();
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+
+        var result = await FormEndpoints.GetFieldAuditHistoryAsync(Guid.NewGuid().ToString(), "vssbp", svc, CancellationToken.None);
+
+        result.Should().BeOfType<ProblemHttpResult>();
+        var problem = (ProblemHttpResult)result;
+        problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    /// <summary>
+    /// Validates that FormEndpoints.GetFieldAuditHistoryAsync returns 200 OK with revision entries for existing submission.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task GetFieldAuditHistory_Handler_WhenSubmissionExists_ReturnsOkWithRevisionHistory()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor();
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+
+        var createRes = await svc.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": \"120\"}"), CancellationToken.None);
+
+        string formId = createRes.Value!.Id;
+
+        var result = await FormEndpoints.GetFieldAuditHistoryAsync(formId, "vssbp", svc, CancellationToken.None);
+
+        result.Should().BeOfType<Ok<IReadOnlyList<FieldAuditHistoryEntryResponse>>>();
+        var ok = (Ok<IReadOnlyList<FieldAuditHistoryEntryResponse>>)result;
+        ok.StatusCode.Should().Be(StatusCodes.Status200OK);
+        ok.Value.Should().NotBeNull();
+        ok.Value.Should().HaveCount(1);
+        ok.Value![0].NewValue.Should().Be("120");
+    }
 }

@@ -18,6 +18,7 @@
         @respond-query="$emit('respond-query', $event)"
         @close-query="$emit('close-query')"
         @reopen-query="$emit('reopen-query')"
+        @open-audit="$emit('open-audit', $event)"
       />
 
       <ClinicalLookupInput
@@ -40,6 +41,7 @@
         @respond-query="$emit('respond-query', $event)"
         @close-query="$emit('close-query')"
         @reopen-query="$emit('reopen-query')"
+        @open-audit="$emit('open-audit', $event)"
       />
 
       <ClinicalInput
@@ -59,6 +61,7 @@
         @respond-query="$emit('respond-query', $event)"
         @close-query="$emit('close-query')"
         @reopen-query="$emit('reopen-query')"
+        @open-audit="$emit('open-audit', $event)"
       />
     </template>
   </div>
@@ -102,6 +105,7 @@ defineEmits<{
   (e: "respond-query", event: any): void;
   (e: "close-query"): void;
   (e: "reopen-query"): void;
+  (e: "open-audit", fieldId: string): void;
 }>();
 
 const customAttributes = computed(() => {

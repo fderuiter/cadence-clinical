@@ -15,6 +15,7 @@ using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -239,7 +240,7 @@ public static class SceEndpoints
         });
 
         // 2. Create / register statistical program
-        group.MapPost("/programs", async (CreateProgramRequestDto req, InteropDbContext db, IClock clock, HttpContext httpContext) =>
+        group.MapPost("/programs", async (CreateProgramRequestDto req, InteropDbContext db, [FromServices] IClock clock, HttpContext httpContext) =>
         {
             string userId = GetUserId(httpContext);
             string codeHash = ComputeSha256(req.SourceCode ?? "");
@@ -307,7 +308,7 @@ public static class SceEndpoints
         });
 
         // 5. List active database lock tokens
-        group.MapGet("/lock-tokens", async (string study_id, InteropDbContext db, IClock clock) =>
+        group.MapGet("/lock-tokens", async (string study_id, InteropDbContext db, [FromServices] IClock clock) =>
         {
             var now = clock.UtcNow;
             var tokens = await db.DatabaseLockAuthTokens
@@ -321,7 +322,7 @@ public static class SceEndpoints
         });
 
         // 6. Issue database lock token
-        group.MapPost("/lock-tokens", async (IssueLockTokenRequestDto req, InteropDbContext db, IClock clock, HttpContext httpContext) =>
+        group.MapPost("/lock-tokens", async (IssueLockTokenRequestDto req, InteropDbContext db, [FromServices] IClock clock, HttpContext httpContext) =>
         {
             string userId = GetUserId(httpContext);
             string userRole = GetUserRole(httpContext);
@@ -373,7 +374,7 @@ public static class SceEndpoints
         });
 
         // 7. Revoke database lock token
-        group.MapPost("/lock-tokens/{token_id}/revoke", async (string token_id, string? reason, InteropDbContext db, IClock clock, HttpContext httpContext) =>
+        group.MapPost("/lock-tokens/{token_id}/revoke", async (string token_id, string? reason, InteropDbContext db, [FromServices] IClock clock, HttpContext httpContext) =>
         {
             string userId = GetUserId(httpContext);
             string userRole = GetUserRole(httpContext);
@@ -419,7 +420,7 @@ public static class SceEndpoints
         });
 
         // 8. Execute statistical program in sandbox
-        group.MapPost("/execute", async (ExecuteProgramRequestDto req, InteropDbContext db, ISceDockerEngineDriver driver, ILockfileValidatorService lockfileValidator, IClock clock, HttpContext httpContext) =>
+        group.MapPost("/execute", async (ExecuteProgramRequestDto req, InteropDbContext db, [FromServices] ISceDockerEngineDriver driver, [FromServices] ILockfileValidatorService lockfileValidator, [FromServices] IClock clock, HttpContext httpContext) =>
         {
             string userId = GetUserId(httpContext);
             string userRole = GetUserRole(httpContext);
@@ -654,7 +655,7 @@ public static class SceEndpoints
         });
 
         // 11. Verify execution run manifest seal
-        group.MapPost("/runs/{run_id}/verify", async (string run_id, InteropDbContext db, IClock clock) =>
+        group.MapPost("/runs/{run_id}/verify", async (string run_id, InteropDbContext db, [FromServices] IClock clock) =>
         {
             var run = await db.ExecutionRunRecords
                 .AsNoTracking()

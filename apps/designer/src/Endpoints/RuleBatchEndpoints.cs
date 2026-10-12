@@ -17,6 +17,7 @@ using Cadence.Security.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Designer.Endpoints;
@@ -56,7 +57,7 @@ public static class RuleBatchEndpoints
             string id,
             BatchValidateApiRequest? request,
             ParallelBatchRuleValidator validator,
-            IClock clock,
+            [FromServices] IClock clock,
             CancellationToken cancellationToken) =>
         {
             var req = request ?? new BatchValidateApiRequest();
@@ -101,7 +102,7 @@ public static class RuleBatchEndpoints
             string id,
             AmendmentRegressionApiRequest? request,
             AmendmentRegressionEngine regressionEngine,
-            IClock clock,
+            [FromServices] IClock clock,
             CancellationToken cancellationToken) =>
         {
             var req = request ?? new AmendmentRegressionApiRequest();

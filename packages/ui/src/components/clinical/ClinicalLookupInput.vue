@@ -9,6 +9,7 @@
     :query-label="queryLabel"
     tag="div"
     extra-class="clinical-lookup-container"
+    @open-audit="$emit('open-audit', $event)"
   >
     <template #default="{ id: slotId, errorId, hasError }">
       <input
@@ -107,6 +108,7 @@ defineEmits<{
   (e: "update:modelValue", value: string | number): void;
   (e: "input", value: string | number): void;
   (e: "change", value: string | number, target: any): void;
+  (e: "open-audit", fieldId: string): void;
 }>();
 
 const stateClass = computed(() => {

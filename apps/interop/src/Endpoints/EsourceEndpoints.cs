@@ -14,6 +14,7 @@ using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -133,7 +134,7 @@ public static class EsourceEndpoints
     public static async Task<IResult> RegisterEhrEndpointAsync(
         EhrEndpointCreateRequest request,
         InteropDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         HttpContext httpContext,
         CancellationToken ct)
     {
@@ -167,7 +168,7 @@ public static class EsourceEndpoints
 
     public static IResult GenerateClientAssertionAsync(
         SmartAssertionRequest request,
-        IClock clock)
+        [FromServices] IClock clock)
     {
         if (string.IsNullOrWhiteSpace(request.ClientId) || string.IsNullOrWhiteSpace(request.TokenUrl))
         {
@@ -224,7 +225,7 @@ public static class EsourceEndpoints
 
     public static IResult VerifyClientAssertionAsync(
         SmartVerifyRequest request,
-        IClock clock)
+        [FromServices] IClock clock)
     {
         if (string.IsNullOrWhiteSpace(request.ClientAssertionToken))
         {
@@ -262,7 +263,7 @@ public static class EsourceEndpoints
     public static async Task<IResult> PollHospitalEhrAsync(
         EhrPollRequest request,
         InteropDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         HttpContext httpContext,
         CancellationToken ct)
     {
@@ -315,7 +316,7 @@ public static class EsourceEndpoints
     public static async Task<IResult> IngestFhirBundleAsync(
         FhirBundleIngestRequest request,
         InteropDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.StudyId) || string.IsNullOrWhiteSpace(request.SubjectId))
@@ -354,7 +355,7 @@ public static class EsourceEndpoints
         int skip,
         int limit,
         InteropDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         CancellationToken ct)
     {
         var query = db.EhrReconciliationCandidateRecords.AsNoTracking();
@@ -426,7 +427,7 @@ public static class EsourceEndpoints
     public static async Task<IResult> AcceptCandidateAsync(
         EhrReconcileAcceptRequest request,
         InteropDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         HttpContext httpContext,
         CancellationToken ct)
     {
@@ -487,7 +488,7 @@ public static class EsourceEndpoints
     public static async Task<IResult> RejectCandidateAsync(
         EhrReconcileRejectRequest request,
         InteropDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         HttpContext httpContext,
         CancellationToken ct)
     {
@@ -549,7 +550,7 @@ public static class EsourceEndpoints
     public static async Task<IResult> BatchAcceptCandidatesAsync(
         EhrReconcileBatchAcceptRequest request,
         InteropDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         HttpContext httpContext,
         CancellationToken ct)
     {
@@ -651,7 +652,7 @@ public static class EsourceEndpoints
     public static async Task<IResult> BatchRejectCandidatesAsync(
         EhrReconcileBatchRejectRequest request,
         InteropDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         HttpContext httpContext,
         CancellationToken ct)
     {
@@ -754,7 +755,7 @@ public static class EsourceEndpoints
     public static async Task<IResult> RaiseClinicalQueryAsync(
         EhrReconcileQueryRequest request,
         InteropDbContext db,
-        IClock clock,
+        [FromServices] IClock clock,
         HttpContext httpContext,
         CancellationToken ct)
     {

@@ -82,6 +82,11 @@ public static class FormEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
+        group.MapGet("/{id}/fields/{fieldId}/audit-history", GetFieldAuditHistoryAsync)
+            .WithName("GetFieldAuditHistory")
+            .Produces<IReadOnlyList<FieldAuditHistoryEntryResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         app.MapPost("/api/v1/execution/batch-sign-off", BatchSignOffAsync)
             .WithName("BatchSignOff")
             .WithTags("Forms")
@@ -106,6 +111,7 @@ public static class FormEndpoints
         legacyGroup.MapPost("/{id}/approve", ApproveFormSubmissionAsync)
             .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
         legacyGroup.MapPost("/{id}/unlock", UnlockFormSubmissionAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapGet("/{id}/fields/{fieldId}/audit-history", GetFieldAuditHistoryAsync);
 
         return app;
     }
@@ -182,6 +188,16 @@ public static class FormEndpoints
     {
         string reason = !string.IsNullOrWhiteSpace(request?.Reason) ? request.Reason : auditContext.ChangeReason;
         var result = await svc.UnlockAsync(id, reason, ct).ConfigureAwait(false);
+        return result.Match(Results.Ok, e => e.ToProblemResult());
+    }
+
+    public static async Task<IResult> GetFieldAuditHistoryAsync(
+        string id,
+        string fieldId,
+        IFormSubmissionApplicationService svc,
+        CancellationToken ct)
+    {
+        var result = await svc.GetFieldAuditHistoryAsync(id, fieldId, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 

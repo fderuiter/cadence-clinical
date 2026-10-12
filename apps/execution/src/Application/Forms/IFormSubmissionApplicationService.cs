@@ -46,4 +46,12 @@ public interface IFormSubmissionApplicationService
         AuthenticatedCaller? signer,
         string? sigToken,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Queries field revision entries from AuditLogEntries for a specific form field.
+    /// </summary>
+    Task<Result<IReadOnlyList<FieldAuditHistoryEntryResponse>>> GetFieldAuditHistoryAsync(
+        string id,
+        string fieldId,
+        CancellationToken cancellationToken);
 }

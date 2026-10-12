@@ -11,6 +11,7 @@ using Cadence.Security.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -90,7 +91,7 @@ public static class DsurEndpoints
     public static async Task<IResult> CompileDsurAsync(
         DsurCompileRequest request,
         SafetyDbContext dbContext,
-        IClock? clock,
+        [FromServices] IClock? clock,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -110,7 +111,7 @@ public static class DsurEndpoints
         string id,
         DsurApproveRequest? request,
         SafetyDbContext dbContext,
-        IClock? clock,
+        [FromServices] IClock? clock,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -132,7 +133,7 @@ public static class DsurEndpoints
         string id,
         DsurUpdateRequest request,
         SafetyDbContext dbContext,
-        IClock? clock,
+        [FromServices] IClock? clock,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {

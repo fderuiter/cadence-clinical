@@ -9,6 +9,7 @@
     :can-manage-queries="canManageQueries"
     :query-label="queryLabel"
     tag="div"
+    @open-audit="$emit('open-audit', $event)"
   >
     <template #default="{ id: slotId, errorId, hasError }">
       <input
@@ -67,5 +68,5 @@ defineProps({
   },
 });
 
-defineEmits(["update:modelValue", "change"]);
+defineEmits(["update:modelValue", "change", "open-audit"]);
 </script>

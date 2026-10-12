@@ -22,6 +22,18 @@ export type FormSubmission = Schemas["Execution_FormSubmissionResponse"];
 export type ClinicalQuery = Schemas["Execution_ClinicalQueryResponse"];
 export type BatchQueryResponse = Schemas["Execution_BatchQueryResponse"];
 
+export interface FieldAuditHistoryEntry {
+  versionIndex: number;
+  timestamp: string;
+  userId: string;
+  changeReason?: string | null;
+  oldValue?: string | null;
+  newValue?: string | null;
+  blockHash: string;
+  predecessorHash?: string | null;
+  action?: string | null;
+}
+
 export interface RaiseQuery {
   studyId: string;
   subjectCode: string;
@@ -433,5 +445,19 @@ export const executionApi = {
       throw new Error("Failed to validate barcode scan");
     }
     return res.json();
+  },
+  /** Retrieves chronological field revision history with Part 11 Merkle hashes (GET /api/v1/execution/forms/{id}/fields/{fieldId}/audit-history). */
+  getFieldAuditHistory(
+    formId: string,
+    fieldId: string
+  ): Promise<FieldAuditHistoryEntry[]> {
+    return unwrapResponse(
+      (client as any).GET(
+        "/api/v1/execution/forms/{id}/fields/{fieldId}/audit-history",
+        {
+          params: { path: { id: formId, fieldId } },
+        }
+      )
+    );
   },
 };

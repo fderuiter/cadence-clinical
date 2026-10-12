@@ -342,6 +342,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/forms/{id}/fields/{fieldId}/audit-history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetFieldAuditHistory"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/queries": {
     parameters: {
       query?: never;
@@ -2147,6 +2163,19 @@ export interface components {
       is_complete: boolean;
       missing_artifacts: null | string[];
     };
+    Execution_FieldAuditHistoryEntryResponse: {
+      /** Format: int64 */
+      version_index: number | string;
+      /** Format: date-time */
+      timestamp: string;
+      user_id: string;
+      change_reason: string;
+      old_value: null | string;
+      new_value: null | string;
+      block_hash: string;
+      predecessor_hash?: null | string;
+      action?: null | string;
+    };
     Execution_FlagObservationRequest: {
       reason: string;
     };
@@ -3630,6 +3659,38 @@ export interface operations {
         };
         content: {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetFieldAuditHistory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        fieldId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_FieldAuditHistoryEntryResponse"][];
         };
       };
       /** @description Not Found */

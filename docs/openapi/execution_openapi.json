@@ -1302,6 +1302,57 @@
         }
       }
     },
+    "/api/v1/execution/forms/{id}/fields/{fieldId}/audit-history": {
+      "get": {
+        "tags": [
+          "Forms"
+        ],
+        "operationId": "GetFieldAuditHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fieldId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Execution_FieldAuditHistoryEntryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/queries": {
       "post": {
         "tags": [
@@ -6083,6 +6134,65 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "Execution_FieldAuditHistoryEntryResponse": {
+        "required": [
+          "version_index",
+          "timestamp",
+          "user_id",
+          "change_reason",
+          "old_value",
+          "new_value",
+          "block_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "change_reason": {
+            "type": "string"
+          },
+          "old_value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "new_value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "block_hash": {
+            "type": "string"
+          },
+          "predecessor_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "action": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

@@ -29,6 +29,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `PUT` | `/api/v1/execution/forms/{id}` | UpdateFormPayload |  |
 | `POST` | `/api/v1/execution/forms/{id}/approve` | ApproveFormSubmission |  |
 | `POST` | `/api/v1/execution/forms/{id}/complete` | CompleteFormSubmission |  |
+| `GET` | `/api/v1/execution/forms/{id}/fields/{fieldId}/audit-history` | GetFieldAuditHistory |  |
 | `POST` | `/api/v1/execution/forms/{id}/unlock` | UnlockFormSubmission |  |
 | `GET` | `/api/v1/execution/lab-ranges` | GetReferenceRanges | Get reference ranges for study/site |
 | `POST` | `/api/v1/execution/lab-ranges` | CreateReferenceRange | Create laboratory reference range |

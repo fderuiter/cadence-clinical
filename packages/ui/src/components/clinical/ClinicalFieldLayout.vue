@@ -25,6 +25,12 @@
         :has-error="showError"
       ></slot>
 
+      <!-- Audit Flag -->
+      <ClinicalFieldAuditFlag
+        :id="id"
+        @open-audit="$emit('open-audit', id)"
+      />
+
       <!-- Query Flag -->
       <ClinicalQueryFlag
         :id="id"
@@ -66,6 +72,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import ClinicalFieldAuditFlag from "./ClinicalFieldAuditFlag.vue";
 import ClinicalQueryFlag from "./ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./ClinicalQueryPanel.vue";
 
@@ -112,7 +119,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(["create-query", "respond-query", "close-query", "reopen-query"]);
+defineEmits(["create-query", "respond-query", "close-query", "reopen-query", "open-audit"]);
 
 const isQueryOpen = ref(false);
 

@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from "vitest";
-import { debounce, createClinicalLookupInput } from "../index.js";
+import { debounce, createClinicalLookupInput, ClinicalFieldAuditFlag, EcrfFieldAuditModal } from "../index.js";
+
+describe("Component Exports", () => {
+  it("exports ClinicalFieldAuditFlag and EcrfFieldAuditModal", () => {
+    expect(ClinicalFieldAuditFlag).toBeDefined();
+    expect(EcrfFieldAuditModal).toBeDefined();
+  });
+});
 
 describe("createClinicalLookupInput", () => {
   it("generates correct HTML structure for default status none", () => {

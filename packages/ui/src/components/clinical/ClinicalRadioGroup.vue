@@ -8,6 +8,7 @@
     :can-manage-queries="canManageQueries"
     :query-label="queryLabel"
     tag="fieldset"
+    @open-audit="$emit('open-audit', $event)"
   >
     <template #default="{ id: slotId }">
       <div class="radio-options">
@@ -77,7 +78,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(["update:modelValue", "change"]);
+defineEmits(["update:modelValue", "change", "open-audit"]);
 
 const normalizedOptions = computed(() => {
   return props.options.map((opt) => {

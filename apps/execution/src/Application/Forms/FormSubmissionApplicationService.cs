@@ -17,12 +17,15 @@ using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Core.Domain;
+using Cadence.Core.Domain.Audit;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Security;
 using Cadence.Security.Authentication;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace Cadence.Apps.Execution.Application.Forms;
@@ -46,7 +49,8 @@ public sealed class FormSubmissionApplicationService(
     IAutoQueryDispatchService? autoQueryDispatchService = null,
     IConfiguration? configuration = null,
     IPublishedFormVersionRegistryRepository? formVersionRegistryRepository = null,
-    IClock? clock = null) : IFormSubmissionApplicationService
+    IClock? clock = null,
+    ExecutionDbContext? dbContext = null) : IFormSubmissionApplicationService
 {
     private readonly IClock _clock = clock ?? SystemClock.Instance;
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
@@ -854,4 +858,207 @@ public sealed class FormSubmissionApplicationService(
             ClonedFromId: f.ClonedFromId,
             Version: f.VersionIndex
         );
+
+    public async Task<Result<IReadOnlyList<FieldAuditHistoryEntryResponse>>> GetFieldAuditHistoryAsync(
+        string id,
+        string fieldId,
+        CancellationToken cancellationToken)
+    {
+        if (!FormSubmissionId.TryParse(id, out var submissionId))
+        {
+            return FormErrors.NotFound(id);
+        }
+
+        var submission = await formSubmissionRepository.GetByIdAsync(submissionId, cancellationToken).ConfigureAwait(false);
+        if (submission is null)
+        {
+            return FormErrors.NotFound(id);
+        }
+
+        List<AuditLogEntry> auditEntries = new();
+        if (dbContext is not null)
+        {
+            string entityName = nameof(FormSubmission);
+            string entityId = submission.Id.ToString();
+
+            auditEntries = await dbContext.AuditLogEntries
+                .AsNoTracking()
+                .Where(e => e.EntityName == entityName && e.EntityId == entityId)
+                .OrderBy(e => e.Timestamp)
+                .ThenBy(e => e.VersionIndex)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var history = ExtractFieldAuditHistory(submission, auditEntries, fieldId);
+        return Result<IReadOnlyList<FieldAuditHistoryEntryResponse>>.Success(history);
+    }
+
+    private static List<FieldAuditHistoryEntryResponse> ExtractFieldAuditHistory(
+        FormSubmission submission,
+        List<AuditLogEntry> auditEntries,
+        string fieldId)
+    {
+        var history = new List<FieldAuditHistoryEntryResponse>();
+        string? previousValue = null;
+
+        if (auditEntries.Count > 0)
+        {
+            foreach (var entry in auditEntries)
+            {
+                var (found, currentValue) = ExtractFieldValueFromChangesJson(entry.ChangesJson, fieldId);
+                if (!found)
+                {
+                    continue;
+                }
+
+                if (history.Count == 0 || currentValue != previousValue)
+                {
+                    history.Add(new FieldAuditHistoryEntryResponse(
+                        VersionIndex: entry.VersionIndex,
+                        Timestamp: entry.Timestamp,
+                        UserId: string.IsNullOrWhiteSpace(entry.UserId) ? (submission.CreatedBy ?? "system") : entry.UserId,
+                        ChangeReason: string.IsNullOrWhiteSpace(entry.ReasonForChange) ? (submission.ReasonForChange ?? "Form update") : entry.ReasonForChange,
+                        OldValue: previousValue,
+                        NewValue: currentValue,
+                        BlockHash: entry.BlockHash,
+                        PredecessorHash: entry.PredecessorHash,
+                        Action: entry.Action
+                    ));
+                    previousValue = currentValue;
+                }
+            }
+        }
+
+        if (history.Count == 0 && !string.IsNullOrWhiteSpace(submission.Payload))
+        {
+            var (found, currentValue) = ExtractFieldValueFromChangesJson(
+                JsonSerializer.Serialize(new { Payload = submission.Payload }), fieldId);
+
+            if (found && currentValue is not null)
+            {
+                history.Add(new FieldAuditHistoryEntryResponse(
+                    VersionIndex: submission.VersionIndex > 0 ? submission.VersionIndex : 1,
+                    Timestamp: submission.CreatedAt,
+                    UserId: string.IsNullOrWhiteSpace(submission.CreatedBy) ? "system" : submission.CreatedBy,
+                    ChangeReason: string.IsNullOrWhiteSpace(submission.ReasonForChange) ? "Initial Form Entry" : submission.ReasonForChange,
+                    OldValue: null,
+                    NewValue: currentValue,
+                    BlockHash: submission.Id.ToString(),
+                    PredecessorHash: null,
+                    Action: "Initial"
+                ));
+            }
+        }
+
+        return history;
+    }
+
+    private static (bool Found, string? Value) ExtractFieldValueFromChangesJson(string? changesJson, string fieldId)
+    {
+        if (string.IsNullOrWhiteSpace(changesJson))
+        {
+            return (false, null);
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(changesJson);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return (false, null);
+            }
+
+            JsonElement payloadElement = default;
+            bool hasPayload = false;
+
+            if (root.TryGetProperty("Payload", out var p1))
+            {
+                payloadElement = p1;
+                hasPayload = true;
+            }
+            else if (root.TryGetProperty("payload", out var p2))
+            {
+                payloadElement = p2;
+                hasPayload = true;
+            }
+            else if (root.TryGetProperty("new", out var newObj) && newObj.ValueKind == JsonValueKind.Object)
+            {
+                if (newObj.TryGetProperty("Payload", out var p3))
+                {
+                    payloadElement = p3;
+                    hasPayload = true;
+                }
+                else if (newObj.TryGetProperty("payload", out var p4))
+                {
+                    payloadElement = p4;
+                    hasPayload = true;
+                }
+            }
+
+            if (hasPayload)
+            {
+                if (payloadElement.ValueKind == JsonValueKind.String)
+                {
+                    string payloadJson = payloadElement.GetString() ?? "{}";
+                    using var payloadDoc = JsonDocument.Parse(payloadJson);
+                    if (payloadDoc.RootElement.ValueKind == JsonValueKind.Object &&
+                        TryGetPropertyCaseInsensitive(payloadDoc.RootElement, fieldId, out var valElem))
+                    {
+                        return (true, GetElementValueString(valElem));
+                    }
+                    return (false, null);
+                }
+
+                if (payloadElement.ValueKind == JsonValueKind.Object)
+                {
+                    if (TryGetPropertyCaseInsensitive(payloadElement, fieldId, out var valElem))
+                    {
+                        return (true, GetElementValueString(valElem));
+                    }
+                    return (false, null);
+                }
+            }
+
+            if (TryGetPropertyCaseInsensitive(root, fieldId, out var directValElem))
+            {
+                return (true, GetElementValueString(directValElem));
+            }
+
+            return (false, null);
+        }
+        catch
+        {
+            return (false, null);
+        }
+    }
+
+    private static string? GetElementValueString(JsonElement element) =>
+        element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Null or JsonValueKind.Undefined => null,
+            _ => element.GetRawText()
+        };
+
+    private static bool TryGetPropertyCaseInsensitive(JsonElement element, string name, out JsonElement result)
+    {
+        if (element.TryGetProperty(name, out result))
+        {
+            return true;
+        }
+
+        var match = element.EnumerateObject()
+            .FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        if (!string.IsNullOrEmpty(match.Name))
+        {
+            result = match.Value;
+            return true;
+        }
+
+        result = default;
+        return false;
+    }
 }
