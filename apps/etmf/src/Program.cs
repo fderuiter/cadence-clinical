@@ -1,6 +1,7 @@
 using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Consumers;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
+using Cadence.Apps.Etmf.Workers;
 using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
@@ -16,6 +17,8 @@ builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<EtmfDbContext>();
+builder.Services.AddSingleton<EtmfExportQueue>();
+builder.Services.AddHostedService<EtmfExportWorker>();
 
 builder.Services.AddMassTransit(x =>
 {

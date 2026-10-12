@@ -3,15 +3,33 @@
     <div class="grid-header">
       <div class="header-titles">
         <h2>Artifact Documents Registry</h2>
-        <p v-if="selectedArtifactCode" class="active-artifact-subtitle">
+        <p
+          v-if="selectedArtifactCode"
+          class="active-artifact-subtitle"
+        >
           Showing documents for Artifact:
           <strong>{{ selectedArtifactCode }}</strong>
         </p>
-        <p v-else class="active-artifact-subtitle">
+        <p
+          v-else
+          class="active-artifact-subtitle"
+        >
           Please select an artifact from the binder tree to view documents.
         </p>
       </div>
       <div style="display: flex; gap: 8px">
+        <button
+          v-if="selectedDocumentIds.length > 0"
+          class="btn btn-outline-primary export-selected-btn"
+          :aria-label="
+            'Download ' +
+              selectedDocumentIds.length +
+              ' selected documents as ZIP package'
+          "
+          @click="handleExportSelected"
+        >
+          <span>📦</span> Download Selected ({{ selectedDocumentIds.length }})
+        </button>
         <button
           class="btn btn-secondary batch-upload-trigger-btn"
           aria-label="Batch Ingestion multi-file upload"
@@ -35,7 +53,10 @@
     </div>
 
     <!-- Documents Data Table -->
-    <div ref="containerRef" class="table-responsive">
+    <div
+      ref="containerRef"
+      class="table-responsive"
+    >
       <table
         class="documents-table"
         role="grid"
@@ -45,13 +66,41 @@
       >
         <thead>
           <tr>
-            <th scope="col">Document Name</th>
-            <th scope="col">Taxonomy</th>
-            <th scope="col">Version</th>
-            <th scope="col">Status</th>
-            <th scope="col">Uploaded By</th>
-            <th scope="col">Uploaded At</th>
-            <th scope="col" class="actions-column">Actions</th>
+            <th
+              scope="col"
+              style="width: 40px; text-align: center"
+            >
+              <input
+                type="checkbox"
+                aria-label="Select all documents on current page"
+                :checked="isAllSelected"
+                @change="toggleSelectAll"
+              >
+            </th>
+            <th scope="col">
+              Document Name
+            </th>
+            <th scope="col">
+              Taxonomy
+            </th>
+            <th scope="col">
+              Version
+            </th>
+            <th scope="col">
+              Status
+            </th>
+            <th scope="col">
+              Uploaded By
+            </th>
+            <th scope="col">
+              Uploaded At
+            </th>
+            <th
+              scope="col"
+              class="actions-column"
+            >
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -61,13 +110,21 @@
               :key="`doc-skel-${sIdx}`"
               class="skeleton-table-row"
             >
-              <td colspan="7">
-                <SkeletonLoader type="row" :count="1" :columns="7" />
+              <td colspan="8">
+                <SkeletonLoader
+                  type="row"
+                  :count="1"
+                  :columns="8"
+                />
               </td>
             </tr>
           </template>
           <tr v-else-if="paginatedDocuments.length === 0">
-            <td colspan="7" role="gridcell" class="empty-table-cell">
+            <td
+              colspan="8"
+              role="gridcell"
+              class="empty-table-cell"
+            >
               <EmptyState
                 icon="📄"
                 title="No Regulated Documents Found"
@@ -101,6 +158,18 @@
             >
               <td
                 role="gridcell"
+                style="text-align: center"
+                @click.stop
+              >
+                <input
+                  type="checkbox"
+                  :aria-label="'Select document ' + doc.filename"
+                  :checked="isDocumentSelected(doc.id)"
+                  @change="etmfStore.toggleDocumentSelection(doc.id)"
+                >
+              </td>
+              <td
+                role="gridcell"
                 :tabindex="getCellTabindex(rIndex, 0)"
                 :class="{
                   'cell-active': isCellActive(rIndex, 0),
@@ -112,15 +181,17 @@
                 @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
               >
                 <span class="file-icon">📄</span>
-                <span class="filename" :title="doc.filename">{{
+                <span
+                  class="filename"
+                  :title="doc.filename"
+                >{{
                   doc.filename
                 }}</span>
                 <span
                   v-if="doc.is_redacted"
                   class="compliance-badge-pill"
                   title="HIPAA/GDPR Compliant Redacted Copy"
-                  >🛡️ Compliant</span
-                >
+                >🛡️ Compliant</span>
               </td>
               <td
                 role="gridcell"
@@ -163,7 +234,10 @@
                     </option>
                   </select>
                 </div>
-                <span v-else class="taxonomy-pill">
+                <span
+                  v-else
+                  class="taxonomy-pill"
+                >
                   Z{{ doc.zone }} - S{{ doc.section }} [{{ doc.artifact_code }}]
                 </span>
               </td>
@@ -191,7 +265,10 @@
                 @click="selectCell(rIndex, 3)"
                 @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
               >
-                <span class="status-badge" :class="getStatusClass(doc.status)">
+                <span
+                  class="status-badge"
+                  :class="getStatusClass(doc.status)"
+                >
                   {{ formatStatus(doc.status) }}
                 </span>
               </td>
@@ -264,7 +341,10 @@
     </div>
 
     <!-- Pagination Controls -->
-    <div v-if="totalItems > 0" class="pagination-controls">
+    <div
+      v-if="totalItems > 0"
+      class="pagination-controls"
+    >
       <div class="pagination-info">
         Showing
         <span class="font-semibold">{{
@@ -364,15 +444,26 @@
               class="hidden-file-input"
               accept=".pdf"
               @change="onFileSelected"
-            />
-            <div class="drop-prompt-content" aria-hidden="true">
+            >
+            <div
+              class="drop-prompt-content"
+              aria-hidden="true"
+            >
               <span class="upload-cloud-icon">☁️</span>
-              <p v-if="!selectedFile" class="drop-text">
+              <p
+                v-if="!selectedFile"
+                class="drop-text"
+              >
                 Drag and drop your regulated PDF here, or
                 <span class="highlight">browse</span>
               </p>
-              <div v-else class="selected-file-details">
-                <p class="file-name-success">🎉 {{ selectedFile.name }}</p>
+              <div
+                v-else
+                class="selected-file-details"
+              >
+                <p class="file-name-success">
+                  🎉 {{ selectedFile.name }}
+                </p>
                 <p class="file-size-meta">
                   Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
                   {{ selectedFile.type || "application/pdf" }}
@@ -382,7 +473,10 @@
           </div>
 
           <!-- Upload Metadata Form -->
-          <form class="upload-meta-form" @submit.prevent="submitUpload">
+          <form
+            class="upload-meta-form"
+            @submit.prevent="submitUpload"
+          >
             <div class="form-group-row">
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -393,7 +487,7 @@
                   type="text"
                   class="form-control"
                   readonly
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -404,7 +498,7 @@
                   type="text"
                   placeholder="e.g. SITE-01"
                   class="form-control"
-                />
+                >
               </div>
             </div>
 
@@ -418,7 +512,7 @@
                   type="text"
                   class="form-control"
                   readonly
-                />
+                >
               </div>
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -429,7 +523,7 @@
                   type="text"
                   class="form-control"
                   readonly
-                />
+                >
               </div>
             </div>
 
@@ -449,7 +543,10 @@
               />
             </div>
 
-            <div v-if="uploadError" class="upload-error-banner">
+            <div
+              v-if="uploadError"
+              class="upload-error-banner"
+            >
               ❌ {{ uploadError }}
             </div>
 
@@ -687,6 +784,47 @@ const showUploadModal = ref(false);
 const isDragging = ref(false);
 const isSubmitting = ref(false);
 const uploadError = ref("");
+
+const selectedDocumentIds = computed(() => etmfStore.selectedDocumentIds);
+
+function isDocumentSelected(docId) {
+  return etmfStore.selectedDocumentIds.includes(docId);
+}
+
+const isAllSelected = computed(() => {
+  return (
+    paginatedDocuments.value.length > 0 &&
+    paginatedDocuments.value.every((d) =>
+      etmfStore.selectedDocumentIds.includes(d.id)
+    )
+  );
+});
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    const paginatedIds = new Set(paginatedDocuments.value.map((d) => d.id));
+    const newSelected = etmfStore.selectedDocumentIds.filter(
+      (id) => !paginatedIds.has(id)
+    );
+    etmfStore.setSelectedDocumentIds(newSelected);
+  } else {
+    const selectedSet = new Set(etmfStore.selectedDocumentIds);
+    paginatedDocuments.value.forEach((d) => selectedSet.add(d.id));
+    etmfStore.setSelectedDocumentIds(Array.from(selectedSet));
+  }
+}
+
+async function handleExportSelected() {
+  if (etmfStore.selectedDocumentIds.length === 0) return;
+  try {
+    await etmfStore.triggerExport({
+      document_ids: [...etmfStore.selectedDocumentIds],
+      is_full_binder: false,
+    });
+  } catch (err) {
+    useToastStore().apiError("Export failed", err);
+  }
+}
 
 // Selected File reference
 const selectedFile = ref(null);
