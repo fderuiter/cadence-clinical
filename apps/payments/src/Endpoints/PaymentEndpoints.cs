@@ -14,6 +14,7 @@ using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -2287,7 +2288,7 @@ public static class PaymentEndpoints
     private static async Task<IResult> CompileBillingCycle(
         BillingCycleCompilationRequest request,
         PaymentsDbContext dbContext,
-        IClock clock)
+        [FromServices] IClock clock)
     {
         if (string.IsNullOrWhiteSpace(request.StudyId) || string.IsNullOrWhiteSpace(request.SiteId))
         {
@@ -2326,7 +2327,7 @@ public static class PaymentEndpoints
     private static async Task<IResult> BatchCompileBillingCycles(
         BatchBillingCycleCompilationRequest request,
         PaymentsDbContext dbContext,
-        IClock clock)
+        [FromServices] IClock clock)
     {
         if (string.IsNullOrWhiteSpace(request.StudyId))
         {
@@ -2504,7 +2505,7 @@ public static class PaymentEndpoints
         return Results.Created($"/api/v1/payments/invoices?batch_execution_id={batchExecutionId}", response);
     }
 
-    private static async Task<IResult> ApproveInvoice(string id, PaymentsDbContext dbContext, IClock clock)
+    private static async Task<IResult> ApproveInvoice(string id, PaymentsDbContext dbContext, [FromServices] IClock clock)
     {
         var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
         if (inv == null)
@@ -2542,7 +2543,7 @@ public static class PaymentEndpoints
         return Results.Ok(MapInvoiceToResponse(inv, lineItems, remittance));
     }
 
-    private static async Task<IResult> SignRemittanceAdvice(string id, SignRemittanceRequest request, PaymentsDbContext dbContext, IClock clock)
+    private static async Task<IResult> SignRemittanceAdvice(string id, SignRemittanceRequest request, PaymentsDbContext dbContext, [FromServices] IClock clock)
     {
         var remittance = await dbContext.RemittanceAdvices.FirstOrDefaultAsync(r => r.InvoiceId == id || r.Id == id);
         if (remittance == null)
@@ -2614,7 +2615,7 @@ public static class PaymentEndpoints
         return Results.Bytes(bytes, contentType: "application/pdf", fileDownloadName: $"{remittance.RemittanceNumber}.pdf");
     }
 
-    private static async Task<IResult> ReconcileInvoice(string id, ReconcileInvoiceRequest request, PaymentsDbContext dbContext, IClock clock)
+    private static async Task<IResult> ReconcileInvoice(string id, ReconcileInvoiceRequest request, PaymentsDbContext dbContext, [FromServices] IClock clock)
     {
         var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
         if (inv == null)
@@ -2655,7 +2656,7 @@ public static class PaymentEndpoints
         return Results.Ok(MapInvoiceToResponse(inv, lineItems, remittance));
     }
 
-    private static async Task<IResult> ExportInvoiceToErp(string id, PaymentsDbContext dbContext, IClock clock, string? erp_system = "SAP")
+    private static async Task<IResult> ExportInvoiceToErp(string id, PaymentsDbContext dbContext, [FromServices] IClock clock, string? erp_system = "SAP")
     {
         var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
         if (inv == null)

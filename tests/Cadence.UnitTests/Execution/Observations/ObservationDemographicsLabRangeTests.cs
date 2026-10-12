@@ -210,7 +210,9 @@ public sealed class ObservationDemographicsLabRangeTests
             double? value,
             string? sex = null,
             int? ageYears = null,
-            string? labSource = null)
+            string? labSource = null,
+            string? studyId = null,
+            string? siteId = null)
         {
             CapturedSex = sex;
             CapturedAgeYears = ageYears;
@@ -222,8 +224,15 @@ public sealed class ObservationDemographicsLabRangeTests
             double? value,
             int? ageYears = null,
             string? sex = null,
-            string? labSource = null) =>
-            Evaluate(new TestCode(testCode), value, sex, ageYears, labSource);
+            string? labSource = null,
+            string? studyId = null,
+            string? siteId = null) =>
+            Evaluate(new TestCode(testCode), value, sex, ageYears, labSource, studyId, siteId);
+
+        public void UpdateActiveRanges(IEnumerable<LabReferenceRange> ranges)
+        {
+            // No-op for mock tracking service
+        }
     }
 
     [Fact]
