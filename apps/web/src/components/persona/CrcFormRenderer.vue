@@ -325,6 +325,54 @@
       <!-- Batch Verification Action Bar (CRA Persona Integration Slot / Element) -->
       <slot name="batch-sdv-bar" />
 
+      <!-- Unsaved Draft Changes / Local Draft Recovery Banner -->
+      <div
+        v-if="isDirty || draftRestored"
+        id="ecrf-draft-status-banner"
+        class="draft-banner"
+        style="
+          background-color: #eff6ff;
+          border: 1px solid #93c5fd;
+          border-left: 4px solid #3b82f6;
+          border-radius: 6px;
+          padding: 10px 14px;
+          margin-bottom: var(--spacing-md);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            color: #1e40af;
+            font-weight: 600;
+          "
+        >
+          <span>📝 {{ isDirty ? $t("ecrf.form.unsavedDraftChanges") : $t("ecrf.form.draftRecoveryActive") }}</span>
+          <span
+            class="badge badge-draft"
+            style="
+              background-color: #3b82f6;
+              color: white;
+              padding: 2px 6px;
+              border-radius: 4px;
+              font-size: 0.75rem;
+            "
+          >
+            Draft
+          </span>
+        </div>
+        <div style="font-size: 0.8rem; color: #1e3a8a">
+          {{ isDirty ? $t("ecrf.form.draftAutoSaving") : $t("ecrf.form.draftRestoredMsg") }}
+        </div>
+      </div>
+
       <form
         id="form-VS_DEMO"
         class="clinical-form responsive-grid"
@@ -341,8 +389,41 @@
             <div
               v-show="store.fieldVisibility[field.id] ?? true"
               :style="`grid-column: span ${field.gridSpan || 12}; display: flex; flex-direction: column; gap: 8px;`"
-              style="margin-bottom: 8px"
+              style="margin-bottom: 8px; position: relative"
             >
+              <div
+                v-if="dirtyFields && dirtyFields[field.id]"
+                :id="`dirty-badge-${field.id}`"
+                class="dirty-dot-badge"
+                style="
+                  position: absolute;
+                  top: -2px;
+                  right: 0px;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 4px;
+                  background-color: #fffbeb;
+                  border: 1px solid #fde68a;
+                  color: #b45309;
+                  font-size: 0.7rem;
+                  font-weight: 600;
+                  padding: 2px 6px;
+                  border-radius: 10px;
+                  z-index: 10;
+                "
+                title="Unsaved draft change"
+              >
+                <span
+                  class="dirty-dot"
+                  style="
+                    width: 6px;
+                    height: 6px;
+                    background-color: #f59e0b;
+                    border-radius: 50%;
+                  "
+                ></span>
+                <span>Unsaved</span>
+              </div>
               <ClinicalFormField
                 :field="field"
                 :model-value="store.formValues[field.id]"
@@ -890,6 +971,9 @@ const props = defineProps({
   sdvStates: { type: Object, required: true },
   getSdvKey: { type: Function, required: true },
   selectedBatchFields: { type: Array, required: true },
+  dirtyFields: { type: Object, default: () => ({}) },
+  isDirty: { type: Boolean, default: false },
+  draftRestored: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([

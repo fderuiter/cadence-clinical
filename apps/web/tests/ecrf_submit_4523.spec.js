@@ -10,6 +10,7 @@ import SubjectEnrollmentForm from "../src/components/clinical/SubjectEnrollmentF
 import { executionApi } from "../src/api/executionApi";
 
 vi.mock("vue-router", () => ({
+  onBeforeRouteLeave: () => {},
   useRouter: () => ({ push: vi.fn() }),
   useRoute: () => ({
     query: {

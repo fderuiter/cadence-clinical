@@ -125,6 +125,9 @@
           :is-authorized-for-bulk-sdv="isAuthorizedForBulkSdv"
           :sdv-states="sdvStates"
           :get-sdv-key="getSdvKey"
+          :dirty-fields="dirtyFields"
+          :is-dirty="isDirty"
+          :draft-restored="draftRestored"
           @load-ecrf-session="loadEcrfSession"
           @open-econsent-modal="openEconsentModal"
           @open-paper-icf-modal="openPaperIcfModal"
@@ -327,8 +330,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted, computed } from "vue";
-import { useRoute } from "vue-router";
+import { ref, reactive, watch, onMounted, onUnmounted, computed } from "vue";
+import { useRoute, onBeforeRouteLeave } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { useToastStore } from "../stores/toasts.js";
@@ -356,6 +359,7 @@ import { useConsentGating } from "../composables/useConsentGating";
 import { useVerification } from "../composables/useVerification";
 import { usePiSignoff } from "../composables/usePiSignoff";
 import { useSchemaIngestion } from "../composables/useSchemaIngestion";
+import { useEcrfDrafts } from "../composables/useEcrfDrafts";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -370,6 +374,29 @@ const showEhrReconciliationDrawer = ref(false);
 // Selected Subject & Visit State
 const selectedSubjectId = ref("SUBJ-001");
 const selectedVisitId = ref("Screening");
+
+const currentStudyId = computed(
+  () =>
+    store.activeStudyId ||
+    store.currentStudyId ||
+    store.currentUsdm?.studyId ||
+    "STUDY-USDM-001"
+);
+
+// Domain Composable: Draft Persistence & Dirty Tracking
+const {
+  dirtyFields,
+  isDirty,
+  draftRestored,
+  setInitialValues,
+  restoreDraft,
+  clearDraft,
+} = useEcrfDrafts(
+  currentStudyId,
+  selectedSubjectId,
+  selectedVisitId,
+  computed(() => store.formValues)
+);
 
 // Screening and Enrollment State (CRC)
 const screeningResult = ref(null);
@@ -664,6 +691,12 @@ function loadEcrfSession() {
   store.formValues = ecrfSessions[key].values;
   store.formQueries = ecrfSessions[key].queries;
 
+  // Establish baseline values for calculating dirty state
+  setInitialValues(store.formValues);
+
+  // Auto-restore draft from localStorage if present for this session
+  restoreDraft();
+
   store.evaluateRules();
 
   store.ecrfFields.forEach((field) => {
@@ -706,6 +739,7 @@ watch(
 );
 
 onMounted(async () => {
+  window.addEventListener("beforeunload", handleBeforeUnload);
   if (route && route.query) {
     if (route.query.studyId) store.activeStudyId = route.query.studyId;
     if (route.query.siteId) store.activeSiteId = route.query.siteId;
@@ -735,6 +769,32 @@ onMounted(async () => {
   }
   selectListedSubject();
 });
+
+onUnmounted(() => {
+  window.removeEventListener("beforeunload", handleBeforeUnload);
+});
+
+// Route & Browser Navigation Guards
+if (typeof onBeforeRouteLeave === "function") {
+  onBeforeRouteLeave(() => {
+    if (isDirty.value) {
+      const confirmLeave = window.confirm(
+        "You have unsaved eCRF draft changes. Are you sure you want to leave?"
+      );
+      if (!confirmLeave) {
+        return false;
+      }
+    }
+  });
+}
+
+function handleBeforeUnload(event) {
+  if (isDirty.value) {
+    event.preventDefault();
+    event.returnValue = "";
+    return "";
+  }
+}
 
 /**
  * Keeps the selected subject one the list holds: the first listed subject when the current one is
@@ -1190,6 +1250,7 @@ function clearForm() {
     store.formValues[f.id] = "";
     delete store.formQueries[f.id];
   });
+  clearDraft();
   store.addLedgerBlock(
     "FORM_CLEAR",
     {
@@ -1281,6 +1342,7 @@ async function submitEcrf() {
       title: "eCRF Form Submitted",
       message: `eCRF Session successfully submitted to backend Execution API (Submission ID: ${completed.id}).`,
     });
+    clearDraft();
   } catch (err) {
     toastStore.apiError("eCRF Form Submission Failed", err);
   }
