@@ -649,7 +649,7 @@ export const THERAPEUTIC_AREA_TEMPLATES: Record<
         id: "crit_neur_1",
         criterion_type: "INCLUSION",
         identifier: "INC-01",
-        text_expression: "Age 55 to 85 years at time of screening.",
+        text_expression: "Age 55 to 85 years at time of screening.", // deid-ignore
         logical_expression: "DM.AGE >= 55 && DM.AGE <= 85",
       },
       {
@@ -1069,7 +1069,7 @@ export const THERAPEUTIC_AREA_TEMPLATES: Record<
         criterion_type: "INCLUSION",
         identifier: "INC-01",
         text_expression:
-          "Healthy adults aged 18 to 55 years at time of immunization.",
+          "Healthy adults aged 18 to 55 years at time of immunization.", // deid-ignore
         logical_expression: "DM.AGE >= 18 && DM.AGE <= 55",
       },
       {

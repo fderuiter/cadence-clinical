@@ -320,6 +320,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       crcRenderer.vm.$emit("submit-ecrf");
       await vi.runAllTimersAsync();
       await flushPromises();
+      await flushPromises();
 
       expect(executionApi.createFormSubmission).toHaveBeenCalled();
       // The submit chain hashes a ledger block with Web Crypto, which resolves outside the
