@@ -325,6 +325,10 @@ public sealed class DicomIngestionService : IDicomIngestionService
 
                 successfulInstances.Add((fileItem, deidResult));
             }
+            catch (DicomPixelDeidException)
+            {
+                throw;
+            }
             catch
             {
                 skippedNonDicomFiles.Add(fileItem.FileName);

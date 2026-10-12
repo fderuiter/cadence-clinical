@@ -356,4 +356,63 @@ public class DeidEngineUnitTests
         Action act = () => invalidManifest.Reason = "";
         act.Should().Throw<ArgumentException>();
     }
+
+    [Fact]
+    [GxPRequirement("PRD-IMG-002")]
+    public void MaskBurnedInPixels_ThrowsDicomPixelDeidException_WhenPixelMaskingDecodingFails()
+    {
+        byte[] corruptedBytes = UnsupportedCompressedDicom();
+        using var ms = new MemoryStream(corruptedBytes);
+        var dicomFile = DicomFile.Open(ms);
+        var deidentifier = new DicomDeidentifier(SigningKey);
+
+        Action act = () => deidentifier.MaskBurnedInPixels(dicomFile.Dataset, autoDetectHeaders: true);
+
+        act.Should().Throw<DicomPixelDeidException>()
+            .WithMessage("*compressed DICOM transfer syntax*");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-IMG-002")]
+    public void Deidentify_DoesNotGenerateOrSignCertificate_WhenPixelMaskingFails()
+    {
+        byte[] corruptedBytes = UnsupportedCompressedDicom();
+        var deidentifier = new DicomDeidentifier(SigningKey);
+
+        Action act = () => deidentifier.Deidentify(
+            dicomBytes: corruptedBytes,
+            subjectId: "SUBJ-999",
+            siteId: "SITE-99",
+            studyId: "STUDY-2026",
+            deidentifiedAt: FakeClock.DefaultStart,
+            applyPixelMask: true);
+
+        act.Should().Throw<DicomPixelDeidException>();
+    }
+
+    private static byte[] UnsupportedCompressedDicom()
+    {
+        var dataset = new DicomDataset
+        {
+            { DicomTag.SOPClassUID, DicomUID.SecondaryCaptureImageStorage },
+            { DicomTag.SOPInstanceUID, "1.2.840.10008.5.1.4.1.1.7.1001" },
+            { DicomTag.StudyInstanceUID, "1.2.840.10008.5.1.4.1.1.7.2001" },
+            { DicomTag.SeriesInstanceUID, "1.2.840.10008.5.1.4.1.1.7.3001" },
+            { DicomTag.PatientName, "CORRUPTED^PATIENT" },
+            { DicomTag.Modality, "SC" },
+            { DicomTag.Rows, (ushort)100 },
+            { DicomTag.Columns, (ushort)100 },
+            { DicomTag.BitsAllocated, (ushort)16 }
+        };
+
+        var fragment = new DicomOtherByteFragment(DicomTag.PixelData);
+        fragment.Fragments.Add(new MemoryByteBuffer(new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10 }));
+        dataset.AddOrUpdate(fragment);
+
+        var dicomFile = new DicomFile(dataset);
+        dicomFile.FileMetaInfo.TransferSyntax = DicomTransferSyntax.JPEG2000Lossless;
+        using var ms = new MemoryStream();
+        dicomFile.Save(ms);
+        return ms.ToArray();
+    }
 }

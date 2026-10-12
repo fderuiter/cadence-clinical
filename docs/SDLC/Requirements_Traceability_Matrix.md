@@ -13,13 +13,13 @@ search: false
 ## 1. Traceability Summary
 
 - **Total Documented Requirements (PRD):** 195
-- **Qualified (mapped tests passed):** 27
+- **Qualified (mapped tests passed):** 28
 - **Failed (a mapped test failed):** 0
 - **Not Verified (mapped tests skipped or not run):** 2
-- **Planned (no mapped tests):** 166
+- **Planned (no mapped tests):** 165
 - **Traceability Aliases (Trace and SRS IDs):** 94
 - **Unknown Requirement IDs Declared by Tests:** 0
-- **Qualified Coverage:** 13.8%
+- **Qualified Coverage:** 14.4%
 
 ## 2. Requirements with Mapped Tests
 
@@ -38,6 +38,7 @@ search: false
 | PRD-ESR-001 | PRD | **SMART Backend Services Automated Ingestion** | `RegisterAndListEndpoints_SuccessfullyManagesEhrEndpoints` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`GenerateAndVerifySmartAssertion_ValidatesOAuth2AssertionToken` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`PollHospitalEhr_IngestsCandidatesWithDiscrepancyClassification` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-ESR-002 | PRD | **Clinical Research Coordinator (CRC) Reconciliation Drawer** | `AcceptCandidate_CommitsValueAndWritesGxPAuditAndESignature` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`RaiseClinicalQuery_RegistersQueryAndUpdatesCandidateStatus` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchAcceptCandidates_CommitsAllValidCandidatesAndWritesAuditLogs` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchRejectCandidates_RequiresRationaleAndUpdatesStatus` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchAcceptCandidates_ExceedingLimit_ReturnsBadRequest` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchOperation_WithNonExistentCandidateId_RollsBackTransaction` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-ESR-003 | PRD | **Immutable Source Data Provenance & Part 11 Audit Attribution** | `RejectCandidate_RequiresRationaleAndPreservesOriginalPayload` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`GetProvenanceAudit_ReturnsRawFhirPayloadAndAuditTrail` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢<br>`BatchRejectCandidates_RequiresRationaleAndUpdatesStatus` (tests/Cadence.UnitTests/Interop/EsourceReconciliationTests.cs) 🟢 | ✅ **Qualified** |
+| PRD-IMG-002 | PRD | **In-Flight Pixel & Header De-Identification and PHI Scrubbing** | `IngestInstanceAsync_AbortsDatabasePersistence_WhenDeidentificationFails` (tests/Cadence.UnitTests/Imaging/DicomIngestionServiceTests.cs) 🟢<br>`IngestBatchAsync_AbortsDatabasePersistence_WhenDeidentificationFails` (tests/Cadence.UnitTests/Imaging/DicomIngestionServiceTests.cs) 🟢<br>`StoreInstancesAsync_ReturnsBadRequestWithEmptyPayloadCode_WhenRequestPayloadIsZeroBytes` (tests/Cadence.UnitTests/Imaging/DicomWebEndpointsTests.cs) 🟢<br>`StoreBatchInstancesAsync_ReturnsBadRequestWithEmptyPayloadCode_WhenRequestPayloadIsZeroBytes` (tests/Cadence.UnitTests/Imaging/DicomWebEndpointsTests.cs) 🟢<br>`MaskBurnedInPixels_ThrowsDicomPixelDeidException_WhenPixelMaskingDecodingFails` (tests/Cadence.UnitTests/Packages/DeidEngineUnitTests.cs) 🟢<br>`Deidentify_DoesNotGenerateOrSignCertificate_WhenPixelMaskingFails` (tests/Cadence.UnitTests/Packages/DeidEngineUnitTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-LBM-001 | PRD | **Multi-Format Lab Ingestion & LOINC Standardization** | `Map_GlucoseInConventionalUnits_ConvertsToSi` (tests/Cadence.UnitTests/Kernel/Standards/MappingSpecificationTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-PAT-002 | PRD | **Mobile Travel Expense Submission & Receipt OCR** | `ExtractReceiptOcr_ParsesMetadataAndRecordsAudit` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢<br>`SubmitExpenseClaim_Under100WithHighConfidence_AutoApprovesAndDispatchesACH` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢<br>`SubmitExpenseClaim_Exceeding100Threshold_RoutesToPendingReview` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢<br>`SubmitExpenseClaim_MealSurpassingPerDiemCap_RoutesToPendingReview` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-PAY-006 | PRD | **21 CFR Part 11 Financial Disbursement Audit Ledger** | `SubmitExpenseClaim_Under100WithHighConfidence_AutoApprovesAndDispatchesACH` (tests/Cadence.UnitTests/Payments/ExpenseClaimAutoApprovalTests.cs) 🟢 | ✅ **Qualified** |
@@ -120,7 +121,6 @@ search: false
 | PRD-EVT-001 | PRD | **Transactional Outbox Pattern & Zero Data Loss** | Sprint Roadmap |
 | PRD-EVT-002 | PRD | **Deterministic Idempotency & Replay Auditability** | Sprint Roadmap |
 | PRD-IMG-001 | PRD | **Zero-Footprint High-Performance Web DICOM & Multi-Planar Viewer** | Sprint Roadmap |
-| PRD-IMG-002 | PRD | **In-Flight Pixel & Header De-Identification and PHI Scrubbing** | Sprint Roadmap |
 | PRD-IMG-003 | PRD | **Independent Review Charter (IRC) & Blinded Dual-Reader Workflow** | Sprint Roadmap |
 | PRD-IMG-004 | PRD | **Automated RECIST 1.1, Cheson, Lugano & RANO Measurement Derivations** | Sprint Roadmap |
 | PRD-IMG-005 | PRD | **Adjudication Tie-Breaker Committee Escalation & Electronic Sign-off** | Sprint Roadmap |
@@ -259,7 +259,7 @@ Aliases report their canonical parent's state. A test tagged only with an alias 
 | `SRS-FIN-001` | `PRD-FIN-001` | Procedure Fee Triggers & 10% Holdback | 📋 **Scheduled via Parent** |
 | `SRS-FIN-002` | `PRD-FIN-002` | Participant Wallet & IRS 1099 Tracking | 📋 **Scheduled via Parent** |
 | `SRS-IMG-001` | `PRD-IMG-001` | WebGL Multi-Planar Reconstruction (MPR) | 📋 **Scheduled via Parent** |
-| `SRS-IMG-002` | `PRD-IMG-002` | Blinded RECIST 1.1 20% SOD Discordance | 📋 **Scheduled via Parent** |
+| `SRS-IMG-002` | `PRD-IMG-002` | Blinded RECIST 1.1 20% SOD Discordance | ✅ **Verified via Parent** |
 | `SRS-INT-001` | `PRD-INT-001` | SMART on FHIR eSource Ingestion Drawer | 📋 **Scheduled via Parent** |
 | `SRS-INT-002` | `PRD-INT-002` | Continuous Biometric Sensor Stream | 📋 **Scheduled via Parent** |
 | `SRS-ISF-001` | `PRD-ISF-001` | Site-Isolated Regulatory Binder | 📋 **Scheduled via Parent** |
@@ -336,4 +336,4 @@ None. Every requirement ID declared by a test is defined in the PRD or SRS.
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** 4b3d77461d889eae403902df1d5d750870dfd1291a185e69bbd7a7738495d95a
+- **Content Hash (SHA-256):** 7926777f5648cd936d1ae9dbdeba9b23f52487cb6700e839bc3b2aba06543263

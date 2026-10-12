@@ -187,6 +187,11 @@ public class DicomDeidentifier
 
         try
         {
+            if (dataset.InternalTransferSyntax.IsEncapsulated)
+            {
+                throw new DicomPixelDeidException($"Unsupported compressed DICOM transfer syntax '{dataset.InternalTransferSyntax.UID.Name}'. Convert to uncompressed DICOM prior to de-identification.");
+            }
+
             var pixelData = DicomPixelData.Create(dataset);
             IByteBuffer frameBuffer = pixelData.GetFrame(0);
             byte[] bytes = frameBuffer.Data.ToArray();
@@ -222,12 +227,12 @@ public class DicomDeidentifier
                 appliedMasks.Add(box);
             }
 
-            dataset.AddOrUpdate(DicomTag.PixelData, new MemoryByteBuffer(bytes));
+            dataset.AddOrUpdate(new DicomOtherByte(DicomTag.PixelData, bytes));
             dataset.AddOrUpdate(DicomTag.BurnedInAnnotation, "NO");
         }
-        catch
+        catch (Exception ex) when (ex is not DicomPixelDeidException)
         {
-            // If pixel data decoding is unsupported for compressed syntax, suppress without breaking header deid
+            throw new DicomPixelDeidException("Failed to decode or mask pixel data for DICOM dataset.", ex);
         }
 
         return appliedMasks;
