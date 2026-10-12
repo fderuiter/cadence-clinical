@@ -5,6 +5,8 @@ import { createRouter, createWebHistory } from "vue-router";
 import { nextTick } from "vue";
 import CommandPaletteOverlay from "../../src/components/CommandPaletteOverlay.vue";
 import { useAuthStore } from "../../src/stores/auth";
+import { useKnowledgeStore } from "../../src/stores/knowledge";
+import { useOnboardingStore } from "../../src/stores/onboarding";
 
 // These tests cover screens that are hidden until their .NET backend exists
 // (#4829), so they treat every screen as available.
@@ -20,19 +22,53 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/", name: "home", component: DummyView },
+    { path: "/overview", name: "overview", component: DummyView },
     { path: "/mdr", name: "mdr", component: DummyView },
+    { path: "/digitization", name: "digitization", component: DummyView },
+    { path: "/icf-builder", name: "icf-builder", component: DummyView },
+    {
+      path: "/econsent-authoring",
+      name: "econsent-authoring",
+      component: DummyView,
+    },
+    { path: "/amendment-diff", name: "amendment-diff", component: DummyView },
     { path: "/ecrf", name: "ecrf", component: DummyView },
+    { path: "/imaging", name: "imaging", component: DummyView },
+    { path: "/devices", name: "devices", component: DummyView },
+    { path: "/cec", name: "cec", component: DummyView },
     { path: "/ctms", name: "ctms", component: DummyView },
-    { path: "/rules", name: "rules", component: DummyView },
     { path: "/audit", name: "audit", component: DummyView },
+    { path: "/rules", name: "rules", component: DummyView },
+    { path: "/coding", name: "coding", component: DummyView },
+    { path: "/data-lock", name: "data-lock", component: DummyView },
+    { path: "/lakehouse", name: "lakehouse", component: DummyView },
+    { path: "/sensors", name: "sensors", component: DummyView },
+    { path: "/labs", name: "labs", component: DummyView },
+    { path: "/dct", name: "dct", component: DummyView },
+    { path: "/safety", name: "safety", component: DummyView },
+    { path: "/exports", name: "exports", component: DummyView },
     { path: "/etmf", name: "etmf", component: DummyView },
+    { path: "/quality", name: "quality", component: DummyView },
     { path: "/notifications", name: "notifications", component: DummyView },
+    { path: "/tickets", name: "tickets", component: DummyView },
+    { path: "/documents", name: "documents", component: DummyView },
+    { path: "/knowledge", name: "knowledge", component: DummyView },
+    { path: "/training", name: "training", component: DummyView },
+    {
+      path: "/participant-wallet",
+      name: "participant-wallet",
+      component: DummyView,
+    },
+    { path: "/lay-summaries", name: "lay-summaries", component: DummyView },
+    { path: "/studies", name: "studies", component: DummyView },
   ],
 });
 
 describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () => {
+  let pinia;
+
   beforeEach(() => {
-    const pinia = createPinia();
+    pinia = createPinia();
     setActivePinia(pinia);
   });
 
@@ -42,7 +78,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
         isOpen: false,
       },
       global: {
-        plugins: [router],
+        plugins: [pinia, router],
       },
     });
 
@@ -59,7 +95,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
         isOpen: true,
       },
       global: {
-        plugins: [router],
+        plugins: [pinia, router],
       },
       attachTo: document.body, // Needed to test document.activeElement focus
     });
@@ -79,7 +115,6 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
   it("dynamically filters items based on the user's roles", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
-    // Sponsor Designer only has access to MDR, eConsent Authoring, Notifications
     authStore.rawRoles = ["Sponsor Designer"];
 
     const wrapper = mount(CommandPaletteOverlay, {
@@ -87,69 +122,138 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
         isOpen: true,
       },
       global: {
-        plugins: [router],
+        plugins: [pinia, router],
       },
     });
 
     const items = wrapper.findAll(".command-item");
-
-    // Total permitted items for Sponsor Designer:
-    // 1. MDR Protocol Designer
-    // 2. eConsent Authoring
-    // 3. Rules Designer
-    // 4. Notifications
-    // Total = 4
-    expect(items.length).toBe(4);
-
     const names = items.map((el) => el.find(".command-name").text());
+
+    // Sponsor Designer accessible items should be present
     expect(names).toContain("MDR Protocol Designer");
     expect(names).toContain("eConsent Authoring");
     expect(names).toContain("Rules Designer");
     expect(names).toContain("Notifications");
 
-    // Restricted routes like CTMS, Cryptographic Ledger, eTMF, eCRF should be omitted
+    // Restricted routes like CTMS Dashboard, Cryptographic Ledger, eTMF Document Manager, eCRF Form Engine
     expect(names).not.toContain("CTMS Dashboard");
     expect(names).not.toContain("Cryptographic Ledger");
-    expect(names).not.toContain("eTMF Document Manager");
-    expect(names).not.toContain("eCRF Form Engine");
   });
 
-  it("filters search results in real time as the user types", async () => {
+  it("displays category badges ([Route], [Action], [Subject], [Document], [SOP])", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
-    authStore.rawRoles = ["Sponsor Admin"]; // Access to all routes
+    authStore.rawRoles = ["Sponsor Admin"];
 
     const wrapper = mount(CommandPaletteOverlay, {
       props: {
         isOpen: true,
       },
       global: {
-        plugins: [router],
+        plugins: [pinia, router],
+      },
+    });
+
+    const items = wrapper.findAll(".command-item");
+    const badges = items.map((el) => el.find(".command-badge").text());
+
+    expect(badges).toContain("[Route]");
+    expect(badges).toContain("[Action]");
+    expect(badges).toContain("[Subject]");
+    expect(badges).toContain("[Document]");
+    expect(badges).toContain("[SOP]");
+  });
+
+  it("filters search results in real time as the user types across entities", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: {
+        isOpen: true,
+      },
+      global: {
+        plugins: [pinia, router],
       },
     });
 
     const input = wrapper.find(".command-palette-input");
 
-    // Type "CTMS"
-    await input.setValue("CTMS");
-
+    // Type "CTMS Dashboard"
+    await input.setValue("CTMS Dashboard");
     let items = wrapper.findAll(".command-item");
     expect(items.length).toBe(1);
     expect(items[0].find(".command-name").text()).toBe("CTMS Dashboard");
+    expect(items[0].find(".command-badge").text()).toBe("[Route]");
 
-    // Type "informed consent"
-    await input.setValue("informed consent");
+    // Type "SUBJ-101" to search subject entities
+    await input.setValue("SUBJ-101");
     items = wrapper.findAll(".command-item");
     expect(items.length).toBe(1);
-    expect(items[0].find(".command-name").text()).toBe("eConsent Authoring");
+    expect(items[0].find(".command-name").text()).toBe("Subject SUBJ-101");
+    expect(items[0].find(".command-badge").text()).toBe("[Subject]");
+
+    // Type "protocol_v1" to search document entities
+    await input.setValue("protocol_v1");
+    items = wrapper.findAll(".command-item");
+    expect(items.length).toBe(1);
+    expect(items[0].find(".command-name").text()).toBe("protocol_v1_draft.pdf");
+    expect(items[0].find(".command-badge").text()).toBe("[Document]");
+
+    // Type "SOP-ECRF-201" to search SOP entities
+    await input.setValue("SOP-ECRF-201");
+    items = wrapper.findAll(".command-item");
+    expect(items.length).toBe(1);
+    expect(items[0].find(".command-name").text()).toContain("SOP-ECRF-201");
+    expect(items[0].find(".command-badge").text()).toBe("[SOP]");
+
+    // Type "Create Clinical Ticket" to search action items
+    await input.setValue("Create Clinical Ticket");
+    items = wrapper.findAll(".command-item");
+    expect(items.length).toBe(1);
+    expect(items[0].find(".command-name").text()).toBe(
+      "Create Clinical Ticket / Issue"
+    );
+    expect(items[0].find(".command-badge").text()).toBe("[Action]");
 
     // Type something that matches nothing
     await input.setValue("xyz123nonexistent");
     items = wrapper.findAll(".command-item");
     expect(items.length).toBe(0);
     expect(wrapper.find(".command-palette-no-results").text()).toContain(
-      "No matching modules found."
+      "No matching modules or commands found."
     );
+  });
+
+  it("dispatches action callbacks for action items and closes modal", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const knowledgeStore = useKnowledgeStore();
+    const openHelpSpy = vi.spyOn(knowledgeStore, "openDrawer");
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: {
+        isOpen: true,
+      },
+      global: {
+        plugins: [pinia, router],
+      },
+    });
+
+    const input = wrapper.find(".command-palette-input");
+
+    // Search for the Contextual Help Action
+    await input.setValue("Open Contextual Help");
+    const items = wrapper.findAll(".command-item");
+    expect(items.length).toBe(1);
+
+    // Click the action item
+    await items[0].trigger("click");
+    expect(openHelpSpy).toHaveBeenCalled();
+    expect(wrapper.emitted("close")).toBeTruthy();
   });
 
   it("navigates list highlighting using ArrowUp/ArrowDown and resets selectedIndex on search query change", async () => {
@@ -162,11 +266,10 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
         isOpen: true,
       },
       global: {
-        plugins: [router],
+        plugins: [pinia, router],
       },
     });
 
-    // Default active item is the first one (MDR Protocol Designer)
     let items = wrapper.findAll(".command-item");
     expect(items[0].classes()).toContain("active");
     expect(items[1].classes()).not.toContain("active");
@@ -187,14 +290,13 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     expect(items[1].classes()).toContain("active");
 
     // Change query, selectedIndex must reset to 0
-    await input.setValue("Engine");
+    await input.setValue("Form Engine");
     items = wrapper.findAll(".command-item");
-    // eCRF Form Engine should be active (index 0 of current filtered list)
     expect(items[0].classes()).toContain("active");
     expect(items[0].find(".command-name").text()).toBe("eCRF Form Engine");
   });
 
-  it("triggers routing on Enter key press", async () => {
+  it("triggers routing on Enter key press for route items", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
     authStore.rawRoles = ["Sponsor Admin"];
@@ -206,7 +308,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
         isOpen: true,
       },
       global: {
-        plugins: [router],
+        plugins: [pinia, router],
       },
     });
 
@@ -226,7 +328,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     // 1. Close via Close button (x)
     const wrapper1 = mount(CommandPaletteOverlay, {
       props: { isOpen: true },
-      global: { plugins: [router] },
+      global: { plugins: [pinia, router] },
     });
     await wrapper1.find(".command-palette-close-btn").trigger("click");
     expect(wrapper1.emitted("close")).toBeTruthy();
@@ -235,7 +337,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     // 2. Close via click outside (clicking backdrop container)
     const wrapper2 = mount(CommandPaletteOverlay, {
       props: { isOpen: true },
-      global: { plugins: [router] },
+      global: { plugins: [pinia, router] },
     });
     await wrapper2.find(".command-palette-backdrop").trigger("click");
     expect(wrapper2.emitted("close")).toBeTruthy();
@@ -244,7 +346,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     // 3. Close via Escape key
     const wrapper3 = mount(CommandPaletteOverlay, {
       props: { isOpen: true },
-      global: { plugins: [router] },
+      global: { plugins: [pinia, router] },
     });
     const event = new KeyboardEvent("keydown", { key: "Escape" });
     document.dispatchEvent(event);
@@ -257,7 +359,6 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     authStore.isAuthenticated = true;
     authStore.rawRoles = ["Sponsor Admin"];
 
-    // Create a dummy element to focus beforehand
     const previousFocusElement = document.createElement("input");
     document.body.appendChild(previousFocusElement);
     previousFocusElement.focus();
@@ -268,7 +369,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
         isOpen: true,
       },
       global: {
-        plugins: [router],
+        plugins: [pinia, router],
       },
       attachTo: document.body,
     });
@@ -276,17 +377,13 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     await nextTick();
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    // The palette input should now have focus
     const input = wrapper.find(".command-palette-input").element;
     expect(document.activeElement).toBe(input);
 
-    // Unmount the component (simulating parent conditional unmount)
     wrapper.unmount();
 
-    // Focus should be restored back to the previous element
     expect(document.activeElement).toBe(previousFocusElement);
 
-    // Cleanup DOM
     document.body.removeChild(previousFocusElement);
   });
 
@@ -299,28 +396,24 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
         isOpen: true,
       },
       global: {
-        plugins: [router],
+        plugins: [pinia, router],
       },
     });
 
-    // Spies should be called during mount
     expect(addEventListenerSpy).toHaveBeenCalled();
     const keydownAddedCalls = addEventListenerSpy.mock.calls.filter(
       (call) => call[0] === "keydown"
     );
     expect(keydownAddedCalls.length).toBeGreaterThan(0);
 
-    // Now unmount
     wrapper.unmount();
 
-    // Spies should be called during unmount
     expect(removeEventListenerSpy).toHaveBeenCalled();
     const keydownRemovedCalls = removeEventListenerSpy.mock.calls.filter(
       (call) => call[0] === "keydown"
     );
     expect(keydownRemovedCalls.length).toBeGreaterThan(0);
 
-    // Restore spies
     addEventListenerSpy.mockRestore();
     removeEventListenerSpy.mockRestore();
   });

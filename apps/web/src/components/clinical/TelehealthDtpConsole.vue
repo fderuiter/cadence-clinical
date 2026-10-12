@@ -50,6 +50,14 @@
         >
           <span class="icon">📦</span> Dispatch DTP Courier Kit
         </button>
+
+        <button
+          type="button"
+          class="btn btn-warning"
+          @click="isReconciliationDrawerOpen = true"
+        >
+          <span class="icon">🔍</span> Bulk Kit Reconciliation
+        </button>
       </div>
     </header>
 
@@ -959,14 +967,25 @@
         </div>
       </div>
     </div>
+
+    <!-- Bulk IP Kit Reconciliation Drawer -->
+    <BulkIpKitReconciliationDrawer
+      :is-open="isReconciliationDrawerOpen"
+      study-id="STUDY-DCT-001"
+      site-id="SITE-01"
+      @close="isReconciliationDrawerOpen = false"
+      @reconciled="refreshData"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
 import { interopService } from "../../api/interop";
+import BulkIpKitReconciliationDrawer from "./BulkIpKitReconciliationDrawer.vue";
 
 const isLoading = ref(false);
+const isReconciliationDrawerOpen = ref(false);
 const activeTab = ref("telehealth");
 
 const metrics = reactive({

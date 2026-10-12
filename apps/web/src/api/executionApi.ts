@@ -353,4 +353,59 @@ export const executionApi = {
       })
     );
   },
+
+  /** Reconciles a batch of IP kit returns atomically in RTSM (POST /api/v1/execution/rtsm/kits/reconcile-batch). */
+  async reconcileIpKitBatch(payload: {
+    study_id: string;
+    site_id: string;
+    processed_by: string;
+    notes?: string;
+    reason_for_change: string;
+    items: Array<{
+      kit_number: string;
+      lot_number: string;
+      expected_lot_number?: string;
+      residual_volume_ml?: number;
+      residual_volume_percentage?: number;
+      disposition: string;
+      disposition_reason: string;
+    }>;
+  }): Promise<any> {
+    const res = await fetch("/api/v1/execution/rtsm/kits/reconcile-batch", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Change-Reason": encodeChangeReason(payload.reason_for_change),
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Request failed" }));
+      throw new Error(err.detail || "Server failed to process batch reconciliation.");
+    }
+    return res.json();
+  },
+
+  /** Retrieves site IP kit inventory catalog (GET /api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}). */
+  async getSiteIpKitInventory(studyId: string, siteId: string): Promise<any[]> {
+    const res = await fetch(`/api/v1/execution/rtsm/kits/inventory/${studyId}/${siteId}`);
+    if (!res.ok) {
+      throw new Error("Failed to load site IP kit inventory");
+    }
+    return res.json();
+  },
+
+  /** Validates scanned barcode against site inventory (POST /api/v1/execution/rtsm/kits/validate-scan). */
+  async validateIpKitScan(studyId: string, siteId: string, scannedBarcode: string): Promise<any> {
+    const res = await fetch("/api/v1/execution/rtsm/kits/validate-scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ study_id: studyId, site_id: siteId, scanned_barcode: scannedBarcode }),
+    });
+    if (!res.ok) {
+      throw new Error("Failed to validate barcode scan");
+    }
+    return res.json();
+  },
 };
+
