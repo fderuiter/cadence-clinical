@@ -66,12 +66,16 @@ describe("CellGeneTherapyCocConsole.vue - Domain Formatting Specification", () =
 
     expect(wrapper.find(".modal-xl").exists()).toBe(false);
 
-    const logBtn = wrapper.findAll("button").find((b) => b.text().includes("+ Log Transit Milestone"));
+    const logBtn = wrapper
+      .findAll("button")
+      .find((b) => b.text().includes("+ Log Transit Milestone"));
     expect(logBtn).toBeDefined();
     await logBtn?.trigger("click");
 
     expect(wrapper.find(".modal-xl").exists()).toBe(true);
-    expect(wrapper.text()).toContain("Log Transit Milestone & Telemetry Upload");
+    expect(wrapper.text()).toContain(
+      "Log Transit Milestone & Telemetry Upload"
+    );
   });
 
   it("parses valid telemetry file and displays excursion preview drawer with minimum temp and sample count", async () => {
@@ -86,7 +90,9 @@ Timestamp,Temperature (°C)
 2026-10-12T10:30:00Z,-188.5
     `.trim();
 
-    const file = new File([sampleCsv], "Sensitech_Transit_Log.csv", { type: "text/csv" });
+    const file = new File([sampleCsv], "Sensitech_Transit_Log.csv", {
+      type: "text/csv",
+    });
     await wrapper.vm.handleFileUpload(file);
     await wrapper.vm.$nextTick();
 
@@ -110,7 +116,9 @@ Date Time,Temp (°C)
 2026-10-12T12:45:00Z,-185.0
     `.trim();
 
-    const file = new File([sampleCsv], "TempTale_Excursion.csv", { type: "text/csv" });
+    const file = new File([sampleCsv], "TempTale_Excursion.csv", {
+      type: "text/csv",
+    });
     await wrapper.vm.handleFileUpload(file);
     await wrapper.vm.$nextTick();
 
@@ -126,7 +134,11 @@ Date Time,Temp (°C)
     wrapper.vm.openMilestoneModal();
     await wrapper.vm.$nextTick();
 
-    const invalidFile = new File(["Invalid unparseable payload text"], "corrupted.txt", { type: "text/plain" });
+    const invalidFile = new File(
+      ["Invalid unparseable payload text"],
+      "corrupted.txt",
+      { type: "text/plain" }
+    );
     await wrapper.vm.handleFileUpload(invalidFile);
     await wrapper.vm.$nextTick();
 
@@ -183,11 +195,12 @@ Timestamp,Temperature (°C)
       "/api/v1/execution/rtsm/cgt/milestone",
       expect.objectContaining({
         method: "POST",
-        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+        }),
       })
     );
 
     fetchSpy.mockRestore();
   });
 });
-

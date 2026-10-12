@@ -183,7 +183,9 @@ describe("LabGovernanceConsole.vue", () => {
     await bulkBtn.trigger("click");
 
     // Check modal exists
-    expect(wrapper.text()).toContain("Bulk Laboratory Reference Range Import (CSV / XLSX)");
+    expect(wrapper.text()).toContain(
+      "Bulk Laboratory Reference Range Import (CSV / XLSX)"
+    );
 
     // Enter raw CSV content
     const textarea = wrapper.find("#bulk-raw");
@@ -194,7 +196,9 @@ describe("LabGovernanceConsole.vue", () => {
 
     // Click Pre-Flight Dry Run button
     const buttons = wrapper.findAll(".modal-footer button");
-    const dryRunBtn = buttons.find((b) => b.text().includes("Pre-Flight Dry Run"));
+    const dryRunBtn = buttons.find((b) =>
+      b.text().includes("Pre-Flight Dry Run")
+    );
     expect(dryRunBtn?.exists()).toBe(true);
     await dryRunBtn?.trigger("click");
 
@@ -229,7 +233,9 @@ describe("LabGovernanceConsole.vue", () => {
 
     // Dry run
     const buttons = wrapper.findAll(".modal-footer button");
-    const dryRunBtn = buttons.find((b) => b.text().includes("Pre-Flight Dry Run"));
+    const dryRunBtn = buttons.find((b) =>
+      b.text().includes("Pre-Flight Dry Run")
+    );
     await dryRunBtn?.trigger("click");
 
     // Commit import

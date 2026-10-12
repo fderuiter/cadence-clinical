@@ -396,14 +396,18 @@ export const executionApi = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: "Request failed" }));
-      throw new Error(err.detail || "Server failed to process batch reconciliation.");
+      throw new Error(
+        err.detail || "Server failed to process batch reconciliation."
+      );
     }
     return res.json();
   },
 
   /** Retrieves site IP kit inventory catalog (GET /api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}). */
   async getSiteIpKitInventory(studyId: string, siteId: string): Promise<any[]> {
-    const res = await fetch(`/api/v1/execution/rtsm/kits/inventory/${studyId}/${siteId}`);
+    const res = await fetch(
+      `/api/v1/execution/rtsm/kits/inventory/${studyId}/${siteId}`
+    );
     if (!res.ok) {
       throw new Error("Failed to load site IP kit inventory");
     }
@@ -411,11 +415,19 @@ export const executionApi = {
   },
 
   /** Validates scanned barcode against site inventory (POST /api/v1/execution/rtsm/kits/validate-scan). */
-  async validateIpKitScan(studyId: string, siteId: string, scannedBarcode: string): Promise<any> {
+  async validateIpKitScan(
+    studyId: string,
+    siteId: string,
+    scannedBarcode: string
+  ): Promise<any> {
     const res = await fetch("/api/v1/execution/rtsm/kits/validate-scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ study_id: studyId, site_id: siteId, scanned_barcode: scannedBarcode }),
+      body: JSON.stringify({
+        study_id: studyId,
+        site_id: siteId,
+        scanned_barcode: scannedBarcode,
+      }),
     });
     if (!res.ok) {
       throw new Error("Failed to validate barcode scan");
@@ -423,4 +435,3 @@ export const executionApi = {
     return res.json();
   },
 };
-

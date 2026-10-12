@@ -221,7 +221,10 @@
                   <button class="btn btn-sm btn-outline" @click="editRange(r)">
                     Edit
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" @click="deactivateRange(r)">
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    @click="deactivateRange(r)"
+                  >
                     Deactivate
                   </button>
                 </td>
@@ -1415,7 +1418,9 @@
               />
             </div>
             <div class="form-group">
-              <label for="bulk-site">Site Identifier (optional for local lab):</label>
+              <label for="bulk-site"
+                >Site Identifier (optional for local lab):</label
+              >
               <input
                 id="bulk-site"
                 v-model="bulkImportForm.site_id"
@@ -1438,7 +1443,9 @@
           </div>
 
           <div class="form-group">
-            <label for="bulk-file">Reference Range Data File (CSV / XLSX):</label>
+            <label for="bulk-file"
+              >Reference Range Data File (CSV / XLSX):</label
+            >
             <input
               id="bulk-file"
               type="file"
@@ -1449,7 +1456,9 @@
           </div>
 
           <div class="form-group">
-            <label for="bulk-raw">Or Paste CSV/TSV Reference Range Content:</label>
+            <label for="bulk-raw"
+              >Or Paste CSV/TSV Reference Range Content:</label
+            >
             <textarea
               id="bulk-raw"
               v-model="bulkImportForm.raw_content"
@@ -1460,7 +1469,9 @@
           </div>
 
           <div class="form-group">
-            <label for="bulk-reason">GxP Reason for Change (21 CFR Part 11):</label>
+            <label for="bulk-reason"
+              >GxP Reason for Change (21 CFR Part 11):</label
+            >
             <input
               id="bulk-reason"
               v-model="bulkImportForm.reason_for_change"
@@ -1474,16 +1485,32 @@
           <div v-if="dryRunResult" class="dry-run-results">
             <h4>Pre-Flight Validation Preview</h4>
             <div class="status-summary">
-              <span :class="['status-pill', dryRunResult.is_valid ? 'success' : 'danger']">
-                {{ dryRunResult.is_valid ? 'VALIDATED CLEANLY' : 'VALIDATION ERRORS DETECTED' }}
+              <span
+                :class="[
+                  'status-pill',
+                  dryRunResult.is_valid ? 'success' : 'danger',
+                ]"
+              >
+                {{
+                  dryRunResult.is_valid
+                    ? "VALIDATED CLEANLY"
+                    : "VALIDATION ERRORS DETECTED"
+                }}
               </span>
               <span>Total Rows: {{ dryRunResult.total_rows_parsed }}</span>
-              <span class="text-success">Valid Rows: {{ dryRunResult.valid_rows_count }}</span>
-              <span class="text-danger">Invalid Rows: {{ dryRunResult.invalid_rows_count }}</span>
+              <span class="text-success"
+                >Valid Rows: {{ dryRunResult.valid_rows_count }}</span
+              >
+              <span class="text-danger"
+                >Invalid Rows: {{ dryRunResult.invalid_rows_count }}</span
+              >
             </div>
 
             <!-- Preview Rows Table -->
-            <div v-if="dryRunResult.rows && dryRunResult.rows.length > 0" class="table-responsive preview-table">
+            <div
+              v-if="dryRunResult.rows && dryRunResult.rows.length > 0"
+              class="table-responsive preview-table"
+            >
               <table class="data-table">
                 <thead>
                   <tr>
@@ -1498,17 +1525,34 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="row in dryRunResult.rows" :key="row.row_number" :class="{ 'row-critical': !row.is_valid }">
+                  <tr
+                    v-for="row in dryRunResult.rows"
+                    :key="row.row_number"
+                    :class="{ 'row-critical': !row.is_valid }"
+                  >
                     <td>#{{ row.row_number }}</td>
-                    <td><strong>{{ row.test_code }}</strong></td>
-                    <td>{{ row.test_name }}</td>
-                    <td><code>{{ row.unit }}</code></td>
-                    <td>{{ row.low_bound ?? '—' }} – {{ row.high_bound ?? '—' }}</td>
-                    <td>{{ row.sex_applicability || 'ALL' }}</td>
-                    <td><code>{{ row.loinc_code || 'Auto-mapped' }}</code></td>
                     <td>
-                      <span :class="['status-pill', row.is_valid ? 'success' : 'danger']">
-                        {{ row.is_valid ? 'Valid' : 'Invalid' }}
+                      <strong>{{ row.test_code }}</strong>
+                    </td>
+                    <td>{{ row.test_name }}</td>
+                    <td>
+                      <code>{{ row.unit }}</code>
+                    </td>
+                    <td>
+                      {{ row.low_bound ?? "—" }} – {{ row.high_bound ?? "—" }}
+                    </td>
+                    <td>{{ row.sex_applicability || "ALL" }}</td>
+                    <td>
+                      <code>{{ row.loinc_code || "Auto-mapped" }}</code>
+                    </td>
+                    <td>
+                      <span
+                        :class="[
+                          'status-pill',
+                          row.is_valid ? 'success' : 'danger',
+                        ]"
+                      >
+                        {{ row.is_valid ? "Valid" : "Invalid" }}
                       </span>
                     </td>
                   </tr>
@@ -1517,11 +1561,25 @@
             </div>
 
             <!-- Validation Errors List -->
-            <div v-if="dryRunResult.validation_errors && dryRunResult.validation_errors.length > 0" class="error-summary">
+            <div
+              v-if="
+                dryRunResult.validation_errors &&
+                dryRunResult.validation_errors.length > 0
+              "
+              class="error-summary"
+            >
               <h5>Validation Error Details</h5>
               <ul>
-                <li v-for="(err, idx) in dryRunResult.validation_errors" :key="idx" class="error-item">
-                  <strong>Row {{ err.row_number }} (Column {{ err.column_name }}):</strong> {{ err.message }}
+                <li
+                  v-for="(err, idx) in dryRunResult.validation_errors"
+                  :key="idx"
+                  class="error-item"
+                >
+                  <strong
+                    >Row {{ err.row_number }} (Column
+                    {{ err.column_name }}):</strong
+                  >
+                  {{ err.message }}
                 </li>
               </ul>
             </div>
@@ -2417,8 +2475,16 @@ async function executeCommitImport() {
 }
 
 async function deactivateRange(range) {
-  if (!confirm(`Are you sure you want to deactivate reference range for ${range.test_code}?`)) return;
-  const reason = prompt("Enter 21 CFR Part 11 Reason for Deactivation:", "Routine reference range retirement");
+  if (
+    !confirm(
+      `Are you sure you want to deactivate reference range for ${range.test_code}?`
+    )
+  )
+    return;
+  const reason = prompt(
+    "Enter 21 CFR Part 11 Reason for Deactivation:",
+    "Routine reference range retirement"
+  );
   if (!reason) return;
 
   try {
@@ -2441,7 +2507,9 @@ async function deactivateRange(range) {
 }
 
 function editRange(range) {
-  alert(`Editing range ${range.test_code}. Use Bulk Import or New Reference Range for updates.`);
+  alert(
+    `Editing range ${range.test_code}. Use Bulk Import or New Reference Range for updates.`
+  );
 }
 
 function openIngestModal() {

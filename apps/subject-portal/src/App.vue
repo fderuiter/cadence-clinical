@@ -909,10 +909,13 @@
           <div class="card" style="margin-bottom: 20px">
             <h3 style="margin-top: 0">💳 Digital Payout Method</h3>
             <p style="font-size: 14px; color: var(--text-muted)">
-              Virtual Card: <strong>**** **** **** 4821</strong> (EXP: 12/29) | Direct ACH Enabled
+              Virtual Card: <strong>**** **** **** 4821</strong> (EXP: 12/29) |
+              Direct ACH Enabled
             </p>
             <button type="button" class="btn btn-primary" style="width: 100%">
-              🚀 Disburse Available Balance (${{ (state.walletBalance || 0).toFixed(2) }})
+              🚀 Disburse Available Balance (${{
+                (state.walletBalance || 0).toFixed(2)
+              }})
             </button>
           </div>
 
@@ -922,7 +925,8 @@
             </h3>
             <p style="font-size: 14px; color: var(--text-muted)">
               Upload receipt photos for clinical trial travel, mileage, parking,
-              and meals. Policy auto-approval applies for low-risk claims under $100.
+              and meals. Policy auto-approval applies for low-risk claims under
+              $100.
             </p>
             <div
               id="receipt-upload-dropzone"
@@ -948,7 +952,8 @@
                 Tap to Capture or Upload Receipt Image
               </p>
               <small style="color: var(--text-muted)"
-                >OCR extraction will automatically detect merchant, date, and amount</small
+                >OCR extraction will automatically detect merchant, date, and
+                amount</small
               >
             </div>
             <input
@@ -964,9 +969,17 @@
             <div
               v-if="state.expenseOcr?.loading"
               id="ocr-loading-spinner"
-              style="margin-top: 16px; text-align: center; padding: 12px; background: var(--bg-muted); border-radius: 6px;"
+              style="
+                margin-top: 16px;
+                text-align: center;
+                padding: 12px;
+                background: var(--bg-muted);
+                border-radius: 6px;
+              "
             >
-              <p style="margin: 0; font-weight: 600; color: var(--primary-color);">
+              <p
+                style="margin: 0; font-weight: 600; color: var(--primary-color)"
+              >
                 🔍 Extracting Receipt Metadata via Mobile OCR...
               </p>
             </div>
@@ -975,44 +988,105 @@
             <div
               v-if="state.expenseOcr?.data || state.expenseForm?.merchantName"
               id="ocr-review-card"
-              style="margin-top: 20px; padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.02);"
+              style="
+                margin-top: 20px;
+                padding: 16px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.02);
+              "
             >
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <h4 style="margin: 0; font-size: 16px;">OCR Extracted Claim Confirmation</h4>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 12px;
+                "
+              >
+                <h4 style="margin: 0; font-size: 16px">
+                  OCR Extracted Claim Confirmation
+                </h4>
                 <span id="ocr-confidence-badge" class="badge badge-gxp">
-                  Confidence: {{ Math.round((state.expenseForm.ocrConfidence || 0.98) * 100) }}%
+                  Confidence:
+                  {{
+                    Math.round((state.expenseForm.ocrConfidence || 0.98) * 100)
+                  }}%
                 </span>
               </div>
 
               <div class="form-group mb-12">
                 <label for="ocr-category">Expense Category</label>
                 <select id="ocr-category" v-model="state.expenseForm.category">
-                  <option value="TRANSIT">TRANSIT (Public Transit / Ride Share)</option>
-                  <option value="MILEAGE">MILEAGE (Gas / Fuel / Personal Auto)</option>
-                  <option value="PARKING">PARKING (Parking Garage / Lot)</option>
+                  <option value="TRANSIT">
+                    TRANSIT (Public Transit / Ride Share)
+                  </option>
+                  <option value="MILEAGE">
+                    MILEAGE (Gas / Fuel / Personal Auto)
+                  </option>
+                  <option value="PARKING">
+                    PARKING (Parking Garage / Lot)
+                  </option>
                   <option value="MEAL">MEAL (Per-Diem Allowance)</option>
-                  <option value="LODGING">LODGING (Hotel / Accommodation)</option>
+                  <option value="LODGING">
+                    LODGING (Hotel / Accommodation)
+                  </option>
                 </select>
               </div>
 
               <div class="form-group mb-12">
                 <label for="ocr-merchant-name">Merchant Name</label>
-                <input id="ocr-merchant-name" type="text" v-model="state.expenseForm.merchantName" required />
+                <input
+                  id="ocr-merchant-name"
+                  type="text"
+                  v-model="state.expenseForm.merchantName"
+                  required
+                />
               </div>
 
               <div class="form-group mb-12">
                 <label for="ocr-expense-date">Expense Date</label>
-                <input id="ocr-expense-date" type="text" v-model="state.expenseForm.expenseDate" required />
+                <input
+                  id="ocr-expense-date"
+                  type="text"
+                  v-model="state.expenseForm.expenseDate"
+                  required
+                />
               </div>
 
               <div class="form-group mb-12">
                 <label for="ocr-gross-amount">Gross Amount ($ USD)</label>
-                <input id="ocr-gross-amount" type="number" step="0.01" v-model.number="state.expenseForm.grossAmount" required />
+                <input
+                  id="ocr-gross-amount"
+                  type="number"
+                  step="0.01"
+                  v-model.number="state.expenseForm.grossAmount"
+                  required
+                />
               </div>
 
-              <div v-if="state.expenseForm.category === 'MEAL'" class="form-group mb-12" style="background: var(--bg-muted); padding: 10px; border-radius: 6px;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                  <input id="ocr-meal-allowance-check" type="checkbox" v-model="state.expenseForm.isMealAllowance" />
+              <div
+                v-if="state.expenseForm.category === 'MEAL'"
+                class="form-group mb-12"
+                style="
+                  background: var(--bg-muted);
+                  padding: 10px;
+                  border-radius: 6px;
+                "
+              >
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                  "
+                >
+                  <input
+                    id="ocr-meal-allowance-check"
+                    type="checkbox"
+                    v-model="state.expenseForm.isMealAllowance"
+                  />
                   <span>Meal Allowance / Per-Diem Cap ($75.00 limit)</span>
                 </label>
               </div>
@@ -1021,7 +1095,7 @@
                 id="btn-confirm-reimburse"
                 type="button"
                 class="btn btn-primary"
-                style="width: 100%; margin-top: 12px;"
+                style="width: 100%; margin-top: 12px"
                 @click="handleConfirmReimburse"
               >
                 🚀 Confirm & Reimburse
@@ -1032,22 +1106,43 @@
             <div
               v-if="state.expenseResult"
               id="expense-result-container"
-              style="margin-top: 20px;"
+              style="margin-top: 20px"
             >
               <!-- Auto Approved -->
               <div
-                v-if="state.expenseResult.status === 'AUTO_APPROVED' || state.expenseResult.auto_approved"
+                v-if="
+                  state.expenseResult.status === 'AUTO_APPROVED' ||
+                  state.expenseResult.auto_approved
+                "
                 id="expense-auto-approved-banner"
-                style="padding: 16px; border-radius: 8px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: var(--semantic-color-text-dark);"
+                style="
+                  padding: 16px;
+                  border-radius: 8px;
+                  background: rgba(16, 185, 129, 0.1);
+                  border: 1px solid #10b981;
+                  color: var(--semantic-color-text-dark);
+                "
               >
-                <h4 style="margin: 0 0 6px 0; color: #10b981; font-size: 16px;">
+                <h4 style="margin: 0 0 6px 0; color: #10b981; font-size: 16px">
                   ✅ Reimbursement Auto-Approved & Dispatched
                 </h4>
-                <p style="margin: 0 0 8px 0; font-size: 14px;">
-                  Direct ACH disbursement dispatched to your registered participant account.
+                <p style="margin: 0 0 8px 0; font-size: 14px">
+                  Direct ACH disbursement dispatched to your registered
+                  participant account.
                 </p>
-                <div style="font-size: 13px; font-family: monospace; background: rgba(0,0,0,0.1); padding: 6px 10px; border-radius: 4px;">
-                  ACH Reference: <strong id="ach-disbursement-reference">{{ state.expenseResult.disbursement_reference }}</strong>
+                <div
+                  style="
+                    font-size: 13px;
+                    font-family: monospace;
+                    background: rgba(0, 0, 0, 0.1);
+                    padding: 6px 10px;
+                    border-radius: 4px;
+                  "
+                >
+                  ACH Reference:
+                  <strong id="ach-disbursement-reference">{{
+                    state.expenseResult.disbursement_reference
+                  }}</strong>
                 </div>
               </div>
 
@@ -1055,13 +1150,22 @@
               <div
                 v-else
                 id="expense-pending-review-banner"
-                style="padding: 16px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; color: var(--semantic-color-text-dark);"
+                style="
+                  padding: 16px;
+                  border-radius: 8px;
+                  background: rgba(245, 158, 11, 0.1);
+                  border: 1px solid #f59e0b;
+                  color: var(--semantic-color-text-dark);
+                "
               >
-                <h4 style="margin: 0 0 6px 0; color: #f59e0b; font-size: 16px;">
+                <h4 style="margin: 0 0 6px 0; color: #f59e0b; font-size: 16px">
                   ⚠️ Expense Claim Held for Manual Review
                 </h4>
-                <p id="pending-review-notes" style="margin: 0; font-size: 14px;">
-                  {{ state.expenseResult.review_notes || 'Expense claim exceeds policy threshold and requires study coordinator review.' }}
+                <p id="pending-review-notes" style="margin: 0; font-size: 14px">
+                  {{
+                    state.expenseResult.review_notes ||
+                    "Expense claim exceeds policy threshold and requires study coordinator review."
+                  }}
                 </p>
               </div>
             </div>
