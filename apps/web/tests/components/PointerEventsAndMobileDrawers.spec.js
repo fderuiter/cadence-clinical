@@ -7,6 +7,7 @@ import ShareDrawer from "../../src/components/fileshare/ShareDrawer.vue";
 import EhrReconciliationDrawer from "../../src/components/clinical/EhrReconciliationDrawer.vue";
 
 vi.mock("vue-router", () => ({
+  onBeforeRouteLeave: () => {},
   useRoute: vi.fn(() => ({ query: {} })),
   useRouter: vi.fn(() => ({ push: vi.fn() })),
 }));
