@@ -42,8 +42,22 @@
           </select>
         </div>
 
-        <!-- Timepoint Selector -->
+        <!-- View Mode Selector -->
         <div class="selector-box">
+          <label for="view-mode-select" class="sr-only">Select View Mode</label>
+          <select
+            id="view-mode-select"
+            v-model="viewMode"
+            class="header-select view-mode-select"
+            aria-label="Viewport Layout Mode"
+          >
+            <option value="single">Single Timepoint View</option>
+            <option value="dual">Dual Timepoint Comparison View</option>
+          </select>
+        </div>
+
+        <!-- Timepoint Selector (Single View Mode) -->
+        <div v-if="viewMode === 'single'" class="selector-box">
           <label for="timepoint-select" class="sr-only">Select Timepoint</label>
           <select
             id="timepoint-select"
@@ -57,6 +71,59 @@
             <option value="END_OF_TREATMENT">End of Treatment (Week 24)</option>
           </select>
         </div>
+
+        <!-- Dual Timepoint Controls (Dual View Mode) -->
+        <template v-if="viewMode === 'dual'">
+          <div class="selector-box">
+            <label for="timepoint-a-select" class="sr-only"
+              >Viewport A Timepoint</label
+            >
+            <select
+              id="timepoint-a-select"
+              v-model="timepointA"
+              class="header-select"
+              aria-label="Viewport A Timepoint"
+            >
+              <option value="BASELINE">A: Baseline Screening</option>
+              <option value="CYCLE_2_DAY_1">A: Cycle 2 Day 1</option>
+              <option value="CYCLE_4_DAY_1">A: Cycle 4 Day 1</option>
+              <option value="END_OF_TREATMENT">A: End of Treatment</option>
+            </select>
+          </div>
+
+          <div class="selector-box">
+            <label for="timepoint-b-select" class="sr-only"
+              >Viewport B Timepoint</label
+            >
+            <select
+              id="timepoint-b-select"
+              v-model="timepointB"
+              class="header-select"
+              aria-label="Viewport B Timepoint"
+            >
+              <option value="BASELINE">B: Baseline Screening</option>
+              <option value="CYCLE_2_DAY_1">B: Cycle 2 Day 1</option>
+              <option value="CYCLE_4_DAY_1">B: Cycle 4 Day 1</option>
+              <option value="END_OF_TREATMENT">B: End of Treatment</option>
+            </select>
+          </div>
+
+          <div class="selector-box">
+            <button
+              type="button"
+              class="btn-sync-toggle"
+              :class="{ synced: isViewportSynced }"
+              title="Toggle Crosshairs and Wheel Scroll Sync"
+              @click="isViewportSynced = !isViewportSynced"
+            >
+              {{
+                isViewportSynced
+                  ? "🔗 Viewports Synced"
+                  : "🔓 Viewports Unlinked"
+              }}
+            </button>
+          </div>
+        </template>
 
         <!-- Criteria Selector -->
         <div class="selector-box">
@@ -93,26 +160,69 @@
           <span class="panel-heading">Series Envelope</span>
         </div>
         <div class="series-list">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <div
-            v-for="s in availableSeries"
-            :key="s.seriesUid"
-            class="series-item"
-            :class="{ active: activeSeriesUid === s.seriesUid }"
-            @click="activeSeriesUid = s.seriesUid"
-          >
-            <div class="series-thumb">🖼️</div>
-            <div class="series-meta">
-              <div class="series-title">
-                {{ s.description }}
-              </div>
-              <div class="series-tags">
-                <span class="modality-tag">{{ s.modality }}</span>
-                <span class="slices-tag">{{ s.instancesCount }} slices</span>
+          <template v-if="viewMode === 'single'">
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <div
+              v-for="s in availableSeries"
+              :key="s.seriesUid"
+              class="series-item"
+              :class="{ active: activeSeriesUid === s.seriesUid }"
+              @click="activeSeriesUid = s.seriesUid"
+            >
+              <div class="series-thumb">🖼️</div>
+              <div class="series-meta">
+                <div class="series-title">
+                  {{ s.description }}
+                </div>
+                <div class="series-tags">
+                  <span class="modality-tag">{{ s.modality }}</span>
+                  <span class="slices-tag">{{ s.instancesCount }} slices</span>
+                </div>
               </div>
             </div>
-          </div>
+          </template>
+
+          <template v-else>
+            <div class="series-group-title">Viewport A Series</div>
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <div
+              v-for="s in availableSeriesA"
+              :key="'a-' + s.seriesUid"
+              class="series-item"
+              :class="{ active: activeSeriesUidA === s.seriesUid }"
+              @click="activeSeriesUidA = s.seriesUid"
+            >
+              <div class="series-thumb">🖼️</div>
+              <div class="series-meta">
+                <div class="series-title">{{ s.description }}</div>
+                <div class="series-tags">
+                  <span class="modality-tag">{{ s.modality }}</span>
+                  <span class="slices-tag">{{ s.instancesCount }} slices</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="series-group-title margin-top-sm">
+              Viewport B Series
+            </div>
+            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+            <div
+              v-for="s in availableSeriesB"
+              :key="'b-' + s.seriesUid"
+              class="series-item"
+              :class="{ active: activeSeriesUidB === s.seriesUid }"
+              @click="activeSeriesUidB = s.seriesUid"
+            >
+              <div class="series-thumb">🖼️</div>
+              <div class="series-meta">
+                <div class="series-title">{{ s.description }}</div>
+                <div class="series-tags">
+                  <span class="modality-tag">{{ s.modality }}</span>
+                  <span class="slices-tag">{{ s.instancesCount }} slices</span>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
 
         <!-- Series Volume Info Box -->
@@ -135,11 +245,42 @@
       <!-- Center: MPR Viewer -->
       <main class="mpr-viewer-wrapper">
         <DicomMprViewer
+          v-if="viewMode === 'single'"
+          :timepoint="selectedTimepoint"
+          viewport-label="Viewport A (Single Timepoint)"
           :series-uid="activeSeriesUid"
           :active-annotations="currentAnnotations"
           :active-tool="activeCaliperTool"
-          @caliper-created="handleCaliperCreated"
+          @caliper-created="handleCaliperCreated($event, 'single')"
         />
+
+        <div v-else class="dual-viewports-grid">
+          <DicomMprViewer
+            :timepoint="timepointA"
+            viewport-label="Viewport A (Baseline)"
+            :series-uid="activeSeriesUidA"
+            :active-annotations="currentAnnotations"
+            :active-tool="activeCaliperTool"
+            :is-synced="isViewportSynced"
+            :synced-state="sharedSyncState"
+            @update:synced-state="onSyncStateUpdate"
+            @update:is-synced="isViewportSynced = $event"
+            @caliper-created="handleCaliperCreated($event, 'A')"
+          />
+
+          <DicomMprViewer
+            :timepoint="timepointB"
+            viewport-label="Viewport B (Follow-up)"
+            :series-uid="activeSeriesUidB"
+            :active-annotations="currentAnnotations"
+            :active-tool="activeCaliperTool"
+            :is-synced="isViewportSynced"
+            :synced-state="sharedSyncState"
+            @update:synced-state="onSyncStateUpdate"
+            @update:is-synced="isViewportSynced = $event"
+            @caliper-created="handleCaliperCreated($event, 'B')"
+          />
+        </div>
       </main>
 
       <!-- Right: Oncology Calipers & Derivation Console -->
@@ -250,7 +391,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import DicomMprViewer from "../components/imaging/DicomMprViewer.vue";
 import OncologyCalipers from "../components/imaging/OncologyCalipers.vue";
 import DualReaderAdjudicationPanel from "../components/imaging/DualReaderAdjudicationPanel.vue";
@@ -262,6 +403,99 @@ const selectedTimepoint = ref("CYCLE_2_DAY_1");
 const selectedCriteria = ref("RECIST_1_1");
 const activeSeriesUid = ref("1.2.840.113619.2.55.3.200.1");
 const activeCaliperTool = ref("CALIPER_1D");
+
+const viewMode = ref("single"); // 'single' | 'dual'
+const timepointA = ref("BASELINE");
+const timepointB = ref("CYCLE_2_DAY_1");
+
+const isViewportSynced = ref(true);
+const sharedSyncState = ref({
+  axialSlice: 24,
+  sagittalSlice: 256,
+  coronalSlice: 256,
+  selectedPreset: "SOFT_TISSUE",
+});
+
+function onSyncStateUpdate(newState) {
+  if (isViewportSynced.value && newState) {
+    sharedSyncState.value = {
+      ...sharedSyncState.value,
+      ...newState,
+    };
+  }
+}
+
+const timepointSeriesMap = ref({
+  BASELINE: [
+    {
+      seriesUid: "1.2.840.113619.2.55.3.200.1",
+      description: "Baseline Chest/Abdomen/Pelvis CT",
+      modality: "CT",
+      instancesCount: 48,
+    },
+    {
+      seriesUid: "1.2.840.113619.2.55.3.200.2",
+      description: "Baseline Thoracic Lung Thin Slices 1.0mm",
+      modality: "CT",
+      instancesCount: 120,
+    },
+  ],
+  CYCLE_2_DAY_1: [
+    {
+      seriesUid: "1.2.840.113619.2.55.3.200.3",
+      description: "Cycle 2 Day 1 Contrast CT",
+      modality: "CT",
+      instancesCount: 48,
+    },
+    {
+      seriesUid: "1.2.840.113619.2.55.3.200.4",
+      description: "Cycle 2 Day 1 Lung Slices",
+      modality: "CT",
+      instancesCount: 120,
+    },
+  ],
+  CYCLE_4_DAY_1: [
+    {
+      seriesUid: "1.2.840.113619.2.55.3.200.5",
+      description: "Cycle 4 Day 1 Contrast CT",
+      modality: "CT",
+      instancesCount: 48,
+    },
+  ],
+  END_OF_TREATMENT: [
+    {
+      seriesUid: "1.2.840.113619.2.55.3.200.6",
+      description: "EOT Contrast CT",
+      modality: "CT",
+      instancesCount: 48,
+    },
+  ],
+});
+
+const activeSeriesUidA = ref("1.2.840.113619.2.55.3.200.1");
+const activeSeriesUidB = ref("1.2.840.113619.2.55.3.200.3");
+
+const availableSeriesA = computed(() => {
+  return timepointSeriesMap.value[timepointA.value] || [];
+});
+
+const availableSeriesB = computed(() => {
+  return timepointSeriesMap.value[timepointB.value] || [];
+});
+
+watch(timepointA, (newTp) => {
+  const series = timepointSeriesMap.value[newTp];
+  if (series && series.length > 0) {
+    activeSeriesUidA.value = series[0].seriesUid;
+  }
+});
+
+watch(timepointB, (newTp) => {
+  const series = timepointSeriesMap.value[newTp];
+  if (series && series.length > 0) {
+    activeSeriesUidB.value = series[0].seriesUid;
+  }
+});
 
 const availableSeries = ref([
   {
@@ -290,6 +524,7 @@ const currentAnnotations = ref([
       { x: 140, y: 150 },
       { x: 172, y: 150 },
     ],
+    timepoint: "BASELINE",
   },
   {
     id: "annot-002",
@@ -302,6 +537,7 @@ const currentAnnotations = ref([
       { x: 220, y: 180 },
       { x: 240, y: 180 },
     ],
+    timepoint: "CYCLE_2_DAY_1",
   },
 ]);
 
@@ -362,7 +598,15 @@ const derivedResponse = computed(() => {
   };
 });
 
-function handleCaliperCreated(event) {
+function handleCaliperCreated(event, viewportKey = "single") {
+  const originTimepoint =
+    event.timepoint ||
+    (viewMode.value === "dual"
+      ? viewportKey === "A"
+        ? timepointA.value
+        : timepointB.value
+      : selectedTimepoint.value);
+
   const newId = `annot-${Date.now()}`;
   const lesionNum = currentAnnotations.value.length + 1;
   currentAnnotations.value.push({
@@ -373,6 +617,13 @@ function handleCaliperCreated(event) {
     longest_diameter_mm: event.lengthMm,
     perpendicular_diameter_mm: null,
     points: event.points,
+    timepoint: originTimepoint,
+    viewport_origin:
+      viewportKey === "A"
+        ? "Viewport A"
+        : viewportKey === "B"
+          ? "Viewport B"
+          : "Single Viewport",
   });
 }
 
@@ -433,11 +684,17 @@ function handleAdjudicationCompleted(_event) {
 function handleBatchIngested(result) {
   if (result && result.seriesSummary && result.seriesSummary.length > 0) {
     result.seriesSummary.forEach((s) => {
-      const seriesUid = s.anonymizedSeriesUid || s.AnonymizedSeriesUid || `1.2.840.113619.2.${Date.now()}`;
+      const seriesUid =
+        s.anonymizedSeriesUid ||
+        s.AnonymizedSeriesUid ||
+        `1.2.840.113619.2.${Date.now()}`;
       const modality = s.modality || s.Modality || "CT";
-      const sliceCount = s.instanceCount || s.InstanceCount || result.ingestedSliceCount || 120;
+      const sliceCount =
+        s.instanceCount || s.InstanceCount || result.ingestedSliceCount || 120;
 
-      const existing = availableSeries.value.find((a) => a.seriesUid === seriesUid);
+      const existing = availableSeries.value.find(
+        (a) => a.seriesUid === seriesUid
+      );
       if (existing) {
         existing.instancesCount = sliceCount;
       } else {
@@ -451,7 +708,9 @@ function handleBatchIngested(result) {
       activeSeriesUid.value = seriesUid;
     });
   } else if (result) {
-    const newUid = result.anonymizedStudyUid ? `${result.anonymizedStudyUid}.1` : `1.2.840.113619.2.${Date.now()}`;
+    const newUid = result.anonymizedStudyUid
+      ? `${result.anonymizedStudyUid}.1`
+      : `1.2.840.113619.2.${Date.now()}`;
     availableSeries.value.unshift({
       seriesUid: newUid,
       description: `Batch Ingested CT Series (${selectedTimepoint.value})`,
@@ -547,6 +806,57 @@ function handleBatchIngested(result) {
   color: #1e293b;
   outline: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.view-mode-select {
+  background-color: #0f172a;
+  color: #f8fafc;
+  border: 1px solid #38bdf8;
+}
+
+.btn-sync-toggle {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-sync-toggle.synced {
+  background-color: rgba(52, 211, 153, 0.15);
+  border-color: #34d399;
+  color: #065f46;
+}
+
+.dual-viewports-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 1400px) {
+  .dual-viewports-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.series-group-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-bottom: 4px;
+}
+
+.margin-top-sm {
+  margin-top: 10px;
 }
 
 .imaging-workspace-grid {
