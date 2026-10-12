@@ -42,6 +42,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/queries` | CreateClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/batch-cancel` | BatchCancelClinicalQueries |  |
 | `POST` | `/api/v1/execution/queries/batch-close` | BatchCloseClinicalQueries |  |
+| `POST` | `/api/v1/execution/queries/batch-respond` | BatchRespondClinicalQueries |  |
 | `GET` | `/api/v1/execution/queries/{id}` | GetClinicalQueryById |  |
 | `POST` | `/api/v1/execution/queries/{id}/cancel` | CancelClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/{id}/close` | CloseClinicalQuery |  |

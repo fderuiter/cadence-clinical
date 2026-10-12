@@ -335,6 +335,21 @@ export const executionApi = {
     );
   },
 
+  /** Batch responds to multiple open or reopened queries, with the reason as X-Change-Reason. */
+  batchRespondQueries(
+    queryIds: string[],
+    response: string,
+    reason?: string
+  ): Promise<BatchQueryResponse> {
+    const changeReason = reason || response;
+    return unwrapResponse(
+      client.POST("/api/v1/execution/queries/batch-respond", {
+        body: { query_ids: queryIds, response, reason: changeReason },
+        headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
+      })
+    );
+  },
+
   /**
    * Activates a site for the study. Execution refuses (400) unless eTMF reports the site's activation
    * documents complete, and audits the attempt either way with the reason sent as X-Change-Reason

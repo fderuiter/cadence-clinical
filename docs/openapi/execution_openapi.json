@@ -1823,6 +1823,56 @@
         }
       }
     },
+    "/api/v1/execution/queries/batch-respond": {
+      "post": {
+        "tags": [
+          "Queries"
+        ],
+        "operationId": "BatchRespondClinicalQueries",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_BatchQueryRespondRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_BatchQueryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/labs/toxicity/review-queue": {
       "get": {
         "tags": [
@@ -3005,6 +3055,30 @@
             "items": {
               "type": "string"
             }
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_BatchQueryRespondRequest": {
+        "required": [
+          "query_ids",
+          "response"
+        ],
+        "type": "object",
+        "properties": {
+          "query_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "response": {
+            "type": "string"
           },
           "reason": {
             "type": [
