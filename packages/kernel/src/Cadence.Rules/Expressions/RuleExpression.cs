@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Cadence.Rules.Expressions;
 
@@ -8,6 +9,7 @@ namespace Cadence.Rules.Expressions;
 /// EDC <c>AstEditCheckEngine</c> (its JSON shapes still parse, see <see cref="RuleExpressionJson"/>); evaluation uses
 /// Kleene three-valued logic for <c>and</c>, <c>or</c> and <c>not</c>.
 /// </summary>
+[JsonConverter(typeof(RuleExpressionJsonConverter))]
 public abstract record RuleExpression
 {
     /// <summary>The canonical JSON form (<see cref="RuleExpressionJson"/>).</summary>

@@ -53,11 +53,16 @@ public sealed record IndicatorSetLoadResult(LoadedIndicatorSet? Set, KernelError
 /// approved with an attestation; a deprecated set still loads for the studies that pinned it, and a draft never loads,
 /// so a Pulse number is always computed by a released definition.
 /// </summary>
-public sealed class IndicatorSetLoader(IStandardsRegistry registry)
+public sealed class IndicatorSetLoader(IStandardsRegistry? registry = null)
 {
     /// <summary>Loads one released set by its library item id.</summary>
     public async Task<IndicatorSetLoadResult> LoadAsync(TenantId tenant, LibraryItemId id, CancellationToken cancellationToken = default)
     {
+        if (registry is null)
+        {
+            return new(null, IndicatorErrors.SetUnknown);
+        }
+
         var item = await registry.FindLibraryItemAsync(tenant, id, cancellationToken).ConfigureAwait(false);
         if (item is null)
         {
@@ -87,6 +92,11 @@ public sealed class IndicatorSetLoader(IStandardsRegistry registry)
     /// <exception cref="InvalidOperationException">A pinned set can no longer be read, which the registry's guards prevent.</exception>
     public async Task<IReadOnlyList<LoadedIndicatorSet>> LoadForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken = default)
     {
+        if (registry is null)
+        {
+            return [];
+        }
+
         var profile = await registry.FindStudyStandardsAsync(tenant, study, cancellationToken).ConfigureAwait(false);
         if (profile is null)
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace Cadence.Rules.Expressions;
 
@@ -20,6 +21,7 @@ public enum RuleValueKind
 /// A value a rule reads or computes: null, a boolean, a decimal number or text. Numbers are <see cref="decimal"/> so
 /// evaluation never depends on floating-point rounding, and text never depends on the current culture (K-RULE-4).
 /// </summary>
+[JsonConverter(typeof(RuleValueJsonConverter))]
 public readonly struct RuleValue : IEquatable<RuleValue>
 {
     private readonly decimal _number;
