@@ -418,24 +418,81 @@
               </div>
               <div class="cred-card ach-preview">
                 <div class="card-chip">🏦 Direct ACH Payout Account</div>
-                <div class="ach-row">
-                  <strong>Routing:</strong>
-                  {{ selectedWallet.ach_routing_number || "021000021" }}
-                </div>
-                <div class="ach-row">
-                  <strong>Account:</strong>
-                  {{ selectedWallet.ach_account_mask || "ACH-***4321" }}
-                </div>
-                <div class="ach-row">
-                  <strong>Holder:</strong>
-                  {{ selectedWallet.ach_account_holder }}
-                </div>
-                <div class="ach-row">
-                  <strong>W-9 Form:</strong>
-                  <span class="badge badge-gxp">{{
-                    selectedWallet.w9_status
-                  }}</span>
-                </div>
+                <template
+                  v-if="
+                    selectedWallet.ach_account_mask ||
+                    selectedWallet.achAccountMask ||
+                    selectedWallet.ach_routing_number ||
+                    selectedWallet.achRoutingNumber
+                  "
+                >
+                  <div class="ach-row">
+                    <strong>Routing:</strong>
+                    {{
+                      selectedWallet.ach_routing_number ||
+                      selectedWallet.achRoutingNumber ||
+                      "N/A"
+                    }}
+                  </div>
+                  <div class="ach-row">
+                    <strong>Account:</strong>
+                    {{
+                      selectedWallet.ach_account_mask ||
+                      selectedWallet.achAccountMask
+                    }}
+                  </div>
+                  <div class="ach-row">
+                    <strong>Holder:</strong>
+                    {{
+                      selectedWallet.ach_account_holder ||
+                      selectedWallet.achAccountHolder ||
+                      "N/A"
+                    }}
+                  </div>
+                  <div class="ach-row">
+                    <strong>W-9 Form:</strong>
+                    <span class="badge badge-gxp">{{
+                      selectedWallet.w9_status || selectedWallet.w9Status
+                    }}</span>
+                  </div>
+                  <div style="margin-top: 10px">
+                    <button
+                      class="btn btn-xs btn-secondary"
+                      @click="openAchModal"
+                    >
+                      ✏️ Update Direct Deposit
+                    </button>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="ach-empty-state" style="padding: 6px 0">
+                    <div
+                      style="
+                        font-weight: 600;
+                        color: #64748b;
+                        margin-bottom: 4px;
+                      "
+                    >
+                      No Direct Deposit Account Registered
+                    </div>
+                    <p
+                      style="
+                        font-size: 0.8rem;
+                        color: #94a3b8;
+                        margin-bottom: 8px;
+                      "
+                    >
+                      Register a verified bank routing &amp; account number to
+                      enable direct ACH disbursements.
+                    </p>
+                    <button
+                      class="btn btn-xs btn-primary"
+                      @click="openAchModal"
+                    >
+                      ➕ Configure Direct Deposit
+                    </button>
+                  </div>
+                </template>
               </div>
             </div>
 
@@ -1008,6 +1065,90 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal: Configure Direct Deposit (ACH) Account -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="showAchModal"
+      class="modal-backdrop"
+      @click.self="showAchModal = false"
+    >
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Configure Direct Deposit (ACH) Account</h3>
+          <button class="modal-close-btn" @click="showAchModal = false">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">
+            Provide the participant's direct deposit bank routing and account
+            details. Bank credentials are validated and tokenized immediately;
+            plain-text account numbers are never stored.
+          </p>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Account Holder Name:</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="achForm.account_holder_name"
+              class="form-input"
+              placeholder="e.g. Jane Doe"
+            />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Account Type:</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <select v-model="achForm.account_type" class="form-select">
+              <option value="CHECKING">Checking</option>
+              <option value="SAVINGS">Savings</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>ABA Routing Transit Number (9 digits):</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <!-- deid-ignore -->
+            <input
+              v-model="achForm.routing_number"
+              maxlength="9"
+              class="form-input"
+              placeholder="e.g. 021000021"
+            />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Bank Account Number:</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="achForm.account_number"
+              type="password"
+              class="form-input"
+              placeholder="Enter bank account number"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showAchModal = false">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="
+              isSubmitting ||
+              !achForm.routing_number ||
+              achForm.routing_number.length !== 9 ||
+              !achForm.account_number ||
+              !achForm.account_holder_name
+            "
+            @click="submitAchAccountForm"
+          >
+            Save &amp; Tokenize Account
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1021,6 +1162,7 @@ const activeTab = ref("wallets");
 const isLoading = ref(false);
 const isSubmitting = ref(false);
 const showW9Modal = ref(false);
+const showAchModal = ref(false);
 const visitTriggerSuccess = ref("");
 const claimSubmitSuccess = ref("");
 
@@ -1037,6 +1179,68 @@ const disburseForm = ref({
   type: "VIRTUAL_CARD",
   amount: 0,
 });
+
+const achForm = ref({
+  routing_number: "",
+  account_number: "",
+  account_holder_name: "",
+  account_type: "CHECKING",
+});
+
+function openAchModal() {
+  if (!selectedWallet.value) return;
+  achForm.value = {
+    routing_number: "",
+    account_number: "",
+    account_holder_name:
+      selectedWallet.value.ach_account_holder ||
+      selectedWallet.value.achAccountHolder ||
+      `Participant ${selectedWallet.value.subject_id}`,
+    account_type: "CHECKING",
+  };
+  showAchModal.value = true;
+}
+
+async function submitAchAccountForm() {
+  if (!selectedWallet.value) return;
+  isSubmitting.value = true;
+  try {
+    const res = await fetch(
+      `/api/v1/payments/participant/wallets/${selectedWallet.value.id}/ach-account`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          routing_number: achForm.value.routing_number,
+          account_number: achForm.value.account_number,
+          account_holder_name: achForm.value.account_holder_name,
+          account_type: achForm.value.account_type,
+        }),
+      }
+    );
+    await ensureOk(res);
+    useToastStore().push({
+      tone: "success",
+      title: "Direct Deposit Configured",
+      message:
+        "Participant direct deposit bank account registered and tokenized successfully.",
+    });
+    showAchModal.value = false;
+    await loadAllData();
+    if (selectedWallet.value) {
+      const refreshed = wallets.value.find(
+        (w: any) => w.id === selectedWallet.value.id
+      );
+      if (refreshed) {
+        selectedWallet.value = refreshed;
+      }
+    }
+  } catch (e: any) {
+    useToastStore().apiError("Configuring direct deposit failed", e);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
 
 const w9Form = ref({
   full_legal_name: "",

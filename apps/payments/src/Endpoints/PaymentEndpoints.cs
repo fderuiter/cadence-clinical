@@ -122,6 +122,48 @@ public record IssueCardRequestDto(
     string? CardType = "RELOADABLE_DEBIT"
 );
 
+public record RegisterAchAccountRequestDto
+{
+    [JsonPropertyName("routing_number")]
+    public string? RoutingNumberSnake { get; init; }
+
+    [JsonPropertyName("routingNumber")]
+    public string? RoutingNumberCamel { get; init; }
+
+    [JsonPropertyName("account_number")]
+    public string? AccountNumberSnake { get; init; }
+
+    [JsonPropertyName("accountNumber")]
+    public string? AccountNumberCamel { get; init; }
+
+    [JsonPropertyName("account_holder_name")]
+    public string? AccountHolderNameSnake { get; init; }
+
+    [JsonPropertyName("accountHolderName")]
+    public string? AccountHolderNameCamel { get; init; }
+
+    [JsonPropertyName("account_holder")]
+    public string? AccountHolderSnake { get; init; }
+
+    [JsonPropertyName("account_type")]
+    public string? AccountTypeSnake { get; init; }
+
+    [JsonPropertyName("accountType")]
+    public string? AccountTypeCamel { get; init; }
+
+    [JsonIgnore]
+    public string RoutingNumber => RoutingNumberSnake ?? RoutingNumberCamel ?? string.Empty;
+
+    [JsonIgnore]
+    public string AccountNumber => AccountNumberSnake ?? AccountNumberCamel ?? string.Empty;
+
+    [JsonIgnore]
+    public string? AccountHolderName => AccountHolderNameSnake ?? AccountHolderNameCamel ?? AccountHolderSnake;
+
+    [JsonIgnore]
+    public string AccountType => AccountTypeSnake ?? AccountTypeCamel ?? "CHECKING";
+}
+
 public record DisburseFundsRequestDto(
     string DisbursementType,
     decimal Amount
@@ -349,6 +391,10 @@ public static class PaymentEndpoints
             .WithName("IssueReloadableCard")
             .WithSummary("Issue or re-issue reloadable debit card for participant wallet.");
 
+        group.MapPost("/participant/wallets/{walletId}/ach-account", RegisterAchAccount)
+            .WithName("RegisterAchAccount")
+            .WithSummary("Register tokenized direct deposit ACH bank account for participant wallet.");
+
         group.MapPost("/participant/wallets/{walletId}/submit-w9", SubmitW9Form)
             .WithName("SubmitW9Form")
             .WithSummary("Submit Form W-9 taxpayer identification certification.");
@@ -460,9 +506,9 @@ public static class PaymentEndpoints
         Status: wallet.Status,
         VirtualCardMask: wallet.VirtualCardMask ?? "**** **** **** 4821",
         VirtualCardExpiry: wallet.VirtualCardExpiry ?? "12/29",
-        AchRoutingNumber: wallet.AchRoutingMask ?? "021000021", // deid-ignore
-        AchAccountMask: wallet.AchAccountMask ?? "ACH-***4321",
-        AchAccountHolder: wallet.AchAccountHolder ?? $"Participant {wallet.SubjectId}",
+        AchRoutingNumber: wallet.AchRoutingMask,
+        AchAccountMask: wallet.AchAccountMask,
+        AchAccountHolder: wallet.AchAccountHolder,
         AntiCoercionCap: wallet.AntiCoercionCap,
         AutoDisbursementThreshold: wallet.AutoDisbursementThreshold,
         UpdatedAt: wallet.UpdatedAt
@@ -628,6 +674,100 @@ public static class PaymentEndpoints
         return Results.Ok(MapWalletToResponse(wallet));
     }
 
+    public static bool IsValidAbaRoutingNumber(string? routingNumber)
+    {
+        if (string.IsNullOrWhiteSpace(routingNumber)) return false;
+        string digitsOnly = new string(routingNumber.Where(char.IsDigit).ToArray());
+        if (digitsOnly.Length != 9 || digitsOnly.All(c => c == '0')) return false;
+
+        int d1 = digitsOnly[0] - '0';
+        int d2 = digitsOnly[1] - '0';
+        int d3 = digitsOnly[2] - '0';
+        int d4 = digitsOnly[3] - '0';
+        int d5 = digitsOnly[4] - '0';
+        int d6 = digitsOnly[5] - '0';
+        int d7 = digitsOnly[6] - '0';
+        int d8 = digitsOnly[7] - '0';
+        int d9 = digitsOnly[8] - '0';
+
+        int checksum = 3 * (d1 + d4 + d7) + 7 * (d2 + d5 + d8) + 1 * (d3 + d6 + d9);
+        return checksum % 10 == 0;
+    }
+
+    private static async Task<IResult> RegisterAchAccount(string walletId, RegisterAchAccountRequestDto request, PaymentsDbContext dbContext)
+    {
+        var wallet = await dbContext.ParticipantWallets
+            .FirstOrDefaultAsync(w => w.Id == walletId);
+
+        if (wallet == null)
+        {
+            return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
+        }
+
+        if (!IsValidAbaRoutingNumber(request.RoutingNumber))
+        {
+            return Results.BadRequest(new { detail = "Invalid ABA routing number. Must pass 9-digit US banking checksum validation." });
+        }
+
+        string acctNumDigits = new string((request.AccountNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+        if (string.IsNullOrWhiteSpace(acctNumDigits) || acctNumDigits.Length < 4)
+        {
+            return Results.BadRequest(new { detail = "Invalid bank account number. Account number must contain at least 4 digits." });
+        }
+
+        bool hasPendingDisbursement = await dbContext.ParticipantDisbursements
+            .AnyAsync(d => d.WalletId == wallet.Id && d.Status == "PENDING");
+        if (hasPendingDisbursement)
+        {
+            return Results.BadRequest(new { detail = "Cannot modify bank account details while a disbursement is in PENDING state." });
+        }
+
+        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        string processorRef = $"ach_tok_{Guid.NewGuid():N}";
+        string routingDigits = new string(request.RoutingNumber.Where(char.IsDigit).ToArray());
+        string routingMask = $"*****{routingDigits[^4..]}";
+        string accountMask = $"ACH-***{acctNumDigits[^4..]}";
+        string holderName = !string.IsNullOrWhiteSpace(request.AccountHolderName)
+            ? request.AccountHolderName.Trim()
+            : $"Participant {wallet.SubjectId}";
+
+        wallet.AchProcessorReference = processorRef;
+        wallet.AchRoutingMask = routingMask;
+        wallet.AchAccountMask = accountMask;
+        wallet.AchAccountHolder = holderName;
+        wallet.UpdatedAt = now;
+        wallet.VersionIndex += 1;
+
+        var auditLog = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "ParticipantWallet",
+            EntityId = wallet.Id,
+            Action = "ACH_ACCOUNT_REGISTERED",
+            UserId = wallet.SubjectId,
+            UserRoles = "Participant",
+            Details = JsonSerializer.Serialize(new
+            {
+                wallet_id = wallet.Id,
+                subject_id = wallet.SubjectId,
+                ach_processor_reference = processorRef,
+                ach_routing_mask = routingMask,
+                ach_account_mask = accountMask,
+                ach_account_holder = holderName,
+                account_type = request.AccountType
+            }),
+            CreatedAt = now,
+            CreatedBy = wallet.SubjectId,
+            ReasonForChange = "Registered tokenized direct deposit ACH account",
+            VersionIndex = 1
+        };
+
+        dbContext.PaymentAuditLogs.Add(auditLog);
+        await dbContext.SaveChangesAsync();
+
+        return Results.Ok(MapWalletToResponse(wallet));
+    }
+
     private static async Task<IResult> SubmitW9Form(string walletId, SubmitW9RequestDto request, PaymentsDbContext dbContext)
     {
         var wallet = await dbContext.ParticipantWallets
@@ -720,6 +860,13 @@ public static class PaymentEndpoints
         if (wallet == null)
         {
             return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
+        }
+
+        if (string.Equals(request.DisbursementType, "DIRECT_ACH", StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrWhiteSpace(wallet.AchProcessorReference)
+            && string.IsNullOrWhiteSpace(wallet.AchAccountMask))
+        {
+            return Results.BadRequest(new { detail = "Direct ACH disbursement requires a registered active ACH bank account." });
         }
 
         decimal payoutAmount = request.Amount > 0m ? request.Amount : wallet.CurrentBalance;

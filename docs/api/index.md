@@ -9,7 +9,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [ai_gateway](ai_gateway.md) | 2 |
 | [ctms](ctms.md) | 9 |
 | [designer](designer.md) | 6 |
-| [econsent](econsent.md) | 4 |
+| [econsent](econsent.md) | 6 |
 | [eisf](eisf.md) | 2 |
 | [etmf](etmf.md) | 14 |
 | [execution](execution.md) | 82 |
@@ -20,7 +20,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [knowledge](knowledge.md) | 9 |
 | [notifications](notifications.md) | 3 |
 | [org](org.md) | 2 |
-| [payments](payments.md) | 32 |
+| [payments](payments.md) | 33 |
 | [quality](quality.md) | 2 |
 | [safety](safety.md) | 14 |
 | [tickets](tickets.md) | 2 |

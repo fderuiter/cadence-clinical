@@ -195,6 +195,22 @@ const state = reactive({
     receiptImageName: "",
   },
   expenseResult: null,
+  showAchModal: false,
+  achSubmitting: false,
+  achError: null,
+  achSuccess: null,
+  achDetails: {
+    routingMask: "*****0021",
+    accountMask: "****4321",
+    accountHolder: "Participant SUBJ-1001",
+    accountType: "CHECKING",
+  },
+  achForm: {
+    routingNumber: "",
+    accountNumber: "",
+    accountHolderName: "Participant SUBJ-1001",
+    accountType: "CHECKING",
+  },
   assignments: [],
   notifications: [],
   ledgerBlocks: [],
@@ -3235,6 +3251,11 @@ export {
   submitReconsentSignature,
   emitSyncLifecycleEvent,
   resetSyncRetryInfo,
+  showToast,
+  renderLedger,
+  createClinicalSlider,
+  createClinicalInput,
+  createClinicalRadioGrid,
 };
 
 function createClinicalSlider(
@@ -3614,5 +3635,103 @@ export async function submitExpenseClaim(customFormData = null) {
   } catch (err) {
     console.error("Failed to submit expense claim:", err);
     throw err;
+  }
+}
+
+export function openAchModal() {
+  state.showAchModal = true;
+  state.achError = null;
+  state.achSuccess = null;
+  state.achForm = {
+    routingNumber: "",
+    accountNumber: "",
+    accountHolderName:
+      state.achDetails?.accountHolder ||
+      `Participant ${state.session.userId || "subject_001"}`,
+    accountType: state.achDetails?.accountType || "CHECKING",
+  };
+}
+
+export function closeAchModal() {
+  state.showAchModal = false;
+  state.achError = null;
+  state.achSuccess = null;
+}
+
+export async function registerAchAccount(achData) {
+  const subjectId = state.session.userId || "subject_001";
+  const walletId = `w-${subjectId}`;
+
+  const payload = {
+    routing_number: achData.routingNumber || achData.routing_number,
+    account_number: achData.accountNumber || achData.account_number,
+    account_holder_name:
+      achData.accountHolderName || achData.account_holder_name,
+    account_type: achData.accountType || achData.account_type || "CHECKING",
+  };
+
+  try {
+    const res = await dispatchApi(
+      `api/v1/payments/participant/wallets/${walletId}/ach-account`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        change_reason: "Configure participant direct deposit ACH account",
+      }
+    );
+
+    const routingMask =
+      res?.ach_routing_number ||
+      res?.achRoutingNumber ||
+      `*****${payload.routing_number.slice(-4)}`;
+    const accountMask =
+      res?.ach_account_mask ||
+      res?.achAccountMask ||
+      `****${payload.account_number.slice(-4)}`;
+    const accountHolder =
+      res?.ach_account_holder ||
+      res?.achAccountHolder ||
+      payload.account_holder_name;
+
+    state.achDetails = {
+      routingMask,
+      accountMask,
+      accountHolder,
+      accountType: payload.account_type,
+      status: "ACTIVE",
+    };
+
+    await logAuditRecord(
+      "ACH_ACCOUNT_REGISTERED",
+      {
+        subject_id: subjectId,
+        wallet_id: walletId,
+        account_type: payload.account_type,
+      },
+      "Direct deposit bank account registered and tokenized"
+    );
+
+    return res;
+  } catch (err) {
+    console.error("Failed to register ACH account:", err);
+    throw err;
+  }
+}
+
+export async function handleAchSubmit() {
+  state.achSubmitting = true;
+  state.achError = null;
+  state.achSuccess = null;
+  try {
+    await registerAchAccount(state.achForm);
+    state.achSuccess = "Direct deposit details configured successfully!";
+    setTimeout(() => {
+      state.showAchModal = false;
+    }, 1200);
+  } catch (err) {
+    state.achError =
+      err?.message || "Failed to register direct deposit account.";
+  } finally {
+    state.achSubmitting = false;
   }
 }

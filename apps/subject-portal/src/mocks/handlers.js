@@ -132,6 +132,26 @@ export const gatewayHandlers = [
     }
   ),
 
+  http.post(
+    "*/api/v1/payments/participant/wallets/*/ach-account",
+    async ({ request }) => {
+      const body = await request.json().catch(() => ({}));
+      const routing = body.routing_number || body.routingNumber || "021000021"; // deid-ignore
+      const account = body.account_number || body.accountNumber || "123456789"; // deid-ignore
+      const holder =
+        body.account_holder_name || body.accountHolderName || "Jane Doe";
+      return HttpResponse.json({
+        id: "w-101",
+        subject_id: "SUBJ-1001",
+        ach_routing_number: "*****" + routing.slice(-4),
+        ach_account_mask: "****" + account.slice(-4),
+        ach_account_holder: holder,
+        status: "ACTIVE",
+        updated_at: new Date().toISOString(),
+      });
+    }
+  ),
+
   // Intercept all HTTP methods matching API gateway host or API paths
   http.all("*", async ({ request }) => {
     const url = new URL(request.url);

@@ -1,7 +1,13 @@
 <template>
-  <div id="app" :class="{ 'drawer-open': state.isSyncDrawerOpen }">
+  <div
+    id="app"
+    :class="{ 'drawer-open': state.isSyncDrawerOpen }"
+  >
     <!-- Accessible Skip to Content Link -->
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a
+      href="#main-content"
+      class="skip-link"
+    >Skip to main content</a>
 
     <!-- Portal Header -->
     <header class="portal-header">
@@ -9,7 +15,9 @@
         <h1>
           My <span>{{ brandName }}</span>
         </h1>
-        <p class="role-badge">Participant Companion Portal</p>
+        <p class="role-badge">
+          Participant Companion Portal
+        </p>
       </div>
       <div class="compliance-badges">
         <span class="badge badge-epro">ePRO Companion</span>
@@ -69,7 +77,9 @@
       aria-labelledby="drawer-title"
     >
       <div class="drawer-header">
-        <h3 id="drawer-title">🔄 Submission Sync Status</h3>
+        <h3 id="drawer-title">
+          🔄 Submission Sync Status
+        </h3>
         <button
           id="btn-close-sync-drawer"
           type="button"
@@ -83,7 +93,11 @@
 
       <div class="drawer-body">
         <div class="sync-status-section">
-          <p class="status-text" role="status" aria-live="polite">
+          <p
+            class="status-text"
+            role="status"
+            aria-live="polite"
+          >
             {{ state.syncStatusText || "Checking sync status..." }}
           </p>
           <button
@@ -98,14 +112,19 @@
         </div>
 
         <div class="submissions-list-wrapper">
-          <h4 class="submissions-heading">Submissions Status</h4>
+          <h4 class="submissions-heading">
+            Submissions Status
+          </h4>
           <div
             v-if="!state.submissions || state.submissions.length === 0"
             class="empty-state"
           >
             No submission history in queue.
           </div>
-          <div v-else class="submissions-items-list">
+          <div
+            v-else
+            class="submissions-items-list"
+          >
             <div
               v-for="item in state.submissions"
               :key="item.sequence_number"
@@ -116,7 +135,10 @@
                 <span class="item-name">{{
                   getInstrumentName(item.diary_id)
                 }}</span>
-                <span class="status-pill" :class="getBadgeClass(item)">
+                <span
+                  class="status-pill"
+                  :class="getBadgeClass(item)"
+                >
                   {{ getStatusLabel(item) }}
                 </span>
               </div>
@@ -153,7 +175,10 @@
     <!-- Main Layout -->
     <div class="portal-container">
       <!-- Patient Navigation Tabs -->
-      <nav class="portal-navigation" aria-label="Participant navigation">
+      <nav
+        class="portal-navigation"
+        aria-label="Participant navigation"
+      >
         <ul
           class="nav-tabs"
           role="tablist"
@@ -197,10 +222,15 @@
 
         <!-- Active Participant Card -->
         <div class="participant-info-card">
-          <div class="info-title">Participant Session</div>
+          <div class="info-title">
+            Participant Session
+          </div>
           <div class="info-row">
             <span class="info-lbl">ID:</span>
-            <span id="session-subject-id" class="info-val">{{
+            <span
+              id="session-subject-id"
+              class="info-val"
+            >{{
               state.session.userId || "Loading..."
             }}</span>
           </div>
@@ -217,13 +247,16 @@
             >
               ${{
                 state.walletBalance !== undefined &&
-                state.walletBalance !== null
+                  state.walletBalance !== null
                   ? Number(state.walletBalance).toFixed(2)
                   : "0.00"
               }}
             </span>
           </div>
-          <div class="info-row" style="margin-top: 12px">
+          <div
+            class="info-row"
+            style="margin-top: 12px"
+          >
             <button
               id="btn-logout"
               type="button"
@@ -238,7 +271,11 @@
       </nav>
 
       <!-- Main Viewport -->
-      <main id="main-content" class="portal-main" tabindex="-1">
+      <main
+        id="main-content"
+        class="portal-main"
+        tabindex="-1"
+      >
         <!-- Urgent Re-Consent Notification Banner -->
         <div
           v-if="state.pendingReconsent"
@@ -341,7 +378,11 @@
           </div>
 
           <!-- Tasks Loading Placeholder -->
-          <div id="tasks-loading" class="loading-state" style="display: none">
+          <div
+            id="tasks-loading"
+            class="loading-state"
+            style="display: none"
+          >
             Loading your assigned tasks...
           </div>
 
@@ -366,14 +407,23 @@
             >
               Unknown error
             </p>
-            <button id="btn-retry-tasks" type="button" class="btn btn-primary">
+            <button
+              id="btn-retry-tasks"
+              type="button"
+              class="btn btn-primary"
+            >
               Retry
             </button>
           </div>
 
           <!-- List of tasks -->
-          <div id="tasks-list-container" class="tasks-list">
-            <div class="loading-state">Loading your assigned tasks...</div>
+          <div
+            id="tasks-list-container"
+            class="tasks-list"
+          >
+            <div class="loading-state">
+              Loading your assigned tasks...
+            </div>
           </div>
 
           <!-- Offline Sync Status Panel -->
@@ -432,10 +482,16 @@
           :class="{ active: state.currentView === 'view-questionnaire' }"
         >
           <div class="view-header">
-            <button id="btn-back-to-tasks" type="button" class="btn-back">
+            <button
+              id="btn-back-to-tasks"
+              type="button"
+              class="btn-back"
+            >
               ← Back to My Tasks
             </button>
-            <h2 id="questionnaire-title">Questionnaire</h2>
+            <h2 id="questionnaire-title">
+              Questionnaire
+            </h2>
             <p id="questionnaire-desc">
               Please answer all questions accurately.
             </p>
@@ -530,8 +586,15 @@
             <!-- Compliance Score Card -->
             <div class="card compliance-score-card">
               <div class="score-radial">
-                <div id="compliance-rate-pct" class="score-value">0%</div>
-                <div class="score-lbl">Compliance Rate</div>
+                <div
+                  id="compliance-rate-pct"
+                  class="score-value"
+                >
+                  0%
+                </div>
+                <div class="score-lbl">
+                  Compliance Rate
+                </div>
               </div>
               <div class="score-breakdown">
                 <div class="breakdown-item">
@@ -539,20 +602,21 @@
                   <strong
                     id="compliance-completed-count"
                     class="val text-success"
-                    >0</strong
-                  >
+                  >0</strong>
                 </div>
                 <div class="breakdown-item">
                   <span class="lbl">Pending:</span>
-                  <strong id="compliance-pending-count" class="val text-warning"
-                    >0</strong
-                  >
+                  <strong
+                    id="compliance-pending-count"
+                    class="val text-warning"
+                  >0</strong>
                 </div>
                 <div class="breakdown-item">
                   <span class="lbl">Overdue:</span>
-                  <strong id="compliance-overdue-count" class="val text-danger"
-                    >0</strong
-                  >
+                  <strong
+                    id="compliance-overdue-count"
+                    class="val text-danger"
+                  >0</strong>
                 </div>
               </div>
             </div>
@@ -572,7 +636,12 @@
                   </thead>
                   <tbody id="compliance-history-tbody">
                     <tr>
-                      <td colspan="4" class="no-data">No history found.</td>
+                      <td
+                        colspan="4"
+                        class="no-data"
+                      >
+                        No history found.
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -599,7 +668,11 @@
           </div>
 
           <!-- Inbox Loading Placeholder -->
-          <div id="inbox-loading" class="loading-state" style="display: none">
+          <div
+            id="inbox-loading"
+            class="loading-state"
+            style="display: none"
+          >
             Loading notifications...
           </div>
 
@@ -624,13 +697,22 @@
             >
               Unknown error
             </p>
-            <button id="btn-retry-inbox" type="button" class="btn btn-primary">
+            <button
+              id="btn-retry-inbox"
+              type="button"
+              class="btn btn-primary"
+            >
               Retry
             </button>
           </div>
 
-          <div id="inbox-container" class="inbox-list">
-            <div class="loading-state">Loading notifications...</div>
+          <div
+            id="inbox-container"
+            class="inbox-list"
+          >
+            <div class="loading-state">
+              Loading notifications...
+            </div>
           </div>
         </section>
 
@@ -667,8 +749,7 @@
               <label
                 for="consent-lang-selector"
                 style="font-weight: bold; margin-right: 8px"
-                >Select Language:</label
-              >
+              >Select Language:</label>
               <select
                 id="consent-lang-selector"
                 style="
@@ -679,19 +760,32 @@
                   color: var(--text-color);
                 "
               >
-                <option value="en">English (en)</option>
-                <option value="es">Español (es)</option>
-                <option value="nl">Nederlands (nl)</option>
-                <option value="fr">Français (fr)</option>
+                <option value="en">
+                  English (en)
+                </option>
+                <option value="es">
+                  Español (es)
+                </option>
+                <option value="nl">
+                  Nederlands (nl)
+                </option>
+                <option value="fr">
+                  Français (fr)
+                </option>
               </select>
             </div>
-            <span id="consent-status-badge" class="status-pill pending"
-              >Pending Check</span
-            >
+            <span
+              id="consent-status-badge"
+              class="status-pill pending"
+            >Pending Check</span>
           </div>
 
           <!-- Loading indicator -->
-          <div id="consent-loading" class="loading-state" style="display: none">
+          <div
+            id="consent-loading"
+            class="loading-state"
+            style="display: none"
+          >
             Loading informed consent details...
           </div>
 
@@ -726,9 +820,15 @@
           </div>
 
           <!-- Consent Document Content & Visual Renderer -->
-          <div id="consent-content-wrapper" style="display: none">
+          <div
+            id="consent-content-wrapper"
+            style="display: none"
+          >
             <!-- Metadata and Clauses -->
-            <div class="card" style="margin-bottom: 24px">
+            <div
+              class="card"
+              style="margin-bottom: 24px"
+            >
               <h3
                 id="consent-template-title"
                 style="margin-top: 0; color: var(--primary-color)"
@@ -808,7 +908,10 @@
                 <!-- Dynamically rendered questions using radio grids -->
               </div>
 
-              <div class="form-actions" style="margin-top: 20px">
+              <div
+                class="form-actions"
+                style="margin-top: 20px"
+              >
                 <button
                   id="btn-submit-consent-answers"
                   type="button"
@@ -906,13 +1009,75 @@
             </div>
           </div>
 
-          <div class="card" style="margin-bottom: 20px">
-            <h3 style="margin-top: 0">💳 Digital Payout Method</h3>
-            <p style="font-size: 14px; color: var(--text-muted)">
-              Virtual Card: <strong>**** **** **** 4821</strong> (EXP: 12/29) |
-              Direct ACH Enabled
-            </p>
-            <button type="button" class="btn btn-primary" style="width: 100%">
+          <div
+            class="card"
+            style="margin-bottom: 20px"
+          >
+            <h3 style="margin-top: 0">
+              💳 Digital Payout Method
+            </h3>
+            <div
+              style="
+                font-size: 14px;
+                color: var(--text-muted);
+                margin-bottom: 12px;
+              "
+            >
+              <p style="margin: 0 0 6px 0">
+                Virtual Card: <strong>**** **** **** 4821</strong> (EXP: 12/29)
+              </p>
+              <div
+                v-if="state.achDetails"
+                style="
+                  padding: 8px;
+                  background: rgba(0, 0, 0, 0.03);
+                  border-radius: 6px;
+                  margin-top: 6px;
+                "
+              >
+                <strong>Direct Deposit (ACH):</strong> Active<br>
+                <span>Routing: {{ state.achDetails.routingMask }} | Account:
+                  {{ state.achDetails.accountMask }}</span><br>
+                <span>Holder: {{ state.achDetails.accountHolder }} ({{
+                  state.achDetails.accountType || "CHECKING"
+                }})</span>
+                <div style="margin-top: 6px">
+                  <button
+                    type="button"
+                    class="btn btn-secondary btn-xs"
+                    @click="openAchModal"
+                  >
+                    ✏️ Update Direct Deposit
+                  </button>
+                </div>
+              </div>
+              <div
+                v-else
+                style="
+                  padding: 8px;
+                  background: rgba(0, 0, 0, 0.03);
+                  border-radius: 6px;
+                  margin-top: 6px;
+                "
+              >
+                <strong>Direct Deposit (ACH):</strong> Not Configured<br>
+                <span style="font-size: 12px">Set up your bank account for direct deposit payouts.</span>
+                <div style="margin-top: 6px">
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-xs"
+                    @click="openAchModal"
+                  >
+                    ➕ Set Up Direct Deposit
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn btn-primary"
+              style="width: 100%"
+            >
               🚀 Disburse Available Balance (${{
                 (state.walletBalance || 0).toFixed(2)
               }})
@@ -951,10 +1116,8 @@
               <p style="margin: 6px 0 0 0; font-size: 14px; font-weight: 600">
                 Tap to Capture or Upload Receipt Image
               </p>
-              <small style="color: var(--text-muted)"
-                >OCR extraction will automatically detect merchant, date, and
-                amount</small
-              >
+              <small style="color: var(--text-muted)">OCR extraction will automatically detect merchant, date, and
+                amount</small>
             </div>
             <input
               id="receipt-file-input"
@@ -963,7 +1126,7 @@
               class="sr-only"
               style="display: none"
               @change="handleReceiptFileSelected"
-            />
+            >
 
             <!-- Loading State -->
             <div
@@ -1007,7 +1170,10 @@
                 <h4 style="margin: 0; font-size: 16px">
                   OCR Extracted Claim Confirmation
                 </h4>
-                <span id="ocr-confidence-badge" class="badge badge-gxp">
+                <span
+                  id="ocr-confidence-badge"
+                  class="badge badge-gxp"
+                >
                   Confidence:
                   {{
                     Math.round((state.expenseForm.ocrConfidence || 0.98) * 100)
@@ -1017,7 +1183,10 @@
 
               <div class="form-group mb-12">
                 <label for="ocr-category">Expense Category</label>
-                <select id="ocr-category" v-model="state.expenseForm.category">
+                <select
+                  id="ocr-category"
+                  v-model="state.expenseForm.category"
+                >
                   <option value="TRANSIT">
                     TRANSIT (Public Transit / Ride Share)
                   </option>
@@ -1027,7 +1196,9 @@
                   <option value="PARKING">
                     PARKING (Parking Garage / Lot)
                   </option>
-                  <option value="MEAL">MEAL (Per-Diem Allowance)</option>
+                  <option value="MEAL">
+                    MEAL (Per-Diem Allowance)
+                  </option>
                   <option value="LODGING">
                     LODGING (Hotel / Accommodation)
                   </option>
@@ -1038,31 +1209,31 @@
                 <label for="ocr-merchant-name">Merchant Name</label>
                 <input
                   id="ocr-merchant-name"
-                  type="text"
                   v-model="state.expenseForm.merchantName"
+                  type="text"
                   required
-                />
+                >
               </div>
 
               <div class="form-group mb-12">
                 <label for="ocr-expense-date">Expense Date</label>
                 <input
                   id="ocr-expense-date"
-                  type="text"
                   v-model="state.expenseForm.expenseDate"
+                  type="text"
                   required
-                />
+                >
               </div>
 
               <div class="form-group mb-12">
                 <label for="ocr-gross-amount">Gross Amount ($ USD)</label>
                 <input
                   id="ocr-gross-amount"
+                  v-model.number="state.expenseForm.grossAmount"
                   type="number"
                   step="0.01"
-                  v-model.number="state.expenseForm.grossAmount"
                   required
-                />
+                >
               </div>
 
               <div
@@ -1084,9 +1255,9 @@
                 >
                   <input
                     id="ocr-meal-allowance-check"
-                    type="checkbox"
                     v-model="state.expenseForm.isMealAllowance"
-                  />
+                    type="checkbox"
+                  >
                   <span>Meal Allowance / Per-Diem Cap ($75.00 limit)</span>
                 </label>
               </div>
@@ -1112,18 +1283,18 @@
               <div
                 v-if="
                   state.expenseResult.status === 'AUTO_APPROVED' ||
-                  state.expenseResult.auto_approved
+                    state.expenseResult.auto_approved
                 "
                 id="expense-auto-approved-banner"
                 style="
                   padding: 16px;
                   border-radius: 8px;
-                  background: rgba(16, 185, 129, 0.1);
-                  border: 1px solid #10b981;
+                  background: var(--semantic-color-success-bg);
+                  border: 1px solid var(--semantic-color-success);
                   color: var(--semantic-color-text-dark);
                 "
               >
-                <h4 style="margin: 0 0 6px 0; color: #10b981; font-size: 16px">
+                <h4 style="margin: 0 0 6px 0; color: var(--semantic-color-success); font-size: 16px">
                   ✅ Reimbursement Auto-Approved & Dispatched
                 </h4>
                 <p style="margin: 0 0 8px 0; font-size: 14px">
@@ -1153,18 +1324,21 @@
                 style="
                   padding: 16px;
                   border-radius: 8px;
-                  background: rgba(245, 158, 11, 0.1);
-                  border: 1px solid #f59e0b;
+                  background: var(--semantic-color-warning-bg);
+                  border: 1px solid var(--semantic-color-warning);
                   color: var(--semantic-color-text-dark);
                 "
               >
-                <h4 style="margin: 0 0 6px 0; color: #f59e0b; font-size: 16px">
+                <h4 style="margin: 0 0 6px 0; color: var(--semantic-color-warning); font-size: 16px">
                   ⚠️ Expense Claim Held for Manual Review
                 </h4>
-                <p id="pending-review-notes" style="margin: 0; font-size: 14px">
+                <p
+                  id="pending-review-notes"
+                  style="margin: 0; font-size: 14px"
+                >
                   {{
                     state.expenseResult.review_notes ||
-                    "Expense claim exceeds policy threshold and requires study coordinator review."
+                      "Expense claim exceeds policy threshold and requires study coordinator review."
                   }}
                 </p>
               </div>
@@ -1189,7 +1363,10 @@
             </p>
           </div>
 
-          <div class="card" style="margin-bottom: 20px">
+          <div
+            class="card"
+            style="margin-bottom: 20px"
+          >
             <div style="display: flex; gap: 8px; margin-bottom: 8px">
               <span class="badge badge-gxp">IRB Approved</span>
               <span class="badge badge-regulatory">Phase III Results</span>
@@ -1250,8 +1427,14 @@
       @keydown="handleModalKeyDown"
     >
       <div class="modal">
-        <form id="sign-modal-form" @submit.prevent>
-          <div id="portal-modal-title" class="modal-header">
+        <form
+          id="sign-modal-form"
+          @submit.prevent
+        >
+          <div
+            id="portal-modal-title"
+            class="modal-header"
+          >
             Electronic Signature Required
           </div>
           <div class="modal-body">
@@ -1292,13 +1475,13 @@
                 <option value="Acknowledge important reminder">
                   Acknowledge important reminder
                 </option>
-                <option value="Other">Other (specify below)</option>
+                <option value="Other">
+                  Other (specify below)
+                </option>
               </select>
             </div>
             <div class="form-group mb-12">
-              <label for="sign-reason-custom"
-                >Custom Reason Detail (Optional)</label
-              >
+              <label for="sign-reason-custom">Custom Reason Detail (Optional)</label>
               <textarea
                 id="sign-reason-custom"
                 placeholder="Provide extra detail if 'Other' selected..."
@@ -1311,7 +1494,7 @@
                 type="text"
                 placeholder="Enter your participant identifier..."
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <label for="sign-password">Security PIN / Password</label>
@@ -1321,7 +1504,7 @@
                 inputmode="numeric"
                 placeholder="••••••••"
                 required
-              />
+              >
             </div>
           </div>
           <div class="modal-footer">
@@ -1332,7 +1515,11 @@
             >
               Cancel
             </button>
-            <button id="btn-modal-sign" type="submit" class="btn btn-primary">
+            <button
+              id="btn-modal-sign"
+              type="submit"
+              class="btn btn-primary"
+            >
               Sign and Confirm
             </button>
           </div>
@@ -1352,12 +1539,18 @@
       tabindex="-1"
       @keydown="handleReconsentModalKeyDown"
     >
-      <div class="modal" style="max-width: 600px">
+      <div
+        class="modal"
+        style="max-width: 600px"
+      >
         <form
           id="reconsent-modal-form"
           @submit.prevent="submitReconsentSignature"
         >
-          <div id="portal-reconsent-modal-title" class="modal-header">
+          <div
+            id="portal-reconsent-modal-title"
+            class="modal-header"
+          >
             Protocol Amendment Re-Consent Review
           </div>
           <div class="modal-body">
@@ -1414,16 +1607,14 @@
               >
                 {{
                   state.pendingReconsent?.change_summary ||
-                  state.pendingReconsent?.summary_of_changes ||
-                  "Updated study consent document terms."
+                    state.pendingReconsent?.summary_of_changes ||
+                    "Updated study consent document terms."
                 }}
               </p>
             </div>
 
             <div class="form-group mb-12">
-              <label for="reconsent-sign-reason"
-                >Reason for Action / Declaration</label
-              >
+              <label for="reconsent-sign-reason">Reason for Action / Declaration</label>
               <select
                 id="reconsent-sign-reason"
                 v-model="state.reconsentForm.reason"
@@ -1434,13 +1625,13 @@
                 <option value="Acknowledge updated clinical study consent">
                   Acknowledge updated clinical study consent
                 </option>
-                <option value="Other">Other (specify below)</option>
+                <option value="Other">
+                  Other (specify below)
+                </option>
               </select>
             </div>
             <div class="form-group mb-12">
-              <label for="reconsent-sign-reason-custom"
-                >Custom Reason Detail (Optional)</label
-              >
+              <label for="reconsent-sign-reason-custom">Custom Reason Detail (Optional)</label>
               <textarea
                 id="reconsent-sign-reason-custom"
                 v-model="state.reconsentForm.customReason"
@@ -1455,12 +1646,10 @@
                 type="text"
                 placeholder="Enter your participant identifier..."
                 required
-              />
+              >
             </div>
             <div class="form-group">
-              <label for="reconsent-sign-password"
-                >Security PIN / Password</label
-              >
+              <label for="reconsent-sign-password">Security PIN / Password</label>
               <input
                 id="reconsent-sign-password"
                 v-model="state.reconsentForm.password"
@@ -1468,7 +1657,7 @@
                 inputmode="numeric"
                 placeholder="••••••••"
                 required
-              />
+              >
             </div>
           </div>
           <div class="modal-footer">
@@ -1505,8 +1694,14 @@
       @keydown="handleSetupModalKeyDown"
     >
       <div class="modal">
-        <form id="pin-setup-form" @submit.prevent="handlePINSetupSubmit">
-          <div id="pin-setup-title" class="modal-header">
+        <form
+          id="pin-setup-form"
+          @submit.prevent="handlePINSetupSubmit"
+        >
+          <div
+            id="pin-setup-title"
+            class="modal-header"
+          >
             Configure Security PIN
           </div>
           <div class="modal-body">
@@ -1539,7 +1734,7 @@
                 pattern="[0-9]*"
                 placeholder="••••"
                 required
-              />
+              >
             </div>
             <div class="form-group">
               <label for="confirm-setup-pin">Confirm Numeric PIN</label>
@@ -1551,7 +1746,7 @@
                 pattern="[0-9]*"
                 placeholder="••••"
                 required
-              />
+              >
             </div>
           </div>
           <div class="modal-footer">
@@ -1580,8 +1775,14 @@
       @keydown="handleUnlockModalKeyDown"
     >
       <div class="modal">
-        <form id="pin-unlock-form" @submit.prevent="handlePINUnlockSubmit">
-          <div id="pin-unlock-title" class="modal-header">
+        <form
+          id="pin-unlock-form"
+          @submit.prevent="handlePINUnlockSubmit"
+        >
+          <div
+            id="pin-unlock-title"
+            class="modal-header"
+          >
             Device Locked - Enter Security PIN
           </div>
           <div class="modal-body">
@@ -1615,7 +1816,7 @@
                 placeholder="••••"
                 required
                 @keydown.enter="handlePINUnlockSubmit"
-              />
+              >
             </div>
           </div>
           <div class="modal-footer">
@@ -1631,12 +1832,164 @@
       </div>
     </div>
 
+    <!-- Modal: Direct Deposit (ACH) Setup -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="state.showAchModal"
+      id="portal-ach-modal"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ach-modal-title"
+      tabindex="-1"
+      @click.self="closeAchModal"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <span id="ach-modal-title">🏛️ Direct Deposit (ACH) Setup</span>
+          <button
+            type="button"
+            class="btn-close-drawer"
+            aria-label="Close modal"
+            @click="closeAchModal"
+          >
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <p
+            style="
+              font-size: 13px;
+              color: var(--text-muted);
+              margin-bottom: 16px;
+            "
+          >
+            Enter your bank routing and account numbers to receive stipend
+            disbursements directly into your bank account. Banking credentials
+            are secure and tokenized.
+          </p>
+
+          <div
+            v-if="state.achError"
+            class="error-state"
+            style="color: var(--danger); margin-bottom: 12px; font-size: 13px"
+          >
+            {{ state.achError }}
+          </div>
+          <div
+            v-if="state.achSuccess"
+            class="success-state"
+            style="
+              color: var(--semantic-color-success);
+              margin-bottom: 12px;
+              font-size: 13px;
+            "
+          >
+            {{ state.achSuccess }}
+          </div>
+
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
+            <label for="ach-account-holder">Account Holder Full Name</label>
+            <input
+              id="ach-account-holder"
+              v-model="state.achForm.accountHolderName"
+              type="text"
+              placeholder="e.g. Jane Doe"
+              required
+            >
+          </div>
+
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
+            <label for="ach-account-type">Account Type</label>
+            <select
+              id="ach-account-type"
+              v-model="state.achForm.accountType"
+            >
+              <option value="CHECKING">
+                Checking
+              </option>
+              <option value="SAVINGS">
+                Savings
+              </option>
+            </select>
+          </div>
+
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
+            <label for="ach-routing-number">9-Digit ABA Routing Number</label>
+            <!-- deid-ignore -->
+            <input
+              id="ach-routing-number"
+              v-model="state.achForm.routingNumber"
+              type="text"
+              maxlength="9"
+              placeholder="e.g. 021000021"
+              required
+            >
+          </div>
+
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
+            <label for="ach-account-number">Bank Account Number</label>
+            <input
+              id="ach-account-number"
+              v-model="state.achForm.accountNumber"
+              type="password"
+              placeholder="Enter bank account number"
+              required
+            >
+          </div>
+        </div>
+        <div
+          class="modal-footer"
+          style="display: flex; justify-content: flex-end; gap: 8px"
+        >
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="closeAchModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="
+              state.achSubmitting ||
+                !state.achForm.routingNumber ||
+                state.achForm.routingNumber.length !== 9 ||
+                !state.achForm.accountNumber ||
+                !state.achForm.accountHolderName
+            "
+            @click="handleAchSubmit"
+          >
+            {{
+              state.achSubmitting ? "Saving..." : "Save Direct Deposit Details"
+            }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Activity log at the bottom for patient transparency & 21 CFR compliance review -->
     <footer class="portal-footer">
       <div class="footer-title">
         My Digital Activity Audit Log (21 CFR Part 11 Compliant)
       </div>
-      <div id="portal-ledger-timeline" class="ledger-timeline">
+      <div
+        id="portal-ledger-timeline"
+        class="ledger-timeline"
+      >
         <!-- Ledger records shown here -->
       </div>
     </footer>
@@ -1658,6 +2011,9 @@ import {
   describeQueuedSync,
   extractReceiptOcr,
   submitExpenseClaim,
+  openAchModal,
+  closeAchModal,
+  handleAchSubmit,
 } from "./index.js";
 
 function handleReconsentModalKeyDown(e) {
@@ -1953,5 +2309,28 @@ function handleModalKeyDown(e) {
 
 onMounted(() => {
   // Wait for DOM
+});
+
+defineExpose({
+  handleReconsentModalKeyDown,
+  handleSetupModalKeyDown,
+  handleUnlockModalKeyDown,
+  handleLogout,
+  toggleSyncDrawer,
+  triggerManualSync,
+  getInstrumentName,
+  formatTime,
+  getSubmissionClass,
+  getBadgeClass,
+  getStatusLabel,
+  getStatusDescription,
+  handleTabKeyDown,
+  selectView,
+  submitActiveQuestionnaire,
+  cancelQuestionnaire,
+  triggerReceiptUpload,
+  handleReceiptFileSelected,
+  handleConfirmReimburse,
+  handleModalKeyDown,
 });
 </script>

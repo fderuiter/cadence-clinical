@@ -244,6 +244,40 @@
         }
       }
     },
+    "/api/v1/payments/participant/wallets/{walletId}/ach-account": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Register tokenized direct deposit ACH bank account for participant wallet.",
+        "operationId": "RegisterAchAccount",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_RegisterAchAccountRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
       "post": {
         "tags": [
@@ -1229,6 +1263,65 @@
             ]
           },
           "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Payments_RegisterAchAccountRequestDto": {
+        "type": "object",
+        "properties": {
+          "routing_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "routingNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "account_number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accountNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "account_holder_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accountHolderName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "account_holder": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "account_type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accountType": {
             "type": [
               "null",
               "string"

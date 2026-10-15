@@ -28,6 +28,7 @@ Generated from `docs/openapi/payments_openapi.json` by `pnpm cadence generate-ap
 | `POST` | `/api/v1/payments/participant/wallets/disburse` | DisburseStipendWallet | Disburse stipend to participant wallet. |
 | `GET` | `/api/v1/payments/participant/wallets/subject/{subjectId}` | GetSubjectWallet | Retrieve participant wallet balance and details. |
 | `GET` | `/api/v1/payments/participant/wallets/{walletId}` | GetWalletById | Retrieve participant wallet details by wallet ID. |
+| `POST` | `/api/v1/payments/participant/wallets/{walletId}/ach-account` | RegisterAchAccount | Register tokenized direct deposit ACH bank account for participant wallet. |
 | `GET` | `/api/v1/payments/participant/wallets/{walletId}/balance` | GetBalanceInquiry | Real-time balance inquiry for participant wallet. |
 | `POST` | `/api/v1/payments/participant/wallets/{walletId}/disburse` | DisburseParticipantFunds | Disburse digital funds from participant wallet to debit card or bank account. |
 | `POST` | `/api/v1/payments/participant/wallets/{walletId}/issue-card` | IssueReloadableCard | Issue or re-issue reloadable debit card for participant wallet. |
