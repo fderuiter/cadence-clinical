@@ -102,34 +102,57 @@ class DatasetJsonEtlService:
 
             item_data = []
             usubjid_cache: dict[str, str] = {}
+            for r in raw_observations:
+                sub = r.get("subject_id")
+                if sub and sub not in usubjid_cache:
+                    sid = r.get("study_id", protocol_id)
+                    usubjid_cache[sub] = f"{sid}-{sub}"
+
+            s_elem = sample[0] if sample else {}
+            has_usubjid = "usubjid" in s_elem
+            has_study_id = "study_id" in s_elem
+            has_subject_id = "subject_id" in s_elem
 
             for var_id in present_var_ids:
                 sdtm_var, unit = var_map_dict[var_id]
-                rows = [
-                    [
-                        sid := (r["study_id"] if "study_id" in r else protocol_id),
-                        (
-                            r["usubjid"]
-                            if "usubjid" in r
-                            else (
-                                usubjid_cache.get(
-                                    sub := (
-                                        r["subject_id"]
-                                        if "subject_id" in r
-                                        else "UNKNOWN"
-                                    )
-                                )
-                                or usubjid_cache.setdefault(sub, f"{sid}-{sub}")
-                            )
-                        ),
-                        domain,
-                        sdtm_var,
-                        str(r[var_id]),
-                        unit,
+                if has_usubjid:
+                    if has_study_id:
+                        rows = [
+                            [r["study_id"], r["usubjid"], domain, sdtm_var, str(r[var_id]), unit]
+                            for r in raw_observations
+                            if var_id in r
+                        ]
+                    else:
+                        rows = [
+                            [protocol_id, r["usubjid"], domain, sdtm_var, str(r[var_id]), unit]
+                            for r in raw_observations
+                            if var_id in r
+                        ]
+                elif has_study_id and has_subject_id:
+                    rows = [
+                        [r["study_id"], usubjid_cache[r["subject_id"]], domain, sdtm_var, str(r[var_id]), unit]
+                        for r in raw_observations
+                        if var_id in r
                     ]
-                    for r in raw_observations
-                    if var_id in r
-                ]
+                else:
+                    rows = [
+                        [
+                            sid := r.get("study_id", protocol_id),
+                            r.get(
+                                "usubjid",
+                                usubjid_cache.get(
+                                    r.get("subject_id", "UNKNOWN"),
+                                    f"{sid}-{r.get('subject_id', 'UNKNOWN')}",
+                                ),
+                            ),
+                            domain,
+                            sdtm_var,
+                            str(r[var_id]),
+                            unit,
+                        ]
+                        for r in raw_observations
+                        if var_id in r
+                    ]
                 item_data.extend(rows)
 
         return {
