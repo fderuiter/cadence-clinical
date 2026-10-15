@@ -62,7 +62,7 @@ importers:
         version: 2.0.17(mermaid@11.17.2)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.6.3)(change-case@5.4.4)(lightningcss@1.33.0)(postcss@8.5.28)(search-insights@2.17.3)(sortablejs@1.14.0)(typescript@6.0.3))
       vitest:
         specifier: ^5.0.2
-        version: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)))(vite@8.3.3(@types/node@26.6.3))
+        version: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)))(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
       vue:
         specifier: ^3.5.42
         version: 3.5.42(typescript@6.0.3)
@@ -93,7 +93,7 @@ importers:
         version: 1.64.0
       '@vitejs/plugin-vue':
         specifier: ^6.0.8
-        version: 6.0.8(vite@8.3.3(@types/node@26.6.3))(vue@3.5.42(typescript@6.0.3))
+        version: 6.0.8(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))(vue@3.5.42(typescript@6.0.3))
       '@vitest/coverage-v8':
         specifier: ^5.0.2
         version: 5.0.2(vitest@5.0.2)
@@ -104,14 +104,14 @@ importers:
         specifier: ^30.1.2
         version: 30.1.2
       msw:
-        specifier: ^3.0.1
-        version: 3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3))
+        specifier: ^3.0.3
+        version: 3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
       vite:
         specifier: ^8.3.3
-        version: 8.3.3(@types/node@26.6.3)
+        version: 8.3.3(@types/node@26.6.3)(esbuild@0.21.5)
       vitest:
         specifier: ^5.0.2
-        version: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)))(vite@8.3.3(@types/node@26.6.3))
+        version: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)))(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
 
   apps/web:
     dependencies:
@@ -141,7 +141,7 @@ importers:
         version: 11.4.14(vue@3.5.42(typescript@6.0.3))
       vue-router:
         specifier: ^5.3.1
-        version: 5.3.1(@vue/compiler-sfc@3.5.42)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.42(typescript@6.0.3)))(rolldown@1.2.11)(rollup@4.62.3)(vite@8.3.3(@types/node@26.6.3))(vue@3.5.42(typescript@6.0.3))
+        version: 5.3.1(@vue/compiler-sfc@3.5.42)(esbuild@0.21.5)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.42(typescript@6.0.3)))(rolldown@1.2.11)(rollup@4.62.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))(vue@3.5.42(typescript@6.0.3))
       vuedraggable:
         specifier: 4.1.0
         version: 4.1.0(vue@3.5.42(typescript@6.0.3))
@@ -157,7 +157,7 @@ importers:
         version: 26.6.3
       '@vitejs/plugin-vue':
         specifier: ^6.0.8
-        version: 6.0.8(vite@8.3.3(@types/node@26.6.3))(vue@3.5.42(typescript@6.0.3))
+        version: 6.0.8(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))(vue@3.5.42(typescript@6.0.3))
       '@vitest/coverage-v8':
         specifier: ^5.0.2
         version: 5.0.2(vitest@5.0.2)
@@ -174,8 +174,8 @@ importers:
         specifier: ^30.1.2
         version: 30.1.2
       msw:
-        specifier: ^3.0.1
-        version: 3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3))
+        specifier: ^3.0.3
+        version: 3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -184,7 +184,7 @@ importers:
         version: 6.0.3
       vite:
         specifier: ^8.3.3
-        version: 8.3.3(@types/node@26.6.3)
+        version: 8.3.3(@types/node@26.6.3)(esbuild@0.21.5)
 
   packages/ui:
     dependencies:
@@ -194,7 +194,7 @@ importers:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: ^6.0.8
-        version: 6.0.8(vite@8.3.3(@types/node@26.6.3))(vue@3.5.42(typescript@6.0.3))
+        version: 6.0.8(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))(vue@3.5.42(typescript@6.0.3))
       pinia:
         specifier: ^4.0.3
         version: 4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.42(typescript@6.0.3))
@@ -203,10 +203,10 @@ importers:
         version: 6.0.3
       vite:
         specifier: ^8.3.3
-        version: 8.3.3(@types/node@26.6.3)
+        version: 8.3.3(@types/node@26.6.3)(esbuild@0.21.5)
       vitest:
         specifier: ^5.0.2
-        version: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)))(vite@8.3.3(@types/node@26.6.3))
+        version: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)))(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
       vue:
         specifier: ^3.5.42
         version: 3.5.42(typescript@6.0.3)
@@ -219,7 +219,7 @@ importers:
     devDependencies:
       vitest:
         specifier: ^5.0.2
-        version: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)))(vite@8.3.3(@types/node@26.6.3))
+        version: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)))(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
 
 packages:
 
@@ -611,15 +611,6 @@ packages:
   '@eslint/plugin-kit@0.7.3':
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
-
-  '@exodus/bytes@1.15.1':
-    resolution: {integrity: sha512-S6mL0yNB/Abt9Ei4tq8gDhcczc4S3+vQ4ra7vxnAf+YHC02srtqxKKZghx2Dq6p0e66THKwR6r8N6P95wEty7Q==}
-    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
-    peerDependencies:
-      '@noble/hashes': ^1.8.0 || ^2.0.0
-    peerDependenciesMeta:
-      '@noble/hashes':
-        optional: true
 
   '@exodus/bytes@1.16.0':
     resolution: {integrity: sha512-IcpW84uEn3N7ETtNZMlxKhfl6Pec8rUNGOTBtWbK1FKhJxIFAptZyVrvVRVBimAJxJCgc3PxepxkdWWG4DVzfA==}
@@ -2357,8 +2348,8 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  msw@3.0.1:
-    resolution: {integrity: sha512-gZvA8aJe8t5Ajnt5G91v19zdjCDSf8jmWO3I9krN+2PFdVgg90Mrl4lWkjP3bivMRAmyI+G2eEIzrcPko8laEg==}
+  msw@3.0.3:
+    resolution: {integrity: sha512-hsXUCt2gK12q1IUBY9VmMun+yC60eEpVzegAFN5aGZbXhrGqtgPARVWn2ew4mezYvk1G8yhFha9myGSyRyRGWg==}
     engines: {node: '>=22.12.0'}
     hasBin: true
     peerDependencies:
@@ -3460,8 +3451,6 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@exodus/bytes@1.15.1': {}
-
   '@exodus/bytes@1.16.0': {}
 
   '@humanfs/core@0.19.2':
@@ -4145,10 +4134,10 @@ snapshots:
       vite: 5.4.21(@types/node@26.6.3)(lightningcss@1.33.0)
       vue: 3.5.42(typescript@6.0.3)
 
-  '@vitejs/plugin-vue@6.0.8(vite@8.3.3(@types/node@26.6.3))(vue@3.5.42(typescript@6.0.3))':
+  '@vitejs/plugin-vue@6.0.8(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))(vue@3.5.42(typescript@6.0.3))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
-      vite: 8.3.3(@types/node@26.6.3)
+      vite: 8.3.3(@types/node@26.6.3)(esbuild@0.21.5)
       vue: 3.5.42(typescript@6.0.3)
 
   '@vitest/coverage-v8@5.0.2(vitest@5.0.2)':
@@ -4161,7 +4150,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)))(vite@8.3.3(@types/node@26.6.3))
+      vitest: 5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)))(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
 
   '@vitest/istanbul-lib-coverage@1.0.2': {}
 
@@ -4169,15 +4158,15 @@ snapshots:
     dependencies:
       '@vitest/istanbul-lib-coverage': 1.0.2
 
-  '@vitest/mocker@5.0.2(msw@3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)))(vite@8.3.3(@types/node@26.6.3))':
+  '@vitest/mocker@5.0.2(msw@3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)))(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.0.2
       estree-walker: 3.0.3
       magic-string: 1.4.2
     optionalDependencies:
-      msw: 3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3))
-      vite: 8.3.3(@types/node@26.6.3)
+      msw: 3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
+      vite: 8.3.3(@types/node@26.6.3)(esbuild@0.21.5)
 
   '@vitest/spy@5.0.2': {}
 
@@ -4961,7 +4950,7 @@ snapshots:
 
   html-encoding-sniffer@7.0.0:
     dependencies:
-      '@exodus/bytes': 1.15.1
+      '@exodus/bytes': 1.16.0
     transitivePeerDependencies:
       - '@noble/hashes'
 
@@ -5246,7 +5235,7 @@ snapshots:
 
   ms@2.1.3: {}
 
-  msw@3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)):
+  msw@3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)):
     dependencies:
       '@inquirer/confirm': 6.2.0(@types/node@26.6.3)
       '@msw/url': 0.1.2
@@ -5262,7 +5251,7 @@ snapshots:
       yargs: 18.2.0
     optionalDependencies:
       typescript: 6.0.3
-      vite: 8.3.3(@types/node@26.6.3)
+      vite: 8.3.3(@types/node@26.6.3)(esbuild@0.21.5)
     transitivePeerDependencies:
       - '@types/node'
       - supports-color
@@ -5692,15 +5681,16 @@ snapshots:
       pathe: 2.0.3
       picomatch: 4.0.7
 
-  unplugin@3.3.0(rolldown@1.2.11)(rollup@4.62.3)(vite@8.3.3(@types/node@26.6.3)):
+  unplugin@3.3.0(esbuild@0.21.5)(rolldown@1.2.11)(rollup@4.62.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)):
     dependencies:
       '@jridgewell/remapping': 2.3.5
       picomatch: 4.0.7
       webpack-virtual-modules: 0.6.2
     optionalDependencies:
+      esbuild: 0.21.5
       rolldown: 1.2.11
       rollup: 4.62.3
-      vite: 8.3.3(@types/node@26.6.3)
+      vite: 8.3.3(@types/node@26.6.3)(esbuild@0.21.5)
 
   until-async@3.0.2: {}
 
@@ -5734,7 +5724,7 @@ snapshots:
       fsevents: 2.3.3
       lightningcss: 1.33.0
 
-  vite@8.3.3(@types/node@26.6.3):
+  vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -5743,6 +5733,7 @@ snapshots:
       tinyglobby: 0.2.17
     optionalDependencies:
       '@types/node': 26.6.3
+      esbuild: 0.21.5
       fsevents: 2.3.3
 
   vitepress-plugin-mermaid@2.0.17(mermaid@11.17.2)(vitepress@1.6.4(@algolia/client-search@5.56.0)(@types/node@26.6.3)(change-case@5.4.4)(lightningcss@1.33.0)(postcss@8.5.28)(search-insights@2.17.3)(sortablejs@1.14.0)(typescript@6.0.3)):
@@ -5802,10 +5793,10 @@ snapshots:
       - typescript
       - universal-cookie
 
-  vitest@5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)))(vite@8.3.3(@types/node@26.6.3)):
+  vitest@5.0.2(@types/node@26.6.3)(@vitest/coverage-v8@5.0.2)(jsdom@30.1.2)(msw@3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)))(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.2(msw@3.0.1(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)))(vite@8.3.3(@types/node@26.6.3))
+      '@vitest/mocker': 5.0.2(msw@3.0.3(@types/node@26.6.3)(supports-color@10.2.2)(typescript@6.0.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5)))(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
       chai: 6.2.2
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -5816,7 +5807,7 @@ snapshots:
       tinybench: 6.2.0
       tinyexec: 1.3.0
       tinyglobby: 0.2.17
-      vite: 8.3.3(@types/node@26.6.3)
+      vite: 8.3.3(@types/node@26.6.3)(esbuild@0.21.5)
       why-is-node-running: 3.2.2
     optionalDependencies:
       '@types/node': 26.6.3
@@ -5847,7 +5838,7 @@ snapshots:
       '@vue/devtools-api': 6.6.4
       vue: 3.5.42(typescript@6.0.3)
 
-  vue-router@5.3.1(@vue/compiler-sfc@3.5.42)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.42(typescript@6.0.3)))(rolldown@1.2.11)(rollup@4.62.3)(vite@8.3.3(@types/node@26.6.3))(vue@3.5.42(typescript@6.0.3)):
+  vue-router@5.3.1(@vue/compiler-sfc@3.5.42)(esbuild@0.21.5)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.42(typescript@6.0.3)))(rolldown@1.2.11)(rollup@4.62.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))(vue@3.5.42(typescript@6.0.3)):
     dependencies:
       '@vue-macros/common': 3.1.4(vue@3.5.42(typescript@6.0.3))
       '@vue/devtools-api': 8.2.1
@@ -5863,13 +5854,13 @@ snapshots:
       picomatch: 4.0.7
       scule: 1.3.0
       tinyglobby: 0.2.17
-      unplugin: 3.3.0(rolldown@1.2.11)(rollup@4.62.3)(vite@8.3.3(@types/node@26.6.3))
+      unplugin: 3.3.0(esbuild@0.21.5)(rolldown@1.2.11)(rollup@4.62.3)(vite@8.3.3(@types/node@26.6.3)(esbuild@0.21.5))
       unplugin-utils: 0.3.2
       vue: 3.5.42(typescript@6.0.3)
     optionalDependencies:
       '@vue/compiler-sfc': 3.5.42
       pinia: 4.0.3(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.42(typescript@6.0.3))
-      vite: 8.3.3(@types/node@26.6.3)
+      vite: 8.3.3(@types/node@26.6.3)(esbuild@0.21.5)
     transitivePeerDependencies:
       - '@farmfe/core'
       - '@rspack/core'
