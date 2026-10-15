@@ -10,7 +10,7 @@
     </p>
     <template v-else>
       <div
-        v-if="canManage && selectableQueries.length > 0"
+        v-if="selectableQueries.length > 0"
         class="batch-controls"
         role="group"
         aria-label="Batch query actions"
@@ -27,6 +27,16 @@
         </label>
         <div class="batch-buttons">
           <button
+            id="btn-batch-respond"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="selectedRespondableQueries.length === 0"
+            @click="startBatchAction('respond')"
+          >
+            Batch Answer
+          </button>
+          <button
+            v-if="canManage"
             id="btn-batch-close"
             type="button"
             class="btn btn-secondary"
@@ -36,6 +46,7 @@
             Batch Close
           </button>
           <button
+            v-if="canManage"
             id="btn-batch-cancel"
             type="button"
             class="btn btn-secondary"
@@ -52,15 +63,19 @@
         class="batch-form"
         role="group"
         :aria-label="
-          batchAction === 'close'
-            ? 'Batch close queries'
-            : 'Batch cancel queries'
+          batchAction === 'respond'
+            ? 'Batch answer queries'
+            : batchAction === 'close'
+              ? 'Batch close queries'
+              : 'Batch cancel queries'
         "
       >
         <label for="batch-query-reason">{{
-          batchAction === "close"
-            ? `Reason for batch closing ${selectedCloseableQueries.length} query/queries`
-            : `Reason for batch cancelling ${selectedCancellableQueries.length} query/queries`
+          batchAction === "respond"
+            ? `Answer for batch answering ${selectedRespondableQueries.length} query/queries`
+            : batchAction === "close"
+              ? `Reason for batch closing ${selectedCloseableQueries.length} query/queries`
+              : `Reason for batch cancelling ${selectedCancellableQueries.length} query/queries`
         }}</label>
         <textarea id="batch-query-reason" v-model="batchReason" rows="2" />
         <div class="query-buttons">
@@ -72,7 +87,13 @@
             @click="confirmBatchAction"
           >
             Confirm
-            {{ batchAction === "close" ? "Batch Close" : "Batch Cancel" }}
+            {{
+              batchAction === "respond"
+                ? "Batch Answer"
+                : batchAction === "close"
+                  ? "Batch Close"
+                  : "Batch Cancel"
+            }}
           </button>
           <button
             type="button"
@@ -93,7 +114,7 @@
         >
           <div class="query-head">
             <input
-              v-if="canManage && isQuerySelectable(query)"
+              v-if="isQuerySelectable(query)"
               :id="`select-query-${query.id}`"
               v-model="selectedQueryIds"
               type="checkbox"
@@ -226,16 +247,27 @@ const actionText = ref("");
 const busy = ref(false);
 
 const selectedQueryIds = ref<string[]>([]);
-const batchAction = ref<"close" | "cancel" | null>(null);
+const batchAction = ref<"respond" | "close" | "cancel" | null>(null);
 const batchReason = ref("");
 const batchBusy = ref(false);
 
 function isQuerySelectable(query: ClinicalQuery): boolean {
-  return query.status !== "CLOSED" && query.status !== "CANCELLED";
+  if (props.canManage) {
+    return query.status !== "CLOSED" && query.status !== "CANCELLED";
+  }
+  return query.status === "OPEN" || query.status === "REOPENED";
 }
 
 const selectableQueries = computed(() => {
   return props.queries.filter(isQuerySelectable);
+});
+
+const selectedRespondableQueries = computed(() => {
+  return props.queries.filter(
+    (q) =>
+      selectedQueryIds.value.includes(q.id) &&
+      (q.status === "OPEN" || q.status === "REOPENED")
+  );
 });
 
 const selectedCloseableQueries = computed(() => {
@@ -266,7 +298,7 @@ function toggleSelectAll(event: Event) {
   }
 }
 
-function startBatchAction(action: "close" | "cancel") {
+function startBatchAction(action: "respond" | "close" | "cancel") {
   batchAction.value = action;
   batchReason.value = "";
 }
@@ -282,16 +314,21 @@ async function confirmBatchAction() {
   if (!action || !reason) return;
 
   const targetQueries =
-    action === "close"
-      ? selectedCloseableQueries.value
-      : selectedCancellableQueries.value;
+    action === "respond"
+      ? selectedRespondableQueries.value
+      : action === "close"
+        ? selectedCloseableQueries.value
+        : selectedCancellableQueries.value;
 
   const targetIds = targetQueries.map((q) => q.id);
   if (targetIds.length === 0) return;
 
   batchBusy.value = true;
   try {
-    const success = await canvas.batchActOnQueries(targetIds, action, reason);
+    const success =
+      action === "respond"
+        ? await canvas.batchRespondToQueries(targetIds, reason)
+        : await canvas.batchActOnQueries(targetIds, action, reason);
     if (success) {
       selectedQueryIds.value = selectedQueryIds.value.filter(
         (id) => !targetIds.includes(id)

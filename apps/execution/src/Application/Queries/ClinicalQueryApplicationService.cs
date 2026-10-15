@@ -544,6 +544,89 @@ public sealed class ClinicalQueryApplicationService(
         return new BatchQueryResponse(responses, responses.Count);
     }
 
+    public async Task<Result<BatchQueryResponse>> BatchRespondAsync(
+        BatchQueryRespondRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.QueryIds is null || request.QueryIds.Count == 0)
+        {
+            return DomainError.Validation("INVALID_BATCH_REQUEST", "At least one query ID must be provided.");
+        }
+
+        if (request.QueryIds.Count > 100)
+        {
+            return DomainError.Validation("BATCH_CAP_EXCEEDED", "Batch target size exceeds maximum limit of 100 items per transaction.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Response))
+        {
+            return QueryErrors.ResponseRequired();
+        }
+
+        var parsedIds = new List<QueryId>(request.QueryIds.Count);
+        foreach (var idStr in request.QueryIds)
+        {
+            if (!QueryId.TryParse(idStr, out var qId))
+            {
+                return DomainError.Validation("INVALID_QUERY_ID", $"Query ID '{idStr}' is not a valid GUID.");
+            }
+            parsedIds.Add(qId);
+        }
+
+        var changeReason = !string.IsNullOrWhiteSpace(auditContextAccessor.ChangeReason)
+            ? auditContextAccessor.ChangeReason
+            : request.Reason;
+
+        var queries = await queryRepository.GetForUpdateAsync(parsedIds, cancellationToken).ConfigureAwait(false);
+        if (queries.Count != parsedIds.Distinct().Count())
+        {
+            var missingId = parsedIds.FirstOrDefault(id => !queries.Any(q => q.Id == id));
+            return QueryErrors.NotFound(missingId.ToString());
+        }
+
+        var queryMap = queries.ToDictionary(q => q.Id);
+
+        foreach (var qId in parsedIds)
+        {
+            var query = queryMap[qId];
+            if (query.Status is not (QueryStatus.Open or QueryStatus.Reopened))
+            {
+                return QueryErrors.InvalidStateTransition(query.Status.ToString(), QueryStatus.Answered.ToString());
+            }
+        }
+
+        await using var transaction = await queryRepository.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+        var updatedList = new List<ClinicalQuery>(queries.Count);
+
+        foreach (var qId in parsedIds)
+        {
+            var query = queryMap[qId];
+            var answerResult = query.Answer(request.Response, auditContextAccessor.UserId);
+            if (answerResult.IsFailure)
+            {
+                return answerResult.Error!;
+            }
+
+            if (!string.IsNullOrWhiteSpace(changeReason))
+            {
+                query.ReasonForChange = changeReason;
+            }
+
+            updatedList.Add(query);
+        }
+
+        await queryRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (transaction is Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction dbTx)
+        {
+            await dbTx.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        var responses = updatedList.Select(MapToResponse).ToList();
+        return new BatchQueryResponse(responses, responses.Count);
+    }
+
     /// <summary>Whether <paramref name="role"/> may close, reopen or cancel a query (CRA or data manager).</summary>
     public static bool CanManageQueryLifecycle(string role) => IsAuthorizedCraOrDm(role);
 

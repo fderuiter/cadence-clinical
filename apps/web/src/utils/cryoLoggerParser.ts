@@ -71,7 +71,7 @@ function parseTimestampValue(rawVal: any): string | null {
     if (!str) return null;
     const d = new Date(str);
     if (!isNaN(d.getTime())) return d.toISOString();
-    
+
     // Try parsing US format MM/DD/YYYY HH:mm:ss or DD-MMM-YYYY
     const parts = str.split(/[\s,T]+/);
     if (parts.length >= 2) {
@@ -128,9 +128,12 @@ export async function parseCryoLoggerFile(
       readings = await parseJsonTelemetry(parsedJson);
     } catch (err: any) {
       if (fileName.toLowerCase().endsWith(".json")) {
-        throw new Error(`Invalid or corrupted JSON logger file: ${err.message || err}`, {
-          cause: err,
-        });
+        throw new Error(
+          `Invalid or corrupted JSON logger file: ${err.message || err}`,
+          {
+            cause: err,
+          }
+        );
       }
     }
   }
@@ -167,7 +170,9 @@ export async function parseCryoLoggerFile(
     const r = readings[i];
     if (r.isExcursion) {
       const type: "WARM_EXCURSION" | "COLD_EXCURSION" =
-        r.temperatureCelsius > CRYO_TEMP_SAFE_MAX ? "WARM_EXCURSION" : "COLD_EXCURSION";
+        r.temperatureCelsius > CRYO_TEMP_SAFE_MAX
+          ? "WARM_EXCURSION"
+          : "COLD_EXCURSION";
 
       if (currentEventStart === null) {
         currentEventStart = i;
@@ -329,7 +334,8 @@ async function parseJsonTelemetry(jsonObj: any): Promise<TelemetryReading[]> {
       readings.push({
         timestamp: parsedTime,
         temperatureCelsius: parsedTemp,
-        isExcursion: parsedTemp > CRYO_TEMP_SAFE_MAX || parsedTemp < CRYO_TEMP_SAFE_MIN,
+        isExcursion:
+          parsedTemp > CRYO_TEMP_SAFE_MAX || parsedTemp < CRYO_TEMP_SAFE_MIN,
       });
     }
   }
@@ -422,7 +428,8 @@ async function parseCsvTelemetry(
           readings.push({
             timestamp: timeVal,
             temperatureCelsius: tempVal,
-            isExcursion: tempVal > CRYO_TEMP_SAFE_MAX || tempVal < CRYO_TEMP_SAFE_MIN,
+            isExcursion:
+              tempVal > CRYO_TEMP_SAFE_MAX || tempVal < CRYO_TEMP_SAFE_MIN,
           });
         }
       }
@@ -435,7 +442,8 @@ async function parseCsvTelemetry(
         readings.push({
           timestamp: timeVal,
           temperatureCelsius: tempVal,
-          isExcursion: tempVal > CRYO_TEMP_SAFE_MAX || tempVal < CRYO_TEMP_SAFE_MIN,
+          isExcursion:
+            tempVal > CRYO_TEMP_SAFE_MAX || tempVal < CRYO_TEMP_SAFE_MIN,
         });
       }
     }
@@ -459,8 +467,10 @@ function downsampleKeypoints(
   let minIdx = 0;
   let maxIdx = 0;
   for (let i = 1; i < readings.length; i++) {
-    if (readings[i].temperatureCelsius < readings[minIdx].temperatureCelsius) minIdx = i;
-    if (readings[i].temperatureCelsius > readings[maxIdx].temperatureCelsius) maxIdx = i;
+    if (readings[i].temperatureCelsius < readings[minIdx].temperatureCelsius)
+      minIdx = i;
+    if (readings[i].temperatureCelsius > readings[maxIdx].temperatureCelsius)
+      maxIdx = i;
   }
   keyIndexSet.add(minIdx);
   keyIndexSet.add(maxIdx);
@@ -474,9 +484,15 @@ function downsampleKeypoints(
     let peakIdx = event.startSampleIndex;
     for (let i = event.startSampleIndex + 1; i <= event.endSampleIndex; i++) {
       if (event.type === "WARM_EXCURSION") {
-        if (readings[i].temperatureCelsius > readings[peakIdx].temperatureCelsius) peakIdx = i;
+        if (
+          readings[i].temperatureCelsius > readings[peakIdx].temperatureCelsius
+        )
+          peakIdx = i;
       } else {
-        if (readings[i].temperatureCelsius < readings[peakIdx].temperatureCelsius) peakIdx = i;
+        if (
+          readings[i].temperatureCelsius < readings[peakIdx].temperatureCelsius
+        )
+          peakIdx = i;
       }
     }
     keyIndexSet.add(peakIdx);

@@ -26,7 +26,7 @@
     "msw": "^3.0.1",
     "openapi-typescript": "^7.13.0",
     "typescript": "^6.0.3",
-    "vite": "^8.3.2"
+    "vite": "^8.3.3"
   },
   "keywords": [],
   "license": "ISC",

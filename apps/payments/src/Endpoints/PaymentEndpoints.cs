@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -11,6 +14,7 @@ using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -151,6 +155,159 @@ public record OcrExtractRequestDto(
     string? Filename = null
 );
 
+public record BillingCycleCompilationRequest(
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("site_id")] string SiteId,
+    [property: JsonPropertyName("billing_cycle")] string BillingCycle = "MONTHLY",
+    [property: JsonPropertyName("period_start")] string? PeriodStart = null,
+    [property: JsonPropertyName("period_end")] string? PeriodEnd = null,
+    [property: JsonPropertyName("auto_approve")] bool AutoApprove = false
+);
+
+public record BatchBillingCycleCompilationRequest(
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("billing_cycle")] string BillingCycle = "MONTHLY",
+    [property: JsonPropertyName("period_start")] string? PeriodStart = null,
+    [property: JsonPropertyName("period_end")] string? PeriodEnd = null,
+    [property: JsonPropertyName("auto_approve")] bool AutoApprove = false,
+    [property: JsonPropertyName("site_ids")] List<string>? SiteIds = null
+);
+
+public record SiteBatchCompilationResult(
+    [property: JsonPropertyName("site_id")] string SiteId,
+    [property: JsonPropertyName("success")] bool Success,
+    [property: JsonPropertyName("invoice_id")] string? InvoiceId,
+    [property: JsonPropertyName("invoice_number")] string? InvoiceNumber,
+    [property: JsonPropertyName("payable_count")] int PayableCount,
+    [property: JsonPropertyName("total_gross_amount")] decimal TotalGrossAmount,
+    [property: JsonPropertyName("total_holdback_amount")] decimal TotalHoldbackAmount,
+    [property: JsonPropertyName("total_net_amount")] decimal TotalNetAmount,
+    [property: JsonPropertyName("error_message")] string? ErrorMessage
+);
+
+public record PaymentAuditLogDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("entity_type")] string EntityType,
+    [property: JsonPropertyName("entity_id")] string EntityId,
+    [property: JsonPropertyName("action")] string Action,
+    [property: JsonPropertyName("user_id")] string UserId,
+    [property: JsonPropertyName("details")] string? Details,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("created_by")] string CreatedBy
+);
+
+public record BatchBillingCompilationResponse(
+    [property: JsonPropertyName("batch_execution_id")] string BatchExecutionId,
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("billing_cycle")] string BillingCycle,
+    [property: JsonPropertyName("period_start")] string PeriodStart,
+    [property: JsonPropertyName("period_end")] string PeriodEnd,
+    [property: JsonPropertyName("total_sites_processed")] int TotalSitesProcessed,
+    [property: JsonPropertyName("successful_sites_count")] int SuccessfulSitesCount,
+    [property: JsonPropertyName("failed_sites_count")] int FailedSitesCount,
+    [property: JsonPropertyName("total_invoices_generated")] int TotalInvoicesGenerated,
+    [property: JsonPropertyName("total_payables_compiled")] int TotalPayablesCompiled,
+    [property: JsonPropertyName("total_gross_amount")] decimal TotalGrossAmount,
+    [property: JsonPropertyName("total_holdback_amount")] decimal TotalHoldbackAmount,
+    [property: JsonPropertyName("total_net_amount")] decimal TotalNetAmount,
+    [property: JsonPropertyName("site_results")] List<SiteBatchCompilationResult> SiteResults,
+    [property: JsonPropertyName("audit_logs")] List<PaymentAuditLogDto> AuditLogs
+);
+
+public record InvoiceLineItemDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("invoice_id")] string InvoiceId,
+    [property: JsonPropertyName("payable_id")] string? PayableId,
+    [property: JsonPropertyName("subject_id")] string SubjectId,
+    [property: JsonPropertyName("visit_code")] string VisitCode,
+    [property: JsonPropertyName("procedure_code")] string? ProcedureCode,
+    [property: JsonPropertyName("procedure_name")] string? ProcedureName,
+    [property: JsonPropertyName("base_amount")] decimal BaseAmount,
+    [property: JsonPropertyName("overhead_amount")] decimal OverheadAmount,
+    [property: JsonPropertyName("patient_stipend")] decimal PatientStipend,
+    [property: JsonPropertyName("travel_reimbursement")] decimal TravelReimbursement,
+    [property: JsonPropertyName("gross_amount")] decimal GrossAmount,
+    [property: JsonPropertyName("withholding_rate")] decimal WithholdingRate,
+    [property: JsonPropertyName("withholding_amount")] decimal WithholdingAmount,
+    [property: JsonPropertyName("net_amount")] decimal NetAmount,
+    [property: JsonPropertyName("currency")] string Currency,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("version_index")] int VersionIndex
+);
+
+public record RemittanceAdviceDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("remittance_number")] string RemittanceNumber,
+    [property: JsonPropertyName("invoice_id")] string InvoiceId,
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("site_id")] string SiteId,
+    [property: JsonPropertyName("currency")] string Currency,
+    [property: JsonPropertyName("gross_amount")] decimal GrossAmount,
+    [property: JsonPropertyName("overhead_amount")] decimal OverheadAmount,
+    [property: JsonPropertyName("holdback_amount")] decimal HoldbackAmount,
+    [property: JsonPropertyName("net_amount")] decimal NetAmount,
+    [property: JsonPropertyName("pdf_sha256_hash")] string PdfSha256Hash,
+    [property: JsonPropertyName("is_sealed")] bool IsSealed,
+    [property: JsonPropertyName("is_signed")] bool IsSigned,
+    [property: JsonPropertyName("signed_by")] string? SignedBy,
+    [property: JsonPropertyName("signed_at")] DateTimeOffset? SignedAt,
+    [property: JsonPropertyName("signer_role")] string? SignerRole,
+    [property: JsonPropertyName("dispatch_status")] string DispatchStatus,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("version_index")] int VersionIndex
+);
+
+public record SelfBillingInvoiceResponse(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("invoice_number")] string InvoiceNumber,
+    [property: JsonPropertyName("study_id")] string StudyId,
+    [property: JsonPropertyName("site_id")] string SiteId,
+    [property: JsonPropertyName("contract_id")] string ContractId,
+    [property: JsonPropertyName("billing_cycle")] string BillingCycle,
+    [property: JsonPropertyName("period_start")] string PeriodStart,
+    [property: JsonPropertyName("period_end")] string PeriodEnd,
+    [property: JsonPropertyName("currency")] string Currency,
+    [property: JsonPropertyName("total_base_amount")] decimal TotalBaseAmount,
+    [property: JsonPropertyName("total_overhead_amount")] decimal TotalOverheadAmount,
+    [property: JsonPropertyName("total_patient_stipend")] decimal TotalPatientStipend,
+    [property: JsonPropertyName("total_travel_reimbursement")] decimal TotalTravelReimbursement,
+    [property: JsonPropertyName("total_gross_amount")] decimal TotalGrossAmount,
+    [property: JsonPropertyName("total_holdback_amount")] decimal TotalHoldbackAmount,
+    [property: JsonPropertyName("total_net_amount")] decimal TotalNetAmount,
+    [property: JsonPropertyName("payable_count")] int PayableCount,
+    [property: JsonPropertyName("status")] string Status,
+    [property: JsonPropertyName("approved_by")] string? ApprovedBy,
+    [property: JsonPropertyName("approved_at")] DateTimeOffset? ApprovedAt,
+    [property: JsonPropertyName("erp_system")] string? ErpSystem,
+    [property: JsonPropertyName("erp_reference_id")] string? ErpReferenceId,
+    [property: JsonPropertyName("erp_sync_status")] string ErpSyncStatus,
+    [property: JsonPropertyName("erp_synced_at")] DateTimeOffset? ErpSyncedAt,
+    [property: JsonPropertyName("reconciled_by")] string? ReconciledBy,
+    [property: JsonPropertyName("reconciled_at")] DateTimeOffset? ReconciledAt,
+    [property: JsonPropertyName("reconciliation_reference")] string? ReconciliationReference,
+    [property: JsonPropertyName("reconciliation_notes")] string? ReconciliationNotes,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("created_by")] string CreatedBy,
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
+    [property: JsonPropertyName("version_index")] int VersionIndex,
+    [property: JsonPropertyName("line_items")] List<InvoiceLineItemDto> LineItems,
+    [property: JsonPropertyName("remittance_advice")] RemittanceAdviceDto? RemittanceAdvice
+);
+
+public record SignRemittanceRequest(
+    [property: JsonPropertyName("signer_name")] string SignerName,
+    [property: JsonPropertyName("signer_role")] string SignerRole,
+    [property: JsonPropertyName("signature_reason")] string? SignatureReason = null
+);
+
+public record ReconcileInvoiceRequest(
+    [property: JsonPropertyName("payment_reference")] string PaymentReference,
+    [property: JsonPropertyName("erp_system")] string? ErpSystem = "SAP",
+    [property: JsonPropertyName("amount_paid")] decimal? AmountPaid = null,
+    [property: JsonPropertyName("payment_date")] string? PaymentDate = null,
+    [property: JsonPropertyName("notes")] string? Notes = null
+);
+
 public static class PaymentEndpoints
 {
     public static IEndpointRouteBuilder MapPaymentEndpoints(this IEndpointRouteBuilder routes)
@@ -246,6 +403,43 @@ public static class PaymentEndpoints
         group.MapGet("/audit-logs", GetAuditLogs)
             .WithName("GetPaymentAuditLogs")
             .WithSummary("Retrieve payment audit ledger records.");
+
+        // Self-Billing Invoices & Automated Batch Milestone Invoicing
+        group.MapGet("/invoices", ListInvoices)
+            .WithName("ListInvoices")
+            .WithSummary("Lists compiled self-billing invoices matching filter criteria.");
+
+        group.MapGet("/invoices/{id}", GetInvoiceById)
+            .WithName("GetInvoiceById")
+            .WithSummary("Retrieve single self-billing invoice details with line items.");
+
+        group.MapPost("/invoices/compile", CompileBillingCycle)
+            .WithName("CompileBillingCycle")
+            .WithSummary("Automates single-site billing cycle compilation into a self-billing invoice.");
+
+        group.MapPost("/invoices/batch-compile", BatchCompileBillingCycles)
+            .WithName("BatchCompileBillingCycles")
+            .WithSummary("Executes study-wide batch milestone invoice compilation across all active trial sites.");
+
+        group.MapPost("/invoices/{id}/approve", ApproveInvoice)
+            .WithName("ApproveInvoice")
+            .WithSummary("Approve draft self-billing invoice for ERP export and settlement.");
+
+        group.MapPost("/invoices/{id}/remittance-advice/sign", SignRemittanceAdvice)
+            .WithName("SignRemittanceAdvice")
+            .WithSummary("Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.");
+
+        group.MapGet("/invoices/{id}/remittance-advice/pdf", DownloadRemittancePdf)
+            .WithName("DownloadRemittancePdf")
+            .WithSummary("Downloads cryptographic PDF remittance statement.");
+
+        group.MapPost("/invoices/{id}/reconcile", ReconcileInvoice)
+            .WithName("ReconcileInvoice")
+            .WithSummary("Reconciles invoice settlement against bank wire or ERP clearing statement.");
+
+        group.MapPost("/invoices/{id}/erp-export", ExportInvoiceToErp)
+            .WithName("ExportInvoiceToErp")
+            .WithSummary("Exports self-billing invoice to ERP gateway (e.g. SAP).");
 
         return routes;
     }
@@ -1723,5 +1917,800 @@ public static class PaymentEndpoints
             .ToListAsync();
 
         return Results.Ok(logs);
+    }
+
+    private static SelfBillingInvoiceResponse MapInvoiceToResponse(
+        SelfBillingInvoice inv,
+        IEnumerable<InvoiceLineItem> lineItems,
+        RemittanceAdvice? remittance) => new(
+            Id: inv.Id,
+            InvoiceNumber: inv.InvoiceNumber,
+            StudyId: inv.StudyId,
+            SiteId: inv.SiteId,
+            ContractId: inv.ContractId,
+            BillingCycle: inv.BillingCycle,
+            PeriodStart: inv.PeriodStart,
+            PeriodEnd: inv.PeriodEnd,
+            Currency: inv.Currency,
+            TotalBaseAmount: inv.TotalBaseAmount,
+            TotalOverheadAmount: inv.TotalOverheadAmount,
+            TotalPatientStipend: inv.TotalPatientStipend,
+            TotalTravelReimbursement: inv.TotalTravelReimbursement,
+            TotalGrossAmount: inv.TotalGrossAmount,
+            TotalHoldbackAmount: inv.TotalHoldbackAmount,
+            TotalNetAmount: inv.TotalNetAmount,
+            PayableCount: inv.PayableCount,
+            Status: inv.Status,
+            ApprovedBy: inv.ApprovedBy,
+            ApprovedAt: inv.ApprovedAt,
+            ErpSystem: inv.ErpSystem,
+            ErpReferenceId: inv.ErpReferenceId,
+            ErpSyncStatus: inv.ErpSyncStatus,
+            ErpSyncedAt: inv.ErpSyncedAt,
+            ReconciledBy: inv.ReconciledBy,
+            ReconciledAt: inv.ReconciledAt,
+            ReconciliationReference: inv.ReconciliationReference,
+            ReconciliationNotes: inv.ReconciliationNotes,
+            CreatedAt: inv.CreatedAt,
+            CreatedBy: inv.CreatedBy,
+            ReasonForChange: inv.ReasonForChange,
+            VersionIndex: inv.VersionIndex,
+            LineItems: lineItems.Select(item => new InvoiceLineItemDto(
+                Id: item.Id,
+                InvoiceId: item.InvoiceId,
+                PayableId: item.PayableId,
+                SubjectId: item.SubjectId,
+                VisitCode: item.VisitCode,
+                ProcedureCode: item.ProcedureCode,
+                ProcedureName: item.ProcedureName,
+                BaseAmount: item.BaseAmount,
+                OverheadAmount: item.OverheadAmount,
+                PatientStipend: item.PatientStipend,
+                TravelReimbursement: item.TravelReimbursement,
+                GrossAmount: item.GrossAmount,
+                WithholdingRate: item.WithholdingRate,
+                WithholdingAmount: item.WithholdingAmount,
+                NetAmount: item.NetAmount,
+                Currency: item.Currency,
+                CreatedAt: item.CreatedAt,
+                VersionIndex: item.VersionIndex
+            )).ToList(),
+            RemittanceAdvice: remittance == null ? null : new RemittanceAdviceDto(
+                Id: remittance.Id,
+                RemittanceNumber: remittance.RemittanceNumber,
+                InvoiceId: remittance.InvoiceId,
+                StudyId: remittance.StudyId,
+                SiteId: remittance.SiteId,
+                Currency: remittance.Currency,
+                GrossAmount: remittance.GrossAmount,
+                OverheadAmount: remittance.OverheadAmount,
+                HoldbackAmount: remittance.HoldbackAmount,
+                NetAmount: remittance.NetAmount,
+                PdfSha256Hash: remittance.PdfSha256Hash,
+                IsSealed: remittance.IsSealed,
+                IsSigned: remittance.IsSigned,
+                SignedBy: remittance.SignedBy,
+                SignedAt: remittance.SignedAt,
+                SignerRole: remittance.SignerRole,
+                DispatchStatus: remittance.DispatchStatus,
+                CreatedAt: remittance.CreatedAt,
+                VersionIndex: remittance.VersionIndex
+            )
+        );
+
+    private static async Task<IResult> ListInvoices(
+        PaymentsDbContext dbContext,
+        string? study_id = null,
+        string? site_id = null,
+        string? billing_cycle = null,
+        string? status = null,
+        string? erp_sync_status = null,
+        string? batch_execution_id = null)
+    {
+        var query = dbContext.SelfBillingInvoices.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(study_id))
+        {
+            query = query.Where(i => i.StudyId == study_id);
+        }
+        if (!string.IsNullOrWhiteSpace(site_id))
+        {
+            query = query.Where(i => i.SiteId == site_id);
+        }
+        if (!string.IsNullOrWhiteSpace(billing_cycle))
+        {
+            query = query.Where(i => i.BillingCycle == billing_cycle);
+        }
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            query = query.Where(i => i.Status == status);
+        }
+        if (!string.IsNullOrWhiteSpace(erp_sync_status))
+        {
+            query = query.Where(i => i.ErpSyncStatus == erp_sync_status);
+        }
+        if (!string.IsNullOrWhiteSpace(batch_execution_id))
+        {
+            var batchAuditLogs = await dbContext.PaymentAuditLogs.AsNoTracking()
+                .Where(a => a.EntityType == "SelfBillingInvoiceBatch" && a.EntityId == batch_execution_id)
+                .Select(a => a.Details)
+                .ToListAsync();
+
+            var matchingInvoiceIds = new HashSet<string>();
+            foreach (var detail in batchAuditLogs)
+            {
+                if (!string.IsNullOrEmpty(detail) && detail.Contains("invoice_ids"))
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(detail);
+                        if (doc.RootElement.TryGetProperty("invoice_ids", out var idsElement) && idsElement.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var idEl in idsElement.EnumerateArray())
+                            {
+                                if (idEl.GetString() is string idStr)
+                                {
+                                    matchingInvoiceIds.Add(idStr);
+                                }
+                            }
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        // Ignore malformed JSON details from non-batch audit logs
+                        _ = ex.Message;
+                    }
+                }
+            }
+
+            if (matchingInvoiceIds.Count > 0)
+            {
+                query = query.Where(i => matchingInvoiceIds.Contains(i.Id));
+            }
+            else
+            {
+                query = query.Where(i => i.ReasonForChange != null && i.ReasonForChange.Contains(batch_execution_id));
+            }
+        }
+
+        var invoices = await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
+        var invoiceIds = invoices.Select(i => i.Id).ToList();
+
+        var lineItems = await dbContext.InvoiceLineItems.AsNoTracking()
+            .Where(l => invoiceIds.Contains(l.InvoiceId))
+            .ToListAsync();
+
+        var remittanceAdvices = await dbContext.RemittanceAdvices.AsNoTracking()
+            .Where(r => invoiceIds.Contains(r.InvoiceId))
+            .ToListAsync();
+
+        var lineItemMap = lineItems.GroupBy(l => l.InvoiceId).ToDictionary(g => g.Key, g => g.ToList());
+        var remittanceMap = remittanceAdvices.ToDictionary(r => r.InvoiceId, r => r);
+
+        var responses = invoices.Select(inv => MapInvoiceToResponse(
+            inv,
+            lineItemMap.GetValueOrDefault(inv.Id) ?? [],
+            remittanceMap.GetValueOrDefault(inv.Id)
+        )).ToList();
+
+        return Results.Ok(responses);
+    }
+
+    private static async Task<IResult> GetInvoiceById(string id, PaymentsDbContext dbContext)
+    {
+        var inv = await dbContext.SelfBillingInvoices.AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Id == id);
+
+        if (inv == null)
+        {
+            return Results.NotFound(new { detail = $"Self-billing invoice with ID '{id}' not found." });
+        }
+
+        var lineItems = await dbContext.InvoiceLineItems.AsNoTracking()
+            .Where(l => l.InvoiceId == id)
+            .ToListAsync();
+
+        var remittance = await dbContext.RemittanceAdvices.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.InvoiceId == id);
+
+        return Results.Ok(MapInvoiceToResponse(inv, lineItems, remittance));
+    }
+
+    private static async Task<(SelfBillingInvoice Invoice, List<InvoiceLineItem> LineItems, RemittanceAdvice Remittance, PaymentAuditLog AuditLog)> CompileSiteInvoiceCoreAsync(
+        PaymentsDbContext dbContext,
+        IClock clock,
+        string studyId,
+        string siteId,
+        string billingCycle,
+        string periodStart,
+        string periodEnd,
+        bool autoApprove,
+        string userId,
+        string? batchExecutionId = null)
+    {
+        DateTimeOffset now = clock.UtcNow;
+
+        var contract = await dbContext.BudgetContracts.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.StudyId == studyId && c.SiteId == siteId && c.IsActive);
+
+        string contractId = contract?.Id ?? $"CONTRACT-{studyId}-{siteId}";
+        string currency = contract?.Currency ?? "USD";
+
+        var pendingPayables = await dbContext.Payables
+            .Where(p => p.StudyId == studyId && p.SiteId == siteId && p.Status != "INVOICED")
+            .ToListAsync();
+
+        if (pendingPayables.Count == 0)
+        {
+            throw new InvalidOperationException($"No pending achieved milestone payables found for site '{siteId}' in study '{studyId}'.");
+        }
+
+        decimal totalBase = pendingPayables.Sum(p => p.BaseAmount);
+        decimal totalOverhead = pendingPayables.Sum(p => p.OverheadAmount);
+        decimal totalStipend = pendingPayables.Sum(p => p.PatientStipendAmount);
+        decimal totalTravel = pendingPayables.Sum(p => p.TravelReimbursementAmount);
+        decimal totalGross = pendingPayables.Sum(p => p.GrossAmount);
+        decimal totalHoldback = pendingPayables.Sum(p => p.WithholdingAmount);
+        decimal totalNet = totalGross - totalHoldback;
+
+        foreach (var p in pendingPayables)
+        {
+            p.Status = "INVOICED";
+            p.UpdatedAt = now;
+            p.VersionIndex += 1;
+        }
+
+        string invoiceNumber = $"INV-{studyId}-{siteId}-{now.Ticks % 1000000:D6}";
+        var invoice = new SelfBillingInvoice
+        {
+            Id = Guid.NewGuid().ToString(),
+            InvoiceNumber = invoiceNumber,
+            StudyId = studyId,
+            SiteId = siteId,
+            ContractId = contractId,
+            BillingCycle = billingCycle,
+            PeriodStart = periodStart,
+            PeriodEnd = periodEnd,
+            Currency = currency,
+            TotalBaseAmount = totalBase,
+            TotalOverheadAmount = totalOverhead,
+            TotalPatientStipend = totalStipend,
+            TotalTravelReimbursement = totalTravel,
+            TotalGrossAmount = totalGross,
+            TotalHoldbackAmount = totalHoldback,
+            TotalNetAmount = totalNet,
+            PayableCount = pendingPayables.Count,
+            Status = autoApprove ? "APPROVED" : "DRAFT",
+            ApprovedBy = autoApprove ? userId : null,
+            ApprovedAt = autoApprove ? now : null,
+            ErpSyncStatus = "PENDING",
+            CreatedAt = now,
+            CreatedBy = userId,
+            UpdatedAt = now,
+            ReasonForChange = batchExecutionId != null ? $"Compiled in study batch run {batchExecutionId}" : "Compiled billing cycle",
+            VersionIndex = 1
+        };
+
+        var lineItems = new List<InvoiceLineItem>();
+        foreach (var p in pendingPayables)
+        {
+            lineItems.Add(new InvoiceLineItem
+            {
+                Id = Guid.NewGuid().ToString(),
+                InvoiceId = invoice.Id,
+                PayableId = p.Id,
+                SubjectId = p.SubjectId,
+                VisitCode = p.VisitCode,
+                ProcedureCode = p.ProcedureCode,
+                ProcedureName = p.ProcedureName,
+                BaseAmount = p.BaseAmount,
+                OverheadAmount = p.OverheadAmount,
+                PatientStipend = p.PatientStipendAmount,
+                TravelReimbursement = p.TravelReimbursementAmount,
+                GrossAmount = p.GrossAmount,
+                WithholdingRate = p.WithholdingRate,
+                WithholdingAmount = p.WithholdingAmount,
+                NetAmount = p.NetAmount,
+                Currency = p.Currency,
+                CreatedAt = now,
+                CreatedBy = userId,
+                UpdatedAt = now,
+                ReasonForChange = "Invoice line item generated from milestone payable",
+                VersionIndex = 1
+            });
+        }
+
+        string remittanceNumber = $"REM-{invoiceNumber}";
+        string pdfContentRaw = $"SELF-BILLING REMITTANCE STATEMENT\nInvoice #: {invoiceNumber}\nStudy: {studyId}\nSite: {siteId}\nNet Total: {currency} {totalNet:F2}\nDate: {now:yyyy-MM-dd HH:mm:ss} UTC";
+        using var sha256 = SHA256.Create();
+        byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(pdfContentRaw));
+        string sha256Hash = Convert.ToHexStringLower(hashBytes);
+
+        var remittance = new RemittanceAdvice
+        {
+            Id = Guid.NewGuid().ToString(),
+            RemittanceNumber = remittanceNumber,
+            InvoiceId = invoice.Id,
+            StudyId = studyId,
+            SiteId = siteId,
+            Currency = currency,
+            GrossAmount = totalGross,
+            OverheadAmount = totalOverhead,
+            HoldbackAmount = totalHoldback,
+            NetAmount = totalNet,
+            PdfSha256Hash = sha256Hash,
+            PdfContent = pdfContentRaw,
+            IsSealed = true,
+            IsSigned = false,
+            DispatchStatus = "PENDING",
+            CreatedAt = now,
+            CreatedBy = userId,
+            UpdatedAt = now,
+            ReasonForChange = "Remittance advice generated for self-billing invoice",
+            VersionIndex = 1
+        };
+
+        var auditLog = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "SelfBillingInvoice",
+            EntityId = invoice.Id,
+            Action = batchExecutionId != null ? "BATCH_SITE_INVOICE_COMPILED" : "INVOICE_COMPILED",
+            UserId = userId,
+            UserRoles = "StudyManager",
+            Details = JsonSerializer.Serialize(new
+            {
+                invoice_id = invoice.Id,
+                invoice_number = invoice.InvoiceNumber,
+                study_id = studyId,
+                site_id = siteId,
+                billing_cycle = billingCycle,
+                payable_count = pendingPayables.Count,
+                total_gross_amount = totalGross,
+                total_holdback_amount = totalHoldback,
+                total_net_amount = totalNet,
+                batch_execution_id = batchExecutionId
+            }),
+            CreatedAt = now,
+            CreatedBy = userId,
+            ReasonForChange = $"Self-billing invoice {invoiceNumber} generated for site {siteId}",
+            VersionIndex = 1
+        };
+
+        dbContext.SelfBillingInvoices.Add(invoice);
+        dbContext.InvoiceLineItems.AddRange(lineItems);
+        dbContext.RemittanceAdvices.Add(remittance);
+        dbContext.PaymentAuditLogs.Add(auditLog);
+
+        return (invoice, lineItems, remittance, auditLog);
+    }
+
+    private static async Task<IResult> CompileBillingCycle(
+        BillingCycleCompilationRequest request,
+        PaymentsDbContext dbContext,
+        [FromServices] IClock clock)
+    {
+        if (string.IsNullOrWhiteSpace(request.StudyId) || string.IsNullOrWhiteSpace(request.SiteId))
+        {
+            return Results.BadRequest(new { detail = "Both 'study_id' and 'site_id' are required for single site invoice compilation." });
+        }
+
+        DateTimeOffset now = clock.UtcNow;
+        string periodStart = request.PeriodStart ?? $"{now.Year}-{now.Month:D2}-01";
+        string periodEnd = request.PeriodEnd ?? $"{now.Year}-{now.Month:D2}-{DateTime.DaysInMonth(now.Year, now.Month):D2}";
+        string userId = "study_manager";
+
+        try
+        {
+            var (invoice, lineItems, remittance, _) = await CompileSiteInvoiceCoreAsync(
+                dbContext,
+                clock,
+                request.StudyId,
+                request.SiteId,
+                request.BillingCycle,
+                periodStart,
+                periodEnd,
+                request.AutoApprove,
+                userId
+            );
+
+            await dbContext.SaveChangesAsync();
+
+            return Results.Created($"/api/v1/payments/invoices/{invoice.Id}", MapInvoiceToResponse(invoice, lineItems, remittance));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { detail = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> BatchCompileBillingCycles(
+        BatchBillingCycleCompilationRequest request,
+        PaymentsDbContext dbContext,
+        [FromServices] IClock clock)
+    {
+        if (string.IsNullOrWhiteSpace(request.StudyId))
+        {
+            return Results.BadRequest(new { detail = "Study Protocol ID ('study_id') is required for batch compilation." });
+        }
+
+        DateTimeOffset now = clock.UtcNow;
+        string batchExecutionId = $"BATCH-EXEC-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
+        string periodStart = request.PeriodStart ?? $"{now.Year}-{now.Month:D2}-01";
+        string periodEnd = request.PeriodEnd ?? $"{now.Year}-{now.Month:D2}-{DateTime.DaysInMonth(now.Year, now.Month):D2}";
+        string userId = "study_manager";
+
+        List<string> targetSiteIds;
+        if (request.SiteIds != null && request.SiteIds.Count > 0)
+        {
+            targetSiteIds = request.SiteIds.Distinct().ToList();
+        }
+        else
+        {
+            var contractSites = await dbContext.BudgetContracts.AsNoTracking()
+                .Where(c => c.StudyId == request.StudyId && c.IsActive)
+                .Select(c => c.SiteId)
+                .ToListAsync();
+
+            var payableSites = await dbContext.Payables.AsNoTracking()
+                .Where(p => p.StudyId == request.StudyId && p.Status != "INVOICED")
+                .Select(p => p.SiteId)
+                .ToListAsync();
+
+            targetSiteIds = contractSites.Concat(payableSites).Distinct().OrderBy(s => s).ToList();
+        }
+
+        var siteResults = new List<SiteBatchCompilationResult>();
+        var batchAuditLogs = new List<PaymentAuditLogDto>();
+        var generatedInvoiceIds = new List<string>();
+
+        int successfulSites = 0;
+        int failedSites = 0;
+        int totalInvoices = 0;
+        int totalPayables = 0;
+        decimal totalGrossSum = 0m;
+        decimal totalHoldbackSum = 0m;
+        decimal totalNetSum = 0m;
+
+        foreach (var siteId in targetSiteIds)
+        {
+            try
+            {
+                var (invoice, _, _, auditLog) = await CompileSiteInvoiceCoreAsync(
+                    dbContext,
+                    clock,
+                    request.StudyId,
+                    siteId,
+                    request.BillingCycle,
+                    periodStart,
+                    periodEnd,
+                    request.AutoApprove,
+                    userId,
+                    batchExecutionId
+                );
+
+                await dbContext.SaveChangesAsync();
+
+                successfulSites++;
+                totalInvoices++;
+                totalPayables += invoice.PayableCount;
+                totalGrossSum += invoice.TotalGrossAmount;
+                totalHoldbackSum += invoice.TotalHoldbackAmount;
+                totalNetSum += invoice.TotalNetAmount;
+                generatedInvoiceIds.Add(invoice.Id);
+
+                siteResults.Add(new SiteBatchCompilationResult(
+                    SiteId: siteId,
+                    Success: true,
+                    InvoiceId: invoice.Id,
+                    InvoiceNumber: invoice.InvoiceNumber,
+                    PayableCount: invoice.PayableCount,
+                    TotalGrossAmount: invoice.TotalGrossAmount,
+                    TotalHoldbackAmount: invoice.TotalHoldbackAmount,
+                    TotalNetAmount: invoice.TotalNetAmount,
+                    ErrorMessage: null
+                ));
+
+                batchAuditLogs.Add(new PaymentAuditLogDto(
+                    Id: auditLog.Id,
+                    EntityType: auditLog.EntityType,
+                    EntityId: auditLog.EntityId,
+                    Action: auditLog.Action,
+                    UserId: auditLog.UserId,
+                    Details: auditLog.Details,
+                    CreatedAt: auditLog.CreatedAt,
+                    CreatedBy: auditLog.CreatedBy
+                ));
+            }
+            catch (Exception ex)
+            {
+                failedSites++;
+                siteResults.Add(new SiteBatchCompilationResult(
+                    SiteId: siteId,
+                    Success: false,
+                    InvoiceId: null,
+                    InvoiceNumber: null,
+                    PayableCount: 0,
+                    TotalGrossAmount: 0m,
+                    TotalHoldbackAmount: 0m,
+                    TotalNetAmount: 0m,
+                    ErrorMessage: ex.Message
+                ));
+            }
+        }
+
+        var masterAudit = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "SelfBillingInvoiceBatch",
+            EntityId = batchExecutionId,
+            Action = "BATCH_MILESTONE_INVOICE_COMPILED",
+            UserId = userId,
+            UserRoles = "StudyManager",
+            Details = JsonSerializer.Serialize(new
+            {
+                batch_execution_id = batchExecutionId,
+                study_id = request.StudyId,
+                billing_cycle = request.BillingCycle,
+                period_start = periodStart,
+                period_end = periodEnd,
+                total_sites_processed = targetSiteIds.Count,
+                successful_sites_count = successfulSites,
+                failed_sites_count = failedSites,
+                total_invoices_generated = totalInvoices,
+                total_payables_compiled = totalPayables,
+                total_gross_amount = totalGrossSum,
+                total_holdback_amount = totalHoldbackSum,
+                total_net_amount = totalNetSum,
+                invoice_ids = generatedInvoiceIds
+            }),
+            CreatedAt = now,
+            CreatedBy = userId,
+            ReasonForChange = $"Executed multi-site batch milestone compilation for study {request.StudyId}",
+            VersionIndex = 1
+        };
+
+        dbContext.PaymentAuditLogs.Add(masterAudit);
+        await dbContext.SaveChangesAsync();
+
+        batchAuditLogs.Insert(0, new PaymentAuditLogDto(
+            Id: masterAudit.Id,
+            EntityType: masterAudit.EntityType,
+            EntityId: masterAudit.EntityId,
+            Action: masterAudit.Action,
+            UserId: masterAudit.UserId,
+            Details: masterAudit.Details,
+            CreatedAt: masterAudit.CreatedAt,
+            CreatedBy: masterAudit.CreatedBy
+        ));
+
+        var response = new BatchBillingCompilationResponse(
+            BatchExecutionId: batchExecutionId,
+            StudyId: request.StudyId,
+            BillingCycle: request.BillingCycle,
+            PeriodStart: periodStart,
+            PeriodEnd: periodEnd,
+            TotalSitesProcessed: targetSiteIds.Count,
+            SuccessfulSitesCount: successfulSites,
+            FailedSitesCount: failedSites,
+            TotalInvoicesGenerated: totalInvoices,
+            TotalPayablesCompiled: totalPayables,
+            TotalGrossAmount: totalGrossSum,
+            TotalHoldbackAmount: totalHoldbackSum,
+            TotalNetAmount: totalNetSum,
+            SiteResults: siteResults,
+            AuditLogs: batchAuditLogs
+        );
+
+        return Results.Created($"/api/v1/payments/invoices?batch_execution_id={batchExecutionId}", response);
+    }
+
+    private static async Task<IResult> ApproveInvoice(string id, PaymentsDbContext dbContext, [FromServices] IClock clock)
+    {
+        var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
+        if (inv == null)
+        {
+            return Results.NotFound(new { detail = $"Invoice with ID '{id}' not found." });
+        }
+
+        DateTimeOffset now = clock.UtcNow;
+        inv.Status = "APPROVED";
+        inv.ApprovedBy = "study_manager";
+        inv.ApprovedAt = now;
+        inv.UpdatedAt = now;
+        inv.VersionIndex += 1;
+
+        var audit = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "SelfBillingInvoice",
+            EntityId = inv.Id,
+            Action = "INVOICE_APPROVED",
+            UserId = "study_manager",
+            UserRoles = "StudyManager",
+            Details = JsonSerializer.Serialize(new { invoice_id = inv.Id, invoice_number = inv.InvoiceNumber, status = inv.Status }),
+            CreatedAt = now,
+            CreatedBy = "study_manager",
+            ReasonForChange = "Self-billing invoice approved for ERP sync and payment processing",
+            VersionIndex = inv.VersionIndex
+        };
+        dbContext.PaymentAuditLogs.Add(audit);
+        await dbContext.SaveChangesAsync();
+
+        var lineItems = await dbContext.InvoiceLineItems.AsNoTracking().Where(l => l.InvoiceId == id).ToListAsync();
+        var remittance = await dbContext.RemittanceAdvices.AsNoTracking().FirstOrDefaultAsync(r => r.InvoiceId == id);
+
+        return Results.Ok(MapInvoiceToResponse(inv, lineItems, remittance));
+    }
+
+    private static async Task<IResult> SignRemittanceAdvice(string id, SignRemittanceRequest request, PaymentsDbContext dbContext, [FromServices] IClock clock)
+    {
+        var remittance = await dbContext.RemittanceAdvices.FirstOrDefaultAsync(r => r.InvoiceId == id || r.Id == id);
+        if (remittance == null)
+        {
+            return Results.NotFound(new { detail = $"Remittance advice statement for invoice '{id}' not found." });
+        }
+
+        DateTimeOffset now = clock.UtcNow;
+        remittance.IsSigned = true;
+        remittance.SignedBy = request.SignerName;
+        remittance.SignedAt = now;
+        remittance.SignerRole = request.SignerRole;
+        remittance.DispatchStatus = "SIGNED_SEALED";
+        remittance.UpdatedAt = now;
+        remittance.VersionIndex += 1;
+
+        var audit = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "RemittanceAdvice",
+            EntityId = remittance.Id,
+            Action = "REMITTANCE_ADVICE_SIGNED",
+            UserId = request.SignerName,
+            UserRoles = request.SignerRole,
+            Details = JsonSerializer.Serialize(new { remittance_id = remittance.Id, invoice_id = remittance.InvoiceId, signer_name = request.SignerName, reason = request.SignatureReason }),
+            CreatedAt = now,
+            CreatedBy = request.SignerName,
+            ReasonForChange = request.SignatureReason ?? "21 CFR Part 11 electronic signature applied to remittance statement",
+            VersionIndex = remittance.VersionIndex
+        };
+        dbContext.PaymentAuditLogs.Add(audit);
+        await dbContext.SaveChangesAsync();
+
+        return Results.Ok(new RemittanceAdviceDto(
+            Id: remittance.Id,
+            RemittanceNumber: remittance.RemittanceNumber,
+            InvoiceId: remittance.InvoiceId,
+            StudyId: remittance.StudyId,
+            SiteId: remittance.SiteId,
+            Currency: remittance.Currency,
+            GrossAmount: remittance.GrossAmount,
+            OverheadAmount: remittance.OverheadAmount,
+            HoldbackAmount: remittance.HoldbackAmount,
+            NetAmount: remittance.NetAmount,
+            PdfSha256Hash: remittance.PdfSha256Hash,
+            IsSealed: remittance.IsSealed,
+            IsSigned: remittance.IsSigned,
+            SignedBy: remittance.SignedBy,
+            SignedAt: remittance.SignedAt,
+            SignerRole: remittance.SignerRole,
+            DispatchStatus: remittance.DispatchStatus,
+            CreatedAt: remittance.CreatedAt,
+            VersionIndex: remittance.VersionIndex
+        ));
+    }
+
+    private static async Task<IResult> DownloadRemittancePdf(string id, PaymentsDbContext dbContext)
+    {
+        var remittance = await dbContext.RemittanceAdvices.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.InvoiceId == id || r.Id == id);
+
+        if (remittance == null)
+        {
+            return Results.NotFound(new { detail = $"Remittance statement for invoice '{id}' not found." });
+        }
+
+        string text = remittance.PdfContent ?? $"REMITTANCE STATEMENT {remittance.RemittanceNumber}\nGross: {remittance.GrossAmount:F2}\nNet: {remittance.NetAmount:F2}";
+        byte[] bytes = Encoding.UTF8.GetBytes(text);
+        return Results.Bytes(bytes, contentType: "application/pdf", fileDownloadName: $"{remittance.RemittanceNumber}.pdf");
+    }
+
+    private static async Task<IResult> ReconcileInvoice(string id, ReconcileInvoiceRequest request, PaymentsDbContext dbContext, [FromServices] IClock clock)
+    {
+        var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
+        if (inv == null)
+        {
+            return Results.NotFound(new { detail = $"Invoice with ID '{id}' not found." });
+        }
+
+        DateTimeOffset now = clock.UtcNow;
+        inv.Status = "RECONCILED";
+        inv.ReconciledBy = "finance_lead";
+        inv.ReconciledAt = now;
+        inv.ReconciliationReference = request.PaymentReference;
+        inv.ReconciliationNotes = request.Notes;
+        inv.ErpSystem = request.ErpSystem ?? inv.ErpSystem;
+        inv.UpdatedAt = now;
+        inv.VersionIndex += 1;
+
+        var audit = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "SelfBillingInvoice",
+            EntityId = inv.Id,
+            Action = "INVOICE_SETTLEMENT_RECONCILED",
+            UserId = "finance_lead",
+            UserRoles = "FinanceLead",
+            Details = JsonSerializer.Serialize(new { invoice_id = inv.Id, reference = request.PaymentReference, amount_paid = request.AmountPaid ?? inv.TotalNetAmount }),
+            CreatedAt = now,
+            CreatedBy = "finance_lead",
+            ReasonForChange = "Invoice settlement reconciled against bank wire statement",
+            VersionIndex = inv.VersionIndex
+        };
+        dbContext.PaymentAuditLogs.Add(audit);
+        await dbContext.SaveChangesAsync();
+
+        var lineItems = await dbContext.InvoiceLineItems.AsNoTracking().Where(l => l.InvoiceId == id).ToListAsync();
+        var remittance = await dbContext.RemittanceAdvices.AsNoTracking().FirstOrDefaultAsync(r => r.InvoiceId == id);
+
+        return Results.Ok(MapInvoiceToResponse(inv, lineItems, remittance));
+    }
+
+    private static async Task<IResult> ExportInvoiceToErp(string id, PaymentsDbContext dbContext, [FromServices] IClock clock, string? erp_system = "SAP")
+    {
+        var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
+        if (inv == null)
+        {
+            return Results.NotFound(new { detail = $"Invoice with ID '{id}' not found." });
+        }
+
+        DateTimeOffset now = clock.UtcNow;
+        string sys = erp_system ?? "SAP";
+        string erpRef = $"ERP-{sys}-{Guid.NewGuid():N}"[..16].ToUpperInvariant();
+
+        inv.ErpSystem = sys;
+        inv.ErpReferenceId = erpRef;
+        inv.ErpSyncStatus = "EXPORTED";
+        inv.ErpSyncedAt = now;
+        inv.UpdatedAt = now;
+        inv.VersionIndex += 1;
+
+        var erpLog = new ErpSyncLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            InvoiceId = inv.Id,
+            ErpSystem = sys,
+            SyncDirection = "OUTBOUND_EXPORT",
+            Status = "EXPORTED",
+            ExternalReference = erpRef,
+            Reconciled = false,
+            CreatedAt = now,
+            CreatedBy = "svc:erp-integration-service",
+            ReasonForChange = $"Self-billing invoice exported to {sys}",
+            VersionIndex = 1
+        };
+        dbContext.ErpSyncLogs.Add(erpLog);
+
+        var audit = new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "SelfBillingInvoice",
+            EntityId = inv.Id,
+            Action = "INVOICE_ERP_EXPORTED",
+            UserId = "svc:erp-integration-service",
+            UserRoles = "IntegrationService",
+            Details = JsonSerializer.Serialize(new { invoice_id = inv.Id, erp_system = sys, erp_reference_id = erpRef }),
+            CreatedAt = now,
+            CreatedBy = "svc:erp-integration-service",
+            ReasonForChange = $"Self-billing invoice synced to {sys} ERP gateway",
+            VersionIndex = inv.VersionIndex
+        };
+        dbContext.PaymentAuditLogs.Add(audit);
+        await dbContext.SaveChangesAsync();
+
+        var lineItems = await dbContext.InvoiceLineItems.AsNoTracking().Where(l => l.InvoiceId == id).ToListAsync();
+        var remittance = await dbContext.RemittanceAdvices.AsNoTracking().FirstOrDefaultAsync(r => r.InvoiceId == id);
+
+        return Results.Ok(MapInvoiceToResponse(inv, lineItems, remittance));
     }
 }

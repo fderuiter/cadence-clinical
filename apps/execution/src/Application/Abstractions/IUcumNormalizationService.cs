@@ -12,4 +12,12 @@ public interface IUcumNormalizationService
     double ConvertUnit(double value, string fromUnit, string toUnit);
 
     (double? NormalizedValue, string? NormalizedUnit) GetNormalizedRepresentation(double? value, string? unit);
+
+    string? MapLoincCode(string testCode);
+
+    string GetTargetSiUnit(string testCode, string currentUnit);
+
+    (double ConvertedValue, double Factor) ConvertLabUnit(double value, string fromUnit, string toUnit, string? testCode = null);
+
+    IReadOnlyList<Observations.LoincCatalogItemResponse> GetLoincCatalog();
 }

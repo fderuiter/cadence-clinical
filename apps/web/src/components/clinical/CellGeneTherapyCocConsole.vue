@@ -801,7 +801,8 @@
           <div>
             <h3>Log Transit Milestone &amp; Telemetry Upload</h3>
             <p class="modal-subtitle">
-              Upload Sensitech or TempTale logger file and review cryogenic excursion details.
+              Upload Sensitech or TempTale logger file and review cryogenic
+              excursion details.
             </p>
           </div>
           <button
@@ -817,10 +818,15 @@
           <!-- File Dropzone Section -->
           <div class="dropzone-section">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="section-label">Logger Telemetry Upload (Sensitech / TempTale CSV or JSON)</label>
+            <label class="section-label"
+              >Logger Telemetry Upload (Sensitech / TempTale CSV or JSON)</label
+            >
             <div
               class="dropzone-box"
-              :class="{ 'dropzone-active': isDragging, 'dropzone-has-file': parsedTelemetry !== null }"
+              :class="{
+                'dropzone-active': isDragging,
+                'dropzone-has-file': parsedTelemetry !== null,
+              }"
               @dragover.prevent="isDragging = true"
               @dragenter.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
@@ -841,12 +847,21 @@
                 @change="handleFileSelect"
               />
               <div v-if="isParsing" class="dropzone-status">
-                <p><strong>Parsing time-series telemetry data off main thread...</strong></p>
+                <p>
+                  <strong
+                    >Parsing time-series telemetry data off main
+                    thread...</strong
+                  >
+                </p>
               </div>
-              <div v-else-if="parsedTelemetry" class="dropzone-status text-success">
+              <div
+                v-else-if="parsedTelemetry"
+                class="dropzone-status text-success"
+              >
                 <p>
                   <strong>Loaded: {{ parsedTelemetry.fileName }}</strong>
-                  ({{ parsedTelemetry.totalSamples }} readings, Vendor: {{ parsedTelemetry.vendor }})
+                  ({{ parsedTelemetry.totalSamples }} readings, Vendor:
+                  {{ parsedTelemetry.vendor }})
                 </p>
                 <button
                   type="button"
@@ -858,10 +873,12 @@
               </div>
               <div v-else class="dropzone-prompt">
                 <p class="dropzone-text">
-                  Drag &amp; drop Sensitech or TempTale telemetry export file here, or <strong>click to browse</strong>
+                  Drag &amp; drop Sensitech or TempTale telemetry export file
+                  here, or <strong>click to browse</strong>
                 </p>
                 <p class="dropzone-sub">
-                  Supports cryogenic temperature validation (-196.0°C to -70.0°C safe range)
+                  Supports cryogenic temperature validation (-196.0°C to -70.0°C
+                  safe range)
                 </p>
               </div>
             </div>
@@ -877,14 +894,26 @@
               <div class="drawer-title-group">
                 <h4 class="drawer-title">Excursion Preview Drawer</h4>
                 <span class="badge badge-stage">
-                  {{ parsedTelemetry.isDownsampled ? `Downsampled Keypoints (${parsedTelemetry.keypoints.length} / ${parsedTelemetry.totalSamples})` : `Full Resolution (${parsedTelemetry.totalSamples} readings)` }}
+                  {{
+                    parsedTelemetry.isDownsampled
+                      ? `Downsampled Keypoints (${parsedTelemetry.keypoints.length} / ${parsedTelemetry.totalSamples})`
+                      : `Full Resolution (${parsedTelemetry.totalSamples} readings)`
+                  }}
                 </span>
               </div>
               <span
                 class="badge"
-                :class="parsedTelemetry.excursionCount > 0 ? 'badge-quarantine' : 'badge-unlocked'"
+                :class="
+                  parsedTelemetry.excursionCount > 0
+                    ? 'badge-quarantine'
+                    : 'badge-unlocked'
+                "
               >
-                {{ parsedTelemetry.excursionCount > 0 ? `EXCURSION (${parsedTelemetry.excursionCount} Readings Out of Range)` : 'OPTIMAL (0 Excursions)' }}
+                {{
+                  parsedTelemetry.excursionCount > 0
+                    ? `EXCURSION (${parsedTelemetry.excursionCount} Readings Out of Range)`
+                    : "OPTIMAL (0 Excursions)"
+                }}
               </span>
             </div>
 
@@ -894,7 +923,11 @@
                 <span class="stat-label">Min Temperature</span>
                 <span
                   class="stat-value code-font"
-                  :class="parsedTelemetry.minTemperature < -196.0 ? 'text-danger' : 'text-success'"
+                  :class="
+                    parsedTelemetry.minTemperature < -196.0
+                      ? 'text-danger'
+                      : 'text-success'
+                  "
                 >
                   {{ parsedTelemetry.minTemperature.toFixed(1) }}°C
                 </span>
@@ -903,20 +936,30 @@
                 <span class="stat-label">Max Temperature</span>
                 <span
                   class="stat-value code-font"
-                  :class="parsedTelemetry.maxTemperature > -70.0 ? 'text-danger' : 'text-success'"
+                  :class="
+                    parsedTelemetry.maxTemperature > -70.0
+                      ? 'text-danger'
+                      : 'text-success'
+                  "
                 >
                   {{ parsedTelemetry.maxTemperature.toFixed(1) }}°C
                 </span>
               </div>
               <div class="drawer-stat">
                 <span class="stat-label">Total Sample Count</span>
-                <span class="stat-value code-font">{{ parsedTelemetry.totalSamples.toLocaleString() }}</span>
+                <span class="stat-value code-font">{{
+                  parsedTelemetry.totalSamples.toLocaleString()
+                }}</span>
               </div>
               <div class="drawer-stat">
                 <span class="stat-label">Excursion Reading Points</span>
                 <span
                   class="stat-value code-font"
-                  :class="parsedTelemetry.excursionCount > 0 ? 'text-danger font-bold' : 'text-success'"
+                  :class="
+                    parsedTelemetry.excursionCount > 0
+                      ? 'text-danger font-bold'
+                      : 'text-success'
+                  "
                 >
                   {{ parsedTelemetry.excursionCount }}
                 </span>
@@ -924,7 +967,10 @@
             </div>
 
             <!-- Excursion Range Events List -->
-            <div v-if="parsedTelemetry.excursionEvents.length > 0" class="excursion-events-box">
+            <div
+              v-if="parsedTelemetry.excursionEvents.length > 0"
+              class="excursion-events-box"
+            >
               <h5 class="sub-title text-danger">Detected Excursion Events</h5>
               <div class="table-responsive">
                 <table class="table table-sm">
@@ -940,17 +986,33 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="evt in parsedTelemetry.excursionEvents" :key="evt.id" class="row-excursion-event">
+                    <tr
+                      v-for="evt in parsedTelemetry.excursionEvents"
+                      :key="evt.id"
+                      class="row-excursion-event"
+                    >
                       <td class="code-font font-bold">{{ evt.id }}</td>
                       <td>
                         <span class="badge badge-quarantine">
-                          {{ evt.type === 'WARM_EXCURSION' ? 'WARM EXCURSION (> -70.0°C)' : 'COLD EXCURSION (< -196.0°C)' }}
+                          {{
+                            evt.type === "WARM_EXCURSION"
+                              ? "WARM EXCURSION (> -70.0°C)"
+                              : "COLD EXCURSION (< -196.0°C)"
+                          }}
                         </span>
                       </td>
-                      <td class="code-font">{{ formatDateTime(evt.startTime) }}</td>
-                      <td class="code-font">{{ formatDateTime(evt.endTime) }}</td>
-                      <td class="code-font font-bold">{{ evt.durationFormatted }}</td>
-                      <td class="code-font font-bold text-danger">{{ evt.peakTemperature.toFixed(1) }}°C</td>
+                      <td class="code-font">
+                        {{ formatDateTime(evt.startTime) }}
+                      </td>
+                      <td class="code-font">
+                        {{ formatDateTime(evt.endTime) }}
+                      </td>
+                      <td class="code-font font-bold">
+                        {{ evt.durationFormatted }}
+                      </td>
+                      <td class="code-font font-bold text-danger">
+                        {{ evt.peakTemperature.toFixed(1) }}°C
+                      </td>
                       <td>{{ evt.sampleCount }}</td>
                     </tr>
                   </tbody>
@@ -974,18 +1036,32 @@
                     <tr
                       v-for="(reading, idx) in parsedTelemetry.sampleReadings"
                       :key="idx"
-                      :class="{ 'row-excursion-highlight': reading.isExcursion }"
+                      :class="{
+                        'row-excursion-highlight': reading.isExcursion,
+                      }"
                     >
-                      <td class="code-font">{{ formatDateTime(reading.timestamp) }}</td>
+                      <td class="code-font">
+                        {{ formatDateTime(reading.timestamp) }}
+                      </td>
                       <td
                         class="code-font"
-                        :class="reading.isExcursion ? 'text-danger font-bold' : 'text-success'"
+                        :class="
+                          reading.isExcursion
+                            ? 'text-danger font-bold'
+                            : 'text-success'
+                        "
                       >
                         {{ reading.temperatureCelsius.toFixed(1) }}°C
                       </td>
                       <td>
-                        <span :class="reading.isExcursion ? 'badge badge-quarantine' : 'badge badge-unlocked'">
-                          {{ reading.isExcursion ? 'EXCURSION' : 'OPTIMAL' }}
+                        <span
+                          :class="
+                            reading.isExcursion
+                              ? 'badge badge-quarantine'
+                              : 'badge badge-unlocked'
+                          "
+                        >
+                          {{ reading.isExcursion ? "EXCURSION" : "OPTIMAL" }}
                         </span>
                       </td>
                     </tr>
@@ -1003,12 +1079,22 @@
                 <label>Transit Stage</label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <select v-model="milestoneForm.stage" required>
-                  <option value="APHERESIS_COLLECTION">1. Apheresis Collection</option>
+                  <option value="APHERESIS_COLLECTION">
+                    1. Apheresis Collection
+                  </option>
                   <option value="CRYOPRESERVATION">2. Cryopreservation</option>
-                  <option value="COURIER_TRANSIT_OUTBOUND">3. Outbound Courier Transit</option>
-                  <option value="MANUFACTURING_PROCESSING">4. Manufacturing Processing</option>
-                  <option value="COURIER_TRANSIT_RETURN">5. Return Courier Transit</option>
-                  <option value="SITE_RECEIPT_AND_STORAGE">6. Site Storage</option>
+                  <option value="COURIER_TRANSIT_OUTBOUND">
+                    3. Outbound Courier Transit
+                  </option>
+                  <option value="MANUFACTURING_PROCESSING">
+                    4. Manufacturing Processing
+                  </option>
+                  <option value="COURIER_TRANSIT_RETURN">
+                    5. Return Courier Transit
+                  </option>
+                  <option value="SITE_RECEIPT_AND_STORAGE">
+                    6. Site Storage
+                  </option>
                 </select>
               </div>
 
@@ -1052,55 +1138,86 @@
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Custodian User ID</label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input v-model="milestoneForm.custodian_id" type="text" required />
+                <input
+                  v-model="milestoneForm.custodian_id"
+                  type="text"
+                  required
+                />
               </div>
 
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Custodian Full Name</label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input v-model="milestoneForm.custodian_name" type="text" required />
+                <input
+                  v-model="milestoneForm.custodian_name"
+                  type="text"
+                  required
+                />
               </div>
 
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Courier / Carrier</label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input v-model="milestoneForm.carrier" type="text" placeholder="e.g. WorldCourier Cryo" />
+                <input
+                  v-model="milestoneForm.carrier"
+                  type="text"
+                  placeholder="e.g. WorldCourier Cryo"
+                />
               </div>
 
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Tracking Number</label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input v-model="milestoneForm.tracking_number" type="text" placeholder="e.g. WC-8839210" />
+                <input
+                  v-model="milestoneForm.tracking_number"
+                  type="text"
+                  placeholder="e.g. WC-8839210"
+                />
               </div>
 
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Dry Shipper / Dewar ID</label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input v-model="milestoneForm.dry_shipper_id" type="text" placeholder="e.g. DEWAR-LN2-9901" />
+                <input
+                  v-model="milestoneForm.dry_shipper_id"
+                  type="text"
+                  placeholder="e.g. DEWAR-LN2-9901"
+                />
               </div>
 
               <div class="form-group">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>Tamper Seal ID</label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input v-model="milestoneForm.seal_id" type="text" placeholder="e.g. SEAL-4482" />
+                <input
+                  v-model="milestoneForm.seal_id"
+                  type="text"
+                  placeholder="e.g. SEAL-4482"
+                />
               </div>
 
               <div class="form-group col-full">
                 <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label>
                   GxP Justification Notes &amp; Observations
-                  <span v-if="parsedTelemetry && parsedTelemetry.excursionCount > 0" class="text-danger">* (Required for Excursion)</span>
+                  <span
+                    v-if="parsedTelemetry && parsedTelemetry.excursionCount > 0"
+                    class="text-danger"
+                    >* (Required for Excursion)</span
+                  >
                 </label>
                 <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <textarea
                   v-model="milestoneForm.notes"
                   rows="3"
-                  :required="parsedTelemetry != null && parsedTelemetry.excursionCount > 0"
+                  :required="
+                    parsedTelemetry != null &&
+                    parsedTelemetry.excursionCount > 0
+                  "
                   placeholder="Enter GxP justification notes, courier comments, or excursion investigation references..."
                 />
               </div>
@@ -1142,13 +1259,21 @@
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Manufacturing Batch ID</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="manufacturingForm.batch_id" type="text" required />
+              <input
+                v-model="manufacturingForm.batch_id"
+                type="text"
+                required
+              />
             </div>
             <div class="form-group col-full">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Manufacturing Facility ID</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="manufacturingForm.manufacturing_facility_id" type="text" required />
+              <input
+                v-model="manufacturingForm.manufacturing_facility_id"
+                type="text"
+                required
+              />
             </div>
           </div>
           <footer class="modal-footer">
@@ -1186,19 +1311,31 @@
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Administrator ID</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="infusionForm.administrator_id" type="text" required />
+              <input
+                v-model="infusionForm.administrator_id"
+                type="text"
+                required
+              />
             </div>
             <div class="form-group col-full">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>Administrator Name</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="infusionForm.administrator_name" type="text" required />
+              <input
+                v-model="infusionForm.administrator_name"
+                type="text"
+                required
+              />
             </div>
             <div class="form-group col-full">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>E-Signature Step-Up Token</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="infusionForm.signature_token" type="password" required />
+              <input
+                v-model="infusionForm.signature_token"
+                type="password"
+                required
+              />
             </div>
           </div>
           <footer class="modal-footer">
@@ -1575,8 +1712,10 @@ async function submitDestruction() {
 function openMilestoneModal() {
   milestoneForm.study_id = filters.studyId;
   milestoneForm.chain_of_custody_id = cocData.value?.id || "";
-  milestoneForm.stage = cocData.value?.current_stage || "COURIER_TRANSIT_OUTBOUND";
-  milestoneForm.temperature_celsius = cocData.value?.lowest_temp_celsius ?? -196.0;
+  milestoneForm.stage =
+    cocData.value?.current_stage || "COURIER_TRANSIT_OUTBOUND";
+  milestoneForm.temperature_celsius =
+    cocData.value?.lowest_temp_celsius ?? -196.0;
   milestoneForm.timestamp = new Date().toISOString();
   milestoneForm.notes = "";
 
@@ -1638,7 +1777,8 @@ async function submitMilestone() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-change-justification": milestoneForm.notes || "Log transit milestone",
+        "x-change-justification":
+          milestoneForm.notes || "Log transit milestone",
       },
       body: JSON.stringify({
         study_id: milestoneForm.study_id,
@@ -1668,7 +1808,8 @@ async function submitMilestone() {
       await fetchTraceability();
     } else {
       const errData = await res.json().catch(() => null);
-      parsingError.value = errData?.detail || "Failed to log transit milestone.";
+      parsingError.value =
+        errData?.detail || "Failed to log transit milestone.";
     }
   } catch (err: any) {
     console.error("Milestone log submission failed", err);
@@ -2364,4 +2505,3 @@ onMounted(() => {
   font-size: 0.75rem;
 }
 </style>
-

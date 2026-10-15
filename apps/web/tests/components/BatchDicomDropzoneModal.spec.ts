@@ -13,13 +13,13 @@ describe("BatchDicomDropzoneModal.vue", () => {
     return mount(BatchDicomDropzoneModal, {
       props: {
         isOpen: true,
-        ...props
+        ...props,
       },
       global: {
         stubs: {
-          Teleport: true
-        }
-      }
+          Teleport: true,
+        },
+      },
     });
   };
 
@@ -49,17 +49,25 @@ describe("BatchDicomDropzoneModal.vue", () => {
       subjectId: "SUBJ-TEST-001",
       timepoint: "VISIT-1",
       studyId: "STUDY-ONC-100",
-      siteId: "SITE-200"
+      siteId: "SITE-200",
     });
 
     expect(wrapper.find(".modal-backdrop").exists()).toBe(true);
-    expect(wrapper.find(".badge-gxp").text()).toContain("21 CFR Part 11 / DICOM PS 3.15");
-    expect(wrapper.find("#batch-modal-title").text()).toContain("Batch DICOM Folder & Archive Ingestion");
+    expect(wrapper.find(".badge-gxp").text()).toContain(
+      "21 CFR Part 11 / DICOM PS 3.15"
+    );
+    expect(wrapper.find("#batch-modal-title").text()).toContain(
+      "Batch DICOM Folder & Archive Ingestion"
+    );
 
-    const subjInput = wrapper.find("#batch-subj-input").element as HTMLInputElement;
-    const timeInput = wrapper.find("#batch-time-input").element as HTMLInputElement;
-    const studyInput = wrapper.find("#batch-study-input").element as HTMLInputElement;
-    const siteInput = wrapper.find("#batch-site-input").element as HTMLInputElement;
+    const subjInput = wrapper.find("#batch-subj-input")
+      .element as HTMLInputElement;
+    const timeInput = wrapper.find("#batch-time-input")
+      .element as HTMLInputElement;
+    const studyInput = wrapper.find("#batch-study-input")
+      .element as HTMLInputElement;
+    const siteInput = wrapper.find("#batch-site-input")
+      .element as HTMLInputElement;
 
     expect(subjInput.value).toBe("SUBJ-TEST-001");
     expect(timeInput.value).toBe("VISIT-1");
@@ -73,15 +81,23 @@ describe("BatchDicomDropzoneModal.vue", () => {
      */
     const wrapper = mountModal({ isOpen: true });
 
-    const fileDicom1 = new File(["dummy dicom content 1"], "slice_001.dcm", { type: "application/dicom" });
-    const fileDicom2 = new File(["dummy dicom content 2"], "slice_002.dcm", { type: "application/dicom" });
-    const filePdf = new File(["dummy pdf content"], "clinical_notes.pdf", { type: "application/pdf" });
-    const fileDoc = new File(["dummy doc content"], "site_summary.docx", { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+    const fileDicom1 = new File(["dummy dicom content 1"], "slice_001.dcm", {
+      type: "application/dicom",
+    });
+    const fileDicom2 = new File(["dummy dicom content 2"], "slice_002.dcm", {
+      type: "application/dicom",
+    });
+    const filePdf = new File(["dummy pdf content"], "clinical_notes.pdf", {
+      type: "application/pdf",
+    });
+    const fileDoc = new File(["dummy doc content"], "site_summary.docx", {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
 
     const folderInput = wrapper.find("input[webkitdirectory]");
     Object.defineProperty(folderInput.element, "files", {
       value: [fileDicom1, fileDicom2, filePdf, fileDoc],
-      writable: true
+      writable: true,
     });
 
     await folderInput.trigger("change");
@@ -105,7 +121,9 @@ describe("BatchDicomDropzoneModal.vue", () => {
      */
     const wrapper = mountModal({ isOpen: true });
 
-    const zipFile = new File(["dummy zip bytes"], "batch_study.zip", { type: "application/zip" });
+    const zipFile = new File(["dummy zip bytes"], "batch_study.zip", {
+      type: "application/zip",
+    });
 
     const dropArea = wrapper.find(".dropzone-area");
     await dropArea.trigger("dragover");
@@ -113,11 +131,13 @@ describe("BatchDicomDropzoneModal.vue", () => {
 
     await dropArea.trigger("drop", {
       dataTransfer: {
-        files: [zipFile]
-      }
+        files: [zipFile],
+      },
     });
 
-    expect(wrapper.find(".dropzone-area").classes()).not.toContain("is-dragging");
+    expect(wrapper.find(".dropzone-area").classes()).not.toContain(
+      "is-dragging"
+    );
     expect(wrapper.find(".file-summary-card").exists()).toBe(true);
     const totalFilesBadge = wrapper.find(".badge-info").text();
     expect(totalFilesBadge).toContain("1 Total Files");
@@ -137,29 +157,33 @@ describe("BatchDicomDropzoneModal.vue", () => {
       manifest: {
         manifest_id: "man_888",
         scrubbed_tags_count: 56,
-        pixel_mask_applied: true
+        pixel_mask_applied: true,
       },
-      signature: "SIG-HMAC256-VALID-TEST-CERT"
+      signature: "SIG-HMAC256-VALID-TEST-CERT",
     };
 
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
-      json: async () => mockSuccessResponse
+      json: async () => mockSuccessResponse,
     } as Response);
 
     const wrapper = mountModal({
       isOpen: true,
       subjectId: "SUBJ-ONC-001",
-      timepoint: "BASELINE"
+      timepoint: "BASELINE",
     });
 
-    const dcmFile = new File(["dicom content"], "slice_1.dcm", { type: "application/dicom" });
-    const pdfFile = new File(["pdf content"], "notes.pdf", { type: "application/pdf" });
+    const dcmFile = new File(["dicom content"], "slice_1.dcm", {
+      type: "application/dicom",
+    });
+    const pdfFile = new File(["pdf content"], "notes.pdf", {
+      type: "application/pdf",
+    });
 
     const fileInput = wrapper.find("input[accept*='.dcm']");
     Object.defineProperty(fileInput.element, "files", {
       value: [dcmFile, pdfFile],
-      writable: true
+      writable: true,
     });
     await fileInput.trigger("change");
 
@@ -171,13 +195,18 @@ describe("BatchDicomDropzoneModal.vue", () => {
     await new Promise((r) => setTimeout(r, 10));
     await wrapper.vm.$nextTick();
 
-    expect(fetchSpy).toHaveBeenCalledWith("/api/v1/imaging/studies/batch", expect.objectContaining({
-      method: "POST",
-      headers: { "X-Operator-Identity": "crc.coordinator@site.org" }
-    }));
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/v1/imaging/studies/batch",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "X-Operator-Identity": "crc.coordinator@site.org" },
+      })
+    );
 
     expect(wrapper.find(".certificate-summary-card").exists()).toBe(true);
-    expect(wrapper.find(".cert-title").text()).toContain("PS 3.15 De-Identification Certificate Issued");
+    expect(wrapper.find(".cert-title").text()).toContain(
+      "PS 3.15 De-Identification Certificate Issued"
+    );
     expect(wrapper.text()).toContain("CERT-PS315-2026-9999");
     expect(wrapper.text()).toContain("1.2.840.10008.1.999.888.777");
     expect(wrapper.text()).toContain("5 slices");
@@ -188,11 +217,13 @@ describe("BatchDicomDropzoneModal.vue", () => {
     await doneBtn.trigger("click");
 
     expect(wrapper.emitted("ingested")).toBeTruthy();
-    expect(wrapper.emitted("ingested")?.[0][0]).toEqual(expect.objectContaining({
-      studyEnvelopeId: "env_study_batch_999",
-      certificateId: "CERT-PS315-2026-9999",
-      anonymizedStudyUid: "1.2.840.10008.1.999.888.777"
-    }));
+    expect(wrapper.emitted("ingested")?.[0][0]).toEqual(
+      expect.objectContaining({
+        studyEnvelopeId: "env_study_batch_999",
+        certificateId: "CERT-PS315-2026-9999",
+        anonymizedStudyUid: "1.2.840.10008.1.999.888.777",
+      })
+    );
     expect(wrapper.emitted("close")).toBeTruthy();
   });
 
@@ -203,16 +234,20 @@ describe("BatchDicomDropzoneModal.vue", () => {
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: false,
       status: 400,
-      json: async () => ({ message: "Batch payload exceeds maximum size limit of 2 GB." })
+      json: async () => ({
+        message: "Batch payload exceeds maximum size limit of 2 GB.",
+      }),
     } as Response);
 
     const wrapper = mountModal({ isOpen: true });
 
-    const dcmFile = new File(["dicom content"], "slice_1.dcm", { type: "application/dicom" });
+    const dcmFile = new File(["dicom content"], "slice_1.dcm", {
+      type: "application/dicom",
+    });
     const fileInput = wrapper.find("input[accept*='.dcm']");
     Object.defineProperty(fileInput.element, "files", {
       value: [dcmFile],
-      writable: true
+      writable: true,
     });
     await fileInput.trigger("change");
 
@@ -224,7 +259,9 @@ describe("BatchDicomDropzoneModal.vue", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".error-alert-box").exists()).toBe(true);
-    expect(wrapper.find(".error-alert-box").text()).toContain("Batch payload exceeds maximum size limit of 2 GB.");
+    expect(wrapper.find(".error-alert-box").text()).toContain(
+      "Batch payload exceeds maximum size limit of 2 GB."
+    );
   });
 
   it("emits close event when close button or cancel button is clicked", async () => {

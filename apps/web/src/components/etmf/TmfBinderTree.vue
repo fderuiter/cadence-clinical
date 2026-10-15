@@ -1,6 +1,16 @@
 <template>
   <!-- eslint-disable vuejs-accessibility/interactive-supports-focus, vuejs-accessibility/click-events-have-key-events -->
   <div class="tmf-binder-tree-container">
+    <div class="binder-export-header">
+      <button
+        class="btn-export-full-binder"
+        aria-label="Export complete eTMF study binder"
+        @click="exportFullBinder"
+      >
+        <span>📦</span> Export Complete Study Binder
+      </button>
+    </div>
+
     <div class="tree-search-bar">
       <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
       <input
@@ -58,6 +68,14 @@
           >
             {{ getUnreadBadgeCount(zone) }}
           </span>
+          <button
+            class="btn-node-export"
+            title="Export Zone documents"
+            :aria-label="'Export Zone ' + zone.code + ' documents'"
+            @click.stop="exportZone(zone)"
+          >
+            📥
+          </button>
         </div>
 
         <div
@@ -95,6 +113,14 @@
               >
                 {{ getUnreadBadgeCount(section) }}
               </span>
+              <button
+                class="btn-node-export"
+                title="Export Section documents"
+                :aria-label="'Export Section ' + section.code + ' documents'"
+                @click.stop="exportSection(section)"
+              >
+                📥
+              </button>
             </div>
 
             <div
@@ -138,6 +164,44 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
+import { useEtmfStore } from "../../stores/etmf.js";
+
+function getEtmfStore() {
+  try {
+    return useEtmfStore();
+  } catch {
+    return null;
+  }
+}
+
+function exportFullBinder() {
+  const store = getEtmfStore();
+  if (store) {
+    store.triggerExport({
+      is_full_binder: true,
+    });
+  }
+}
+
+function exportZone(zone) {
+  const store = getEtmfStore();
+  if (store) {
+    store.triggerExport({
+      zone: parseInt(zone.code, 10),
+      is_full_binder: false,
+    });
+  }
+}
+
+function exportSection(section) {
+  const store = getEtmfStore();
+  if (store) {
+    store.triggerExport({
+      section: section.code,
+      is_full_binder: false,
+    });
+  }
+}
 
 const props = defineProps({
   tree: {
@@ -435,6 +499,47 @@ function getUnreadBadgeCount(node) {
   border-right: 1px solid #e2e8f0;
   padding: 16px;
   box-sizing: border-box;
+}
+
+.binder-export-header {
+  margin-bottom: 12px;
+}
+
+.btn-export-full-binder {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-export-full-binder:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-node-export {
+  background: transparent;
+  border: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+.btn-node-export:hover {
+  opacity: 1;
+  background-color: #cbd5e1;
 }
 
 .tree-search-bar {

@@ -200,6 +200,7 @@ builder.Services.AddScoped<IFormSubmissionApplicationService, FormSubmissionAppl
 builder.Services.AddScoped<IClinicalQueryApplicationService, ClinicalQueryApplicationService>();
 builder.Services.AddScoped<IAutoQueryDispatchService, AutoQueryDispatchService>();
 builder.Services.AddScoped<ILabToxicityGovernanceService, LabToxicityGovernanceService>();
+builder.Services.AddScoped<ILabRangeImportService, LabRangeImportService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
 builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
 builder.Services.AddScoped<ISynonymImportService, SynonymImportService>();
@@ -264,6 +265,7 @@ app.MapObservationEndpoints();
 app.MapFormEndpoints();
 app.MapQueryEndpoints();
 app.MapLabToxicityEndpoints();
+app.MapLabRangeEndpoints();
 app.MapCecEndpoints();
 app.MapCgtEndpoints();
 app.MapSynonymEndpoints();

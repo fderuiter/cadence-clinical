@@ -17,7 +17,9 @@
               Batch DICOM Folder &amp; Archive Ingestion
             </h3>
             <p class="modal-subtitle">
-              Drag and drop complete DICOM study directories or ZIP archives. Non-DICOM items (PDFs, notes) are automatically filtered and reported.
+              Drag and drop complete DICOM study directories or ZIP archives.
+              Non-DICOM items (PDFs, notes) are automatically filtered and
+              reported.
             </p>
           </div>
           <button
@@ -35,7 +37,9 @@
           <!-- Parameter Bindings -->
           <div class="param-grid">
             <div class="param-field">
-              <label for="batch-subj-input" class="param-label">Subject ID</label>
+              <label for="batch-subj-input" class="param-label"
+                >Subject ID</label
+              >
               <input
                 id="batch-subj-input"
                 v-model="inputSubjectId"
@@ -45,7 +49,9 @@
               />
             </div>
             <div class="param-field">
-              <label for="batch-time-input" class="param-label">Timepoint</label>
+              <label for="batch-time-input" class="param-label"
+                >Timepoint</label
+              >
               <input
                 id="batch-time-input"
                 v-model="inputTimepoint"
@@ -55,7 +61,9 @@
               />
             </div>
             <div class="param-field">
-              <label for="batch-study-input" class="param-label">Study Protocol</label>
+              <label for="batch-study-input" class="param-label"
+                >Study Protocol</label
+              >
               <input
                 id="batch-study-input"
                 v-model="inputStudyId"
@@ -91,7 +99,8 @@
                   Drag &amp; Drop DICOM Study Folder or ZIP Archive
                 </p>
                 <p class="dropzone-hint">
-                  Supports multi-slice DICOM folders, subdirectories, or .zip files up to 2 GB
+                  Supports multi-slice DICOM folders, subdirectories, or .zip
+                  files up to 2 GB
                 </p>
 
                 <div class="dropzone-actions">
@@ -136,16 +145,22 @@
             <div v-if="selectedFiles.length > 0" class="file-summary-card">
               <div class="summary-header">
                 <span class="summary-title">Selected Items Summary</span>
-                <span class="badge badge-info">{{ selectedFiles.length }} Total Files</span>
+                <span class="badge badge-info"
+                  >{{ selectedFiles.length }} Total Files</span
+                >
               </div>
 
               <div class="summary-stats">
                 <div class="stat-box">
-                  <span class="stat-num text-success">{{ candidateDicomCount }}</span>
+                  <span class="stat-num text-success">{{
+                    candidateDicomCount
+                  }}</span>
                   <span class="stat-label">Candidate DICOM Items</span>
                 </div>
                 <div class="stat-box">
-                  <span class="stat-num text-warning">{{ nonDicomList.length }}</span>
+                  <span class="stat-num text-warning">{{
+                    nonDicomList.length
+                  }}</span>
                   <span class="stat-label">Non-DICOM Files Detected</span>
                 </div>
               </div>
@@ -154,13 +169,18 @@
               <div v-if="nonDicomList.length > 0" class="non-dicom-alert">
                 <span class="alert-icon">⚠️</span>
                 <div class="alert-text">
-                  <strong>Non-DICOM Files Detected:</strong> The following {{ nonDicomList.length }} file(s) will be automatically filtered out during ingestion:
+                  <strong>Non-DICOM Files Detected:</strong> The following
+                  {{ nonDicomList.length }} file(s) will be automatically
+                  filtered out during ingestion:
                   <ul class="non-dicom-file-list">
                     <li v-for="f in nonDicomList.slice(0, 5)" :key="f.name">
                       <code>{{ f.name }}</code>
                     </li>
                     <li v-if="nonDicomList.length > 5">
-                      <em>...and {{ nonDicomList.length - 5 }} more non-DICOM file(s)</em>
+                      <em
+                        >...and {{ nonDicomList.length - 5 }} more non-DICOM
+                        file(s)</em
+                      >
                     </li>
                   </ul>
                 </div>
@@ -171,9 +191,12 @@
           <!-- Step 2: Uploading / Processing State -->
           <div v-if="isUploading" class="uploading-state-card">
             <div class="spinner-icon">🔄</div>
-            <h4 class="uploading-title">Streaming &amp; De-identifying DICOM Batch...</h4>
+            <h4 class="uploading-title">
+              Streaming &amp; De-identifying DICOM Batch...
+            </h4>
             <p class="uploading-desc">
-              Scrubbing 50+ PHI header tags, shifting dates, and applying PS 3.15 pixel masks in memory.
+              Scrubbing 50+ PHI header tags, shifting dates, and applying PS
+              3.15 pixel masks in memory.
             </p>
             <div class="progress-bar-track">
               <div
@@ -189,9 +212,12 @@
             <div class="cert-banner">
               <span class="cert-icon">🔒</span>
               <div>
-                <h4 class="cert-title">PS 3.15 De-Identification Certificate Issued</h4>
+                <h4 class="cert-title">
+                  PS 3.15 De-Identification Certificate Issued
+                </h4>
                 <p class="cert-subtitle">
-                  Batch session cryptographic manifest persisted with HMAC-SHA256 signature.
+                  Batch session cryptographic manifest persisted with
+                  HMAC-SHA256 signature.
                 </p>
               </div>
             </div>
@@ -199,40 +225,65 @@
             <div class="cert-details-grid">
               <div class="detail-row">
                 <span class="detail-label">Certificate ID:</span>
-                <span class="detail-val code">{{ ingestionResult.certificateId }}</span>
+                <span class="detail-val code">{{
+                  ingestionResult.certificateId
+                }}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Anonymized Study UID:</span>
-                <span class="detail-val code">{{ ingestionResult.anonymizedStudyUid }}</span>
+                <span class="detail-val code">{{
+                  ingestionResult.anonymizedStudyUid
+                }}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Ingested Slices:</span>
-                <span class="detail-val font-bold text-success">{{ ingestionResult.ingestedSliceCount }} slices</span>
+                <span class="detail-val font-bold text-success"
+                  >{{ ingestionResult.ingestedSliceCount }} slices</span
+                >
               </div>
               <div class="detail-row">
                 <span class="detail-label">Filtered Non-DICOM Items:</span>
-                <span class="detail-val">{{ ingestionResult.skippedNonDicomCount }} files skipped</span>
+                <span class="detail-val"
+                  >{{ ingestionResult.skippedNonDicomCount }} files
+                  skipped</span
+                >
               </div>
               <div class="detail-row">
                 <span class="detail-label">Scrubbed PHI Tags:</span>
-                <span class="detail-val">{{ ingestionResult.manifest?.scrubbed_tags_count || 56 }} DICOM tags sanitized</span>
+                <span class="detail-val"
+                  >{{
+                    ingestionResult.manifest?.scrubbed_tags_count || 56
+                  }}
+                  DICOM tags sanitized</span
+                >
               </div>
               <div class="detail-row">
                 <span class="detail-label">Pixel Masking:</span>
-                <span class="detail-val">{{ ingestionResult.manifest?.pixel_mask_applied ? 'Applied (Header & Overlay Redacted)' : 'Cleared' }}</span>
+                <span class="detail-val">{{
+                  ingestionResult.manifest?.pixel_mask_applied
+                    ? "Applied (Header & Overlay Redacted)"
+                    : "Cleared"
+                }}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">HMAC Signature:</span>
-                <span class="detail-val code signature-truncate">{{ ingestionResult.signature }}</span>
+                <span class="detail-val code signature-truncate">{{
+                  ingestionResult.signature
+                }}</span>
               </div>
             </div>
 
             <!-- Reported Skipped Non-DICOM Files -->
             <div
-              v-if="ingestionResult.skippedNonDicomFiles && ingestionResult.skippedNonDicomFiles.length > 0"
+              v-if="
+                ingestionResult.skippedNonDicomFiles &&
+                ingestionResult.skippedNonDicomFiles.length > 0
+              "
               class="skipped-report-box"
             >
-              <span class="report-heading">Reported Non-DICOM Items Filtered:</span>
+              <span class="report-heading"
+                >Reported Non-DICOM Items Filtered:</span
+              >
               <ul class="skipped-list">
                 <li v-for="f in ingestionResult.skippedNonDicomFiles" :key="f">
                   <code>{{ f }}</code>
@@ -267,7 +318,7 @@
             :disabled="selectedFiles.length === 0 || isUploading"
             @click="startBatchIngestion"
           >
-            {{ isUploading ? 'Ingesting...' : 'Start Batch Ingestion' }}
+            {{ isUploading ? "Ingesting..." : "Start Batch Ingestion" }}
           </button>
 
           <button
@@ -292,7 +343,7 @@ const props = defineProps({
   subjectId: { type: String, default: "SUBJ-ONC-001" },
   timepoint: { type: String, default: "BASELINE" },
   studyId: { type: String, default: "STUDY-ONC-2026" },
-  siteId: { type: String, default: "SITE-101" }
+  siteId: { type: String, default: "SITE-101" },
 });
 
 const emit = defineEmits(["close", "ingested"]);
@@ -334,7 +385,19 @@ function resetState() {
   isDragging.value = false;
 }
 
-const nonDicomExtensions = [".pdf", ".txt", ".doc", ".docx", ".png", ".jpg", ".jpeg", ".csv", ".xml", ".ds_store", ".json"];
+const nonDicomExtensions = [
+  ".pdf",
+  ".txt",
+  ".doc",
+  ".docx",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".csv",
+  ".xml",
+  ".ds_store",
+  ".json",
+];
 
 function isNonDicomFile(file) {
   const name = file.name.toLowerCase();
@@ -394,17 +457,25 @@ async function handleDrop(event) {
 function traverseEntry(entry, fileList) {
   return new Promise((resolve) => {
     if (entry.isFile) {
-      entry.file((file) => {
-        fileList.push(file);
-        resolve();
-      }, () => resolve());
+      entry.file(
+        (file) => {
+          fileList.push(file);
+          resolve();
+        },
+        () => resolve()
+      );
     } else if (entry.isDirectory) {
       const dirReader = entry.createReader();
-      dirReader.readEntries(async (entries) => {
-        const promises = entries.map((child) => traverseEntry(child, fileList));
-        await Promise.all(promises);
-        resolve();
-      }, () => resolve());
+      dirReader.readEntries(
+        async (entries) => {
+          const promises = entries.map((child) =>
+            traverseEntry(child, fileList)
+          );
+          await Promise.all(promises);
+          resolve();
+        },
+        () => resolve()
+      );
     } else {
       resolve();
     }
@@ -434,16 +505,18 @@ async function startBatchIngestion() {
     const response = await fetch("/api/v1/imaging/studies/batch", {
       method: "POST",
       headers: {
-        "X-Operator-Identity": "crc.coordinator@site.org" // deid-ignore
+        "X-Operator-Identity": "crc.coordinator@site.org", // deid-ignore
       },
-      body: formData
+      body: formData,
     });
 
     uploadProgress.value = 85;
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.message || `Upload failed with HTTP ${response.status}`);
+      throw new Error(
+        errData.message || `Upload failed with HTTP ${response.status}`
+      );
     }
 
     const data = await response.json();
@@ -452,12 +525,22 @@ async function startBatchIngestion() {
       studyEnvelopeId: data.studyEnvelopeId || data.StudyEnvelopeId,
       certificateId: data.certificateId || data.CertificateId,
       anonymizedStudyUid: data.anonymizedStudyUid || data.AnonymizedStudyUid,
-      ingestedSliceCount: data.ingestedSliceCount ?? data.IngestedSliceCount ?? candidateDicomCount.value,
-      skippedNonDicomCount: data.skippedNonDicomCount ?? data.SkippedNonDicomCount ?? nonDicomList.value.length,
-      skippedNonDicomFiles: data.skippedNonDicomFiles || data.SkippedNonDicomFiles || nonDicomList.value.map(f => f.name),
+      ingestedSliceCount:
+        data.ingestedSliceCount ??
+        data.IngestedSliceCount ??
+        candidateDicomCount.value,
+      skippedNonDicomCount:
+        data.skippedNonDicomCount ??
+        data.SkippedNonDicomCount ??
+        nonDicomList.value.length,
+      skippedNonDicomFiles:
+        data.skippedNonDicomFiles ||
+        data.SkippedNonDicomFiles ||
+        nonDicomList.value.map((f) => f.name),
       seriesSummary: data.seriesSummary || data.SeriesSummary || [],
       manifest: data.manifest || data.Manifest,
-      signature: data.signature || data.Signature || "SIG-HMAC256-VALID-21CFR11"
+      signature:
+        data.signature || data.Signature || "SIG-HMAC256-VALID-21CFR11",
     };
   } catch (err) {
     errorMessage.value = err.message || "Failed to process batch DICOM upload.";
@@ -495,7 +578,9 @@ function completeAndClose() {
 .modal-card {
   background-color: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.2),
+    0 10px 10px -5px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 680px;
   max-height: 90vh;
@@ -744,8 +829,12 @@ function completeAndClose() {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .uploading-title {

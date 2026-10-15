@@ -1,7 +1,10 @@
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Time;
+using Cadence.Rules.Amendment;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
+using Cadence.Rules.Validation;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -21,9 +24,13 @@ public static class RulesServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddCadenceRules(this IServiceCollection services)
     {
+        services.TryAddSingleton<IClock>(SystemClock.Instance);
         services.TryAddSingleton<IRuleEvaluator, DotNetRuleEvaluator>();
         services.TryAddSingleton<RulePackLoader>();
         services.TryAddScoped<ValidationRunner>();
+        services.TryAddSingleton<BatchJobStore>();
+        services.TryAddScoped<ParallelBatchRuleValidator>();
+        services.TryAddScoped<AmendmentRegressionEngine>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<ILibraryContentValidator, RulePackContentValidator>());
         services.TryAddSingleton<IndicatorSetLoader>();
         services.TryAddSingleton<IndicatorEvaluator>();

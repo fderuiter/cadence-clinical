@@ -13,6 +13,18 @@
       </div>
       <div style="display: flex; gap: 8px">
         <button
+          v-if="selectedDocumentIds.length > 0"
+          class="btn btn-outline-primary export-selected-btn"
+          :aria-label="
+            'Download ' +
+            selectedDocumentIds.length +
+            ' selected documents as ZIP package'
+          "
+          @click="handleExportSelected"
+        >
+          <span>📦</span> Download Selected ({{ selectedDocumentIds.length }})
+        </button>
+        <button
           class="btn btn-secondary batch-upload-trigger-btn"
           aria-label="Batch Ingestion multi-file upload"
           @click="isBatchDrawerOpen = true"
@@ -45,6 +57,14 @@
       >
         <thead>
           <tr>
+            <th scope="col" style="width: 40px; text-align: center">
+              <input
+                type="checkbox"
+                aria-label="Select all documents on current page"
+                :checked="isAllSelected"
+                @change="toggleSelectAll"
+              />
+            </th>
             <th scope="col">Document Name</th>
             <th scope="col">Taxonomy</th>
             <th scope="col">Version</th>
@@ -61,13 +81,13 @@
               :key="`doc-skel-${sIdx}`"
               class="skeleton-table-row"
             >
-              <td colspan="7">
-                <SkeletonLoader type="row" :count="1" :columns="7" />
+              <td colspan="8">
+                <SkeletonLoader type="row" :count="1" :columns="8" />
               </td>
             </tr>
           </template>
           <tr v-else-if="paginatedDocuments.length === 0">
-            <td colspan="7" role="gridcell" class="empty-table-cell">
+            <td colspan="8" role="gridcell" class="empty-table-cell">
               <EmptyState
                 icon="📄"
                 title="No Regulated Documents Found"
@@ -99,6 +119,14 @@
               :key="doc.id"
               class="document-row"
             >
+              <td role="gridcell" style="text-align: center" @click.stop>
+                <input
+                  type="checkbox"
+                  :aria-label="'Select document ' + doc.filename"
+                  :checked="isDocumentSelected(doc.id)"
+                  @change="etmfStore.toggleDocumentSelection(doc.id)"
+                />
+              </td>
               <td
                 role="gridcell"
                 :tabindex="getCellTabindex(rIndex, 0)"
@@ -687,6 +715,47 @@ const showUploadModal = ref(false);
 const isDragging = ref(false);
 const isSubmitting = ref(false);
 const uploadError = ref("");
+
+const selectedDocumentIds = computed(() => etmfStore.selectedDocumentIds);
+
+function isDocumentSelected(docId) {
+  return etmfStore.selectedDocumentIds.includes(docId);
+}
+
+const isAllSelected = computed(() => {
+  return (
+    paginatedDocuments.value.length > 0 &&
+    paginatedDocuments.value.every((d) =>
+      etmfStore.selectedDocumentIds.includes(d.id)
+    )
+  );
+});
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    const paginatedIds = new Set(paginatedDocuments.value.map((d) => d.id));
+    const newSelected = etmfStore.selectedDocumentIds.filter(
+      (id) => !paginatedIds.has(id)
+    );
+    etmfStore.setSelectedDocumentIds(newSelected);
+  } else {
+    const selectedSet = new Set(etmfStore.selectedDocumentIds);
+    paginatedDocuments.value.forEach((d) => selectedSet.add(d.id));
+    etmfStore.setSelectedDocumentIds(Array.from(selectedSet));
+  }
+}
+
+async function handleExportSelected() {
+  if (etmfStore.selectedDocumentIds.length === 0) return;
+  try {
+    await etmfStore.triggerExport({
+      document_ids: [...etmfStore.selectedDocumentIds],
+      is_full_binder: false,
+    });
+  } catch (err) {
+    useToastStore().apiError("Export failed", err);
+  }
+}
 
 // Selected File reference
 const selectedFile = ref(null);

@@ -60,4 +60,9 @@ public interface IClinicalQueryApplicationService
         BatchQueryRequest request,
         CancellationToken cancellationToken,
         string? userRole = null);
+
+    /// <summary>Batch responds to up to 100 queries in an atomic database transaction (Clinical Coordinators and Site Staff).</summary>
+    Task<Result<BatchQueryResponse>> BatchRespondAsync(
+        BatchQueryRespondRequest request,
+        CancellationToken cancellationToken);
 }

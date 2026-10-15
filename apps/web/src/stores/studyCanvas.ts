@@ -464,5 +464,38 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         return false;
       }
     },
+
+    /** Batch responds to multiple open or reopened queries, then updates Execution's results in place. */
+    async batchRespondToQueries(
+      queryIds: string[],
+      response: string,
+      reason?: string
+    ): Promise<boolean> {
+      const toasts = useToastStore();
+      try {
+        const res = await executionApi.batchRespondQueries(
+          queryIds,
+          response,
+          reason
+        );
+
+        const updatedQueries = res.queries || [];
+        const count = res.count ?? updatedQueries.length;
+        const list = this.record.queries;
+        for (const updated of updatedQueries) {
+          const index = list.findIndex((q) => q.id === updated.id);
+          if (index >= 0) {
+            list.splice(index, 1, updated);
+          }
+        }
+
+        const title = `${count} ${count === 1 ? "query" : "queries"} answered`;
+        toasts.push({ tone: "success", title, message: "" });
+        return true;
+      } catch (err) {
+        toasts.apiError("The queries were not answered", err);
+        return false;
+      }
+    },
   },
 });

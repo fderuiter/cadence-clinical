@@ -6,6 +6,15 @@ Generated from `docs/openapi/payments_openapi.json` by `pnpm cadence generate-ap
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/payments/audit-logs` | GetPaymentAuditLogs | Retrieve payment audit ledger records. |
 | `POST` | `/api/v1/payments/disburse` | DisburseStipendDirect | Direct disburse ePRO stipend to participant wallet with strict idempotency and audit trail. |
+| `GET` | `/api/v1/payments/invoices` | ListInvoices | Lists compiled self-billing invoices matching filter criteria. |
+| `POST` | `/api/v1/payments/invoices/batch-compile` | BatchCompileBillingCycles | Executes study-wide batch milestone invoice compilation across all active trial sites. |
+| `POST` | `/api/v1/payments/invoices/compile` | CompileBillingCycle | Automates single-site billing cycle compilation into a self-billing invoice. |
+| `GET` | `/api/v1/payments/invoices/{id}` | GetInvoiceById | Retrieve single self-billing invoice details with line items. |
+| `POST` | `/api/v1/payments/invoices/{id}/approve` | ApproveInvoice | Approve draft self-billing invoice for ERP export and settlement. |
+| `POST` | `/api/v1/payments/invoices/{id}/erp-export` | ExportInvoiceToErp | Exports self-billing invoice to ERP gateway (e.g. SAP). |
+| `POST` | `/api/v1/payments/invoices/{id}/reconcile` | ReconcileInvoice | Reconciles invoice settlement against bank wire or ERP clearing statement. |
+| `GET` | `/api/v1/payments/invoices/{id}/remittance-advice/pdf` | DownloadRemittancePdf | Downloads cryptographic PDF remittance statement. |
+| `POST` | `/api/v1/payments/invoices/{id}/remittance-advice/sign` | SignRemittanceAdvice | Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice. |
 | `GET` | `/api/v1/payments/participant/disbursements` | ListDisbursements | List digital disbursement dispatches. |
 | `POST` | `/api/v1/payments/participant/events/visit-verified` | IngestVisitVerifiedEvent | Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules. |
 | `GET` | `/api/v1/payments/participant/expenses` | ListExpenseClaims | List travel and meal expense reimbursement claims. |

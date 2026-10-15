@@ -32,7 +32,14 @@
           class="btn btn-primary"
           @click="showCompileModal = true"
         >
-          + Compile Billing Cycle
+          + Compile Site Cycle
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          @click="showBatchCompileModal = true"
+        >
+          ⚡ Study Batch Compilation
         </button>
       </div>
     </header>
@@ -111,6 +118,16 @@
           <option value="PAID">Paid</option>
           <option value="RECONCILED">Reconciled</option>
         </select>
+      </div>
+      <div class="filter-group">
+        <label for="filter-batch">Batch Execution ID</label>
+        <input
+          id="filter-batch"
+          v-model="filters.batchExecutionId"
+          type="text"
+          placeholder="e.g. BATCH-EXEC-..."
+          @input="onFilterChange"
+        />
       </div>
       <div class="filter-actions">
         <button
@@ -584,6 +601,227 @@
       </div>
     </div>
 
+    <!-- Modal: Study Batch Billing Compilation -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="showBatchCompileModal"
+      class="modal-overlay"
+      @click.self="showBatchCompileModal = false"
+    >
+      <div class="modal-card modal-sm">
+        <header class="modal-header">
+          <div>
+            <h3>Study Batch Billing Compilation</h3>
+            <p class="text-muted">
+              Automated milestone invoicing across active study sites
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showBatchCompileModal = false"
+          >
+            &times;
+          </button>
+        </header>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="batch-study">Study Protocol ID *</label>
+            <input
+              id="batch-study"
+              v-model="batchCompileForm.studyId"
+              type="text"
+              placeholder="e.g. STUDY-ONC-201"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="batch-cycle">Billing Cycle</label>
+            <select id="batch-cycle" v-model="batchCompileForm.billingCycle">
+              <option value="MONTHLY">Monthly</option>
+              <option value="QUARTERLY">Quarterly</option>
+              <option value="MANUAL">Manual Settlement</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="batch-start">Period Start</label>
+              <input
+                id="batch-start"
+                v-model="batchCompileForm.periodStart"
+                type="date"
+              />
+            </div>
+            <div class="form-group">
+              <label for="batch-end">Period End</label>
+              <input
+                id="batch-end"
+                v-model="batchCompileForm.periodEnd"
+                type="date"
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="batch-sites"
+              >Site Filter (Optional, comma-separated)</label
+            >
+            <input
+              id="batch-sites"
+              v-model="batchCompileForm.siteIdsInput"
+              type="text"
+              placeholder="e.g. SITE-101, SITE-102 (leave empty for all active sites)"
+            />
+          </div>
+          <div class="form-group checkbox-group">
+            <label>
+              <input v-model="batchCompileForm.autoApprove" type="checkbox" />
+              Auto-approve invoices upon compilation
+            </label>
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showBatchCompileModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="isSubmitting"
+            @click="submitBatchCompileBilling"
+          >
+            {{ isSubmitting ? "Compiling Batch..." : "⚡ Execute Study Batch" }}
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Modal: Batch Compilation Summary Result -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="showBatchSummaryModal && batchResult"
+      class="modal-overlay"
+      @click.self="showBatchSummaryModal = false"
+    >
+      <div class="modal-card">
+        <header class="modal-header">
+          <div>
+            <h3>
+              Batch Execution Summary: {{ batchResult.batch_execution_id }}
+            </h3>
+            <p class="text-muted">
+              Study: {{ batchResult.study_id }} | Cycle:
+              {{ batchResult.billing_cycle }} ({{ batchResult.period_start }} to
+              {{ batchResult.period_end }})
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-close"
+            @click="showBatchSummaryModal = false"
+          >
+            &times;
+          </button>
+        </header>
+
+        <div class="modal-body">
+          <div class="summary-cards-grid">
+            <div class="mini-stat-card">
+              <span class="stat-label">Sites Processed</span>
+              <span class="stat-value">
+                {{ batchResult.successful_sites_count }} /
+                {{ batchResult.total_sites_processed }} Passed
+              </span>
+            </div>
+            <div class="mini-stat-card">
+              <span class="stat-label">Total Gross Invoiced</span>
+              <span class="stat-value"
+                >${{ batchResult.total_gross_amount.toFixed(2) }}</span
+              >
+            </div>
+            <div class="mini-stat-card stat-danger">
+              <span class="stat-label">Total Holdback Retention</span>
+              <span class="stat-value"
+                >-${{ batchResult.total_holdback_amount.toFixed(2) }}</span
+              >
+            </div>
+            <div class="mini-stat-card stat-success">
+              <span class="stat-label">Net Settlement Total</span>
+              <span class="stat-value"
+                >${{ batchResult.total_net_amount.toFixed(2) }}</span
+              >
+            </div>
+          </div>
+
+          <h4 class="section-title">
+            Site Results ({{ batchResult.site_results.length }})
+          </h4>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Site ID</th>
+                  <th>Invoice #</th>
+                  <th>Payables</th>
+                  <th class="text-right">Gross</th>
+                  <th class="text-right">Holdback</th>
+                  <th class="text-right">Net</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="res in batchResult.site_results" :key="res.site_id">
+                  <td class="font-bold">
+                    {{ res.site_id }}
+                  </td>
+                  <td class="font-mono">
+                    {{ res.invoice_number || "-" }}
+                  </td>
+                  <td>{{ res.payable_count }}</td>
+                  <td class="text-right font-mono">
+                    ${{ res.gross_amount.toFixed(2) }}
+                  </td>
+                  <td class="text-right text-danger font-mono">
+                    -${{ res.holdback_amount.toFixed(2) }}
+                  </td>
+                  <td class="text-right text-success font-mono font-bold">
+                    ${{ res.net_amount.toFixed(2) }}
+                  </td>
+                  <td>
+                    <span v-if="res.success" class="badge badge-signed"
+                      >✓ Success</span
+                    >
+                    <span
+                      v-else
+                      class="badge badge-pending"
+                      :title="res.error_message || ''"
+                    >
+                      Failed: {{ res.error_message }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="showBatchSummaryModal = false"
+          >
+            Close
+          </button>
+        </footer>
+      </div>
+    </div>
+
     <!-- Modal: Part 11 Electronic Signature for Remittance Advice -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
@@ -798,6 +1036,37 @@ export interface RemittanceAdvice {
   version_index: number;
 }
 
+export interface SiteBatchResult {
+  site_id: string;
+  invoice_id: string | null;
+  invoice_number: string | null;
+  success: boolean;
+  error_message: string | null;
+  payable_count: number;
+  gross_amount: number;
+  holdback_amount: number;
+  net_amount: number;
+}
+
+export interface BatchBillingCompilationResponse {
+  batch_execution_id: string;
+  study_id: string;
+  billing_cycle: string;
+  period_start: string;
+  period_end: string;
+  compiled_at: string;
+  compiled_by: string;
+  total_sites_processed: number;
+  successful_sites_count: number;
+  failed_sites_count: number;
+  total_invoices_generated: number;
+  total_payables_compiled: number;
+  total_gross_amount: number;
+  total_holdback_amount: number;
+  total_net_amount: number;
+  site_results: SiteBatchResult[];
+}
+
 export interface SelfBillingInvoice {
   id: string;
   invoice_number: string;
@@ -841,15 +1110,20 @@ const isLoading = ref<boolean>(false);
 const isSubmitting = ref<boolean>(false);
 
 const showCompileModal = ref<boolean>(false);
+const showBatchCompileModal = ref<boolean>(false);
+const showBatchSummaryModal = ref<boolean>(false);
 const showSignModal = ref<boolean>(false);
 const showReconcileModal = ref<boolean>(false);
 const signingInvoiceId = ref<string>("");
+
+const batchResult = ref<BatchBillingCompilationResponse | null>(null);
 
 const filters = ref({
   studyId: "",
   siteId: "",
   billingCycle: "",
   status: "",
+  batchExecutionId: "",
 });
 
 const compileForm = ref({
@@ -859,6 +1133,15 @@ const compileForm = ref({
   periodStart: "2026-08-01",
   periodEnd: "2026-08-31",
   autoApprove: false,
+});
+
+const batchCompileForm = ref({
+  studyId: "",
+  billingCycle: "MONTHLY",
+  periodStart: "2026-08-01",
+  periodEnd: "2026-08-31",
+  autoApprove: false,
+  siteIdsInput: "",
 });
 
 const signForm = ref({
@@ -907,6 +1190,8 @@ async function fetchInvoices() {
     if (filters.value.billingCycle)
       params.append("billing_cycle", filters.value.billingCycle);
     if (filters.value.status) params.append("status", filters.value.status);
+    if (filters.value.batchExecutionId)
+      params.append("batch_execution_id", filters.value.batchExecutionId);
 
     const res = await fetch(`/api/v1/payments/invoices?${params.toString()}`);
     if (res.ok) {
@@ -929,6 +1214,7 @@ function resetFilters() {
     siteId: "",
     billingCycle: "",
     status: "",
+    batchExecutionId: "",
   };
   fetchInvoices();
 }
@@ -966,6 +1252,54 @@ async function submitCompileBilling() {
     }
   } catch (err) {
     console.error("Error compiling billing cycle:", err);
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+async function submitBatchCompileBilling() {
+  if (!batchCompileForm.value.studyId) {
+    alert("Please provide a Study Protocol ID.");
+    return;
+  }
+
+  isSubmitting.value = true;
+  try {
+    const siteIds = batchCompileForm.value.siteIdsInput
+      ? batchCompileForm.value.siteIdsInput
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
+      : null;
+
+    const res = await fetch("/api/v1/payments/invoices/batch-compile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        study_id: batchCompileForm.value.studyId,
+        billing_cycle: batchCompileForm.value.billingCycle,
+        period_start: batchCompileForm.value.periodStart,
+        period_end: batchCompileForm.value.periodEnd,
+        auto_approve: batchCompileForm.value.autoApprove,
+        site_ids: siteIds,
+      }),
+    });
+
+    if (res.ok) {
+      const data: BatchBillingCompilationResponse = await res.json();
+      batchResult.value = data;
+      showBatchCompileModal.value = false;
+      showBatchSummaryModal.value = true;
+      filters.value.batchExecutionId = data.batch_execution_id;
+      await fetchInvoices();
+    } else {
+      const err = await res.json();
+      alert(
+        `Error running batch compilation: ${err.detail || "Unknown error"}`
+      );
+    }
+  } catch (err) {
+    console.error("Error in batch compilation:", err);
   } finally {
     isSubmitting.value = false;
   }

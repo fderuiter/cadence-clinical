@@ -260,6 +260,9 @@
       :document="selectedDoc"
       @close="selectedDoc = null"
     />
+
+    <!-- Real-time eTMF Export Job Progress Drawer -->
+    <ExportJobDrawer />
   </div>
 </template>
 
@@ -271,6 +274,7 @@ import { useClinicalStore } from "../stores/clinical";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
 import DocumentGrid from "../components/etmf/DocumentGrid.vue";
 import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
+import ExportJobDrawer from "../components/etmf/ExportJobDrawer.vue";
 
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();

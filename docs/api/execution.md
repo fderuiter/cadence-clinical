@@ -30,6 +30,17 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/forms/{id}/approve` | ApproveFormSubmission |  |
 | `POST` | `/api/v1/execution/forms/{id}/complete` | CompleteFormSubmission |  |
 | `POST` | `/api/v1/execution/forms/{id}/unlock` | UnlockFormSubmission |  |
+| `GET` | `/api/v1/execution/lab-ranges` | GetReferenceRanges | Get reference ranges for study/site |
+| `POST` | `/api/v1/execution/lab-ranges` | CreateReferenceRange | Create laboratory reference range |
+| `GET` | `/api/v1/execution/lab-ranges/{id}` | GetReferenceRangeById | Get reference range by ID |
+| `PUT` | `/api/v1/execution/lab-ranges/{id}` | UpdateReferenceRange | Update laboratory reference range |
+| `DELETE` | `/api/v1/execution/lab-ranges/{id}` | DeleteReferenceRange | Deactivate laboratory reference range |
+| `GET` | `/api/v1/execution/labs/batch-status` | GetLabBatchStatus | Retrieve batch status history for bulk lab range imports |
+| `GET` | `/api/v1/execution/labs/batch-status/{id}` | GetLabBatchStatusById | Get lab batch import job status by ID |
+| `POST` | `/api/v1/execution/labs/convert-unit` | ConvertLabUnit | Convert clinical laboratory unit via UCUM SI formulas |
+| `POST` | `/api/v1/execution/labs/import/commit` | CommitLabRangeImport | Commit validated bulk lab ranges into persistent store with Part 11 audit logging |
+| `POST` | `/api/v1/execution/labs/import/dry-run` | DryRunLabRangeImport | Pre-flight validation preview for bulk lab range CSV/XLSX file |
+| `GET` | `/api/v1/execution/labs/loinc-catalog` | GetLoincCatalog | Retrieve standardized LOINC catalog mappings |
 | `POST` | `/api/v1/execution/labs/toxicity/evaluate` | EvaluateLabToxicityEndpoint | Evaluate Lab Toxicity Endpoint |
 | `GET` | `/api/v1/execution/labs/toxicity/review-queue` | ListStagedAeReviewQueue | List Staged Ae Review Queue |
 | `POST` | `/api/v1/execution/labs/toxicity/review/{review_id}/action` | ActionStagedAeReview | Action Staged Ae Review |
@@ -42,6 +53,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/queries` | CreateClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/batch-cancel` | BatchCancelClinicalQueries |  |
 | `POST` | `/api/v1/execution/queries/batch-close` | BatchCloseClinicalQueries |  |
+| `POST` | `/api/v1/execution/queries/batch-respond` | BatchRespondClinicalQueries |  |
 | `GET` | `/api/v1/execution/queries/{id}` | GetClinicalQueryById |  |
 | `POST` | `/api/v1/execution/queries/{id}/cancel` | CancelClinicalQuery |  |
 | `POST` | `/api/v1/execution/queries/{id}/close` | CloseClinicalQuery |  |
@@ -58,6 +70,11 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `GET` | `/api/v1/execution/rtsm/cgt/reconciliations/{studyId}` |  |  |
 | `POST` | `/api/v1/execution/rtsm/cgt/returns` |  |  |
 | `POST` | `/api/v1/execution/rtsm/cgt/verify-barcode` |  |  |
+| `GET` | `/api/v1/execution/rtsm/kits/certificates/{certificateId}` |  |  |
+| `GET` | `/api/v1/execution/rtsm/kits/inventory/{studyId}/{siteId}` |  |  |
+| `POST` | `/api/v1/execution/rtsm/kits/reconcile-batch` |  |  |
+| `POST` | `/api/v1/execution/rtsm/kits/seed-inventory` |  |  |
+| `POST` | `/api/v1/execution/rtsm/kits/validate-scan` |  |  |
 | `POST` | `/api/v1/execution/sites/{siteId}/activate` | ActivateSite |  |
 | `GET` | `/api/v1/execution/sites/{siteId}/compliance-status` | GetSiteComplianceStatus |  |
 | `GET` | `/api/v1/execution/subjects` | ListSubjects | Lists one page of a study's subjects in enrollment order. |

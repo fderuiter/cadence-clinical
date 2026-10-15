@@ -26,7 +26,10 @@ Timestamp,Temperature (°C),Status
 2026-10-12T10:15:00Z,-185.0,OK
     `.trim();
 
-    const result = await parseCryoLoggerFile(csvContent, "Sensitech_Log_001.csv");
+    const result = await parseCryoLoggerFile(
+      csvContent,
+      "Sensitech_Log_001.csv"
+    );
 
     expect(result.vendor).toBe("Sensitech");
     expect(result.totalSamples).toBe(4);
@@ -78,7 +81,10 @@ Date Time,Temp (°C)
       ],
     });
 
-    const result = await parseCryoLoggerFile(jsonContent, "sensitech_data.json");
+    const result = await parseCryoLoggerFile(
+      jsonContent,
+      "sensitech_data.json"
+    );
 
     expect(result.vendor).toBe("Sensitech");
     expect(result.totalSamples).toBe(3);
@@ -104,7 +110,10 @@ Date Time,Temp (°C)
     }
 
     const csvContent = rawReadings.join("\n");
-    const result = await parseCryoLoggerFile(csvContent, "Large_Sensitech_50k.csv");
+    const result = await parseCryoLoggerFile(
+      csvContent,
+      "Large_Sensitech_50k.csv"
+    );
 
     expect(result.totalSamples).toBe(50010);
     expect(result.isDownsampled).toBe(true);
@@ -120,7 +129,10 @@ Date Time,Temp (°C)
     );
 
     await expect(
-      parseCryoLoggerFile("No telemetry data here\nJust random text", "random.txt")
+      parseCryoLoggerFile(
+        "No telemetry data here\nJust random text",
+        "random.txt"
+      )
     ).rejects.toThrow("No valid time-series temperature readings found.");
   });
 });

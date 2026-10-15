@@ -39,7 +39,7 @@ public sealed class StudyIndicators(
     IndicatorSetLoader loader,
     IndicatorEvaluator evaluator,
     IEnumerable<IIndicatorPopulationSource> sources,
-    INodeVisibility visibility)
+    INodeVisibility? visibility = null)
 {
     /// <summary>The most records one population may hold for a study; a larger one is refused rather than miscounted.</summary>
     public const int MaxRecords = 10_000;
@@ -82,6 +82,11 @@ public sealed class StudyIndicators(
         }
 
         var nodes = read.Values.SelectMany(r => r).Select(r => r.Node).Distinct().ToList();
+        if (visibility is null)
+        {
+            throw new InvalidOperationException("INodeVisibility is not registered.");
+        }
+
         var hidden = nodes.Count == 0
             ? new Dictionary<NodeRef, MaskReason>()
             : await visibility.MaskAsync(tenant, reader, nodes, cancellationToken).ConfigureAwait(false);

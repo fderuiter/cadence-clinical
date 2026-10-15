@@ -97,7 +97,9 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
     const wrapper = mountDrawer();
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.text()).toContain("Bulk IP Kit Reconciliation & Batch Disposition Drawer");
+    expect(wrapper.text()).toContain(
+      "Bulk IP Kit Reconciliation & Batch Disposition Drawer"
+    );
     expect(wrapper.text()).toContain("21 CFR Part 11");
     expect(wrapper.text()).toContain("RTSM Supply Chain");
     expect(wrapper.text()).toContain("STUDY-101");
@@ -174,8 +176,12 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
 
     const selects = wrapper.findAll(".disposition-select");
     expect(selects.length).toBe(2);
-    expect((selects[0].element as HTMLSelectElement).value).toBe("RETURNED_TO_DEPOT");
-    expect((selects[1].element as HTMLSelectElement).value).toBe("RETURNED_TO_DEPOT");
+    expect((selects[0].element as HTMLSelectElement).value).toBe(
+      "RETURNED_TO_DEPOT"
+    );
+    expect((selects[1].element as HTMLSelectElement).value).toBe(
+      "RETURNED_TO_DEPOT"
+    );
   });
 
   it("enforces Part 11 e-signature requirements before batch submission", async () => {
@@ -226,14 +232,18 @@ describe("BulkIpKitReconciliationDrawer.vue", () => {
     await wrapper.vm.$nextTick();
 
     await wrapper.find("#pharmacist-signature-id").setValue("pharm_user");
-    await wrapper.find("#reason-for-change-input").setValue("Routine site return");
+    await wrapper
+      .find("#reason-for-change-input")
+      .setValue("Routine site return");
     await wrapper.vm.$nextTick();
 
     await wrapper.find(".btn-submit-batch").trigger("click");
     await wrapper.vm.$nextTick();
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(wrapper.text()).toContain("Digital IP Kit Reconciliation Certificate");
+    expect(wrapper.text()).toContain(
+      "Digital IP Kit Reconciliation Certificate"
+    );
     expect(wrapper.text()).toContain("cert-999");
     expect(wrapper.text()).toContain("abcd1234efgh5678ijkl");
   });

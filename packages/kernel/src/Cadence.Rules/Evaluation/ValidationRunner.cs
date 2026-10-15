@@ -64,7 +64,7 @@ public sealed record ValidationRequest(
 /// and sends one <see cref="RecordValidationRun"/> whose detections are the violations. The kernel then derives the
 /// findings: a problem detected again keeps its finding, and one no longer detected is resolved by the run (K-FIND-1).
 /// </summary>
-public sealed class ValidationRunner(RulePackLoader loader, IRuleEvaluator evaluator, IKernelCommandSender commands, IClock clock)
+public sealed class ValidationRunner(RulePackLoader loader, IRuleEvaluator evaluator, IKernelCommandSender? commands = null, IClock? clock = null)
 {
     /// <summary>Runs validation and records the run.</summary>
     public async Task<CommandResult<ValidationRunOutcome>> RunAsync(ValidationRequest request, CancellationToken cancellationToken = default)
@@ -81,7 +81,8 @@ public sealed class ValidationRunner(RulePackLoader loader, IRuleEvaluator evalu
         var datasets = request.Datasets ?? [.. request.Records.Select(r => r.Dataset).Distinct(StringComparer.Ordinal)];
         var covered = datasets.ToHashSet(StringComparer.Ordinal);
         var records = request.Datasets is null ? request.Records : [.. request.Records.Where(r => covered.Contains(r.Dataset))];
-        var started = clock.UtcNow;
+        var effectiveClock = clock ?? SystemClock.Instance;
+        var started = effectiveClock.UtcNow;
         var context = new RuleEvaluationContext(request.Stage, request.AsOf)
         {
             Standard = request.Standard,
@@ -97,7 +98,12 @@ public sealed class ValidationRunner(RulePackLoader loader, IRuleEvaluator evalu
             }
         }
 
-        var completed = clock.UtcNow;
+        var completed = effectiveClock.UtcNow;
+        if (commands is null)
+        {
+            throw new InvalidOperationException("IKernelCommandSender is not registered.");
+        }
+
         return await commands.SendAsync(
             new RecordValidationRun(
                 request.Tenant,
