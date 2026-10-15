@@ -52,3 +52,10 @@ Clinical Trial Management Systems (CTMS) require Clinical Research Associates (C
 
 - **Affected Repositories / Services:** `apps/ctms`
 - **Verification Plan:** Verified via `dotnet test` and `pnpm cadence check`.
+
+## Amendment (2026-10-15): migration registered
+
+`20261001180000_AddVisitLetterPdfAndDispatchFields` was committed without a `.Designer.cs` or a
+`[Migration]` attribute, so EF never applied it and `ctms_generated_letters` lacked the PDF and dispatch
+columns the model maps. The migration now carries `[DbContext]` and `[Migration]` attributes and applies
+in order.

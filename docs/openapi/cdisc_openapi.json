@@ -678,6 +678,111 @@
         }
       }
     },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/publish": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "PublishTemplateVersioned",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Econsent_PublishTemplateRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_PublishTemplateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/publish": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "PublishTemplate",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Econsent_PublishTemplateRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_PublishTemplateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent": {
       "post": {
         "tags": [
@@ -10455,6 +10560,91 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Econsent_PublishTemplateRequest": {
+        "required": [
+          "study_id",
+          "protocol_version",
+          "change_summary",
+          "change_reason",
+          "requires_reconsent",
+          "channels"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocol_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "change_summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "change_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requires_reconsent": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "channels": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Econsent_PublishTemplateResponse": {
+        "required": [
+          "template_id",
+          "version_index",
+          "is_published",
+          "requires_reconsent",
+          "published_at"
+        ],
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_published": {
+            "type": "boolean"
+          },
+          "requires_reconsent": {
+            "type": "boolean"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },

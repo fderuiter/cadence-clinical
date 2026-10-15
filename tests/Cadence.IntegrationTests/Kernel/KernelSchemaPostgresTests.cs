@@ -55,7 +55,8 @@ public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : I
             "lineage_nodes", "lineage_edges", "activity_entries", "artifacts", "artifact_versions", "roles", "grants",
             "grant_periods", "work_queue_definitions", "validation_runs", "validation_run_packs", "validation_run_datasets",
             "validation_run_inputs", "validation_detections", "validation_findings", "effectivities", "effectivity_status_periods",
-            "qualifications", "qualification_periods", "qualification_requirements", "qualification_requirement_periods", "proposals");
+            "qualifications", "qualification_periods", "qualification_requirements", "qualification_requirement_periods", "proposals",
+            "form_version_snapshots");
     }
 
     /// <summary>
