@@ -207,6 +207,44 @@ public sealed class ObservationAndFormEndpointsTests
     }
 
     /// <summary>
+    /// Validates that FormEndpoints.UpdateFormPayloadAsync updates form payload and passes formHash.
+    /// </summary>
+    [Fact]
+    public async Task UpdateFormPayload_Handler_WithFormHash_ReturnsOkResult()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor();
+        var registryRepo = new InMemoryPublishedFormVersionRegistryRepository();
+
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit, formVersionRegistryRepository: registryRepo);
+
+        var registry = new PublishedFormVersionRegistry(
+            Guid.NewGuid(), "TENANT-01", "STUDY-001", "PV-001", "1.0.0", "FORM-VS", "HASH_123", "<xml/>", "{}", DateTimeOffset.UnixEpoch);
+        await registryRepo.AddOrUpdateAsync(registry, CancellationToken.None);
+
+        var form = FormSubmission.Initialize(
+            studyId: new Apps.Execution.Domain.Subjects.StudyCode("STUDY-001"),
+            subjectId: new Apps.Execution.Domain.Subjects.SubjectCode("SUBJ-001"),
+            formId: new FormId("FORM-VS"),
+            protocolVersion: "1.0.0",
+            initialPayload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}").Value!;
+        await formRepo.AddAsync(form, CancellationToken.None);
+
+        var updateRequest = new FormPayloadUpdateRequest(
+            Payload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 130}",
+            FormHash: "HASH_123");
+
+        var result = await FormEndpoints.UpdateFormPayloadAsync(form.Id.ToString(), updateRequest, svc, CancellationToken.None);
+
+        result.Should().BeOfType<Ok<FormSubmissionResponse>>();
+        var ok = (Ok<FormSubmissionResponse>)result;
+        ok.StatusCode.Should().Be(StatusCodes.Status200OK);
+        ok.Value!.Payload.Should().Contain("130");
+    }
+
+    /// <summary>
     /// Validates that QueryEndpoints.CreateQueryAsync returns 201 Created.
     /// </summary>
     [Fact]

@@ -2152,6 +2152,7 @@ export interface components {
     };
     Execution_FormPayloadUpdateRequest: {
       payload: string;
+      form_hash?: null | string;
     };
     Execution_FormSubmissionApproveRequest: {
       signing_reason: string;

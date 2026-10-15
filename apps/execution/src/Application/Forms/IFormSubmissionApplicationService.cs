@@ -22,7 +22,10 @@ public interface IFormSubmissionApplicationService
 
     Task<Result<IReadOnlyList<FormSubmissionResponse>>> ListBySubjectAsync(string studyId, string subjectId, CancellationToken cancellationToken);
 
-    Task<Result<FormSubmissionResponse>> UpdatePayloadAsync(string id, string newPayload, CancellationToken cancellationToken);
+    Task<Result<FormSubmissionResponse>> UpdatePayloadAsync(string id, string newPayload, string? formHash, CancellationToken cancellationToken);
+
+    Task<Result<FormSubmissionResponse>> UpdatePayloadAsync(string id, string newPayload, CancellationToken cancellationToken)
+        => UpdatePayloadAsync(id, newPayload, null, cancellationToken);
 
     Task<Result<FormSubmissionResponse>> CompleteAsync(string id, CancellationToken cancellationToken);
 
