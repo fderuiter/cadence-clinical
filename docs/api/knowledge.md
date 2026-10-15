@@ -4,6 +4,10 @@ Generated from `docs/openapi/knowledge_openapi.json` by `pnpm cadence generate-a
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `GET` | `/api/v1/knowledge/rwe/cohorts` | ListRweCohorts | Lists real-world evidence baseline cohort profiles. |
+| `POST` | `/api/v1/knowledge/rwe/cohorts` | CreateRweCohort | Registers a new real-world evidence baseline cohort profile. |
+| `GET` | `/api/v1/knowledge/rwe/cohorts/{id}` | GetRweCohortById | Retrieves a real-world evidence cohort profile by ID or cohort code. |
+| `GET` | `/api/v1/knowledge/rwe/cohorts/{id}/records` | GetRweCohortRecords | Retrieves de-identified real-world evidence patient records for a cohort profile. |
 | `GET` | `/api/v1/knowledge/status` | KnowledgeStatus | Returns Knowledge base operational status. |
 | `GET` | `/api/v1/training/assignments` | ListAssignments |  |
 | `GET` | `/api/v1/training/assignments/{assignment_id}` | GetAssignmentDetail |  |

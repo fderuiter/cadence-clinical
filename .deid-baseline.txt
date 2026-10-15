@@ -1,8 +1,10 @@
 # DEID scan ratchet baseline (pnpm cadence check deid). Findings that predate the full detector and are not PHI.
 # One per line: path|category|first 16 hex digits of SHA-256(trimmed line). Sorted ordinally. The list may only shrink.
 # Regenerate with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid (docs/cli.md).
+apps/ai_gateway/src/Endpoints/SyntheticControlEndpoints.cs|age|b83ec702a91ccc74
 apps/apphost/src/Program.cs|urls|0dbf6a3a3204223b
 apps/apphost/src/Properties/launchSettings.json|urls|75a56978a4790517
+apps/designer/src/Endpoints/CohortFeasibilityEndpoints.cs|age|b83ec702a91ccc74
 apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|52696c2bdd7c546c
 apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|52696c2bdd7c546c
 apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|52696c2bdd7c546c
@@ -51,10 +53,10 @@ apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|b6db71
 apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|f5aa350df66b8c0e
 apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|1206ac45b9e900ac
 apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|5599cd0b6401b5dc
-apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|808287361bbcbb89
 apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|8e1803d041cfa5be
 apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|8e1803d041cfa5be
 apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|91e83f95c9d34a2c
+apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|da18ea3392b53b48
 apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|zip_geographic|e2f374666c86f46d
 apps/web/src/components/clinical/ClinicalGanttVisualizer.vue|zip_geographic|5ec88b2331da7e38
 apps/web/src/components/clinical/ClinicalGanttVisualizer.vue|zip_geographic|65e6982cbc81ecc1

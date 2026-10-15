@@ -369,6 +369,147 @@
           }
         }
       }
+    },
+    "/api/v1/knowledge/rwe/cohorts": {
+      "get": {
+        "tags": [
+          "RWE Cohort Distributions"
+        ],
+        "summary": "Lists real-world evidence baseline cohort profiles.",
+        "operationId": "ListRweCohorts",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_RweCohortProfileResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "RWE Cohort Distributions"
+        ],
+        "summary": "Registers a new real-world evidence baseline cohort profile.",
+        "operationId": "CreateRweCohort",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Knowledge_CreateRweCohortRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_RweCohortProfileResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/rwe/cohorts/{id}": {
+      "get": {
+        "tags": [
+          "RWE Cohort Distributions"
+        ],
+        "summary": "Retrieves a real-world evidence cohort profile by ID or cohort code.",
+        "operationId": "GetRweCohortById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_RweCohortProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/rwe/cohorts/{id}/records": {
+      "get": {
+        "tags": [
+          "RWE Cohort Distributions"
+        ],
+        "summary": "Retrieves de-identified real-world evidence patient records for a cohort profile.",
+        "operationId": "GetRweCohortRecords",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_SyntheticPatientRecord"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -608,6 +749,50 @@
           }
         }
       },
+      "Knowledge_CreateRweCohortRequest": {
+        "required": [
+          "cohortCode",
+          "name",
+          "therapeuticArea",
+          "indication"
+        ],
+        "type": "object",
+        "properties": {
+          "cohortCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "therapeuticArea": {
+            "type": "string"
+          },
+          "indication": {
+            "type": "string"
+          },
+          "baselineDemographicsJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalPatientCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 5000
+          },
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Knowledge_DelegationSummaryDto": {
         "required": [
           "id",
@@ -730,6 +915,64 @@
           }
         }
       },
+      "Knowledge_RweCohortProfileResponse": {
+        "required": [
+          "id",
+          "cohortCode",
+          "name",
+          "therapeuticArea",
+          "indication",
+          "baselineDemographicsJson",
+          "totalPatientCount",
+          "createdAt",
+          "createdBy",
+          "versionIndex"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "cohortCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "therapeuticArea": {
+            "type": "string"
+          },
+          "indication": {
+            "type": "string"
+          },
+          "baselineDemographicsJson": {
+            "type": "string"
+          },
+          "totalPatientCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "versionIndex": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "Knowledge_SignaturePayloadDto": {
         "required": [
           "signer_name",
@@ -780,6 +1023,94 @@
           },
           "reason": {
             "type": "string"
+          }
+        }
+      },
+      "Knowledge_SyntheticPatientRecord": {
+        "required": [
+          "patientId",
+          "age",
+          "sex",
+          "bmi",
+          "systolicBp",
+          "diastolicBp",
+          "biomarkerValue",
+          "propensityScore",
+          "isMatched"
+        ],
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "age": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sex": {
+            "type": "string"
+          },
+          "bmi": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "systolicBp": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "diastolicBp": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "biomarkerValue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "propensityScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMatched": {
+            "type": "boolean"
+          },
+          "matchedControlId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "additionalAttributes": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       },
@@ -908,6 +1239,9 @@
     },
     {
       "name": "Study Training \u0026 Gating"
+    },
+    {
+      "name": "RWE Cohort Distributions"
     }
   ]
 }

@@ -18,6 +18,8 @@ Generated from the EF Core model of `Cadence.Apps.Knowledge.Infrastructure.Persi
 | [`knowledge.knowledge_categories`](#knowledgeknowledge_categories) | `KnowledgeCategory` | 11 |
 | [`knowledge.knowledge_contextual_help_mappings`](#knowledgeknowledge_contextual_help_mappings) | `ContextualHelpMapping` | 11 |
 | [`knowledge.protocol_knowledge_chunks`](#knowledgeprotocol_knowledge_chunks) | `ProtocolKnowledgeChunk` | 17 |
+| [`knowledge.rwe_cohort_profiles`](#knowledgerwe_cohort_profiles) | `RweCohortProfile` | 11 |
+| [`knowledge.rwe_patient_records`](#knowledgerwe_patient_records) | `RwePatientRecord` | 12 |
 
 ## knowledge.DelegationRecords
 
@@ -290,3 +292,49 @@ Indexes:
 - `IX_protocol_knowledge_chunks_PageNumber`: (`PageNumber`)
 - `IX_protocol_knowledge_chunks_ProtocolVersion`: (`ProtocolVersion`)
 - `IX_protocol_knowledge_chunks_StudyId`: (`StudyId`)
+
+## knowledge.rwe_cohort_profiles
+
+Entity: `RweCohortProfile`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `BaselineDemographicsJson` | `text` | no |  |  |
+| `CohortCode` | `character varying(100)` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `Indication` | `character varying(255)` | no |  |  |
+| `Name` | `character varying(255)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `TherapeuticArea` | `character varying(100)` | no |  |  |
+| `TotalPatientCount` | `integer` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+
+Indexes:
+
+- `IX_rwe_cohort_profiles_CohortCode`: unique (`CohortCode`)
+
+## knowledge.rwe_patient_records
+
+Entity: `RwePatientRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `Age` | `double precision` | no |  |  |
+| `BiomarkerValue` | `double precision` | no |  |  |
+| `Bmi` | `double precision` | no |  |  |
+| `CohortProfileId` | `character varying(36)` | no |  |  |
+| `ComorbiditiesJson` | `text` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `DiastolicBp` | `double precision` | no |  |  |
+| `PatientIdentifier` | `character varying(100)` | no |  |  |
+| `Sex` | `character varying(10)` | no |  |  |
+| `SystolicBp` | `double precision` | no |  |  |
+
+Indexes:
+
+- `IX_rwe_patient_records_CohortProfileId`: (`CohortProfileId`)
+- `IX_rwe_patient_records_CohortProfileId_PatientIdentifier`: unique (`CohortProfileId`, `PatientIdentifier`)

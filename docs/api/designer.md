@@ -4,6 +4,7 @@ Generated from `docs/openapi/designer_openapi.json` by `pnpm cadence generate-ap
 
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
+| `POST` | `/api/v1/designer/cohort-feasibility/synthetic-simulate` | SimulateDesignerCohortFeasibility | Proxies synthetic cohort feasibility simulation requests to AI Gateway and returns structured feasibility summaries. |
 | `POST` | `/api/v1/protocols/compile` | CompileProtocol | Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas. |
 | `GET` | `/api/v1/studies` | ListStudies | Lists active CDISC USDM study protocol definitions. |
 | `POST` | `/api/v1/studies/{id}/rules/amendment-regression` | AmendmentRegression | Compares baseline and target rule pack versions during protocol amendments to highlight rule diffs and broken dependencies. |

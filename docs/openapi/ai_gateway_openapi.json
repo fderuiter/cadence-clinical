@@ -51,6 +51,88 @@
           }
         }
       }
+    },
+    "/api/v1/ai/synthetic-controls/simulate": {
+      "post": {
+        "tags": [
+          "AI Gateway Synthetic Control Arm \u0026 Protocol Eligibility Optimization"
+        ],
+        "summary": "Executes propensity score matching and Monte Carlo sampling to generate a synthetic control arm cohort.",
+        "operationId": "SimulateSyntheticControlArm",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiGateway_PropensityMatchingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiGateway_PropensityMatchingResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiGateway_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/protocol-optimization/eligibility": {
+      "post": {
+        "tags": [
+          "AI Gateway Synthetic Control Arm \u0026 Protocol Eligibility Optimization"
+        ],
+        "summary": "Evaluates USDM eligibility criteria feasibility against RWE baseline distributions and reports attrition waterfalls.",
+        "operationId": "SimulateEligibilityOptimization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiGateway_EligibilityOptimizationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiGateway_AttritionWaterfallResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiGateway_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -75,12 +157,544 @@
             ]
           }
         }
+      },
+      "AiGateway_AttritionWaterfallResult": {
+        "required": [
+          "protocolId",
+          "initialPopulationCount",
+          "finalEligibleCount",
+          "overallFeasibilityYieldPercentage",
+          "steps",
+          "latencyMs"
+        ],
+        "type": "object",
+        "properties": {
+          "protocolId": {
+            "type": "string"
+          },
+          "initialPopulationCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "finalEligibleCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "overallFeasibilityYieldPercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiGateway_WaterfallStep"
+            }
+          },
+          "latencyMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "AiGateway_CovariateBalanceMetric": {
+        "required": [
+          "covariateName",
+          "preMatchMeanTreatment",
+          "preMatchMeanControl",
+          "preMatchSmd",
+          "postMatchMeanTreatment",
+          "postMatchMeanControl",
+          "postMatchSmd",
+          "isBalanced"
+        ],
+        "type": "object",
+        "properties": {
+          "covariateName": {
+            "type": "string"
+          },
+          "preMatchMeanTreatment": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "preMatchMeanControl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "preMatchSmd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "postMatchMeanTreatment": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "postMatchMeanControl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "postMatchSmd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isBalanced": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AiGateway_EligibilityCriterion": {
+        "required": [
+          "id",
+          "name",
+          "category",
+          "variableName",
+          "operator",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "variableName": {
+            "type": "string"
+          },
+          "operator": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "highValue": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "usdmElementId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AiGateway_EligibilityOptimizationRequest": {
+        "required": [
+          "protocolId"
+        ],
+        "type": "object",
+        "properties": {
+          "protocolId": {
+            "type": "string"
+          },
+          "criteria": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AiGateway_EligibilityCriterion"
+            }
+          },
+          "initialCohortSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 5000
+          },
+          "rweCohortProfileId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AiGateway_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AiGateway_PropensityMatchingRequest": {
+        "required": [
+          "studyId",
+          "eligibilityCriteria"
+        ],
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": "string"
+          },
+          "eligibilityCriteria": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiGateway_EligibilityCriterion"
+            }
+          },
+          "targetSampleSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 500
+          },
+          "caliper": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double",
+            "default": 0.25
+          },
+          "matchingRatio": {
+            "type": "string",
+            "default": "1:1"
+          },
+          "rweCohortProfileId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AiGateway_PropensityMatchingResult": {
+        "required": [
+          "simulationId",
+          "studyId",
+          "totalCandidateRecordsEvaluated",
+          "matchedTreatmentCount",
+          "matchedControlCount",
+          "matchRatePercentage",
+          "meanPropensityScoreTreatment",
+          "meanPropensityScoreControl",
+          "covariateBalance",
+          "matchedSyntheticArm",
+          "latencyMs"
+        ],
+        "type": "object",
+        "properties": {
+          "simulationId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "totalCandidateRecordsEvaluated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "matchedTreatmentCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "matchedControlCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "matchRatePercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "meanPropensityScoreTreatment": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "meanPropensityScoreControl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "covariateBalance": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiGateway_CovariateBalanceMetric"
+            }
+          },
+          "matchedSyntheticArm": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AiGateway_SyntheticPatientRecord"
+            }
+          },
+          "latencyMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "AiGateway_SyntheticPatientRecord": {
+        "required": [
+          "patientId",
+          "age",
+          "sex",
+          "bmi",
+          "systolicBp",
+          "diastolicBp",
+          "biomarkerValue",
+          "propensityScore",
+          "isMatched"
+        ],
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "age": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sex": {
+            "type": "string"
+          },
+          "bmi": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "systolicBp": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "diastolicBp": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "biomarkerValue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "propensityScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMatched": {
+            "type": "boolean"
+          },
+          "matchedControlId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "additionalAttributes": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AiGateway_WaterfallStep": {
+        "required": [
+          "stepNumber",
+          "criterionId",
+          "criterionName",
+          "category",
+          "remainingCount",
+          "excludedCount",
+          "retentionPercentage",
+          "attritionPercentage"
+        ],
+        "type": "object",
+        "properties": {
+          "stepNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "criterionId": {
+            "type": "string"
+          },
+          "criterionName": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "remainingCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "excludedCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retentionPercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "attritionPercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Cadence.Apps.AiGateway"
+    },
+    {
+      "name": "AI Gateway Synthetic Control Arm \u0026 Protocol Eligibility Optimization"
     }
   ]
 }

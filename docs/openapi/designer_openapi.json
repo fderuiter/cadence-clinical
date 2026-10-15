@@ -167,6 +167,57 @@
         }
       }
     },
+    "/api/v1/designer/cohort-feasibility/synthetic-simulate": {
+      "post": {
+        "tags": [
+          "Designer Cohort Feasibility \u0026 Synthetic Control Proxy"
+        ],
+        "summary": "Proxies synthetic cohort feasibility simulation requests to AI Gateway and returns structured feasibility summaries.",
+        "operationId": "SimulateDesignerCohortFeasibility",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Designer_DesignerCohortFeasibilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_CohortFeasibilitySummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Designer_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies": {
       "get": {
         "tags": [
@@ -420,6 +471,60 @@
           }
         }
       },
+      "Designer_AttritionWaterfallResult": {
+        "required": [
+          "protocolId",
+          "initialPopulationCount",
+          "finalEligibleCount",
+          "overallFeasibilityYieldPercentage",
+          "steps",
+          "latencyMs"
+        ],
+        "type": "object",
+        "properties": {
+          "protocolId": {
+            "type": "string"
+          },
+          "initialPopulationCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "finalEligibleCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "overallFeasibilityYieldPercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_WaterfallStep"
+            }
+          },
+          "latencyMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "Designer_BatchValidateApiRequest": {
         "type": "object",
         "properties": {
@@ -538,6 +643,75 @@
           }
         }
       },
+      "Designer_CohortFeasibilitySummary": {
+        "required": [
+          "simulationId",
+          "protocolId",
+          "evaluatedCohortSize",
+          "eligibleCohortSize",
+          "overallYieldPercentage",
+          "waterfall",
+          "syntheticControlArm",
+          "sentinelValidationErrors",
+          "generatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "simulationId": {
+            "type": "string"
+          },
+          "protocolId": {
+            "type": "string"
+          },
+          "evaluatedCohortSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "eligibleCohortSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "overallYieldPercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "waterfall": {
+            "$ref": "#/components/schemas/Designer_AttritionWaterfallResult"
+          },
+          "syntheticControlArm": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Designer_PropensityMatchingResult"
+              }
+            ]
+          },
+          "sentinelValidationErrors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Designer_CompileProtocolRequest": {
         "required": [
           "usdmJson"
@@ -558,6 +732,75 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Designer_CovariateBalanceMetric": {
+        "required": [
+          "covariateName",
+          "preMatchMeanTreatment",
+          "preMatchMeanControl",
+          "preMatchSmd",
+          "postMatchMeanTreatment",
+          "postMatchMeanControl",
+          "postMatchSmd",
+          "isBalanced"
+        ],
+        "type": "object",
+        "properties": {
+          "covariateName": {
+            "type": "string"
+          },
+          "preMatchMeanTreatment": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "preMatchMeanControl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "preMatchSmd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "postMatchMeanTreatment": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "postMatchMeanControl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "postMatchSmd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isBalanced": {
+            "type": "boolean"
           }
         }
       },
@@ -611,6 +854,69 @@
           }
         }
       },
+      "Designer_DesignerCohortFeasibilityRequest": {
+        "type": "object",
+        "properties": {
+          "studyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocolId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "usdmJson": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "eligibilityCriteria": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Designer_EligibilityCriterion"
+            }
+          },
+          "targetSampleSize": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 500
+          },
+          "caliper": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double",
+            "default": 0.25
+          },
+          "matchingRatio": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "1:1"
+          },
+          "rweCohortProfileId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Designer_EffectivePeriod": {
         "required": [
           "from",
@@ -631,6 +937,49 @@
               "string"
             ],
             "format": "date"
+          }
+        }
+      },
+      "Designer_EligibilityCriterion": {
+        "required": [
+          "id",
+          "name",
+          "category",
+          "variableName",
+          "operator",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "variableName": {
+            "type": "string"
+          },
+          "operator": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "highValue": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "usdmElementId": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -719,6 +1068,98 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Designer_PropensityMatchingResult": {
+        "required": [
+          "simulationId",
+          "studyId",
+          "totalCandidateRecordsEvaluated",
+          "matchedTreatmentCount",
+          "matchedControlCount",
+          "matchRatePercentage",
+          "meanPropensityScoreTreatment",
+          "meanPropensityScoreControl",
+          "covariateBalance",
+          "matchedSyntheticArm",
+          "latencyMs"
+        ],
+        "type": "object",
+        "properties": {
+          "simulationId": {
+            "type": "string"
+          },
+          "studyId": {
+            "type": "string"
+          },
+          "totalCandidateRecordsEvaluated": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "matchedTreatmentCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "matchedControlCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "matchRatePercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "meanPropensityScoreTreatment": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "meanPropensityScoreControl": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "covariateBalance": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_CovariateBalanceMetric"
+            }
+          },
+          "matchedSyntheticArm": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Designer_SyntheticPatientRecord"
+            }
+          },
+          "latencyMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -893,6 +1334,94 @@
         }
       },
       "Designer_StudyId": {},
+      "Designer_SyntheticPatientRecord": {
+        "required": [
+          "patientId",
+          "age",
+          "sex",
+          "bmi",
+          "systolicBp",
+          "diastolicBp",
+          "biomarkerValue",
+          "propensityScore",
+          "isMatched"
+        ],
+        "type": "object",
+        "properties": {
+          "patientId": {
+            "type": "string"
+          },
+          "age": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "sex": {
+            "type": "string"
+          },
+          "bmi": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "systolicBp": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "diastolicBp": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "biomarkerValue": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "propensityScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "isMatched": {
+            "type": "boolean"
+          },
+          "matchedControlId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "additionalAttributes": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "Designer_ValidationDetection": {
         "required": [
           "packKey",
@@ -1001,12 +1530,79 @@
             "format": "int32"
           }
         }
+      },
+      "Designer_WaterfallStep": {
+        "required": [
+          "stepNumber",
+          "criterionId",
+          "criterionName",
+          "category",
+          "remainingCount",
+          "excludedCount",
+          "retentionPercentage",
+          "attritionPercentage"
+        ],
+        "type": "object",
+        "properties": {
+          "stepNumber": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "criterionId": {
+            "type": "string"
+          },
+          "criterionName": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "remainingCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "excludedCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retentionPercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "attritionPercentage": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?(?:[eE][\u002B-]?\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
       }
     }
   },
   "tags": [
     {
       "name": "Cadence.Apps.Designer"
+    },
+    {
+      "name": "Designer Cohort Feasibility \u0026 Synthetic Control Proxy"
     }
   ]
 }

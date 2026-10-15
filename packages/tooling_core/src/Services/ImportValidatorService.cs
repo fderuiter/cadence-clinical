@@ -46,7 +46,9 @@ public static class ImportValidatorService
                             if (subParts.Length >= 3)
                             {
                                 string targetApp = subParts[2].ToLowerInvariant();
-                                if (!targetApp.Equals(appName, StringComparison.OrdinalIgnoreCase) &&
+                                string normalizedTargetApp = targetApp.Replace("_", "").Replace("-", "");
+                                string normalizedAppName = appName.Replace("_", "").Replace("-", "");
+                                if (!normalizedTargetApp.Equals(normalizedAppName, StringComparison.OrdinalIgnoreCase) &&
                                     !appName.Equals("gateway", StringComparison.OrdinalIgnoreCase))
                                 {
                                     violations++;
