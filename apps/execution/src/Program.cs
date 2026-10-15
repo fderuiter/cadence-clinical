@@ -204,6 +204,8 @@ builder.Services.AddScoped<ILabRangeImportService, LabRangeImportService>();
 builder.Services.AddScoped<ICecApplicationService, CecApplicationService>();
 builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
 builder.Services.AddScoped<ISynonymImportService, SynonymImportService>();
+builder.Services.AddScoped<ICodingAutosuggestService, CodingAutosuggestService>();
+builder.Services.AddHttpClient("AiGatewayClient");
 builder.Services.AddScoped<IDeviceApplicationService, DeviceApplicationService>();
 builder.Services.AddScoped<IIpKitApplicationService, IpKitApplicationService>();
 

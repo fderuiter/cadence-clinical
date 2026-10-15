@@ -49,6 +49,11 @@ public static class SynonymEndpoints
             .WithName("DeactivateSynonymRule")
             .WithSummary("Deactivate an active synonym rule.");
 
+        routes.MapGet("/api/v1/execution/coding/autosuggest", GetCodingAutosuggestAsync)
+            .WithName("GetCodingAutosuggest")
+            .WithSummary("Retrieve real-time semantic medical coding suggestions proxied to AI Gateway.")
+            .WithTags("Medical Coding");
+
         return group;
     }
 
@@ -238,5 +243,28 @@ public static class SynonymEndpoints
         return caller.Roles.Any(r =>
             r.Equals("DATA_MANAGER", StringComparison.OrdinalIgnoreCase) ||
             r.Equals("SPONSOR_DESIGNER", StringComparison.OrdinalIgnoreCase));
+    }
+
+    public static async Task<IResult> GetCodingAutosuggestAsync(
+        ICodingAutosuggestService autosuggestService,
+        string? query,
+        string? q,
+        string? dictionary,
+        string? study_id,
+        string? studyId,
+        int? limit,
+        CancellationToken cancellationToken)
+    {
+        string termQuery = !string.IsNullOrWhiteSpace(query) ? query : (q ?? string.Empty);
+        string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
+
+        var suggestions = await autosuggestService.GetAutosuggestionsAsync(
+            termQuery,
+            dictionary,
+            effectiveStudyId,
+            limit ?? 5,
+            cancellationToken);
+
+        return TypedResults.Ok(suggestions);
     }
 }

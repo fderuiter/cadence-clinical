@@ -50,7 +50,6 @@
 
 <script setup>
 import { ref } from "vue";
-import { unbackedActionsEnabled } from "../../../utils/unbackedActions.js";
 
 const props = defineProps({
   modelValue: { type: String, default: "" },
@@ -58,6 +57,7 @@ const props = defineProps({
   required: { type: Boolean, default: false },
   placeholder: { type: String, default: "" },
   dictionary: { type: String, default: "MedDRA" },
+  studyId: { type: String, default: "" },
 });
 
 const emit = defineEmits(["update:modelValue", "code-selected"]);
@@ -75,34 +75,32 @@ const onInput = (e) => {
   emit("update:modelValue", query);
 
   clearTimeout(debounceTimer);
-  // #4827: no coding service backs these suggestions, and the codes below are made up. Outside demo builds
-  // the verbatim term is still captured, but nothing suggests or assigns a code.
-  if (!query || query.length < 2 || !unbackedActionsEnabled()) {
+  if (!query || query.length < 2) {
     suggestions.value = [];
+    loading.value = false;
     return;
   }
 
   loading.value = true;
-  debounceTimer = setTimeout(() => {
-    // Simulated MedDRA / WHODrug Auto-Coding suggestion engine
-    suggestions.value = [
-      {
-        name: query,
-        code: "10019211",
-        pt: query.toUpperCase(),
-        soc: "Nervous system disorders",
-        dictionary: props.dictionary,
-      },
-      {
-        name: `${query} (acute)`,
-        code: "10019212",
-        pt: `${query.toUpperCase()} ACUTE`,
-        soc: "General disorders",
-        dictionary: props.dictionary,
-      },
-    ];
-    loading.value = false;
-    isOpen.value = true;
+  debounceTimer = setTimeout(async () => {
+    try {
+      let url = `/api/v1/execution/coding/autosuggest?query=${encodeURIComponent(query)}&dictionary=${encodeURIComponent(props.dictionary || "MedDRA")}`;
+      if (props.studyId) {
+        url += `&study_id=${encodeURIComponent(props.studyId)}`;
+      }
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        suggestions.value = Array.isArray(data) ? data : (data.suggestions || []);
+      } else {
+        suggestions.value = [];
+      }
+    } catch {
+      suggestions.value = [];
+    } finally {
+      loading.value = false;
+      isOpen.value = true;
+    }
   }, 250);
 };
 

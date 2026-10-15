@@ -22,7 +22,8 @@ namespace Cadence.Apps.Execution.Application.Coding;
 /// </summary>
 public sealed class SynonymImportService(
     ExecutionDbContext dbContext,
-    IClock clock) : ISynonymImportService
+    IClock clock,
+    ICodingAutosuggestService? autosuggestService = null) : ISynonymImportService
 {
     private static readonly Regex MedDraCodeRegex = new(@"^\d{8}$", RegexOptions.Compiled);
     private static readonly Regex WhoDrugCodeRegex = new(@"^[A-Za-z0-9]{8,11}$", RegexOptions.Compiled);
@@ -237,6 +238,18 @@ public sealed class SynonymImportService(
 
         var jobResponse = MapJobResponse(importJob);
         var ruleResponses = validRulesToInsert.Select(MapRuleResponse).ToList();
+
+        if (autosuggestService != null && ruleResponses.Count > 0)
+        {
+            try
+            {
+                await autosuggestService.IndexRulesAsync(ruleResponses, cancellationToken);
+            }
+            catch
+            {
+                // Non-blocking background index trigger
+            }
+        }
 
         return new BulkImportExecutionResponse(jobResponse, ruleResponses);
     }
