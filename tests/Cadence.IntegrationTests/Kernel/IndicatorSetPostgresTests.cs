@@ -29,7 +29,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Study Pulse indicators as governed data on PostgreSQL (ADR-2488): an indicator set is drafted, released with an
 /// attestation and pinned by a study like a rule pack, and its values are computed by the rule evaluator. Skipped
-/// unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class IndicatorSetPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

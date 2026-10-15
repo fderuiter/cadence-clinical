@@ -30,7 +30,7 @@ namespace Cadence.IntegrationTests.Kernel;
 
 /// <summary>
 /// The Standards Registry and Metadata Registry on PostgreSQL through the command pipeline (spec §6.3, #4809), as the
-/// application role under Row-Level Security. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// application role under Row-Level Security. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

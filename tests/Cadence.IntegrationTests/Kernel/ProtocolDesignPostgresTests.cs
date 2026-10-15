@@ -24,7 +24,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Submitting a protocol design for review against PostgreSQL (spec §6.2, ADR-2472): every concept version, pinned
 /// code-system version and artifact the design names must exist in the tenant (K-SEM-1), and a design that names only
-/// what the tenant has goes into review. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// what the tenant has goes into review. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class ProtocolDesignPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

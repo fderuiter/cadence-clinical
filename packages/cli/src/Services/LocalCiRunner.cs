@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
+using Cadence.Compliance;
+
 using Npgsql;
 
 namespace Cadence.Cli.Services;
@@ -78,6 +80,12 @@ public sealed class LocalCiEnvironment
 
     /// <summary>Called before each step that runs, with the step and the commands it is about to run.</summary>
     public Action<CiStep, IReadOnlyList<string>>? OnStepStarting { get; init; }
+
+    /// <summary>
+    /// Lists the database tests that did not execute in the TRX files under a results directory (#5325). Called after
+    /// a PostgreSQL step passes, unless <c>--allow-skip</c> was given.
+    /// </summary>
+    public Func<string, IReadOnlyList<SkippedDatabaseTest>> FindSkippedDatabaseTests { get; init; } = DatabaseTestEvidence.FindSkipped;
 
     /// <summary>Deletes a directory under the repository root, if it exists.</summary>
     public Action<string> DeleteDirectory { get; init; } = path =>
@@ -305,6 +313,10 @@ public static class LocalCiRunner
                     }
 
                     result = RunStep(step, options, environment, note, byKey);
+                    if (step.NeedsPostgres && result.Outcome == CiOutcome.Passed && !options.AllowSkip)
+                    {
+                        result = RejectSkippedDatabaseTests(result, environment);
+                    }
                 }
 
                 Record(result);
@@ -346,6 +358,27 @@ public static class LocalCiRunner
         return null;
     }
 
+    /// <summary>
+    /// Fails a passing test step whose results show database tests that did not execute: a green run must have
+    /// exercised them (#5325). The opt-in benchmark is exempt (<see cref="DatabaseTestEvidence.OptInTests"/>).
+    /// </summary>
+    private static CiStepResult RejectSkippedDatabaseTests(CiStepResult result, LocalCiEnvironment environment)
+    {
+        var skipped = environment.FindSkippedDatabaseTests(Path.Combine(environment.RepoRoot, RtmGeneratorService.DefaultResultsDir));
+        if (skipped.Count == 0)
+        {
+            return result;
+        }
+
+        string examples = string.Join(", ", skipped.Take(3).Select(t => t.FullName));
+        return result with
+        {
+            Outcome = CiOutcome.Failed,
+            Note = Join(result.Note, $"{skipped.Count} database test(s) did not execute ({examples}{(skipped.Count > 3 ? ", ..." : "")}); "
+                + "pass --allow-skip to accept a run without them."),
+        };
+    }
+
     private static CiStepResult RunStep(
         CiStep step, LocalCiOptions options, LocalCiEnvironment environment, string note, Dictionary<string, CiStepResult> earlier)
     {
@@ -370,6 +403,11 @@ public static class LocalCiRunner
         var variables = step.EnvironmentIfPassed
             .Where(e => earlier.TryGetValue(e.StepKey, out var r) && r.Outcome == CiOutcome.Passed)
             .ToDictionary(e => e.Name, e => e.Value, StringComparer.Ordinal);
+        if (step.NeedsPostgres)
+        {
+            // The database fixtures record the server, extensions, migrations and role they used next to the TRX files.
+            variables["CADENCE_TEST_EVIDENCE_DIR"] = Path.Combine(environment.RepoRoot, RtmGeneratorService.DefaultResultsDir);
+        }
         display.AddRange(variables.Select(v => $"(with {v.Key}={v.Value})"));
 
         environment.OnStepStarting?.Invoke(step, display);

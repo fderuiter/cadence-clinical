@@ -32,7 +32,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// Proposals and automation agents through the production pipeline and authorization against PostgreSQL (ADR-2489,
 /// #4783): an agent proposes and only a person approves, with an attestation over the proposal's content hash; the
 /// proposer cannot approve; a tampered or expired proposal cannot be approved; only the proposer withdraws; and the
-/// proposal sits in its study for lineage, visibility and navigation. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// proposal sits in its study for lineage, visibility and navigation. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFixture>, IDisposable

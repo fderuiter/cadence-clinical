@@ -17,7 +17,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// The read ports a kernel host uses before and while serving the Canvas, read as the application role: resolving the
 /// gateway's tenant code (#4780) and listing a study's protocol versions (spec §6.2). Skipped unless
-/// <c>CADENCE_TEST_POSTGRES</c> is set.
+/// <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelReadPortsPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

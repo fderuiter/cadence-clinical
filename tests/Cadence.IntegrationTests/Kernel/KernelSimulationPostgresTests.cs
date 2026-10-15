@@ -29,7 +29,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Simulation against PostgreSQL (ADR-2480): a forked and revised protocol draft is compared with its approved parent
 /// through kernel persistence, with the parent's dependents counted exactly as amendment impact counts them, the run adds or changes no row in any kernel table (K-SIM-1), and another tenant's
-/// versions cannot be simulated. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// versions cannot be simulated. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelSimulationPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

@@ -22,7 +22,7 @@ namespace Cadence.IntegrationTests.Kernel;
 
 /// <summary>
 /// <c>Dependents(node)</c> (Canvas D2, #4841) and amendment impact (K-PROT-2) as its caller, against PostgreSQL as the
-/// application role. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// application role. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class DependentsPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>, IDisposable

@@ -37,6 +37,8 @@
   <ItemGroup>
     <!-- Pins EF Core Relational to the central version; see InMemorySubjectRepository for the conflict it avoids. -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- PostgresTestServer: CADENCE_TEST_DOCKER=1 starts a Testcontainers PostgreSQL. -->
+    <PackageReference Include="Testcontainers.PostgreSql" />
   </ItemGroup>
 
 </Project>

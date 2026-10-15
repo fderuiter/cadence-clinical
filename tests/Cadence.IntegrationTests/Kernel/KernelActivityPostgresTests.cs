@@ -29,7 +29,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// The activity stream against PostgreSQL (ADR-2485): the projector turns outbox envelopes into activity entries
 /// scoped by the subject's zoom path, idempotently and without touching the outbox; reads filter by scope, family,
 /// actor and time, page by cursor, stay inside the tenant, and mask entries the reader may not see. Skipped unless
-/// <c>CADENCE_TEST_POSTGRES</c> is set.
+/// <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

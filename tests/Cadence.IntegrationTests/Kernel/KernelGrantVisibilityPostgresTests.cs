@@ -22,7 +22,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Grant-backed visibility over the kernel's own scope paths against PostgreSQL (ADR-2457, #4781): grants issued
 /// through the pipeline decide which studies, study sites, sites, participants, enrollments, protocol versions and
-/// effectivities a reader sees. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// effectivities a reader sees. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelGrantVisibilityPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

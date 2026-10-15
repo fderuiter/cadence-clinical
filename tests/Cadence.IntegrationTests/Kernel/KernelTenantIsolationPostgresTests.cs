@@ -23,7 +23,7 @@ namespace Cadence.IntegrationTests.Kernel;
 
 /// <summary>
 /// Tenant isolation enforced by PostgreSQL (K-ID-1, K-ID-2, K-ID-4, ADR-2250; spec §14 scenario 5), checked as the
-/// application role: not the owner, no <c>BYPASSRLS</c>. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// application role: not the owner, no <c>BYPASSRLS</c>. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelTenantIsolationPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 
 using Cadence.Compliance;
+using Cadence.Kernel.Time;
 
 namespace Cadence.Cli.Services;
 
@@ -373,16 +374,18 @@ public static class CiPlan
             new("compliance", "Generate Compliance Reports")
             {
                 InProcess = repoRoot => RtmGeneratorService.GenerateRtm(
-                    draft: false, validateOnly: false, reportPath: Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir), repoRoot: repoRoot, honorDraftEnvironment: false),
+                    draft: false, validateOnly: false, reportPath: Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir), repoRoot: repoRoot,
+                    honorDraftEnvironment: false, evidence: RtmEvidenceContext.Capture(repoRoot, "pnpm cadence ci", SystemClock.Instance)),
                 InProcessDisplay = $"generate the RTM and IQ/OQ/PQ report from {RtmGeneratorService.DefaultResultsDir} (what 'gxp sync' does after its test run; nothing is staged)",
                 InProcessCiText = $"dotnet run --project {Cli} -- gxp sync",
             },
             new("compliance", "Assert No Documentation Git Diff")
             {
-                Commands =
-                [
-                    new CiCommand("git", ["diff", "--exit-code", RtmReport, IqReport]),
-                ],
+                // The evidence block (revision, time, database, runner) changes on every run, so the documents are
+                // compared without it. A match is put back to the committed copy so the run leaves no change behind.
+                InProcess = repoRoot => GxpDocsDiffService.Compare(repoRoot, restoreWhenEquivalent: true),
+                InProcessDisplay = "compare the regenerated RTM and IQ/OQ/PQ report with the committed copies, ignoring the evidence block",
+                InProcessCiText = $"dotnet run --project {Cli} -- gxp diff",
             },
         ])
         {

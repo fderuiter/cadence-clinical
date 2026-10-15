@@ -6,14 +6,14 @@ requirement as qualified.
 
 ## Test projects
 
-| Project | What it holds | Run it with |
-| --- | --- | --- |
-| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj` | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database. | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` |
-| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj` | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`. | `dotnet cadence test --integration` |
-| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, suppression and test-layout policies, and the architecture sentinels. | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj` | Black-box HTTP tests against the execution service through `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj` |
-| `packages/ui/tests/` | Vitest suite for the shared JavaScript signing and UI helpers. | `pnpm --filter ui test` |
-| `apps/web/tests/` | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` are excluded. | `pnpm --filter web test` |
+| Project                                                            | What it holds                                                                                                                        | Run it with                                                                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database. | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                               | `dotnet cadence test --integration`                                            |
+| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, suppression and test-layout policies, and the architecture sentinels.   | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service through `WebApplicationFactory`.                                                  | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
+| `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                       | `pnpm --filter ui test`                                                        |
+| `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` are excluded.              | `pnpm --filter web test`                                                       |
 
 `dotnet test Cadence.sln` runs all four .NET test projects. `dotnet cadence test --fast` is the quick loop (every
 project, `Category!=Integration`), and `make verify` runs the quality gates plus every suite before you open a PR.
@@ -31,11 +31,23 @@ relying on CI.
 Some behaviour only exists on a real database: advisory locks, transactions, and EF Core migrations. Those
 tests never fall back to an in-memory stand-in. Without a database they report as **skipped**, not passed.
 
-Two opt-ins are checked in order:
+Two opt-ins are checked in order, by every fixture below:
 
-1. `CADENCE_TEST_POSTGRES` is an Npgsql connection string to a server you already run. Each fixture
+1. `CADENCE_TEST_POSTGRES` is an Npgsql connection string to a server you already run, as a superuser. Each fixture
    creates a throwaway database on it (`cadence_it_*`, `cadence_kernel_it_*` or `cadence_e2e_*`) and drops it afterwards.
-2. `CADENCE_TEST_DOCKER=1` starts a Testcontainers `postgres:16-alpine` container.
+2. `CADENCE_TEST_DOCKER=1` starts a Testcontainers `postgres:16-alpine` container, whose default `postgres` user is a
+   superuser. `PostgresTestServer` in `tests/Cadence.TestSupport/Database` makes this choice for the kernel fixtures.
+
+Once either is set, a fixture that cannot reach or start the server fails its tests; it never turns them into skips.
+A run that skips database tests is not evidence: `cadence ci` fails when any test in `Cadence.IntegrationTests` or
+`Cadence.E2ETests` was skipped or did not execute (unless `--allow-skip` is given), and `gxp sync` refuses to stage
+documents from such a run. The only exemption is the opt-in lineage benchmark, named in
+`DatabaseTestEvidence.OptInTests`.
+
+The kernel fixture checks that its application role is neither a superuser nor `BYPASSRLS` before any test runs, since
+a pass under such a role says nothing about Row-Level Security. When `CADENCE_TEST_EVIDENCE_DIR` is set (`gxp sync` and
+`cadence ci` set it to `TestResults/gxp`), it records the server version and source, the installed extensions, the latest
+kernel migration and the role's attributes in `kernel.database.txt`, which the RTM and IQ/OQ/PQ report print.
 
 Where Docker is not available, for example in a cloud agent session, a local server works:
 
@@ -61,7 +73,8 @@ These tests currently use it:
   assertions never depend on what is stored, such as authentication rejections, routing and OpenAPI. A test that
   writes through the API and checks the result belongs on `ExecutionPostgresApiFactory`.
 - `tests/Cadence.IntegrationTests/Kernel/` (`KernelPostgresFixture`): the kernel schema, bitemporal guards and the command
-  pipeline. This fixture honours only `CADENCE_TEST_POSTGRES`.
+  pipeline, all as the non-owner application role under Row-Level Security. The IdentityVault migration tests use the
+  same server choice.
 - `tests/Cadence.IntegrationTests/Database/` (`ThrowawayPostgresDatabase`): every service's migrations applied the way a deployed
   service applies them, into one shared database, checking that each service's tables and migration history
   land in its own schema (ADR-2247).
@@ -178,8 +191,9 @@ Rules:
   `dotnet cadence check` (the `rtm` gate), `dotnet cadence gxp validate`, and the
   `RepositoryTests_DeclareOnlyRequirementIdsThatExist` unit test. Add the requirement first, then tag the
   test.
-- **An alias does not qualify its parent.** An `SRS-*` or `Trace-*` entry that points at a `PRD-*`
-  requirement is listed with its parent's tests, but tagging the alias does not qualify the parent.
+- **An alias and its parent qualify separately.** An `SRS-*` or `Trace-*` entry that points at a `PRD-*`
+  requirement is judged by its own tests only: the parent's tests do not qualify it, and its tests do not qualify the
+  parent.
 - **No placeholder tests.** A test that asserts on its own literals (`true.Should().BeTrue()`, or a status
   that accepts 201, 400 or 500) verifies nothing. Write a real assertion, or leave the requirement Planned.
 
@@ -197,14 +211,27 @@ branches do not conflict on them (ADR-2287).
 Tests are found by scanning `tests/` for `[Fact]` and `[Theory]` methods and matched to TRX results by
 their fully qualified name. Theory cases are merged: a single failing case fails the test.
 
-| State | Meaning |
-| --- | --- |
-| **Qualified** | At least one test declaring the requirement ran and passed, and none failed. |
-| **Failed** | At least one test declaring the requirement failed, errored, timed out or aborted. |
-| **Not verified** | Tests declare the requirement, but none of them passed: they were skipped or have no result. |
-| **Planned** | No test declares the requirement yet. |
+| State            | Meaning                                                                                         |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| **Qualified**    | Every test declaring the requirement ran and passed.                                            |
+| **Failed**       | At least one test declaring the requirement failed, errored, timed out or aborted.              |
+| **Not verified** | No test failed, but at least one test declaring the requirement was skipped or did not execute. |
+| **Planned**      | No test declares the requirement yet.                                                           |
 
-A test with no result is reported as **NOT RUN**. It is never assumed to have passed. Without any TRX
+Every test that declares a requirement is mandatory (#5324). A requirement with three passing tests and one skipped
+test is **Not verified**, not Qualified. Each test is reported with one of four results: **PASSED**, **FAILED**,
+**SKIPPED** (xUnit skipped it, for example because no database was configured) or **NOT EXECUTED** (it has no result in
+any TRX file, or its result is neither a pass, a failure nor a skip). Theory cases are merged per method, and a single
+skipped case keeps the method from passing. A test that did not execute is never assumed to have passed.
+
+An `SRS-*` or `Trace-*` alias is a child requirement with its own acceptance criteria, so it is judged only by the tests
+that declare the alias itself. Its parent's tests never qualify it, and its own tests never qualify the parent. Section 4
+of the RTM lists each alias with its own tests.
+
+Both documents open with an evidence block: the tested revision (`HEAD`, and whether the working tree had other
+changes), the generation time, the database the fixtures recorded and the runner. Commit the code first and then run
+`gxp sync`, so the recorded revision is exactly what was tested. CI's docs comparison (`cadence gxp diff`) leaves the
+evidence block and the integrity stamp out, since they change on every run. Without any TRX
 results, generation stops with an error unless you run `dotnet cadence generate-rtm --draft` or set
 `RTM_DRAFT=true`. A draft is marked **DRAFT ONLY** and every test shows as **UNVERIFIED**. `gxp sync` ignores
 `RTM_DRAFT`, so a variable left set in a shell or CI job can't turn documents built from real results into

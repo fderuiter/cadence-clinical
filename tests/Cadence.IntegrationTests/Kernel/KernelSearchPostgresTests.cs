@@ -30,7 +30,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Kernel search against PostgreSQL (ADR-2484): code and title matches across studies, sites, organizations,
 /// concepts and terminology codes, NodeRef results, tenant isolation through Row-Level Security, and the GIN indexes
-/// the migration creates. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// the migration creates. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelSearchPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

@@ -26,7 +26,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Kernel navigation over the real kernel tables (ADR-2481, Canvas PX-1 and PX-2): summaries, the zoom path through a
 /// study site's country, children with counts, and no reads across tenants. Skipped unless
-/// <c>CADENCE_TEST_POSTGRES</c> is set.
+/// <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

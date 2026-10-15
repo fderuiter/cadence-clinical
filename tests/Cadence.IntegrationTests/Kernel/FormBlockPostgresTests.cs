@@ -23,7 +23,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// Reusable form blocks as governed collection specifications on PostgreSQL (ADR-2503): the shipped vital signs block
 /// drafts and approves as a <c>CollectionSpecification</c> library item, instantiates into a protocol design once the
 /// tenant holds its Biomedical Concepts, and invalid content is refused when drafted. Skipped unless
-/// <c>CADENCE_TEST_POSTGRES</c> is set.
+/// <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class FormBlockPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

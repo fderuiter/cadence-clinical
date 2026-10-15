@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Cadence.Cli.Services;
+using Cadence.Compliance;
 
 using FluentAssertions;
 
@@ -25,7 +26,8 @@ public class LocalCiRunnerTests
     private LocalCiEnvironment Environment(
         bool postgres = true,
         Func<string, bool>? tools = null,
-        IReadOnlyList<string>? files = null) => new()
+        IReadOnlyList<string>? files = null,
+        IReadOnlyList<SkippedDatabaseTest>? skippedDatabaseTests = null) => new()
         {
             RepoRoot = "/repo",
             Run = (command, extra, variables) =>
@@ -46,6 +48,7 @@ public class LocalCiRunnerTests
             ProbePostgres = () => new CiPostgresStatus(postgres, postgres ? "reachable." : "Neither CADENCE_TEST_POSTGRES nor CADENCE_TEST_DOCKER=1 is set."),
             FindFiles = (_, _) => files ?? [],
             DeleteDirectory = _ => { },
+            FindSkippedDatabaseTests = _ => skippedDatabaseTests ?? [],
         };
 
     private static CiJob Job(string key, params CiStep[] steps) => new(key, key, steps);
@@ -152,6 +155,34 @@ public class LocalCiRunnerTests
         results.Single().Outcome.Should().Be(CiOutcome.Passed);
         results.Single().Note.Should().StartWith("PostgreSQL tests skipped (--allow-skip)");
         _ran.Should().Equal("test");
+    }
+
+    /// <summary>
+    /// Regression for #5325: with CADENCE_TEST_DOCKER=1 the kernel tests used to skip while the run reported green. A
+    /// passing test step whose results show skipped database tests now fails.
+    /// </summary>
+    [Fact]
+    public void DatabaseTests_ThatDidNotExecute_FailAPassingTestStep()
+    {
+        var jobs = new[] { Job("t", new CiStep("t", "tests") { NeedsPostgres = true, Commands = [Cmd("test")] }) };
+        var skipped = new[] { new SkippedDatabaseTest("Cadence.IntegrationTests.Kernel.RlsTests.Isolates", "Cadence.IntegrationTests.dll", "no database") };
+
+        var results = LocalCiRunner.Run(jobs, Defaults, Environment(skippedDatabaseTests: skipped));
+
+        results.Single().Outcome.Should().Be(CiOutcome.Failed);
+        results.Single().Note.Should().Contain("1 database test(s) did not execute").And.Contain("RlsTests.Isolates").And.Contain("--allow-skip");
+        _variables["test"].Should().ContainKey("CADENCE_TEST_EVIDENCE_DIR");
+    }
+
+    [Fact]
+    public void DatabaseTests_ThatDidNotExecute_AreAccepted_WithAllowSkip()
+    {
+        var jobs = new[] { Job("t", new CiStep("t", "tests") { NeedsPostgres = true, Commands = [Cmd("test")] }) };
+        var skipped = new[] { new SkippedDatabaseTest("Cadence.IntegrationTests.Kernel.RlsTests.Isolates", "Cadence.IntegrationTests.dll", "no database") };
+
+        var results = LocalCiRunner.Run(jobs, Defaults with { AllowSkip = true }, Environment(skippedDatabaseTests: skipped));
+
+        results.Single().Outcome.Should().Be(CiOutcome.Passed);
     }
 
     [Fact]
