@@ -2,7 +2,9 @@
   <div
     v-if="codingStore.isSynonymDrawerOpen"
     class="synonym-drawer-overlay fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-xs transition-opacity"
+    role="presentation"
     @click.self="close"
+    @keydown.esc="close"
   >
     <div
       class="synonym-drawer-panel flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl dark:bg-slate-900"
@@ -170,11 +172,17 @@
               @dragover.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
               @drop.prevent="handleFileDrop"
+              role="button"
+              tabindex="0"
+              aria-label="Select synonym dictionary file"
               @click="triggerFileInput"
+              @keydown.enter.prevent="triggerFileInput"
+              @keydown.space.prevent="triggerFileInput"
             >
               <input
                 ref="fileInputRef"
                 type="file"
+                aria-label="Synonym dictionary file"
                 accept=".csv,.xlsx"
                 class="hidden"
                 :disabled="!isAuthorized || codingStore.synonymImportLoading"
@@ -346,7 +354,7 @@
                   >
                     <tr
                       v-for="errRow in report.invalidRows"
-                      :row-key="errRow.rowNumber"
+                      :key="errRow.rowNumber"
                       class="hover:bg-slate-50 dark:hover:bg-slate-800/40"
                     >
                       <td

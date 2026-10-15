@@ -1119,11 +1119,17 @@
                   padding: 16px;
                   border-radius: 8px;
                   background: rgba(16, 185, 129, 0.1);
-                  border: 1px solid #10b981;
+                  border: 1px solid var(--semantic-color-success);
                   color: var(--semantic-color-text-dark);
                 "
               >
-                <h4 style="margin: 0 0 6px 0; color: #10b981; font-size: 16px">
+                <h4
+                  style="
+                    margin: 0 0 6px 0;
+                    color: var(--semantic-color-success);
+                    font-size: 16px;
+                  "
+                >
                   ✅ Reimbursement Auto-Approved & Dispatched
                 </h4>
                 <p style="margin: 0 0 8px 0; font-size: 14px">
@@ -1154,11 +1160,17 @@
                   padding: 16px;
                   border-radius: 8px;
                   background: rgba(245, 158, 11, 0.1);
-                  border: 1px solid #f59e0b;
+                  border: 1px solid var(--semantic-color-warning-border-strong);
                   color: var(--semantic-color-text-dark);
                 "
               >
-                <h4 style="margin: 0 0 6px 0; color: #f59e0b; font-size: 16px">
+                <h4
+                  style="
+                    margin: 0 0 6px 0;
+                    color: var(--semantic-color-warning-text);
+                    font-size: 16px;
+                  "
+                >
                   ⚠️ Expense Claim Held for Manual Review
                 </h4>
                 <p id="pending-review-notes" style="margin: 0; font-size: 14px">

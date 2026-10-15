@@ -56,7 +56,14 @@
         class="rule-card"
         :class="getRuleCardClass(rule)"
       >
-        <div class="rule-card-header" @click="toggleRuleExpand(rule.id)">
+        <div
+          class="rule-card-header"
+          role="button"
+          tabindex="0"
+          @click="toggleRuleExpand(rule.id)"
+          @keydown.enter.prevent="toggleRuleExpand(rule.id)"
+          @keydown.space.prevent="toggleRuleExpand(rule.id)"
+        >
           <div class="rule-title-group">
             <span class="rule-type-badge" :class="rule.type">
               {{ formatRuleType(rule.type) }}
@@ -175,7 +182,7 @@ function getRuleStatus(rule) {
   const resultVal = trace.val;
 
   if (rule.type === "skip_logic") {
-    if (resultVal === true) {
+    if (Object.is(resultVal, true)) {
       return {
         label: rule.action === "hide" ? "HIDDEN" : "VISIBLE",
         style: "status-active",
@@ -192,7 +199,7 @@ function getRuleStatus(rule) {
     return { label: "QUERY RAISED", style: "status-error" };
   }
 
-  if (resultVal === true) {
+  if (Object.is(resultVal, true)) {
     // If AST condition evaluates to true, check if query error exists on target
     const isError =
       props.fieldErrors[rule.target_field || ""] || props.fieldErrors[rule.id];
@@ -202,7 +209,7 @@ function getRuleStatus(rule) {
     return { label: "MET / PASS", style: "status-success" };
   }
 
-  if (resultVal === false) {
+  if (Object.is(resultVal, false)) {
     return { label: "PASS", style: "status-success" };
   }
 

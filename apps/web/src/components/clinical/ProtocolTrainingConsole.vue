@@ -476,7 +476,7 @@
 
           <div class="batch-filter-grid">
             <div class="filter-col">
-              <label class="filter-title">Target Sites (Multi-Select):</label>
+              <div class="filter-title">Target Sites (Multi-Select):</div>
               <div class="checkbox-group">
                 <label
                   v-for="site in availableSites"
@@ -494,7 +494,7 @@
             </div>
 
             <div class="filter-col">
-              <label class="filter-title">Clinical Roles (Multi-Select):</label>
+              <div class="filter-title">Clinical Roles (Multi-Select):</div>
               <div class="checkbox-group">
                 <label
                   v-for="role in availableRoles"
@@ -619,6 +619,7 @@
                   <th style="width: 40px">
                     <input
                       type="checkbox"
+                      aria-label="Select all delegations"
                       :checked="isAllDelegationsSelected"
                       @change="toggleSelectAllDelegations"
                     />
@@ -637,6 +638,7 @@
                     <input
                       type="checkbox"
                       :value="del.id"
+                      :aria-label="`Select delegation ${del.id}`"
                       v-model="selectedDelegationIds"
                       :disabled="del.status === 'COMPLETED'"
                     />
@@ -888,7 +890,7 @@
             />
           </div>
           <div class="form-group">
-            <label>Legal Attestation Statement:</label>
+            <span>Legal Attestation Statement:</span>
             <div class="statement-box">
               "I confirm that I have reviewed and approved the delegated duties
               for the selected site staff personnel in accordance with 21 CFR

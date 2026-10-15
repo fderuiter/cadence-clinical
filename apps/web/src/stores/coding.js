@@ -1368,7 +1368,7 @@ export const useCodingStore = defineStore("coding", {
           this.synonymImportJobs = [];
         }
         return jobs;
-      } catch (err) {
+      } catch {
         this.synonymImportJobs = [];
         return [];
       }
