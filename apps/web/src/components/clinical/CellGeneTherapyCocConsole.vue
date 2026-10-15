@@ -1174,7 +1174,7 @@
                 <input
                   v-model="milestoneForm.tracking_number"
                   type="text"
-                  placeholder="e.g. WC-8839210"
+                  placeholder="e.g. WC-TRACK-01"
                 />
               </div>
 
