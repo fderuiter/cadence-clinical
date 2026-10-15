@@ -5,7 +5,7 @@
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
 - **Issue:** #4787 (part of #4719); follow-ups #5371–#5378
-- **Supersedes:** ADR-047, ADR-100, ADR-2191, ADR-2310, ADR-2342, ADR-2374, ADR-2396, ADR-2399, ADR-2406
+- **Supersedes:** ADR-2310, ADR-2406; partly ADR-047, ADR-100, ADR-2191, ADR-2342, ADR-2374, ADR-2394, ADR-2396, ADR-2399
 
 ---
 
@@ -43,8 +43,10 @@ org, quality and tickets have identical 33-line `Program.cs` files apart from th
 - **Spec §2.3 and K-XS-1:** applications never declare their own Study, Site, Participant, Delegation, Role or
   `*AuditLog` types.
 - **Spec §12:** the application capability map fixes which kernel concepts each capability is built on.
-- **Keep what has users or features; delete what has neither.** A host with no routes and no tests carries cost (a
-  process, a route, a schema, a compose service) and no value.
+- **One process, not seventeen.** A separate host per capability carries a process, a gateway route, a compose service
+  and its own wiring; a module in the composition host carries none of them.
+- **Keep the capabilities the product is built around.** Tickets, quality and the AI gateway are wanted as distinctive,
+  self-contained features of the application (maintainer direction, 2026-10-15), even though they map no routes yet.
 - **No new frameworks** (user direction, 2026-10-15): the existing stack hosts the modules.
 
 ## 3. Options Considered
@@ -54,17 +56,17 @@ org, quality and tickets have identical 33-line `Program.cs` files apart from th
 - **Pros:**
   - ✅ No decision needed per service.
 - **Cons:**
-  - ❌ Carries seven hosts with no routes into the composition host.
+  - ❌ Keeps eisf and fileshare apart from the eTMF evidence they hold, and notifications as a module when it is plumbing.
   - ❌ Keeps org's delegation model alongside the kernel's Grants, contrary to spec §2.3.
 
 ### Option 2: Disposition each service against spec §12 (selected)
 
 - **Pros:**
-  - ✅ Ten modules with real features stay; storage and plumbing services fold into the module or host that owns
-    the concern.
-  - ✅ Services that duplicate kernel truth or sit outside K-SCOPE-1 go.
+  - ✅ Thirteen capabilities stay as modules; storage and plumbing services fold into the module or host that owns the
+    concern.
+  - ✅ The one service that only duplicates kernel truth (org) goes.
 - **Cons:**
-  - ❌ Code for deviations, CAPA and tickets is discarded and must be rebuilt if those capabilities are wanted later.
+  - ❌ Three of the kept modules (tickets, quality, ai_gateway) are scaffolds today and have to be built out.
 
 ### Option 3: Delete every scaffold and rebuild modules from the kernel up
 
@@ -77,21 +79,22 @@ org, quality and tickets have identical 33-line `Program.cs` files apart from th
 
 - **Chosen Option:** Option 2.
 
-| Service                                                                                  | Disposition                                                                                                                 | Follow-up |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------- |
-| execution, ctms, etmf, payments, interop, imaging, safety, econsent, designer, knowledge | **Module**: becomes `Cadence.Modules.X` over kernel IDs, hosted in the composition host (#5315)                             | #5378     |
-| eisf                                                                                     | **Merge into etmf**: ISF and TMF are one capability in spec §12 ("TMF / ISF")                                               | #5371     |
-| fileshare                                                                                | **Merge into etmf**: file storage, sharing and conversion are document concerns of the TMF                                  | #5372     |
-| notifications                                                                            | **Merge into the composition host**: rendering and delivery become a host capability modules call in-process                | #5373     |
-| ai_gateway                                                                               | **Delete**: no routes; AI actors are a kernel concern (Proposals, #4783)                                                    | #5374     |
-| org                                                                                      | **Delete**: delegation of authority and personnel assignments become kernel Grants, training becomes Qualification evidence | #5375     |
-| quality                                                                                  | **Delete**: deviations arrive with the kernel's quality expansion (spec §15 phase 3); CAPA workflow is built on it then     | #5376     |
-| tickets                                                                                  | **Delete**: a help desk is outside K-SCOPE-1                                                                                | #5377     |
+| Service                                                                                  | Disposition                                                                                                                                                                                                                                          | Follow-up |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| execution, ctms, etmf, payments, interop, imaging, safety, econsent, designer, knowledge | **Module**: becomes `Cadence.Modules.X` over kernel IDs, hosted in the composition host (#5315)                                                                                                                                                      | #5378     |
+| tickets                                                                                  | **Module**: a self-contained support and issue-tracking feature in the composition host                                                                                                                                                              | #5377     |
+| quality                                                                                  | **Module**: deviations, root-cause analysis and CAPA in the composition host; deviations use the kernel's Findings and Deviations as they arrive (spec §12, §15 phase 3)                                                                             | #5376     |
+| ai_gateway                                                                               | **Module**: the in-process AI capability (provider routing, cost and PHI controls) in the composition host; AI actors act through kernel Proposals limited to Read and Propose ([ADR-2489](2026-09-30-ai-proposals-and-automation-agents.md), #4783) | #5374     |
+| eisf                                                                                     | **Merge into etmf**: ISF and TMF are one capability in spec §12 ("TMF / ISF")                                                                                                                                                                        | #5371     |
+| fileshare                                                                                | **Merge into etmf**: file storage, sharing and conversion are document concerns of the TMF                                                                                                                                                           | #5372     |
+| notifications                                                                            | **Merge into the composition host**: rendering and delivery become a host capability modules call in-process                                                                                                                                         | #5373     |
+| org                                                                                      | **Delete**: delegation of authority and personnel assignments become kernel Grants, training becomes Qualification evidence                                                                                                                          | #5375     |
 
-- **Justification:** the ten modules have product features and map to rows of spec §12. eisf and fileshare hold the
-  same evidence as etmf. Notifications is shared plumbing with one route. The four deleted services have no routes, and
-  their data either duplicates kernel concepts (org) or is not clinical evidence (tickets), or will be rebuilt on kernel
-  concepts that do not exist yet (quality, ai_gateway).
+- **Justification:** the ten feature modules map to rows of spec §12. Tickets, quality and the AI gateway are kept as
+  distinctive features to build out inside the application rather than as separate services; they are applications
+  under K-SCOPE-1, so they stay out of the kernel and build on its concepts (Findings, Deviations, Proposals). eisf and
+  fileshare hold the same evidence as etmf. Notifications is shared plumbing with one route. Org has no routes and its
+  data duplicates kernel Grants and Qualifications.
 
 ## 5. Consequences & Trade-offs
 
@@ -108,24 +111,27 @@ org, quality and tickets have identical 33-line `Program.cs` files apart from th
 | `SubjectConsent`, `ConsentWithdrawal`                                                | execution, econsent              | Kernel `ConsentStatus` (spec §12, eConsent row)                                                                                                                    |
 | `string` study, site and participant IDs                                             | all modules                      | `StudyId`, `SiteId`, `ParticipantId` in `Cadence.Kernel.Abstractions`                                                                                              |
 
-- **Positive Impact:** seven fewer processes, gateway routes, compose services and schemas; no route points at a
-  service that maps nothing; one delegation model.
-- **Negative Impact / Technical Debt:** the quality, tickets and ai_gateway code is deleted, not ported.
-  PRD-SYS-051 still describes an AI gateway microservice and must be reworded (#5374).
-- **Mitigation Strategy:** every move and deletion has its own issue under #4787, each of which removes the gateway
-  route, AppHost entry, compose service and project references together, so what is wired always matches what runs.
+- **Positive Impact:** one process instead of seventeen product hosts; four fewer schemas (eisf, fileshare and
+  notifications merge, org goes); one delegation model.
+- **Negative Impact / Technical Debt:** tickets, quality and the AI gateway have to be built out before they do
+  anything. PRD-SYS-051 describes an AI gateway _microservice_ and must be reworded to an in-process module (#5374).
+- **Mitigation Strategy:** every move has its own issue under #4787, each of which removes the old host's gateway
+  cluster, AppHost entry, compose service and project references together, so what is wired always matches what runs.
   The K-XS-1 baseline in `tests/Cadence.ArchitectureTests/Architecture` shrinks as modules switch to kernel types.
 
 ### ADRs superseded
 
-| ADR                                                                                                                                                                                                                                                                       | Why                                                         |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| [ADR-2191](2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md)                                                                                                                                                                       | AI gateway microservice is deleted                          |
-| [ADR-047](2026-07-27-quality-capa-scaffold.md), [ADR-2342](2026-08-05-quality-capa-management.md)                                                                                                                                                                         | Quality service is deleted                                  |
-| [ADR-2310](2026-08-02-notifications-service-foundation.md)                                                                                                                                                                                                                | Notifications is no longer a standalone service             |
-| [ADR-2374](2026-08-13-tickets-service-scaffold-and-gateway-integration.md), [ADR-100](2026-08-23-tickets-notifications-integration.md), [ADR-2396](2026-08-23-ticket-read-audit-policy-and-pagination.md), [ADR-2399](2026-08-24-tickets-escalation-and-deduplication.md) | Tickets service is deleted                                  |
-| [ADR-2406](2026-08-26-eisf-gateway-compose-and-etmf-sync-topology.md)                                                                                                                                                                                                     | eISF is no longer a separate service synchronised with eTMF |
+| ADR                                                                   | Why                                                         |
+| --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [ADR-2310](2026-08-02-notifications-service-foundation.md)            | Notifications is no longer a standalone service             |
+| [ADR-2406](2026-08-26-eisf-gateway-compose-and-etmf-sync-topology.md) | eISF is no longer a separate service synchronised with eTMF |
 
+Partly superseded, for hosting only: [ADR-2191](2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md)
+(AI gateway), [ADR-047](2026-07-27-quality-capa-scaffold.md) and [ADR-2342](2026-08-05-quality-capa-management.md)
+(quality), and [ADR-2374](2026-08-13-tickets-service-scaffold-and-gateway-integration.md),
+[ADR-100](2026-08-23-tickets-notifications-integration.md), [ADR-2396](2026-08-23-ticket-read-audit-policy-and-pagination.md)
+and [ADR-2399](2026-08-24-tickets-escalation-and-deduplication.md) (tickets). Their feature decisions stand; the
+capability runs as a module in the composition host instead of a separate service.
 [ADR-2394](2026-08-23-doa-archive-destination-and-taxonomy.md) is superseded only for its org parts: delegation of
 authority lives in kernel Grants.
 
@@ -133,7 +139,7 @@ authority lives in kernel Grants.
 
 - **Affected Repositories / Services:** `apps/*`, `apps/gateway`, `apps/apphost`, `docker/docker-compose.yml`,
   `Cadence.sln`, the test projects and `packages/tooling_core` exporters. This ADR changes no code.
-- **Order:** the deletions (#5374, #5376, #5377) have no dependencies. #5375 waits on the kernel authority model
-  (#4781, #5319). The merges (#5371–#5373) and module conversion (#5378) land in the composition host (#5315).
+- **Order:** #5375 (delete org) waits on the kernel authority model (#4781, #5319). The merges (#5371–#5373) and the
+  module conversions (#5374, #5376, #5377, #5378) land in the composition host (#5315).
 - **Verification Plan:** each follow-up PR passes the gateway route test ([ADR-2448](2026-09-29-gateway-routes-verified-against-service-endpoints.md)),
   `pnpm cadence check arch-drift` and the architecture tests; #4787 closes when its acceptance criteria are met.

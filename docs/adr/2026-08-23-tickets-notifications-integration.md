@@ -1,9 +1,9 @@
 # ADR-100: Tickets-to-Notifications Integration Architecture
 
 > [!NOTE]
-> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). The tickets service is deleted (#5377).
+> Partly superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md): tickets runs as a module in the composition host instead of a separate service (#5377). The feature decisions below stand.
 
-- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
+- **Status:** Accepted
 - **Date:** 2026-08-23
 - **Authors:** Jules
 - **Deciders:** @fderuiter

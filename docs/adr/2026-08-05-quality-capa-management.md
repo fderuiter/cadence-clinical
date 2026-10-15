@@ -3,9 +3,9 @@
 Also known as: ADR-056 (former number)
 
 > [!NOTE]
-> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). The quality service is deleted; deviations arrive with the kernel's quality expansion (#5376).
+> Partly superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md): quality runs as a module in the composition host instead of a separate service (#5376). The feature decisions below stand.
 
-- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
+- **Status:** Accepted
 - **Date:** 2026-08-05
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter

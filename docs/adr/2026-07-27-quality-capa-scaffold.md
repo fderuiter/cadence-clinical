@@ -1,9 +1,9 @@
 # ADR-047: Quality & CAPA Foundation and Domain Models
 
 > [!NOTE]
-> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). The quality service is deleted; deviations arrive with the kernel's quality expansion (#5376).
+> Partly superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md): quality runs as a module in the composition host instead of a separate service (#5376). The feature decisions below stand.
 
-- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
+- **Status:** Accepted
 - **Date:** 2026-07-27
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
