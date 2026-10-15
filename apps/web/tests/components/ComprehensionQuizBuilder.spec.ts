@@ -159,7 +159,9 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
     await domainSelect.setValue("HIPAA & Confidentiality");
     expect(drawer.vm.selectedDomain).toBe("HIPAA & Confidentiality");
     const filtered = drawer.vm.filteredTemplates;
-    expect(filtered.every((t) => t.domain === "HIPAA & Confidentiality")).toBe(true);
+    expect(filtered.every((t) => t.domain === "HIPAA & Confidentiality")).toBe(
+      true
+    );
 
     // Search by keyword
     const searchInput = drawer.find("#template-search-input");

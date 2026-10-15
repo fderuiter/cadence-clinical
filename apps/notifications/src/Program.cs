@@ -20,6 +20,8 @@ builder.Services.AddCadenceSecurity();
 builder.AddCadencePostgresDbContext<NotificationsDbContext>();
 builder.Services.AddFluidTemplating();
 
+builder.Services.AddSingleton<IEnrolledSubjectResolver, DefaultEnrolledSubjectResolver>();
+
 builder.Services.AddMassTransit(x =>
 {
     x.AddEntityFrameworkOutbox<NotificationsDbContext>(o =>
@@ -28,6 +30,7 @@ builder.Services.AddMassTransit(x =>
         o.UseBusOutbox();
     });
     x.AddConsumer<ClinicalQueryRaisedConsumer>();
+    x.AddConsumer<EconsentReconsentConsumer>();
     x.UsingInMemory((context, cfg) =>
     {
         cfg.ConfigureEndpoints(context);

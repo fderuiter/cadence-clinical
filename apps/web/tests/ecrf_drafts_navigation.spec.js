@@ -51,9 +51,16 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       const visitId = ref("Week2");
       const formValues = reactive({ vssbp: "120" });
 
-      const { getStorageKey } = useEcrfDrafts(studyId, subjectId, visitId, formValues);
+      const { getStorageKey } = useEcrfDrafts(
+        studyId,
+        subjectId,
+        visitId,
+        formValues
+      );
 
-      expect(getStorageKey()).toBe("cadence_ecrf_drafts:STUDY-101:SUBJ-202:Week2");
+      expect(getStorageKey()).toBe(
+        "cadence_ecrf_drafts:STUDY-101:SUBJ-202:Week2"
+      );
     });
 
     it("identifies dirty fields and isDirty flag correctly", () => {
@@ -140,12 +147,8 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       const visitId = ref("Screening");
       const formValues = reactive({ vssbp: "128" });
 
-      const { clearDraft, isDirty, setInitialValues, getStorageKey } = useEcrfDrafts(
-        studyId,
-        subjectId,
-        visitId,
-        formValues
-      );
+      const { clearDraft, isDirty, setInitialValues, getStorageKey } =
+        useEcrfDrafts(studyId, subjectId, visitId, formValues);
 
       setInitialValues({ vssbp: "120" });
       localStorage.setItem(getStorageKey(), JSON.stringify({ vssbp: "128" }));
@@ -241,7 +244,9 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
 
       const store = useClinicalStore();
       store.subjects = [{ id: "SUBJ-001", status: "ENROLLED" }];
-      store.ecrfFields = [{ id: "vssbp", label: "Systolic BP", type: "number" }];
+      store.ecrfFields = [
+        { id: "vssbp", label: "Systolic BP", type: "number" },
+      ];
 
       mount(EcrfView, {
         global: {
@@ -283,7 +288,9 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
     it("clears draft from localStorage when form is submitted", async () => {
       const store = useClinicalStore();
       store.subjects = [{ id: "SUBJ-001", status: "ENROLLED" }];
-      store.ecrfFields = [{ id: "vssbp", label: "Systolic BP", type: "number" }];
+      store.ecrfFields = [
+        { id: "vssbp", label: "Systolic BP", type: "number" },
+      ];
 
       const draftKey = "cadence_ecrf_drafts:STUDY-USDM-001:SUBJ-001:Screening";
       localStorage.setItem(draftKey, JSON.stringify({ vssbp: "120" }));

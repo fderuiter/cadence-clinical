@@ -4,6 +4,8 @@ using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Security.FieldProtection;
 
+using MassTransit;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
@@ -61,5 +63,7 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
         modelBuilder.ApplyConfiguration(new ReconsentRequirementConfiguration());
         modelBuilder.ApplyConfiguration(new ConsentWithdrawalConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+
+        modelBuilder.AddTransactionalOutboxEntities();
     }
 }

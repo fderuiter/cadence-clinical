@@ -131,13 +131,19 @@ describe("SelfBillingInvoicingConsole.vue - Batch Milestone Invoicing Features",
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation((url, options) => {
-        if (typeof url === "string" && url.includes("/api/v1/payments/invoices/batch-compile")) {
+        if (
+          typeof url === "string" &&
+          url.includes("/api/v1/payments/invoices/batch-compile")
+        ) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockBatchResponse),
           });
         }
-        if (typeof url === "string" && url.includes("/api/v1/payments/invoices")) {
+        if (
+          typeof url === "string" &&
+          url.includes("/api/v1/payments/invoices")
+        ) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockInvoices),
@@ -201,7 +207,9 @@ describe("SelfBillingInvoicingConsole.vue - Batch Milestone Invoicing Features",
 
     // Verify batch summary modal appears
     await wrapper.vm.$nextTick();
-    expect(wrapper.text()).toContain("Batch Execution Summary: BATCH-EXEC-20261012-0001");
+    expect(wrapper.text()).toContain(
+      "Batch Execution Summary: BATCH-EXEC-20261012-0001"
+    );
     expect(wrapper.text()).toContain("2 / 2 Passed");
   });
 });

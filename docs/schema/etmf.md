@@ -16,6 +16,7 @@ Generated from the EF Core model of `Cadence.Apps.Etmf.Infrastructure.Persistenc
 | [`etmf.tmf_document_qc_transitions`](#etmftmf_document_qc_transitions) | `TmfDocumentQcTransition` | 9 |
 | [`etmf.tmf_documents`](#etmftmf_documents) | `TmfDocument` | 37 |
 | [`etmf.tmf_expected_documents`](#etmftmf_expected_documents) | `TmfExpectedDocument` | 12 |
+| [`etmf.tmf_export_jobs`](#etmftmf_export_jobs) | `TmfExportJob` | 14 |
 
 ## etmf.InboxState
 
@@ -299,3 +300,30 @@ Indexes:
 - `IX_tmf_expected_documents_Milestone`: (`Milestone`)
 - `IX_tmf_expected_documents_SiteId`: (`SiteId`)
 - `IX_tmf_expected_documents_StudyId`: (`StudyId`)
+
+## etmf.tmf_export_jobs
+
+Entity: `TmfExportJob`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(64)` | no |  | PK |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `DownloadUrl` | `character varying(1000)` | yes |  |  |
+| `ExpiresAt` | `timestamp with time zone` | yes |  |  |
+| `JobId` | `text` | no |  |  |
+| `ProcessedDocuments` | `integer` | no |  |  |
+| `ProgressPercentage` | `double precision` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RequestedBy` | `text` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `TotalDocuments` | `integer` | no |  |  |
+| `VersionIndex` | `bigint` | no |  |  |
+
+Indexes:
+
+- `IX_tmf_export_jobs_CreatedAt`: (`CreatedAt`)
+- `IX_tmf_export_jobs_Status`: (`Status`)
+- `IX_tmf_export_jobs_StudyId`: (`StudyId`)

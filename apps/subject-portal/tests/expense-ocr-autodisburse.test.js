@@ -7,12 +7,12 @@ import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createApp, nextTick } from "vue";
 import App from "../src/App.vue";
+import { state, extractReceiptOcr, submitExpenseClaim } from "../src/index.js";
 import {
-  state,
-  extractReceiptOcr,
-  submitExpenseClaim,
-} from "../src/index.js";
-import { initSessionKey, clearSessionKey, clearAllSubmissions } from "../src/sync-queue.js";
+  initSessionKey,
+  clearSessionKey,
+  clearAllSubmissions,
+} from "../src/sync-queue.js";
 
 describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
   const mockUserId = "subject_ocr_001";
@@ -26,7 +26,12 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     state.walletBalance = 325.0;
     state.ledgerBlocks = [];
     state.expenseResult = null;
-    state.expenseOcr = { loading: false, error: null, data: null, previewUrl: null };
+    state.expenseOcr = {
+      loading: false,
+      error: null,
+      data: null,
+      previewUrl: null,
+    };
     state.expenseForm = {
       subjectId: mockUserId,
       studyId: "study_001",
@@ -62,22 +67,28 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
   });
 
   it("extracts receipt metadata via mobile OCR engine and writes 21 CFR Part 11 audit record", async () => {
-    const rawText = "METRO TRANSIT AUTHORITY\nRoute: Clinical Trial Express\nDate: 2026-08-23\nFare Paid: $28.50";
+    const rawText =
+      "METRO TRANSIT AUTHORITY\nRoute: Clinical Trial Express\nDate: 2026-08-23\nFare Paid: $28.50";
     const res = await extractReceiptOcr(rawText);
 
     expect(res).toBeDefined();
     expect(res.merchant_name).toBe("METRO TRANSIT AUTHORITY");
-    expect(res.gross_amount).toBe(28.50);
+    expect(res.gross_amount).toBe(28.5);
     expect(res.confidence_score).toBe(0.98);
 
     expect(state.expenseForm.merchantName).toBe("METRO TRANSIT AUTHORITY");
-    expect(state.expenseForm.grossAmount).toBe(28.50);
+    expect(state.expenseForm.grossAmount).toBe(28.5);
     expect(state.expenseForm.category).toBe("TRANSIT");
 
     // Audit log verification
-    const auditRecord = state.ledgerBlocks.find((b) => b.action === "OCR_RECEIPT_EXTRACTED");
+    const auditRecord = state.ledgerBlocks.find(
+      (b) => b.action === "OCR_RECEIPT_EXTRACTED"
+    );
     expect(auditRecord).toBeDefined();
-    expect(auditRecord.details).toHaveProperty("merchant_name", "METRO TRANSIT AUTHORITY");
+    expect(auditRecord.details).toHaveProperty(
+      "merchant_name",
+      "METRO TRANSIT AUTHORITY"
+    );
   });
 
   it("parses file object hints for meal and fuel receipts", async () => {
@@ -93,7 +104,9 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
 
   it("auto-approves low-risk claim (<$100), dispatches direct ACH reimbursement, and updates wallet balance", async () => {
     // 1. OCR Extract
-    await extractReceiptOcr("METRO TRANSIT AUTHORITY\nDate: 2026-08-23\nFare Paid: $28.50");
+    await extractReceiptOcr(
+      "METRO TRANSIT AUTHORITY\nDate: 2026-08-23\nFare Paid: $28.50"
+    );
 
     // 2. Submit reimbursement claim
     const initialBalance = state.walletBalance; // 325.00
@@ -104,22 +117,31 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     expect(res.disbursement_reference).toMatch(/^DISB-ACH-/);
 
     // Wallet balance should be dynamically credited by 28.50
-    expect(state.walletBalance).toBe(initialBalance + 28.50);
+    expect(state.walletBalance).toBe(initialBalance + 28.5);
 
     // Audit trailing verification
-    const approvedLog = state.ledgerBlocks.find((b) => b.action === "EXPENSE_CLAIM_AUTO_APPROVED");
+    const approvedLog = state.ledgerBlocks.find(
+      (b) => b.action === "EXPENSE_CLAIM_AUTO_APPROVED"
+    );
     expect(approvedLog).toBeDefined();
 
-    const dispatchedLog = state.ledgerBlocks.find((b) => b.action === "DIGITAL_DISBURSEMENT_DISPATCHED");
+    const dispatchedLog = state.ledgerBlocks.find(
+      (b) => b.action === "DIGITAL_DISBURSEMENT_DISPATCHED"
+    );
     expect(dispatchedLog).toBeDefined();
-    expect(dispatchedLog.details).toHaveProperty("disbursement_reference", res.disbursement_reference);
+    expect(dispatchedLog.details).toHaveProperty(
+      "disbursement_reference",
+      res.disbursement_reference
+    );
     expect(dispatchedLog.details).toHaveProperty("method", "DIRECT_ACH");
   });
 
   it("places expense claim on hold for manual review when gross amount >= $100", async () => {
     // Setup high-value claim ($125.00)
-    await extractReceiptOcr("CITY BISTRO RESTAURANT\nDate: 2026-08-23\nMeal Charge: $125.00");
-    state.expenseForm.grossAmount = 125.00;
+    await extractReceiptOcr(
+      "CITY BISTRO RESTAURANT\nDate: 2026-08-23\nMeal Charge: $125.00"
+    );
+    state.expenseForm.grossAmount = 125.0;
 
     const initialBalance = state.walletBalance;
     const res = await submitExpenseClaim();
@@ -133,16 +155,18 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     expect(state.walletBalance).toBe(initialBalance);
 
     // Audit trailing verification
-    const reviewLog = state.ledgerBlocks.find((b) => b.action === "EXPENSE_CLAIM_HELD_FOR_REVIEW");
+    const reviewLog = state.ledgerBlocks.find(
+      (b) => b.action === "EXPENSE_CLAIM_HELD_FOR_REVIEW"
+    );
     expect(reviewLog).toBeDefined();
   });
 
   it("places meal expense claim on hold when exceeding $75 per-diem cap", async () => {
     state.expenseForm.category = "MEAL";
     state.expenseForm.merchantName = "DOWNTOWN GRILL";
-    state.expenseForm.grossAmount = 85.00; // Exceeds $75.00 meal per-diem cap
+    state.expenseForm.grossAmount = 85.0; // Exceeds $75.00 meal per-diem cap
     state.expenseForm.isMealAllowance = true;
-    state.expenseForm.perDiemCap = 75.00;
+    state.expenseForm.perDiemCap = 75.0;
 
     const res = await submitExpenseClaim();
 
@@ -153,7 +177,7 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
 
   it("places claim on hold when OCR confidence score is low (< 0.90)", async () => {
     state.expenseForm.category = "TRANSIT";
-    state.expenseForm.grossAmount = 30.00;
+    state.expenseForm.grossAmount = 30.0;
     state.expenseForm.ocrConfidence = 0.75; // Low confidence
 
     const res = await submitExpenseClaim();
@@ -165,9 +189,13 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
 
   it("handles OCR extraction and submission errors gracefully", async () => {
     const origFetch = global.fetch;
-    global.fetch = vi.fn().mockRejectedValueOnce(new Error("Network connection lost"));
+    global.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Network connection lost"));
 
-    await expect(extractReceiptOcr("INVALID")).rejects.toThrow("Network connection lost");
+    await expect(extractReceiptOcr("INVALID")).rejects.toThrow(
+      "Network connection lost"
+    );
     expect(state.expenseOcr.loading).toBe(false);
     expect(state.expenseOcr.error).toBe("Network connection lost");
 
@@ -195,9 +223,13 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     dropzone.click();
 
     // Dispatch file input change event
-    const mockFile = new File(["dummy content"], "transit_receipt.png", { type: "image/png" });
+    const mockFile = new File(["dummy content"], "transit_receipt.png", {
+      type: "image/png",
+    });
     const changeEvent = new Event("change");
-    Object.defineProperty(changeEvent, "target", { value: { files: [mockFile] } });
+    Object.defineProperty(changeEvent, "target", {
+      value: { files: [mockFile] },
+    });
     fileInput.dispatchEvent(changeEvent);
 
     // Wait for OCR extraction
@@ -222,7 +254,9 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     await nextTick();
 
     // Verify auto-approved banner and ACH reference rendered
-    const approvedBanner = document.getElementById("expense-auto-approved-banner");
+    const approvedBanner = document.getElementById(
+      "expense-auto-approved-banner"
+    );
     expect(approvedBanner).not.toBeNull();
 
     const achRef = document.getElementById("ach-disbursement-reference");

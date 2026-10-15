@@ -55,25 +55,27 @@
         <div class="drawer-body">
           <!-- DIA Reference Model Taxonomy Section -->
           <div class="drawer-section">
-            <h4 class="section-heading">
-              DIA Reference Model Taxonomy
-            </h4>
+            <h4 class="section-heading">DIA Reference Model Taxonomy</h4>
             <div class="meta-grid">
               <div class="meta-item">
                 <span class="meta-label">Artifact Code</span>
                 <span class="meta-val font-mono">{{
                   inspectedDoc.artifact_code ||
-                    inspectedDoc.taxonomy_code ||
-                    "01.01.01"
+                  inspectedDoc.taxonomy_code ||
+                  "01.01.01"
                 }}</span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Zone &amp; Section</span>
-                <span class="meta-val">Zone {{ inspectedDoc.zone_id || 1 }} - Trial Management</span>
+                <span class="meta-val"
+                  >Zone {{ inspectedDoc.zone_id || 1 }} - Trial Management</span
+                >
               </div>
               <div class="meta-item">
                 <span class="meta-label">Version</span>
-                <span class="meta-val badge status-review">v{{ inspectedDoc.version_index || 1 }}.0</span>
+                <span class="meta-val badge status-review"
+                  >v{{ inspectedDoc.version_index || 1 }}.0</span
+                >
               </div>
               <div class="meta-item">
                 <span class="meta-label">Lifecycle Status</span>
@@ -86,37 +88,32 @@
 
           <!-- 21 CFR Part 11 Audit Trail & Change Justification -->
           <div class="drawer-section">
-            <h4 class="section-heading">
-              21 CFR Part 11 Audit Record
-            </h4>
+            <h4 class="section-heading">21 CFR Part 11 Audit Record</h4>
             <div class="reason-box">
               <strong>Mandatory Reason for Change:</strong>
               <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text)">
                 {{
                   inspectedDoc.reason_for_change ||
-                    inspectedDoc.reason ||
-                    "Standard clinical document ingestion and lifecycle management."
+                  inspectedDoc.reason ||
+                  "Standard clinical document ingestion and lifecycle management."
                 }}
               </p>
             </div>
-            <div
-              class="meta-grid"
-              style="margin-top: 10px"
-            >
+            <div class="meta-grid" style="margin-top: 10px">
               <div class="meta-item">
                 <span class="meta-label">Uploaded By</span>
                 <span class="meta-val font-mono">{{
                   inspectedDoc.created_by ||
-                    inspectedDoc.uploaded_by ||
-                    "crc.user"
+                  inspectedDoc.uploaded_by ||
+                  "crc.user"
                 }}</span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Uploaded At</span>
                 <span class="meta-val font-mono">{{
                   inspectedDoc.formattedCreatedAt ||
-                    inspectedDoc.created_at ||
-                    new Date().toISOString()
+                  inspectedDoc.created_at ||
+                  new Date().toISOString()
                 }}</span>
               </div>
             </div>
@@ -124,9 +121,7 @@
 
           <!-- Cryptographic SHA-256 Checksum & Seal -->
           <div class="drawer-section">
-            <h4 class="section-heading">
-              Cryptographic Integrity
-            </h4>
+            <h4 class="section-heading">Cryptographic Integrity</h4>
             <div class="crypto-seal-card">
               <div
                 style="
@@ -136,11 +131,12 @@
                   margin-bottom: 6px;
                 "
               >
-                <span style="font-size: 11px; font-weight: 600">SHA-256 Checksum Digest</span>
-                <span
-                  class="badge status-approved"
-                  style="font-size: 9px"
-                >LEDGER SEALED</span>
+                <span style="font-size: 11px; font-weight: 600"
+                  >SHA-256 Checksum Digest</span
+                >
+                <span class="badge status-approved" style="font-size: 9px"
+                  >LEDGER SEALED</span
+                >
               </div>
               <code class="sha256-hash-display">{{
                 getDocSha256(inspectedDoc)
@@ -150,9 +146,7 @@
 
           <!-- De-Identification / Redaction Manifest -->
           <div class="drawer-section">
-            <h4 class="section-heading">
-              HIPAA / GDPR De-identification
-            </h4>
+            <h4 class="section-heading">HIPAA / GDPR De-identification</h4>
             <div class="redaction-info">
               <span
                 v-if="inspectedDoc.is_redacted"
@@ -160,10 +154,7 @@
               >
                 🛡️ De-Identified Copy (PHI/PII Scrubber Applied)
               </span>
-              <span
-                v-else
-                class="badge status-draft"
-              >
+              <span v-else class="badge status-draft">
                 🔒 Regulated Source Original
               </span>
             </div>
@@ -171,9 +162,7 @@
 
           <!-- Multimodal DIA Document Intelligence & Signature Completeness -->
           <div class="drawer-section">
-            <h4 class="section-heading">
-              🤖 DIA Document Intelligence
-            </h4>
+            <h4 class="section-heading">🤖 DIA Document Intelligence</h4>
             <div class="intelligence-card">
               <div
                 style="
@@ -183,7 +172,9 @@
                   margin-bottom: 8px;
                 "
               >
-                <span style="font-size: 12px; font-weight: 600">DIA Classifier Confidence</span>
+                <span style="font-size: 12px; font-weight: 600"
+                  >DIA Classifier Confidence</span
+                >
                 <span
                   class="badge status-approved"
                   style="font-size: 10px; font-weight: bold"
@@ -229,7 +220,7 @@
               <div
                 v-if="
                   inspectedDoc.status === 'TECHNICAL_QC' ||
-                    inspectedDoc.status === 'DRAFT'
+                  inspectedDoc.status === 'DRAFT'
                 "
                 style="margin-top: 10px; display: flex; gap: 8px"
               >

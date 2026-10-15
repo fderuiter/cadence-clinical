@@ -39,6 +39,9 @@
       </div>
 
       <div class="header-actions">
+        <button class="btn btn-outline" @click="openBulkImportModal">
+          <span class="icon">📊</span> Bulk Import Reference Ranges (CSV/XLSX)
+        </button>
         <button class="btn btn-secondary" @click="openIngestModal">
           <span class="icon">📥</span> Ingest Lab Feed (HL7 / CDISC / CSV)
         </button>
@@ -143,6 +146,9 @@
               <option value="F">Female (F)</option>
             </select>
           </div>
+          <button class="btn btn-primary" @click="openBulkImportModal">
+            <span class="icon">📥</span> Bulk Import Lab Ranges
+          </button>
         </div>
 
         <div class="table-responsive">
@@ -214,6 +220,12 @@
                 <td>
                   <button class="btn btn-sm btn-outline" @click="editRange(r)">
                     Edit
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    @click="deactivateRange(r)"
+                  >
+                    Deactivate
                   </button>
                 </td>
               </tr>
@@ -1378,6 +1390,223 @@
         </div>
       </div>
     </div>
+
+    <!-- MODAL: Bulk Laboratory Reference Range Import -->
+    <div
+      v-if="showBulkImportModal"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="modal-box modal-lg">
+        <div class="modal-header">
+          <h3>Bulk Laboratory Reference Range Import (CSV / XLSX)</h3>
+          <button class="close-btn" @click="closeBulkImportModal">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bulk-study">Study Identifier:</label>
+              <input
+                id="bulk-study"
+                v-model="bulkImportForm.study_id"
+                type="text"
+                class="text-input"
+                placeholder="e.g. STUDY-101"
+              />
+            </div>
+            <div class="form-group">
+              <label for="bulk-site"
+                >Site Identifier (optional for local lab):</label
+              >
+              <input
+                id="bulk-site"
+                v-model="bulkImportForm.site_id"
+                type="text"
+                class="text-input"
+                placeholder="e.g. SITE-001"
+              />
+            </div>
+            <div class="form-group">
+              <label for="bulk-source">Laboratory Source:</label>
+              <select
+                id="bulk-source"
+                v-model="bulkImportForm.lab_source"
+                class="select-input"
+              >
+                <option value="CENTRAL">CENTRAL</option>
+                <option value="LOCAL">LOCAL</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="bulk-file"
+              >Reference Range Data File (CSV / XLSX):</label
+            >
+            <input
+              id="bulk-file"
+              type="file"
+              accept=".csv,.xlsx,.tsv"
+              class="file-input"
+              @change="handleFileUpload"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="bulk-raw"
+              >Or Paste CSV/TSV Reference Range Content:</label
+            >
+            <textarea
+              id="bulk-raw"
+              v-model="bulkImportForm.raw_content"
+              rows="5"
+              class="textarea-input"
+              placeholder="TestCode,TestName,Unit,LowBound,HighBound,CriticalLow,CriticalHigh,Sex,AgeLow,AgeHigh,Ethnicity,LoincCode&#10;ALT,Alanine Aminotransferase,U/L,7,56,,,ALL,,,ALL,1742-6&#10;CREAT,Serum Creatinine,mg/dL,0.6,1.2,0.3,3.0,M,18,65,ALL,2160-0"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="bulk-reason"
+              >GxP Reason for Change (21 CFR Part 11):</label
+            >
+            <input
+              id="bulk-reason"
+              v-model="bulkImportForm.reason_for_change"
+              type="text"
+              class="text-input"
+              placeholder="Mandatory GxP audit justification..."
+            />
+          </div>
+
+          <!-- Pre-flight Dry-Run Results Section -->
+          <div v-if="dryRunResult" class="dry-run-results">
+            <h4>Pre-Flight Validation Preview</h4>
+            <div class="status-summary">
+              <span
+                :class="[
+                  'status-pill',
+                  dryRunResult.is_valid ? 'success' : 'danger',
+                ]"
+              >
+                {{
+                  dryRunResult.is_valid
+                    ? "VALIDATED CLEANLY"
+                    : "VALIDATION ERRORS DETECTED"
+                }}
+              </span>
+              <span>Total Rows: {{ dryRunResult.total_rows_parsed }}</span>
+              <span class="text-success"
+                >Valid Rows: {{ dryRunResult.valid_rows_count }}</span
+              >
+              <span class="text-danger"
+                >Invalid Rows: {{ dryRunResult.invalid_rows_count }}</span
+              >
+            </div>
+
+            <!-- Preview Rows Table -->
+            <div
+              v-if="dryRunResult.rows && dryRunResult.rows.length > 0"
+              class="table-responsive preview-table"
+            >
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Row</th>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Unit</th>
+                    <th>Range [LLN - ULN]</th>
+                    <th>Sex</th>
+                    <th>LOINC Code</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in dryRunResult.rows"
+                    :key="row.row_number"
+                    :class="{ 'row-critical': !row.is_valid }"
+                  >
+                    <td>#{{ row.row_number }}</td>
+                    <td>
+                      <strong>{{ row.test_code }}</strong>
+                    </td>
+                    <td>{{ row.test_name }}</td>
+                    <td>
+                      <code>{{ row.unit }}</code>
+                    </td>
+                    <td>
+                      {{ row.low_bound ?? "—" }} – {{ row.high_bound ?? "—" }}
+                    </td>
+                    <td>{{ row.sex_applicability || "ALL" }}</td>
+                    <td>
+                      <code>{{ row.loinc_code || "Auto-mapped" }}</code>
+                    </td>
+                    <td>
+                      <span
+                        :class="[
+                          'status-pill',
+                          row.is_valid ? 'success' : 'danger',
+                        ]"
+                      >
+                        {{ row.is_valid ? "Valid" : "Invalid" }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Validation Errors List -->
+            <div
+              v-if="
+                dryRunResult.validation_errors &&
+                dryRunResult.validation_errors.length > 0
+              "
+              class="error-summary"
+            >
+              <h5>Validation Error Details</h5>
+              <ul>
+                <li
+                  v-for="(err, idx) in dryRunResult.validation_errors"
+                  :key="idx"
+                  class="error-item"
+                >
+                  <strong
+                    >Row {{ err.row_number }} (Column
+                    {{ err.column_name }}):</strong
+                  >
+                  {{ err.message }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="closeBulkImportModal">
+            Cancel
+          </button>
+          <button
+            class="btn btn-secondary"
+            :disabled="isDryRunning"
+            @click="executeDryRun"
+          >
+            {{ isDryRunning ? "Validating..." : "Pre-Flight Dry Run" }}
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="isCommitting || !dryRunResult"
+            @click="executeCommitImport"
+          >
+            {{ isCommitting ? "Importing Ranges..." : "Commit Bulk Import" }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1420,6 +1649,20 @@ const ingestForm = ref({
   lab_source: "CENTRAL",
   payload: "",
   reason_for_change: "Batch laboratory data ingestion",
+});
+
+// Bulk Reference Range Import State
+const showBulkImportModal = ref(false);
+const isDryRunning = ref(false);
+const isCommitting = ref(false);
+const dryRunResult = ref(null);
+const uploadedFile = ref(null);
+const bulkImportForm = ref({
+  study_id: "STUDY-101",
+  site_id: "",
+  lab_source: "CENTRAL",
+  raw_content: "",
+  reason_for_change: "Bulk laboratory reference range import",
 });
 
 // LOINC & Unit Conversion State
@@ -2091,6 +2334,184 @@ async function fetchLoincCatalog() {
 }
 
 // Actions
+function openBulkImportModal() {
+  dryRunResult.value = null;
+  uploadedFile.value = null;
+  bulkImportForm.value.study_id = currentStudyId.value || "STUDY-101";
+  showBulkImportModal.value = true;
+}
+
+function closeBulkImportModal() {
+  showBulkImportModal.value = false;
+  dryRunResult.value = null;
+  uploadedFile.value = null;
+}
+
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (file) {
+    uploadedFile.value = file;
+  }
+}
+
+async function executeDryRun() {
+  isDryRunning.value = true;
+  try {
+    let res;
+    if (uploadedFile.value) {
+      const formData = new FormData();
+      formData.append("file", uploadedFile.value);
+      formData.append("study_id", bulkImportForm.value.study_id);
+      if (bulkImportForm.value.site_id) {
+        formData.append("site_id", bulkImportForm.value.site_id);
+      }
+      formData.append("lab_source", bulkImportForm.value.lab_source);
+
+      res = await fetch("/api/v1/execution/labs/import/dry-run", {
+        method: "POST",
+        body: formData,
+      });
+    } else {
+      let rawContent = bulkImportForm.value.raw_content;
+      if (!rawContent) {
+        alert("Please select a file or paste CSV/TSV content to dry run.");
+        isDryRunning.value = false;
+        return;
+      }
+
+      res = await fetch("/api/v1/execution/labs/import/dry-run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          study_id: bulkImportForm.value.study_id,
+          site_id: bulkImportForm.value.site_id || null,
+          lab_source: bulkImportForm.value.lab_source,
+          file_name: "import.csv",
+          raw_file_content: rawContent,
+        }),
+      });
+    }
+
+    if (res.ok) {
+      dryRunResult.value = await res.json();
+    } else {
+      const err = await res.json();
+      alert(`Dry Run Validation Error: ${err.detail || "Validation failed"}`);
+    }
+  } catch (err) {
+    alert(`Dry Run Request Failed: ${err}`);
+  } finally {
+    isDryRunning.value = false;
+  }
+}
+
+async function executeCommitImport() {
+  if (!bulkImportForm.value.reason_for_change) {
+    alert("GxP Reason for Change is required for Part 11 compliance.");
+    return;
+  }
+
+  isCommitting.value = true;
+  try {
+    let res;
+    const changeReason = bulkImportForm.value.reason_for_change;
+
+    if (uploadedFile.value) {
+      const formData = new FormData();
+      formData.append("file", uploadedFile.value);
+      formData.append("study_id", bulkImportForm.value.study_id);
+      if (bulkImportForm.value.site_id) {
+        formData.append("site_id", bulkImportForm.value.site_id);
+      }
+      formData.append("lab_source", bulkImportForm.value.lab_source);
+      formData.append("reason_for_change", changeReason);
+      if (dryRunResult.value && dryRunResult.value.dry_run_id) {
+        formData.append("dry_run_id", dryRunResult.value.dry_run_id);
+      }
+
+      res = await fetch("/api/v1/execution/labs/import/commit", {
+        method: "POST",
+        headers: {
+          "X-Change-Reason": changeReason,
+        },
+        body: formData,
+      });
+    } else {
+      res = await fetch("/api/v1/execution/labs/import/commit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Change-Reason": changeReason,
+        },
+        body: JSON.stringify({
+          dry_run_id: dryRunResult.value?.dry_run_id || null,
+          study_id: bulkImportForm.value.study_id,
+          site_id: bulkImportForm.value.site_id || null,
+          lab_source: bulkImportForm.value.lab_source,
+          file_name: "import.csv",
+          raw_file_content: bulkImportForm.value.raw_content,
+          reason_for_change: changeReason,
+        }),
+      });
+    }
+
+    if (res.ok) {
+      const result = await res.json();
+      alert(
+        `Bulk Reference Range Import Committed! Imported: ${result.imported_count}, Total Rows: ${result.total_rows}, Status: ${result.status}`
+      );
+      closeBulkImportModal();
+      await fetchRanges();
+      await fetchBatchStatuses();
+    } else {
+      const err = await res.json();
+      alert(`Commit Import Error: ${err.detail || "Import failed"}`);
+    }
+  } catch (err) {
+    alert(`Commit Import Request Failed: ${err}`);
+  } finally {
+    isCommitting.value = false;
+  }
+}
+
+async function deactivateRange(range) {
+  if (
+    !confirm(
+      `Are you sure you want to deactivate reference range for ${range.test_code}?`
+    )
+  )
+    return;
+  const reason = prompt(
+    "Enter 21 CFR Part 11 Reason for Deactivation:",
+    "Routine reference range retirement"
+  );
+  if (!reason) return;
+
+  try {
+    const res = await fetch(`/api/v1/execution/lab-ranges/${range.id}`, {
+      method: "DELETE",
+      headers: {
+        "X-Change-Reason": reason,
+      },
+    });
+    if (res.ok) {
+      alert(`Reference range for ${range.test_code} deactivated.`);
+      await fetchRanges();
+    } else {
+      const err = await res.json();
+      alert(`Deactivation failed: ${err.detail || "Error"}`);
+    }
+  } catch (err) {
+    alert(`Deactivation request failed: ${err}`);
+  }
+}
+
+function editRange(range) {
+  alert(
+    `Editing range ${range.test_code}. Use Bulk Import or New Reference Range for updates.`
+  );
+}
+
 function openIngestModal() {
   showIngestModal.value = true;
 }
@@ -2779,5 +3200,76 @@ onMounted(() => {
 
 .text-primary {
   color: #2563eb !important;
+}
+
+.dry-run-results {
+  margin-top: 1rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.status-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.preview-table {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.error-summary {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  color: #991b1b;
+  font-size: 0.85rem;
+}
+
+.error-summary h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.error-summary ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.error-item {
+  margin-bottom: 0.25rem;
+}
+
+.btn-outline-danger {
+  background: transparent;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.btn-outline-danger:hover {
+  background: #fef2f2;
+}
+
+.file-input {
+  display: block;
+  width: 100%;
+  padding: 0.4rem;
+  font-size: 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
 }
 </style>

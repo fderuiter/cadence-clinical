@@ -2319,12 +2319,31 @@
           gap: 24px;
         "
       >
-        <div class="rtsm-action-bar" style="display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 16px 20px; border-radius: 8px;">
+        <div
+          class="rtsm-action-bar"
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1e293b;
+            padding: 16px 20px;
+            border-radius: 8px;
+          "
+        >
           <div>
-            <h3 style="margin: 0; color: #f8fafc; font-size: 16px;">RTSM Site Inventory &amp; Return Accountability</h3>
-            <p style="margin: 4px 0 0; color: #94a3b8; font-size: 13px;">Manage site IP kit returns, barcode scanning, residual volumes, and Part 11 e-signatures.</p>
+            <h3 style="margin: 0; color: #f8fafc; font-size: 16px">
+              RTSM Site Inventory &amp; Return Accountability
+            </h3>
+            <p style="margin: 4px 0 0; color: #94a3b8; font-size: 13px">
+              Manage site IP kit returns, barcode scanning, residual volumes,
+              and Part 11 e-signatures.
+            </p>
           </div>
-          <button type="button" class="btn btn-primary" @click="isIpKitReconciliationDrawerOpen = true">
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="isIpKitReconciliationDrawerOpen = true"
+          >
             🔍 Launch Bulk Kit Reconciliation Drawer
           </button>
         </div>

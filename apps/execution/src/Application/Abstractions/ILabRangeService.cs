@@ -24,12 +24,18 @@ public interface ILabRangeService
         double? value,
         string? sex = null,
         int? ageYears = null,
-        string? labSource = null);
+        string? labSource = null,
+        string? studyId = null,
+        string? siteId = null);
 
     LabAssessmentResult EvaluateRange(
         string testCode,
         double? value,
         int? ageYears = null,
         string? sex = null,
-        string? labSource = null);
+        string? labSource = null,
+        string? studyId = null,
+        string? siteId = null);
+
+    void UpdateActiveRanges(IEnumerable<Domain.Observations.LabReferenceRange> ranges);
 }

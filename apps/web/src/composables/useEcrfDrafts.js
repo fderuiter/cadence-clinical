@@ -1,4 +1,11 @@
-import { ref, computed, watch, unref, onUnmounted, getCurrentInstance } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  unref,
+  onUnmounted,
+  getCurrentInstance,
+} from "vue";
 
 /**
  * Composable for eCRF local draft persistence, debounced auto-save,
@@ -6,7 +13,12 @@ import { ref, computed, watch, unref, onUnmounted, getCurrentInstance } from "vu
  *
  * Storage key format: cadence_ecrf_drafts:<studyId>:<subjectId>:<visitId>
  */
-export function useEcrfDrafts(studyIdRef, subjectIdRef, visitIdRef, formValuesRef) {
+export function useEcrfDrafts(
+  studyIdRef,
+  subjectIdRef,
+  visitIdRef,
+  formValuesRef
+) {
   const initialValues = ref({});
   const hasDraft = ref(false);
   const draftRestored = ref(false);

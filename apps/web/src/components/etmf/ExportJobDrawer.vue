@@ -1,11 +1,7 @@
 <!-- apps/web/src/components/etmf/ExportJobDrawer.vue -->
 <template>
   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div
-    v-if="isOpen"
-    class="export-drawer-overlay"
-    @click.self="handleClose"
-  >
+  <div v-if="isOpen" class="export-drawer-overlay" @click.self="handleClose">
     <div
       class="export-drawer"
       role="dialog"
@@ -14,14 +10,9 @@
     >
       <div class="drawer-header">
         <div class="header-title-group">
-          <span
-            class="header-icon"
-            aria-hidden="true"
-          >📦</span>
+          <span class="header-icon" aria-hidden="true">📦</span>
           <div>
-            <h3 class="drawer-title">
-              eTMF Study Binder Export
-            </h3>
+            <h3 class="drawer-title">eTMF Study Binder Export</h3>
             <p class="drawer-subtitle">
               Dual-mode synchronous streaming &amp; background async export jobs
             </p>
@@ -38,10 +29,7 @@
 
       <div class="drawer-body">
         <!-- Active Job Section -->
-        <div
-          v-if="activeJob"
-          class="active-job-card"
-        >
+        <div v-if="activeJob" class="active-job-card">
           <div class="card-header">
             <div>
               <span class="job-id-tag">{{ activeJob.job_id }}</span>
@@ -55,13 +43,12 @@
             </span>
           </div>
 
-          <div
-            class="progress-container"
-            style="margin-top: 14px"
-          >
+          <div class="progress-container" style="margin-top: 14px">
             <div class="progress-info">
               <span class="progress-label">Export Progress</span>
-              <span class="progress-value">{{ Math.round(activeJob.progress_percentage) }}%</span>
+              <span class="progress-value"
+                >{{ Math.round(activeJob.progress_percentage) }}%</span
+              >
             </div>
             <div
               class="progress-bar-track"
@@ -83,24 +70,20 @@
                 <strong>{{ activeJob.processed_documents }}</strong> of
                 <strong>{{ activeJob.total_documents }}</strong> documents
               </span>
-              <span
-                v-if="activeJob.created_at"
-                class="created-at"
-              >
+              <span v-if="activeJob.created_at" class="created-at">
                 Requested {{ formatDate(activeJob.created_at) }}
               </span>
             </div>
           </div>
 
           <!-- Download Action Area -->
-          <div
-            v-if="activeJob.status === 'COMPLETED'"
-            class="completion-box"
-          >
+          <div v-if="activeJob.status === 'COMPLETED'" class="completion-box">
             <div class="completion-message">
-              <span>✅ ZIP package successfully generated with root
+              <span
+                >✅ ZIP package successfully generated with root
                 <code>manifest.json</code> &amp;
-                <code>manifest.csv</code>.</span>
+                <code>manifest.csv</code>.</span
+              >
             </div>
             <a
               v-if="activeJob.download_url"
@@ -110,42 +93,28 @@
             >
               ⬇️ Download Export Package (.zip)
             </a>
-            <p
-              v-if="activeJob.expires_at"
-              class="expiration-notice"
-            >
+            <p v-if="activeJob.expires_at" class="expiration-notice">
               ⏱️ Temporary download link expires at
               {{ formatDate(activeJob.expires_at) }} (24h validity).
             </p>
           </div>
 
           <!-- Failure Alert -->
-          <div
-            v-else-if="activeJob.status === 'FAILED'"
-            class="error-box"
-          >
+          <div v-else-if="activeJob.status === 'FAILED'" class="error-box">
             ❌ Background export job failed. Please verify document storage
             connectivity or retry export.
           </div>
         </div>
 
         <!-- No Active Job State -->
-        <div
-          v-else
-          class="empty-active-job"
-        >
+        <div v-else class="empty-active-job">
           <p>No export job currently in progress.</p>
         </div>
 
         <!-- Export Job History Section -->
         <div class="history-section">
-          <h4 class="history-title">
-            Export Job History
-          </h4>
-          <div
-            v-if="exportJobs && exportJobs.length > 0"
-            class="history-list"
-          >
+          <h4 class="history-title">Export Job History</h4>
+          <div v-if="exportJobs && exportJobs.length > 0" class="history-list">
             <div
               v-for="job in exportJobs"
               :key="job.job_id"
@@ -179,10 +148,7 @@
               </div>
             </div>
           </div>
-          <p
-            v-else
-            class="empty-history-text"
-          >
+          <p v-else class="empty-history-text">
             No previous export history found.
           </p>
         </div>

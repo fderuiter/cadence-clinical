@@ -238,10 +238,19 @@
           <div>
             <h4>Batch Greenlight Certification Successfully Processed!</h4>
             <p>
-              Batch certified {{ batchSuccessData.certified_count ?? batchSuccessData.certifiedCount }} site(s) in
-              {{ batchSuccessData.country_code ?? batchSuccessData.countryCode }} for study
-              {{ batchSuccessData.study_id ?? batchSuccessData.studyId }}. Distinct HMAC-SHA256 activation
-              tokens generated and 21 CFR Part 11 audit records written.
+              Batch certified
+              {{
+                batchSuccessData.certified_count ??
+                batchSuccessData.certifiedCount
+              }}
+              site(s) in
+              {{
+                batchSuccessData.country_code ?? batchSuccessData.countryCode
+              }}
+              for study
+              {{ batchSuccessData.study_id ?? batchSuccessData.studyId }}.
+              Distinct HMAC-SHA256 activation tokens generated and 21 CFR Part
+              11 audit records written.
             </p>
           </div>
           <button
@@ -254,14 +263,19 @@
         </div>
         <div class="banner-tokens-list">
           <div
-            v-for="site in (batchSuccessData.certified_sites || batchSuccessData.certifiedSites)"
+            v-for="site in batchSuccessData.certified_sites ||
+            batchSuccessData.certifiedSites"
             :key="site.site_id || site.siteId"
             class="token-item"
           >
             <span class="token-site-id"
-              ><strong>{{ site.site_id || site.siteId }}</strong> ({{ site.site_name || site.siteName }}):</span
+              ><strong>{{ site.site_id || site.siteId }}</strong> ({{
+                site.site_name || site.siteName
+              }}):</span
             >
-            <code class="token-code">{{ site.greenlight_token || site.greenlightToken }}</code>
+            <code class="token-code">{{
+              site.greenlight_token || site.greenlightToken
+            }}</code>
           </div>
         </div>
       </div>
@@ -495,7 +509,11 @@
           </div>
 
           <div class="modal-body">
-            <div v-if="batchErrorMessage" class="alert alert-danger" role="alert">
+            <div
+              v-if="batchErrorMessage"
+              class="alert alert-danger"
+              role="alert"
+            >
               <span class="alert-icon">⚠️</span>
               <div>
                 <strong>Batch Certification Rejected:</strong>
@@ -1306,7 +1324,10 @@ async function executeBatchCertification() {
       await fetchCountryMatrix();
     } else {
       const errData = await res.json().catch(() => null);
-      const detail = errData?.detail || errData?.title || `Batch certification rejected: HTTP ${res.status}`;
+      const detail =
+        errData?.detail ||
+        errData?.title ||
+        `Batch certification rejected: HTTP ${res.status}`;
       batchErrorMessage.value = detail;
       useToastStore().addToast({
         message: detail,

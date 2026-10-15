@@ -7,13 +7,32 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
+using Cadence.Contracts;
 using Cadence.Security.Authentication;
+
+using MassTransit;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Econsent.Endpoints;
+
+public sealed record PublishTemplateRequest(
+    [property: JsonPropertyName("study_id")] string? StudyId,
+    [property: JsonPropertyName("protocol_version")] string? ProtocolVersion,
+    [property: JsonPropertyName("change_summary")] string? ChangeSummary,
+    [property: JsonPropertyName("change_reason")] string? ChangeReason,
+    [property: JsonPropertyName("requires_reconsent")] bool? RequiresReconsent,
+    [property: JsonPropertyName("channels")] string[]? Channels);
+
+public sealed record PublishTemplateResponse(
+    [property: JsonPropertyName("template_id")] string TemplateId,
+    [property: JsonPropertyName("version_index")] int VersionIndex,
+    [property: JsonPropertyName("is_published")] bool IsPublished,
+    [property: JsonPropertyName("requires_reconsent")] bool RequiresReconsent,
+    [property: JsonPropertyName("published_at")] DateTimeOffset PublishedAt);
 
 public sealed record CaptureConsentRequest(
     [property: JsonPropertyName("subject_pseudonym")] string? SubjectPseudonym,
@@ -60,6 +79,14 @@ public static class EconsentEndpoints
     {
         var group = app.MapGroup("/api/v1/econsent/templates")
             .WithTags("eConsent");
+
+        group.MapPost("/{template_id}/versions/{version_index}/publish", PublishTemplateVersionedAsync)
+            .WithName("PublishTemplateVersioned")
+            .Produces<PublishTemplateResponse>(StatusCodes.Status200OK);
+
+        group.MapPost("/{template_id}/publish", PublishTemplateAsync)
+            .WithName("PublishTemplate")
+            .Produces<PublishTemplateResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/{template_id}/versions/{version_index}/capture-consent", CaptureConsentAsync)
             .WithName("CaptureConsentVersioned")
@@ -248,6 +275,125 @@ public static class EconsentEndpoints
             ServerTimestamp: now,
             Status: "ACTIVE",
             Sha256Hash: digestHash);
+
+        return TypedResults.Ok(response);
+    }
+
+    private static async Task<IResult> PublishTemplateVersionedAsync(
+        string template_id,
+        int version_index,
+        PublishTemplateRequest? request,
+        EconsentDbContext dbContext,
+        IPublishEndpoint publishEndpoint,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        return await ProcessPublishTemplateAsync(template_id, version_index, request, dbContext, publishEndpoint, timeProvider, cancellationToken);
+    }
+
+    private static async Task<IResult> PublishTemplateAsync(
+        string template_id,
+        PublishTemplateRequest? request,
+        EconsentDbContext dbContext,
+        IPublishEndpoint publishEndpoint,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        return await ProcessPublishTemplateAsync(template_id, 1, request, dbContext, publishEndpoint, timeProvider, cancellationToken);
+    }
+
+    public static async Task<IResult> ProcessPublishTemplateAsync(
+        string templateId,
+        int versionIndex,
+        PublishTemplateRequest? request,
+        EconsentDbContext dbContext,
+        IPublishEndpoint publishEndpoint,
+        TimeProvider timeProvider,
+        CancellationToken cancellationToken)
+    {
+        DateTimeOffset now = timeProvider.GetUtcNow();
+
+        var template = await dbContext.ConsentTemplates
+            .FirstOrDefaultAsync(t => t.TemplateId == templateId && t.VersionIndex == versionIndex, cancellationToken)
+            ?? await dbContext.ConsentTemplates
+                .FirstOrDefaultAsync(t => t.TemplateId == templateId, cancellationToken);
+
+        if (template is null)
+        {
+            template = new ConsentTemplate
+            {
+                Id = Guid.NewGuid().ToString(),
+                TemplateId = templateId,
+                StudyId = !string.IsNullOrWhiteSpace(request?.StudyId) ? request.StudyId : "STUDY-101",
+                TemplateName = $"Consent Template {templateId}",
+                ProtocolVersion = !string.IsNullOrWhiteSpace(request?.ProtocolVersion) ? request.ProtocolVersion : $"v{versionIndex}.0",
+                IsPublished = true,
+                RequiresReconsent = request?.RequiresReconsent ?? true,
+                VersionIndex = versionIndex,
+                CreatedAt = now,
+                CreatedBy = "svc:econsent",
+                ReasonForChange = request?.ChangeSummary ?? request?.ChangeReason ?? "Publishing template"
+            };
+            dbContext.ConsentTemplates.Add(template);
+        }
+        else
+        {
+            template.IsPublished = true;
+            if (request?.RequiresReconsent.HasValue == true)
+            {
+                template.RequiresReconsent = request.RequiresReconsent.Value;
+            }
+            if (!string.IsNullOrWhiteSpace(request?.ProtocolVersion))
+            {
+                template.ProtocolVersion = request.ProtocolVersion;
+            }
+            if (!string.IsNullOrWhiteSpace(request?.StudyId))
+            {
+                template.StudyId = request.StudyId;
+            }
+            if (!string.IsNullOrWhiteSpace(request?.ChangeSummary) || !string.IsNullOrWhiteSpace(request?.ChangeReason))
+            {
+                template.ReasonForChange = request.ChangeSummary ?? request.ChangeReason!;
+            }
+        }
+
+        if (template.RequiresReconsent)
+        {
+            string changeSummary;
+            if (!string.IsNullOrWhiteSpace(request?.ChangeSummary))
+            {
+                changeSummary = request.ChangeSummary;
+            }
+            else if (!string.IsNullOrWhiteSpace(request?.ChangeReason))
+            {
+                changeSummary = request.ChangeReason;
+            }
+            else
+            {
+                changeSummary = "Updated informed consent form requires re-consent.";
+            }
+
+            var reconsentEvent = new EconsentReconsentRequired(
+                StudyId: template.StudyId,
+                TemplateId: template.TemplateId,
+                VersionIndex: template.VersionIndex,
+                ChangeSummary: changeSummary,
+                Channels: request?.Channels ?? new[] { "SMS", "Mobile Push", "Email" },
+                ProtocolVersion: template.ProtocolVersion,
+                OccurredAt: now
+            );
+
+            await publishEndpoint.Publish(reconsentEvent, cancellationToken);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var response = new PublishTemplateResponse(
+            TemplateId: template.TemplateId,
+            VersionIndex: template.VersionIndex,
+            IsPublished: template.IsPublished,
+            RequiresReconsent: template.RequiresReconsent,
+            PublishedAt: now);
 
         return TypedResults.Ok(response);
     }

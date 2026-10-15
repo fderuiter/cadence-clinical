@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Endpoints;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
+using Cadence.Contracts;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -14,10 +15,14 @@ using Cadence.Testing.Security;
 
 using FluentAssertions;
 
+using MassTransit;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+
+using NSubstitute;
 
 using Xunit;
 
@@ -213,6 +218,76 @@ public sealed class EconsentEndpointsTests : IDisposable
         var signatureRecord = await context.ConsentSignatures.FirstOrDefaultAsync(s => s.SubjectPseudonym == "SUBJ-123", TestContext.Current.CancellationToken);
         signatureRecord.Should().NotBeNull();
         signatureRecord!.SignerName.Should().Be("John Doe");
+    }
+
+    [Fact]
+    public async Task ProcessPublishTemplateAsync_WhenRequiresReconsentIsTrue_PublishesReconsentRequiredEventAndSavesTemplate()
+    {
+        using var context = CreateContext();
+        var publishEndpoint = Substitute.For<IPublishEndpoint>();
+
+        var request = new PublishTemplateRequest(
+            StudyId: "STUDY-101",
+            ProtocolVersion: "v2.0",
+            ChangeSummary: "Updated safety risks and procedure schedule.",
+            ChangeReason: "Protocol amendment 2",
+            RequiresReconsent: true,
+            Channels: new[] { "SMS", "Mobile Push", "Email" });
+
+        var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
+            "tpl-reconsent-01", 1, request, context, publishEndpoint, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<Ok<PublishTemplateResponse>>();
+        var okResult = (Ok<PublishTemplateResponse>)result;
+        okResult.Value.Should().NotBeNull();
+        okResult.Value!.TemplateId.Should().Be("tpl-reconsent-01");
+        okResult.Value.IsPublished.Should().BeTrue();
+        okResult.Value.RequiresReconsent.Should().BeTrue();
+
+        var dbTemplate = await context.ConsentTemplates.FirstOrDefaultAsync(t => t.TemplateId == "tpl-reconsent-01", TestContext.Current.CancellationToken);
+        dbTemplate.Should().NotBeNull();
+        dbTemplate!.IsPublished.Should().BeTrue();
+        dbTemplate.RequiresReconsent.Should().BeTrue();
+
+        await publishEndpoint.Received(1).Publish(
+            Arg.Is<EconsentReconsentRequired>(e =>
+                e.StudyId == "STUDY-101" &&
+                e.TemplateId == "tpl-reconsent-01" &&
+                e.VersionIndex == 1 &&
+                e.ChangeSummary == "Updated safety risks and procedure schedule." &&
+                e.ProtocolVersion == "v2.0"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ProcessPublishTemplateAsync_WhenRequiresReconsentIsFalse_DoesNotPublishReconsentEvent()
+    {
+        using var context = CreateContext();
+        var publishEndpoint = Substitute.For<IPublishEndpoint>();
+
+        var request = new PublishTemplateRequest(
+            StudyId: "STUDY-101",
+            ProtocolVersion: "v1.1",
+            ChangeSummary: "Typo fix in clause 3.",
+            ChangeReason: "Administrative correction",
+            RequiresReconsent: false,
+            Channels: null);
+
+        var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
+            "tpl-minor-01", 1, request, context, publishEndpoint, TimeProvider.System, TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<Ok<PublishTemplateResponse>>();
+        var okResult = (Ok<PublishTemplateResponse>)result;
+        okResult.Value.Should().NotBeNull();
+        okResult.Value!.RequiresReconsent.Should().BeFalse();
+
+        var dbTemplate = await context.ConsentTemplates.FirstOrDefaultAsync(t => t.TemplateId == "tpl-minor-01", TestContext.Current.CancellationToken);
+        dbTemplate.Should().NotBeNull();
+        dbTemplate!.RequiresReconsent.Should().BeFalse();
+
+        await publishEndpoint.DidNotReceive().Publish(
+            Arg.Any<EconsentReconsentRequired>(),
+            Arg.Any<CancellationToken>());
     }
 
     private EconsentDbContext CreateContext() =>
