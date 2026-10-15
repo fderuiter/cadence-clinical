@@ -1,6 +1,9 @@
 # ADR-100: Tickets-to-Notifications Integration Architecture
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). The tickets service is deleted (#5377).
+
+- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
 - **Date:** 2026-08-23
 - **Authors:** Jules
 - **Deciders:** @fderuiter

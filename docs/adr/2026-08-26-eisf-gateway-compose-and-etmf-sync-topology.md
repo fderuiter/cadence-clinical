@@ -2,7 +2,10 @@
 
 Also known as: ADR-111 (former number)
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). eISF merges into the eTMF module and is no longer a separate service (#5371).
+
+- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
 - **Date:** 2026-08-26
 - **Authors:** @fderuiter
 - **Deciders:** @engineering_leads, @qa_lead

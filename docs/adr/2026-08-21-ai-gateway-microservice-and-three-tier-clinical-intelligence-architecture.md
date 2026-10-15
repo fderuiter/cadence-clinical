@@ -1,6 +1,9 @@
 # ADR-2191: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). The ai_gateway service is deleted (#5374).
+
+- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
 - **Date:** 2026-08-21
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter

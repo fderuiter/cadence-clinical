@@ -2,7 +2,10 @@
 
 Also known as: ADR-056 (former number)
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). The quality service is deleted; deviations arrive with the kernel's quality expansion (#5376).
+
+- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
 - **Date:** 2026-08-05
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter

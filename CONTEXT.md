@@ -437,6 +437,8 @@ The continuous, automated synthesis pipeline that translates high-level CDISC US
 
 ### Module-Based Ticket Routing
 
+_Retired_: ADR-2610 deletes the tickets service (#5377); this term and the ticket terms below describe the old design.
+
 A deterministic operational routing pattern mapping clinical inquiries, data discrepancies, and system support tickets to specialized functional queues based on clinical domain ownership (`PROTOCOL_DESIGNER`, `DATA_CAPTURE_ECRF`, `SUBJECT_MANAGEMENT_RTSM`, `REPORTING_ANALYTICS`, `PLATFORM_ADMIN_ACCESS`, `REGULATORY_COMPLIANCE`).
 
 ### Dual-Target SLA Model
@@ -518,6 +520,8 @@ A modular architecture unifying repository sentinels (drift detection, duplicati
 ### AI Gateway Microservice
 
 A dedicated internal routing and inference microservice (`apps/ai_gateway`) that encapsulates model provider orchestration, token rate-limiting, cost accounting, tier-based model selection, and prompt template execution behind a uniform HMAC-authenticated REST API.
+
+_Retired_: ADR-2610 deletes `apps/ai_gateway` (#5374); AI actors are kernel Proposals (ADR-2489).
 
 ### Three-Tier Model Routing Strategy
 

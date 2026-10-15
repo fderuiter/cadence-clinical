@@ -2,6 +2,9 @@
 
 Also known as: ADR-099 (former number)
 
+> [!NOTE]
+> Partly superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md): the org service is deleted and delegation of authority lives in kernel Grants (#5375).
+
 - **Status:** Accepted
 - **Date:** 2026-08-23
 - **Authors:** Jules

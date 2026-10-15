@@ -2,7 +2,10 @@
 
 Also known as: ADR-067 (former number)
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). The tickets service is deleted (#5377).
+
+- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
 - **Date:** 2026-08-13
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
