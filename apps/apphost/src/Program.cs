@@ -137,6 +137,7 @@ if (full)
     // interop hashes device-token lookups with the lookup hash key. Both are base64 of 32 random bytes.
     var fieldEncryptionKey = builder.AddParameter("field-encryption-key", secret: true);
     var fieldLookupHashKey = builder.AddParameter("field-lookup-hash-key", secret: true);
+    var sceSigningKey = builder.AddParameter("sce-signing-key", secret: true);
 
     // Images are pinned to explicit release tags (same MinIO release as docker/docker-compose.yml). No service
     // reads MinIO yet; it runs for storage work in progress, as in docker compose's storage profile.
@@ -152,7 +153,8 @@ if (full)
     Service("DESIGNER_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Designer>("designer"), 8001, database: false);
     Service("ETMF_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"), 8003);
     Service("INTEROP_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Interop>("interop"), 8004)
-        .WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey);
+        .WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey)
+        .WithEnvironment("CADENCE_SCE_SIGNING_KEY", sceSigningKey);
     Service("QUALITY_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Quality>("quality"), 8005);
     Service("NOTIFICATIONS_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Notifications>("notifications"), 8006);
     Service("CTMS_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"), 8007);

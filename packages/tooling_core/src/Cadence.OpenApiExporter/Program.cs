@@ -176,7 +176,7 @@ public static class Program
         // WebApplicationFactory guesses the content root from the assembly name, which does not match
         // the apps/<service>/src layout, so set it explicitly.
         // The services refuse to start without auth and database settings and, for execution, a demographics
-        // key, and for payments, eConsent and interop the field-protection keys (ADR-2494). Export only reads route metadata and never opens a connection, so throwaway secrets, an
+        // key, and for payments, eConsent and interop the field-protection keys (ADR-2494), and for interop the SCE signing key (ADR-2515). Export only reads route metadata and never opens a connection, so throwaway secrets, an
         // unreachable authority and a credential-free connection string are enough.
         Action<IWebHostBuilder> configureHostBuilder = builder => builder
             .UseEnvironment("Development")
@@ -186,7 +186,8 @@ public static class Program
             .UseSetting("POSTGRES_CONNECTION_STRING", "Host=localhost;Database=cadence_openapi_export")
             .UseSetting("DemographicsEncryption:KeyBase64", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("FIELD_ENCRYPTION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
-            .UseSetting("FIELD_LOOKUP_HASH_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+            .UseSetting("FIELD_LOOKUP_HASH_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
+            .UseSetting("CADENCE_SCE_SIGNING_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
         var configuredFactory = withHostBuilderMethod?.Invoke(factory, new object[] { configureHostBuilder }) ?? factory;
 
         var createClientMethod = configuredFactory.GetType().GetMethod("CreateClient", Type.EmptyTypes);

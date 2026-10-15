@@ -13,19 +13,20 @@ search: false
 ## 1. Traceability Summary
 
 - **Total Documented Requirements (PRD):** 195
-- **Qualified (mapped tests passed):** 33
+- **Qualified (mapped tests passed):** 34
 - **Failed (a mapped test failed):** 0
 - **Not Verified (mapped tests skipped or not run):** 0
-- **Planned (no mapped tests):** 162
+- **Planned (no mapped tests):** 161
 - **Traceability Aliases (Trace and SRS IDs):** 94
 - **Unknown Requirement IDs Declared by Tests:** 0
-- **Qualified Coverage:** 16.9%
+- **Qualified Coverage:** 17.4%
 
 ## 2. Requirements with Mapped Tests
 
 | Requirement ID | Source Document | Title / Description | Mapped Test Cases | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | PRD-CDR-002 | PRD | **Automated CDISC SDTM & ADaM Data Pipeline Engine** | `Map_SystolicBloodPressure_WritesOriginalAndStandardResults` (tests/Cadence.UnitTests/Kernel/Standards/MappingSpecificationTests.cs) 🟢 | ✅ **Qualified** |
+| PRD-CDR-006 | PRD | **Biostatistical Export Audit Trail & Blinded Interim Analysis Gating** | `IssueLockToken_ByACoordinator_Returns403AndMintsNothing` (tests/Cadence.IntegrationTests/Interop/SceUnblindingAuthorizationTests.cs) 🟢<br>`IssueLockToken_ByACallerWithNoRole_Returns403AndMintsNothing` (tests/Cadence.IntegrationTests/Interop/SceUnblindingAuthorizationTests.cs) 🟢<br>`IssueLockToken_IgnoresRolesInTheBody` (tests/Cadence.IntegrationTests/Interop/SceUnblindingAuthorizationTests.cs) 🟢<br>`Execute_WithATokenSignedWithTheOldLiteralKey_Returns403` (tests/Cadence.IntegrationTests/Interop/SceUnblindingAuthorizationTests.cs) 🟢<br>`Execute_WithATokenIssuedToSomeoneElse_Returns403` (tests/Cadence.IntegrationTests/Interop/SceUnblindingAuthorizationTests.cs) 🟢<br>`Execute_ByTheRecipient_RunsUnblindedAndOnlyUnblindedReadersSeeIt` (tests/Cadence.IntegrationTests/Interop/SceUnblindingAuthorizationTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-CRF-004 | PRD | **Declarative Rule Generation & Multi-Layer Edit Checks** | `RulePackDraftedAndReleasedAtRuntimeLoadsAndEvaluates` (tests/Cadence.IntegrationTests/Kernel/RulePackPostgresTests.cs) 🟢<br>`RerunAfterMappingFixResolvesTheFindingInsteadOfDuplicatingIt` (tests/Cadence.IntegrationTests/Kernel/ValidationFindingPostgresTests.cs) 🟢<br>`EvaluatorIsDeterministicOverGeneratedPacksAndRecords` (tests/Cadence.UnitTests/Kernel/Rules/RulePackTests.cs) 🟢<br>`LedgerRerunWithoutDetectionResolvesWithTheRunAsEvidence` (tests/Cadence.UnitTests/Kernel/Validation/ValidationFindingTests.cs) 🟢<br>`LedgerGeneratedHistoriesResolveExactlyWhenTheLatestRunMissesTheFinding` (tests/Cadence.UnitTests/Kernel/Validation/ValidationFindingTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-CRF-012 | PRD | **Version Pinning and Lock Enforcement** | `ForkKeepsTheParentApprovedNumbersTheDraftAndStoresTheAmendment` (tests/Cadence.IntegrationTests/Kernel/KernelProtocolVersionPostgresTests.cs) 🟢<br>`ProtocolVersionsTriggerFreezesApprovedContentForEveryDatabaseUser` (tests/Cadence.IntegrationTests/Kernel/KernelProtocolVersionPostgresTests.cs) 🟢<br>`SubmitForReviewSetsTheContentHashReturnToDraftClearsIt` (tests/Cadence.UnitTests/Kernel/ProtocolVersionTests.cs) 🟢<br>`LifecycleAllowsOnlyTheSpecifiedTransitions` (tests/Cadence.UnitTests/Kernel/ProtocolVersionTests.cs) 🟢<br>`ForkLeavesTheParentApprovedAndStartsAnAmendedDraft` (tests/Cadence.UnitTests/Kernel/ProtocolVersionTests.cs) 🟢 | ✅ **Qualified** |
 | PRD-CRF-013 | PRD | **Site & Tenant Data Isolation** | `ReadNeverReturnsAnotherTenantsActivity` (tests/Cadence.IntegrationTests/Kernel/KernelActivityPostgresTests.cs) 🟢<br>`ApplicationRoleCannotReadTheVaultTablesAndReachesThemOnlyThroughItsFunctions` (tests/Cadence.IntegrationTests/Kernel/KernelIdentityVaultPostgresTests.cs) 🟢<br>`VaultRecordsAreIsolatedByTenant` (tests/Cadence.IntegrationTests/Kernel/KernelIdentityVaultPostgresTests.cs) 🟢<br>`NavigationNeverCrossesTenants` (tests/Cadence.IntegrationTests/Kernel/KernelNavigationPostgresTests.cs) 🟢<br>`SearchNeverReturnsAnotherTenantsObjects` (tests/Cadence.IntegrationTests/Kernel/KernelSearchPostgresTests.cs) 🟢<br>`SimulateCannotReachAnotherTenantsVersions` (tests/Cadence.IntegrationTests/Kernel/KernelSimulationPostgresTests.cs) 🟢<br>`EveryKernelTableHasTenantIdAndForcedRowLevelSecurity` (tests/Cadence.IntegrationTests/Kernel/KernelTenantIsolationPostgresTests.cs) 🟢<br>`ApplicationRoleIsNotOwnerAndCannotBypassRowLevelSecurity` (tests/Cadence.IntegrationTests/Kernel/KernelTenantIsolationPostgresTests.cs) 🟢<br>`CrossTenantReadReturnsNothing` (tests/Cadence.IntegrationTests/Kernel/KernelTenantIsolationPostgresTests.cs) 🟢<br>`CrossTenantForeignKeyAndForeignTenantRowAreRejectedByTheDatabase` (tests/Cadence.IntegrationTests/Kernel/KernelTenantIsolationPostgresTests.cs) 🟢<br>`NoTenantCannotConnectAndSeesNothing` (tests/Cadence.IntegrationTests/Kernel/KernelTenantIsolationPostgresTests.cs) 🟢<br>`PersonIsVisibleOnlyToTenantsWithAMembership` (tests/Cadence.IntegrationTests/Kernel/KernelTenantIsolationPostgresTests.cs) 🟢<br>`TenantDirectoryListsIdsOnlyThroughTheDirectoryFunction` (tests/Cadence.IntegrationTests/Kernel/KernelTenantIsolationPostgresTests.cs) 🟢<br>`PipelineCommandCommitsUnderRowLevelSecurityVisibleToItsTenantOnly` (tests/Cadence.IntegrationTests/Kernel/KernelTenantIsolationPostgresTests.cs) 🟢<br>`WorkQueueCannotReachAnotherTenant` (tests/Cadence.IntegrationTests/Kernel/KernelWorkQueuePostgresTests.cs) 🟢<br>`TraceFromAnotherTenantSeesNoEdges` (tests/Cadence.IntegrationTests/Kernel/LineagePostgresTests.cs) 🟢<br>`TerminologyResolutionIsTenantScoped` (tests/Cadence.IntegrationTests/Kernel/StandardsRegistryPostgresTests.cs) 🟢<br>`FindingsAreIsolatedByTenant` (tests/Cadence.IntegrationTests/Kernel/ValidationFindingPostgresTests.cs) 🟢<br>`EveryRead_IsRefused_WhenTheSignedTenantIsNotAKernelTenant` (tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs) 🟢<br>`Navigation_ReadsInTheCallersTenant` (tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs) 🟢<br>`KernelDbContextTenantScopedEntitiesUseCompositeTenantForeignKeys` (tests/Cadence.UnitTests/Kernel/KernelDbContextModelTests.cs) 🟢 | ✅ **Qualified** |
@@ -70,7 +71,6 @@ search: false
 | PRD-CDR-003 | PRD | **CDISC Dataset-JSON 1.1 / 2.0 & Define-XML 2.1 Compiler** | Sprint Roadmap |
 | PRD-CDR-004 | PRD | **Validated Containerized Statistical Computing Environment (R & Python)** | Sprint Roadmap |
 | PRD-CDR-005 | PRD | **Package Lock Integrity, Script Versioning & Reproducible Run Manifests** | Sprint Roadmap |
-| PRD-CDR-006 | PRD | **Biostatistical Export Audit Trail & Blinded Interim Analysis Gating** | Sprint Roadmap |
 | PRD-CEC-001 | PRD | **Automated Patient Event Dossier Compilation & PHI Redaction** | Sprint Roadmap |
 | PRD-CEC-002 | PRD | **2+1 Independent Blinded Reader & Tie-Breaker Workflow** | Sprint Roadmap |
 | PRD-CEC-003 | PRD | **Bi-Directional EDC Feedback & CDISC SDTM CE Domain Export** | Sprint Roadmap |
@@ -336,4 +336,4 @@ None. Every requirement ID declared by a test is defined in the PRD or SRS.
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** 8b781a529805ef2ad394ad009d4dca2b9beac395ab1e582c21a69586147a1609
+- **Content Hash (SHA-256):** 10a2f08ad6619953f0290e5d1ed19228433ed49307bc10bd48a9b07dc75e2cf6

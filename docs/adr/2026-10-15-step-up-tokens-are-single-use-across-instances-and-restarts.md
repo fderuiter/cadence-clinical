@@ -6,7 +6,7 @@
 - **Deciders:** @fderuiter (pre-deployment containment brief, 2026-10-15)
 - **Requirements:** SRS-SYS-005 (e-signature step-up, single use), SRS-EDC-003 (Part 11 signature manifest),
   PRD-TRN-003 (training electronic signatures)
-- **Issues:** #5311, #5361 (signing routes only)
+- **Issues:** #5311, #5382, #5361 (signing and SCE routes only)
 
 ---
 
@@ -89,6 +89,23 @@ the token is still accepted.
   request with 404, and the seal is an HMAC keyed with the gateway secret. The body no longer carries a password, signer
   name or role.
 
+### 4.4 SCE database-lock tokens (#5382)
+
+The statistical computing environment's database-lock tokens unlock unblinded analysis, so they follow the same rules.
+
+- Every SCE route needs an `sce_*` permission. Only `sponsor_dm` (and `admin`) has `sce_lock_token:issue` and
+  `revoke`; `unblinded_statistician` has `sce_run:execute_unblinded`; `unblinded_statistician` and `idmc` have
+  `sce_run:read_unblinded`; `sponsor_statistician` runs and reads blinded runs only.
+- Identity and roles come only from the verified gateway principal; there is no fallback user or role.
+- A token authorizes exactly the roles the matrix lets run unblinded analyses, never roles from the request.
+- Tokens and run signature blocks are signed through `Cadence.Security.HmacSigner` with `CADENCE_SCE_SIGNING_KEY`
+  (base64 of 32 bytes), validated at startup with no default. The literal key in the source is gone.
+- `/execute` for an unblinded run checks the token's signature over its claims (token, study, lock, recipient,
+  expiry), that it was issued to the caller, that it authorizes one of the caller's roles, and that it is for this
+  study and neither revoked nor expired.
+- Unblinded runs and their artifacts answer 404 to a caller without `sce_run:read_unblinded`, and are left out of the
+  run list.
+
 ## 5. Consequences & Trade-offs
 
 - Clients must obtain a step-up token for each batch with the matching `semantic_action` and `batch_id`.
@@ -107,4 +124,5 @@ the token is still accepted.
 - `apps/knowledge`: the delegation sign-off route; `PermissionMatrix` grants `delegation_log:sign`.
 - Tests: `Cadence.IntegrationTests.Execution.BatchSignOffSignatureTests` (PostgreSQL, two hosts on one database),
   `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests`,
-  `Cadence.UnitTests.Knowledge.DelegationSignOffAuthorityTests` and `Cadence.UnitTests.Packages.SignatureTokenTests`.
+  `Cadence.UnitTests.Knowledge.DelegationSignOffAuthorityTests`, `Cadence.UnitTests.Packages.SignatureTokenTests` and
+  `Cadence.IntegrationTests.Interop.SceUnblindingAuthorizationTests` (PostgreSQL).

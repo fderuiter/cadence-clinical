@@ -11,11 +11,11 @@
 
 ## Profiles and existing infrastructure
 
-| Setting | Values | Effect |
-| --- | --- | --- |
-| `AppHost:Profile` | `full` (default), `core` | `core` runs the gateway, the kernel API host, execution and the web app. `full` adds the other 15 services and MinIO. |
-| `ConnectionStrings:cadence` | an Npgsql connection string | Use this existing database instead of starting the PostgreSQL container. The services apply their migrations to it. |
-| `AppHost:OidcAuthority` | a Keycloak realm URL, `http(s)://host:port/realms/<realm>` | Use this issuer for the gateway and the web app instead of starting the Keycloak container. The realm needs the `cadence-web` client from `docker/cadence-realm.json`. |
+| Setting                     | Values                                                     | Effect                                                                                                                                                                 |
+| --------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AppHost:Profile`           | `full` (default), `core`                                   | `core` runs the gateway, the kernel API host, execution and the web app. `full` adds the other 15 services and MinIO.                                                  |
+| `ConnectionStrings:cadence` | an Npgsql connection string                                | Use this existing database instead of starting the PostgreSQL container. The services apply their migrations to it.                                                    |
+| `AppHost:OidcAuthority`     | a Keycloak realm URL, `http(s)://host:port/realms/<realm>` | Use this issuer for the gateway and the web app instead of starting the Keycloak container. The realm needs the `cadence-web` client from `docker/cadence-realm.json`. |
 
 Pass them on the command line after `--` (`-- --AppHost:Profile=core`) or as environment variables
 (`AppHost__Profile=core`). An unknown profile or a malformed authority stops the AppHost with a message. In the
@@ -33,15 +33,15 @@ routes answer as the service being down.
 - Projects, each on the host port docker compose publishes it on, so the gateway's Development defaults and the
   web apps' `VITE_API_BASE_URL=http://localhost:8000` work for both (`core` runs 8000, 8002 and 8018):
 
-  | Port | Service | Port | Service | Port | Service |
-  | --- | --- | --- | --- | --- | --- |
-  | 8000 | gateway | 8006 | notifications | 8012 | org |
-  | 8001 | designer | 8007 | ctms | 8013 | fileshare |
-  | 8002 | execution | 8008 | safety | 8014 | imaging |
-  | 8003 | etmf | 8009 | tickets | 8015 | knowledge |
-  | 8004 | interop | 8010 | eisf | 8016 | payments |
-  | 8005 | quality | 8011 | econsent | 8017 | ai-gateway |
-  |  |  |  |  | 8018 | kernel |
+  | Port | Service   | Port | Service       | Port | Service    |
+  | ---- | --------- | ---- | ------------- | ---- | ---------- |
+  | 8000 | gateway   | 8006 | notifications | 8012 | org        |
+  | 8001 | designer  | 8007 | ctms          | 8013 | fileshare  |
+  | 8002 | execution | 8008 | safety        | 8014 | imaging    |
+  | 8003 | etmf      | 8009 | tickets       | 8015 | knowledge  |
+  | 8004 | interop   | 8010 | eisf          | 8016 | payments   |
+  | 8005 | quality   | 8011 | econsent      | 8017 | ai-gateway |
+  |      |           |      |               | 8018 | kernel     |
 
 - Every service except the gateway, designer and ai-gateway references the `cadence` database
   (`ConnectionStrings:cadence`), waits for PostgreSQL, and applies its own migrations on start
@@ -63,7 +63,9 @@ issuer never asks for the Keycloak admin):
 - `demographics-encryption-key`, passed to execution as `DemographicsEncryption__KeyBase64` (base64 AES key of
   16, 24 or 32 bytes; execution refuses to start without one, ADR-2490);
 - `field-encryption-key`, passed to econsent and payments as `FIELD_ENCRYPTION_KEY`, and `field-lookup-hash-key`,
-  passed to interop as `FIELD_LOOKUP_HASH_KEY` (base64 of 32 bytes each, ADR-2494).
+  passed to interop as `FIELD_LOOKUP_HASH_KEY` (base64 of 32 bytes each, ADR-2494);
+- `sce-signing-key`, passed to interop as `CADENCE_SCE_SIGNING_KEY` (base64 of 32 bytes; signs SCE database-lock
+  tokens, ADR-2515).
 
 The gateway's `OIDC_AUTHORITY` is the Keycloak `cadence` realm. Set the parameters once with user secrets (choose your own values):
 
@@ -77,6 +79,7 @@ dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Param
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:demographics-encryption-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-encryption-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-lookup-hash-key" "$(openssl rand -base64 32)"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:sce-signing-key" "$(openssl rand -base64 32)"
 ```
 
 Or set `Parameters__minio-root-user` (and so on) as environment variables. The names contain hyphens, which
