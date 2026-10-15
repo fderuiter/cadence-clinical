@@ -241,4 +241,178 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     expect(openHelpSpy).toHaveBeenCalled();
     expect(wrapper.emitted("close")).toBeTruthy();
   });
+
+  it("invokes AI Gateway intent endpoint and displays [AI Copilot] recommendations", async () => {
+    const { apiClient } = await import("../../api/apiClient");
+    vi.spyOn(apiClient, "post").mockResolvedValue({
+      query: "log adverse event for subject 101",
+      recommendations: [
+        {
+          id: "ai-intent-log-ae-101",
+          name: "Log Adverse Event for Subject SUBJ-101",
+          description: "Directly navigate to eCRF data entry for subject SUBJ-101",
+          category: "[AI Copilot]",
+          icon: "🩺",
+          targetRoute: "/ecrf?subjectId=SUBJ-101&action=log_ae",
+          action: "log_ae",
+          confidence: 0.98,
+          roles: ["site_investigator", "crc"],
+        },
+      ],
+    });
+
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Site Investigator"];
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: {
+        isOpen: true,
+      },
+      global: {
+        plugins: [pinia, router],
+      },
+    });
+
+    const input = wrapper.find(".command-palette-input");
+    await input.setValue("log adverse event for subject 101");
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await nextTick();
+
+    expect(apiClient.post).toHaveBeenCalledWith("/api/v1/ai/intent/route", {
+      query: "log adverse event for subject 101",
+      context: { roles: "site_investigator" },
+    });
+
+    const aiItem = wrapper.findAll(".command-item").find((el) => {
+      return el.find(".command-badge").text() === "[AI Copilot]";
+    });
+
+    expect(aiItem).toBeDefined();
+    expect(aiItem.find(".command-name").text()).toBe("Log Adverse Event for Subject SUBJ-101");
+  });
+
+  it("enforces role restrictions on AI Copilot recommendations", async () => {
+    const { apiClient } = await import("../../api/apiClient");
+    vi.spyOn(apiClient, "post").mockResolvedValue({
+      query: "check site status",
+      recommendations: [
+        {
+          id: "ai-intent-ctms",
+          name: "CTMS Site Monitoring",
+          description: "View site visit logs",
+          category: "[AI Copilot]",
+          icon: "📊",
+          targetRoute: "/ctms",
+          confidence: 0.9,
+          roles: ["cra", "monitor"],
+        },
+      ],
+    });
+
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Site Investigator"]; // Not CRA or Monitor
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: {
+        isOpen: true,
+      },
+      global: {
+        plugins: [pinia, router],
+      },
+    });
+
+    const input = wrapper.find(".command-palette-input");
+    await input.setValue("check site status");
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await nextTick();
+
+    const aiItem = wrapper.findAll(".command-item").find((el) => {
+      return el.find(".command-badge").text() === "[AI Copilot]";
+    });
+
+    expect(aiItem).toBeUndefined();
+  });
+
+  it("navigates to target route when AI Copilot recommendation is selected", async () => {
+    const { apiClient } = await import("../../api/apiClient");
+    vi.spyOn(apiClient, "post").mockResolvedValue({
+      query: "log adverse event for subject 101",
+      recommendations: [
+        {
+          id: "ai-intent-log-ae-101",
+          name: "Log Adverse Event for Subject SUBJ-101",
+          description: "Directly navigate to eCRF",
+          category: "[AI Copilot]",
+          icon: "🩺",
+          targetRoute: "/ecrf?subjectId=SUBJ-101&action=log_ae",
+          confidence: 0.98,
+          roles: ["site_investigator"],
+        },
+      ],
+    });
+
+    const routerPushSpy = vi.spyOn(router, "push");
+
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Site Investigator"];
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: {
+        isOpen: true,
+      },
+      global: {
+        plugins: [pinia, router],
+      },
+    });
+
+    const input = wrapper.find(".command-palette-input");
+    await input.setValue("log adverse event for subject 101");
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await nextTick();
+
+    const aiItem = wrapper.findAll(".command-item").find((el) => {
+      return el.find(".command-badge").text() === "[AI Copilot]";
+    });
+
+    expect(aiItem).toBeDefined();
+    await aiItem.trigger("click");
+
+    expect(routerPushSpy).toHaveBeenCalledWith("/ecrf?subjectId=SUBJ-101&action=log_ae");
+    expect(wrapper.emitted("close")).toBeTruthy();
+  });
+
+  it("falls back to static substring filtering without UI errors when AI Gateway fails", async () => {
+    const { apiClient } = await import("../../api/apiClient");
+    vi.spyOn(apiClient, "post").mockRejectedValueOnce(new Error("Network Error 500"));
+
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: {
+        isOpen: true,
+      },
+      global: {
+        plugins: [pinia, router],
+      },
+    });
+
+    const input = wrapper.find(".command-palette-input");
+    await input.setValue("CTMS Dashboard");
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await nextTick();
+
+    const items = wrapper.findAll(".command-item");
+    expect(items.length).toBe(1);
+    expect(items[0].find(".command-name").text()).toBe("CTMS Dashboard");
+    expect(items[0].find(".command-badge").text()).toBe("[Route]");
+  });
 });
