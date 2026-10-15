@@ -48,7 +48,11 @@
 
     <!-- Timeline Mode -->
     <template v-else-if="type === 'timeline'">
-      <div v-for="tm in count" :key="`timeline-${tm}`" class="skeleton-timeline-item">
+      <div
+        v-for="tm in count"
+        :key="`timeline-${tm}`"
+        class="skeleton-timeline-item"
+      >
         <div class="skeleton-bullet" />
         <div class="skeleton-timeline-card">
           <div class="skeleton-line" style="width: 50%" />

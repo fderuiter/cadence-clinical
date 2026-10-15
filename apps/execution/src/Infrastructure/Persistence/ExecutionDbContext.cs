@@ -87,6 +87,10 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
+    public DbSet<LabReferenceRange> LabReferenceRanges => Set<LabReferenceRange>();
+
+    public DbSet<BulkLabRangeImportJob> BulkLabRangeImportJobs => Set<BulkLabRangeImportJob>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -114,6 +118,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new IpKitInventoryItemConfiguration());
         modelBuilder.ApplyConfiguration(new IpKitReconciliationBatchConfiguration());
         modelBuilder.ApplyConfiguration(new IpKitReconciliationCertificateConfiguration());
+        modelBuilder.ApplyConfiguration(new LabReferenceRangeConfiguration());
+        modelBuilder.ApplyConfiguration(new BulkLabRangeImportJobConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
     }

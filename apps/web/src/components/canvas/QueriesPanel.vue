@@ -4,14 +4,8 @@
     class="queries"
     aria-labelledby="record-queries-title"
   >
-    <h3 id="record-queries-title">
-      Queries
-    </h3>
-    <p
-      v-if="!queries.length"
-      id="record-queries-empty"
-      class="status-line"
-    >
+    <h3 id="record-queries-title">Queries</h3>
+    <p v-if="!queries.length" id="record-queries-empty" class="status-line">
       No queries on {{ subjectCode }}.
     </p>
     <template v-else>
@@ -28,7 +22,7 @@
             :checked="allSelected"
             aria-label="Select all queries"
             @change="toggleSelectAll"
-          >
+          />
           <span>Select All</span>
         </label>
         <div class="batch-buttons">
@@ -83,11 +77,7 @@
               ? `Reason for batch closing ${selectedCloseableQueries.length} query/queries`
               : `Reason for batch cancelling ${selectedCancellableQueries.length} query/queries`
         }}</label>
-        <textarea
-          id="batch-query-reason"
-          v-model="batchReason"
-          rows="2"
-        />
+        <textarea id="batch-query-reason" v-model="batchReason" rows="2" />
         <div class="query-buttons">
           <button
             :id="`btn-confirm-batch-${batchAction}`"
@@ -131,11 +121,8 @@
               :value="query.id"
               :aria-label="`Select query ${query.id}`"
               class="query-checkbox"
-            >
-            <span
-              class="query-status"
-              :data-status="query.status"
-            >{{
+            />
+            <span class="query-status" :data-status="query.status">{{
               queryStatusLabel(query.status)
             }}</span>
             <span class="query-target">{{ targetLabel(query) }}</span>
@@ -143,16 +130,10 @@
           <p class="query-text">
             {{ query.explanation }}
           </p>
-          <p
-            v-if="query.response"
-            class="query-response"
-          >
+          <p v-if="query.response" class="query-response">
             Answer: {{ query.response }}
           </p>
-          <p
-            v-if="query.cancellation_reason"
-            class="query-response"
-          >
+          <p v-if="query.cancellation_reason" class="query-response">
             Cancelled: {{ query.cancellation_reason }}
           </p>
 
@@ -180,19 +161,12 @@
               >
                 {{ ACTION_TEXT[openAction.action].button }}
               </button>
-              <button
-                type="button"
-                class="btn btn-secondary"
-                @click="dismiss"
-              >
+              <button type="button" class="btn btn-secondary" @click="dismiss">
                 Back
               </button>
             </div>
           </div>
-          <div
-            v-else
-            class="query-buttons"
-          >
+          <div v-else class="query-buttons">
             <button
               v-for="action in actionsFor(query)"
               :id="`btn-${action}-${query.id}`"
@@ -207,11 +181,7 @@
         </li>
       </ul>
     </template>
-    <p
-      v-if="!canManage"
-      id="record-queries-note"
-      class="status-line"
-    >
+    <p v-if="!canManage" id="record-queries-note" class="status-line">
       A CRA or data manager closes, reopens and cancels queries.
     </p>
   </section>

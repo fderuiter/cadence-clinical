@@ -1,10 +1,6 @@
 <template>
   <!-- eslint-disable vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    @click.self="$emit('close')"
-  >
+  <div v-if="isOpen" class="drawer-backdrop" @click.self="$emit('close')">
     <aside
       class="quiz-template-drawer"
       :class="{ open: isOpen }"
@@ -15,16 +11,12 @@
       <!-- Header -->
       <div class="drawer-header">
         <div class="drawer-title-group">
-          <span
-            class="drawer-icon"
-            aria-hidden="true"
-          >📚</span>
+          <span class="drawer-icon" aria-hidden="true">📚</span>
           <div>
-            <h3 class="drawer-title">
-              Regulatory Quiz Template Library
-            </h3>
+            <h3 class="drawer-title">Regulatory Quiz Template Library</h3>
             <p class="drawer-subtitle">
-              Browse, filter, and batch-import pre-approved comprehension check questions
+              Browse, filter, and batch-import pre-approved comprehension check
+              questions
             </p>
           </div>
         </div>
@@ -42,45 +34,34 @@
       <!-- Controls: Domain Filter & Search Bar -->
       <div class="drawer-controls">
         <div class="filter-group">
-          <label
-            for="domain-filter-select"
-            class="control-label"
-          >Domain Category:</label>
+          <label for="domain-filter-select" class="control-label"
+            >Domain Category:</label
+          >
           <select
             id="domain-filter-select"
             v-model="selectedDomain"
             class="form-control domain-select"
           >
-            <option value="All">
-              All Domains ({{ catalog.length }})
-            </option>
-            <option
-              v-for="domain in domains"
-              :key="domain"
-              :value="domain"
-            >
+            <option value="All">All Domains ({{ catalog.length }})</option>
+            <option v-for="domain in domains" :key="domain" :value="domain">
               {{ domain }} ({{ getDomainCount(domain) }})
             </option>
           </select>
         </div>
 
         <div class="search-group">
-          <label
-            for="template-search-input"
-            class="control-label"
-          >Search Keywords:</label>
+          <label for="template-search-input" class="control-label"
+            >Search Keywords:</label
+          >
           <div class="search-input-wrapper">
-            <span
-              class="search-icon"
-              aria-hidden="true"
-            >🔍</span>
+            <span class="search-icon" aria-hidden="true">🔍</span>
             <input
               id="template-search-input"
               v-model="searchQuery"
               type="text"
               placeholder="Search by keyword (e.g. HIPAA, voluntary, risks)..."
               class="form-control input-template-search"
-            >
+            />
             <button
               v-if="searchQuery"
               type="button"
@@ -95,11 +76,7 @@
       </div>
 
       <!-- Domain Tab Pills -->
-      <div
-        class="domain-pills"
-        role="tablist"
-        aria-label="Regulatory Domains"
-      >
+      <div class="domain-pills" role="tablist" aria-label="Regulatory Domains">
         <button
           type="button"
           role="tab"
@@ -132,23 +109,22 @@
               :checked="isAllFilteredSelected && filteredTemplates.length > 0"
               :disabled="filteredTemplates.length === 0"
               @change="toggleSelectAll"
-            >
-            <span>
-              Select All Filtered ({{ filteredTemplates.length }})
-            </span>
+            />
+            <span> Select All Filtered ({{ filteredTemplates.length }}) </span>
           </label>
           <span class="selected-count-badge">
-            {{ selectedTemplateIds.length }} Question{{ selectedTemplateIds.length === 1 ? '' : 's' }} Selected
+            {{ selectedTemplateIds.length }} Question{{
+              selectedTemplateIds.length === 1 ? "" : "s"
+            }}
+            Selected
           </span>
         </div>
 
-        <div
-          v-if="filteredTemplates.length === 0"
-          class="no-templates-state"
-        >
+        <div v-if="filteredTemplates.length === 0" class="no-templates-state">
           <p class="no-templates-text">
             No matching quiz templates found for "{{ searchQuery }}"
-            <span v-if="selectedDomain !== 'All'"> in {{ selectedDomain }}</span>.
+            <span v-if="selectedDomain !== 'All'"> in {{ selectedDomain }}</span
+            >.
           </p>
           <button
             type="button"
@@ -159,17 +135,11 @@
           </button>
         </div>
 
-        <div
-          v-else
-          class="templates-list"
-        >
+        <div v-else class="templates-list">
           <div
             v-for="tmpl in filteredTemplates"
             :key="tmpl.id"
-            :class="[
-              'template-card card',
-              { selected: isSelected(tmpl.id) }
-            ]"
+            :class="['template-card card', { selected: isSelected(tmpl.id) }]"
             role="button"
             tabindex="0"
             @click="toggleSelect(tmpl.id)"
@@ -177,16 +147,13 @@
             @keydown.space.prevent="toggleSelect(tmpl.id)"
           >
             <div class="template-card-header">
-              <label
-                class="checkbox-wrapper"
-                @click.stop
-              >
+              <label class="checkbox-wrapper" @click.stop>
                 <input
                   type="checkbox"
                   class="checkbox-template-select"
                   :checked="isSelected(tmpl.id)"
                   @change="toggleSelect(tmpl.id)"
-                >
+                />
                 <span class="sr-only">Select question: {{ tmpl.text }}</span>
               </label>
 
@@ -204,11 +171,11 @@
                   :key="optIdx"
                   :class="[
                     'preview-option-item',
-                    { 'correct-option': optIdx === tmpl.correctAnswerIndex }
+                    { 'correct-option': optIdx === tmpl.correctAnswerIndex },
                   ]"
                 >
                   <span class="opt-bullet">
-                    {{ optIdx === tmpl.correctAnswerIndex ? '✓' : '•' }}
+                    {{ optIdx === tmpl.correctAnswerIndex ? "✓" : "•" }}
                   </span>
                   <span class="opt-text">{{ opt }}</span>
                   <span
@@ -220,15 +187,11 @@
                 </div>
               </div>
 
-              <div
-                v-if="tmpl.hint"
-                class="template-hint-preview"
-              >
-                <span
-                  class="hint-icon"
-                  aria-hidden="true"
-                >💡</span>
-                <span class="hint-text"><strong>Feedback Hint:</strong> {{ tmpl.hint }}</span>
+              <div v-if="tmpl.hint" class="template-hint-preview">
+                <span class="hint-icon" aria-hidden="true">💡</span>
+                <span class="hint-text"
+                  ><strong>Feedback Hint:</strong> {{ tmpl.hint }}</span
+                >
               </div>
             </div>
           </div>
@@ -237,11 +200,7 @@
 
       <!-- Drawer Footer -->
       <div class="drawer-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          @click="$emit('close')"
-        >
+        <button type="button" class="btn btn-secondary" @click="$emit('close')">
           Cancel
         </button>
 
@@ -260,7 +219,10 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { REGULATORY_DOMAINS, QUIZ_TEMPLATE_CATALOG } from "../../data/quizTemplates.js";
+import {
+  REGULATORY_DOMAINS,
+  QUIZ_TEMPLATE_CATALOG,
+} from "../../data/quizTemplates.js";
 
 const props = defineProps({
   isOpen: {

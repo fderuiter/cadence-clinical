@@ -354,7 +354,14 @@
             font-weight: 600;
           "
         >
-          <span>📝 {{ isDirty ? $t("ecrf.form.unsavedDraftChanges") : $t("ecrf.form.draftRecoveryActive") }}</span>
+          <span
+            >📝
+            {{
+              isDirty
+                ? $t("ecrf.form.unsavedDraftChanges")
+                : $t("ecrf.form.draftRecoveryActive")
+            }}</span
+          >
           <span
             class="badge badge-draft"
             style="
@@ -369,7 +376,11 @@
           </span>
         </div>
         <div style="font-size: 0.8rem; color: #1e3a8a">
-          {{ isDirty ? $t("ecrf.form.draftAutoSaving") : $t("ecrf.form.draftRestoredMsg") }}
+          {{
+            isDirty
+              ? $t("ecrf.form.draftAutoSaving")
+              : $t("ecrf.form.draftRestoredMsg")
+          }}
         </div>
       </div>
 
