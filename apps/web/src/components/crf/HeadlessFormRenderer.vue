@@ -206,7 +206,19 @@ const evaluateRules = () => {
         (r) => (r.type === "skip_logic" || r.action) && r.target_field === v.id
       );
       if (skipRule) {
-        relevantExpr = skipRule.condition || skipRule.ast_expression;
+        const cond = skipRule.condition || skipRule.ast_expression;
+        if (cond) {
+          const action = (skipRule.action || "").toLowerCase();
+          if (action === "hide" || action === "skip") {
+            relevantExpr = {
+              type: "logical",
+              operator: "not",
+              operands: [cond],
+            };
+          } else {
+            relevantExpr = cond;
+          }
+        }
       }
     }
     return {
@@ -321,10 +333,17 @@ const setFormData = (data) => {
 const handleSubmit = () => {
   evaluateRules();
   if (!hasHardErrors.value) {
+    const payloadData = {};
+    Object.keys(formData).forEach((key) => {
+      if (!Object.is(visibleFields.value[key], false)) {
+        payloadData[key] = formData[key];
+      }
+    });
+
     emit("form-submitted", {
       form_id: props.formDefinition.form_id,
       version_tag: props.formDefinition.version_tag,
-      data: { ...formData },
+      data: payloadData,
     });
   }
 };

@@ -399,6 +399,51 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       });
     });
 
+    it("supports skip_logic with inverted not operator for hide and skip actions", () => {
+      // Condition: pulse <= 100
+      const hideCondition = {
+        type: "comparison",
+        operator: "<=",
+        operands: [
+          { type: "field_ref", field_ref: { field_id: "pulse" } },
+          { type: "constant", value: 100 },
+        ],
+      };
+
+      // Wrap in inverted NOT operator as HeadlessFormRenderer does for "hide" action
+      const invertedRelevant = {
+        type: "logical",
+        operator: "not",
+        operands: [hideCondition],
+      };
+
+      const fields = [
+        { id: "pulse", label: "Pulse", type: "text" },
+        {
+          id: "pulse_details",
+          label: "Pulse Details",
+          type: "text",
+          relevant: invertedRelevant,
+        },
+      ];
+
+      // When pulse is 70 (<= 100), hide condition is true, inverted relevant is false -> field hidden & value purged
+      const res1 = renderFormFromJSON(fields, {
+        pulse: 70,
+        pulse_details: "Mild arrhythmia",
+      });
+      expect(res1.visibleFields.pulse_details).toBe(false);
+      expect(res1.updatedValues.pulse_details).toBe("");
+
+      // When pulse is 120 (> 100), hide condition is false, inverted relevant is true -> field visible
+      const res2 = renderFormFromJSON(fields, {
+        pulse: 120,
+        pulse_details: "Tachycardic",
+      });
+      expect(res2.visibleFields.pulse_details).toBe(true);
+      expect(res2.updatedValues.pulse_details).toBe("Tachycardic");
+    });
+
     it("evaluates constraints via validateField in index.js", () => {
       const heightFieldMeta = {
         id: "height",
