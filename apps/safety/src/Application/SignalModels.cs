@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
+using Cadence.Kernel;
+
 namespace Cadence.Apps.Safety.Application;
 
 public static class SafetySignalAlertStatus
@@ -27,7 +29,7 @@ public class CaseReactionInput
     public string CaseId { get; set; } = string.Empty;
 
     [JsonPropertyName("study_id")]
-    public string? StudyId { get; set; }
+    public StudyId? StudyId { get; set; }
 
     [JsonPropertyName("drug_name")]
     public string DrugName { get; set; } = string.Empty;
@@ -45,7 +47,7 @@ public class CaseReactionInput
 public class SignalDetectionScanRequest
 {
     [JsonPropertyName("study_id")]
-    public string? StudyId { get; set; }
+    public StudyId? StudyId { get; set; }
 
     [JsonPropertyName("target_drug")]
     public string TargetDrug { get; set; } = string.Empty;
@@ -177,7 +179,7 @@ public class SignalDetectionScanResponse
     public string RunId { get; set; } = string.Empty;
 
     [JsonPropertyName("study_id")]
-    public string? StudyId { get; set; }
+    public StudyId? StudyId { get; set; }
 
     [JsonPropertyName("target_drug")]
     public string TargetDrug { get; set; } = string.Empty;
@@ -213,7 +215,7 @@ public class SafetySignalAlertDto
     public string? DetectionRunId { get; set; }
 
     [JsonPropertyName("study_id")]
-    public string? StudyId { get; set; }
+    public StudyId? StudyId { get; set; }
 
     [JsonPropertyName("target_drug")]
     public string TargetDrug { get; set; } = string.Empty;

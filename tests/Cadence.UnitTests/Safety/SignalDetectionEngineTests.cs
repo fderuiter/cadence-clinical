@@ -8,6 +8,7 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Kernel;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
@@ -91,10 +92,11 @@ public class SignalDetectionEngineTests
         using var dbContext = CreateInMemoryDbContext();
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 15, 0, 0, 0, TimeSpan.Zero));
         var engine = new SignalDetectionEngine(dbContext, clock);
+        var studyId = StudyId.New();
 
         var request = new SignalDetectionScanRequest
         {
-            StudyId = "STUDY-001",
+            StudyId = studyId,
             TargetDrug = "COMPOUND-X",
             BenchmarkDataset = "INTERNAL_TRIAL_POOL",
             AutoTriggerAlerts = true,
@@ -103,16 +105,16 @@ public class SignalDetectionEngineTests
             ChiSquareThreshold = 3.0,
             Cases = new List<CaseReactionInput>
             {
-                new() { CaseId = "C001", StudyId = "STUDY-001", DrugName = "COMPOUND-X", MeddraPt = "Acute Renal Failure", MeddraSoc = "Renal disorders" },
-                new() { CaseId = "C002", StudyId = "STUDY-001", DrugName = "COMPOUND-X", MeddraPt = "Acute Renal Failure", MeddraSoc = "Renal disorders" },
-                new() { CaseId = "C003", StudyId = "STUDY-001", DrugName = "COMPOUND-X", MeddraPt = "Acute Renal Failure", MeddraSoc = "Renal disorders" },
-                new() { CaseId = "C004", StudyId = "STUDY-001", DrugName = "COMPOUND-X", MeddraPt = "Nausea", MeddraSoc = "Gastrointestinal disorders" },
-                new() { CaseId = "C005", StudyId = "STUDY-001", DrugName = "PLACEBO", MeddraPt = "Nausea", MeddraSoc = "Gastrointestinal disorders" },
-                new() { CaseId = "C006", StudyId = "STUDY-001", DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" },
-                new() { CaseId = "C007", StudyId = "STUDY-001", DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" },
-                new() { CaseId = "C008", StudyId = "STUDY-001", DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" },
-                new() { CaseId = "C009", StudyId = "STUDY-001", DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" },
-                new() { CaseId = "C010", StudyId = "STUDY-001", DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" }
+                new() { CaseId = "C001", StudyId = studyId, DrugName = "COMPOUND-X", MeddraPt = "Acute Renal Failure", MeddraSoc = "Renal disorders" },
+                new() { CaseId = "C002", StudyId = studyId, DrugName = "COMPOUND-X", MeddraPt = "Acute Renal Failure", MeddraSoc = "Renal disorders" },
+                new() { CaseId = "C003", StudyId = studyId, DrugName = "COMPOUND-X", MeddraPt = "Acute Renal Failure", MeddraSoc = "Renal disorders" },
+                new() { CaseId = "C004", StudyId = studyId, DrugName = "COMPOUND-X", MeddraPt = "Nausea", MeddraSoc = "Gastrointestinal disorders" },
+                new() { CaseId = "C005", StudyId = studyId, DrugName = "PLACEBO", MeddraPt = "Nausea", MeddraSoc = "Gastrointestinal disorders" },
+                new() { CaseId = "C006", StudyId = studyId, DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" },
+                new() { CaseId = "C007", StudyId = studyId, DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" },
+                new() { CaseId = "C008", StudyId = studyId, DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" },
+                new() { CaseId = "C009", StudyId = studyId, DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" },
+                new() { CaseId = "C010", StudyId = studyId, DrugName = "PLACEBO", MeddraPt = "Headache", MeddraSoc = "Nervous system disorders" }
             }
         };
 

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Safety.Application;
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 
@@ -355,7 +356,7 @@ public static class SignalEndpoints
         {
             Id = alert.Id,
             DetectionRunId = alert.DetectionRunId,
-            StudyId = alert.StudyId,
+            StudyId = !string.IsNullOrEmpty(alert.StudyId) && StudyId.TryParse(alert.StudyId, out var sId) ? sId : null,
             TargetDrug = alert.TargetDrug,
             MeddraTerm = alert.MeddraTerm,
             TermLevel = alert.TermLevel,

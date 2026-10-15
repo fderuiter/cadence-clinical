@@ -239,9 +239,9 @@ public class SignalDetectionEngine
         var unblindedCases = allCases.Where(c => !c.IsBlinded).ToList();
 
         // Filter by study if specified
-        if (!string.IsNullOrWhiteSpace(request.StudyId))
+        if (request.StudyId.HasValue && !request.StudyId.Value.IsEmpty)
         {
-            var studyCases = unblindedCases.Where(c => string.Equals(c.StudyId, request.StudyId, StringComparison.OrdinalIgnoreCase)).ToList();
+            var studyCases = unblindedCases.Where(c => c.StudyId.HasValue && c.StudyId.Value == request.StudyId.Value).ToList();
             if (studyCases.Count > 0)
             {
                 unblindedCases = studyCases;
@@ -325,7 +325,7 @@ public class SignalDetectionEngine
         var run = new SafetySignalDetectionRun
         {
             Id = Guid.NewGuid().ToString(),
-            StudyId = request.StudyId,
+            StudyId = request.StudyId?.ToString(),
             TargetDrug = targetDrug,
             BenchmarkDataset = request.BenchmarkDataset,
             TotalCasesAnalyzed = totalCasesAnalyzed,
@@ -348,7 +348,7 @@ public class SignalDetectionEngine
                 {
                     Id = Guid.NewGuid().ToString(),
                     DetectionRunId = run.Id,
-                    StudyId = request.StudyId,
+                    StudyId = request.StudyId?.ToString(),
                     TargetDrug = targetDrug,
                     MeddraTerm = result.MeddraPt,
                     TermLevel = result.TermLevel,
