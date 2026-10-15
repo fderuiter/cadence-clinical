@@ -397,7 +397,9 @@ try {
   console.log("--- Docs Build Completed Successfully! ---");
 } catch (error) {
   console.error("Docs build pipeline failed.");
-  process.exit(1);
+  // exitCode, not process.exit(): exiting here would skip the cleanup in `finally`
+  // and leave the staged root docs behind to fail the next run's index check.
+  process.exitCode = 1;
 } finally {
   console.log("--- Cleanup Temporary Docs ---");
   const tempGeneratedDocs = new Set([

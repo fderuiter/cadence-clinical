@@ -29,6 +29,11 @@ public static partial class DocIndexSyncService
     [GeneratedRegex(@"\]\(([^)\r\n]+)\)")]
     private static partial Regex MarkdownLinkRegex();
 
+    // Inline links are reduced to their text in descriptions: their targets are relative to the source
+    // document, not to the index, and truncation can cut a link in half.
+    [GeneratedRegex(@"\[([^\]\r\n]*)\]\([^)\r\n]*\)")]
+    private static partial Regex InlineLinkRegex();
+
     [GeneratedRegex(@"^\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|")]
     private static partial Regex TableRow3ColRegex();
 
@@ -258,6 +263,7 @@ public static partial class DocIndexSyncService
                         .Replace(">", "")
                         .Replace("**", "")
                         .Trim();
+                    cleaned = InlineLinkRegex().Replace(cleaned, "$1");
 
                     if (!string.IsNullOrWhiteSpace(cleaned))
                     {
