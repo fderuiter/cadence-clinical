@@ -697,6 +697,19 @@ public sealed class FormSubmissionApplicationService(
                 {
                     if (item.ValueKind != JsonValueKind.Object) continue;
 
+                    double? val = null;
+                    if (item.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.Number)
+                    {
+                        val = v.GetDouble();
+                    }
+
+                    string? valStr = item.TryGetProperty("value_string", out var vs) ? vs.GetString() : val?.ToString(CultureInfo.InvariantCulture);
+
+                    if (val is null && string.IsNullOrWhiteSpace(valStr))
+                    {
+                        continue;
+                    }
+
                     var itemDate = ReadObservationDate(item);
                     if (itemDate.IsFailure)
                     {
@@ -713,14 +726,6 @@ public sealed class FormSubmissionApplicationService(
                     string testNameStr = item.TryGetProperty("test_name", out var tn) ? tn.GetString() ?? testCodeStr : testCodeStr;
                     string? unit = item.TryGetProperty("unit", out var u) ? u.GetString() : null;
 
-                    double? val = null;
-                    if (item.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.Number)
-                    {
-                        val = v.GetDouble();
-                    }
-
-                    string? valStr = item.TryGetProperty("value_string", out var vs) ? vs.GetString() : val?.ToString(CultureInfo.InvariantCulture);
-
                     AddIfValid(observations, submission, new DomainCode(domainStr), new TestCode(testCodeStr), testNameStr, observationDate, val, valStr, unit);
                 }
             }
@@ -732,11 +737,6 @@ public sealed class FormSubmissionApplicationService(
                     string key = prop.Name.ToLowerInvariant().Replace(".", "_").Replace("-", "_");
                     if (FieldMapping.TryGetValue(key, out var mapping))
                     {
-                        if (payloadDate.Value is not { } observationDate)
-                        {
-                            return ObservationErrors.ObservationDateRequired();
-                        }
-
                         double? val = null;
                         if (prop.Value.ValueKind == JsonValueKind.Number)
                         {
@@ -751,6 +751,16 @@ public sealed class FormSubmissionApplicationService(
                         string? valStr = prop.Value.ValueKind == JsonValueKind.String
                             ? prop.Value.GetString()
                             : val?.ToString(CultureInfo.InvariantCulture);
+
+                        if (val is null && string.IsNullOrWhiteSpace(valStr))
+                        {
+                            continue;
+                        }
+
+                        if (payloadDate.Value is not { } observationDate)
+                        {
+                            return ObservationErrors.ObservationDateRequired();
+                        }
 
                         AddIfValid(observations, submission, new DomainCode(mapping.Domain), new TestCode(mapping.TestCode), mapping.TestName, observationDate, val, valStr, mapping.Unit);
                     }
@@ -772,6 +782,10 @@ public sealed class FormSubmissionApplicationService(
         string? valueString,
         string? unit)
     {
+        if (value is null && string.IsNullOrWhiteSpace(valueString))
+        {
+            return;
+        }
         var (normVal, normUnit) = ucumService.GetNormalizedRepresentation(value, unit);
         var obsResult = ClinicalObservation.Create(
             studyId: submission.StudyId,
