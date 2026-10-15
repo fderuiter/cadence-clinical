@@ -32,6 +32,7 @@ describe("Screen availability", () => {
     expect([...AVAILABLE_SCREENS].sort()).toEqual([
       "ctms",
       "ecrf",
+      "observation",
       "ssu",
       "study",
     ]);

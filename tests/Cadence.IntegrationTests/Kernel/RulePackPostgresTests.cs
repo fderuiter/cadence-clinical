@@ -27,7 +27,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Rule packs as governed data on PostgreSQL (spec §10.1, #4811): a pack is drafted, released with an attestation and
 /// loaded while the platform runs (K-RULE-1), pinned per study, and evaluated through <see cref="IRuleEvaluator"/>.
-/// Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class RulePackPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

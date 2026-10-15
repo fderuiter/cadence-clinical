@@ -1,60 +1,76 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Cadence.Kernel.Time;
 
 namespace Cadence.Security.Authentication;
 
 /// <summary>
-/// Thread-safe cache to prevent 21 CFR Part 11 signature token replay attacks.
-/// @req:PRD-SYS-053
+/// Records the first use of each e-signature step-up token so that a token is accepted at most once (21 CFR
+/// 11.200(a)(1)). The record must outlive the token's whole acceptance window: until
+/// <c>exp + </c><see cref="SigTokenVerifier.ClockSkew"/>, after which the verifier refuses the token anyway.
+/// <para>
+/// Single use only holds as far as the store is shared. <see cref="ReplayCache"/> is process memory, so it forgets
+/// every use on restart and a second instance never sees the first one's uses. A host that runs more than one
+/// instance, or can restart within a token's window, registers a durable store instead (ADR-2515).
+/// </para>
 /// </summary>
-public class ReplayCache(IClock? clock = null)
+public interface ISigTokenUseStore
 {
-    private readonly ConcurrentDictionary<string, double> _consumed = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Records that <paramref name="tokenId"/> (the token's <c>jti</c>) was used, keeping the record at least until
+    /// <paramref name="retainUntil"/>. Returns true for the first use and false for every later one, including
+    /// concurrent attempts. Implementations must make check-and-record one atomic step.
+    /// </summary>
+    Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// The process-local <see cref="ISigTokenUseStore"/>: correct for one instance that does not restart within a
+/// token's acceptance window, and the default until a host registers a durable store (ADR-2515).
+/// @req:SRS-SYS-005
+/// </summary>
+public class ReplayCache(IClock? clock = null) : ISigTokenUseStore
+{
+    private readonly Dictionary<string, DateTimeOffset> _used = new(StringComparer.Ordinal);
     private readonly object _lock = new();
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 
-    /// <summary>
-    /// Atomically verifies and consumes a token.
-    /// Returns true if first time consumed, false if already consumed (replay attempt).
-    /// </summary>
-    public bool Consume(string token, string? jti, double exp)
+    /// <inheritdoc />
+    public Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken)
     {
-        string key = !string.IsNullOrWhiteSpace(jti) ? jti : token;
-        double now = _clock.UtcNow.ToUnixTimeSeconds();
+        ArgumentException.ThrowIfNullOrWhiteSpace(tokenId);
+        return Task.FromResult(TryRecordFirstUse(tokenId, retainUntil));
+    }
 
+    /// <summary>The synchronous form of <see cref="TryRecordFirstUseAsync"/>.</summary>
+    public bool TryRecordFirstUse(string tokenId, DateTimeOffset retainUntil)
+    {
+        var now = _clock.UtcNow;
         lock (_lock)
         {
-            // Prune expired entries
-            var expiredKeys = _consumed.Where(kvp => kvp.Value <= now).Select(kvp => kvp.Key).ToList();
-            foreach (var expKey in expiredKeys)
+            // Forget only records whose retention has passed; the verifier refuses those tokens by then.
+            foreach (string expired in _used.Where(kvp => kvp.Value <= now).Select(kvp => kvp.Key).ToList())
             {
-                _consumed.TryRemove(expKey, out _);
+                _used.Remove(expired);
             }
 
-            if (_consumed.ContainsKey(key))
-            {
-                return false;
-            }
-
-            _consumed[key] = exp;
-            return true;
+            return _used.TryAdd(tokenId, retainUntil);
         }
     }
 
-    /// <summary>
-    /// Resets the consumed token cache.
-    /// </summary>
+    /// <summary>Forgets every recorded use.</summary>
     public void Reset()
     {
         lock (_lock)
         {
-            _consumed.Clear();
+            _used.Clear();
         }
     }
 
+    /// <summary>Forgets every recorded use.</summary>
     public void Clear() => Reset();
 }

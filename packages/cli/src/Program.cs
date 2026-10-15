@@ -80,6 +80,8 @@ public static class Program
         var gxp = AddBranch(root, "gxp", "GxP requirement traceability");
         AddCommand(gxp, "sync", "Executes test suites and regenerates RTM compliance docs", GxPSyncCommand.Configure);
         AddCommand(gxp, "validate", "Validates RTM compliance matrix against design requirements", Services.GxPComplianceService.ValidateCompliance);
+        AddCommand(gxp, "diff", "Compares the regenerated RTM and IQ/OQ/PQ report with the committed copies, ignoring the evidence block",
+            () => Services.GxpDocsDiffService.Compare(Services.QualityGateOrchestrator.FindRepoRoot()));
         AddCommand(gxp, "verify", "Not implemented yet: verifies electronic signatures on signed GxP reports", () => VerifyGxPSignaturesService.VerifySignatures());
 
         var db = AddBranch(root, "db", "Database management and migrations");

@@ -4,8 +4,14 @@ search: false
 
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
-*Execution Date:* 2026-07-23 22:38:25 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
+
+<!-- evidence-context:start -->
+- **Tested revision:** `0cd5412fd2ff3d61465b2c002a135083403dec25` plus uncommitted changes to 63 file(s)
+- **Generated (UTC):** 2026-10-15 21:17:20
+- **Database:** kernel fixture: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) from CADENCE_TEST_POSTGRES, extensions btree_gist 1.7, plpgsql 1.0, migrations through `20261015191056_ObservationsAndLocks`, tests connected as the application role (NOSUPERUSER NOBYPASSRLS)
+- **Runner:** `pnpm cadence gxp sync` on Ubuntu 24.04.5 LTS, .NET 10.0.12
+<!-- evidence-context:end -->
 
 ## 1. Executive Summary & Verification Declaration
 
@@ -16,16 +22,17 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Counts cover the requirement-tagged test methods in section 3. Whole-suite totals are in the TRX files under
 `TestResults/gxp/`, so this report only changes when a tagged test or its result changes.
 
-- **Requirement-Tagged Test Methods:** 259
-- **Passed:** 259 🟢
+- **Requirement-Tagged Test Methods:** 279
+- **Passed:** 279 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
-- **Not Run:** 0
+- **Not Executed:** 0
 - **Pass Rate (of executed):** 100.00%
 
 ## 2. Installation Qualification (IQ)
 
-The Installation Qualification verifies that the software execution environment and static quality checks are fully compliant.
+The Installation Qualification records the environment the tests ran in: the tested revision, the database and the
+runner are in the evidence block at the top of this report.
 
 ## 3. Operational Qualification (OQ)
 
@@ -36,6 +43,12 @@ out so the report only changes when results change; they are in the TRX files un
 | :--- | :--- | :--- | :--- |
 | `AuditTrailEntitiesMustNotBeDependentOfCascadeDelete` | `Cadence.ArchitectureTests.ArchitectureSentinelTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ChainWrittenToPostgres_VerifiesWhenReadBack` | `Cadence.IntegrationTests.Execution.AuditChainPostgresRoundTripTests` | PRD-SYS-001 | 🟢 PASSED |
+| `BatchSignOff_ReplayingAUsedToken_Returns401` | `Cadence.IntegrationTests.Execution.BatchSignOffSignatureTests` | SRS-SYS-005 | 🟢 PASSED |
+| `BatchSignOff_SameTokenRacedAcrossInstances_IsAcceptedOnce` | `Cadence.IntegrationTests.Execution.BatchSignOffSignatureTests` | SRS-SYS-005 | 🟢 PASSED |
+| `BatchSignOff_TokenUsedOnOneInstance_IsRefusedByAnother` | `Cadence.IntegrationTests.Execution.BatchSignOffSignatureTests` | SRS-SYS-005 | 🟢 PASSED |
+| `BatchSignOff_WithATokenIssuedForSomethingElse_Returns401` | `Cadence.IntegrationTests.Execution.BatchSignOffSignatureTests` | SRS-SYS-005 | 🟢 PASSED |
+| `BatchSignOff_WithTokenForTheBatch_SignsWithAKeyedSignature` | `Cadence.IntegrationTests.Execution.BatchSignOffSignatureTests` | SRS-EDC-003 | 🟢 PASSED |
+| `BatchSignOff_WithoutSigToken_Returns401AndSignsNothing` | `Cadence.IntegrationTests.Execution.BatchSignOffSignatureTests` | SRS-SYS-005 | 🟢 PASSED |
 | `EtmfComplianceUpdate_StoresTheTypedReasonInTheAuditEntry` | `Cadence.IntegrationTests.Execution.ChangeReasonEncodingTests` | PRD-SYS-001 | 🟢 PASSED |
 | `SubjectStateChange_StoresTheTypedReasonInTheAuditEntry` | `Cadence.IntegrationTests.Execution.ChangeReasonEncodingTests` | PRD-SYS-001 | 🟢 PASSED |
 | `FormWrites_AreEachAuditedAgainstTheCaller` | `Cadence.IntegrationTests.Execution.ExecutionAuditAttributionTests` | PRD-SYS-001 | 🟢 PASSED |
@@ -50,6 +63,12 @@ out so the report only changes when results change; they are in the TRX files un
 | `ErrorScenario_MatchesExpectedStatusAndDetail` | `Cadence.IntegrationTests.Execution.SubjectGoldenMasterTests` | PRD-SUB-001 | 🟢 PASSED |
 | `NominalScenario_MatchesGoldenMaster` | `Cadence.IntegrationTests.Execution.SubjectGoldenMasterTests` | PRD-SUB-001 | 🟢 PASSED |
 | `StateChange_AlongAForbiddenPath_Returns422_AndLeavesTheStateUnchanged` | `Cadence.IntegrationTests.Execution.SubjectRouteAuthorityTests` | PRD-SUB-001 | 🟢 PASSED |
+| `Execute_ByTheRecipient_RunsUnblindedAndOnlyUnblindedReadersSeeIt` | `Cadence.IntegrationTests.Interop.SceUnblindingAuthorizationTests` | PRD-CDR-006 | 🟢 PASSED |
+| `Execute_WithATokenIssuedToSomeoneElse_Returns403` | `Cadence.IntegrationTests.Interop.SceUnblindingAuthorizationTests` | PRD-CDR-006 | 🟢 PASSED |
+| `Execute_WithATokenSignedWithTheOldLiteralKey_Returns403` | `Cadence.IntegrationTests.Interop.SceUnblindingAuthorizationTests` | PRD-CDR-006 | 🟢 PASSED |
+| `IssueLockToken_ByACallerWithNoRole_Returns403AndMintsNothing` | `Cadence.IntegrationTests.Interop.SceUnblindingAuthorizationTests` | PRD-CDR-006 | 🟢 PASSED |
+| `IssueLockToken_ByACoordinator_Returns403AndMintsNothing` | `Cadence.IntegrationTests.Interop.SceUnblindingAuthorizationTests` | PRD-CDR-006 | 🟢 PASSED |
+| `IssueLockToken_IgnoresRolesInTheBody` | `Cadence.IntegrationTests.Interop.SceUnblindingAuthorizationTests` | PRD-CDR-006 | 🟢 PASSED |
 | `CdiscCtPackageLoadsAsOnePinnedVersionWithAuditedDigest` | `Cadence.IntegrationTests.Kernel.ConceptRegistryPostgresTests` | PRD-SYS-001 | 🟢 PASSED |
 | `IndicatorSet_ReleasedAndPinned_ComputesValuesAndFlagsABreachedLimit` | `Cadence.IntegrationTests.Kernel.IndicatorSetPostgresTests` | PRD-CTMS-007 | 🟢 PASSED |
 | `StudyPulse_ReadsLiveKernelPopulationsAndCountsOnlyWhatTheReaderMaySee` | `Cadence.IntegrationTests.Kernel.IndicatorSetPostgresTests` | PRD-CTMS-007 | 🟢 PASSED |
@@ -136,9 +155,10 @@ out so the report only changes when results change; they are in the TRX files un
 | `Parse_NullOrEmptyBarcode_ReturnsInvalidResult` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
 | `ValidateGtinMod10_ValidAndInvalidGtins_EvaluatesCorrectly` | `Cadence.UnitTests.Execution.Devices.UdiParserTests` | PRD-DEV-001 | 🟢 PASSED |
 | `EvaluateInlineConstraints_FlagsReferenceRangeViolations` | `Cadence.UnitTests.Execution.EditChecks.AstEditCheckTests` | SRS-EDC-002 | 🟢 PASSED |
-| `BatchSignOff_Exceeds100SubjectsCap_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
-| `BatchSignOff_NonPiRole_RejectsWithForbidden` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
-| `BatchSignOff_SubjectLevel_ApprovesCompletedSubmissionsAndReturnsSummary` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | PRD-SYS-002 | 🟢 PASSED |
+| `BatchSignOff_WithTokenForSomethingElse_Returns401` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | SRS-SYS-005 | 🟢 PASSED |
+| `BatchSignOff_WithVerifiedTokenForTheBatch_ApprovesWithKeyedManifests` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
+| `BatchSignOff_WithoutGatewaySecret_ThrowsAndSignsNothing` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
+| `BatchSignOff_WithoutVerifiedToken_Returns401AndSignsNothing` | `Cadence.UnitTests.Execution.Endpoints.BatchSignOffEndpointsTests` | SRS-SYS-005 | 🟢 PASSED |
 | `ChangingRoute_WithoutAChangeReason_Returns400` | `Cadence.UnitTests.Execution.Endpoints.LegacyAliasChangeReasonTests` | PRD-SYS-001 | 🟢 PASSED |
 | `ApproveFormSubmission_Handler_WithInvalidHmac_ReturnsBadRequest` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
 | `ApproveFormSubmission_Handler_WithUnauthorizedRole_ReturnsForbiddenResult` | `Cadence.UnitTests.Execution.Endpoints.ObservationAndFormEndpointsTests` | SRS-EDC-003 | 🟢 PASSED |
@@ -151,7 +171,6 @@ out so the report only changes when results change; they are in the TRX files un
 | `CompleteAndApprove_LocksFormInReadOnlyState` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
 | `FormApplicationService_Approve_ValidatesSha256PayloadHash` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
 | `FormApplicationService_Approve_WithUnauthorizedSignerRole_ReturnsUnauthorizedError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
-| `FormApplicationService_Approve_WithUnconfiguredConfigurationSecret_ThrowsInvalidOperationException` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
 | `FormApplicationService_Approve_WithUnconfiguredSecret_ThrowsInvalidOperationException` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
 | `UnlockForm_WithReason_RevertsToDraftAndUnlocks` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
 | `UpdatePayload_WhenFormIsApproved_ReturnsForbiddenLockedError` | `Cadence.UnitTests.Execution.Forms.FormSubmissionStateTests` | SRS-EDC-003 | 🟢 PASSED |
@@ -264,6 +283,11 @@ out so the report only changes when results change; they are in the TRX files un
 | `Map_SystolicBloodPressure_WritesOriginalAndStandardResults` | `Cadence.UnitTests.Kernel.Standards.MappingSpecificationTests` | PRD-CDR-002 | 🟢 PASSED |
 | `LedgerGeneratedHistoriesResolveExactlyWhenTheLatestRunMissesTheFinding` | `Cadence.UnitTests.Kernel.Validation.ValidationFindingTests` | PRD-CRF-004 | 🟢 PASSED |
 | `LedgerRerunWithoutDetectionResolvesWithTheRunAsEvidence` | `Cadence.UnitTests.Kernel.Validation.ValidationFindingTests` | PRD-CRF-004 | 🟢 PASSED |
+| `BulkSignOff_WithATokenForOtherDelegations_Returns401` | `Cadence.UnitTests.Knowledge.DelegationSignOffAuthorityTests` | SRS-SYS-005 | 🟢 PASSED |
+| `BulkSignOff_WithAnUnknownDelegationId_Returns404AndCreatesNothing` | `Cadence.UnitTests.Knowledge.DelegationSignOffAuthorityTests` | PRD-TRN-003 | 🟢 PASSED |
+| `BulkSignOff_WithTokenForTheDelegations_SignsAsTheVerifiedCaller` | `Cadence.UnitTests.Knowledge.DelegationSignOffAuthorityTests` | PRD-TRN-003 | 🟢 PASSED |
+| `BulkSignOff_WithoutDelegationSignPermission_Returns403` | `Cadence.UnitTests.Knowledge.DelegationSignOffAuthorityTests` | PRD-TRN-003 | 🟢 PASSED |
+| `BulkSignOff_WithoutSigToken_Returns401AndSignsNothing` | `Cadence.UnitTests.Knowledge.DelegationSignOffAuthorityTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Consume_DuplicateClinicalQueryRaised_IsIdempotent` | `Cadence.UnitTests.Notifications.Consumers.ClinicalQueryRaisedConsumerTests` | PRD-SYS-001 | 🟢 PASSED |
 | `Consume_ValidClinicalQueryRaised_CreatesNotificationRecord` | `Cadence.UnitTests.Notifications.Consumers.ClinicalQueryRaisedConsumerTests` | PRD-SYS-001 | 🟢 PASSED |
 | `Consume_DuplicateEconsentReconsentRequired_IsIdempotent` | `Cadence.UnitTests.Notifications.Consumers.EconsentReconsentConsumerTests` | PRD-SYS-001 | 🟢 PASSED |
@@ -279,7 +303,10 @@ out so the report only changes when results change; they are in the TRX files un
 | `Issue_ForAnAuditor_IsRefused` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Issue_WritesTheV3ContractClaims_WithASixtySecondLifetime` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Verify_AcceptsABoundTokenOnce` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `Verify_AcceptsATokenOnlyWithinItsWindow` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Verify_ExpiredToken_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `Verify_ReplayInTheSkewAfterExpiry_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
+| `Verify_SingleUseSpansExactlyTheSharedStore` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Verify_TokenSignedWithAnotherSecret_IsRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Verify_TokensOutsideTheV3Contract_AreRejected` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
 | `Verify_WithAnotherSignerActionOrBatch_IsRejectedWithoutConsumingTheToken` | `Cadence.UnitTests.Packages.SignatureTokenTests` | SRS-SYS-005 | 🟢 PASSED |
@@ -296,7 +323,7 @@ out so the report only changes when results change; they are in the TRX files un
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
-Qualified Requirements: 33 of 195
+Qualified Requirements: 34 of 195
 
 ## 5. Qualification Review & Authorization
 
@@ -310,4 +337,4 @@ Director of Clinical Quality Assurance: ___________________________   Date: ____
 ## Integrity Stamp
 
 - **Status:** Unsigned working copy, generated by `dotnet cadence gxp sync`. Not an electronic signature.
-- **Content Hash (SHA-256):** efd99b39e7b8c84c5f35437f9bb815647fcee453ff9c8ea8e0f56222a5256371
+- **Content Hash (SHA-256):** 881a131d3b0fdb6564dfb5bdff847b2314bb556a104f0a5a359abb9ce4f4cb67

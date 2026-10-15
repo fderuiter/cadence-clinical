@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 using Cadence.Compliance;
+using Cadence.Kernel.Time;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -46,6 +48,8 @@ public static class SyncGxPService
                 WorkingDirectory = repoRoot,
                 UseShellExecute = false
             };
+            // The database fixtures record the server, extensions, migrations and role they used next to the TRX files.
+            psi.Environment["CADENCE_TEST_EVIDENCE_DIR"] = resultsDir;
             foreach (var arg in new[] { "test", "Cadence.sln", "--no-restore", "--configuration", "Release", "--results-directory", resultsDir, "--logger", "trx;LogFilePrefix=gxp" })
             {
                 psi.ArgumentList.Add(arg);
@@ -69,9 +73,30 @@ public static class SyncGxPService
         Console.WriteLine("STEP 2 / 3 — Generating GxP compliance docs");
         Console.WriteLine("============================================================");
 
-        int rtmRes = RtmGeneratorService.GenerateRtm(draft: draft, validateOnly: dryRun, reportPath: resultsDir, repoRoot: repoRoot, honorDraftEnvironment: false);
+        var evidence = RtmEvidenceContext.Capture(repoRoot, "pnpm cadence gxp sync", SystemClock.Instance);
+        int rtmRes = RtmGeneratorService.GenerateRtm(
+            draft: draft, validateOnly: dryRun, reportPath: resultsDir, repoRoot: repoRoot, honorDraftEnvironment: false, evidence: evidence);
         if (testExitCode != 0) return testExitCode;
         if (rtmRes != 0) return rtmRes;
+
+        // A run that skipped database tests never exercised them (#5324, #5325): the documents show the skips, but
+        // they are not staged as evidence.
+        IReadOnlyList<SkippedDatabaseTest> skipped = dryRun || draft ? [] : DatabaseTestEvidence.FindSkipped(resultsDir);
+        if (skipped.Count > 0)
+        {
+            Console.WriteLine($"\n[ERROR] {skipped.Count} database test(s) did not execute, so nothing is staged. Set CADENCE_TEST_POSTGRES=<connection string> or CADENCE_TEST_DOCKER=1 (docs/TESTING.md) and run gxp sync again:");
+            foreach (var test in skipped.Take(20))
+            {
+                Console.WriteLine($"  {test.FullName}: {test.Reason}");
+            }
+
+            if (skipped.Count > 20)
+            {
+                Console.WriteLine($"  ... and {skipped.Count - 20} more");
+            }
+
+            return 1;
+        }
 
         // Step 3: Stage
         Console.WriteLine("\n============================================================");

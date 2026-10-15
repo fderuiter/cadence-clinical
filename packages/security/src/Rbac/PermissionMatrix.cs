@@ -137,7 +137,9 @@ public static class PermissionMatrix
             ["lab_range"] = ["create", "read", "update", "delete", "alert"],
             ["ecoa_schedule"] = ["create", "read"],
             ["ecoa_diary"] = ["create", "read", "alert"],
-            ["ecoa_submission"] = ["create", "read"]
+            ["ecoa_submission"] = ["create", "read"],
+            // SCE: issues and revokes database-lock tokens; cannot run or read unblinded analyses (#5382)
+            ["sce_lock_token"] = ["read", "issue", "revoke"]
         };
 
         // sponsor_mm
@@ -168,7 +170,10 @@ public static class PermissionMatrix
             ["export_masked"] = ["create", "read", "update"],
             ["eisf_document"] = ["read"],
             ["regulatory_form"] = ["read"],
-            ["training_log"] = ["read"]
+            ["training_log"] = ["read"],
+            // SCE: blinded programs and runs only (#5382)
+            ["sce_program"] = ["create", "read"],
+            ["sce_run"] = ["execute", "read"]
         };
 
         // investigator
@@ -348,13 +353,20 @@ public static class PermissionMatrix
         _rolePermissions[RoleNormalization.ROLE_UNBLINDED_STATISTICIAN] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["rtsm_randomization"] = ["read"],
-            ["rtsm_allocation"] = ["read"]
+            ["rtsm_allocation"] = ["read"],
+            // SCE: runs unblinded analyses with a lock token issued to them, and reads unblinded runs (#5382)
+            ["sce_program"] = ["create", "read"],
+            ["sce_lock_token"] = ["read"],
+            ["sce_run"] = ["execute", "read", "execute_unblinded", "read_unblinded"]
         };
 
         _rolePermissions[RoleNormalization.ROLE_IDMC] = new(StringComparer.OrdinalIgnoreCase)
         {
             ["rtsm_randomization"] = ["read"],
-            ["rtsm_allocation"] = ["read"]
+            ["rtsm_allocation"] = ["read"],
+            // SCE: reviews unblinded runs; does not run them (#5382)
+            ["sce_program"] = ["read"],
+            ["sce_run"] = ["read", "read_unblinded"]
         };
 
         _rolePermissions[RoleNormalization.ROLE_PHARMACIST] = new(StringComparer.OrdinalIgnoreCase)
@@ -376,6 +388,8 @@ public static class PermissionMatrix
         var piBase = ClonePermissions(_rolePermissions[RoleNormalization.ROLE_INVESTIGATOR]);
         piBase["rtsm_unblind"] = ["write"];
         piBase["eisf_document"] = ["create", "read", "update", "delete", "sync"];
+        // Only the PI (and those acting as PI) signs the site delegation log; a sub-investigator does not (#5311).
+        piBase["delegation_log"] = ["read", "sign"];
 
         _rolePermissions[RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR] = ClonePermissions(piBase);
         _rolePermissions[RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN] = ClonePermissions(piBase);

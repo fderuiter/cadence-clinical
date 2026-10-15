@@ -22,7 +22,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Applies the kernel migrations to a real PostgreSQL server and checks the schema itself: tables, bitemporal guards,
 /// database constraints and the K-TX-2 write guard. Commands are covered by <see cref="KernelCommandPipelinePostgresTests"/>.
-/// Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelSchemaPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

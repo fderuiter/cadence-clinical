@@ -28,6 +28,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -40,6 +41,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
 using Polly;
@@ -159,6 +161,10 @@ builder.Services.AddCadenceDbContext<ExecutionDbContext>((sp, options) =>
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ExecutionDbContext>(name: nameof(ExecutionDbContext), tags: [CadenceDatabaseExtensions.ReadinessTag]);
 builder.Services.AddCadenceMigrations<ExecutionDbContext>(builder.Configuration);
+
+// E-signature step-up tokens are single use across every instance and restart: their use is recorded in
+// consumed_signature_tokens, not in process memory (#5311, ADR-2515).
+builder.Services.Replace(ServiceDescriptor.Singleton<ISigTokenUseStore, PostgresSigTokenUseStore>());
 
 // The repository ports, Scoped to match ExecutionDbContext's own lifetime
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();

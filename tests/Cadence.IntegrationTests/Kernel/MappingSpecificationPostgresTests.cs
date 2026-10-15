@@ -36,7 +36,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// Mapping specifications on PostgreSQL (spec §6.3, #4810, ADR-2463): drafting resolves a specification's standard
 /// version, variables, CT versions, codelists and Concepts and links them as its lineage inputs; a study's pins must work
 /// together; and K-STD-1 refuses to submit a protocol version whose collected Concepts have no mapping in the study's
-/// declared standards unless the gap is an accepted finding. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// declared standards unless the gap is an accepted finding. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class MappingSpecificationPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

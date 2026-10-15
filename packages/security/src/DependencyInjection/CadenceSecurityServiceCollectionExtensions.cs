@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cadence.Security.DependencyInjection;
 
@@ -57,8 +58,9 @@ public static class CadenceSecurityServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddTransient<AuditorWriteGuardMiddleware>();
-        services.AddSingleton<ReplayCache>();
-        services.AddSingleton<SigTokenVerifier>();
+        // Process-local single use by default; a host with a durable store replaces it (ADR-2515).
+        services.TryAddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetService<IClock>()));
+        services.AddSingleton(sp => new SigTokenVerifier(sp.GetRequiredService<ISigTokenUseStore>(), sp.GetService<IClock>()));
         services.AddSingleton<IAuditLogWriter, InMemoryAuditStore>();
         services.AddSingleton(sp => new AuditDigestEngine(
             sp.GetRequiredService<IAuditLogWriter>(),

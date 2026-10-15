@@ -12,7 +12,10 @@ public static class QueryLinterService
         Console.WriteLine("Linting database and ORM query statements...");
 
         var csFiles = files != null && files.Length > 0
-            ? files.Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToList()
+            // The pre-commit gate passes every staged file; only C# source is linted, so a Markdown table that
+            // documents these rules is not reported as a violation of them.
+            ? files.Where(f => f.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                .Select(f => Path.IsPathRooted(f) ? f : Path.Combine(repoRoot, f)).Where(File.Exists).ToList()
             : Directory.EnumerateFiles(repoRoot, "*.cs", SearchOption.AllDirectories)
                 .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
                             !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") &&

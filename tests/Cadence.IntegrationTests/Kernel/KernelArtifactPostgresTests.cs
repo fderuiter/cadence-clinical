@@ -24,7 +24,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Evidence artifacts through the production pipeline against PostgreSQL (spec §8.3, #4729): registration with a
 /// first version, later versions numbered in order, events, attestations over a version, and the insert-only guard
-/// that keeps versions immutable whoever connects. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// that keeps versions immutable whoever connects. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelArtifactPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

@@ -1,11 +1,13 @@
+import { encodeChangeReason } from "./changeReason";
 import { createOpenApiClient, unwrapResponse } from "./client";
 import type { components, paths } from "./generated/kernel";
 
 /**
  * Typed client for the kernel API host, generated from docs/openapi/kernel_openapi.json (ADR-2540).
  *
- * Every call reads: none sends a kernel command. The host acts in the kernel tenant and as the person named by the
- * gateway-signed identity, so nothing here names a tenant or an actor. NodeRefs travel as their canonical strings
+ * Most calls read. `correctObservation` sends a kernel command (ADR-2620) with the reason as `X-Change-Reason`
+ * and an `Idempotency-Key`, so a retried request is answered once. The host acts in the kernel tenant and as the
+ * person named by the gateway-signed identity, so nothing here names a tenant or an actor. NodeRefs travel as their canonical strings
  * (`kind:id@version`). An object the reader may not see comes back masked (ADR-2471): only its `kind` and `mask`,
  * everything else null; search leaves it out. Clients render the kernel's explanations and never compose one
  * (K-EXP-1).
@@ -31,6 +33,27 @@ export type KernelAmendmentImpact =
   Schemas["Kernel_KernelAmendmentImpactResponse"];
 export type KernelActivityEntry = Schemas["Kernel_KernelActivityEntryResponse"];
 export type KernelActivityPage = Schemas["Kernel_KernelActivityPageResponse"];
+export type KernelObservation = Schemas["Kernel_KernelObservationResponse"];
+export type KernelObservationState =
+  Schemas["Kernel_KernelObservationStateResponse"];
+export type KernelObservationRevision =
+  Schemas["Kernel_ObservationRevisionView"];
+export type KernelObservationAuditEntry =
+  Schemas["Kernel_ObservationAuditView"];
+
+/** A correction of one observation's value (ADR-2620). */
+export interface KernelObservationCorrection {
+  /** The observation's NodeRef; a version suffix is ignored. */
+  observationRef: string;
+  /** The enrollment the observation belongs to: the scope the correction is authorised against. */
+  enrollmentRef: string;
+  value: string;
+  /** The version the user corrected; the kernel answers 409 if the observation has changed since. */
+  expectedVersion: number;
+  reason: string;
+  /** One key per correction the user confirms, reused if that request is retried. */
+  idempotencyKey: string;
+}
 
 /** The event families of the kernel's activity stream (spec §5.2). */
 export type KernelEventFamily =
@@ -86,7 +109,51 @@ function windowQuery({
   };
 }
 
+/** The NodeRef without its `@version`, as the observation routes take it. */
+function unversioned(nodeRef: string): string {
+  const at = nodeRef.indexOf("@");
+  return at < 0 ? nodeRef : nodeRef.slice(0, at);
+}
+
 export const kernelApi = {
+  /** One observation with its revisions, lock and kernel audit trail (GET /api/v1/kernel/observations/{observationRef}). */
+  getObservation(observationRef: string): Promise<KernelObservation> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/observations/{observationRef}", {
+        params: { path: { observationRef: unversioned(observationRef) } },
+      })
+    );
+  },
+
+  /**
+   * Corrects an observation's value (POST /api/v1/kernel/observations/{observationRef}/corrections). The promise
+   * resolves only when the kernel has committed the value, its revision, the audit entry and the outgoing event
+   * together; it rejects with an ApiError of status 409 (stale version), 423 (locked) or 422 (no reason).
+   */
+  correctObservation({
+    observationRef,
+    enrollmentRef,
+    value,
+    expectedVersion,
+    reason,
+    idempotencyKey,
+  }: KernelObservationCorrection): Promise<KernelObservationState> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/observations/{observationRef}/corrections", {
+        params: { path: { observationRef: unversioned(observationRef) } },
+        body: {
+          enrollment_ref: enrollmentRef,
+          value,
+          expected_version: expectedVersion,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
   /** Summary of one object at its current version (GET /api/v1/kernel/nodes/{nodeRef}). */
   getNode(nodeRef: string): Promise<KernelNode> {
     return unwrapResponse(

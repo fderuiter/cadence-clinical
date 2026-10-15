@@ -9,11 +9,15 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
+using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Knowledge.Endpoints;
 
@@ -57,18 +61,27 @@ public sealed record BatchAssignmentResponse(
     [property: JsonPropertyName("skipped_items")] List<SkippedAssignmentItemDto> SkippedItems,
     [property: JsonPropertyName("executed_at")] DateTimeOffset ExecutedAt);
 
+/// <summary>
+/// The meaning and reason of a delegation sign-off. The signer is never taken from the body: it is the verified
+/// caller, and the credential check is the step-up token in <c>X-Sig-Token</c> (#5311).
+/// </summary>
 public sealed record SignaturePayloadDto(
-    [property: JsonPropertyName("signer_name")] string SignerName,
-    [property: JsonPropertyName("signer_role")] string SignerRole,
     [property: JsonPropertyName("meaning")] string Meaning,
-    [property: JsonPropertyName("password")] string Password,
     [property: JsonPropertyName("reason_for_change")] string? ReasonForChange);
 
 public sealed record BulkDelegationSignOffRequest(
     [property: JsonPropertyName("delegation_ids")] List<string> DelegationIds,
     [property: JsonPropertyName("study_id")] string? StudyId,
     [property: JsonPropertyName("site_id")] string? SiteId,
-    [property: JsonPropertyName("signature_payload")] SignaturePayloadDto SignaturePayload);
+    [property: JsonPropertyName("signature_payload")] SignaturePayloadDto SignaturePayload)
+{
+    /// <summary>
+    /// The step-up token's <c>batch_id</c> for this sign-off: the lower-case hex SHA-256 of the trimmed delegation
+    /// ids, sorted ordinally and joined with commas. The web client computes the same value.
+    /// </summary>
+    public string BatchBindingId() => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+        string.Join(",", (DelegationIds ?? []).Select(id => id.Trim()).Order(StringComparer.Ordinal)))));
+}
 
 public sealed record DelegationSummaryDto(
     [property: JsonPropertyName("id")] string Id,
@@ -117,6 +130,12 @@ public static class TrainingEndpoints
 {
     public const int MaxBatchLimit = 200;
 
+    /// <summary>The <c>action</c> a delegation sign-off token is bound to.</summary>
+    public const string DelegationSignOffAction = "/api/v1/training/delegations/bulk-signoff";
+
+    /// <summary>The <c>semantic_action</c> a delegation sign-off token is bound to.</summary>
+    public const string DelegationSignOffSemanticAction = "knowledge.delegation.sign_off";
+
     public static IEndpointRouteBuilder MapTrainingEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/training")
@@ -152,9 +171,13 @@ public static class TrainingEndpoints
 
         group.MapPost("/delegations/bulk-signoff", BulkSignOffDelegationsAsync)
             .WithName("BulkSignOffDelegations")
+            .RequirePermission("delegation_log:sign")
+            .RequireElectronicSignature(DelegationSignOffBinding)
             .Produces<BulkDelegationSignOffResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status401Unauthorized);
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -408,7 +431,6 @@ public static class TrainingEndpoints
         string? site_id,
         string? status,
         KnowledgeDbContext dbContext,
-        TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var query = dbContext.DelegationRecords.AsNoTracking();
@@ -417,11 +439,6 @@ public static class TrainingEndpoints
         if (!string.IsNullOrEmpty(status)) query = query.Where(d => d.Status == status);
 
         var list = await query.ToListAsync(cancellationToken);
-        if (list.Count == 0)
-        {
-            // Seed sample pending delegation records if empty
-            list = GetSampleDelegations(study_id ?? "CARDIO-2026", site_id ?? "SITE-101", timeProvider.GetUtcNow());
-        }
 
         var dtos = list.Select(d => new DelegationSummaryDto(
             d.Id, d.StudyId, d.SiteId, d.StaffUserId, d.StaffName, d.Role, d.TaskCode, d.Duties,
@@ -430,10 +447,23 @@ public static class TrainingEndpoints
         return TypedResults.Ok(dtos);
     }
 
+    private static SigTokenBinding? DelegationSignOffBinding(EndpointFilterInvocationContext context) =>
+        context.Arguments.OfType<BulkDelegationSignOffRequest>().FirstOrDefault() is { DelegationIds.Count: > 0 } request
+            ? new SigTokenBinding(DelegationSignOffAction, DelegationSignOffSemanticAction, request.BatchBindingId())
+            : null;
+
+    /// <summary>
+    /// The PI's Part 11 sign-off of existing delegation-log records (#5311). The route requires
+    /// <c>delegation_log:sign</c> and a step-up token bound to exactly these ids, so the signer is the verified caller;
+    /// an id that names no record fails the whole request instead of creating one. The seal is an HMAC keyed with the
+    /// gateway secret.
+    /// </summary>
     private static async Task<IResult> BulkSignOffDelegationsAsync(
         BulkDelegationSignOffRequest request,
+        HttpContext httpContext,
         KnowledgeDbContext dbContext,
         TimeProvider timeProvider,
+        IOptionsMonitor<GatewayAuthenticationOptions> gatewayAuthentication,
         CancellationToken cancellationToken)
     {
         if (request.DelegationIds == null || request.DelegationIds.Count == 0)
@@ -449,62 +479,43 @@ public static class TrainingEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        // Part 11 Password Validation
-        if (string.IsNullOrWhiteSpace(request.SignaturePayload?.Password))
+        // The filter has verified and consumed the token for this caller and these ids.
+        if (httpContext.VerifiedSigToken() is null
+            || httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] is not Principal signer)
+        {
+            return TypedResults.Problem(SigTokenVerifier.ReauthenticationRequired, statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        string secret = gatewayAuthentication.Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret
+            is { Length: > 0 } configured
+            ? configured
+            : throw new InvalidOperationException("GATEWAY_SECRET is not configured; delegation sign-offs cannot be sealed.");
+
+        var ids = request.DelegationIds.Select(id => id.Trim()).Distinct(StringComparer.Ordinal).ToList();
+        var records = await dbContext.DelegationRecords
+            .Where(d => ids.Contains(d.Id))
+            .ToListAsync(cancellationToken);
+        var missing = ids.Except(records.Select(r => r.Id), StringComparer.Ordinal).ToList();
+        if (missing.Count > 0)
         {
             return TypedResults.Problem(
-                "21 CFR Part 11 credential verification failed: Signer password is required for legally binding electronic signatures.",
-                statusCode: StatusCodes.Status401Unauthorized);
+                $"No delegation record exists for: {string.Join(", ", missing)}. Nothing was signed.",
+                statusCode: StatusCodes.Status404NotFound);
         }
 
         var now = timeProvider.GetUtcNow();
         string batchTxId = Guid.NewGuid().ToString();
+        string signerRole = string.Join(",", signer.Roles);
 
-        // Compute SHA-256 seal
-        string rawSealInput = $"{batchTxId}|{string.Join(",", request.DelegationIds)}|{request.SignaturePayload.SignerName}|{request.SignaturePayload.SignerRole}|{now:O}";
-        using var sha256 = SHA256.Create();
-        byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(rawSealInput));
-        string sha256Seal = Convert.ToHexString(hashBytes).ToLowerInvariant();
+        string sealInput = $"{batchTxId}|{string.Join(",", ids.Order(StringComparer.Ordinal))}|{signer.UserId}|{signerRole}|{request.SignaturePayload?.Meaning}|{now:O}";
+        string seal = HmacSigner.ComputeSignature(sealInput, secret);
 
         var signedList = new List<DelegationSummaryDto>();
-        var failedList = new List<FailedDelegationItemDto>();
-
-        // Load existing or mock delegation records
-        var existingRecords = await dbContext.DelegationRecords
-            .Where(d => request.DelegationIds.Contains(d.Id))
-            .ToListAsync(cancellationToken);
-
-        var existingMap = existingRecords.ToDictionary(r => r.Id);
-
-        foreach (var id in request.DelegationIds)
+        foreach (var record in records.OrderBy(r => r.Id, StringComparer.Ordinal))
         {
-            DelegationRecord record;
-            if (existingMap.TryGetValue(id, out var found))
-            {
-                record = found;
-            }
-            else
-            {
-                record = new DelegationRecord
-                {
-                    Id = id,
-                    StudyId = request.StudyId ?? "CARDIO-2026",
-                    SiteId = request.SiteId ?? "SITE-101",
-                    StaffUserId = $"staff_{id.Replace("-", "_")}",
-                    StaffName = $"Site Staff Member ({id})",
-                    Role = "Clinical Research Coordinator",
-                    TaskCode = "EDC_DATA_ENTRY",
-                    Duties = "eCRF Data Entry & Query Resolution",
-                    Status = "PENDING",
-                    CreatedAt = now,
-                    CreatedBy = "Site Manager"
-                };
-                dbContext.DelegationRecords.Add(record);
-            }
-
             record.Status = "COMPLETED";
             record.SignedOff = true;
-            record.PiSignatureHash = sha256Seal;
+            record.PiSignatureHash = seal;
             record.PiApprovedAt = now;
             record.BatchTransactionId = batchTxId;
 
@@ -514,97 +525,42 @@ public static class TrainingEndpoints
                 record.PiSignatureHash, record.PiApprovedAt, record.BatchTransactionId));
         }
 
-        // Record Audit Entry
-        var audit = new OrgAuditLog
+        dbContext.OrgAuditLogs.Add(new OrgAuditLog
         {
             Id = Guid.NewGuid().ToString(),
             Timestamp = now,
-            ActorId = request.SignaturePayload.SignerName,
-            ActorRole = request.SignaturePayload.SignerRole,
+            ActorId = signer.UserId,
+            ActorRole = signerRole,
             Action = "training.delegation.bulk_signoff",
             BatchTransactionId = batchTxId,
-            Details = $"Executed Part 11 bulk delegation sign-off for {signedList.Count} delegation log records. Routed to eTMF Zone 5 (Artifact 05.02.04). Seal SHA-256: {sha256Seal}",
-            ReasonForChange = request.SignaturePayload.ReasonForChange ?? "21 CFR Part 11 Principal Investigator bulk delegation sign-off"
-        };
-        dbContext.OrgAuditLogs.Add(audit);
+            Details = $"Executed Part 11 bulk delegation sign-off for {signedList.Count} delegation log records. Routed to eTMF Zone 5 (Artifact 05.02.04). Seal HMAC-SHA256: {seal}",
+            ReasonForChange = request.SignaturePayload?.ReasonForChange ?? "21 CFR Part 11 Principal Investigator bulk delegation sign-off"
+        });
 
-        // Record Training Certificate / eTMF routing record
-        var cert = new TrainingCertificate
+        dbContext.TrainingCertificates.Add(new TrainingCertificate
         {
             Id = Guid.NewGuid().ToString(),
-            AssignmentId = signedList.FirstOrDefault()?.Id ?? batchTxId,
+            AssignmentId = signedList[0].Id,
             BatchTransactionId = batchTxId,
-            SignerName = request.SignaturePayload.SignerName,
-            SignerRole = request.SignaturePayload.SignerRole,
-            Meaning = request.SignaturePayload.Meaning,
-            Sha256Seal = sha256Seal,
+            SignerName = signer.UserId,
+            SignerRole = signerRole,
+            Meaning = request.SignaturePayload?.Meaning ?? string.Empty,
+            Sha256Seal = seal,
             EtmfArtifactId = "05.02.04",
             CreatedAt = now
-        };
-        dbContext.TrainingCertificates.Add(cert);
+        });
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var response = new BulkDelegationSignOffResponse(
+        return TypedResults.Ok(new BulkDelegationSignOffResponse(
             batchTxId,
-            request.DelegationIds.Count,
+            ids.Count,
             signedList.Count,
-            failedList.Count,
+            0,
             signedList,
-            failedList,
-            sha256Seal,
+            [],
+            seal,
             "05.02.04",
-            now);
-
-        return TypedResults.Ok(response);
-    }
-
-    private static List<DelegationRecord> GetSampleDelegations(string studyId, string siteId, DateTimeOffset now)
-    {
-        return
-        [
-            new DelegationRecord
-            {
-                Id = "del-001",
-                StudyId = studyId,
-                SiteId = siteId,
-                StaffUserId = "usr-01",
-                StaffName = "Dr. Marcus Vance",
-                Role = "Sub-Investigator",
-                TaskCode = "INFORMED_CONSENT",
-                Duties = "Informed Consent Administration & Eligibility Assessment",
-                Status = "PENDING",
-                CreatedAt = now,
-                CreatedBy = "PI"
-            },
-            new DelegationRecord
-            {
-                Id = "del-002",
-                StudyId = studyId,
-                SiteId = siteId,
-                StaffUserId = "usr-02",
-                StaffName = "Sarah Jenkins, RN",
-                Role = "Clinical Research Coordinator",
-                TaskCode = "EDC_DATA_ENTRY",
-                Duties = "eCRF Data Entry, Query Resolution, Vital Signs Capture",
-                Status = "PENDING",
-                CreatedAt = now,
-                CreatedBy = "PI"
-            },
-            new DelegationRecord
-            {
-                Id = "del-003",
-                StudyId = studyId,
-                SiteId = siteId,
-                StaffUserId = "usr-03",
-                StaffName = "David Miller, PharmD",
-                Role = "Investigational Pharmacist",
-                TaskCode = "IP_ACCOUNTABILITY",
-                Duties = "Investigational Product Receipt, Storage, and Accountability",
-                Status = "PENDING",
-                CreatedAt = now,
-                CreatedBy = "PI"
-            }
-        ];
+            now));
     }
 }

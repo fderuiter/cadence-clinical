@@ -14,10 +14,16 @@ namespace Cadence.Security.Authentication;
 /// must have been issued to the authenticated caller for this exact action and semantic action, and is
 /// consumed on use. Anything else is answered with 401 <c>REAUTHENTICATION_REQUIRED</c> before the handler
 /// runs, so no write happens.
-/// @req:PRD-SYS-053
+/// @req:SRS-SYS-005
 /// </summary>
-public sealed class ElectronicSignatureEndpointFilter(string semanticAction, Func<HttpContext, string> resolveAction) : IEndpointFilter
+public sealed class ElectronicSignatureEndpointFilter(Func<EndpointFilterInvocationContext, SigTokenBinding?> resolveBinding) : IEndpointFilter
 {
+    /// <summary>A filter binding the token to <paramref name="semanticAction"/> on the action the request names.</summary>
+    public ElectronicSignatureEndpointFilter(string semanticAction, Func<HttpContext, string> resolveAction)
+        : this(context => new SigTokenBinding(resolveAction(context.HttpContext), semanticAction))
+    {
+    }
+
     /// <summary>The <see cref="HttpContext.Items"/> key holding the verified, consumed token.</summary>
     public const string VerifiedTokenItemKey = "Cadence.VerifiedSigToken";
 
@@ -31,18 +37,21 @@ public sealed class ElectronicSignatureEndpointFilter(string semanticAction, Fun
         string? secret = httpContext.RequestServices
             .GetRequiredService<IOptionsMonitor<GatewayAuthenticationOptions>>()
             .Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret;
-        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrEmpty(secret))
+        // A binding the request cannot produce (for example a batch body that does not parse) signs nothing.
+        var binding = resolveBinding(context);
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrEmpty(secret) || binding is null)
         {
             return ReauthenticationRequired();
         }
 
         try
         {
-            var token = httpContext.RequestServices.GetRequiredService<SigTokenVerifier>().VerifyAndConsumeSigToken(
+            var token = await httpContext.RequestServices.GetRequiredService<SigTokenVerifier>().VerifyAndConsumeAsync(
                 httpContext.Request.Headers[GatewayHeaders.SigToken].ToString(),
                 userId,
-                new SigTokenBinding(resolveAction(httpContext), semanticAction),
-                GatewayIdentity.EncodeSecret(secret));
+                binding,
+                GatewayIdentity.EncodeSecret(secret),
+                httpContext.RequestAborted).ConfigureAwait(false);
             httpContext.Items[VerifiedTokenItemKey] = token;
         }
         catch (UnauthorizedAccessException)
@@ -86,4 +95,25 @@ public static class ElectronicSignatureEndpointExtensions
             .AddEndpointFilter(new ElectronicSignatureEndpointFilter(semanticAction, resolveAction))
             .ProducesProblem(StatusCodes.Status401Unauthorized);
     }
+
+    /// <summary>
+    /// Gates the endpoint on an e-signature step-up token bound to the <see cref="SigTokenBinding"/>
+    /// <paramref name="resolveBinding"/> computes from the bound arguments, for endpoints whose binding depends on the
+    /// request body (a batch id over the signed targets). A null binding is refused.
+    /// </summary>
+    public static RouteHandlerBuilder RequireElectronicSignature(
+        this RouteHandlerBuilder builder,
+        Func<EndpointFilterInvocationContext, SigTokenBinding?> resolveBinding)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(resolveBinding);
+
+        return builder
+            .AddEndpointFilter(new ElectronicSignatureEndpointFilter(resolveBinding))
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+    }
+
+    /// <summary>The token the filter verified and consumed for this request, or null when no filter ran.</summary>
+    public static System.IdentityModel.Tokens.Jwt.JwtSecurityToken? VerifiedSigToken(this HttpContext httpContext) =>
+        httpContext?.Items[ElectronicSignatureEndpointFilter.VerifiedTokenItemKey] as System.IdentityModel.Tokens.Jwt.JwtSecurityToken;
 }

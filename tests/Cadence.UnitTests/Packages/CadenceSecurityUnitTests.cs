@@ -209,34 +209,6 @@ public class CadenceSecurityUnitTests
         isInvalid.Should().BeFalse();
     }
 
-    [Fact]
-    public void SigTokenVerifier_ValidatesAndConsumesToken_AndPreventsReplay()
-    {
-        byte[] secret = Encoding.UTF8.GetBytes(TestSecret);
-        var replayCache = new ReplayCache();
-        var verifier = new SigTokenVerifier(replayCache);
-
-        // Generate JWT
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(new[] { new Claim("sub", "user-777") }),
-            Expires = SystemClock.Instance.UtcNow.UtcDateTime.AddMinutes(5),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(secret), SecurityAlgorithms.HmacSha256Signature)
-        };
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        string sigToken = tokenHandler.WriteToken(token);
-
-        // First verification -> Success
-        var jwt = verifier.VerifyAndConsumeSigToken(sigToken, "user-777", secret);
-        jwt.Should().NotBeNull();
-        jwt.Subject.Should().Be("user-777");
-
-        // Second verification (Replay attempt) -> Throws UnauthorizedAccessException
-        Action replayAct = () => verifier.VerifyAndConsumeSigToken(sigToken, "user-777", secret);
-        replayAct.Should().Throw<UnauthorizedAccessException>();
-    }
-
     /// <summary>
     /// Issue #4765: the audit HMAC key has no hardcoded fallback. Environment variables are process-wide, so
     /// this test reads AUDIT_LOG_SECRET_KEY rather than mutating it.

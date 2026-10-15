@@ -1,0 +1,219 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
+import ObservationView from "@/views/ObservationView.vue";
+import { ApiError } from "@/api/client";
+import { kernelApi } from "@/api/kernelApi";
+
+const OBSERVATION = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
+const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d71";
+
+function observation(overrides: Record<string, unknown> = {}) {
+  return {
+    ref: `${OBSERVATION}@1`,
+    enrollment_ref: ENROLLMENT,
+    concept: "concept:systolic@1",
+    value: "182",
+    observed_at: "2026-10-15T09:00:00Z",
+    version: 1,
+    locked: null,
+    revisions: [
+      {
+        number: 1,
+        value: "182",
+        reason_for_change: "Initial entry",
+        recorded_by: "crc@site.test",
+        recorded_at: "2026-10-15T09:05:00Z",
+        recorded_until: null,
+      },
+    ],
+    audit: [],
+    ...overrides,
+  };
+}
+
+async function mountView() {
+  const wrapper = mount(ObservationView, {
+    props: { observationRef: OBSERVATION },
+    attachTo: document.body,
+  });
+  await flushPromises();
+  return wrapper;
+}
+
+async function correctTo(
+  wrapper: Awaited<ReturnType<typeof mountView>>,
+  value: string,
+  reason = "Transcription error"
+) {
+  await wrapper.find("#observation-new-value").setValue(value);
+  await wrapper.find("form.observation-correction").trigger("submit");
+  await wrapper
+    .find("#observation-change-reason-select")
+    .setValue("Typographical Error");
+  await wrapper.find("#observation-change-reason-text").setValue(reason);
+  await wrapper.find("#observation-btn-save-change").trigger("click");
+  await flushPromises();
+}
+
+describe("ObservationView (ADR-2620)", () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.restoreAllMocks();
+  });
+
+  it("shows the saved state only after the kernel commits, then the reloaded audit trail", async () => {
+    const corrected = observation({
+      ref: `${OBSERVATION}@2`,
+      value: "128",
+      version: 2,
+      audit: [
+        {
+          sequence: 7,
+          recorded_at: "2026-10-15T09:10:00Z",
+          actor_id: "crc@site.test",
+          action: "Updated",
+          subject: "Observation",
+          version: 2,
+          reason_for_change: "Typographical Error: Transcription error",
+        },
+      ],
+    });
+    vi.spyOn(kernelApi, "getObservation")
+      .mockResolvedValueOnce(observation())
+      .mockResolvedValueOnce(corrected);
+    let commit!: (value: unknown) => void;
+    const correct = vi
+      .spyOn(kernelApi, "correctObservation")
+      .mockImplementation(
+        () => new Promise((resolve) => (commit = resolve)) as never
+      );
+    const wrapper = await mountView();
+
+    await wrapper.find("#observation-new-value").setValue("128");
+    await wrapper.find("form.observation-correction").trigger("submit");
+    await wrapper
+      .find("#observation-change-reason-select")
+      .setValue("Typographical Error");
+    await wrapper
+      .find("#observation-change-reason-text")
+      .setValue("Transcription error");
+    await wrapper.find("#observation-btn-save-change").trigger("click");
+    await flushPromises();
+
+    // Waiting on the kernel: nothing is reported saved and the shown value is still the kernel's.
+    expect(wrapper.find("[data-testid=observation-outcome]").exists()).toBe(
+      false
+    );
+    expect(wrapper.find("[data-testid=observation-value]").text()).toBe("182");
+    expect(wrapper.find("#observation-save").text()).toBe("Saving…");
+    expect(correct).toHaveBeenCalledWith(
+      expect.objectContaining({
+        observationRef: `${OBSERVATION}@1`,
+        enrollmentRef: ENROLLMENT,
+        value: "128",
+        expectedVersion: 1,
+        reason: "Typographical Error: Transcription error",
+      })
+    );
+
+    commit({ ref: `${OBSERVATION}@2`, value: "128", version: 2, revision: 2 });
+    await flushPromises();
+
+    expect(wrapper.find("[data-testid=observation-outcome]").text()).toContain(
+      "Correction saved"
+    );
+    expect(wrapper.find("[data-testid=observation-value]").text()).toBe("128");
+    expect(wrapper.find("[data-testid=observation-audit]").text()).toContain(
+      "Typographical Error: Transcription error"
+    );
+    wrapper.unmount();
+  });
+
+  it("reloads and asks again when the version is stale", async () => {
+    const newer = observation({
+      ref: `${OBSERVATION}@2`,
+      value: "130",
+      version: 2,
+    });
+    const get = vi
+      .spyOn(kernelApi, "getObservation")
+      .mockResolvedValueOnce(observation())
+      .mockResolvedValueOnce(newer);
+    vi.spyOn(kernelApi, "correctObservation").mockRejectedValueOnce(
+      new ApiError("stale", 409)
+    );
+    const wrapper = await mountView();
+
+    await correctTo(wrapper, "128");
+
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(wrapper.find("[data-testid=observation-outcome]").text()).toContain(
+      "changed this value after you opened it"
+    );
+    expect(wrapper.find("[data-testid=observation-value]").text()).toBe("130");
+    wrapper.unmount();
+  });
+
+  it("reports a locked observation and offers no correction", async () => {
+    const lockedView = observation({
+      locked: {
+        locked_at: "2026-10-15T10:00:00Z",
+        locked_by: "dm@sponsor.test",
+        reason_for_change: "Data review complete",
+      },
+    });
+    vi.spyOn(kernelApi, "getObservation")
+      .mockResolvedValueOnce(observation())
+      .mockResolvedValueOnce(lockedView);
+    vi.spyOn(kernelApi, "correctObservation").mockRejectedValueOnce(
+      new ApiError("locked", 423)
+    );
+    const wrapper = await mountView();
+
+    await correctTo(wrapper, "128");
+
+    expect(wrapper.find("[data-testid=observation-outcome]").text()).toContain(
+      "locked"
+    );
+    expect(wrapper.find("[data-testid=observation-status]").text()).toContain(
+      "Locked by dm@sponsor.test"
+    );
+    expect(wrapper.find("form.observation-correction").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("retries a failed request with the same idempotency key", async () => {
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    const correct = vi
+      .spyOn(kernelApi, "correctObservation")
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    const wrapper = await mountView();
+
+    await correctTo(wrapper, "128");
+    expect(wrapper.find("[data-testid=observation-outcome]").text()).toContain(
+      "Failed to fetch"
+    );
+    await correctTo(wrapper, "128");
+
+    const keys = correct.mock.calls.map(([c]) => c.idempotencyKey);
+    expect(keys[0]).toBe(keys[1]);
+    wrapper.unmount();
+  });
+
+  it("does not offer to save an unchanged or empty value", async () => {
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    const wrapper = await mountView();
+
+    await wrapper.find("#observation-new-value").setValue("182");
+    expect(
+      wrapper.find("#observation-save").attributes("disabled")
+    ).toBeDefined();
+    await wrapper.find("#observation-new-value").setValue("  ");
+    expect(
+      wrapper.find("#observation-save").attributes("disabled")
+    ).toBeDefined();
+    wrapper.unmount();
+  });
+});

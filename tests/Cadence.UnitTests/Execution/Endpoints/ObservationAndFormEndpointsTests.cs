@@ -189,7 +189,7 @@ public sealed class ObservationAndFormEndpointsTests
         var ucum = new UcumNormalizationService();
         var audit = new FakeCurrentAuditContextAccessor();
 
-        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit, gatewayAuthentication: TestSecurityContext.GatewayOptions());
 
         var request = new FormSubmissionCreateRequest(
             StudyId: "STUDY-001",
@@ -347,7 +347,7 @@ public sealed class ObservationAndFormEndpointsTests
         var ucum = new UcumNormalizationService();
         var audit = new FakeCurrentAuditContextAccessor();
 
-        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit, gatewayAuthentication: TestSecurityContext.GatewayOptions());
 
         var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(
@@ -358,7 +358,6 @@ public sealed class ObservationAndFormEndpointsTests
         form.Complete();
         await formRepo.AddAsync(form, CancellationToken.None);
 
-        Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
         var payloadHash = JsonCanonicalization.Sha256Hex(payload);
         var hmacSignature = HmacSigner.ComputeSignature(payloadHash, TestSecurityContext.GatewaySecret);
 
@@ -392,7 +391,7 @@ public sealed class ObservationAndFormEndpointsTests
         var ucum = new UcumNormalizationService();
         var audit = new FakeCurrentAuditContextAccessor("test_cra_user", "GxP Audit Reason");
 
-        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit, gatewayAuthentication: TestSecurityContext.GatewayOptions());
 
         var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(
@@ -403,7 +402,6 @@ public sealed class ObservationAndFormEndpointsTests
         form.Complete();
         await formRepo.AddAsync(form, CancellationToken.None);
 
-        Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
         var payloadHash = JsonCanonicalization.Sha256Hex(payload);
         var hmacSignature = HmacSigner.ComputeSignature(payloadHash, TestSecurityContext.GatewaySecret);
 
@@ -435,7 +433,7 @@ public sealed class ObservationAndFormEndpointsTests
         var ucum = new UcumNormalizationService();
         var audit = new FakeCurrentAuditContextAccessor("pi-user-01", "GxP Audit Reason");
 
-        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit, gatewayAuthentication: TestSecurityContext.GatewayOptions());
 
         var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(
@@ -446,7 +444,6 @@ public sealed class ObservationAndFormEndpointsTests
         form.Complete();
         await formRepo.AddAsync(form, CancellationToken.None);
 
-        Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
         var payloadHash = JsonCanonicalization.Sha256Hex(payload);
 
         var request = FormSubmissionApproveRequest.Create(
@@ -479,7 +476,7 @@ public sealed class ObservationAndFormEndpointsTests
         var ucum = new UcumNormalizationService();
         var audit = new FakeCurrentAuditContextAccessor(userId: "dm-01", changeReason: "Sponsor query correction");
 
-        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit);
+        var svc = new FormSubmissionApplicationService(formRepo, obsRepo, ucum, audit, gatewayAuthentication: TestSecurityContext.GatewayOptions());
 
         var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
         var form = FormSubmission.Initialize(

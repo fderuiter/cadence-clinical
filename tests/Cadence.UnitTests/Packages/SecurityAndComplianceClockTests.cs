@@ -18,20 +18,20 @@ namespace Cadence.UnitTests.Packages;
 public sealed class SecurityAndComplianceClockTests
 {
     [Fact]
-    public void ReplayCache_ForgetsAConsumedTokenOnlyOnceTheInjectedClockPassesItsExpiry()
+    public void ReplayCache_ForgetsAUsedTokenOnlyOnceTheInjectedClockPassesItsRetention()
     {
         var clock = new FakeClock();
         var cache = new ReplayCache(clock);
-        double expiry = clock.UtcNow.AddSeconds(10).ToUnixTimeSeconds();
+        var retainUntil = clock.UtcNow.AddSeconds(10);
 
-        cache.Consume("token", jti: "jti-1", expiry).Should().BeTrue();
-        cache.Consume("token", jti: "jti-1", expiry).Should().BeFalse();
+        cache.TryRecordFirstUse("jti-1", retainUntil).Should().BeTrue();
+        cache.TryRecordFirstUse("jti-1", retainUntil).Should().BeFalse();
 
         clock.Advance(TimeSpan.FromSeconds(9));
-        cache.Consume("token", jti: "jti-1", expiry).Should().BeFalse();
+        cache.TryRecordFirstUse("jti-1", retainUntil).Should().BeFalse();
 
         clock.Advance(TimeSpan.FromSeconds(2));
-        cache.Consume("token", jti: "jti-1", expiry).Should().BeTrue();
+        cache.TryRecordFirstUse("jti-1", retainUntil).Should().BeTrue();
     }
 
     [Fact]

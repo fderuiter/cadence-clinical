@@ -31,7 +31,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Protocol design elements as lineage nodes against PostgreSQL (ADR-2474): approving a version writes its elements and
 /// their references in the approval's transaction, an amendment writes only what it changes, and amendment impact
-/// follows only the changed elements. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// follows only the changed elements. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

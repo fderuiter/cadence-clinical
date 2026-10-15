@@ -27,7 +27,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Work queues against PostgreSQL with the production authority evaluator (Canvas D10, ADR-2486): a queue keyed by
 /// <c>protocol.approve</c> holds the protocol versions in review that the reader holds that capability on, and loses
-/// them when the grant is revoked. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// them when the grant is revoked. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelWorkQueuePostgresTests : IClassFixture<KernelPostgresFixture>, IDisposable

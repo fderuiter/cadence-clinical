@@ -27,7 +27,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// Participants and enrollments through the production pipeline against PostgreSQL (spec §7.4, #4776): the lifecycle
 /// with its bitemporal history, gap-free enrollment numbers under the study's advisory lock (K-TX-4), subject codes
 /// unique per study, attested withdrawal, and the database guards that repeat the lifecycle whoever connects.
-/// Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelEnrollmentPostgresTests(KernelPostgresFixture fixture)

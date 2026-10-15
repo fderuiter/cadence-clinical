@@ -2065,15 +2065,6 @@
             ],
             "format": "double",
             "default": 24
-          },
-          "authorized_roles": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string"
-            }
           }
         }
       },

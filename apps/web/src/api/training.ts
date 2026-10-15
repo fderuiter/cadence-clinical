@@ -57,11 +57,9 @@ export interface BulkDelegationSignOffPayload {
   delegation_ids: string[];
   study_id?: string;
   site_id?: string;
+  /** The signer is the signed-in user; the credential check is the step-up token (ADR-2515). */
   signature_payload: {
-    signer_name: string;
-    signer_role: string;
     meaning: string;
-    password: string;
     reason_for_change?: string;
   };
 }
@@ -115,10 +113,14 @@ export const trainingApi = {
   /**
    * Execute 21 CFR Part 11 bulk delegation sign-off.
    */
-  bulkSignOffDelegations(payload: BulkDelegationSignOffPayload) {
+  bulkSignOffDelegations(
+    payload: BulkDelegationSignOffPayload,
+    sigToken: string
+  ) {
     return unwrapResponse(
       openApiClient.POST("/api/v1/training/delegations/bulk-signoff" as any, {
         body: payload as any,
+        headers: { "X-Sig-Token": sigToken },
       })
     );
   },

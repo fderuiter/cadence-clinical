@@ -86,12 +86,12 @@ public sealed class SignatureTokenEndpointTests(SignatureTokenEndpointTests.Fixt
         var verifier = new SigTokenVerifier();
         var binding = new SigTokenBinding(Action, SemanticAction);
         byte[] secret = GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret);
-        var token = verifier.VerifyAndConsumeSigToken(issued.SigToken, "pi-sub-1", binding, secret);
+        var token = await verifier.VerifyAndConsumeAsync(issued.SigToken, "pi-sub-1", binding, secret, TestContext.Current.CancellationToken);
         token.Claims.First(c => c.Type == SigTokenClaims.Username).Value.Should().Be("dr.pi");
         token.Claims.Where(c => c.Type == SigTokenClaims.Roles).Select(c => c.Value).Should().Equal("Site Investigator");
         issued.SigToken.Should().NotContain("pi-password");
-        verifier.Invoking(v => v.VerifyAndConsumeSigToken(issued.SigToken, "pi-sub-1", binding, secret))
-            .Should().Throw<UnauthorizedAccessException>();
+        await verifier.Awaiting(v => v.VerifyAndConsumeAsync(issued.SigToken, "pi-sub-1", binding, secret, TestContext.Current.CancellationToken))
+            .Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     /// <summary>

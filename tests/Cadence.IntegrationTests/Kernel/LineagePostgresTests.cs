@@ -28,7 +28,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// The lineage store (spec §9.6, ADR-2255, ADR-2471) against PostgreSQL as the application role: edges written by the
 /// command pipeline in the object's transaction (K-LIN-2), derived objects refused without inputs (K-LIN-1), and the
-/// masked read contract (#4840). Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// masked read contract (#4840). Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class LineagePostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

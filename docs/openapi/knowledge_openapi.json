@@ -337,6 +337,16 @@
           "required": true
         },
         "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
           "200": {
             "description": "OK",
             "content": {
@@ -357,8 +367,18 @@
               }
             }
           },
-          "401": {
-            "description": "Unauthorized",
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -732,24 +752,12 @@
       },
       "Knowledge_SignaturePayloadDto": {
         "required": [
-          "signer_name",
-          "signer_role",
           "meaning",
-          "password",
           "reason_for_change"
         ],
         "type": "object",
         "properties": {
-          "signer_name": {
-            "type": "string"
-          },
-          "signer_role": {
-            "type": "string"
-          },
           "meaning": {
-            "type": "string"
-          },
-          "password": {
             "type": "string"
           },
           "reason_for_change": {

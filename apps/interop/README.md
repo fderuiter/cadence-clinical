@@ -24,6 +24,14 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
+The statistical computing environment (`/api/v1/interop/sce/**`) needs an `sce_*` permission from the permission
+matrix on every route, and takes identity and roles only from the verified gateway principal. Only `sponsor_dm` (and
+`admin`) issues and revokes database-lock tokens; a token authorizes the roles the matrix lets run unblinded analyses,
+never roles from the request. An unblinded run needs `sce_run:execute_unblinded` and a token issued to the caller and
+signed with `CADENCE_SCE_SIGNING_KEY`. Unblinded runs and their artifacts are hidden from callers without
+`sce_run:read_unblinded` (#5382,
+[ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
+
 ## Persistence
 
 `AddCadencePostgresDbContext<InteropDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `interop` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
@@ -35,9 +43,10 @@ Interoperability scaffold. It holds the ePRO submission, instrument, subject ass
 
 ## Configuration and secrets at rest
 
-| Setting | Purpose |
-| --- | --- |
-| `FIELD_LOOKUP_HASH_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) for device-token lookup hashes. The service refuses to start without a valid key; there is no default. |
+| Setting                   | Purpose                                                                                                                                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FIELD_LOOKUP_HASH_KEY`   | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) for device-token lookup hashes. The service refuses to start without a valid key; there is no default.                               |
+| `CADENCE_SCE_SIGNING_KEY` | **Required.** Base64 HMAC-SHA256 key (`openssl rand -base64 32`) that signs SCE database-lock tokens and run signature blocks. The service refuses to start without a valid key; there is no default. |
 
 Wearable/sensor device tokens are never stored (#4770). `device_registrations`, `sensor_telemetry_streams`,
 `sensor_daily_summaries` and `sensor_safety_alerts` each keep an indexed `DeviceTokenHash`: the keyed HMAC-SHA256
@@ -48,7 +57,9 @@ device is re-registered); run `VACUUM FULL` on those four tables afterwards. See
 
 ## Tests
 
-- No service-specific tests exist yet.
+- `tests/Cadence.IntegrationTests/Interop/SceUnblindingAuthorizationTests.cs`: SCE lock-token and unblinded-run
+  authorization through the real host on PostgreSQL (`CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1`).
+- `tests/Cadence.UnitTests/Interop/StatisticalComputingEnvironmentTests.cs`: lockfile validation and sandbox driver.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally

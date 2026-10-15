@@ -18,6 +18,8 @@ export const AVAILABLE_SCREENS = new Set([
   "study",
   // Execution: subjects, forms, observations, SDV, queries (#4828).
   "ecrf",
+  // Kernel: one observation and its correction (ADR-2620).
+  "observation",
   // Execution: site activation and eTMF compliance status; the other CTMS tabs run only in a demo build.
   "ctms",
   "ssu",

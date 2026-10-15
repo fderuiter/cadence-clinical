@@ -10,6 +10,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Domain.Supply;
 using Cadence.Apps.Execution.Domain.Toxicity;
 using Cadence.Apps.Execution.Infrastructure.Persistence.Configurations;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain.Audit;
 
 using MassTransit;
@@ -91,6 +92,9 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<BulkLabRangeImportJob> BulkLabRangeImportJobs => Set<BulkLabRangeImportJob>();
 
+    /// <summary>Used e-signature step-up tokens, so each token signs once across instances and restarts (ADR-2515).</summary>
+    public DbSet<ConsumedSignatureToken> ConsumedSignatureTokens => Set<ConsumedSignatureToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -120,6 +124,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new IpKitReconciliationCertificateConfiguration());
         modelBuilder.ApplyConfiguration(new LabReferenceRangeConfiguration());
         modelBuilder.ApplyConfiguration(new BulkLabRangeImportJobConfiguration());
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
     }

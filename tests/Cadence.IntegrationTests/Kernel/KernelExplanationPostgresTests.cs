@@ -21,7 +21,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// A denied command returns the evaluator's explanation and records the conditions it was decided on in the audit
 /// chain and the <c>DecisionDenied</c> event (ADR-2482, K-AUTH-2, K-AUTH-6). Skipped unless
-/// <c>CADENCE_TEST_POSTGRES</c> is set.
+/// <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelExplanationPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>, IDisposable

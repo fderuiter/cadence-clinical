@@ -6,6 +6,7 @@ using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
@@ -73,6 +74,10 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
                     new ConcurrencyTokenIncrementInterceptor(),
                     new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId, sp.GetRequiredService<IClock>()));
             });
+
+            // The durable token-use store needs PostgreSQL; this in-memory host keeps uses in process memory.
+            services.RemoveAll<ISigTokenUseStore>();
+            services.AddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetRequiredService<IClock>()));
 
             // MassTransit's EF outbox lock-statement provider is configured for Postgres syntax
             // (Program.cs's own o.UsePostgres() call, unmodified here) and is therefore expected to fail its

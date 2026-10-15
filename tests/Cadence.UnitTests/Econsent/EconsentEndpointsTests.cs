@@ -52,7 +52,7 @@ public sealed class EconsentEndpointsTests : IDisposable
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-SYS-053")]
-    public void SigTokenVerifier_ValidTokenForEconsent_VerifiesAndConsumesSuccessfully()
+    public async Task SigTokenVerifier_ValidTokenForEconsent_VerifiesAndConsumesSuccessfully()
     {
         var verifier = new SigTokenVerifier();
         string token = SigTokenIssuer.Issue(
@@ -61,7 +61,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Secret);
 
         var binding = new SigTokenBinding(ActionUrl, SemanticAction);
-        var verifiedJwt = verifier.VerifyAndConsumeSigToken(token, "subj-001", binding, Secret);
+        var verifiedJwt = await verifier.VerifyAndConsumeAsync(token, "subj-001", binding, Secret, TestContext.Current.CancellationToken);
 
         verifiedJwt.Should().NotBeNull();
         verifiedJwt.Subject.Should().Be("subj-001");
@@ -70,7 +70,7 @@ public sealed class EconsentEndpointsTests : IDisposable
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-SYS-053")]
-    public void SigTokenVerifier_ReusedTokenForEconsent_FailsClosedWithReauthenticationRequired()
+    public async Task SigTokenVerifier_ReusedTokenForEconsent_FailsClosedWithReauthenticationRequired()
     {
         var verifier = new SigTokenVerifier();
         string token = SigTokenIssuer.Issue(
@@ -79,16 +79,16 @@ public sealed class EconsentEndpointsTests : IDisposable
             Secret);
 
         var binding = new SigTokenBinding(ActionUrl, SemanticAction);
-        verifier.VerifyAndConsumeSigToken(token, "subj-001", binding, Secret);
+        await verifier.VerifyAndConsumeAsync(token, "subj-001", binding, Secret, TestContext.Current.CancellationToken);
 
-        Action replay = () => verifier.VerifyAndConsumeSigToken(token, "subj-001", binding, Secret);
-        replay.Should().Throw<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
+        Func<Task> replay = () => verifier.VerifyAndConsumeAsync(token, "subj-001", binding, Secret, TestContext.Current.CancellationToken);
+        await replay.Should().ThrowAsync<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
     }
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-SYS-053")]
-    public void SigTokenVerifier_TokenForDifferentActionUrl_FailsClosedWithReauthenticationRequired()
+    public async Task SigTokenVerifier_TokenForDifferentActionUrl_FailsClosedWithReauthenticationRequired()
     {
         var verifier = new SigTokenVerifier();
         string token = SigTokenIssuer.Issue(
@@ -97,8 +97,8 @@ public sealed class EconsentEndpointsTests : IDisposable
             Secret);
 
         var binding = new SigTokenBinding(ActionUrl, SemanticAction);
-        Action verify = () => verifier.VerifyAndConsumeSigToken(token, "subj-001", binding, Secret);
-        verify.Should().Throw<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
+        Func<Task> verify = () => verifier.VerifyAndConsumeAsync(token, "subj-001", binding, Secret, TestContext.Current.CancellationToken);
+        await verify.Should().ThrowAsync<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
     }
 
     [Theory]
