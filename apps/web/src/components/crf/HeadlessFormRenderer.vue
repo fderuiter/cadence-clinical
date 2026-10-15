@@ -57,7 +57,7 @@
             <div
               v-for="widget in section.widgets"
               :key="widget.variable_id"
-              v-show="visibleFields[widget.variable_id] !== false"
+              v-show="!Object.is(visibleFields[widget.variable_id], false)"
               class="grid-field-cell"
               :style="{
                 gridColumn:
@@ -251,15 +251,15 @@ const evaluateRules = () => {
     if (!expr) return;
 
     const res = evaluateAST(expr, formData);
-    let isViolated = false;
+    let isViolated;
     if (check.is_violation_when === "true") {
-      isViolated = res === true;
+      isViolated = Object.is(res, true);
     } else if (check.is_violation_when === "false") {
-      isViolated = res === false;
+      isViolated = Object.is(res, false);
     } else if (check.type === "constraint" || check.rule_type === "constraint") {
-      isViolated = res === false;
+      isViolated = Object.is(res, false);
     } else {
-      isViolated = res === true;
+      isViolated = Object.is(res, true);
     }
 
     if (isViolated) {
