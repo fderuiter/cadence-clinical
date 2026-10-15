@@ -1,7 +1,7 @@
 # ADR-2610: Scaffold Services Become Kernel Modules or Merge
 
 - **Status:** Accepted
-- **Date:** 2026-10-15 (amended 2026-10-15: tickets, quality, ai_gateway and org are kept as modules)
+- **Date:** 2026-10-15 (amended 2026-10-15: tickets, quality, ai_gateway and org are kept as modules; file storage becomes a host capability)
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
 - **Issue:** #4787 (part of #4719); follow-ups #5371–#5378
@@ -86,14 +86,14 @@ org, quality and tickets have identical 33-line `Program.cs` files apart from th
 | quality                                                                                  | **Module**: deviations, root-cause analysis and CAPA in the composition host; deviations use the kernel's Findings and Deviations as they arrive (spec §12, §15 phase 3)                                                                             | #5376     |
 | ai_gateway                                                                               | **Module**: the in-process AI capability (provider routing, cost and PHI controls) in the composition host; AI actors act through kernel Proposals limited to Read and Propose ([ADR-2489](2026-09-30-ai-proposals-and-automation-agents.md), #4783) | #5374     |
 | eisf                                                                                     | **Merge into etmf**: ISF and TMF are one capability in spec §12 ("TMF / ISF")                                                                                                                                                                        | #5371     |
-| fileshare                                                                                | **Merge into etmf**: file storage, sharing and conversion are document concerns of the TMF                                                                                                                                                           | #5372     |
+| fileshare                                                                                | **Split**: blob storage and document/media conversion (`FileRecord`, MinIO access, the conversion and transcoding workers) become a host capability, because imaging and payments store files too; share grants and guest links merge into etmf      | #5372     |
 | notifications                                                                            | **Merge into the composition host**: rendering and delivery become a host capability modules call in-process                                                                                                                                         | #5373     |
 | org                                                                                      | **Module**: organization administration in the composition host (delegation-of-authority log, personnel assignments, training records); authority itself stays in kernel Grants and Qualifications (below)                                           | #5375     |
 
 - **Justification:** the ten feature modules map to rows of spec §12. Tickets, quality and the AI gateway are kept as
   distinctive features to build out inside the application rather than as separate services; they are applications
   under K-SCOPE-1, so they stay out of the kernel and build on its concepts (Findings, Deviations, Proposals). eisf and
-  fileshare hold the same evidence as etmf. Notifications is shared plumbing with one route. Org is kept as the module people use to administer delegation,
+  fileshare's sharing and guest links serve TMF documents, while its storage and conversion serve every module that keeps files. Notifications is shared plumbing with one route. Org is kept as the module people use to administer delegation,
   staffing and training, on top of kernel authority.
 
 ### Org and kernel authority
