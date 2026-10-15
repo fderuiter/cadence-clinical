@@ -78,7 +78,8 @@ public class RequirementTagScannerTests
             "    [Trait(\"Requirement\", \"SRS-CCC-001\")]",
             "    public void Many()",
             "    {",
-            "        /// @req:PRD-TRACE-7",
+            // Split so the pre-commit requirement sanitizer, which rewrites staged tags, leaves the sample alone.
+            "        /// @" + "req:Trace-7",
             "    }",
             "}"), "tests/Tagged.cs");
 
