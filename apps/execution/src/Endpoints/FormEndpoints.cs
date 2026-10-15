@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +34,12 @@ public static class FormEndpoints
     /// submission, whichever route alias the request came in on.
     /// </summary>
     public static string ApproveAction(string submissionId) => $"/api/v1/execution/forms/{submissionId}/approve";
+
+    /// <summary>
+    /// The concrete action a batch sign-off's e-signature token must carry, on either route alias. The token is also
+    /// bound to the batch (<see cref="BatchSignOffRequest.BatchBindingId"/>) under <see cref="ApproveSemanticAction"/>.
+    /// </summary>
+    public const string BatchSignOffAction = "/api/v1/execution/batch-sign-off";
 
     public static IEndpointRouteBuilder MapFormEndpoints(this IEndpointRouteBuilder app)
     {
@@ -89,10 +96,12 @@ public static class FormEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status423Locked);
+            .ProducesProblem(StatusCodes.Status423Locked)
+            .RequireElectronicSignature(BatchSignOffBinding);
 
         app.MapPost("/api/v1/execution/signatures/batch-sign-off", BatchSignOffAsync)
-            .ExcludeFromDescription();
+            .ExcludeFromDescription()
+            .RequireElectronicSignature(BatchSignOffBinding);
 
         // Undocumented alias for legacy Python router compatibility. The gateway proxies it, so every alias carries the
         // same filters as its documented route: a change without X-Change-Reason is refused here too (#5060).
@@ -170,6 +179,11 @@ public static class FormEndpoints
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
+    private static SigTokenBinding? BatchSignOffBinding(EndpointFilterInvocationContext context) =>
+        context.Arguments.OfType<BatchSignOffRequest>().FirstOrDefault() is { } request
+            ? new SigTokenBinding(BatchSignOffAction, ApproveSemanticAction, request.BatchBindingId())
+            : null;
+
     private static string ApproveActionFor(HttpContext httpContext) =>
         ApproveAction(httpContext.Request.RouteValues["id"]?.ToString() ?? string.Empty);
 
@@ -191,8 +205,7 @@ public static class FormEndpoints
         IFormSubmissionApplicationService svc,
         CancellationToken ct)
     {
-        string? sigToken = httpContext.Request.Headers[GatewayHeaders.SigToken].ToString();
-        var result = await svc.BatchSignOffAsync(request, httpContext.User.ToAuthenticatedCaller(), sigToken, ct).ConfigureAwait(false);
+        var result = await svc.BatchSignOffAsync(request, httpContext.User.ToAuthenticatedCaller(), httpContext.VerifiedSigToken(), ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 }

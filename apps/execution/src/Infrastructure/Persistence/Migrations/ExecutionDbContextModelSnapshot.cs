@@ -2490,6 +2490,25 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.ToTable("staged_adverse_event_reviews", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Execution.Infrastructure.Security.ConsumedSignatureToken", b =>
+                {
+                    b.Property<string>("TokenId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("RetainUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TokenId");
+
+                    b.HasIndex("RetainUntil");
+
+                    b.ToTable("consumed_signature_tokens", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Core.Domain.Audit.AuditLogEntry", b =>
                 {
                     b.Property<Guid>("Id")

@@ -376,6 +376,8 @@ public static class PermissionMatrix
         var piBase = ClonePermissions(_rolePermissions[RoleNormalization.ROLE_INVESTIGATOR]);
         piBase["rtsm_unblind"] = ["write"];
         piBase["eisf_document"] = ["create", "read", "update", "delete", "sync"];
+        // Only the PI (and those acting as PI) signs the site delegation log; a sub-investigator does not (#5311).
+        piBase["delegation_log"] = ["read", "sign"];
 
         _rolePermissions[RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR] = ClonePermissions(piBase);
         _rolePermissions[RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN] = ClonePermissions(piBase);

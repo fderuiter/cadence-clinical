@@ -6,7 +6,9 @@ namespace Cadence.ToolingCore.Services;
 
 public static class ComplianceUtilityService
 {
-    private static readonly Regex ReqRegex = new(@"@req:(?:prd-|PRD-)?([a-zA-Z0-9]+)-([a-zA-Z0-9]+)", RegexOptions.Compiled);
+    // PRD tags only: an SRS tag (@req:SRS-SYS-005) is a different, valid requirement family and must not become
+    // "PRD-SRS-SYS-005".
+    private static readonly Regex ReqRegex = new(@"@req:(?:prd-|PRD-)?(?!srs-|SRS-)([a-zA-Z0-9]+)-([a-zA-Z0-9]+)", RegexOptions.Compiled);
 
     public static int ExecuteComplianceUtility(bool sanitize = false, string[]? targetFiles = null, string? docsDir = null, string? repoRoot = null)
     {
@@ -26,6 +28,8 @@ public static class ComplianceUtilityService
                 foreach (var file in files)
                 {
                     if (file.Contains("docs/SDLC/runs/")) continue;
+                    // The sanitizer covers documentation; staged source files are passed in too and are left alone.
+                    if (!file.EndsWith(".md", StringComparison.OrdinalIgnoreCase)) continue;
                     if (!File.Exists(file)) continue;
 
                     try

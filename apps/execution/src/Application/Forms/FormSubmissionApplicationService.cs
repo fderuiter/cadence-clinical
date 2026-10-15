@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -24,7 +25,7 @@ using Cadence.Kernel.Trust;
 using Cadence.Security;
 using Cadence.Security.Authentication;
 
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Execution.Application.Forms;
 
@@ -45,7 +46,7 @@ public sealed class FormSubmissionApplicationService(
     ISubjectRepository? subjectRepository = null,
     IEditCheckEngine? editCheckEngine = null,
     IAutoQueryDispatchService? autoQueryDispatchService = null,
-    IConfiguration? configuration = null,
+    IOptionsMonitor<GatewayAuthenticationOptions>? gatewayAuthentication = null,
     IPublishedFormVersionRegistryRepository? formVersionRegistryRepository = null,
     IClock? clock = null,
     IAuditLogWriter? auditLogWriter = null) : IFormSubmissionApplicationService
@@ -420,14 +421,7 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.InvalidPayloadHash();
         }
 
-        string? secret = configuration?["GATEWAY_SECRET"]
-            ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET");
-
-        if (string.IsNullOrWhiteSpace(secret))
-        {
-            throw new InvalidOperationException("GATEWAY_SECRET is not configured; e-signature verification cannot proceed.");
-        }
-
+        string secret = GatewaySecret();
         if (!Cadence.Security.HmacSigner.VerifySignature(computedHash, secret, manifest.HmacSignature ?? string.Empty))
         {
             return FormErrors.InvalidHmacSignature();
@@ -450,6 +444,22 @@ public sealed class FormSubmissionApplicationService(
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         return MapToResponse(submission);
+    }
+
+    /// <summary>
+    /// The gateway secret that keys signature manifests, from the validated authentication options. The host refuses
+    /// to start without it (ADR-2256), so a missing secret here is a wiring fault: it throws rather than signing with a
+    /// placeholder.
+    /// </summary>
+    private string GatewaySecret()
+    {
+        string? secret = gatewayAuthentication?.Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret;
+        if (string.IsNullOrWhiteSpace(secret))
+        {
+            throw new InvalidOperationException("GATEWAY_SECRET is not configured; e-signature manifests cannot be signed or verified.");
+        }
+
+        return secret;
     }
 
     private static bool IsAuthorizedInvestigatorRole(string role)
@@ -490,7 +500,7 @@ public sealed class FormSubmissionApplicationService(
     public async Task<Result<BatchSignOffResponse>> BatchSignOffAsync(
         BatchSignOffRequest request,
         AuthenticatedCaller? signer,
-        string? sigToken,
+        JwtSecurityToken? verifiedSigToken,
         CancellationToken cancellationToken)
     {
         if (signer is null)
@@ -514,34 +524,20 @@ public sealed class FormSubmissionApplicationService(
             return DomainError.Validation("BATCH_CAP_EXCEEDED", "Batch target size exceeds maximum limit of 100 items per transaction.");
         }
 
-        string normStudy = request.StudyId.Trim();
-        string normType = request.TargetType.Trim().ToUpperInvariant();
-        string normIds = string.Join(",", request.TargetIds.Select(id => id.Trim()).OrderBy(id => id, StringComparer.Ordinal));
-        string normReason = request.SigningReason.Trim();
-        string bindingStr = $"{normStudy}:{normType}:{normIds}:{normReason}";
-
-        string batchId = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(bindingStr)));
-
-        string secret = configuration?["GATEWAY_SECRET"]
-            ?? Environment.GetEnvironmentVariable("GATEWAY_SECRET")
-            ?? string.Empty;
-
-        if (!string.IsNullOrWhiteSpace(sigToken) && !string.IsNullOrEmpty(secret))
+        // Nothing is signed without the step-up token the endpoint verified and consumed for this signer and this
+        // exact batch (#5311). The endpoint filter already refused anything else; this keeps the guarantee on the
+        // service itself, so no caller can reach the signing loop without one.
+        string batchId = request.BatchBindingId();
+        if (verifiedSigToken is null
+            || !string.Equals(verifiedSigToken.Subject, signer.UserId, StringComparison.Ordinal)
+            || !string.Equals(verifiedSigToken.Claims.FirstOrDefault(c => c.Type == SigTokenClaims.BatchId)?.Value, batchId, StringComparison.Ordinal))
         {
-            try
-            {
-                var verifier = new SigTokenVerifier();
-                verifier.VerifyAndConsumeSigToken(
-                    sigToken,
-                    signer.UserId,
-                    new SigTokenBinding("/api/v1/execution/batch-sign-off", "execution.form.approve", batchId),
-                    Encoding.UTF8.GetBytes(secret));
-            }
-            catch (Exception)
-            {
-                return DomainError.Unauthorized(SigTokenVerifier.ReauthenticationRequired, "21 CFR Part 11 mandate: Re-authentication is required.");
-            }
+            return DomainError.Unauthorized(SigTokenVerifier.ReauthenticationRequired, "21 CFR Part 11 mandate: Re-authentication is required.");
         }
+
+        string normType = request.TargetType.Trim().ToUpperInvariant();
+        string normReason = request.SigningReason.Trim();
+        string secret = GatewaySecret();
 
         StudyCode studyCode;
         try
@@ -583,8 +579,14 @@ public sealed class FormSubmissionApplicationService(
                 continue;
             }
 
-            string computedHash = ComputePayloadHash(submission.Payload ?? "{}") ?? "0000000000000000000000000000000000000000000000000000000000000000";
-            string hmacSignature = !string.IsNullOrEmpty(secret) ? Cadence.Security.HmacSigner.ComputeSignature(computedHash, secret) : "mock-sig";
+            // A payload that cannot be hashed cannot be signed; it is skipped rather than signed over a placeholder.
+            if (ComputePayloadHash(submission.Payload ?? "{}") is not { } computedHash)
+            {
+                skippedSubmissionIds.Add(submission.Id.ToString());
+                continue;
+            }
+
+            string hmacSignature = Cadence.Security.HmacSigner.ComputeSignature(computedHash, secret);
 
             var manifest = SignatureManifest.Create(
                 signer.UserId,

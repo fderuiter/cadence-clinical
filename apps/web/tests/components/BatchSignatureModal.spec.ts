@@ -174,7 +174,9 @@ describe("BatchSignatureModal.vue", () => {
     };
 
     const mockPost = vi.mocked(apiClient.post);
-    mockPost.mockResolvedValue(mockResponse);
+    mockPost
+      .mockResolvedValueOnce({ sig_token: "step-up-token" })
+      .mockResolvedValueOnce(mockResponse);
 
     const wrapper = mount(BatchSignatureModal, {
       props: {

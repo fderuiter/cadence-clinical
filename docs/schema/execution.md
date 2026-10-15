@@ -22,6 +22,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.clinical_observations`](#edcclinical_observations) | `ClinicalObservation` | 40 |
 | [`edc.clinical_queries`](#edcclinical_queries) | `ClinicalQuery` | 30 |
 | [`edc.clinical_subjects`](#edcclinical_subjects) | `ClinicalSubject` | 23 |
+| [`edc.consumed_signature_tokens`](#edcconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`edc.device_deficiencies`](#edcdevice_deficiencies) | `DeviceDeficiency` | 30 |
 | [`edc.device_inventory_items`](#edcdevice_inventory_items) | `DeviceInventoryItem` | 28 |
 | [`edc.device_quarantine_records`](#edcdevice_quarantine_records) | `DeviceQuarantineRecord` | 19 |
@@ -571,6 +572,20 @@ Indexes:
 - `IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex`: (`StudyCode`, `SiteCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_StudyCode_Status_EnrollmentIndex`: (`StudyCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_SubjectCode`: unique (`SubjectCode`)
+
+## edc.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
 
 ## edc.device_deficiencies
 
