@@ -6,7 +6,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 
 | Service | Operations |
 | ------- | ---------- |
-| [ai_gateway](ai_gateway.md) | 2 |
+| [ai_gateway](ai_gateway.md) | 3 |
 | [ctms](ctms.md) | 9 |
 | [designer](designer.md) | 6 |
 | [econsent](econsent.md) | 6 |
@@ -16,7 +16,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [fileshare](fileshare.md) | 2 |
 | [imaging](imaging.md) | 10 |
 | [interop](interop.md) | 28 |
-| [kernel](kernel.md) | 18 |
+| [kernel](kernel.md) | 22 |
 | [knowledge](knowledge.md) | 9 |
 | [notifications](notifications.md) | 3 |
 | [org](org.md) | 2 |

@@ -1,54 +1,202 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 using Cadence.Core.Domain;
-using Cadence.Kernel.Domain.Bitemporal;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Time;
 
 namespace Cadence.Kernel.Domain.Entities;
 
 /// <summary>
-/// Canonical Observation aggregate root capturing clinical data with full bitemporal intervals under 21 CFR Part 11.
-/// @req:PRD-SYS-053
+/// A recorded clinical fact (spec §8.1): this concept had this value for the participant of this enrollment, observed
+/// at <see cref="ObservedAt"/>. It is the authoritative value; an eCRF field is a representation of it (ADR-2620).
+/// <list type="bullet">
+/// <item>Values are never overwritten (K-FACT-1). Each correction appends an insert-only
+/// <see cref="ObservationRevision"/> with its reason; <see cref="Value"/> repeats the current revision.</item>
+/// <item>A revision is recorded from its <see cref="ObservationRevision.RecordedAt"/> until the next one's, so the
+/// pre-correction view is read without changing any history row.</item>
+/// <item>Locks are a separate aggregate (<see cref="ObservationLock"/>); the correction command reads it under its
+/// advisory lock (K-TX-4).</item>
+/// </list>
+/// Expected failures return a <see cref="KernelError"/>.
 /// </summary>
-public class Observation : AggregateRoot<ObservationId>, IBitemporalEntity
+public class Observation : AggregateRoot<ObservationId>
 {
-    public TenantId TenantId { get; private set; }
-    public StudyId StudyId { get; private set; }
-    public ParticipantId ParticipantId { get; private set; }
-    public string ObservationType { get; private set; } = string.Empty;
-    public string Value { get; private set; } = string.Empty;
-    public TemporalPeriod Period { get; private set; }
-    public bool IsActive { get; private set; } = true;
+    private readonly List<ObservationRevision> _revisions = [];
 
     protected Observation() { }
 
-    public Observation(
+    private Observation(
         ObservationId id,
         TenantId tenantId,
-        StudyId studyId,
+        EnrollmentId enrollmentId,
         ParticipantId participantId,
-        string observationType,
-        string value,
-        TemporalPeriod period,
-        string createdBy,
-        string reasonForChange)
+        StudyId studyId,
+        ConceptRef concept,
+        DateTimeOffset observedAt)
         : base(id)
     {
         TenantId = tenantId;
-        StudyId = studyId;
+        EnrollmentId = enrollmentId;
         ParticipantId = participantId;
-        ObservationType = observationType;
-        Value = value;
-        Period = period;
-        CreatedBy = createdBy;
-        ReasonForChange = reasonForChange;
+        StudyId = studyId;
+        ConceptId = concept.ConceptId;
+        ConceptVersion = concept.Version;
+        ObservedAt = observedAt;
     }
 
-    public void Supersede(string newValue, DateTimeOffset supersededAt, string updatedBy, string reasonForChange)
+    public TenantId TenantId { get; private set; }
+
+    public EnrollmentId EnrollmentId { get; private set; }
+
+    public ParticipantId ParticipantId { get; private set; }
+
+    public StudyId StudyId { get; private set; }
+
+    public ConceptId ConceptId { get; private set; }
+
+    public int ConceptVersion { get; private set; }
+
+    /// <summary>What the observation means (K-SEM-1).</summary>
+    public ConceptRef Concept => new(ConceptId, ConceptVersion);
+
+    /// <summary>When the fact held in the trial world (valid time).</summary>
+    public DateTimeOffset ObservedAt { get; private set; }
+
+    /// <summary>The current value: the value of the latest revision.</summary>
+    public string Value { get; private set; } = string.Empty;
+
+    /// <summary>The number of the latest revision.</summary>
+    public int Revision { get; private set; }
+
+    /// <summary>Every revision, oldest first.</summary>
+    public IReadOnlyList<ObservationRevision> Revisions => _revisions;
+
+    /// <summary>Records the first value, entered by <paramref name="recordedBy"/> at <paramref name="recordedAt"/>.</summary>
+    public static CommandResult<Observation> Record(
+        ObservationId id,
+        TenantId tenantId,
+        EnrollmentId enrollmentId,
+        ParticipantId participantId,
+        StudyId studyId,
+        ConceptRef concept,
+        string? value,
+        DateTimeOffset observedAt,
+        string reasonForChange,
+        string recordedBy,
+        DateTimeOffset recordedAt)
     {
-        Value = newValue;
-        Period = Period.Supersede(supersededAt);
-        CreatedBy = updatedBy;
-        ReasonForChange = reasonForChange;
-        VersionIndex++;
+        if (!IsValid(value))
+        {
+            return ObservationErrors.ValueInvalid;
+        }
+
+        var observed = KernelTimestamps.ToStoredPrecision(observedAt);
+        var recorded = KernelTimestamps.ToStoredPrecision(recordedAt);
+        if (observed > recorded)
+        {
+            return ObservationErrors.ObservedAtInvalid;
+        }
+
+        var observation = new Observation(id, tenantId, enrollmentId, participantId, studyId, concept, observed);
+        observation.Append(value!, reasonForChange, recordedBy, recorded);
+        return CommandResult<Observation>.Success(observation);
     }
+
+    /// <summary>
+    /// Supersedes the current value with <paramref name="value"/>. The caller has already checked the lock and the
+    /// expected version; this refuses only an invalid or unchanged value.
+    /// </summary>
+    public KernelError? Correct(string? value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
+    {
+        if (!IsValid(value))
+        {
+            return ObservationErrors.ValueInvalid;
+        }
+
+        if (string.Equals(value, Value, StringComparison.Ordinal))
+        {
+            return ObservationErrors.ValueUnchanged;
+        }
+
+        Append(value!, reasonForChange, recordedBy, KernelTimestamps.ToStoredPrecision(recordedAt));
+        return null;
+    }
+
+    private void Append(string value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
+    {
+        var number = _revisions.Count == 0 ? 1 : _revisions.Max(r => r.Number) + 1;
+        _revisions.Add(new ObservationRevision(this, number, value, reasonForChange, recordedBy, recordedAt));
+        Value = value;
+        Revision = number;
+    }
+
+    private static bool IsValid(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && value.Length <= ObservationLimits.MaxValueLength;
+}
+
+/// <summary>
+/// One immutable value of an <see cref="Observation"/>, with who recorded it, when and why. Insert-only in the database.
+/// </summary>
+public class ObservationRevision
+{
+    protected ObservationRevision() { }
+
+    internal ObservationRevision(Observation observation, int number, string value, string reasonForChange, string recordedBy, DateTimeOffset recordedAt)
+    {
+        Id = Guid.CreateVersion7(recordedAt);
+        TenantId = observation.TenantId;
+        ObservationId = observation.Id;
+        Number = number;
+        Value = value;
+        ReasonForChange = reasonForChange;
+        RecordedBy = recordedBy;
+        RecordedAt = recordedAt;
+    }
+
+    public Guid Id { get; private set; }
+
+    public TenantId TenantId { get; private set; }
+
+    public ObservationId ObservationId { get; private set; }
+
+    /// <summary>1 for the recorded value, then one more per correction.</summary>
+    public int Number { get; private set; }
+
+    public string Value { get; private set; } = string.Empty;
+
+    public string ReasonForChange { get; private set; } = string.Empty;
+
+    public string RecordedBy { get; private set; } = string.Empty;
+
+    /// <summary>When the kernel recorded this value; it holds until the next revision's.</summary>
+    public DateTimeOffset RecordedAt { get; private set; }
+}
+
+/// <summary>
+/// The lock on one observation (kernel Quality, ADR-2620). Its existence means the observation is locked; it carries
+/// the observation's UUID (<see cref="ObservationLockId.For"/>), so there is at most one.
+/// </summary>
+public class ObservationLock : AggregateRoot<ObservationLockId>
+{
+    protected ObservationLock() { }
+
+    public ObservationLock(ObservationId observationId, TenantId tenantId, EnrollmentId enrollmentId, DateTimeOffset lockedAt)
+        : base(ObservationLockId.For(observationId))
+    {
+        TenantId = tenantId;
+        ObservationId = observationId;
+        EnrollmentId = enrollmentId;
+        LockedAt = KernelTimestamps.ToStoredPrecision(lockedAt);
+    }
+
+    public TenantId TenantId { get; private set; }
+
+    public ObservationId ObservationId { get; private set; }
+
+    public EnrollmentId EnrollmentId { get; private set; }
+
+    public DateTimeOffset LockedAt { get; private set; }
 }

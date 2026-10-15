@@ -509,6 +509,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2813: Synchronous Batch Assignment and Multi Role Delegation Sign Off Architecture](adr/2026-10-07-synchronous-batch-assignment-and-multi-role-delegation-sign-off-architecture.md) | Current | - Status: Accepted |
 | [ADR-2815: Bulk Laboratory Reference Range Import & Persistent Audit Store](adr/2026-10-12-bulk-laboratory-reference-range-import-persistent-audit-store.md) | Current | - Status: Accepted |
 | [ADR-2610: Scaffold Services Become Kernel Modules or Merge](adr/2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) | Current | Disposition of the 17 scaffold services (#4787): fourteen modules, three merges, nothing deleted |
+| [ADR-2620: The eCRF Correction Transaction Boundary](adr/2026-10-15-ecrf-correction-transaction-boundary.md) | Current | - Status: Accepted |
 | [ADR-2515: Step-Up Tokens Are Single Use Across Instances and Restarts](adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md) | Current | - Status: Accepted |
 ## Developing and running
 

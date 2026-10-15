@@ -65,9 +65,29 @@
       </div>
     </div>
 
-    <!-- STEP 1: DOCUMENT INGESTION -->
+    <!-- STEP 1: DOCUMENT INGESTION & TA WIZARD -->
     <div v-if="currentStep === 1" class="wizard-pane">
-      <div class="card upload-card">
+      <div class="ingestion-mode-tabs">
+        <button
+          type="button"
+          class="btn btn-mode btn-mode-upload"
+          :class="{ active: step1Mode === 'upload' }"
+          @click="step1Mode = 'upload'"
+        >
+          📄 Document Upload (PDF / DOCX)
+        </button>
+        <button
+          type="button"
+          class="btn btn-mode btn-mode-wizard"
+          :class="{ active: step1Mode === 'wizard' }"
+          @click="step1Mode = 'wizard'"
+        >
+          🪄 Guided Therapeutic Area Wizard
+        </button>
+      </div>
+
+      <!-- Mode A: Document Ingestion Dropzone -->
+      <div v-if="step1Mode === 'upload'" class="card upload-card">
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
@@ -141,6 +161,11 @@
             Start USDM Extraction ➜
           </button>
         </div>
+      </div>
+
+      <!-- Mode B: Guided Therapeutic Area Wizard -->
+      <div v-else-if="step1Mode === 'wizard'">
+        <TherapeuticAreaWizard @synthesize="handleWizardSynthesize" />
       </div>
     </div>
 
@@ -632,10 +657,12 @@ import ArmVisualizer from "../components/clinical/ArmVisualizer.vue";
 import IECriteriaTable from "../components/clinical/IECriteriaTable.vue";
 import SoaMatrixGrid from "../components/clinical/SoaMatrixGrid.vue";
 import UsdmConceptStagingDrawer from "../components/clinical/UsdmConceptStagingDrawer.vue";
+import TherapeuticAreaWizard from "../components/clinical/TherapeuticAreaWizard.vue";
 
 const { presentError } = useErrorPresenter();
 
 const currentStep = ref(1);
+const step1Mode = ref("upload"); // 'upload' | 'wizard'
 const isDragging = ref(false);
 const selectedFile = ref(null);
 const fileHash = ref("");
@@ -643,6 +670,13 @@ const fileInputRef = ref(null);
 const extractionProgress = ref(0);
 const currentStageIndex = ref(0);
 const rawExtractionData = ref(null);
+
+const handleWizardSynthesize = (synthesizedUSDM) => {
+  rawExtractionData.value = synthesizedUSDM;
+  extractionProgress.value = 100;
+  currentStageIndex.value = extractionStages.length;
+  currentStep.value = 3;
+};
 const reviewTab = ref("soa");
 const changeReason = ref("Automated Protocol Ingestion & USDM Graph Synthesis");
 const isCommitting = ref(false);
@@ -1822,5 +1856,40 @@ const commitAndActivateEDC = async () => {
 
 .btn-submit-correction:hover {
   background-color: #b45309;
+}
+
+.ingestion-mode-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.btn-mode {
+  flex: 1;
+  padding: 12px 20px;
+  background-color: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-mode:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.btn-mode.active {
+  background-color: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 </style>

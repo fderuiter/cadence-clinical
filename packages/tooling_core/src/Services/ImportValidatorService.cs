@@ -46,7 +46,8 @@ public static class ImportValidatorService
                             if (subParts.Length >= 3)
                             {
                                 string targetApp = subParts[2].ToLowerInvariant();
-                                if (!targetApp.Equals(appName, StringComparison.OrdinalIgnoreCase) &&
+                                // Folder names use snake case (ai_gateway) where namespaces use Pascal case (AiGateway).
+                                if (!NormalizeAppName(targetApp).Equals(NormalizeAppName(appName), StringComparison.OrdinalIgnoreCase) &&
                                     !appName.Equals("gateway", StringComparison.OrdinalIgnoreCase))
                                 {
                                     violations++;
@@ -82,4 +83,7 @@ public static class ImportValidatorService
         }
         return Directory.GetCurrentDirectory();
     }
+
+    private static string NormalizeAppName(string name) =>
+        name.Replace("_", "", StringComparison.Ordinal).Replace("-", "", StringComparison.Ordinal);
 }

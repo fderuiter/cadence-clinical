@@ -1,18 +1,19 @@
 # AI gateway service
 
-Placeholder for the medical coding and AI proxy service. It currently maps only health and status endpoints; no AI, coding or de-identification logic exists in this project.
+Placeholder for the medical coding and AI proxy service. Besides health and status endpoints it hosts one deterministic navigation router for the command palette; no model calls, coding or de-identification logic exist in this project.
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel, is merged, or is retired. The disposition of the scaffold services is tracked in issue #4787.
 
 ## Project
 
 - Project: `apps/ai_gateway/src/Cadence.Apps.AiGateway.csproj` (assembly `Cadence.Apps.AiGateway`).
-- `Program.cs` is the only source file.
+- `Program.cs` wires the host; `Endpoints/IntentEndpoints.cs` and `Services/IntentRoutingService.cs` hold the navigation router.
 
 ## HTTP surface
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)).
 - `GET /api/v1/ai/status` (anonymous status payload).
+- `POST /api/v1/ai/intent/route` (signed-in callers): a rule-based router that maps a command-palette prompt such as "log an AE for subject 101" to a screen and action, filtered by the caller's roles from verified claims (both sides canonicalised with `RoleNormalization`). It calls no model, writes nothing, and logs only the query length, never its text. Its recommendations carry the badge `[Suggested]` and a fixed confidence of 1.0, because a pattern either matches or does not.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/ai/**` here (default upstream `http://localhost:8017`, `AI_GATEWAY_SERVICE_URL`). Compose publishes host port 8017 (container port 8080).
 
