@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interim Monitoring Visit (IMV) Trip Report</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2d3748; margin: 0; padding: 30px; line-height: 1.6; }
+        .header { border-bottom: 2px solid #2b6cb0; padding-bottom: 12px; margin-bottom: 24px; }
+        .header h1 { color: #1a365d; margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .meta-table { width: 100%; margin-bottom: 24px; border-collapse: collapse; }
+        .meta-table td { padding: 6px 12px; font-size: 14px; }
+        .meta-table td.label { font-weight: bold; color: #4a5568; width: 200px; background-color: #f7fafc; }
+        .watermark { text-align: center; color: #c53030; font-weight: bold; font-size: 18px; border: 2px dashed #c53030; padding: 10px; margin: 20px 0; background-color: #fff5f5; }
+        .section-card { border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 20px; padding: 16px; background-color: #ffffff; }
+        .section-header { font-size: 16px; font-weight: bold; color: #2b6cb0; border-bottom: 1px solid #edf2f7; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; }
+        .badge-verified { background-color: #c6f6d5; color: #22543d; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-pending { background-color: #feebc8; color: #744210; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .q-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        .q-table th { background-color: #edf2f7; text-align: left; padding: 8px; font-size: 13px; color: #4a5568; }
+        .q-table td { padding: 8px; border-top: 1px solid #edf2f7; font-size: 13px; vertical-align: top; }
+        .finding-item { background-color: #fffaf0; border-left: 4px solid #dd6b20; padding: 8px 12px; margin-top: 8px; font-size: 13px; }
+        .signature-manifestation { margin-top: 40px; border: 1px solid #cbd5e0; padding: 16px; background-color: #f8fafc; border-radius: 4px; }
+        .signature-manifestation h3 { margin-top: 0; color: #2b6cb0; font-size: 14px; text-transform: uppercase; }
+        .integrity-stamp { margin-top: 20px; font-family: monospace; font-size: 11px; color: #718096; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>INTERIM MONITORING VISIT (IMV) TRIP REPORT</h1>
+    </div>
+
+    {% if is_signed == false or is_signed == null %}
+    <div class="watermark">DRAFT - UNSIGNED WORKING COPY</div>
+    {% endif %}
+
+    <table class="meta-table">
+        <tr><td class="label">Study Identifier:</td><td>{{ study_id }}</td></tr>
+        <tr><td class="label">Site Identifier:</td><td>{{ site_id }}</td></tr>
+        <tr><td class="label">Clinical Research Assoc (CRA):</td><td>{{ cra_id }}</td></tr>
+        <tr><td class="label">Visit Type:</td><td>Interim Monitoring Visit (IMV)</td></tr>
+        <tr><td class="label">Visit Date:</td><td>{{ actual_date }}</td></tr>
+        <tr><td class="label">Report Status:</td><td>{{ status }}</td></tr>
+    </table>
+
+    <div class="content">
+        <h2>Interim Study Progress &amp; Compliance Audit</h2>
+        {% if sections %}
+            {% for sec in sections %}
+            <div class="section-card">
+                <div class="section-header">
+                    <span>{{ sec.title }}</span>
+                    {% if sec.is_verified %}
+                    <span class="badge-verified">VERIFIED</span>
+                    {% else %}
+                    <span class="badge-pending">PENDING VERIFICATION</span>
+                    {% endif %}
+                </div>
+                <table class="q-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">Question / Checkpoint</th>
+                            <th style="width: 20%;">Response</th>
+                            <th style="width: 30%;">Commentary / Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for resp in sec.responses %}
+                        <tr>
+                            <td><strong>{{ resp.question_text }}</strong></td>
+                            <td>{{ resp.value }}</td>
+                            <td>{{ resp.commentary }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if sec.findings %}
+                <div style="margin-top: 12px;">
+                    <strong style="font-size: 13px; color: #dd6b20;">Associated Visit Findings:</strong>
+                    {% for f in sec.findings %}
+                    <div class="finding-item">
+                        <strong>[{{ f.severity }}]</strong> {{ f.text }} <em>(Status: {{ f.resolution_status }})</em>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No section responses recorded for this visit.</p>
+        {% endif %}
+    </div>
+
+    {% if is_signed and signer_name %}
+    <div class="signature-manifestation">
+        <h3>21 CFR Part 11 Electronic Signature Manifestation</h3>
+        <p><strong>Signer:</strong> {{ signer_name }}</p>
+        <p><strong>Timestamp (UTC):</strong> {{ signing_timestamp }}</p>
+        <p><strong>Reason/Purpose:</strong> {{ signing_purpose }}</p>
+    </div>
+    {% endif %}
+
+    {% if integrity_hash %}
+    <div class="integrity-stamp">
+        <strong>Integrity Stamp (SHA-256):</strong> {{ integrity_hash }}
+    </div>
+    {% endif %}
+</body>
+</html>

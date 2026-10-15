@@ -996,23 +996,79 @@
             <div
               v-if="newAmendment.requires_reconsent"
               class="form-group notification-channels-config"
-              style="margin-top: 12px; padding: 12px; background-color: #f8fafc; border: 1px solid var(--border); border-radius: 6px;"
+              style="
+                margin-top: 12px;
+                padding: 12px;
+                background-color: #f8fafc;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+              "
             >
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: var(--primary);">
+              <label
+                class="form-label"
+                style="
+                  font-size: 0.85rem;
+                  font-weight: 600;
+                  color: var(--primary);
+                "
+              >
                 Automated Re-Consent Notification Channels:
               </label>
-              <div style="display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap;">
-                <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                  <input type="checkbox" value="SMS" v-model="newAmendment.notification_channels" />
+              <div
+                style="
+                  display: flex;
+                  gap: 16px;
+                  margin-top: 6px;
+                  flex-wrap: wrap;
+                "
+              >
+                <label
+                  style="
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    value="SMS"
+                    v-model="newAmendment.notification_channels"
+                  />
                   SMS Alerts
                 </label>
-                <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                  <input type="checkbox" value="Mobile Push" v-model="newAmendment.notification_channels" />
+                <label
+                  style="
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    value="Mobile Push"
+                    v-model="newAmendment.notification_channels"
+                  />
                   Mobile Push
                 </label>
-                <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                  <input type="checkbox" value="Email" v-model="newAmendment.notification_channels" />
+                <label
+                  style="
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    value="Email"
+                    v-model="newAmendment.notification_channels"
+                  />
                   Email
                 </label>
               </div>

@@ -104,6 +104,9 @@ public sealed class CtmsMonitoringVisitFinding : AggregateRoot<string>
     public string Text { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;
     public string ResolutionStatus { get; set; } = string.Empty;
+    public string? SectionKey { get; set; }
+    public string? QuestionKey { get; set; }
+    public string? TripReportId { get; set; }
     public string? OfflineSyncMarkers { get; set; }
     public string? SyncStatus { get; set; }
 
@@ -276,3 +279,131 @@ public record SiteVisitLetterModel(
     string? InvestigatorEmail = null,
     string? ReasonForChange = null
 );
+
+public sealed class CtmsTripReport : AggregateRoot<string>
+{
+    public string VisitId { get; set; } = string.Empty;
+    public string StudyId { get; set; } = string.Empty;
+    public string SiteId { get; set; } = string.Empty;
+    public string CraId { get; set; } = string.Empty;
+    public string VisitType { get; set; } = string.Empty; // PSV, SIV, IMV, COV
+    public string TemplateName { get; set; } = string.Empty;
+    public string Status { get; set; } = "DRAFT"; // DRAFT, SUBMITTED, SIGNED, FINALIZED
+    public bool IsSigned { get; set; }
+    public string? SignatureManifestation { get; set; }
+    public string? Signer { get; set; }
+    public DateTimeOffset? SigningTimestamp { get; set; }
+    public DateTimeOffset? SubmittedAt { get; set; }
+    public string? SubmittedBy { get; set; }
+    public string? EtmfDocumentId { get; set; }
+    public string? PdfObjectKey { get; set; }
+    public string? PdfSha256Hash { get; set; }
+
+    public CtmsTripReport() : base(Guid.NewGuid().ToString()) { }
+    public CtmsTripReport(string id) : base(id) { }
+}
+
+public sealed class CtmsTripReportSection : AggregateRoot<string>
+{
+    public string TripReportId { get; set; } = string.Empty;
+    public string SectionKey { get; set; } = string.Empty; // protocol_compliance, ip_accountability, regulatory_binder, facilities
+    public string Title { get; set; } = string.Empty;
+    public bool IsVerified { get; set; }
+    public int OrderIndex { get; set; }
+
+    public CtmsTripReportSection() : base(Guid.NewGuid().ToString()) { }
+    public CtmsTripReportSection(string id) : base(id) { }
+}
+
+public sealed class CtmsTripReportResponse : AggregateRoot<string>
+{
+    public string TripReportId { get; set; } = string.Empty;
+    public string SectionKey { get; set; } = string.Empty;
+    public string QuestionKey { get; set; } = string.Empty;
+    public string QuestionText { get; set; } = string.Empty;
+    public string ResponseType { get; set; } = string.Empty; // boolean, multiple_choice, numerical, text
+    public string Value { get; set; } = string.Empty;
+    public string? Commentary { get; set; }
+    public string? FindingId { get; set; }
+
+    public CtmsTripReportResponse() : base(Guid.NewGuid().ToString()) { }
+    public CtmsTripReportResponse(string id) : base(id) { }
+}
+
+public record TripReportSectionDto(
+    string SectionKey,
+    string Title,
+    bool IsVerified,
+    int OrderIndex,
+    IReadOnlyList<TripReportResponseDto> Responses,
+    IReadOnlyList<SiteVisitFindingModel> Findings
+);
+
+public record TripReportResponseDto(
+    string ResponseId,
+    string SectionKey,
+    string QuestionKey,
+    string QuestionText,
+    string ResponseType,
+    string Value,
+    string? Commentary,
+    string? FindingId
+);
+
+public record TripReportFormDto(
+    string TripReportId,
+    string VisitId,
+    string StudyId,
+    string SiteId,
+    string CraId,
+    string VisitType,
+    string TemplateName,
+    string Status,
+    bool IsSigned,
+    string? Signer,
+    DateTimeOffset? SigningTimestamp,
+    string? SignatureManifestation,
+    string? EtmfDocumentId,
+    string? PdfObjectKey,
+    string? PdfSha256Hash,
+    IReadOnlyList<TripReportSectionDto> Sections
+);
+
+public record SaveTripReportSectionRequest(
+    string SectionKey,
+    bool IsVerified,
+    IReadOnlyList<TripReportResponseSaveItem> Responses
+);
+
+public record TripReportResponseSaveItem(
+    string QuestionKey,
+    string QuestionText,
+    string ResponseType,
+    string Value,
+    string? Commentary,
+    string? FindingId
+);
+
+public record SaveTripReportRequest(
+    string TripReportId,
+    IReadOnlyList<SaveTripReportSectionRequest> Sections,
+    string? ReasonForChange = null
+);
+
+public record SubmitTripReportRequest(
+    string TripReportId,
+    bool Finalize = true,
+    string? SignerName = null,
+    string? SigningPurpose = null,
+    string? ReasonForChange = null
+);
+
+public record AttachFindingRequest(
+    string VisitId,
+    string SectionKey,
+    string? QuestionKey,
+    string Text,
+    string Severity,
+    string ResolutionStatus = "OPEN"
+);
+

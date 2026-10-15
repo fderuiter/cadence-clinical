@@ -217,6 +217,28 @@
           CRA Monitoring &amp; SDV
         </button>
         <button
+          id="tab-trip-reports"
+          class="tab-btn"
+          :class="{ active: activeTab === 'trip-reports' }"
+          style="
+            padding: 8px 16px;
+            border: none;
+            background: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+            border-bottom: 3px solid transparent;
+          "
+          :style="
+            activeTab === 'trip-reports'
+              ? { borderBottomColor: '#0f4c81', color: '#0f4c81' }
+              : { color: '#64748b' }
+          "
+          @click="activeTab = 'trip-reports'"
+        >
+          📋 Visit Questionnaires
+        </button>
+        <button
           id="tab-delegation"
           class="tab-btn"
           :class="{ active: activeTab === 'delegation' }"
@@ -609,6 +631,11 @@
           :study-id="studyId"
           :site-id="siteId"
         />
+      </div>
+
+      <!-- Tab: Visit Questionnaires & Trip Reports -->
+      <div v-if="activeTab === 'trip-reports'">
+        <TripReportConsole />
       </div>
 
       <!-- Tab 3: Delegation Matrix -->
@@ -2366,6 +2393,7 @@ import { useRoute } from "vue-router";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import CraVerificationConsole from "../components/persona/CraVerificationConsole.vue";
+import TripReportConsole from "../components/clinical/TripReportConsole.vue";
 import SsuGreenlightConsole from "../components/clinical/SsuGreenlightConsole.vue";
 import AdaptiveDoseEscalationConsole from "../components/clinical/AdaptiveDoseEscalationConsole.vue";
 import CellGeneTherapyCocConsole from "../components/clinical/CellGeneTherapyCocConsole.vue";

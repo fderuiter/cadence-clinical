@@ -415,3 +415,78 @@ public sealed class CtmsSiteGreenlightGateConfiguration : IEntityTypeConfigurati
         builder.HasIndex(x => new { x.StudyId, x.CountryCode });
     }
 }
+
+public sealed class CtmsTripReportConfiguration : IEntityTypeConfiguration<CtmsTripReport>
+{
+    public void Configure(EntityTypeBuilder<CtmsTripReport> builder)
+    {
+        builder.ToTable("ctms_trip_reports");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.VisitId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.CraId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.VisitType).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.TemplateName).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Signer).HasMaxLength(255);
+        builder.Property(x => x.SubmittedBy).HasMaxLength(255);
+        builder.Property(x => x.EtmfDocumentId).HasMaxLength(255);
+        builder.Property(x => x.PdfObjectKey).HasMaxLength(500);
+        builder.Property(x => x.PdfSha256Hash).HasMaxLength(64);
+        builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.VersionIndex).IsRequired();
+
+        builder.HasIndex(x => x.VisitId);
+        builder.HasIndex(x => x.StudyId);
+        builder.HasIndex(x => x.SiteId);
+    }
+}
+
+public sealed class CtmsTripReportSectionConfiguration : IEntityTypeConfiguration<CtmsTripReportSection>
+{
+    public void Configure(EntityTypeBuilder<CtmsTripReportSection> builder)
+    {
+        builder.ToTable("ctms_trip_report_sections");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.TripReportId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.SectionKey).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Title).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.VersionIndex).IsRequired();
+
+        builder.HasIndex(x => x.TripReportId);
+        builder.HasIndex(x => new { x.TripReportId, x.SectionKey });
+    }
+}
+
+public sealed class CtmsTripReportResponseConfiguration : IEntityTypeConfiguration<CtmsTripReportResponse>
+{
+    public void Configure(EntityTypeBuilder<CtmsTripReportResponse> builder)
+    {
+        builder.ToTable("ctms_trip_report_responses");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.TripReportId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.SectionKey).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.QuestionKey).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.QuestionText).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.ResponseType).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.Value).HasMaxLength(2000).IsRequired();
+        builder.Property(x => x.Commentary).HasMaxLength(2000);
+        builder.Property(x => x.FindingId).HasMaxLength(36);
+        builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.VersionIndex).IsRequired();
+
+        builder.HasIndex(x => x.TripReportId);
+        builder.HasIndex(x => new { x.TripReportId, x.SectionKey });
+    }
+}

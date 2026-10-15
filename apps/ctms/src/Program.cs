@@ -21,6 +21,9 @@ builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
 FluidTemplateRenderer.RegisterType<SiteVisitFindingModel>();
 FluidTemplateRenderer.RegisterType<SiteVisitLetterModel>();
+FluidTemplateRenderer.RegisterType<TripReportFormDto>();
+FluidTemplateRenderer.RegisterType<TripReportSectionDto>();
+FluidTemplateRenderer.RegisterType<TripReportResponseDto>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
@@ -34,6 +37,7 @@ app.MapCadenceHealthAndStatusEndpoints(
 var ctmsApi = app.MapGroup("/api/v1/ctms");
 ctmsApi.MapLetterTemplateEndpoints();
 ctmsApi.MapStartupGreenlightEndpoints();
+ctmsApi.MapTripReportEndpoints();
 
 await app.RunAsync();
 

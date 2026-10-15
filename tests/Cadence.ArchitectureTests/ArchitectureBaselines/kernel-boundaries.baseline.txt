@@ -18,6 +18,8 @@ K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate.SiteId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate.StudyId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.SiteId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.StudyId
+K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsTripReport.SiteId
+K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsTripReport.StudyId
 K-MOD-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.DoaDelegationRecord.SiteId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentClause.StudyId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocument.SiteId
@@ -164,9 +166,13 @@ K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteGreenlightGate.StudyId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsSiteMilestone.StudyId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsTripReport.SiteId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.CtmsTripReport.StudyId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.DoaDelegationRecord.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.SiteVisitLetterModel.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.SiteVisitLetterModel.StudyId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.TripReportFormDto.SiteId
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Domain.TripReportFormDto.StudyId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.BatchCertifyRequestDto.StudyId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.BatchCertifyResponseDto.StudyId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.CertifiedSiteItemDto.SiteId

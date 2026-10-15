@@ -80,310 +80,382 @@
         </div>
       </div>
 
-      <!-- Scope Filters Bar -->
+      <!-- CRA Workspace Navigation Sub-Tabs -->
       <div
-        class="scope-controls"
+        class="console-subtabs"
         style="
           display: flex;
-          gap: 16px;
-          flex-wrap: wrap;
-          padding: 12px;
-          background-color: var(--semantic-color-surface-muted);
-          border: 1px solid var(--semantic-color-border);
-          border-radius: 6px;
+          gap: 12px;
           margin-bottom: 16px;
-          align-items: center;
+          border-bottom: 2px solid var(--semantic-color-border);
+          padding-bottom: 8px;
         "
       >
-        <div class="form-group" style="margin: 0; min-width: 180px">
-          <label
-            for="cra-subject-selector"
-            style="font-weight: bold; font-size: 0.75rem"
-            >Subject ID</label
-          >
-          <select
-            id="cra-subject-selector"
-            v-model="currentSubjectId"
-            style="
-              width: 100%;
-              padding: 6px 10px;
-              border: 1px solid var(--semantic-color-border-muted);
-              border-radius: 4px;
-            "
-          >
-            <option
-              v-for="sub in availableSubjects"
-              :key="sub.id"
-              :value="sub.id"
-            >
-              {{ sub.label || `${sub.id} (${sub.status})` }}
-            </option>
-          </select>
-        </div>
-
-        <div class="form-group" style="margin: 0; min-width: 180px">
-          <label
-            for="cra-visit-selector"
-            style="font-weight: bold; font-size: 0.75rem"
-            >Encounter / Visit</label
-          >
-          <select
-            id="cra-visit-selector"
-            v-model="currentVisitId"
-            style="
-              width: 100%;
-              padding: 6px 10px;
-              border: 1px solid var(--semantic-color-border-muted);
-              border-radius: 4px;
-            "
-          >
-            <option value="Screening">Screening / Day -7</option>
-            <option value="Week2">Week 2 Treatment</option>
-            <option value="Week4">Week 4 Treatment</option>
-          </select>
-        </div>
-
-        <div
+        <button
+          id="btn-subtab-sdv"
+          type="button"
+          class="btn"
           style="
-            margin-left: auto;
+            padding: 6px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            background: none;
+            border-bottom: 3px solid transparent;
+            font-size: 0.9rem;
+          "
+          :style="
+            activeConsoleTab === 'sdv'
+              ? {
+                  borderBottomColor:
+                    'var(--semantic-color-interactive-primary)',
+                  color: 'var(--semantic-color-interactive-primary)',
+                }
+              : { color: 'var(--semantic-color-text-muted)' }
+          "
+          @click="activeConsoleTab = 'sdv'"
+        >
+          🔍 Source Data Verification (SDV)
+        </button>
+        <button
+          id="btn-subtab-trip-report"
+          type="button"
+          class="btn"
+          style="
+            padding: 6px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            background: none;
+            border-bottom: 3px solid transparent;
+            font-size: 0.9rem;
+          "
+          :style="
+            activeConsoleTab === 'trip_report'
+              ? {
+                  borderBottomColor:
+                    'var(--semantic-color-interactive-primary)',
+                  color: 'var(--semantic-color-interactive-primary)',
+                }
+              : { color: 'var(--semantic-color-text-muted)' }
+          "
+          @click="activeConsoleTab = 'trip_report'"
+        >
+          📋 Visit Questionnaire &amp; Trip Report Engine
+        </button>
+      </div>
+
+      <div v-if="activeConsoleTab === 'sdv'">
+        <!-- Scope Filters Bar -->
+        <div
+          class="scope-controls"
+          style="
             display: flex;
-            gap: 12px;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 12px;
+            background-color: var(--semantic-color-surface-muted);
+            border: 1px solid var(--semantic-color-border);
+            border-radius: 6px;
+            margin-bottom: 16px;
             align-items: center;
-            font-size: 0.85rem;
-            color: var(--semantic-color-text-muted);
           "
         >
-          <div>
-            <strong>SDV Completion:</strong>
-            <span
-              style="
-                font-weight: 700;
-                color: var(--semantic-color-success-dark);
-                margin-left: 4px;
-              "
-              >{{ sdvCompletionRate }}%</span
+          <div class="form-group" style="margin: 0; min-width: 180px">
+            <label
+              for="cra-subject-selector"
+              style="font-weight: bold; font-size: 0.75rem"
+              >Subject ID</label
             >
-          </div>
-          <div>
-            <strong>Open Queries:</strong>
-            <span
+            <select
+              id="cra-subject-selector"
+              v-model="currentSubjectId"
               style="
-                font-weight: 700;
-                color: var(--semantic-color-warning-dark);
-                margin-left: 4px;
+                width: 100%;
+                padding: 6px 10px;
+                border: 1px solid var(--semantic-color-border-muted);
+                border-radius: 4px;
               "
-              >{{ openQueriesCount }}</span
             >
+              <option
+                v-for="sub in availableSubjects"
+                :key="sub.id"
+                :value="sub.id"
+              >
+                {{ sub.label || `${sub.id} (${sub.status})` }}
+              </option>
+            </select>
           </div>
+
+          <div class="form-group" style="margin: 0; min-width: 180px">
+            <label
+              for="cra-visit-selector"
+              style="font-weight: bold; font-size: 0.75rem"
+              >Encounter / Visit</label
+            >
+            <select
+              id="cra-visit-selector"
+              v-model="currentVisitId"
+              style="
+                width: 100%;
+                padding: 6px 10px;
+                border: 1px solid var(--semantic-color-border-muted);
+                border-radius: 4px;
+              "
+            >
+              <option value="Screening">Screening / Day -7</option>
+              <option value="Week2">Week 2 Treatment</option>
+              <option value="Week4">Week 4 Treatment</option>
+            </select>
+          </div>
+
+          <div
+            style="
+              margin-left: auto;
+              display: flex;
+              gap: 12px;
+              align-items: center;
+              font-size: 0.85rem;
+              color: var(--semantic-color-text-muted);
+            "
+          >
+            <div>
+              <strong>SDV Completion:</strong>
+              <span
+                style="
+                  font-weight: 700;
+                  color: var(--semantic-color-success-dark);
+                  margin-left: 4px;
+                "
+                >{{ sdvCompletionRate }}%</span
+              >
+            </div>
+            <div>
+              <strong>Open Queries:</strong>
+              <span
+                style="
+                  font-weight: 700;
+                  color: var(--semantic-color-warning-dark);
+                  margin-left: 4px;
+                "
+                >{{ openQueriesCount }}</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- eCRF Source Data Verification Inspection Table -->
+        <div class="table-responsive">
+          <table
+            class="clinical-visit-matrix"
+            style="width: 100%; border-collapse: collapse"
+          >
+            <thead>
+              <tr>
+                <th scope="col" style="width: 40px; text-align: center">
+                  Batch
+                </th>
+                <th scope="col">Field / Parameter</th>
+                <th scope="col">CDASH Variable</th>
+                <th scope="col">Reported eCRF Value</th>
+                <th scope="col">Source Record (EMR/Lab)</th>
+                <th scope="col" style="text-align: center">SDV Verified</th>
+                <th scope="col">Query Discrepancy Status</th>
+                <th scope="col">Monitoring Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="field in currentFields" :key="field.id">
+                <!-- Batch SDV Checkbox -->
+                <td style="text-align: center" class="batch-sdv-box">
+                  <input
+                    :id="`batch-sdv-${field.id}`"
+                    type="checkbox"
+                    class="batch-sdv-checkbox"
+                    :value="field.id"
+                    :checked="effectiveSelectedBatchFields.includes(field.id)"
+                    :disabled="!isAuthorizedForBulkSdv"
+                    style="cursor: pointer"
+                    @change="toggleBatchField(field.id, $event.target.checked)"
+                  />
+                </td>
+
+                <!-- Field Label -->
+                <td>
+                  <strong>{{ field.label }}</strong>
+                </td>
+
+                <!-- CDASH Variable Code -->
+                <td>
+                  <code>{{ field.cdash || field.id }}</code>
+                </td>
+
+                <!-- Reported Value -->
+                <td>
+                  <span
+                    style="font-weight: 600; color: var(--semantic-color-text)"
+                  >
+                    {{ getFieldValue(field.id) || "—" }}
+                  </span>
+                </td>
+
+                <!-- Source Document Reference -->
+                <td>
+                  <span
+                    style="
+                      color: var(--semantic-color-text-secondary);
+                      font-size: 0.85rem;
+                    "
+                  >
+                    {{ getSourceValue(field.id) }}
+                  </span>
+                </td>
+
+                <!-- Single Field SDV Toggle Checkbox -->
+                <td style="text-align: center" class="sdv-box">
+                  <input
+                    :id="`sdv-${field.id}`"
+                    type="checkbox"
+                    class="sdv-checkbox"
+                    :checked="isFieldSdvVerified(field.id)"
+                    style="
+                      cursor: pointer;
+                      width: 18px;
+                      height: 18px;
+                      accent-color: var(--semantic-color-success-interactive);
+                    "
+                    @change="
+                      handleSingleSdvToggle(field.id, $event.target.checked)
+                    "
+                  />
+                  <label :for="`sdv-${field.id}`" style="display: none"
+                    >SDV {{ field.label }}</label
+                  >
+                </td>
+
+                <!-- Query Discrepancy Visual Badge & Info -->
+                <td>
+                  <template v-if="getFieldQuery(field.id)">
+                    <span
+                      :id="`query-badge-${field.id}`"
+                      class="badge query-status-badge"
+                      :class="`badge-${(getFieldQuery(field.id).status || 'OPEN').toLowerCase()}`"
+                      style="font-weight: 700"
+                    >
+                      {{ getFieldQuery(field.id).status }}
+                    </span>
+                    <div
+                      style="
+                        font-size: 0.75rem;
+                        color: var(--semantic-color-text-body);
+                        margin-top: 2px;
+                      "
+                    >
+                      {{
+                        getFieldQuery(field.id).text ||
+                        getFieldQuery(field.id).query_text ||
+                        getFieldQuery(field.id).message
+                      }}
+                    </div>
+                    <div
+                      v-if="
+                        getFieldQuery(field.id).response ||
+                        getFieldQuery(field.id).response_text
+                      "
+                      style="
+                        font-size: 0.72rem;
+                        color: var(--semantic-color-info);
+                        margin-top: 2px;
+                      "
+                    >
+                      <em
+                        >Ans:
+                        {{
+                          getFieldQuery(field.id).response ||
+                          getFieldQuery(field.id).response_text
+                        }}</em
+                      >
+                    </div>
+                  </template>
+                  <template v-else>
+                    <span
+                      style="
+                        color: var(--semantic-color-text-subtle);
+                        font-size: 0.8rem;
+                      "
+                      >— Clean —</span
+                    >
+                  </template>
+                </td>
+
+                <!-- Actions (Raise, Answer, Close) -->
+                <td>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap">
+                    <!-- No query: Allow raising discrepancy query -->
+                    <button
+                      v-if="!getFieldQuery(field.id)"
+                      :id="`btn-raise-query-${field.id}`"
+                      type="button"
+                      class="btn btn-secondary btn-sm"
+                      style="padding: 2px 8px; font-size: 0.75rem"
+                      @click="openRaiseQueryModal(field)"
+                    >
+                      ⚠️ Raise Query
+                    </button>
+
+                    <!-- Query in OPEN state: CRC can answer -->
+                    <button
+                      v-if="
+                        getFieldQuery(field.id) &&
+                        (getFieldQuery(field.id).status === 'OPEN' ||
+                          getFieldQuery(field.id).status === 'REOPENED')
+                      "
+                      :id="`btn-respond-query-${field.id}`"
+                      type="button"
+                      class="btn btn-primary btn-sm"
+                      style="
+                        padding: 2px 8px;
+                        font-size: 0.75rem;
+                        background-color: var(
+                          --semantic-color-interactive-primary
+                        );
+                      "
+                      @click="openAnswerQueryModal(field)"
+                    >
+                      💬 Submit Answer
+                    </button>
+
+                    <!-- Query in ANSWERED state (or OPEN by CRA): CRA can Close / Resolve -->
+                    <button
+                      v-if="
+                        getFieldQuery(field.id) &&
+                        getFieldQuery(field.id).status !== 'CLOSED'
+                      "
+                      :id="`btn-close-query-${field.id}`"
+                      type="button"
+                      class="btn btn-success btn-sm"
+                      style="
+                        padding: 2px 8px;
+                        font-size: 0.75rem;
+                        background-color: var(
+                          --semantic-color-success-interactive
+                        );
+                        color: var(--semantic-color-surface);
+                      "
+                      @click="openCloseQueryModal(field)"
+                    >
+                      ✅ Close Query
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <!-- eCRF Source Data Verification Inspection Table -->
-      <div class="table-responsive">
-        <table
-          class="clinical-visit-matrix"
-          style="width: 100%; border-collapse: collapse"
-        >
-          <thead>
-            <tr>
-              <th scope="col" style="width: 40px; text-align: center">Batch</th>
-              <th scope="col">Field / Parameter</th>
-              <th scope="col">CDASH Variable</th>
-              <th scope="col">Reported eCRF Value</th>
-              <th scope="col">Source Record (EMR/Lab)</th>
-              <th scope="col" style="text-align: center">SDV Verified</th>
-              <th scope="col">Query Discrepancy Status</th>
-              <th scope="col">Monitoring Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="field in currentFields" :key="field.id">
-              <!-- Batch SDV Checkbox -->
-              <td style="text-align: center" class="batch-sdv-box">
-                <input
-                  :id="`batch-sdv-${field.id}`"
-                  type="checkbox"
-                  class="batch-sdv-checkbox"
-                  :value="field.id"
-                  :checked="effectiveSelectedBatchFields.includes(field.id)"
-                  :disabled="!isAuthorizedForBulkSdv"
-                  style="cursor: pointer"
-                  @change="toggleBatchField(field.id, $event.target.checked)"
-                />
-              </td>
-
-              <!-- Field Label -->
-              <td>
-                <strong>{{ field.label }}</strong>
-              </td>
-
-              <!-- CDASH Variable Code -->
-              <td>
-                <code>{{ field.cdash || field.id }}</code>
-              </td>
-
-              <!-- Reported Value -->
-              <td>
-                <span
-                  style="font-weight: 600; color: var(--semantic-color-text)"
-                >
-                  {{ getFieldValue(field.id) || "—" }}
-                </span>
-              </td>
-
-              <!-- Source Document Reference -->
-              <td>
-                <span
-                  style="
-                    color: var(--semantic-color-text-secondary);
-                    font-size: 0.85rem;
-                  "
-                >
-                  {{ getSourceValue(field.id) }}
-                </span>
-              </td>
-
-              <!-- Single Field SDV Toggle Checkbox -->
-              <td style="text-align: center" class="sdv-box">
-                <input
-                  :id="`sdv-${field.id}`"
-                  type="checkbox"
-                  class="sdv-checkbox"
-                  :checked="isFieldSdvVerified(field.id)"
-                  style="
-                    cursor: pointer;
-                    width: 18px;
-                    height: 18px;
-                    accent-color: var(--semantic-color-success-interactive);
-                  "
-                  @change="
-                    handleSingleSdvToggle(field.id, $event.target.checked)
-                  "
-                />
-                <label :for="`sdv-${field.id}`" style="display: none"
-                  >SDV {{ field.label }}</label
-                >
-              </td>
-
-              <!-- Query Discrepancy Visual Badge & Info -->
-              <td>
-                <template v-if="getFieldQuery(field.id)">
-                  <span
-                    :id="`query-badge-${field.id}`"
-                    class="badge query-status-badge"
-                    :class="`badge-${(getFieldQuery(field.id).status || 'OPEN').toLowerCase()}`"
-                    style="font-weight: 700"
-                  >
-                    {{ getFieldQuery(field.id).status }}
-                  </span>
-                  <div
-                    style="
-                      font-size: 0.75rem;
-                      color: var(--semantic-color-text-body);
-                      margin-top: 2px;
-                    "
-                  >
-                    {{
-                      getFieldQuery(field.id).text ||
-                      getFieldQuery(field.id).query_text ||
-                      getFieldQuery(field.id).message
-                    }}
-                  </div>
-                  <div
-                    v-if="
-                      getFieldQuery(field.id).response ||
-                      getFieldQuery(field.id).response_text
-                    "
-                    style="
-                      font-size: 0.72rem;
-                      color: var(--semantic-color-info);
-                      margin-top: 2px;
-                    "
-                  >
-                    <em
-                      >Ans:
-                      {{
-                        getFieldQuery(field.id).response ||
-                        getFieldQuery(field.id).response_text
-                      }}</em
-                    >
-                  </div>
-                </template>
-                <template v-else>
-                  <span
-                    style="
-                      color: var(--semantic-color-text-subtle);
-                      font-size: 0.8rem;
-                    "
-                    >— Clean —</span
-                  >
-                </template>
-              </td>
-
-              <!-- Actions (Raise, Answer, Close) -->
-              <td>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap">
-                  <!-- No query: Allow raising discrepancy query -->
-                  <button
-                    v-if="!getFieldQuery(field.id)"
-                    :id="`btn-raise-query-${field.id}`"
-                    type="button"
-                    class="btn btn-secondary btn-sm"
-                    style="padding: 2px 8px; font-size: 0.75rem"
-                    @click="openRaiseQueryModal(field)"
-                  >
-                    ⚠️ Raise Query
-                  </button>
-
-                  <!-- Query in OPEN state: CRC can answer -->
-                  <button
-                    v-if="
-                      getFieldQuery(field.id) &&
-                      (getFieldQuery(field.id).status === 'OPEN' ||
-                        getFieldQuery(field.id).status === 'REOPENED')
-                    "
-                    :id="`btn-respond-query-${field.id}`"
-                    type="button"
-                    class="btn btn-primary btn-sm"
-                    style="
-                      padding: 2px 8px;
-                      font-size: 0.75rem;
-                      background-color: var(
-                        --semantic-color-interactive-primary
-                      );
-                    "
-                    @click="openAnswerQueryModal(field)"
-                  >
-                    💬 Submit Answer
-                  </button>
-
-                  <!-- Query in ANSWERED state (or OPEN by CRA): CRA can Close / Resolve -->
-                  <button
-                    v-if="
-                      getFieldQuery(field.id) &&
-                      getFieldQuery(field.id).status !== 'CLOSED'
-                    "
-                    :id="`btn-close-query-${field.id}`"
-                    type="button"
-                    class="btn btn-success btn-sm"
-                    style="
-                      padding: 2px 8px;
-                      font-size: 0.75rem;
-                      background-color: var(
-                        --semantic-color-success-interactive
-                      );
-                      color: var(--semantic-color-surface);
-                    "
-                    @click="openCloseQueryModal(field)"
-                  >
-                    ✅ Close Query
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <!-- Trip Report / Visit Questionnaire Workspace -->
+      <TripReportConsole v-if="activeConsoleTab === 'trip_report'" />
     </div>
 
     <!-- Modal 1: Raise Discrepancy Query -->
@@ -597,6 +669,9 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../../stores/clinical";
 import { useAuthStore } from "../../stores/auth";
+import TripReportConsole from "../clinical/TripReportConsole.vue";
+
+const activeConsoleTab = ref("sdv");
 
 const props = defineProps({
   selectedBatchFields: {
