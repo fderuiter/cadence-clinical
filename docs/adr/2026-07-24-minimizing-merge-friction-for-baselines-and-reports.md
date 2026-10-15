@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted. Amended by [ADR-2531](2026-10-15-every-mapped-test-is-mandatory-evidence.md): the reports now carry an
+evidence block naming the tested revision, which CI's comparison leaves out.
 
 ## Context
 

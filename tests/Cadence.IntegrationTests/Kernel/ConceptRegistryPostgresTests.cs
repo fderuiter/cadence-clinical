@@ -21,7 +21,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// The Concept Registry through the command pipeline and its read port against PostgreSQL (spec §6.1, ADR-2252,
 /// ADR-2470): checksum-verified terminology loading, version pinning, concept versions, mappings, and tenant
-/// isolation. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// isolation. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class ConceptRegistryPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

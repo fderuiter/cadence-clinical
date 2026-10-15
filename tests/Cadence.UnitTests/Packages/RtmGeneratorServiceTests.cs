@@ -78,7 +78,7 @@ public class RequirementTagScannerTests
             "    [Trait(\"Requirement\", \"SRS-CCC-001\")]",
             "    public void Many()",
             "    {",
-            "        /// @req:Trace-7",
+            "        /// @req:PRD-TRACE-7",
             "    }",
             "}"), "tests/Tagged.cs");
 
@@ -176,19 +176,34 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     }
 
     [Fact]
-    public void ParseTestResults_MergesTheoryCasesSoAnyFailureWins()
+    public void ParseTestResults_MergesTheoryCasesSoAnyFailureWinsAndASkippedCaseIsNeverAPass()
     {
         WriteTrx("theory.trx",
             ("Sample.T", "Cases", "Passed"),
             ("Sample.T", "Cases", "Failed"),
             ("Sample.T", "Cases", "Passed"),
             ("Sample.T", "SkippedThenPassed", "NotExecuted"),
-            ("Sample.T", "SkippedThenPassed", "Passed"));
+            ("Sample.T", "SkippedThenPassed", "Passed"),
+            ("Sample.T", "AllPassed", "Passed"),
+            ("Sample.T", "AllPassed", "Passed"));
 
         var results = RtmGeneratorService.ParseTestResults(_dir, _dir);
 
         results["Sample.T.Cases"].Status.Should().Be(TestStatus.Failed);
-        results["Sample.T.SkippedThenPassed"].Status.Should().Be(TestStatus.Passed);
+        results["Sample.T.SkippedThenPassed"].Status.Should().Be(TestStatus.Skipped, "every theory case is mandatory");
+        results["Sample.T.AllPassed"].Status.Should().Be(TestStatus.Passed);
+    }
+
+    [Theory]
+    [InlineData("Passed", TestStatus.Passed)]
+    [InlineData("Failed", TestStatus.Failed)]
+    [InlineData("NotExecuted", TestStatus.Skipped)]
+    [InlineData("Inconclusive", TestStatus.NotExecuted)]
+    [InlineData("Pending", TestStatus.NotExecuted)]
+    [InlineData("", TestStatus.NotExecuted)]
+    public void StatusFromOutcome_KeepsPassedFailedSkippedAndNotExecutedApart(string outcome, string expected)
+    {
+        RtmGeneratorService.StatusFromOutcome(outcome).Should().Be(expected);
     }
 
     [Theory]
@@ -218,7 +233,7 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     }
 
     [Fact]
-    public void Classify_QualifiesOnlyWhenAMappedTestPassedAndNoneFailed()
+    public void Classify_QualifiesOnlyWhenEveryMappedTestPassed()
     {
         var mappings = new Dictionary<string, List<TestMappingInfo>>
         {
@@ -237,6 +252,131 @@ public sealed class RtmGeneratorServiceTests : IDisposable
         RtmGeneratorService.Classify("PRD-A-2", mappings, results).Should().Be(RequirementState.Failed);
         RtmGeneratorService.Classify("PRD-A-3", mappings, results).Should().Be(RequirementState.NotVerified);
         RtmGeneratorService.Classify("PRD-A-4", mappings, results).Should().Be(RequirementState.Planned);
+    }
+
+    /// <summary>
+    /// Regression for #5324: "at least one passed, none failed" qualified a requirement whose other mapped tests were
+    /// skipped or never ran. Every mapped test is mandatory now.
+    /// </summary>
+    [Fact]
+    public void Classify_LeavesARequirementUnverified_WhenOneMandatoryTestSkippedOrDidNotExecute()
+    {
+        var mappings = new Dictionary<string, List<TestMappingInfo>>
+        {
+            ["PRD-A-1"] = [Mapping("S.Pass1"), Mapping("S.Pass2"), Mapping("S.Pass3"), Mapping("S.Skip")],
+            ["PRD-A-2"] = [Mapping("S.Pass1"), Mapping("S.Pass2"), Mapping("S.NoResult")],
+            ["PRD-A-3"] = [Mapping("S.Pass1"), Mapping("S.Inconclusive")],
+        };
+        var results = new Dictionary<string, TestResultInfo>
+        {
+            ["S.Pass1"] = new() { Status = TestStatus.Passed },
+            ["S.Pass2"] = new() { Status = TestStatus.Passed },
+            ["S.Pass3"] = new() { Status = TestStatus.Passed },
+            ["S.Skip"] = new() { Status = TestStatus.Skipped },
+            ["S.Inconclusive"] = new() { Status = TestStatus.NotExecuted },
+        };
+
+        RtmGeneratorService.Classify("PRD-A-1", mappings, results).Should().Be(RequirementState.NotVerified);
+        RtmGeneratorService.Classify("PRD-A-2", mappings, results).Should().Be(RequirementState.NotVerified);
+        RtmGeneratorService.Classify("PRD-A-3", mappings, results).Should().Be(RequirementState.NotVerified);
+    }
+
+    /// <summary>
+    /// Regression for #5324 and #5328: an alias (SRS or Trace ID) used to inherit its parent's tests and show
+    /// "Verified via Parent". A parent's evidence no longer qualifies a child with its own acceptance criteria, and a
+    /// child's tests still never qualify the parent.
+    /// </summary>
+    [Fact]
+    public void GenerateRtm_JudgesAnAliasOnlyByItsOwnTests_NeverByItsParent()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "docs", "SDLC"));
+        File.WriteAllText(Path.Combine(_dir, "docs", "SDLC", "prd.md"), "#### PRD-AAA-001: Widget\n#### PRD-AAA-002: Gadget\n");
+        File.WriteAllText(Path.Combine(_dir, "docs", "SRS.md"), string.Join("\n",
+            "| `SRS-AAA-001` | `PRD-AAA-001` | x | Child of a qualified parent |",
+            "| `SRS-AAA-002` | `PRD-AAA-002` | x | Child with its own test |"));
+        Directory.CreateDirectory(Path.Combine(_dir, "tests"));
+        WriteTaggedTest("Parent", "PRD-AAA-001");
+        WriteTaggedTest("Child", "SRS-AAA-002");
+        WriteTrx("a.trx", ("Sample.ParentTests", "Parent", "Passed"), ("Sample.ChildTests", "Child", "Passed"));
+
+        RtmGeneratorService.GenerateRtm(reportPath: ".", repoRoot: _dir).Should().Be(0);
+        string rtm = File.ReadAllText(Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md"));
+
+        rtm.Should().Contain("| `SRS-AAA-001` | `PRD-AAA-001` | Child of a qualified parent | None | 📋 **Planned** |");
+        rtm.Should().Contain("| `SRS-AAA-002` | `PRD-AAA-002` | Child with its own test | `Child` (tests/Child.cs) 🟢 | ✅ **Qualified** |");
+        rtm.Should().Contain("| PRD-AAA-002 | PRD | **Gadget** | Sprint Roadmap |", "the child's test does not qualify its parent");
+        rtm.Should().NotContain("Verified via Parent");
+        RtmGeneratorService.GenerateRtm(validateOnly: true, reportPath: ".", repoRoot: _dir).Should().Be(0, "the RTM lists the alias's own test");
+    }
+
+    [Fact]
+    public void GenerateRtm_RecordsTheEvidenceContext_AndTheDatabaseTheFixturesReported()
+    {
+        WriteMinimalRepository();
+        WriteTrx("a.trx", ("Sample.FirstTests", "First", "Passed"));
+        File.WriteAllLines(Path.Combine(_dir, "kernel.database.txt"),
+        [
+            "fixture=kernel", "source=CADENCE_TEST_POSTGRES", "server_version=16.10", "extensions=plpgsql 1.0",
+            "latest_migration=20261001_Latest", "app_role=NOSUPERUSER NOBYPASSRLS",
+        ]);
+        var evidence = new RtmEvidenceContext("`abc123` (clean working tree)", "2026-10-15 19:00:00", "", "`pnpm cadence gxp sync` on Linux");
+
+        RtmGeneratorService.GenerateRtm(reportPath: ".", repoRoot: _dir, evidence: evidence).Should().Be(0);
+
+        foreach (var document in new[] { "Requirements_Traceability_Matrix.md", "IQ_OQ_PQ_Execution_Report.md" })
+        {
+            File.ReadAllText(Path.Combine(_dir, "docs", "SDLC", document)).Should()
+                .Contain("- **Tested revision:** `abc123` (clean working tree)")
+                .And.Contain("- **Generated (UTC):** 2026-10-15 19:00:00")
+                .And.Contain("PostgreSQL 16.10 from CADENCE_TEST_POSTGRES, extensions plpgsql 1.0, migrations through `20261001_Latest`")
+                .And.Contain("application role (NOSUPERUSER NOBYPASSRLS)")
+                .And.Contain("- **Runner:** `pnpm cadence gxp sync` on Linux");
+        }
+    }
+
+    [Fact]
+    public void GenerateRtm_SaysSo_WhenNoDatabaseFixtureRecordedItsEnvironment()
+    {
+        WriteMinimalRepository();
+        WriteTrx("a.trx", ("Sample.FirstTests", "First", "Passed"));
+
+        RtmGeneratorService.GenerateRtm(reportPath: ".", repoRoot: _dir, evidence: new RtmEvidenceContext("r", "t", "", "x")).Should().Be(0);
+
+        File.ReadAllText(Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md"))
+            .Should().Contain("- **Database:** none recorded: no PostgreSQL fixture ran, so no database test executed");
+    }
+
+    [Fact]
+    public void ComparableContent_IgnoresOnlyTheEvidenceBlockAndTheStamp()
+    {
+        string Document(RtmEvidenceContext evidence, string body) =>
+            GxPSigner.StampGxpMarkdown($"# RTM\n\n{evidence.Render()}\n{body}\n");
+
+        var first = Document(new("`a`", "1", "db", "ci"), "| PRD-A-1 | ✅ **Qualified** |");
+        var second = Document(new("`b`", "2", "other db", "sync"), "| PRD-A-1 | ✅ **Qualified** |");
+        var changed = Document(new("`a`", "1", "db", "ci"), "| PRD-A-1 | ⚠️ **Not Verified** |");
+
+        RtmEvidenceContext.ComparableContent(first).Should().Be(RtmEvidenceContext.ComparableContent(second));
+        RtmEvidenceContext.ComparableContent(first).Should().NotBe(RtmEvidenceContext.ComparableContent(changed));
+        GxPSigner.VerifyStamp(second).Should().BeTrue("the stamp still covers the evidence block");
+    }
+
+    [Fact]
+    public void QualificationReport_CountsSkippedAndNotExecutedSeparately()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "docs", "SDLC"));
+        File.WriteAllText(Path.Combine(_dir, "docs", "SDLC", "prd.md"), "#### PRD-AAA-001: Widget\n");
+        Directory.CreateDirectory(Path.Combine(_dir, "tests"));
+        WriteTaggedTest("Passes", "PRD-AAA-001");
+        WriteTaggedTest("Skips", "PRD-AAA-001");
+        WriteTaggedTest("NeverRuns", "PRD-AAA-001");
+        WriteTrx("a.trx", ("Sample.PassesTests", "Passes", "Passed"), ("Sample.SkipsTests", "Skips", "NotExecuted"));
+
+        RtmGeneratorService.GenerateRtm(reportPath: ".", repoRoot: _dir).Should().Be(0);
+
+        File.ReadAllText(Path.Combine(_dir, "docs", "SDLC", "IQ_OQ_PQ_Execution_Report.md")).Should()
+            .Contain("**Passed:** 1 ").And.Contain("**Skipped:** 1 ").And.Contain("**Not Executed:** 1")
+            .And.Contain("⚪ (NOT EXECUTED) NOT EXECUTED").And.Contain("Qualified Requirements: 0 of 1");
     }
 
     [Fact]
@@ -288,15 +428,25 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     }
 
     [Fact]
-    public void FindMappingDrift_IgnoresUnknownIdsAndAliasesWhichTheRtmListsElsewhere()
+    public void FindMappingDrift_ReadsAliasTestsFromSection4_AndIgnoresUnknownIds()
     {
         var tests = new[] { new DiscoveredTest("S.T", "T", "tests/S.cs", 1, ["SRS-A-1", "PRD-NOPE-1"]) };
         var requirements = new Dictionary<string, RequirementInfo>
         {
             ["SRS-A-1"] = new() { Id = "SRS-A-1", ParentPrdId = "PRD-A-1", IsLegacyAlias = true },
         };
+        string rtm = string.Join("\n",
+            "## 2. Requirements with Mapped Tests",
+            "",
+            "## 4. Traceability Aliases (Trace and SRS IDs)",
+            "",
+            "| Alias ID | Canonical Parent PRD | Requirement Summary | Mapped Test Cases | Status |",
+            "| :--- | :--- | :--- | :--- | :--- |",
+            "| `SRS-A-1` | `PRD-A-1` | Summary | `T` (tests/S.cs) 🟢 | ✅ **Qualified** |");
 
-        RtmGeneratorService.FindMappingDrift("## 2. Requirements with Mapped Tests\n", tests, requirements).Should().BeEmpty();
+        RtmGeneratorService.FindMappingDrift(rtm, tests, requirements).Should().BeEmpty();
+        RtmGeneratorService.FindMappingDrift("## 2. Requirements with Mapped Tests\n", tests, requirements)
+            .Should().Equal("missing from the RTM: SRS-A-1 <- T (tests/S.cs)");
     }
 
     [Fact]

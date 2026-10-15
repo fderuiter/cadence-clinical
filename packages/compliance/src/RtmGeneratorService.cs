@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-
-using Cadence.Kernel.Time;
 
 namespace Cadence.Compliance;
 
@@ -31,7 +28,7 @@ public class TestMappingInfo
 
 public class TestResultInfo
 {
-    public string Status { get; set; } = TestStatus.NotRun;
+    public string Status { get; set; } = TestStatus.NotExecuted;
     public string Message { get; set; } = string.Empty;
     public string Time { get; set; } = "0.0";
 }
@@ -43,8 +40,11 @@ public static class TestStatus
     public const string Failed = "FAILED";
     public const string Skipped = "SKIPPED";
 
-    /// <summary>The test exists in source but has no result in any TRX file.</summary>
-    public const string NotRun = "NOT RUN";
+    /// <summary>
+    /// The test exists in source but did not execute: it has no result in any TRX file, or its result is neither a
+    /// pass, a failure nor a skip (for example inconclusive or pending).
+    /// </summary>
+    public const string NotExecuted = "NOT EXECUTED";
 
     /// <summary>Draft mode: no TRX results were supplied at all.</summary>
     public const string Unverified = "UNVERIFIED";
@@ -53,13 +53,16 @@ public static class TestStatus
 /// <summary>Verification state of one requirement.</summary>
 public enum RequirementState
 {
-    /// <summary>At least one mapped test passed and none failed.</summary>
+    /// <summary>Every mapped test passed. Each mapped test is mandatory.</summary>
     Qualified,
 
     /// <summary>At least one mapped test failed.</summary>
     Failed,
 
-    /// <summary>Tests are mapped but none of them passed (skipped, not run, or no results in draft mode).</summary>
+    /// <summary>
+    /// No mapped test failed, but at least one did not pass: it was skipped, did not execute, or has no result
+    /// (draft mode). Passing tests next to it do not make up for it.
+    /// </summary>
     NotVerified,
 
     /// <summary>No test declares this requirement.</summary>
@@ -69,12 +72,12 @@ public enum RequirementState
 /// <summary>
 /// Generates the Requirements Traceability Matrix and the IQ/OQ/PQ execution report from the requirement
 /// documents, the requirement tags on test methods (<see cref="RequirementTagScanner"/>) and TRX results.
-/// A requirement is reported as qualified only when a test that declares it actually ran and passed.
+/// A requirement is qualified only when every test that declares it ran and passed (#5324). An alias (an
+/// <c>SRS-*</c> or <c>Trace-*</c> entry with a parent PRD) is judged by its own tests: a parent's tests never qualify
+/// it, and its tests never qualify the parent.
 /// </summary>
 public static partial class RtmGeneratorService
 {
-    public const string StableTimestamp = "2026-07-23 22:38:25 UTC";
-
     /// <summary>Directories scanned for test methods. Tests only live under <c>tests/</c>.</summary>
     public static readonly string[] TestSearchDirs = ["tests"];
 
@@ -89,10 +92,9 @@ public static partial class RtmGeneratorService
         string reportPath = DefaultResultsDir,
         bool draft = false,
         bool validateOnly = false,
-        bool dynamicTimestamp = false,
         string? repoRoot = null,
         bool honorDraftEnvironment = true,
-        IClock? clock = null)
+        RtmEvidenceContext? evidence = null)
     {
         repoRoot ??= FindRepoRoot();
         outputDir = Path.Combine(repoRoot, outputDir);
@@ -114,15 +116,8 @@ public static partial class RtmGeneratorService
         var tests = RequirementTagScanner.ScanDirectories(repoRoot, TestSearchDirs);
         var testMappings = BuildMappings(tests);
 
-        // Legacy and SRS aliases inherit their parent's tests for display; a tag on an alias never
-        // qualifies the parent requirement.
-        foreach (var alias in allRequirements.Values.Where(r => !string.IsNullOrEmpty(r.ParentPrdId)))
-        {
-            if (!testMappings.ContainsKey(alias.Id) && testMappings.TryGetValue(alias.ParentPrdId!, out var parentTests))
-            {
-                testMappings[alias.Id] = [.. parentTests];
-            }
-        }
+        // An alias is mapped only to the tests that declare the alias itself. It does not inherit its parent's
+        // tests: a child requirement has its own acceptance criteria, so the parent's evidence never qualifies it.
 
         // 3. Results
         string fullReportPath = Path.IsPathRooted(reportPath) ? reportPath : Path.Combine(repoRoot, reportPath);
@@ -145,17 +140,18 @@ public static partial class RtmGeneratorService
 
         var unknownTags = FindUnknownTags(tests, allRequirements);
 
-        string timestamp = dynamicTimestamp
-            ? (clock ?? SystemClock.Instance).UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC", CultureInfo.InvariantCulture)
-            : StableTimestamp;
+        // The database line comes from what the fixtures recorded during this run, never from the caller.
+        evidence = evidence is null
+            ? RtmEvidenceContext.NotRecorded
+            : evidence with { Database = DatabaseTestEvidence.DescribeEnvironment(fullReportPath) };
 
         if (!validateOnly)
         {
             string rtmOut = Path.Combine(outputDir, "Requirements_Traceability_Matrix.md");
-            GenerateRtmMarkdown(allRequirements, testMappings, testResults, unknownTags, rtmOut, timestamp, draft);
+            GenerateRtmMarkdown(allRequirements, testMappings, testResults, unknownTags, rtmOut, evidence, draft);
 
             string qualOut = Path.Combine(outputDir, "IQ_OQ_PQ_Execution_Report.md");
-            GenerateQualificationReport(allRequirements, testMappings, tests, testResults, qualOut, timestamp, draft);
+            GenerateQualificationReport(allRequirements, testMappings, tests, testResults, qualOut, evidence, draft);
             return 0;
         }
 
@@ -285,7 +281,7 @@ public static partial class RtmGeneratorService
         {
             foreach (var id in test.RequirementIds)
             {
-                if (requirements.TryGetValue(id, out var req) && !req.IsLegacyAlias)
+                if (requirements.TryGetValue(id, out var req))
                 {
                     expected.Add(MappingKey(req.Id, test.MethodName, test.File));
                 }
@@ -298,25 +294,26 @@ public static partial class RtmGeneratorService
         {
             if (line.StartsWith("## ", StringComparison.Ordinal))
             {
-                inMappedSection = line.StartsWith("## 2.", StringComparison.Ordinal);
+                inMappedSection = line.StartsWith("## 2.", StringComparison.Ordinal) || line.StartsWith("## 4.", StringComparison.Ordinal);
                 continue;
             }
 
             if (!inMappedSection || !line.StartsWith("| ", StringComparison.Ordinal) || line.StartsWith("| :", StringComparison.Ordinal)
-                || line.StartsWith("| Requirement ID", StringComparison.Ordinal))
+                || line.StartsWith("| Requirement ID", StringComparison.Ordinal) || line.StartsWith("| Alias ID", StringComparison.Ordinal))
             {
                 continue;
             }
 
-            // | ID | Source | **Title** | `Test` (file) 🟢<br>... | Status |. The title can contain anything, so
-            // the tests column is read from the right.
+            // | ID | Source | **Title** | `Test` (file) 🟢<br>... | Status |, and in section 4
+            // | `Alias` | `Parent` | Title | tests | Status |. The title can contain anything, so the tests column is
+            // read from the right.
             string[] cells = line.Trim().Trim('|').Split(" | ");
             if (cells.Length < 5)
             {
                 continue;
             }
 
-            string id = cells[0].Trim();
+            string id = cells[0].Trim().Trim('`');
             listed.UnionWith(MappedTestPattern().Matches(cells[^2])
                 .Select(m => MappingKey(id, m.Groups["name"].Value, m.Groups["file"].Value)));
         }
@@ -343,14 +340,16 @@ public static partial class RtmGeneratorService
             return RequirementState.Planned;
         }
 
+        // Every mapped test is mandatory: one failure fails the requirement, and one test that was skipped or did
+        // not execute leaves it unverified however many others passed.
         var statuses = mapped.Select(m => StatusOf(m.FullName, results)).ToList();
         if (statuses.Contains(TestStatus.Failed)) return RequirementState.Failed;
-        if (statuses.Contains(TestStatus.Passed)) return RequirementState.Qualified;
+        if (statuses.TrueForAll(s => s == TestStatus.Passed)) return RequirementState.Qualified;
         return RequirementState.NotVerified;
     }
 
     private static string StatusOf(string fullName, IReadOnlyDictionary<string, TestResultInfo> results) =>
-        results.TryGetValue(fullName, out var res) ? res.Status : TestStatus.NotRun;
+        results.TryGetValue(fullName, out var res) ? res.Status : TestStatus.NotExecuted;
 
     private static Dictionary<string, List<TestMappingInfo>> BuildMappings(IEnumerable<DiscoveredTest> tests)
     {
@@ -517,7 +516,8 @@ public static partial class RtmGeneratorService
     /// <summary>
     /// Reads TRX results keyed by <c>Namespace.Class.Method</c>. <paramref name="reportPath"/> may be a TRX
     /// file or a directory of TRX files (one per test project). Theory cases and duplicate runs of the same
-    /// method are merged: any failure wins, then any pass, otherwise the method counts as skipped.
+    /// method are merged: any failure wins, then a case that did not execute, then a skipped case; the method passes
+    /// only when every case passed.
     /// </summary>
     public static Dictionary<string, TestResultInfo> ParseTestResults(string repoRoot, string reportPath)
     {
@@ -563,13 +563,7 @@ public static partial class RtmGeneratorService
                 string testId = r.Attribute("testId")?.Value ?? "";
                 if (!testDefs.TryGetValue(testId, out var fullName)) continue;
 
-                string status = (r.Attribute("outcome")?.Value ?? "").ToUpperInvariant() switch
-                {
-                    "PASSED" => TestStatus.Passed,
-                    "FAILED" or "ERROR" or "TIMEOUT" or "ABORTED" => TestStatus.Failed,
-                    _ => TestStatus.Skipped,
-                };
-
+                string status = StatusFromOutcome(r.Attribute("outcome")?.Value);
                 results[fullName] = Merge(results.GetValueOrDefault(fullName), status, r.Attribute("duration")?.Value ?? "0.0");
             }
         }
@@ -577,12 +571,30 @@ public static partial class RtmGeneratorService
         return results;
     }
 
+    /// <summary>
+    /// Maps a TRX <c>outcome</c> to a <see cref="TestStatus"/>. xUnit writes <c>NotExecuted</c> for a skipped test;
+    /// any outcome that is not a pass, a failure or a skip counts as not executed, never as passed.
+    /// </summary>
+    public static string StatusFromOutcome(string? outcome) => (outcome ?? "").ToUpperInvariant() switch
+    {
+        "PASSED" => TestStatus.Passed,
+        "FAILED" or "ERROR" or "TIMEOUT" or "ABORTED" or "DISCONNECTED" => TestStatus.Failed,
+        "NOTEXECUTED" => TestStatus.Skipped,
+        _ => TestStatus.NotExecuted,
+    };
+
     private static TestResultInfo Merge(TestResultInfo? existing, string status, string duration)
     {
         if (existing is null) return new TestResultInfo { Status = status, Time = duration };
-        if (existing.Status == TestStatus.Failed || status == TestStatus.Failed) return new TestResultInfo { Status = TestStatus.Failed, Time = duration };
-        if (existing.Status == TestStatus.Passed || status == TestStatus.Passed) return new TestResultInfo { Status = TestStatus.Passed, Time = existing.Time };
-        return existing;
+        return new TestResultInfo { Status = Rank(status) > Rank(existing.Status) ? status : existing.Status, Time = existing.Time };
+
+        static int Rank(string s) => s switch
+        {
+            TestStatus.Failed => 3,
+            TestStatus.NotExecuted => 2,
+            TestStatus.Skipped => 1,
+            _ => 0,
+        };
     }
 
     private static string Emoji(string status) => status switch
@@ -591,7 +603,7 @@ public static partial class RtmGeneratorService
         TestStatus.Failed => "🔴",
         TestStatus.Skipped => "⚪ (SKIPPED)",
         TestStatus.Unverified => "⚪ (UNVERIFIED)",
-        _ => "⚪ (NOT RUN)",
+        _ => "⚪ (NOT EXECUTED)",
     };
 
     private static void GenerateRtmMarkdown(
@@ -600,7 +612,7 @@ public static partial class RtmGeneratorService
         Dictionary<string, TestResultInfo> results,
         SortedDictionary<string, List<DiscoveredTest>> unknownTags,
         string outputPath,
-        string timestamp,
+        RtmEvidenceContext evidence,
         bool draft)
     {
         var sb = new StringBuilder();
@@ -611,10 +623,12 @@ public static partial class RtmGeneratorService
             sb.AppendLine("> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*\n");
         }
         sb.AppendLine("# Requirements Traceability Matrix (RTM)\n");
-        sb.AppendLine($"*Generated on:* {timestamp}");
         sb.AppendLine("*Regulatory Compliance Standards:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5, IEC 62304 Section 5.7 & 5.8\n");
-        sb.AppendLine("> Generated by `dotnet cadence gxp sync`. Do not edit by hand. A requirement is **Qualified** only when a test that");
-        sb.AppendLine("> declares it on the test method ran and passed, and no test declaring it failed. See `docs/TESTING.md`.\n");
+        sb.AppendLine(evidence.Render());
+        sb.AppendLine("> Generated by `dotnet cadence gxp sync`. Do not edit by hand. Every test that declares a requirement on the test");
+        sb.AppendLine("> method is mandatory: the requirement is **Qualified** only when all of them ran and passed against the revision");
+        sb.AppendLine("> above. A parent requirement's tests never qualify an alias, and an alias's tests never qualify its parent.");
+        sb.AppendLine("> See `docs/TESTING.md`.\n");
 
         var canonical = reqs.Values.Where(r => !r.IsLegacyAlias).OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
         var aliases = reqs.Values.Where(r => r.IsLegacyAlias).OrderBy(r => r.Id, StringComparer.Ordinal).ToList();
@@ -625,9 +639,9 @@ public static partial class RtmGeneratorService
 
         sb.AppendLine("## 1. Traceability Summary\n");
         sb.AppendLine($"- **Total Documented Requirements (PRD):** {total}");
-        sb.AppendLine($"- **Qualified (mapped tests passed):** {qualified}");
+        sb.AppendLine($"- **Qualified (every mapped test passed):** {qualified}");
         sb.AppendLine($"- **Failed (a mapped test failed):** {byState[RequirementState.Failed].Count()}");
-        sb.AppendLine($"- **Not Verified (mapped tests skipped or not run):** {byState[RequirementState.NotVerified].Count()}");
+        sb.AppendLine($"- **Not Verified (a mapped test was skipped or not executed):** {byState[RequirementState.NotVerified].Count()}");
         sb.AppendLine($"- **Planned (no mapped tests):** {byState[RequirementState.Planned].Count()}");
         sb.AppendLine($"- **Traceability Aliases (Trace and SRS IDs):** {aliases.Count}");
         sb.AppendLine($"- **Unknown Requirement IDs Declared by Tests:** {unknownTags.Count}");
@@ -639,17 +653,7 @@ public static partial class RtmGeneratorService
 
         foreach (var req in canonical.Where(r => mappings.ContainsKey(r.Id) && mappings[r.Id].Count > 0))
         {
-            var links = mappings[req.Id]
-                .OrderBy(m => m.File, StringComparer.Ordinal)
-                .ThenBy(m => m.Line)
-                .Select(m => $"`{m.TestName}` ({m.File}) {Emoji(StatusOf(m.FullName, results))}");
-            string statusStr = Classify(req.Id, mappings, results) switch
-            {
-                RequirementState.Qualified => "✅ **Qualified**",
-                RequirementState.Failed => "❌ **Failed**",
-                _ => draft ? "⚠️ **Unverified**" : "⚠️ **Not Verified**",
-            };
-            sb.AppendLine($"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | {string.Join("<br>", links)} | {statusStr} |");
+            sb.AppendLine($"| {req.Id} | {SourceDoc(req)} | **{req.Title}** | {MappedTests(mappings[req.Id], results)} | {StateLabel(Classify(req.Id, mappings, results), draft)} |");
         }
 
         sb.AppendLine("\n## 3. Planned Requirements (No Mapped Tests)\n");
@@ -662,17 +666,16 @@ public static partial class RtmGeneratorService
         }
 
         sb.AppendLine("\n## 4. Traceability Aliases (Trace and SRS IDs)\n");
-        sb.AppendLine("Aliases report their canonical parent's state. A test tagged only with an alias does not qualify the parent.\n");
-        sb.AppendLine("| Alias ID | Canonical Parent PRD | Requirement Summary | Status |");
-        sb.AppendLine("| :--- | :--- | :--- | :--- |");
+        sb.AppendLine("An alias has its own acceptance criteria, so it is judged only by the tests that declare the alias itself. Its");
+        sb.AppendLine("parent's tests never qualify it, and its own tests never qualify the parent.\n");
+        sb.AppendLine("| Alias ID | Canonical Parent PRD | Requirement Summary | Mapped Test Cases | Status |");
+        sb.AppendLine("| :--- | :--- | :--- | :--- | :--- |");
 
         foreach (var alias in aliases)
         {
             string parent = alias.ParentPrdId ?? "N/A";
-            string status = !string.IsNullOrEmpty(alias.ParentPrdId) && Classify(alias.ParentPrdId, mappings, results) == RequirementState.Qualified
-                ? "✅ **Verified via Parent**"
-                : "📋 **Scheduled via Parent**";
-            sb.AppendLine($"| `{alias.Id}` | `{parent}` | {alias.Title} | {status} |");
+            string tests = mappings.TryGetValue(alias.Id, out var own) && own.Count > 0 ? MappedTests(own, results) : "None";
+            sb.AppendLine($"| `{alias.Id}` | `{parent}` | {alias.Title} | {tests} | {StateLabel(Classify(alias.Id, mappings, results), draft)} |");
         }
 
         sb.AppendLine("\n## 5. Unknown Requirement IDs Declared by Tests\n");
@@ -695,6 +698,20 @@ public static partial class RtmGeneratorService
         File.WriteAllText(outputPath, stampedContent);
     }
 
+    private static string MappedTests(IEnumerable<TestMappingInfo> mapped, IReadOnlyDictionary<string, TestResultInfo> results) =>
+        string.Join("<br>", mapped
+            .OrderBy(m => m.File, StringComparer.Ordinal)
+            .ThenBy(m => m.Line)
+            .Select(m => $"`{m.TestName}` ({m.File}) {Emoji(StatusOf(m.FullName, results))}"));
+
+    private static string StateLabel(RequirementState state, bool draft) => state switch
+    {
+        RequirementState.Qualified => "✅ **Qualified**",
+        RequirementState.Failed => "❌ **Failed**",
+        RequirementState.Planned => "📋 **Planned**",
+        _ => draft ? "⚠️ **Unverified**" : "⚠️ **Not Verified**",
+    };
+
     private static string SourceDoc(RequirementInfo req) => req.Source.Contains("SRS", StringComparison.Ordinal) ? "SRS" : "PRD";
 
     private static void GenerateQualificationReport(
@@ -703,7 +720,7 @@ public static partial class RtmGeneratorService
         IReadOnlyList<DiscoveredTest> tests,
         Dictionary<string, TestResultInfo> results,
         string outputPath,
-        string timestamp,
+        RtmEvidenceContext evidence,
         bool draft)
     {
         var sb = new StringBuilder();
@@ -714,8 +731,8 @@ public static partial class RtmGeneratorService
             sb.AppendLine("> *This document was generated in draft mode with missing test results. It is NOT eligible for GxP production release.*\n");
         }
         sb.AppendLine("# GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report\n");
-        sb.AppendLine($"*Execution Date:* {timestamp}");
         sb.AppendLine("*Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B\n");
+        sb.AppendLine(evidence.Render());
 
         sb.AppendLine("## 1. Executive Summary & Verification Declaration\n");
         sb.AppendLine("This report documents the Installation Qualification (IQ) and Operational Qualification (OQ) for the Cadence Clinical platform.\n");
@@ -729,7 +746,7 @@ public static partial class RtmGeneratorService
         int passedRun = taggedStatuses.Count(s => s == TestStatus.Passed);
         int failedRun = taggedStatuses.Count(s => s == TestStatus.Failed);
         int skippedRun = taggedStatuses.Count(s => s == TestStatus.Skipped);
-        int notRun = taggedStatuses.Count - passedRun - failedRun - skippedRun;
+        int notExecuted = taggedStatuses.Count - passedRun - failedRun - skippedRun;
         int executed = passedRun + failedRun;
 
         sb.AppendLine("### Validation Result Summary\n");
@@ -739,11 +756,12 @@ public static partial class RtmGeneratorService
         sb.AppendLine($"- **Passed:** {passedRun} 🟢");
         sb.AppendLine($"- **Failed/Errors:** {failedRun} 🔴");
         sb.AppendLine($"- **Skipped:** {skippedRun} ⚪");
-        sb.AppendLine($"- **Not Run:** {notRun}");
+        sb.AppendLine($"- **Not Executed:** {notExecuted}");
         sb.AppendLine($"- **Pass Rate (of executed):** {(executed > 0 ? passedRun * 100.0 / executed : 0):F2}%\n");
 
         sb.AppendLine("## 2. Installation Qualification (IQ)\n");
-        sb.AppendLine("The Installation Qualification verifies that the software execution environment and static quality checks are fully compliant.\n");
+        sb.AppendLine("The Installation Qualification records the environment the tests ran in: the tested revision, the database and the");
+        sb.AppendLine("runner are in the evidence block at the top of this report.\n");
 
         sb.AppendLine("## 3. Operational Qualification (OQ)\n");
         sb.AppendLine("Test methods that declare at least one requirement. Theory cases are merged per method. Durations are left");

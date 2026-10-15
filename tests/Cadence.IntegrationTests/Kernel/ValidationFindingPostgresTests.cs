@@ -36,7 +36,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// Validation runs and findings on PostgreSQL (spec §10.3, #4812): a study's pinned rule packs run through
 /// <see cref="ValidationRunner"/>, findings keep their identity across runs and are resolved by the run that no longer
 /// detects them (K-FIND-1), acceptance and explanation need a matching attestation (K-FIND-2), and runs link to their
-/// rule packs and inputs in lineage (K-FIND-3). Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// rule packs and inputs in lineage (K-FIND-3). Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class ValidationFindingPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

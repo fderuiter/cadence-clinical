@@ -19,7 +19,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// The Schedule of Activities against PostgreSQL (ADR-2475): the reader compiles a stored version's design, and an
 /// amendment's impact carries the typed schedule and eligibility directives between it and its parent. Skipped unless
-/// <c>CADENCE_TEST_POSTGRES</c> is set.
+/// <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class ScheduleOfActivitiesPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

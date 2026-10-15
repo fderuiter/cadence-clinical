@@ -26,7 +26,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Protocol versions and attestations through the production pipeline against PostgreSQL (spec §6.2, §9.5, #4775):
 /// the lifecycle with attested approval and withdrawal, forks that leave the parent approved, and the database
-/// trigger that freezes approved content whoever connects. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// trigger that freezes approved content whoever connects. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelProtocolVersionPostgresTests(KernelPostgresFixture fixture)

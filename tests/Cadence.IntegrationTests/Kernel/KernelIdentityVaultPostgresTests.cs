@@ -30,7 +30,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// The IdentityVault against PostgreSQL (spec §9.2, ADR-2253, ADR-2458): sealed storage outside the kernel schema,
 /// audited reveals per layer (K-IDN-1), crypto-shredding, cross-study links (K-IDN-2), residency, and a vault the
-/// application role reaches only through its functions. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// application role reaches only through its functions. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelIdentityVaultPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>, IDisposable

@@ -53,7 +53,7 @@ internal static class BitemporalGuardAssertions
 
 /// <summary>
 /// ADR-2246 database layer against a real PostgreSQL: <c>tstzrange</c> storage, <c>AsOf</c> as range containment,
-/// K-TIME-2 single-truth exclusion and K-TIME-1 append-only rows. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// K-TIME-2 single-truth exclusion and K-TIME-1 append-only rows. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class BitemporalPostgresTests(BitemporalPostgresFixture fixture) : IClassFixture<BitemporalPostgresFixture>

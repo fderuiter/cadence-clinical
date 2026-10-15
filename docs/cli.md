@@ -116,12 +116,12 @@ pnpm cadence ci --job accessibility-e2e # the Playwright job, which CI runs only
 pnpm cadence ci --list                  # what each step runs locally, without running it
 ```
 
-| Option            | Description                                                                                                                      |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Option            | Description                                                                                                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`. |
-| `--allow-skip`    | Runs the .NET tests without PostgreSQL, so the database tests report as skipped instead of failing the run.                      |
-| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.        |
-| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                       |
+| `--allow-skip`    | Accepts a run whose database tests did not execute: without PostgreSQL, or with skips in the integration and E2E results.                                                                      |
+| `--base <ref>`    | The ref that changed files are compared with, for the duplication, DEID and detect-secrets steps. Default: `origin/main`.                                                                      |
+| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                     |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
 and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
@@ -132,10 +132,12 @@ Where it differs from CI:
 
 - **PostgreSQL is required.** CI gives the .NET tests a database, so without `CADENCE_TEST_POSTGRES` or
   `CADENCE_TEST_DOCKER=1` ([TESTING.md](TESTING.md#tests-that-need-postgresql)) the test step fails before it starts
-  instead of passing with every database test skipped. `--allow-skip` accepts the skips.
+  instead of passing with every database test skipped. After the test step passes, its TRX files are read, and any test
+  in `Cadence.IntegrationTests` or `Cadence.E2ETests` that was skipped or did not execute fails the step too (#5325),
+  except the opt-in lineage benchmark listed in `DatabaseTestEvidence.OptInTests`. `--allow-skip` accepts the skips.
 - **Checks already run once are not repeated.** A step that runs one gate of `cadence check` (ADRs, Markdown, schema
   doc, OpenAPI, contracts, duplication, the security audit, vulnerabilities, secrets and DEID) is reported as
-  *covered* when the full `Run Cadence quality sentinels` step passed. If that step failed, each of them runs on its own
+  _covered_ when the full `Run Cadence quality sentinels` step passed. If that step failed, each of them runs on its own
   so the summary shows which gate failed. The Node install and UI build in later jobs are covered by earlier jobs.
   The documentation build (`pnpm docs:build`) also starts with `cadence check` and Markdown validation; after that step
   passed it runs with `CADENCE_DOCS_SKIP_CHECKS=1`, which skips them and saves about two and a half minutes.
@@ -144,7 +146,8 @@ Where it differs from CI:
   own regenerated reports with what is committed.
 - **The tests run once.** The .NET test step writes its TRX files to `TestResults/gxp`, and the compliance job builds
   the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`, which would run every test again. Nothing is
-  staged; `Assert No Documentation Git Diff` then fails if the regenerated reports differ from the committed ones.
+  staged; `Assert No Documentation Git Diff` (`cadence gxp diff`) then fails if the regenerated reports differ from the
+  committed ones outside their evidence block, and puts the committed copies back when they match.
 - **Tools are not installed for you.** Hadolint, ShellCheck and detect-secrets run when they are on `PATH` and are
   reported as skipped, with the install command, when they are not.
 - **Not run:** the container build and Trivy scan (push to `main` only, and they need Docker), the Playwright browser
@@ -188,10 +191,10 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `validate-codeowners`         | Fails when `.github/CODEOWNERS` is missing or empty.                                                                                                                                                                                                                                                                                                  | `CodeownersValidatorService.ValidateCodeowners`               |
 | `validate-markdown`           | Checks workspace links and `#` heading spacing in `docs/**/*.md`.                                                                                                                                                                                                                                                                                     | `MarkdownValidatorService.ValidateMarkdown`                   |
 | `query-linter`                | Scans `.cs` files outside `tests/`. Fails on interpolated `FromSqlRaw($...)` or `ExecuteSqlRaw($...)`, and on `== true` or `== false`.                                                                                                                                                                                                                | `QueryLinterService.LintQueries`                              |
-| `extract-env-vars`            | Finds environment variable reads in `.cs` and `.py` files. Fails if `.env.example` is missing. With `--check`, returns exit code 1 when variables missing from `.env.example` or `docs/ENVIRONMENT_VARIABLES.md` are found. It never writes files. | `EnvVarExtractorService.ExtractAndValidateEnvVars`            |
+| `extract-env-vars`            | Finds environment variable reads in `.cs` and `.py` files. Fails if `.env.example` is missing. With `--check`, returns exit code 1 when variables missing from `.env.example` or `docs/ENVIRONMENT_VARIABLES.md` are found. It never writes files.                                                                                                    | `EnvVarExtractorService.ExtractAndValidateEnvVars`            |
 | `verify-contracts`            | Checks hexagonal port and contract definitions. The rules are in `packages/tooling_core/src/Contracts/ContractVerifier.cs`.                                                                                                                                                                                                                           | `ContractVerifierService.VerifyContracts`                     |
 | `audit-security`              | Scans every file in the repository for secret patterns.                                                                                                                                                                                                                                                                                               | `SecurityAuditorService.AuditSecurity`                        |
-| `validate-vulnerabilities`    | Audits dependency vulnerabilities across .NET packages and pnpm frontend workspace dependencies (alongside Python dependencies) against active exemptions in `docs/SDLC/vulnerability_exclusions_ledger.json`. Fails if unapproved vulnerabilities exist. | `VulnerabilityAuditorService.AuditVulnerabilities`            |
+| `validate-vulnerabilities`    | Audits dependency vulnerabilities across .NET packages and pnpm frontend workspace dependencies (alongside Python dependencies) against active exemptions in `docs/SDLC/vulnerability_exclusions_ledger.json`. Fails if unapproved vulnerabilities exist.                                                                                             | `VulnerabilityAuditorService.AuditVulnerabilities`            |
 | `clean-secrets-baseline`      | Rewrites the file exclusion filter in `.secrets.baseline`. Skips if the file is missing.                                                                                                                                                                                                                                                              | `SecretsBaselineCleanerService.CleanSecretsBaseline`          |
 | `validate-architecture-drift` | Lists services in `docker/docker-compose.yml`. Warns when one is not mentioned in `ARCHITECTURE.md` or `docs/SDLC/02_Technical_Design_Document_TDD.md`. Fails only if the compose file is missing or has no services.                                                                                                                                 | `ArchitectureDriftValidatorService.ValidateArchitectureDrift` |
 | `sync-openapi-spec`           | Runs `Cadence.OpenApiExporter`, which boots every .NET service in memory and exports its OpenAPI document, then writes the specs and the `cdisc_openapi.json` aggregate to `docs/openapi/` and deletes top-level specs no service serves. `docs/openapi/legacy/` is left alone. Option: `--validate` (compare only; exits `1` on drift).              | `OpenApiSyncService.SyncOpenApiSpec`                          |
@@ -201,7 +204,7 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `pre-commit-openapi`          | Same as `validate-openapi-drift`. This is the `openapi` gate. It does not stage anything.                                                                                                                                                                                                                                                             | `PreCommitOpenApiService.ExecutePreCommitOpenApi`             |
 | `validate-api-clients`        | Checks that `apps/web/src/api/generated/` matches `docs/openapi/` (`node scripts/generate-api-types.js --check`), then runs `pnpm exec tsc --noEmit` in `apps/web`, which typechecks the `apps/web/src/api` clients against their generated OpenAPI types. Exits `1` on stale generated types or a type error. This is the `api-clients` gate.        | `ApiClientValidatorService.ValidateApiClients`                |
 | `generate-cli-docs`           | Without options, creates a stub `docs/cli.md` only if it is missing. With `--check`, fails when this file lacks the required headings or a command registered in `Program.cs`.                                                                                                                                                                        | `CliDocsGeneratorService.GenerateCliDocs`                     |
-| `generate-doc-index`          | Scans markdown files in `docs/` and updates `docs/DOCUMENTATION_INDEX.md` organized by category. Option: `--check` (verify index completeness without editing; exits `1` on unindexed files). This is the `validate-doc-index` gate.                                                                                                              | `DocIndexSyncService.SyncDocIndex`                            |
+| `generate-doc-index`          | Scans markdown files in `docs/` and updates `docs/DOCUMENTATION_INDEX.md` organized by category. Option: `--check` (verify index completeness without editing; exits `1` on unindexed files). This is the `validate-doc-index` gate.                                                                                                                  | `DocIndexSyncService.SyncDocIndex`                            |
 | `generate-rtm`                | Builds the traceability matrix from requirements in `docs/`, `@req` tags in tests and `report_dotnet.trx`. Writes `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`. Options: `--validate` (write nothing; fail if a mapped test failed), `--draft` (mark tests as unverified when the report is missing). | `RtmGeneratorService.GenerateRtm` (`packages/compliance/src`) |
 | `compliance-utility`          | With `--sanitize`, upper-cases `@req:PRD-...` tags in `docs/**/*.md`, skipping `docs/SDLC/runs/`. Without it, does nothing.                                                                                                                                                                                                                           | `ComplianceUtilityService.ExecuteComplianceUtility`           |
 | `verify-gxp-signatures`       | Not implemented yet. Exits `1` without checking any signature.                                                                                                                                                                                                                                                                                        | `VerifyGxPSignaturesService.VerifySignatures`                 |
@@ -217,9 +220,12 @@ GxP compliance documents. `docs/SDLC/` must only be changed through these comman
 
 #### `cadence gxp sync`
 
-1. Runs `dotnet test Cadence.sln --no-restore --configuration Release` and writes `report_dotnet.trx`. Stops if tests fail.
-2. Regenerates `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` (see `generate-rtm`).
-3. Stages those files and `docs/SDLC/runs` with `git add`.
+1. Runs `dotnet test Cadence.sln --no-restore --configuration Release`, writing one TRX file per test project and the
+   database fixtures' environment records (`CADENCE_TEST_EVIDENCE_DIR`) into `TestResults/gxp/`.
+2. Regenerates `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` (see `generate-rtm`),
+   with an evidence block naming the tested revision, the generation time, the database and the runner.
+3. Stops without staging if a test failed or a database test in the integration or E2E results did not execute.
+4. Otherwise stages those files and `docs/SDLC/runs` with `git add`.
 
 | Option      | Description                                                                                                            |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -229,6 +235,12 @@ GxP compliance documents. `docs/SDLC/` must only be changed through these comman
 #### `cadence gxp validate`
 
 Same as `cadence gxp sync --dry-run`. It does not compare the checked-in documents with freshly generated ones.
+
+#### `cadence gxp diff`
+
+Compares the RTM and IQ/OQ/PQ report in the working tree with the copies in the git index, leaving out the evidence
+block and the integrity stamp, which change on every run. Exits `1` and prints the differing lines when the results or
+the test mapping differ. CI's `Assert No Documentation Git Diff` step runs it after regenerating the reports.
 
 #### `cadence gxp verify`
 
@@ -309,12 +321,12 @@ Not implemented yet.
 
 Agent lifecycle hooks (PRD-SYS-053). `.agents/hooks.json` runs them from the published binary (`make build` writes `bin/cadence`). Each hook reads the runtime's JSON payload on standard input, exits `0` to allow the step, and exits `2` with the reason on standard error to block it. The banner is not printed.
 
-| Command                       | Phase           | What it does                                                                                                                                                                                                       |
-| ----------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Command                       | Phase           | What it does                                                                                                                                                                                                                                                            |
+| ----------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `cadence hook pre-tool`       | `PreToolUse`    | Blocks `--no-verify`, force-pushing or deleting `main`/`master`, `git filter-branch`/`filter-repo`, `rm -rf` of `/`, `~` or the repository, `git clean -x`, and any write to the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/`. An unreadable payload is blocked. |
-| `cadence hook post-write`     | `PostToolUse`   | Runs the query-style lint on the edited `.cs` files and blocks on `== true`/`== false` comparisons.                                                                                                             |
-| `cadence hook pre-invocation` | `PreInvocation` | Prints the GxP working rules from `AGENTS.md`.                                                                                                                                                                    |
-| `cadence hook stop`           | `Stop`          | Blocks finishing while the traceability matrix is out of date with the requirement tags; run `cadence gxp sync`.                                                                                                 |
+| `cadence hook post-write`     | `PostToolUse`   | Runs the query-style lint on the edited `.cs` files and blocks on `== true`/`== false` comparisons.                                                                                                                                                                     |
+| `cadence hook pre-invocation` | `PreInvocation` | Prints the GxP working rules from `AGENTS.md`.                                                                                                                                                                                                                          |
+| `cadence hook stop`           | `Stop`          | Blocks finishing while the traceability matrix is out of date with the requirement tags; run `cadence gxp sync`.                                                                                                                                                        |
 
 ### `cadence wizard`
 

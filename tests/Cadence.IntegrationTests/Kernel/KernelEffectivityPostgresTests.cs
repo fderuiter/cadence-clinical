@@ -28,7 +28,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// Effectivity and study-site activation through the production pipeline against PostgreSQL (spec §7.1, #4777): a
 /// version becomes effective only on approval evidence (K-TIME-5), a study site activates only where a version is in
 /// force (K-TIME-4), the reader resolves the most specific scope as of any valid and known time, and the status history
-/// is append-only whoever connects. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// is append-only whoever connects. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelEffectivityPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>

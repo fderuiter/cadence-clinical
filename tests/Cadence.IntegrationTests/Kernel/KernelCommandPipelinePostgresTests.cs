@@ -36,7 +36,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// Runs kernel commands through the production pipeline against a real PostgreSQL server (spec §5.1-5.4): the
 /// single transaction for state, provenance, events, audit and outbox (K-TX-2), idempotency (K-TX-3), one aggregate
 /// per command (K-TX-1), the resolved actor (K-TX-5), audited denials (K-AUTH-2), the per-tenant hash chain and the
-/// insert-only tables. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// insert-only tables. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelCommandPipelinePostgresTests(KernelPostgresFixture fixture)

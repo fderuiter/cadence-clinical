@@ -24,7 +24,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// The second half of the command pipeline against a real PostgreSQL server (spec §5.1, §5.3): the outbox relay
 /// delivers committed events at least once, in per-tenant order, with retries; the sealer verifies and seals each
 /// tenant's audit chain, refuses to seal a broken one, and seals make later truncation detectable. Skipped unless
-/// <c>CADENCE_TEST_POSTGRES</c> is set.
+/// <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelOutboxAndSealingPostgresTests(KernelPostgresFixture fixture)

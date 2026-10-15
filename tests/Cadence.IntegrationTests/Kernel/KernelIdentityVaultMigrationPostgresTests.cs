@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.IdentityVault;
+using Cadence.TestSupport.Database;
 
 using FluentAssertions;
 
@@ -20,7 +21,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// The IdentityVault migration never destroys an identifier (ADR-2458): it drops the identifier columns of
 /// <c>kernel.people</c> only when they are empty, and its <c>Down</c> and <c>Up</c> round-trip. Each test migrates its
-/// own throwaway database. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// own throwaway database. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelIdentityVaultMigrationPostgresTests
@@ -39,7 +40,7 @@ public sealed class KernelIdentityVaultMigrationPostgresTests
         await using var database = await ThrowawayDatabase.CreateAsync(ct);
         if (database is null)
         {
-            Assert.Skip("Needs CADENCE_TEST_POSTGRES=<connection string>.");
+            Assert.Skip(PostgresTestServer.SkipReason);
         }
 
         await MigrateAsync(database.ConnectionString, BeforeVault, ct);
@@ -75,7 +76,7 @@ public sealed class KernelIdentityVaultMigrationPostgresTests
         await using var database = await ThrowawayDatabase.CreateAsync(ct);
         if (database is null)
         {
-            Assert.Skip("Needs CADENCE_TEST_POSTGRES=<connection string>.");
+            Assert.Skip(PostgresTestServer.SkipReason);
         }
 
         await MigrateAsync(database.ConnectionString, Vault, ct);
@@ -103,28 +104,30 @@ public sealed class KernelIdentityVaultMigrationPostgresTests
 
     private sealed class ThrowawayDatabase : IAsyncDisposable
     {
+        private readonly PostgresTestServer _host;
         private readonly string _server;
         private readonly string _name;
 
-        private ThrowawayDatabase(string server, string name)
+        private ThrowawayDatabase(PostgresTestServer host, string name)
         {
-            _server = server;
+            _host = host;
+            _server = host.SuperuserConnectionString;
             _name = name;
-            ConnectionString = new NpgsqlConnectionStringBuilder(server) { Database = name }.ConnectionString;
+            ConnectionString = new NpgsqlConnectionStringBuilder(_server) { Database = name }.ConnectionString;
         }
 
         public string ConnectionString { get; }
 
         public static async Task<ThrowawayDatabase?> CreateAsync(CancellationToken ct)
         {
-            var server = Environment.GetEnvironmentVariable("CADENCE_TEST_POSTGRES");
-            if (string.IsNullOrWhiteSpace(server))
+            var host = await PostgresTestServer.StartAsync();
+            if (host is null)
             {
                 return null;
             }
 
-            var database = new ThrowawayDatabase(server, $"cadence_vault_migration_{Guid.NewGuid():N}");
-            await ExecuteOnAsync(server, $"CREATE DATABASE \"{database._name}\"", ct);
+            var database = new ThrowawayDatabase(host, $"cadence_vault_migration_{Guid.NewGuid():N}");
+            await ExecuteOnAsync(database._server, $"CREATE DATABASE \"{database._name}\"", ct);
             return database;
         }
 
@@ -142,6 +145,7 @@ public sealed class KernelIdentityVaultMigrationPostgresTests
         {
             NpgsqlConnection.ClearAllPools();
             await ExecuteOnAsync(_server, $"DROP DATABASE IF EXISTS \"{_name}\" WITH (FORCE)", CancellationToken.None);
+            await _host.DisposeAsync();
         }
 
         private static async Task ExecuteOnAsync(string connectionString, string sql, CancellationToken ct)

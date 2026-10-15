@@ -16,9 +16,9 @@ How CI is set up, which checks run where, and how to reproduce and fix each fail
 1. **Workflow Action Pinning & Actionlint Gate**: runs `rhysd/actionlint` and `python3 scripts/check-action-pinning.py` to enforce GitHub Actions supply-chain security (pinning third-party action usages to full 40-character commit SHAs) and workflow YAML syntax.
 2. **Style and Lint Verification**: `dotnet format --verify-no-changes`, the Cadence quality gates, architecture tests (ArchUnitNET), a Native AOT publish of the CLI that fails on any trim or AOT warning, ADR, Markdown, OpenAPI, schema-doc and traceability checks, code duplication, Hadolint, ShellCheck, CODEOWNERS coverage, the docs build and frontend ESLint/Prettier.
 3. **Security and Vulnerability Audit**: static security audit, secret baseline immutability verification (`git diff --exit-code .secrets.baseline`), secret detection, DEID scan and NuGet/npm vulnerability audit.
-4. **.NET 10 C# xUnit Verification**: `dotnet build` (warnings are errors), then `dotnet test Cadence.sln`, which runs the unit, integration, architecture and E2E test projects against a `postgres:16` service container (`CADENCE_TEST_POSTGRES`), so the database tests run instead of skipping.
+4. **.NET 10 C# xUnit Verification**: `dotnet build` (warnings are errors), then `dotnet test Cadence.sln`, which runs the unit, integration, architecture and E2E test projects against a `postgres:16` service container (`CADENCE_TEST_POSTGRES`), so the database tests run instead of skipping. Locally either `CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1` works for every database fixture ([TESTING.md](TESTING.md#tests-that-need-postgresql)), and `cadence ci` fails when any integration or E2E test was skipped or did not execute, unless `--allow-skip` is given.
 5. **Frontend Unit Tests**: Vitest across the pnpm workspace.
-6. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `pnpm cadence gxp sync` and fails if they differ from the committed files.
+6. **GxP Compliance & Qualification Reporting**: regenerates the RTM and IQ/OQ/PQ report with `pnpm cadence gxp sync` and fails if their results or test mapping differ from the committed files (`cadence gxp diff`, which ignores the evidence block naming the tested revision, time, database and runner).
 
 Only on pushes to `main`: accessibility E2E tests, the container build and Trivy vulnerability scan (enforcing fail-closed exit code 1 with SARIF report upload to GitHub Security tab), the production pipeline and the docs deploy. They are kept off pull requests to save Actions minutes.
 
@@ -57,7 +57,7 @@ Only on pushes to `main`: accessibility E2E tests, the container build and Trivy
 | `contracts`           | Hexagonal port/adapter contracts                                                                                                                                                                |
 | `query-linter`        | No interpolated raw SQL (`FromSqlRaw($...)`, `ExecuteSqlRaw($...)`)                                                                                                                             |
 | `vulnerabilities`     | NuGet dependency vulnerabilities (npm is not audited yet)                                                                                                                                       |
-| `rtm`                 | Requirement tag integrity and traceability matrix alignment                                                                                                                                    |
+| `rtm`                 | Requirement tag integrity and traceability matrix alignment                                                                                                                                     |
 
 `pnpm cadence check rtm` (or `gxp-rtm-validate`) runs Gate 22 to validate the traceability matrix without regenerating it.
 
@@ -90,7 +90,7 @@ CI runs in `.github/workflows/ci.yml`. `pnpm cadence ci` reproduces the whole wo
 
 | Failing job or step                                          | Usual cause                                                                       | Reproduce and fix locally                                                                                        |
 | ------------------------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Workflow Action Pinning & Actionlint Gate                    | Third-party action not pinned to 40-char SHA or actionlint YAML error             | `python3 scripts/check-action-pinning.py` and `pre-commit run actionlint --all-files`                          |
+| Workflow Action Pinning & Actionlint Gate                    | Third-party action not pinned to 40-char SHA or actionlint YAML error             | `python3 scripts/check-action-pinning.py` and `pre-commit run actionlint --all-files`                            |
 | Style › Verify .NET C# code formatting                       | Code doesn't match `.editorconfig` or analyzer style                              | `dotnet format Cadence.sln`, then commit                                                                         |
 | Style › Run frontend style and lint                          | ESLint or Prettier findings in `apps/web`, `apps/subject-portal` or `packages/ui` | `pnpm format` and `pnpm -r lint`                                                                                 |
 | Style › Run Cadence quality sentinels, or a single gate step | One of the 21 gates failed; the log names it                                      | `pnpm cadence check <gate>`                                                                                      |

@@ -30,7 +30,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <summary>
 /// Grants, roles and delegation through the command pipeline with the production authorization (spec §9.3,
 /// ADR-2455, #4781) and the qualifications that gate them (K-AUTH-5, ADR-2459), against PostgreSQL. Includes spec §14
-/// acceptance scenarios 3 and 12. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// acceptance scenarios 3 and 12. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelAuthorityPostgresTests : IClassFixture<KernelPostgresFixture>, IDisposable

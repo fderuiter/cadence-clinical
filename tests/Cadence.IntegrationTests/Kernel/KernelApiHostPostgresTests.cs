@@ -39,7 +39,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// The kernel API host end to end against PostgreSQL (ADR-2540, ADR-2457): the real <c>Program.cs</c> with its tenant
 /// directory, grant-backed visibility and lineage reads, over rows written through the kernel pipeline. Trace, Impact
 /// and amendment impact show a coordinator what their grant covers and mask the rest in place, with the same counts
-/// for every reader. Skipped unless <c>CADENCE_TEST_POSTGRES</c> is set.
+/// for every reader. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>, IDisposable

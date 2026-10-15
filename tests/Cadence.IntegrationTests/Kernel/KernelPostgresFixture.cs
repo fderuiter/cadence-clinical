@@ -38,6 +38,7 @@ using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
 using Cadence.Standards;
 using Cadence.Testing.Time;
+using Cadence.TestSupport.Database;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,7 +53,8 @@ namespace Cadence.IntegrationTests.Kernel;
 
 /// <summary>
 /// PostgreSQL fixture for the kernel schema. Opt in with <c>CADENCE_TEST_POSTGRES</c> (an Npgsql connection string
-/// to an existing server, as a superuser): the fixture creates a throwaway database, applies the kernel migrations as
+/// to an existing server, as a superuser) or <c>CADENCE_TEST_DOCKER=1</c> (a Testcontainers
+/// <c>postgres:16-alpine</c> container, see <see cref="PostgresTestServer"/>): the fixture creates a throwaway database, applies the kernel migrations as
 /// the owner, creates a login role granted exactly <see cref="KernelDatabase.GrantAppRoleSql"/> (not the owner, no
 /// <c>BYPASSRLS</c>), wires the command pipeline for that role exactly as a host does
 /// (<see cref="KernelPersistenceServiceCollectionExtensions.AddKernelPersistence"/> plus
@@ -72,8 +74,9 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>A throwaway IdentityVault master key, generated per fixture.</summary>
     private static readonly string VaultMasterKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
 
-    private const string SkipReason = "Kernel PostgreSQL tests need CADENCE_TEST_POSTGRES=<connection string>.";
+    private const string SkipReason = PostgresTestServer.SkipReason;
 
+    private PostgresTestServer? _server;
     private string? _serverConnectionString;
     private string? _databaseName;
     private string? _appRole;
@@ -107,12 +110,13 @@ public class KernelPostgresFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        var external = Environment.GetEnvironmentVariable("CADENCE_TEST_POSTGRES");
-        if (string.IsNullOrWhiteSpace(external))
+        _server = await PostgresTestServer.StartAsync().ConfigureAwait(false);
+        if (_server is null)
         {
             return;
         }
 
+        var external = _server.SuperuserConnectionString;
         _serverConnectionString = external;
         _databaseName = $"cadence_kernel_it_{Guid.NewGuid():N}";
         _appRole = $"{_databaseName}_app";
@@ -131,6 +135,8 @@ public class KernelPostgresFixture : IAsyncLifetime
         await KernelDatabase.MigrateAsync(AdminConnectionString).ConfigureAwait(false);
         await OnMigratedAsync(AdminConnectionString).ConfigureAwait(false);
         await ExecuteAsync(AdminConnectionString, KernelDatabase.GrantAppRoleSql(_appRole)).ConfigureAwait(false);
+        await PostgresTestEvidence.VerifyAndRecordAsync(
+            "kernel", _server.Kind, AdminConnectionString, $"{KernelDbContext.Schema}.__ef_migrations_history", _appRole).ConfigureAwait(false);
 
         _services = new ServiceCollection()
             .AddSingleton<IClock>(Clock)
@@ -288,6 +294,11 @@ public class KernelPostgresFixture : IAsyncLifetime
             await ExecuteAsync(_serverConnectionString, $"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)").ConfigureAwait(false);
             await ExecuteAsync(_serverConnectionString, $"DROP ROLE IF EXISTS \"{_appRole}\"").ConfigureAwait(false);
         }
+
+        if (_server is not null)
+        {
+            await _server.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     private static async Task ExecuteAsync(string connectionString, string sql)
@@ -340,7 +351,7 @@ public sealed class TestEventPublisher : IKernelEventPublisher
             await Task.Delay(Delay, cancellationToken).ConfigureAwait(false);
         }
 
-        if (Fail?.Invoke(envelope) == true)
+        if (Fail is not null && Fail(envelope))
         {
             throw new InvalidOperationException($"Subscriber rejected {envelope.Type}.");
         }
