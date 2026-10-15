@@ -132,4 +132,100 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
     expect(wrapper.find("#assessment-result-banner").exists()).toBe(false);
     expect(store.quizPassed).toBe(false);
   });
+
+  it("opens template library drawer and filters templates by regulatory domain and search keyword", async () => {
+    const store = useEconsentStore();
+    store.loadIcf();
+
+    const wrapper = mount(ComprehensionQuizBuilder);
+
+    // Click "Import from Template Library" button
+    const importBtn = wrapper.find(".btn-import-template");
+    expect(importBtn.exists()).toBe(true);
+    expect(importBtn.text()).toContain("Import from Template Library");
+
+    await importBtn.trigger("click");
+    expect(wrapper.vm.isDrawerOpen).toBe(true);
+
+    const drawer = wrapper.findComponent({ name: "QuizTemplateDrawer" });
+    expect(drawer.exists()).toBe(true);
+    expect(drawer.find(".quiz-template-drawer").exists()).toBe(true);
+
+    // Verify 5 regulatory domains in pills or select
+    const domainSelect = drawer.find("#domain-filter-select");
+    expect(domainSelect.exists()).toBe(true);
+
+    // Filter by HIPAA domain
+    await domainSelect.setValue("HIPAA & Confidentiality");
+    expect(drawer.vm.selectedDomain).toBe("HIPAA & Confidentiality");
+    const filtered = drawer.vm.filteredTemplates;
+    expect(filtered.every((t) => t.domain === "HIPAA & Confidentiality")).toBe(true);
+
+    // Search by keyword
+    const searchInput = drawer.find("#template-search-input");
+    await searchInput.setValue("withdraw");
+    expect(drawer.vm.searchQuery).toBe("withdraw");
+
+    // Reset filters
+    drawer.vm.resetFilters();
+    expect(drawer.vm.selectedDomain).toBe("All");
+    expect(drawer.vm.searchQuery).toBe("");
+  });
+
+  it("batch imports selected template questions into econsentStore with unique IDs and preserves existing questions", async () => {
+    const store = useEconsentStore();
+    store.loadIcf();
+
+    const initialQuestions = [...store.quizQuestions];
+    const initialLength = initialQuestions.length;
+
+    const wrapper = mount(ComprehensionQuizBuilder);
+
+    // Open drawer
+    await wrapper.find(".btn-import-template").trigger("click");
+    const drawer = wrapper.findComponent({ name: "QuizTemplateDrawer" });
+
+    // Select first two templates in filtered view
+    const visibleTemplates = drawer.vm.filteredTemplates;
+    expect(visibleTemplates.length).toBeGreaterThanOrEqual(2);
+
+    const t1 = visibleTemplates[0];
+    const t2 = visibleTemplates[1];
+
+    drawer.vm.toggleSelect(t1.id);
+    drawer.vm.toggleSelect(t2.id);
+    await wrapper.vm.$nextTick();
+    expect(drawer.vm.selectedTemplateIds.length).toBe(2);
+
+    // Click batch import button
+    const batchBtn = drawer.find(".btn-batch-import");
+    expect(batchBtn.text()).toContain("Import Selected Questions (2)");
+    await batchBtn.trigger("click");
+
+    // Drawer should be closed
+    expect(wrapper.vm.isDrawerOpen).toBe(false);
+
+    // econsentStore.quizQuestions updated
+    expect(store.quizQuestions.length).toBe(initialLength + 2);
+
+    // Initial questions preserved
+    expect(store.quizQuestions[0].id).toBe(initialQuestions[0].id);
+    expect(store.quizQuestions[1].id).toBe(initialQuestions[1].id);
+
+    // Imported questions appended with q-template-${timestamp}-${index} IDs
+    const imported1 = store.quizQuestions[initialLength];
+    const imported2 = store.quizQuestions[initialLength + 1];
+
+    expect(imported1.id).toMatch(/^q-template-\d+-0$/);
+    expect(imported2.id).toMatch(/^q-template-\d+-1$/);
+
+    expect(imported1.text).toBe(t1.text);
+    expect(imported1.options.length).toBe(4);
+    expect(imported1.correctAnswerIndex).toBe(t1.correctAnswerIndex);
+    expect(imported1.hint).toBe(t1.hint);
+
+    // Modifying imported question in store does NOT mutate underlying catalog template
+    imported1.text = "Modified Question Text for Study ICF";
+    expect(t1.text).not.toBe("Modified Question Text for Study ICF");
+  });
 });

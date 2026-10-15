@@ -12,6 +12,7 @@ import StudySubjectsBar from "../src/components/clinical/StudySubjectsBar.vue";
 const routeQuery = { value: {} };
 
 vi.mock("vue-router", () => ({
+  onBeforeRouteLeave: () => {},
   useRouter: () => ({ push: vi.fn() }),
   useRoute: () => ({ query: routeQuery.value }),
 }));

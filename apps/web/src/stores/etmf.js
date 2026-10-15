@@ -215,6 +215,10 @@ export const useEtmfStore = defineStore("etmf", {
     qcQueue: [],
     isBatchUploading: false,
     batchProgress: 0,
+    activeExportJob: null,
+    exportJobs: [],
+    isExportDrawerOpen: false,
+    selectedDocumentIds: [],
   }),
 
   getters: {
@@ -1153,6 +1157,112 @@ export const useEtmfStore = defineStore("etmf", {
         results.push(res);
       }
       return results;
+    },
+
+    toggleExportDrawer(open) {
+      this.isExportDrawerOpen =
+        open !== undefined ? open : !this.isExportDrawerOpen;
+    },
+
+    setSelectedDocumentIds(ids) {
+      this.selectedDocumentIds = [...ids];
+    },
+
+    toggleDocumentSelection(docId) {
+      const idx = this.selectedDocumentIds.indexOf(docId);
+      if (idx >= 0) {
+        this.selectedDocumentIds.splice(idx, 1);
+      } else {
+        this.selectedDocumentIds.push(docId);
+      }
+    },
+
+    clearDocumentSelection() {
+      this.selectedDocumentIds = [];
+    },
+
+    async triggerExport(payload) {
+      try {
+        const fullPayload = {
+          study_id: this.currentStudyId,
+          ...payload,
+        };
+
+        const result = await etmfService.exportDocuments(fullPayload);
+
+        if (result.mode === "stream") {
+          const url = URL.createObjectURL(result.blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = result.filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          return { mode: "stream" };
+        } else if (result.mode === "job") {
+          this.activeExportJob = result.job;
+          this.isExportDrawerOpen = true;
+          const existingIdx = this.exportJobs.findIndex(
+            (j) => j.job_id === result.job.job_id
+          );
+          if (existingIdx >= 0) {
+            this.exportJobs[existingIdx] = result.job;
+          } else {
+            this.exportJobs.unshift(result.job);
+          }
+          this.startPollingExportJob(result.job.job_id);
+          return { mode: "job", job: result.job };
+        }
+      } catch (err) {
+        console.error("Failed to export eTMF documents:", err);
+        throw err;
+      }
+    },
+
+    async fetchExportJobs(studyId = this.currentStudyId) {
+      try {
+        const jobs = await etmfService.listExportJobs(studyId);
+        this.exportJobs = jobs || [];
+        if (this.activeExportJob) {
+          const updated = this.exportJobs.find(
+            (j) => j.job_id === this.activeExportJob.job_id
+          );
+          if (updated) {
+            this.activeExportJob = updated;
+          }
+        }
+        return this.exportJobs;
+      } catch (err) {
+        console.warn("Could not fetch export jobs from server:", err);
+        return this.exportJobs;
+      }
+    },
+
+    async pollExportJob(jobId) {
+      try {
+        const job = await etmfService.getExportJob(jobId);
+        this.activeExportJob = job;
+        const idx = this.exportJobs.findIndex((j) => j.job_id === jobId);
+        if (idx >= 0) {
+          this.exportJobs[idx] = job;
+        } else {
+          this.exportJobs.unshift(job);
+        }
+        return job;
+      } catch (err) {
+        console.warn(`Failed to poll export job ${jobId}:`, err);
+        return this.activeExportJob;
+      }
+    },
+
+    startPollingExportJob(jobId) {
+      const interval = setInterval(async () => {
+        const job = await this.pollExportJob(jobId);
+        if (!job || job.status === "COMPLETED" || job.status === "FAILED") {
+          clearInterval(interval);
+        }
+      }, 2000);
     },
   },
 });

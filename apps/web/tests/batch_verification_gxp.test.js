@@ -12,6 +12,7 @@ import EcrfView from "../src/views/EcrfView.vue";
 vi.mock("vue-router", () => {
   const push = vi.fn();
   return {
+    onBeforeRouteLeave: () => {},
     useRouter: () => ({
       push,
     }),

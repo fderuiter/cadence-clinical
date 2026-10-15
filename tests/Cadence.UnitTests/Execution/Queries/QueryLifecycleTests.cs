@@ -391,4 +391,103 @@ public sealed class QueryLifecycleTests
         var q1Check = await repo.GetByIdAsync(q1.Id, CancellationToken.None);
         q1Check!.Status.Should().Be(QueryStatus.Answered);
     }
+
+    /// <summary>
+    /// Validates that clinical coordinators can batch respond to open and reopened queries in a single atomic operation.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public async Task BatchRespondAsync_WithOpenAndReopenedQueries_AnswersAllSelectedQueriesAtomically()
+    {
+        var repo = new InMemoryClinicalQueryRepository();
+        var auditAccessor = new FakeCurrentAuditContextAccessor("site-crc-01", "Protocol amendment v2 batch update");
+        var service = new ClinicalQueryApplicationService(repo, auditAccessor, new FakeClock());
+
+        var q1 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("SYSBP"), "Open query 1").Value!;
+        var q2 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("DIABP"), "Open query 2").Value!;
+        q2.Answer("Initial answer", "crc-01");
+        q2.Reopen("Reopened by CRA due to protocol change", "cra-01");
+
+        await repo.AddAsync(q1, CancellationToken.None);
+        await repo.AddAsync(q2, CancellationToken.None);
+
+        var request = new BatchQueryRespondRequest(
+            new[] { q1.Id.ToString(), q2.Id.ToString() },
+            "Updated per protocol amendment v2",
+            "Protocol amendment v2 batch update");
+
+        var result = await service.BatchRespondAsync(request, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Count.Should().Be(2);
+        result.Value.Queries.Should().HaveCount(2);
+
+        var updatedQ1 = await repo.GetByIdAsync(q1.Id, CancellationToken.None);
+        var updatedQ2 = await repo.GetByIdAsync(q2.Id, CancellationToken.None);
+
+        updatedQ1!.Status.Should().Be(QueryStatus.Answered);
+        updatedQ1.Response.Should().Be("Updated per protocol amendment v2");
+        updatedQ1.Responder.Should().Be("site-crc-01");
+        updatedQ1.ReasonForChange.Should().Be("Protocol amendment v2 batch update");
+
+        updatedQ2!.Status.Should().Be(QueryStatus.Answered);
+        updatedQ2.Response.Should().Be("Updated per protocol amendment v2");
+        updatedQ2.Responder.Should().Be("site-crc-01");
+        updatedQ2.ReasonForChange.Should().Be("Protocol amendment v2 batch update");
+    }
+
+    /// <summary>
+    /// Validates that batch respond fails atomic operation if any query is in invalid state (CLOSED or CANCELLED).
+    /// </summary>
+    [Fact]
+    public async Task BatchRespondAsync_WithClosedOrCancelledQuery_ReturnsInvalidStateTransitionAndFailsClosed()
+    {
+        var repo = new InMemoryClinicalQueryRepository();
+        var auditAccessor = new FakeCurrentAuditContextAccessor("site-crc-01", "Attempting batch respond");
+        var service = new ClinicalQueryApplicationService(repo, auditAccessor, new FakeClock());
+
+        var q1 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("SYSBP"), "Open query").Value!;
+        var q2 = ClinicalQuery.Raise(new StudyCode("STUDY-001"), new SubjectCode("SUBJ-001"), new TestCode("DIABP"), "Closed query").Value!;
+        q2.Answer("Answer", "crc-01");
+        q2.Close("cra-01", FakeClock.DefaultStart);
+
+        await repo.AddAsync(q1, CancellationToken.None);
+        await repo.AddAsync(q2, CancellationToken.None);
+
+        var request = new BatchQueryRespondRequest(
+            new[] { q1.Id.ToString(), q2.Id.ToString() },
+            "Response text",
+            "Reason");
+
+        var result = await service.BatchRespondAsync(request, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("INVALID_QUERY_TRANSITION");
+
+        // Verify q1 remains Open (fail-closed)
+        var q1Check = await repo.GetByIdAsync(q1.Id, CancellationToken.None);
+        q1Check!.Status.Should().Be(QueryStatus.Open);
+    }
+
+    /// <summary>
+    /// Validates that batch respond exceeding 100 queries is rejected with BATCH_CAP_EXCEEDED.
+    /// </summary>
+    [Fact]
+    public async Task BatchRespondAsync_ExceedingLimit_ReturnsBatchCapExceeded()
+    {
+        var repo = new InMemoryClinicalQueryRepository();
+        var service = new ClinicalQueryApplicationService(repo, new FakeCurrentAuditContextAccessor("crc-user", "Limit test"), new FakeClock());
+
+        var ids = new string[101];
+        for (int i = 0; i < 101; i++)
+        {
+            ids[i] = Guid.NewGuid().ToString();
+        }
+
+        var request = new BatchQueryRespondRequest(ids, "Response text", "Exceeding batch limit");
+        var result = await service.BatchRespondAsync(request, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("BATCH_CAP_EXCEEDED");
+    }
 }

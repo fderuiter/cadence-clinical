@@ -181,3 +181,29 @@ public sealed class TmfDocumentQcTransitionConfiguration : IEntityTypeConfigurat
         builder.HasIndex(x => x.Timestamp);
     }
 }
+
+public sealed class TmfExportJobConfiguration : IEntityTypeConfiguration<TmfExportJob>
+{
+    public void Configure(EntityTypeBuilder<TmfExportJob> builder)
+    {
+        builder.ToTable("tmf_export_jobs");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(64);
+        builder.Property(x => x.StudyId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.ProgressPercentage).IsRequired();
+        builder.Property(x => x.TotalDocuments).IsRequired();
+        builder.Property(x => x.ProcessedDocuments).IsRequired();
+        builder.Property(x => x.DownloadUrl).HasMaxLength(1000);
+        builder.Property(x => x.ExpiresAt);
+        builder.Property(x => x.CreatedAt).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000);
+        builder.Property(x => x.VersionIndex).IsRequired();
+
+        builder.HasIndex(x => x.StudyId);
+        builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => x.CreatedAt);
+    }
+}
+
