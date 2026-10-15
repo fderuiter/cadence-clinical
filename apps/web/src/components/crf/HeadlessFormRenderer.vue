@@ -268,14 +268,13 @@ const evaluateRules = () => {
       isViolated = Object.is(res, true);
     } else if (check.is_violation_when === "false") {
       isViolated = Object.is(res, false);
+    } else if (
+      check.type === "constraint" ||
+      check.rule_type === "constraint"
+    ) {
+      isViolated = Object.is(res, false);
     } else {
-      // Auto-detect based on operator if condition represents error condition or validity check
-      const op = (expr.operator || expr.value || "").toLowerCase();
-      if (["+", ">", ">=", "!=", "not", "is_empty", "empty"].includes(op)) {
-        isViolated = Object.is(res, true);
-      } else {
-        isViolated = Object.is(res, false);
-      }
+      isViolated = Object.is(res, true);
     }
 
     if (isViolated) {

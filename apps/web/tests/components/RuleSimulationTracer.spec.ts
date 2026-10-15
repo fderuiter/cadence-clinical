@@ -43,7 +43,7 @@ describe("Client-Side Embedded Rule Simulation Canvas & Live Execution Tracer", 
             constraints: {
               condition: {
                 type: "comparison",
-                operator: ">",
+                operator: "<=",
                 operands: [
                   { type: "field_ref", field_ref: { field_id: "VS_SYSBP" } },
                   { type: "constant", value: 180 },
