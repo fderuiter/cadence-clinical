@@ -68,16 +68,9 @@
 
         <!-- Multi-Subject Worklist Table (for SUBJECT scope) -->
         <div v-else class="form-group" style="margin-top: 4px">
-          <label
-            style="
-              font-weight: 600;
-              font-size: 0.85rem;
-              margin-bottom: 6px;
-              display: block;
-            "
-          >
+          <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px">
             Select Site Subjects for Batch Sign-Off
-          </label>
+          </div>
           <div
             style="
               border: 1px solid var(--border, #cbd5e1);

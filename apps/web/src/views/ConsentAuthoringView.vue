@@ -379,25 +379,27 @@
               <div
                 v-if="editorForm.requires_reconsent"
                 class="notification-channels-config"
-                style="margin-top: 12px; padding: 12px; background-color: #f8fafc; border: 1px solid var(--border); border-radius: 6px;"
+                style="
+                  margin-top: 12px;
+                  padding: 12px;
+                  background-color: #f8fafc;
+                  border: 1px solid var(--border);
+                  border-radius: 6px;
+                "
               >
-                <div style="font-size: 0.8rem; font-weight: 600; margin-bottom: 8px; color: var(--primary);">
+                <div
+                  style="
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    margin-bottom: 8px;
+                    color: var(--primary);
+                  "
+                >
                   Automated Re-Consent Notification Channels:
                 </div>
-                <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-                  <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                    <input type="checkbox" value="SMS" v-model="editorForm.notification_channels" />
-                    SMS
-                  </label>
-                  <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                    <input type="checkbox" value="Mobile Push" v-model="editorForm.notification_channels" />
-                    Mobile Push
-                  </label>
-                  <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                    <input type="checkbox" value="Email" v-model="editorForm.notification_channels" />
-                    Email
-                  </label>
-                </div>
+                <ReconsentChannelPicker
+                  v-model="editorForm.notification_channels"
+                />
               </div>
             </div>
           </fieldset>
@@ -747,6 +749,7 @@
 </template>
 
 <script setup>
+import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted, reactive } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
@@ -832,7 +835,11 @@ function openEditor(template = null) {
     editorForm.template_name = template.template_name || "";
     editorForm.protocol_version = template.protocol_version || "";
     editorForm.requires_reconsent = template.requires_reconsent || false;
-    editorForm.notification_channels = template.notification_channels || ["SMS", "Mobile Push", "Email"];
+    editorForm.notification_channels = template.notification_channels || [
+      "SMS",
+      "Mobile Push",
+      "Email",
+    ];
     editorForm.clauses = [...(template.clauses || [])];
     editorForm.workflow_steps = JSON.parse(
       JSON.stringify(template.workflow_steps || [])

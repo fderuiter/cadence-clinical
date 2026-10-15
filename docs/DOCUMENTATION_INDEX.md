@@ -305,7 +305,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2203: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](adr/2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md) | Current | - Status: Accepted |
 | [ADR-2390: Hybrid FHIR-to-CDISC Semantic Interoperability Mapper](adr/2026-08-22-hybrid-fhir-to-cdisc-semantic-interoperability-mapper.md) | Current | Accepted |
 | [ADR-2391: Shared Semantic Regulated-Action Contract for Step-Up Re-Authentication](adr/2026-08-22-move-to-shared-semantic-regulated-action-contract.md) | Current | Also known as: ADR-099 (former number) |
-| [ADR-2201: Reactive Cross-App Clinical Event Spine and Transactional Outbox](adr/2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md) | Current | - Status: Superseded by [ADR-2428](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor... |
+| [ADR-2201: Reactive Cross-App Clinical Event Spine and Transactional Outbox](adr/2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md) | Current | - Status: Superseded by ADR-2428 |
 | [ADR-2198: Self-Hosted CI Runner and Trunk-Based Branching Lifecycle](adr/2026-08-22-self-hosted-ci-runner-and-trunk-based-branching-lifecycle.md) | Current | - Status: Accepted |
 | [ADR-2199: Sovereign All-in-One eClinical Suite Expansion](adr/2026-08-22-sovereign-all-in-one-eclinical-suite-expansion.md) | Current | - Status: Accepted |
 | [ADR-2392: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator](adr/2026-08-23-automated-aggregate-safety-compiler-and-exposure-calculator.md) | Current | Also known as: ADR-2199 (former number) |
@@ -359,7 +359,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2154: Dynamic Hover Pointer Capability Detection & Touch-Safe Glossary Fallbacks](adr/2026-08-28-dynamic-hover-detection-and-touch-safe-glossary-fallbacks.md) | Current | - Status: Accepted |
 | [ADR-119: Extend Centralized Permission Matrix for Clinical Execution](adr/2026-08-28-extend-centralized-permission-matrix-for-execution.md) | Current | - Status: Accepted |
 | [ADR-2225: Gateway Proxy Dispatch Routing and RFC 7807 Error Boundaries](adr/2026-08-28-gateway-proxy-dispatch-routing-and-rfc-7807-error-boundaries.md) | Current | - Status: Accepted |
-| [ADR-2229: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture](adr/2026-08-28-hybrid-cqrs-unit-of-work-and-dual-defense-gxp-audit-architecture.md) | Current | - Status: Superseded by [ADR-2428](2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor... |
+| [ADR-2229: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture](adr/2026-08-28-hybrid-cqrs-unit-of-work-and-dual-defense-gxp-audit-architecture.md) | Current | - Status: Superseded by ADR-2428 |
 | [ADR-2228: Metadata-Driven Engine Architecture and Regulated Domain DSL Standard](adr/2026-08-28-metadata-driven-engine-architecture-and-regulated-domain-dsl-standard.md) | Current | - Status: Accepted |
 | [ADR-2224: Multi Persona Golden Path Suite Video Capture and RTM Synchronization](adr/2026-08-28-multi-persona-golden-path-suite-video-capture-and-rtm-synchronization.md) | Current | - Status: Accepted |
 | [ADR-2226: Programmatic VitePress API Documentation Engine](adr/2026-08-28-programmatic-vitepress-api-documentation-engine.md) | Current | - Status: Accepted |

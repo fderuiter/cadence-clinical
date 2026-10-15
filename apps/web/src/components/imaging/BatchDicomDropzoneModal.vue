@@ -1,5 +1,6 @@
 <template>
   <Teleport to="body">
+    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -- Esc closes the dialog; role="dialog" is the correct role for the container -->
     <div
       v-if="isOpen"
       class="modal-backdrop"
@@ -86,6 +87,7 @@
 
           <!-- Step 1: Dropzone State -->
           <div v-if="!ingestionResult && !isUploading">
+            <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -- drag-and-drop is a mouse shortcut; the folder and file buttons inside are the keyboard path -->
             <div
               class="dropzone-area"
               :class="{ 'is-dragging': isDragging }"
@@ -124,6 +126,7 @@
                 <input
                   ref="folderInputRef"
                   type="file"
+                  aria-label="DICOM study folder"
                   webkitdirectory
                   directory
                   multiple
@@ -134,6 +137,7 @@
                   ref="fileInputRef"
                   type="file"
                   multiple
+                  aria-label="DICOM files or ZIP archive"
                   accept=".dcm,.zip,application/zip"
                   class="sr-only"
                   @change="handleFileInput"

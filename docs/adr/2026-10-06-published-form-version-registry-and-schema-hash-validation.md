@@ -11,10 +11,12 @@
 
 In clinical trial data management under 21 CFR Part 11 and GxP standards, electronic Case Report Forms (eCRFs) submitted by site coordinators or participants must strictly conform to the approved protocol version form design and cryptographic schema hash.
 Without schema snapshotting and validation on form submission:
+
 1. Form submissions in Execution service could accept outdated or mismatched form structure data.
 2. Clinical Kernel approvals of USDM protocol versions would lack form snapshot persistence and published schema tracking across services.
 
 To address this, requirement PRD-SYS-053 requires:
+
 - Clinical Kernel: Upon protocol version approval, compile USDM forms via `UsdmCompiler`, persist `FormVersionSnapshot` records in kernel storage, and publish `FormVersionPublished` domain events containing form definitions, version identifiers, and canonical schema hashes.
 - Execution Service: Consume `FormVersionPublished` domain events to register form versions in `PublishedFormVersionRegistry`, and validate eCRF form submission requests against published schemas and form hashes, rejecting mismatches or unregistered forms with `PROTOCOL_VERSION_SCHEMA_MISMATCH`.
 
@@ -76,3 +78,12 @@ To address this, requirement PRD-SYS-053 requires:
 - **Verification Plan:**
   - Unit tests in `FormSubmissionProtocolVersionTests.cs` and `FormVersionPublishedConsumerTests.cs`.
   - Quality sentinel verification via `pnpm cadence check`.
+
+## Amendment (2026-10-15): missing migration added
+
+The registry entity was added to `ExecutionDbContext` and its model snapshot, but the hand-written
+`20261006120000_AddPublishedFormVersionRegistry` had no `.Designer.cs` (so EF never discovered it) and
+used snake_case columns the model does not map. `published_form_version_registries` was never created
+and form writes returned 500. That file is replaced by the generated
+`20261015142350_AddPublishedFormVersionRegistry`, which creates the table and its unique
+`(StudyId, ProtocolVersion, FormId)` index.

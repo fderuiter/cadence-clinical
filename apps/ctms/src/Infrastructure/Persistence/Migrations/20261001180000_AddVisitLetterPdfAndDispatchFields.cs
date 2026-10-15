@@ -1,5 +1,6 @@
 using System;
 
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -7,6 +8,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations;
 
 /// <inheritdoc />
+[DbContext(typeof(CtmsDbContext))]
+[Migration("20261001180000_AddVisitLetterPdfAndDispatchFields")]
 public partial class AddVisitLetterPdfAndDispatchFields : Migration
 {
     /// <inheritdoc />

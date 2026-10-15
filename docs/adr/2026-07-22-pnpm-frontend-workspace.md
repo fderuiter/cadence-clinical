@@ -28,3 +28,10 @@ We have decided to introduce a **pnpm workspace** at the repository root to mana
 - **Negative:** Requires Python developers to install Node.js and pnpm locally if they want to run the full end-to-end `pnpm check` command, though CI will handle verification automatically.
 
 This decision implements requirements under Trace-8.
+
+## Amendment (2026-10-15): one copy of each component
+
+A component lives in one package. `SkeletonLoader.vue` had an unused copy in `packages/ui` (exported
+from `packages/ui/src/index.js`, which the published library entry does not include) beside the copy
+`apps/web` imports. The `packages/ui` copy was removed so the two cannot drift apart under different
+lint rules; `apps/web/src/components/common/SkeletonLoader.vue` is the only one.

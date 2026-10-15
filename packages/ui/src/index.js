@@ -17,5 +17,4 @@ export { default as ModalErrorAlert } from "./components/ModalErrorAlert.vue";
 export { default as MediaPlayer } from "./components/MediaPlayer.vue";
 export { default as PersonaSwitcher } from "./components/clinical/PersonaSwitcher.vue";
 export { useAsyncRetry } from "./composables/useAsyncRetry.js";
-export { default as SkeletonLoader } from "./components/common/SkeletonLoader.vue";
 export { default as EmptyState } from "./components/common/EmptyState.vue";

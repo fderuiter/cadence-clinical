@@ -499,7 +499,7 @@
  * Integrates drag-and-drop sections/fields, a device switcher toolbar, real-time simulated column
  * width validation, property inspector synchronizations, and compiler quality gating rules.
  */
-import { computed, ref, reactive, watch } from "vue";
+import { computed, ref, reactive } from "vue";
 import draggable from "vuedraggable";
 import FormSectionContainer from "./FormSectionContainer.vue";
 import HeadlessFormRenderer from "./HeadlessFormRenderer.vue";

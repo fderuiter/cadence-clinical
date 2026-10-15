@@ -322,7 +322,11 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       await flushPromises();
 
       expect(executionApi.createFormSubmission).toHaveBeenCalled();
-      expect(localStorage.getItem(draftKey)).toBeNull();
+      // The submit chain hashes a ledger block with Web Crypto, which resolves outside the
+      // flushed microtasks when the suite runs under load; wait for the draft to clear.
+      await vi.waitFor(() => {
+        expect(localStorage.getItem(draftKey)).toBeNull();
+      });
     });
   });
 });

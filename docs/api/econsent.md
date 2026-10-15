@@ -6,5 +6,7 @@ Generated from `docs/openapi/econsent_openapi.json` by `pnpm cadence generate-ap
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/econsent/status` | EconsentStatus | Returns eConsent operational status. |
 | `POST` | `/api/v1/econsent/templates/{template_id}/capture-consent` | CaptureConsentLegacy |  |
+| `POST` | `/api/v1/econsent/templates/{template_id}/publish` | PublishTemplate |  |
 | `POST` | `/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent` | CaptureConsentVersioned |  |
+| `POST` | `/api/v1/econsent/templates/{template_id}/versions/{version_index}/publish` | PublishTemplateVersioned |  |
 | `GET` | `/healthz` | EconsentHealthCheck | eConsent service health probe. |

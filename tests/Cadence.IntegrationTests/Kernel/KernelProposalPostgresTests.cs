@@ -417,15 +417,15 @@ public sealed class KernelProposalPostgresTests : IClassFixture<KernelPostgresFi
         var autoEscalatedId = ProposalId.New();
         var autoEscalated = await As(Agent, Propose(tenant, autoEscalatedId, study, plan, [], model: Model) with { ConfidenceScore = 0.60 }, ct);
         autoEscalated.IsEscalated.Should().BeTrue();
-        autoEscalated.ConfidenceTier.Should().Be("Medium");
-        autoEscalated.EscalatedByKind.Should().Be(ActorKind.ServiceAccount);
+        autoEscalated.ConfidenceTier.Should().Be("Low");
+        autoEscalated.EscalatedByKind.Should().Be(ActorKind.AutomationAgent);
 
         var normalId = ProposalId.New();
         var normal = await As(Agent, Propose(tenant, normalId, study, plan, [], model: Model) with { ConfidenceScore = 0.95 }, ct);
         normal.IsEscalated.Should().BeFalse();
         normal.ConfidenceTier.Should().Be("High");
 
-        var escalated = await As(Colleague, new EscalateProposal(tenant, normalId, "SafetyLead", "Safety concerns raised during review", KernelProtocolScenario.Key(), Reason), ct);
+        var escalated = await As(Colleague, new EscalateProposal(tenant, normalId, "SafetyLead", KernelProtocolScenario.Key(), "Safety concerns raised during review"), ct);
         escalated.IsEscalated.Should().BeTrue();
         escalated.EscalatedById.Should().Be(Colleague.Id);
         escalated.EscalatedByKind.Should().Be(ActorKind.Person);

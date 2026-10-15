@@ -93,6 +93,22 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         desc.Should().StartWith("This is the main description paragraph");
     }
 
+    /// <summary>
+    /// A description taken from a line with an inline link keeps the link text only, so a truncated
+    /// description cannot leave a half link that the docs build reports as broken.
+    /// </summary>
+    [Fact]
+    public void ExtractDocMetadata_ReducesInlineLinksToTheirText()
+    {
+        string filePath = Path.Combine(_tempDir, "superseded.md");
+        string target = "2026-09-02-" + new string('x', 120) + ".md";
+        File.WriteAllText(filePath, $"# Old Decision\n\n- Status: Superseded by [ADR-2428]({target})\n");
+
+        var (_, desc) = DocIndexSyncService.ExtractDocMetadata(filePath, "superseded.md");
+
+        desc.Should().Be("- Status: Superseded by ADR-2428");
+    }
+
     [Fact]
     public void SyncDocIndex_CheckMode_FailsWhenUnindexedFileExists()
     {

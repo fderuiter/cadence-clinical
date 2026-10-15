@@ -6,6 +6,9 @@ Generated from the EF Core model of `Cadence.Apps.Econsent.Infrastructure.Persis
 
 | Table | Entity | Columns |
 | --- | --- | --- |
+| [`econsent.InboxState`](#econsentinboxstate) | `InboxState` | 11 |
+| [`econsent.OutboxMessage`](#econsentoutboxmessage) | `OutboxMessage` | 21 |
+| [`econsent.OutboxState`](#econsentoutboxstate) | `OutboxState` | 6 |
 | [`econsent.audit_log_entries`](#econsentaudit_log_entries) | `AuditLogEntry` | 11 |
 | [`econsent.comprehension_checks`](#econsentcomprehension_checks) | `ComprehensionCheck` | 9 |
 | [`econsent.comprehension_results`](#econsentcomprehension_results) | `ComprehensionResult` | 13 |
@@ -21,6 +24,86 @@ Generated from the EF Core model of `Cadence.Apps.Econsent.Infrastructure.Persis
 | [`econsent.reconsent_requirements`](#econsentreconsent_requirements) | `ReconsentRequirement` | 15 |
 | [`econsent.subject_consent_option_selections`](#econsentsubject_consent_option_selections) | `SubjectConsentOptionSelection` | 8 |
 | [`econsent.subject_consents`](#econsentsubject_consents) | `SubjectConsent` | 15 |
+
+## econsent.InboxState
+
+Entity: `InboxState`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `bigint` | no |  | PK |
+| `Consumed` | `timestamp with time zone` | yes |  |  |
+| `ConsumerId` | `uuid` | no |  |  |
+| `Delivered` | `timestamp with time zone` | yes |  |  |
+| `ExpirationTime` | `timestamp with time zone` | yes |  |  |
+| `LastSequenceNumber` | `bigint` | yes |  |  |
+| `LockId` | `uuid` | no |  |  |
+| `MessageId` | `uuid` | no |  |  |
+| `ReceiveCount` | `integer` | no |  |  |
+| `Received` | `timestamp with time zone` | no |  |  |
+| `RowVersion` | `bytea` | yes |  |  |
+
+Indexes:
+
+- `AK_InboxState_MessageId_ConsumerId`: unique constraint (`MessageId`, `ConsumerId`)
+- `IX_InboxState_Delivered`: (`Delivered`)
+
+## econsent.OutboxMessage
+
+Entity: `OutboxMessage`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `SequenceNumber` | `bigint` | no |  | PK |
+| `Body` | `text` | no |  |  |
+| `ContentType` | `character varying(256)` | no |  |  |
+| `ConversationId` | `uuid` | yes |  |  |
+| `CorrelationId` | `uuid` | yes |  |  |
+| `DestinationAddress` | `character varying(256)` | yes |  |  |
+| `EnqueueTime` | `timestamp with time zone` | yes |  |  |
+| `ExpirationTime` | `timestamp with time zone` | yes |  |  |
+| `FaultAddress` | `character varying(256)` | yes |  |  |
+| `Headers` | `text` | yes |  |  |
+| `InboxConsumerId` | `uuid` | yes |  |  |
+| `InboxMessageId` | `uuid` | yes |  |  |
+| `InitiatorId` | `uuid` | yes |  |  |
+| `MessageId` | `uuid` | no |  |  |
+| `MessageType` | `text` | no |  |  |
+| `OutboxId` | `uuid` | yes |  |  |
+| `Properties` | `text` | yes |  |  |
+| `RequestId` | `uuid` | yes |  |  |
+| `ResponseAddress` | `character varying(256)` | yes |  |  |
+| `SentTime` | `timestamp with time zone` | no |  |  |
+| `SourceAddress` | `character varying(256)` | yes |  |  |
+
+Foreign keys:
+
+- `FK_OutboxMessage_InboxState_InboxMessageId_InboxConsumerId`: (`InboxMessageId`, `InboxConsumerId`) references `econsent.InboxState` (`MessageId`, `ConsumerId`), on delete no action
+- `FK_OutboxMessage_OutboxState_OutboxId`: (`OutboxId`) references `econsent.OutboxState` (`OutboxId`), on delete no action
+
+Indexes:
+
+- `IX_OutboxMessage_EnqueueTime`: (`EnqueueTime`)
+- `IX_OutboxMessage_ExpirationTime`: (`ExpirationTime`)
+- `IX_OutboxMessage_InboxMessageId_InboxConsumerId_SequenceNumber`: unique (`InboxMessageId`, `InboxConsumerId`, `SequenceNumber`)
+- `IX_OutboxMessage_OutboxId_SequenceNumber`: unique (`OutboxId`, `SequenceNumber`)
+
+## econsent.OutboxState
+
+Entity: `OutboxState`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `OutboxId` | `uuid` | no |  | PK |
+| `Created` | `timestamp with time zone` | no |  |  |
+| `Delivered` | `timestamp with time zone` | yes |  |  |
+| `LastSequenceNumber` | `bigint` | yes |  |  |
+| `LockId` | `uuid` | no |  |  |
+| `RowVersion` | `bytea` | yes |  |  |
+
+Indexes:
+
+- `IX_OutboxState_Created`: (`Created`)
 
 ## econsent.audit_log_entries
 
