@@ -2,7 +2,10 @@
 
 Also known as: ADR-111 (former number)
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). eISF merges into the eTMF module and is no longer a separate service (#5371).
+
+- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
 - **Date:** 2026-08-26
 - **Authors:** @fderuiter
 - **Deciders:** @engineering_leads, @qa_lead
@@ -31,20 +34,20 @@ This decision implements requirements under **Trace-16**.
 ### Option 1: Gateway-Routed Sync Proxying
 
 - **Overview:** Route all synchronization payloads through the public API Gateway endpoints, executing additional JWT validations on the synchronization loop.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Reuses existing gateway routes.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Adds routing hops and latency.
   - ❌ Exposes synchronization-specific interfaces to the public ingress space unnecessarily.
 
 ### Option 2: Direct Signed Service-to-Service Sync Topology
 
 - **Overview:** Use the gateway-signed service token convention to propagate synced documents directly from eISF to eTMF using downstream URLs, completely bypassing the gateway for internal worker flows.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Eliminates unnecessary gateway proxy overhead and public endpoint exposure.
   - ✅ Simplifies transactional integrity and exception logging in the synchronization code path.
   - ✅ Robust precedent: Aligns with interop/eCOA synchronization and the eTMF inbound-email webhook topology.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Requires configuring microservice URLs (`ETMF_URL`) directly in the downstream environments, which is already standard.
 
 ## 4. Decision Outcome

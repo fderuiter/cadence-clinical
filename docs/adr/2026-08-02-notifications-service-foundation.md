@@ -2,7 +2,10 @@
 
 Also known as: ADR-053 (former number)
 
-- **Status:** Accepted
+> [!NOTE]
+> Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md). Notifications merges into the composition host and is no longer a standalone service (#5373).
+
+- **Status:** Superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md)
 - **Date:** 2026-08-02
 - **Authors:** @fpderutier
 - **Deciders:** @fpderutier
@@ -26,19 +29,19 @@ This decision implements requirements under Trace-10.
 ### Option 1: Shared Execution Database for Notifications
 
 - **Overview:** Store notifications as tables in the core clinical execution database.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Less architectural overhead.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates microservice isolation principles.
   - ❌ Might impact core clinical execution performance during peak notification loads.
 
 ### Option 2: Standalone Notifications Service
 
 - **Overview:** Build a standalone Notifications service with its own isolated database manager and schema.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Absolute database isolation and strict microservice encapsulation.
   - ✅ Dedicated audit logging table to record view and transition events.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Additional service to scaffold and run.
 
 ## 4. Decision Outcome

@@ -2,6 +2,9 @@
 
 Also known as: ADR-101 (former number)
 
+> [!NOTE]
+> Partly superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md): tickets runs as a module in the composition host instead of a separate service (#5377). The feature decisions below stand.
+
 - **Status:** Accepted
 - **Date:** 2026-08-24
 - **Authors:** Jules
@@ -31,12 +34,12 @@ We must implement a programmatic background escalation worker that:
 
 ### Option 1: Inline Synchronous Request inside DB Transactions
 
-- ***Pros:*** Simple, immediate notification.
-- ***Cons:*** High latency on requests, lacks retry resilience, and risks rolling back core database state due to transient network failures.
+- _**Pros:**_ Simple, immediate notification.
+- _**Cons:**_ High latency on requests, lacks retry resilience, and risks rolling back core database state due to transient network failures.
 
 ### Option 2: Post-Commit Background Poller with Two-Step Transactions (Chosen)
 
-- ***Pros:***
+- _**Pros:**_
   - Background worker is decoupled from the user request threads.
   - Multi-instance safe through the use of database-level pessimistic locking (`.with_for_update()`).
   - Persists state for tracking and deduplication (`last_escalated_at`, `last_escalation_notified_at`, and `escalation_count`).
@@ -63,10 +66,10 @@ We evaluated event-driven brokers but preferred a lightweight direct poller to k
 
 ### Trade-offs
 
-- ***Pros:***
+- _**Pros:**_
   - Bulletproof delivery guarantee: any crash between Commit 1 and Commit 2 simply results in a safe notification retry in the next cycle, with no double-escalations.
   - Zero external metrics library overhead; structured logging provides complete telemetry.
-- ***Cons:***
+- _**Cons:**_
   - Short polling cycles consume database connections, which is mitigated by tunable environmental interval options.
 
 ## 6. Implementation & Verification

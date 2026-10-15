@@ -2,6 +2,9 @@
 
 Also known as: ADR-067 (former number)
 
+> [!NOTE]
+> Partly superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md): tickets runs as a module in the composition host instead of a separate service (#5377). The feature decisions below stand.
+
 - **Status:** Accepted
 - **Date:** 2026-08-13
 - **Authors:** @fderuiter
@@ -27,19 +30,19 @@ This decision implements requirements under Trace-8.
 ### Option 1: Store tickets within the execution core database
 
 - **Overview:** Add ticketing tables directly inside the core clinical database of `apps/execution`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ Simplifies setup by avoiding a new service and database.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates system service-isolation guidelines.
   - ❌ Couples support workflows to transactional EDC clinical trials data models.
 
 ### Option 2: Build a standalone Tickets service
 
 - **Overview:** Scaffold an independent FastAPI service utilizing `RelationalDatabaseManager` connected to its own isolated database configuration.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High encapsulation, independent scalability, and absolute separation of concerns.
   - ✅ Focused GxP auditing with a dedicated `TicketAuditLog` model and immutable ledger constraints.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Additional service configuration in Docker Compose.
 
 ## 4. Decision Outcome

@@ -519,6 +519,8 @@ A modular architecture unifying repository sentinels (drift detection, duplicati
 
 A dedicated internal routing and inference microservice (`apps/ai_gateway`) that encapsulates model provider orchestration, token rate-limiting, cost accounting, tier-based model selection, and prompt template execution behind a uniform HMAC-authenticated REST API.
 
+Under ADR-2610 it becomes an in-process module of the composition host rather than a separate microservice (#5374); AI actors act through kernel Proposals (ADR-2489).
+
 ### Three-Tier Model Routing Strategy
 
 A cost-control and performance routing policy categorizing AI workloads into Tier 1 (local SLMs and embedded vector encoders), Tier 2 (fast, high-throughput cost-effective cloud LLMs), and Tier 3 (frontier multi-modal reasoning models reserved for complex clinical synthesis).

@@ -2,6 +2,9 @@
 
 Also known as: ADR-099 (former number)
 
+> [!NOTE]
+> Partly superseded by [ADR-2610](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md): the org service is deleted and delegation of authority lives in kernel Grants (#5375).
+
 - **Status:** Accepted
 - **Date:** 2026-08-23
 - **Authors:** Jules
@@ -31,14 +34,14 @@ This decision satisfies GxP and 21 CFR Part 11 requirements under Trace-7 and PR
 ### Option 1: Archive strictly to eTMF (using code 05.02.18)
 
 - **Description:** Save finalized DOA logs in the Sponsor's eTMF using the historical draft code `05.02.18`.
-- ***Cons:***
+- _**Cons:**_
   - ❌ Violates standard DIA Reference Model v3.2.0 taxonomy (which designates `05.02.04` for DOA logs).
   - ❌ Does not put the record in the eISF, failing standard site-level GCP investigator retention expectations.
 
 ### Option 2: Archive strictly to eISF (using code 05.02.04) (Selected)
 
 - **Description:** Save finalized DOA logs in the Investigator Site File (eISF) using standard taxonomy code `05.02.04`.
-- ***Pros:***
+- _**Pros:**_
   - ✅ High GCP/GxP compliance: site-level delegation of authority resides in the Investigator Site File (eISF), which is legally owned and maintained by the Principal Investigator.
   - ✅ Full taxonomy reconciliation: using the canonical code `05.02.04` aligns perfectly with standard DIA Reference Model v3.2.0-complete catalogs without creating a redundant, non-standard extension `05.02.18`.
   - ✅ Simple completeness integration: eISF already requires Delegation of Authority Log in `apps/eisf/main.py`.
@@ -46,8 +49,8 @@ This decision satisfies GxP and 21 CFR Part 11 requirements under Trace-7 and PR
 ### Option 3: Dual-Filing Workflow (Dual archival to both eTMF and eISF)
 
 - **Description:** Automatically file the record in both systems.
-- ***Pros:*** Highly compliant, but adds duplication.
-- ***Cons:*** Increases complexity; Option 2 is sufficient and highly compliant since eISF-to-eTMF sync can handle cross-system propagation if configured.
+- _**Pros:**_ Highly compliant, but adds duplication.
+- _**Cons:**_ Increases complexity; Option 2 is sufficient and highly compliant since eISF-to-eTMF sync can handle cross-system propagation if configured.
 
 ## 4. Decision Outcome
 
