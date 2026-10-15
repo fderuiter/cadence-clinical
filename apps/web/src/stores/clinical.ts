@@ -16,6 +16,7 @@ import {
   refuseUnbackedAction,
 } from "../utils/unbackedActions.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+import { scopedKey, storageScopeOf } from "../utils/userScopedStorage.js";
 import { executionApi, type SubjectSummary } from "../api/executionApi";
 import { soaClient } from "../api/soaClient.js";
 import { evaluateAST } from "../evaluator.js";
@@ -224,9 +225,27 @@ export function getCurrentPersonaKey(): string {
   return "super_admin";
 }
 
-export function getStorageKey(baseKey: string, personaKey?: string): string {
+function currentStorageScope() {
+  try {
+    return storageScopeOf(useAuthStore());
+  } catch {
+    // Pinia or auth store may not be initialized yet
+    return null;
+  }
+}
+
+/**
+ * The browser storage key for one persisted clinical field of the signed-in
+ * account: `cadence_user:<tenant>:<user>:clinical:<persona>:<baseKey>`. Null
+ * when no account with a tenant and user id is signed in (#5369), so callers
+ * neither read nor write.
+ */
+export function getStorageKey(
+  baseKey: string,
+  personaKey?: string
+): string | null {
   const persona = personaKey || getCurrentPersonaKey();
-  return `clinical_${persona}_${baseKey}`;
+  return scopedKey(currentStorageScope(), "clinical", persona, baseKey);
 }
 
 export function readStorageItem(
@@ -234,9 +253,15 @@ export function readStorageItem(
   personaKey?: string
 ): string | null {
   if (typeof window === "undefined" || !window.localStorage) return null;
-  const persona = personaKey || getCurrentPersonaKey();
-  const scopedKey = `clinical_${persona}_${baseKey}`;
-  return window.localStorage.getItem(scopedKey);
+  const key = getStorageKey(baseKey, personaKey);
+  return key ? window.localStorage.getItem(key) : null;
+}
+
+/** Writes one persisted clinical field for the signed-in account, if any. */
+function writeStorageItem(baseKey: string, value: unknown): void {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  const key = getStorageKey(baseKey);
+  if (key) window.localStorage.setItem(key, JSON.stringify(value));
 }
 
 export const DEFAULT_CLINICAL_USDM = Object.freeze({
@@ -502,71 +527,28 @@ function readPersonaStorage(personaKey?: string) {
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
-      let storedSubjects = readStorageItem("subjects", persona);
-      if (!storedSubjects && isDemoBuild()) {
-        const legacy = window.localStorage.getItem("subjects");
-        if (legacy) {
-          storedSubjects = legacy;
-          window.localStorage.setItem(`clinical_${persona}_subjects`, legacy);
-        }
-      }
+      // Unscoped keys from older builds have no owner and are never read (#5369).
+      const storedSubjects = readStorageItem("subjects", persona);
       if (storedSubjects && isDemoBuild()) {
         savedSubjects = JSON.parse(storedSubjects);
       }
 
-      let storedFormValues = readStorageItem("formValues", persona);
-      if (!storedFormValues) {
-        const legacy = window.localStorage.getItem("formValues");
-        if (legacy) {
-          storedFormValues = legacy;
-          window.localStorage.setItem(`clinical_${persona}_formValues`, legacy);
-        }
-      }
+      const storedFormValues = readStorageItem("formValues", persona);
       if (storedFormValues) {
         savedFormValues = JSON.parse(storedFormValues);
       }
 
-      let storedFormQueries = readStorageItem("formQueries", persona);
-      if (!storedFormQueries) {
-        const legacy = window.localStorage.getItem("formQueries");
-        if (legacy) {
-          storedFormQueries = legacy;
-          window.localStorage.setItem(
-            `clinical_${persona}_formQueries`,
-            legacy
-          );
-        }
-      }
+      const storedFormQueries = readStorageItem("formQueries", persona);
       if (storedFormQueries) {
         savedFormQueries = JSON.parse(storedFormQueries);
       }
 
-      let storedLedgerBlocks = readStorageItem("ledgerBlocks", persona);
-      if (!storedLedgerBlocks) {
-        const legacy = window.localStorage.getItem("ledgerBlocks");
-        if (legacy) {
-          storedLedgerBlocks = legacy;
-          window.localStorage.setItem(
-            `clinical_${persona}_ledgerBlocks`,
-            legacy
-          );
-        }
-      }
+      const storedLedgerBlocks = readStorageItem("ledgerBlocks", persona);
       if (storedLedgerBlocks) {
         savedLedgerBlocks = JSON.parse(storedLedgerBlocks);
       }
 
-      let storedUsdm = readStorageItem("currentUsdm", persona);
-      if (!storedUsdm) {
-        const legacy = window.localStorage.getItem("currentUsdm");
-        if (legacy) {
-          storedUsdm = legacy;
-          window.localStorage.setItem(
-            `clinical_${persona}_currentUsdm`,
-            legacy
-          );
-        }
-      }
+      const storedUsdm = readStorageItem("currentUsdm", persona);
       if (storedUsdm) {
         savedUsdm = JSON.parse(storedUsdm);
       }
@@ -1075,26 +1057,11 @@ const useClinicalStoreInner = defineStore("clinical", {
 
       // Save persistent fields to localStorage
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem(
-          getStorageKey("subjects"),
-          JSON.stringify(this.subjects)
-        );
-        window.localStorage.setItem(
-          getStorageKey("formValues"),
-          JSON.stringify(this.formValues)
-        );
-        window.localStorage.setItem(
-          getStorageKey("formQueries"),
-          JSON.stringify(this.formQueries)
-        );
-        window.localStorage.setItem(
-          getStorageKey("ledgerBlocks"),
-          JSON.stringify(this.ledgerBlocks)
-        );
-        window.localStorage.setItem(
-          getStorageKey("currentUsdm"),
-          JSON.stringify(this.currentUsdm)
-        );
+        writeStorageItem("subjects", this.subjects);
+        writeStorageItem("formValues", this.formValues);
+        writeStorageItem("formQueries", this.formQueries);
+        writeStorageItem("ledgerBlocks", this.ledgerBlocks);
+        writeStorageItem("currentUsdm", this.currentUsdm);
       }
 
       return block;
@@ -1142,10 +1109,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       );
 
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem(
-          getStorageKey("subjects"),
-          JSON.stringify(this.subjects)
-        );
+        writeStorageItem("subjects", this.subjects);
       }
     },
     getEcrfFieldsForVersion(version: string = "1.0.0"): ClinicalField[] {
@@ -1281,10 +1245,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       );
 
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem(
-          getStorageKey("subjects"),
-          JSON.stringify(this.subjects)
-        );
+        writeStorageItem("subjects", this.subjects);
       }
 
       return sub;
@@ -1301,10 +1262,7 @@ const useClinicalStoreInner = defineStore("clinical", {
     clearLedger() {
       this.ledgerBlocks = [];
       if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.setItem(
-          getStorageKey("ledgerBlocks"),
-          JSON.stringify(this.ledgerBlocks)
-        );
+        writeStorageItem("ledgerBlocks", this.ledgerBlocks);
       }
     },
     // --- SoA Pinia Actions ---

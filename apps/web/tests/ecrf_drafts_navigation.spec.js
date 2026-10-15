@@ -7,6 +7,7 @@ import { useEcrfDrafts } from "../src/composables/useEcrfDrafts.js";
 import EcrfView from "../src/views/EcrfView.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import { useClinicalStore } from "../src/stores/clinical.js";
+import { useAuthStore } from "../src/stores/auth.js";
 import { executionApi } from "../src/api/executionApi.js";
 
 // Mock router
@@ -26,6 +27,24 @@ vi.mock("../src/api/executionApi.js", () => ({
     completeFormSubmission: vi.fn().mockResolvedValue({ id: "SUB-12345" }),
   },
 }));
+
+const SCOPE = ref({ tenantId: "tenant-a", userId: "user-a" });
+
+/** Signs in a Keycloak account with a tenant, as the real sign-in does. */
+function signIn() {
+  useAuthStore().setAuth({
+    authenticated: true,
+    token: "token-a",
+    tokenParsed: {
+      sub: "user-a",
+      tenant_id: "tenant-a",
+      realm_access: { roles: ["CRC"] },
+    },
+  });
+}
+
+const VIEW_DRAFT_KEY =
+  "cadence_user:tenant-a:user-a:ecrf_draft:STUDY-USDM-001:SUBJ-001:Screening";
 
 describe("eCRF Draft Persistence & Navigation Guards", () => {
   let pinia;
@@ -55,11 +74,12 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
         studyId,
         subjectId,
         visitId,
-        formValues
+        formValues,
+        SCOPE
       );
 
       expect(getStorageKey()).toBe(
-        "cadence_ecrf_drafts:STUDY-101:SUBJ-202:Week2"
+        "cadence_user:tenant-a:user-a:ecrf_draft:STUDY-101:SUBJ-202:Week2"
       );
     });
 
@@ -73,7 +93,8 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
         studyId,
         subjectId,
         visitId,
-        formValues
+        formValues,
+        SCOPE
       );
 
       setInitialValues({ vssbp: "120", vsdpb: "80" });
@@ -97,7 +118,8 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
         studyId,
         subjectId,
         visitId,
-        formValues
+        formValues,
+        SCOPE
       );
 
       setInitialValues({ vssbp: "120" });
@@ -125,11 +147,12 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
         studyId,
         subjectId,
         visitId,
-        formValues
+        formValues,
+        SCOPE
       );
 
       localStorage.setItem(
-        "cadence_ecrf_drafts:STUDY-101:SUBJ-001:Screening",
+        "cadence_user:tenant-a:user-a:ecrf_draft:STUDY-101:SUBJ-001:Screening",
         JSON.stringify({ vssbp: "128", vsdpb: "82" })
       );
 
@@ -148,7 +171,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       const formValues = reactive({ vssbp: "128" });
 
       const { clearDraft, isDirty, setInitialValues, getStorageKey } =
-        useEcrfDrafts(studyId, subjectId, visitId, formValues);
+        useEcrfDrafts(studyId, subjectId, visitId, formValues, SCOPE);
 
       setInitialValues({ vssbp: "120" });
       localStorage.setItem(getStorageKey(), JSON.stringify({ vssbp: "128" }));
@@ -203,6 +226,8 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
   });
 
   describe("EcrfView Integration & Navigation Guards", () => {
+    beforeEach(signIn);
+
     it("restores local draft on session load if present", async () => {
       const store = useClinicalStore();
       store.subjects = [{ id: "SUBJ-001", status: "ENROLLED" }];
@@ -212,7 +237,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       ];
 
       localStorage.setItem(
-        "cadence_ecrf_drafts:STUDY-USDM-001:SUBJ-001:Screening",
+        VIEW_DRAFT_KEY,
         JSON.stringify({ vssbp: "145", vsdpb: "95" })
       );
 
@@ -292,7 +317,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
         { id: "vssbp", label: "Systolic BP", type: "number" },
       ];
 
-      const draftKey = "cadence_ecrf_drafts:STUDY-USDM-001:SUBJ-001:Screening";
+      const draftKey = VIEW_DRAFT_KEY;
       localStorage.setItem(draftKey, JSON.stringify({ vssbp: "120" }));
 
       const wrapper = mount(EcrfView, {
