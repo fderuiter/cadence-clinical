@@ -6105,6 +6105,12 @@
         "properties": {
           "payload": {
             "type": "string"
+          },
+          "form_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

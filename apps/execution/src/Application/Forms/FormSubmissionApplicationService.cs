@@ -18,6 +18,7 @@ using Cadence.Apps.Execution.Domain.Observations.Errors;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Security;
@@ -46,9 +47,11 @@ public sealed class FormSubmissionApplicationService(
     IAutoQueryDispatchService? autoQueryDispatchService = null,
     IConfiguration? configuration = null,
     IPublishedFormVersionRegistryRepository? formVersionRegistryRepository = null,
-    IClock? clock = null) : IFormSubmissionApplicationService
+    IClock? clock = null,
+    IAuditLogWriter? auditLogWriter = null) : IFormSubmissionApplicationService
 {
     private readonly IClock _clock = clock ?? SystemClock.Instance;
+    private readonly IAuditLogWriter? _auditLogWriter = auditLogWriter;
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
     {
         ["vssbp"] = ("VS", "VSSBP", "Systolic Blood Pressure", "mmHg"),
@@ -141,28 +144,16 @@ public sealed class FormSubmissionApplicationService(
             resolvedProtocolVersion = suppliedVersion;
         }
 
-        if (formVersionRegistryRepository is not null)
+        var schemaError = await ValidateFormSchemaAsync(
+            studyCode.Value,
+            resolvedProtocolVersion,
+            formId.Value,
+            request.FormHash,
+            cancellationToken).ConfigureAwait(false);
+
+        if (schemaError is not null)
         {
-            var registeredForms = await formVersionRegistryRepository
-                .ListByStudyAndVersionAsync(studyCode.Value, resolvedProtocolVersion, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (registeredForms.Count > 0)
-            {
-                var registered = registeredForms.FirstOrDefault(r => string.Equals(r.FormId, formId.Value, StringComparison.OrdinalIgnoreCase));
-                if (registered is null)
-                {
-                    return FormErrors.ProtocolVersionSchemaMismatch(
-                        $"Form '{formId.Value}' is not registered for study '{studyCode.Value}' and protocol version '{resolvedProtocolVersion}'.");
-                }
-
-                if (!string.IsNullOrWhiteSpace(request.FormHash) &&
-                    !string.Equals(request.FormHash.Trim(), registered.FormHash.Trim(), StringComparison.OrdinalIgnoreCase))
-                {
-                    return FormErrors.ProtocolVersionSchemaMismatch(
-                        $"Submitted form hash '{request.FormHash}' does not match registered form hash '{registered.FormHash}'.");
-                }
-            }
+            return schemaError;
         }
 
         var initResult = FormSubmission.Initialize(
@@ -257,9 +248,16 @@ public sealed class FormSubmissionApplicationService(
         return Result<IReadOnlyList<FormSubmissionResponse>>.Success(list.Select(MapToResponse).ToList());
     }
 
+    public Task<Result<FormSubmissionResponse>> UpdatePayloadAsync(
+        string id,
+        string newPayload,
+        CancellationToken cancellationToken) =>
+        UpdatePayloadAsync(id, newPayload, null, cancellationToken);
+
     public async Task<Result<FormSubmissionResponse>> UpdatePayloadAsync(
         string id,
         string newPayload,
+        string? formHash,
         CancellationToken cancellationToken)
     {
         if (!FormSubmissionId.TryParse(id, out var submissionId))
@@ -273,68 +271,60 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.NotFound(id);
         }
 
+        var schemaError = await ValidateFormSchemaAsync(
+            submission.StudyId.Value,
+            submission.ProtocolVersion,
+            submission.FormId.Value,
+            formHash,
+            cancellationToken).ConfigureAwait(false);
+
+        if (schemaError is not null)
+        {
+            return schemaError;
+        }
+
         var updateResult = submission.UpdatePayload(newPayload, auditContextAccessor.ChangeReason);
         if (updateResult.IsFailure)
         {
             return updateResult.Error!;
         }
 
-        if (!string.IsNullOrWhiteSpace(newPayload))
+        var persisted = await PersistObservationsAsync(submission, newPayload, cancellationToken).ConfigureAwait(false);
+        if (persisted.IsFailure)
         {
-            var persisted = await PersistObservationsAsync(submission, newPayload, cancellationToken).ConfigureAwait(false);
-            if (persisted.IsFailure)
-            {
-                return persisted.Error!;
-            }
+            return persisted.Error!;
+        }
 
-            if (autoQueryDispatchService != null && persisted.Value is not null)
-            {
-                var observations = persisted.Value;
-                var violations = new List<EditCheckViolation>();
+        if (autoQueryDispatchService != null && persisted.Value is not null)
+        {
+            var observations = persisted.Value;
+            var violations = new List<EditCheckViolation>();
 
-                if (editCheckEngine != null)
+            if (observations.Count > 0 && editCheckEngine != null)
+            {
+                foreach (var obs in observations)
                 {
-                    foreach (var obs in observations)
-                    {
-                        violations.AddRange(editCheckEngine.EvaluateInlineConstraints(obs));
-                    }
-
-                    var batchContext = new BatchEvaluationContext(
-                        submission.StudyId.Value,
-                        submission.SubjectId.Value,
-                        observations,
-                        [submission]);
-
-                    violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
+                    violations.AddRange(editCheckEngine.EvaluateInlineConstraints(obs));
                 }
 
-                await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
-                    submission.StudyId,
-                    submission.SubjectId,
-                    submission.SiteId,
-                    submission.VisitId,
-                    submission.FormId.Value,
+                var batchContext = new BatchEvaluationContext(
+                    submission.StudyId.Value,
+                    submission.SubjectId.Value,
                     observations,
-                    violations,
-                    cancellationToken).ConfigureAwait(false);
-            }
-        }
-        else
-        {
-            await observationRepository.DeactivateByFormSubmissionIdAsync(submission.Id, cancellationToken).ConfigureAwait(false);
+                    [submission]);
 
-            if (autoQueryDispatchService != null)
-            {
-                await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
-                    submission.StudyId,
-                    submission.SubjectId,
-                    submission.SiteId,
-                    submission.VisitId,
-                    submission.FormId.Value,
-                    Array.Empty<ClinicalObservation>(),
-                    Array.Empty<EditCheckViolation>(),
-                    cancellationToken).ConfigureAwait(false);
+                violations.AddRange(editCheckEngine.EvaluateBatchRules(batchContext));
             }
+
+            await autoQueryDispatchService.ProcessViolationsAndAutoResolutionAsync(
+                submission.StudyId,
+                submission.SubjectId,
+                submission.SiteId,
+                submission.VisitId,
+                submission.FormId.Value,
+                observations,
+                violations,
+                cancellationToken).ConfigureAwait(false);
         }
 
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -665,6 +655,11 @@ public sealed class FormSubmissionApplicationService(
     /// </summary>
     private Result<List<ClinicalObservation>> ExtractObservations(FormSubmission submission, string payloadJson)
     {
+        if (string.IsNullOrWhiteSpace(payloadJson))
+        {
+            return new List<ClinicalObservation>();
+        }
+
         JsonDocument doc;
         try
         {
@@ -697,6 +692,19 @@ public sealed class FormSubmissionApplicationService(
                 {
                     if (item.ValueKind != JsonValueKind.Object) continue;
 
+                    double? val = null;
+                    if (item.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.Number)
+                    {
+                        val = v.GetDouble();
+                    }
+
+                    string? valStr = item.TryGetProperty("value_string", out var vs) ? vs.GetString() : val?.ToString(CultureInfo.InvariantCulture);
+
+                    if (val is null && string.IsNullOrWhiteSpace(valStr))
+                    {
+                        continue;
+                    }
+
                     var itemDate = ReadObservationDate(item);
                     if (itemDate.IsFailure)
                     {
@@ -713,14 +721,6 @@ public sealed class FormSubmissionApplicationService(
                     string testNameStr = item.TryGetProperty("test_name", out var tn) ? tn.GetString() ?? testCodeStr : testCodeStr;
                     string? unit = item.TryGetProperty("unit", out var u) ? u.GetString() : null;
 
-                    double? val = null;
-                    if (item.TryGetProperty("value", out var v) && v.ValueKind == JsonValueKind.Number)
-                    {
-                        val = v.GetDouble();
-                    }
-
-                    string? valStr = item.TryGetProperty("value_string", out var vs) ? vs.GetString() : val?.ToString(CultureInfo.InvariantCulture);
-
                     AddIfValid(observations, submission, new DomainCode(domainStr), new TestCode(testCodeStr), testNameStr, observationDate, val, valStr, unit);
                 }
             }
@@ -732,11 +732,6 @@ public sealed class FormSubmissionApplicationService(
                     string key = prop.Name.ToLowerInvariant().Replace(".", "_").Replace("-", "_");
                     if (FieldMapping.TryGetValue(key, out var mapping))
                     {
-                        if (payloadDate.Value is not { } observationDate)
-                        {
-                            return ObservationErrors.ObservationDateRequired();
-                        }
-
                         double? val = null;
                         if (prop.Value.ValueKind == JsonValueKind.Number)
                         {
@@ -751,6 +746,16 @@ public sealed class FormSubmissionApplicationService(
                         string? valStr = prop.Value.ValueKind == JsonValueKind.String
                             ? prop.Value.GetString()
                             : val?.ToString(CultureInfo.InvariantCulture);
+
+                        if (val is null && string.IsNullOrWhiteSpace(valStr))
+                        {
+                            continue;
+                        }
+
+                        if (payloadDate.Value is not { } observationDate)
+                        {
+                            return ObservationErrors.ObservationDateRequired();
+                        }
 
                         AddIfValid(observations, submission, new DomainCode(mapping.Domain), new TestCode(mapping.TestCode), mapping.TestName, observationDate, val, valStr, mapping.Unit);
                     }
@@ -772,6 +777,10 @@ public sealed class FormSubmissionApplicationService(
         string? valueString,
         string? unit)
     {
+        if (value is null && string.IsNullOrWhiteSpace(valueString))
+        {
+            return;
+        }
         var (normVal, normUnit) = ucumService.GetNormalizedRepresentation(value, unit);
         var obsResult = ClinicalObservation.Create(
             studyId: submission.StudyId,
@@ -827,14 +836,168 @@ public sealed class FormSubmissionApplicationService(
             return extracted.Error!;
         }
 
+        var existingActive = await observationRepository.ListByFormSubmissionAsync(
+            submission.Id,
+            includeInactive: false,
+            cancellationToken).ConfigureAwait(false);
+
         await observationRepository.DeactivateByFormSubmissionIdAsync(submission.Id, cancellationToken).ConfigureAwait(false);
 
-        foreach (var observation in extracted.Value!)
+        var newObservations = extracted.Value!;
+        var matchedExistingIds = new HashSet<ObservationId>();
+
+        foreach (var newObs in newObservations)
         {
-            await observationRepository.AddAsync(observation, cancellationToken).ConfigureAwait(false);
+            var existingObs = existingActive.FirstOrDefault(e =>
+                !matchedExistingIds.Contains(e.Id) &&
+                e.Domain == newObs.Domain &&
+                e.TestCode == newObs.TestCode);
+
+            if (existingObs != null)
+            {
+                matchedExistingIds.Add(existingObs.Id);
+
+                bool isExactMatch = AreValuesEqual(existingObs, newObs);
+
+                if (existingObs.IsSdvVerified)
+                {
+                    if (isExactMatch)
+                    {
+                        newObs.RetainSdvVerification(existingObs.SdvVerifiedBy, existingObs.SdvVerifiedAt);
+                    }
+                    else
+                    {
+                        const string flagReason = "Field changed after SDV verification. Re-verification required";
+                        newObs.FlagSdv(flagReason);
+
+                        if (_auditLogWriter != null)
+                        {
+                            var oldValues = BuildObservationAuditValues(existingObs);
+                            var newValues = BuildObservationAuditValues(newObs);
+
+                            await _auditLogWriter.WriteAsync(
+                                entityName: nameof(ClinicalObservation),
+                                recordId: newObs.Id.ToString(),
+                                action: "SDV_STATUS_RESET",
+                                userId: auditContextAccessor.UserId,
+                                changeReason: flagReason,
+                                oldValues: oldValues,
+                                newValues: newValues,
+                                ct: cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+                }
+            }
+
+            await observationRepository.AddAsync(newObs, cancellationToken).ConfigureAwait(false);
         }
 
-        return extracted.Value!;
+        foreach (var existingObs in existingActive)
+        {
+            if (!matchedExistingIds.Contains(existingObs.Id) && existingObs.IsSdvVerified && _auditLogWriter != null)
+            {
+                var oldValues = BuildObservationAuditValues(existingObs);
+                var newValues = new Dictionary<string, object?> { ["IsActive"] = false };
+
+                await _auditLogWriter.WriteAsync(
+                    entityName: nameof(ClinicalObservation),
+                    recordId: existingObs.Id.ToString(),
+                    action: "SDV_RECORD_DEACTIVATED",
+                    userId: auditContextAccessor.UserId,
+                    changeReason: auditContextAccessor.ChangeReason,
+                    oldValues: oldValues,
+                    newValues: newValues,
+                    ct: cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return newObservations;
+    }
+
+    private static bool AreValuesEqual(ClinicalObservation existing, ClinicalObservation incoming)
+    {
+        if (!Nullable.Equals(existing.Value, incoming.Value))
+        {
+            return false;
+        }
+
+        if (!string.Equals(existing.ValueString, incoming.ValueString, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!string.Equals(existing.Unit, incoming.Unit, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        DateTime existingUtc = NormalizeToUtc(existing.ObservationDate);
+        DateTime incomingUtc = NormalizeToUtc(incoming.ObservationDate);
+
+        return existingUtc == incomingUtc;
+    }
+
+    private static DateTime NormalizeToUtc(DateTime dt) => dt.Kind switch
+    {
+        DateTimeKind.Local => dt.ToUniversalTime(),
+        DateTimeKind.Unspecified => DateTime.SpecifyKind(dt, DateTimeKind.Utc),
+        _ => dt
+    };
+
+    private static Dictionary<string, object?> BuildObservationAuditValues(ClinicalObservation obs) =>
+        new()
+        {
+            ["Id"] = obs.Id.ToString(),
+            ["Domain"] = obs.Domain.Value,
+            ["TestCode"] = obs.TestCode.Value,
+            ["TestName"] = obs.TestName,
+            ["Value"] = obs.Value,
+            ["ValueString"] = obs.ValueString,
+            ["Unit"] = obs.Unit,
+            ["ObservationDate"] = NormalizeToUtc(obs.ObservationDate),
+            ["IsSdvVerified"] = obs.IsSdvVerified,
+            ["SdvVerifiedBy"] = obs.SdvVerifiedBy,
+            ["SdvVerifiedAt"] = obs.SdvVerifiedAt,
+            ["IsSdvFlagged"] = obs.IsSdvFlagged,
+            ["SdvFlagReason"] = obs.SdvFlagReason,
+            ["IsActive"] = obs.IsActive
+        };
+
+    private async Task<DomainError?> ValidateFormSchemaAsync(
+        string studyId,
+        string? protocolVersion,
+        string formId,
+        string? formHash,
+        CancellationToken cancellationToken)
+    {
+        // A submission recorded without a protocol version has nothing to check against; guessing one
+        // could reject a legitimate update.
+        if (formVersionRegistryRepository is not null && !string.IsNullOrWhiteSpace(protocolVersion))
+        {
+            string version = protocolVersion;
+            var registeredForms = await formVersionRegistryRepository
+                .ListByStudyAndVersionAsync(studyId, version, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (registeredForms.Count > 0)
+            {
+                var registered = registeredForms.FirstOrDefault(r => string.Equals(r.FormId, formId, StringComparison.OrdinalIgnoreCase));
+                if (registered is null)
+                {
+                    return FormErrors.ProtocolVersionSchemaMismatch(
+                        $"Form '{formId}' is not registered for study '{studyId}' and protocol version '{version}'.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(formHash) &&
+                    !string.Equals(formHash.Trim(), registered.FormHash.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return FormErrors.ProtocolVersionSchemaMismatch(
+                        $"Submitted form hash '{formHash}' does not match registered form hash '{registered.FormHash}'.");
+                }
+            }
+        }
+
+        return null;
     }
 
     private static FormSubmissionResponse MapToResponse(FormSubmission f) =>

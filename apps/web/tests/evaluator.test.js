@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
+import { mount } from "@vue/test-utils";
 import { validateField } from "ui";
 import {
   evaluateAST,
@@ -9,6 +10,7 @@ import {
   validateField as indexValidateField,
 } from "../src/evaluator.js";
 import { useClinicalStore } from "../src/stores/clinical";
+import HeadlessFormRenderer from "../src/components/crf/HeadlessFormRenderer.vue";
 
 describe("Client-side AST Evaluator & Cascading Nullification", () => {
   beforeEach(() => {
@@ -399,6 +401,51 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       });
     });
 
+    it("supports skip_logic with inverted not operator for hide and skip actions", () => {
+      // Condition: pulse <= 100
+      const hideCondition = {
+        type: "comparison",
+        operator: "<=",
+        operands: [
+          { type: "field_ref", field_ref: { field_id: "pulse" } },
+          { type: "constant", value: 100 },
+        ],
+      };
+
+      // Wrap in inverted NOT operator as HeadlessFormRenderer does for "hide" action
+      const invertedRelevant = {
+        type: "logical",
+        operator: "not",
+        operands: [hideCondition],
+      };
+
+      const fields = [
+        { id: "pulse", label: "Pulse", type: "text" },
+        {
+          id: "pulse_details",
+          label: "Pulse Details",
+          type: "text",
+          relevant: invertedRelevant,
+        },
+      ];
+
+      // When pulse is 70 (<= 100), hide condition is true, inverted relevant is false -> field hidden & value purged
+      const res1 = renderFormFromJSON(fields, {
+        pulse: 70,
+        pulse_details: "Mild arrhythmia",
+      });
+      expect(res1.visibleFields.pulse_details).toBe(false);
+      expect(res1.updatedValues.pulse_details).toBe("");
+
+      // When pulse is 120 (> 100), hide condition is false, inverted relevant is true -> field visible
+      const res2 = renderFormFromJSON(fields, {
+        pulse: 120,
+        pulse_details: "Tachycardic",
+      });
+      expect(res2.visibleFields.pulse_details).toBe(true);
+      expect(res2.updatedValues.pulse_details).toBe("Tachycardic");
+    });
+
     it("evaluates constraints via validateField in index.js", () => {
       const heightFieldMeta = {
         id: "height",
@@ -426,6 +473,328 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       const res2 = indexValidateField(heightFieldMeta, "0", { height: 0 });
       expect(res2.valid).toBe(false);
       expect(res2.message).toBe("Height must be strictly greater than zero.");
+    });
+  });
+
+  describe("Numeric String Coercion in Comparisons", () => {
+    it("coerces numeric strings with numbers and other numeric strings", () => {
+      const eqNode = (left, right) => ({
+        type: "comparison",
+        operator: "==",
+        operands: [
+          { type: "constant", value: left },
+          { type: "constant", value: right },
+        ],
+      });
+
+      const neqNode = (left, right) => ({
+        type: "comparison",
+        operator: "!=",
+        operands: [
+          { type: "constant", value: left },
+          { type: "constant", value: right },
+        ],
+      });
+
+      expect(evaluateAST(eqNode("120", 120))).toBe(true);
+      expect(evaluateAST(eqNode("120.00", 120))).toBe(true);
+      expect(evaluateAST(eqNode("120", "120.0"))).toBe(true);
+      expect(evaluateAST(neqNode("120", 130))).toBe(true);
+      expect(evaluateAST(eqNode("120", 130))).toBe(false);
+      expect(evaluateAST(neqNode("120", 120))).toBe(false);
+    });
+
+    it("handles ordered comparisons with numeric string coercion", () => {
+      const cmpNode = (op, left, right) => ({
+        type: "comparison",
+        operator: op,
+        operands: [
+          { type: "constant", value: left },
+          { type: "constant", value: right },
+        ],
+      });
+
+      expect(evaluateAST(cmpNode("<", "100", 120))).toBe(true);
+      expect(evaluateAST(cmpNode("<=", "120", "120"))).toBe(true);
+      expect(evaluateAST(cmpNode(">", "150", 120))).toBe(true);
+      expect(evaluateAST(cmpNode(">=", "120", 120))).toBe(true);
+    });
+  });
+
+  describe("Kleene 3-Valued Logic for Non-Booleans", () => {
+    it("treats non-boolean primitives as unknown (null)", () => {
+      const notNode = (val) => ({
+        type: "logical",
+        operator: "not",
+        operands: [{ type: "constant", value: val }],
+      });
+
+      const andNode = (vals) => ({
+        type: "logical",
+        operator: "and",
+        operands: vals.map((v) => ({ type: "constant", value: v })),
+      });
+
+      const orNode = (vals) => ({
+        type: "logical",
+        operator: "or",
+        operands: vals.map((v) => ({ type: "constant", value: v })),
+      });
+
+      expect(evaluateAST(notNode(true))).toBe(false);
+      expect(evaluateAST(notNode(false))).toBe(true);
+      expect(evaluateAST(notNode("hello"))).toBeNull();
+      expect(evaluateAST(notNode(123))).toBeNull();
+      expect(evaluateAST(notNode(null))).toBeNull();
+
+      expect(evaluateAST(andNode([true, false, "string"]))).toBe(false);
+      expect(evaluateAST(andNode([true, "string"]))).toBeNull();
+      expect(evaluateAST(andNode([true, true]))).toBe(true);
+
+      expect(evaluateAST(orNode([false, true, "string"]))).toBe(true);
+      expect(evaluateAST(orNode([false, "string"]))).toBeNull();
+      expect(evaluateAST(orNode([false, false]))).toBe(false);
+    });
+  });
+
+  describe("New Backend Operators and Functions", () => {
+    it("evaluates in and not_in", () => {
+      const inNode = (target, opts) => ({
+        type: "function",
+        operator: "in",
+        operands: [
+          { type: "constant", value: target },
+          ...opts.map((o) => ({ type: "constant", value: o })),
+        ],
+      });
+
+      const notInNode = (target, opts) => ({
+        type: "function",
+        operator: "not_in",
+        operands: [
+          { type: "constant", value: target },
+          ...opts.map((o) => ({ type: "constant", value: o })),
+        ],
+      });
+
+      expect(evaluateAST(inNode("120", [100, 120, 140]))).toBe(true);
+      expect(evaluateAST(inNode("150", [100, 120, 140]))).toBe(false);
+      expect(evaluateAST(notInNode("150", [100, 120, 140]))).toBe(true);
+      expect(evaluateAST(notInNode("120", [100, 120, 140]))).toBe(false);
+    });
+
+    it("evaluates between", () => {
+      const node = (val, min, max) => ({
+        type: "function",
+        operator: "between",
+        operands: [
+          { type: "constant", value: val },
+          { type: "constant", value: min },
+          { type: "constant", value: max },
+        ],
+      });
+
+      expect(evaluateAST(node("5", 1, 10))).toBe(true);
+      expect(evaluateAST(node(12, 1, 10))).toBe(false);
+      expect(evaluateAST(node("invalid", 1, 10))).toBe(false);
+      expect(evaluateAST(node(null, 1, 10))).toBe(false);
+    });
+
+    it("evaluates regex_match safely", () => {
+      const node = (val, pattern) => ({
+        type: "function",
+        operator: "regex_match",
+        operands: [
+          { type: "constant", value: val },
+          { type: "constant", value: pattern },
+        ],
+      });
+
+      expect(evaluateAST(node("PAT-1234", "^PAT-\\d+$"))).toBe(true);
+      expect(evaluateAST(node("PAT-ABC", "^PAT-\\d+$"))).toBe(false);
+      expect(evaluateAST(node(null, "^PAT-\\d+$"))).toBe(false);
+      expect(evaluateAST(node("PAT-1234", "[unclosed"))).toBe(false);
+    });
+
+    it("evaluates xor", () => {
+      const node = (a, b) => ({
+        type: "logical",
+        operator: "xor",
+        operands: [
+          { type: "constant", value: a },
+          { type: "constant", value: b },
+        ],
+      });
+
+      expect(evaluateAST(node(true, false))).toBe(true);
+      expect(evaluateAST(node(false, true))).toBe(true);
+      expect(evaluateAST(node(true, true))).toBe(false);
+      expect(evaluateAST(node(false, false))).toBe(false);
+      expect(evaluateAST(node("str", true))).toBeNull();
+    });
+
+    it("evaluates contains, starts_with, and ends_with", () => {
+      const containsNode = (c, i) => ({
+        type: "function",
+        operator: "contains",
+        operands: [
+          { type: "constant", value: c },
+          { type: "constant", value: i },
+        ],
+      });
+
+      const startsWithNode = (s, p) => ({
+        type: "function",
+        operator: "starts_with",
+        operands: [
+          { type: "constant", value: s },
+          { type: "constant", value: p },
+        ],
+      });
+
+      const endsWithNode = (s, sf) => ({
+        type: "function",
+        operator: "ends_with",
+        operands: [
+          { type: "constant", value: s },
+          { type: "constant", value: sf },
+        ],
+      });
+
+      expect(evaluateAST(containsNode("Cadence Clinical", "Clinical"))).toBe(
+        true
+      );
+      expect(evaluateAST(containsNode([10, "20", 30], 20))).toBe(true);
+      expect(evaluateAST(containsNode(null, "test"))).toBe(false);
+
+      expect(evaluateAST(startsWithNode("Cadence", "Cad"))).toBe(true);
+      expect(evaluateAST(startsWithNode("Cadence", "den"))).toBe(false);
+      expect(evaluateAST(startsWithNode(null, "Cad"))).toBe(false);
+
+      expect(evaluateAST(endsWithNode("Cadence", "nce"))).toBe(true);
+      expect(evaluateAST(endsWithNode("Cadence", "Cad"))).toBe(false);
+      expect(evaluateAST(endsWithNode(null, "nce"))).toBe(false);
+    });
+
+    it("evaluates lower, upper, trim, and coalesce", () => {
+      const fnNode = (fn, val) => ({
+        type: "function",
+        operator: fn,
+        operands: [{ type: "constant", value: val }],
+      });
+
+      const coalesceNode = (vals) => ({
+        type: "function",
+        operator: "coalesce",
+        operands: vals.map((v) => ({ type: "constant", value: v })),
+      });
+
+      expect(evaluateAST(fnNode("lower", "CADENCE"))).toBe("cadence");
+      expect(evaluateAST(fnNode("lower", null))).toBeNull();
+
+      expect(evaluateAST(fnNode("upper", "cadence"))).toBe("CADENCE");
+      expect(evaluateAST(fnNode("upper", null))).toBeNull();
+
+      expect(evaluateAST(fnNode("trim", "  cadence  "))).toBe("cadence");
+      expect(evaluateAST(fnNode("trim", null))).toBeNull();
+
+      expect(
+        evaluateAST(coalesceNode([null, undefined, "first", "second"]))
+      ).toBe("first");
+      expect(evaluateAST(coalesceNode([null, null]))).toBeNull();
+    });
+  });
+
+  describe("HeadlessFormRenderer Violation Auto-Detection", () => {
+    it("flags edit check violation when res is true and constraint violation when res is false", async () => {
+      const formDefinition = {
+        form_id: "form_vitals",
+        version_tag: "1.0.0",
+        data_schema: {
+          name: "Vital Signs",
+          variables: [
+            { id: "vssbp", name: "Systolic BP", data_type: "number" },
+            { id: "vsdpb", name: "Diastolic BP", data_type: "number" },
+            { id: "height", name: "Height", data_type: "number" },
+          ],
+        },
+        ui_schema: {
+          sections: [
+            {
+              id: "sec1",
+              title: "Vitals",
+              columns: 2,
+              widgets: [
+                { variable_id: "vssbp", widget: "number_input" },
+                { variable_id: "vsdpb", widget: "number_input" },
+                { variable_id: "height", widget: "number_input" },
+              ],
+            },
+          ],
+        },
+        logic_schema: {
+          edit_checks: [
+            {
+              // Edit check: SBP < DBP error condition (res === true -> violation)
+              target_field: "vssbp",
+              query_message: "Systolic BP cannot be lower than Diastolic BP.",
+              ast_expression: {
+                type: "comparison",
+                operator: "<",
+                operands: [
+                  { type: "field_ref", field_ref: { field_id: "vssbp" } },
+                  { type: "field_ref", field_ref: { field_id: "vsdpb" } },
+                ],
+              },
+            },
+          ],
+          constraints: [
+            {
+              // Validity constraint: Height > 0 (res === false -> violation)
+              type: "constraint",
+              target_field: "height",
+              query_message: "Height must be greater than zero.",
+              ast_expression: {
+                type: "comparison",
+                operator: ">",
+                operands: [
+                  { type: "field_ref", field_ref: { field_id: "height" } },
+                  { type: "constant", value: 0 },
+                ],
+              },
+            },
+          ],
+        },
+      };
+
+      const wrapper = mount(HeadlessFormRenderer, {
+        props: {
+          formDefinition,
+          initialValues: {
+            vssbp: 80,
+            vsdpb: 100,
+            height: -5,
+          },
+        },
+      });
+
+      // Both edit check (80 < 100 is true => violated) and constraint (-5 > 0 is false => violated) should trigger field errors
+      expect(wrapper.vm.fieldErrors.vssbp).toBe(
+        "Systolic BP cannot be lower than Diastolic BP."
+      );
+      expect(wrapper.vm.fieldErrors.height).toBe(
+        "Height must be greater than zero."
+      );
+
+      // Fix values so neither rule is violated
+      wrapper.vm.setFormData({
+        vssbp: 120,
+        vsdpb: 80,
+        height: 1.75,
+      });
+
+      expect(wrapper.vm.fieldErrors.vssbp).toBeUndefined();
+      expect(wrapper.vm.fieldErrors.height).toBeUndefined();
     });
   });
 });

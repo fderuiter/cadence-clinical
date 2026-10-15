@@ -197,6 +197,15 @@ public sealed class ClinicalObservation : AggregateRoot<ObservationId>
         return true;
     }
 
+    public void RetainSdvVerification(string? verifierUserId, DateTimeOffset? verifiedAt)
+    {
+        IsSdvVerified = true;
+        SdvVerifiedBy = verifierUserId;
+        SdvVerifiedAt = verifiedAt?.ToUniversalTime();
+        IsSdvFlagged = false;
+        SdvFlagReason = null;
+    }
+
     public Result<bool> FlagSdv(string reason)
     {
         if (string.IsNullOrWhiteSpace(reason))

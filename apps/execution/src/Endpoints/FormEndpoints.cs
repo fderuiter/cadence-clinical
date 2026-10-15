@@ -146,7 +146,7 @@ public static class FormEndpoints
         IFormSubmissionApplicationService svc,
         CancellationToken ct)
     {
-        var result = await svc.UpdatePayloadAsync(id, request.Payload, ct).ConfigureAwait(false);
+        var result = await svc.UpdatePayloadAsync(id, request.Payload, request.FormHash, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
@@ -198,7 +198,8 @@ public static class FormEndpoints
 }
 
 public sealed record FormPayloadUpdateRequest(
-    [property: JsonPropertyName("payload")] string Payload
+    [property: JsonPropertyName("payload")] string Payload,
+    [property: JsonPropertyName("form_hash")] string? FormHash = null
 );
 
 public sealed record FormUnlockRequest(
