@@ -6,14 +6,14 @@ requirement as qualified.
 
 ## Test projects
 
-| Project                                                            | What it holds                                                                                                                        | Run it with                                                                    |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database. | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
-| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                               | `dotnet cadence test --integration`                                            |
-| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, suppression and test-layout policies, and the architecture sentinels.   | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service through `WebApplicationFactory`.                                                  | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
-| `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                       | `pnpm --filter ui test`                                                        |
-| `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` are excluded.              | `pnpm --filter web test`                                                       |
+| Project                                                            | What it holds                                                                                                                                | Run it with                                                                    |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database.         | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                       | `dotnet cadence test --integration`                                            |
+| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baseline, suppression and test-layout policies, and the architecture sentinels.           | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service through `WebApplicationFactory`.                                                          | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
+| `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                               | `pnpm --filter ui test`                                                        |
+| `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded. | `pnpm --filter web test`                                                       |
 
 `dotnet test Cadence.sln` runs all four .NET test projects. `dotnet cadence test --fast` is the quick loop (every
 project, `Category!=Integration`), and `make verify` runs the quality gates plus every suite before you open a PR.
@@ -75,6 +75,12 @@ These tests currently use it:
 - `tests/Cadence.IntegrationTests/Kernel/` (`KernelPostgresFixture`): the kernel schema, bitemporal guards and the command
   pipeline, all as the non-owner application role under Row-Level Security. The IdentityVault migration tests use the
   same server choice.
+- `tests/Cadence.IntegrationTests/Kernel/KernelObservationHostPostgresTests.cs`: the observation correction through the
+  real kernel host (ADR-2620). Its browser-to-database check also needs `CADENCE_TEST_BROWSER=1`, Node, pnpm and a
+  Chromium: it starts a signing proxy on port 8000 in place of Keycloak and the gateway, runs
+  `apps/web/playwright.correction-check.config.ts` (the real `ObservationView` on the Vite dev server), and reads the
+  correction and its reason back from PostgreSQL. `PLAYWRIGHT_CHROMIUM_PATH` names a preinstalled Chromium; the test
+  sets it to `/opt/pw-browsers/chromium` when that file exists. Without the opt-in it is skipped.
 - `tests/Cadence.IntegrationTests/Database/` (`ThrowawayPostgresDatabase`): every service's migrations applied the way a deployed
   service applies them, into one shared database, checking that each service's tables and migration history
   land in its own schema (ADR-2247).

@@ -1,0 +1,225 @@
+<template>
+  <div id="section-observation" class="dashboard-section active">
+    <div class="card">
+      <h2>Observation</h2>
+
+      <p v-if="loading && !observation" role="status">Loading observation…</p>
+      <p v-else-if="loadError" class="observation-error" role="alert">
+        The observation could not be loaded: {{ loadError }}
+      </p>
+
+      <template v-if="observation">
+        <dl class="observation-summary">
+          <dt>Current value</dt>
+          <dd data-testid="observation-value">
+            {{ observation.value }}
+          </dd>
+          <dt>Version</dt>
+          <dd data-testid="observation-version">
+            {{ observation.version }}
+          </dd>
+          <dt>Observed</dt>
+          <dd>{{ observation.observed_at }}</dd>
+          <dt>Status</dt>
+          <dd data-testid="observation-status">
+            <template v-if="observation.locked">
+              Locked by {{ observation.locked.locked_by }} at
+              {{ observation.locked.locked_at }}
+            </template>
+            <template v-else> Open for correction </template>
+          </dd>
+        </dl>
+
+        <form
+          v-if="!locked"
+          class="observation-correction"
+          @submit.prevent="askReason"
+        >
+          <label for="observation-new-value">Corrected value</label>
+          <input
+            id="observation-new-value"
+            v-model="newValue"
+            type="text"
+            autocomplete="off"
+            :disabled="saving"
+          />
+          <button
+            id="observation-save"
+            class="btn btn-primary"
+            type="submit"
+            :disabled="saving || !canSave"
+          >
+            {{ saving ? "Saving…" : "Save correction" }}
+          </button>
+        </form>
+
+        <div
+          v-if="outcome"
+          data-testid="observation-outcome"
+          :class="[
+            'observation-outcome',
+            `observation-outcome--${outcome.kind}`,
+          ]"
+          :role="outcome.kind === 'saved' ? 'status' : 'alert'"
+        >
+          <template v-if="outcome.kind === 'saved'">
+            Correction saved. The value is now {{ outcome.state.value }} at
+            version {{ outcome.state.version }}, with your reason in the audit
+            trail.
+          </template>
+          <template v-else>
+            {{ outcome.message }}
+          </template>
+        </div>
+
+        <h3>Revisions</h3>
+        <table
+          class="observation-revisions"
+          data-testid="observation-revisions"
+        >
+          <thead>
+            <tr>
+              <th scope="col">Revision</th>
+              <th scope="col">Value</th>
+              <th scope="col">Reason</th>
+              <th scope="col">Recorded by</th>
+              <th scope="col">Recorded</th>
+              <th scope="col">Superseded</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="revision in observation.revisions"
+              :key="revision.number"
+            >
+              <td>{{ revision.number }}</td>
+              <td>{{ revision.value }}</td>
+              <td>{{ revision.reason_for_change }}</td>
+              <td>{{ revision.recorded_by }}</td>
+              <td>{{ revision.recorded_at }}</td>
+              <td>{{ revision.recorded_until ?? "Current" }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Audit trail</h3>
+        <table class="observation-audit" data-testid="observation-audit">
+          <thead>
+            <tr>
+              <th scope="col">Sequence</th>
+              <th scope="col">When</th>
+              <th scope="col">Who</th>
+              <th scope="col">Action</th>
+              <th scope="col">Version</th>
+              <th scope="col">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="entry in observation.audit" :key="entry.sequence">
+              <td>{{ entry.sequence }}</td>
+              <td>{{ entry.recorded_at }}</td>
+              <td>{{ entry.actor_id }}</td>
+              <td>{{ entry.action }} {{ entry.subject }}</td>
+              <td>{{ entry.version ?? "" }}</td>
+              <td>{{ entry.reason_for_change }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </template>
+    </div>
+
+    <ReasonForChangeModal
+      :show="reasonOpen"
+      id-prefix="observation-"
+      title="Reason for correction"
+      confirm-text="Save correction"
+      @confirm="onReason"
+      @cancel="reasonOpen = false"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from "vue";
+import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
+import { useObservationCorrection } from "../composables/useObservationCorrection";
+
+/**
+ * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
+ * copy, and reports a correction as saved only after the kernel has committed it.
+ */
+const props = defineProps<{ observationRef: string }>();
+
+const {
+  observation,
+  loading,
+  saving,
+  loadError,
+  outcome,
+  locked,
+  load,
+  correct,
+} = useObservationCorrection(() => props.observationRef);
+
+const newValue = ref("");
+const reasonOpen = ref(false);
+
+const canSave = computed(() => {
+  const value = newValue.value.trim();
+  return value.length > 0 && value !== observation.value?.value;
+});
+
+function askReason() {
+  if (canSave.value && !saving.value) reasonOpen.value = true;
+}
+
+async function onReason(reason: string) {
+  reasonOpen.value = false;
+  await correct(newValue.value.trim(), reason);
+  if (outcome.value?.kind === "saved") newValue.value = "";
+}
+
+onMounted(load);
+watch(() => props.observationRef, load);
+</script>
+
+<style scoped>
+.observation-summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+}
+.observation-correction {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 16px 0;
+}
+.observation-outcome {
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+.observation-outcome--saved {
+  background: #ecfdf5;
+  color: #065f46;
+}
+.observation-outcome--stale,
+.observation-outcome--locked,
+.observation-outcome--failed,
+.observation-error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+th,
+td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+</style>
