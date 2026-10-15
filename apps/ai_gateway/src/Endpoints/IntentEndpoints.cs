@@ -16,6 +16,7 @@ namespace Cadence.Apps.AiGateway.Endpoints;
 
 /// <summary>
 /// Minimal API endpoints for AI Gateway intent classification and natural language route navigation.
+/// @req:PRD-SYS-051
 /// </summary>
 public static class IntentEndpoints
 {
@@ -26,20 +27,22 @@ public static class IntentEndpoints
     /// <returns>The updated route builder.</returns>
     public static IEndpointRouteBuilder MapIntentEndpoints(this IEndpointRouteBuilder app)
     {
-        var groupAi = app.MapGroup("/api/ai/intent");
-        var groupV1Ai = app.MapGroup("/api/v1/ai/intent");
+        var groupAi = app.MapGroup("/api/ai/intent").RequireAuthorization();
+        var groupV1Ai = app.MapGroup("/api/v1/ai/intent").RequireAuthorization();
 
         groupAi.MapPost("/route", RouteIntentAsync)
             .WithName("RouteAiIntent")
             .WithSummary("Classify natural language prompt queries into structured clinical intent actions.")
             .Produces<IntentRouteResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         groupV1Ai.MapPost("/route", RouteIntentAsync)
             .WithName("RouteV1AiIntent")
             .WithSummary("Classify natural language prompt queries into structured clinical intent actions (v1 API).")
             .Produces<IntentRouteResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return app;
     }
@@ -50,16 +53,26 @@ public static class IntentEndpoints
         ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger("Cadence.Apps.AiGateway.IntentRouting");
+
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        string? userId = user.FindFirst(CadenceClaimTypes.Subject)?.Value
+            ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
         if (request == null || string.IsNullOrWhiteSpace(request.Query))
         {
             return TypedResults.Ok(new IntentRouteResponse(request?.Query ?? string.Empty, Array.Empty<IntentRecommendation>()));
         }
 
-        string userId = user.FindFirst(CadenceClaimTypes.Subject)?.Value
-            ?? user.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? "anonymous_user";
-
-        // Collect user roles from ClaimsPrincipal
+        // Collect user roles strictly from verified ClaimsPrincipal claims
         var userRoles = user.FindAll(ClaimTypes.Role)
             .Concat(user.FindAll("role"))
             .Concat(user.FindAll("roles"))
@@ -67,15 +80,7 @@ public static class IntentEndpoints
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        // Also check if context supplied explicit roles
-        if (request.Context != null && request.Context.TryGetValue("roles", out var contextRolesStr) && !string.IsNullOrWhiteSpace(contextRolesStr))
-        {
-            var ctxRoles = contextRolesStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            userRoles.AddRange(ctxRoles);
-            userRoles = userRoles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        }
-
-        var response = IntentRoutingService.ClassifyIntent(request.Query, userRoles, request.Context);
+        var response = RuleBasedIntentRouter.ClassifyIntent(request.Query, userRoles, request.Context);
 
         logger.LogInformation(
             "GxP Intent Routing: User {UserId} query '{Query}' resolved {Count} intent recommendations.",

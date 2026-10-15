@@ -282,7 +282,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
 
     expect(apiClient.post).toHaveBeenCalledWith("/api/v1/ai/intent/route", {
       query: "log adverse event for subject 101",
-      context: { roles: "site_investigator" },
+      context: undefined,
     });
 
     const aiItem = wrapper.findAll(".command-item").find((el) => {

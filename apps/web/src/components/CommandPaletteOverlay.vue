@@ -760,9 +760,7 @@ watch(query, (newQuery) => {
   selectedIndex.value = 0;
   const q = newQuery.trim();
   if (q) {
-    fetchIntentDebounced(q, {
-      roles: (authStore.normalizedRoles || []).join(","),
-    });
+    fetchIntentDebounced(q);
   } else {
     clearRecommendations();
   }
