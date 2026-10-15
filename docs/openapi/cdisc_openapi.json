@@ -678,6 +678,111 @@
         }
       }
     },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/publish": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "PublishTemplateVersioned",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Econsent_PublishTemplateRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_PublishTemplateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/publish": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "PublishTemplate",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Econsent_PublishTemplateRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_PublishTemplateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent": {
       "post": {
         "tags": [
@@ -4650,6 +4755,94 @@
         "responses": {
           "200": {
             "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/gamification/progress": {
+      "get": {
+        "tags": [
+          "Gamification"
+        ],
+        "operationId": "GetGamificationProgress",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_GamificationProgressResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gamification/process-submission": {
+      "post": {
+        "tags": [
+          "Gamification"
+        ],
+        "operationId": "ProcessSubmissionGamification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ProcessGamificationSubmissionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_GamificationProgressResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -10458,6 +10651,91 @@
           }
         }
       },
+      "Econsent_PublishTemplateRequest": {
+        "required": [
+          "study_id",
+          "protocol_version",
+          "change_summary",
+          "change_reason",
+          "requires_reconsent",
+          "channels"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocol_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "change_summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "change_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requires_reconsent": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "channels": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Econsent_PublishTemplateResponse": {
+        "required": [
+          "template_id",
+          "version_index",
+          "is_published",
+          "requires_reconsent",
+          "published_at"
+        ],
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "is_published": {
+            "type": "boolean"
+          },
+          "requires_reconsent": {
+            "type": "boolean"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Eisf_AnonymousTypeOfstringAndstring": {
         "required": [
           "status",
@@ -13469,6 +13747,86 @@
           }
         }
       },
+      "Execution_GamificationProgressResponse": {
+        "required": [
+          "subject_id",
+          "study_id",
+          "current_streak",
+          "longest_streak",
+          "total_submissions",
+          "on_time_submissions",
+          "last_submission_date",
+          "milestones_achieved",
+          "total_bonus_earned",
+          "updated_at"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "current_streak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "longest_streak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_submissions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "on_time_submissions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "last_submission_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "milestones_achieved": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "total_bonus_earned": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Execution_HttpValidationProblemDetails": {
         "type": "object",
         "properties": {
@@ -14606,6 +14964,49 @@
             ]
           },
           "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Execution_ProcessGamificationSubmissionRequest": {
+        "required": [
+          "subject_id",
+          "study_id",
+          "instrument_id",
+          "sequence_number",
+          "device_timestamp",
+          "is_on_time"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "instrument_id": {
+            "type": "string"
+          },
+          "sequence_number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "device_timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "is_on_time": {
+            "type": "boolean"
+          },
+          "site_id": {
             "type": [
               "null",
               "string"

@@ -1540,6 +1540,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/gamification/progress": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetGamificationProgress"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/gamification/process-submission": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["ProcessSubmissionGamification"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2195,6 +2227,25 @@ export interface components {
     Execution_FormUnlockRequest: {
       reason: string;
     };
+    Execution_GamificationProgressResponse: {
+      subject_id: string;
+      study_id: string;
+      /** Format: int32 */
+      current_streak: number | string;
+      /** Format: int32 */
+      longest_streak: number | string;
+      /** Format: int32 */
+      total_submissions: number | string;
+      /** Format: int32 */
+      on_time_submissions: number | string;
+      /** Format: date-time */
+      last_submission_date: null | string;
+      milestones_achieved: string[];
+      /** Format: double */
+      total_bonus_earned: number | string;
+      /** Format: date-time */
+      updated_at: string;
+    };
     Execution_HttpValidationProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -2456,6 +2507,17 @@ export interface components {
       status?: null | number | string;
       detail?: null | string;
       instance?: null | string;
+    };
+    Execution_ProcessGamificationSubmissionRequest: {
+      subject_id: string;
+      study_id: string;
+      instrument_id: string;
+      /** Format: int32 */
+      sequence_number: number | string;
+      /** Format: date-time */
+      device_timestamp: string;
+      is_on_time: boolean;
+      site_id?: null | string;
     };
     Execution_ProtocolVersionPayload: {
       study_id: string;
@@ -5027,6 +5089,71 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_DeviceInvestigationSummaryResponse"];
+        };
+      };
+    };
+  };
+  GetGamificationProgress: {
+    parameters: {
+      query: {
+        subjectId: string;
+        studyId: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_GamificationProgressResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ProcessSubmissionGamification: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_ProcessGamificationSubmissionRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_GamificationProgressResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
     };

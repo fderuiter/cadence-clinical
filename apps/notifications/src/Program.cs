@@ -31,6 +31,7 @@ builder.Services.AddMassTransit(x =>
     });
     x.AddConsumer<ClinicalQueryRaisedConsumer>();
     x.AddConsumer<EconsentReconsentConsumer>();
+    x.AddConsumer<ParticipantEngagementConsumer>();
     x.UsingInMemory((context, cfg) =>
     {
         cfg.ConfigureEndpoints(context);
@@ -42,6 +43,7 @@ builder.Services.AddNotificationBranding(builder.Configuration);
 
 FluidTemplateRenderer.RegisterType<NotificationPayload>();
 FluidTemplateRenderer.RegisterType<NotificationRenderModel>();
+FluidTemplateRenderer.RegisterType<EngagementNudgePayload>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();

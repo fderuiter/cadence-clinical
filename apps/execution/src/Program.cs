@@ -8,6 +8,7 @@ using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.Devices;
 using Cadence.Apps.Execution.Application.EditChecks;
 using Cadence.Apps.Execution.Application.Forms;
+using Cadence.Apps.Execution.Application.Gamification;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Application.Serialization;
@@ -206,6 +207,7 @@ builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
 builder.Services.AddScoped<ISynonymImportService, SynonymImportService>();
 builder.Services.AddScoped<IDeviceApplicationService, DeviceApplicationService>();
 builder.Services.AddScoped<IIpKitApplicationService, IpKitApplicationService>();
+builder.Services.AddScoped<IGamificationService, GamificationService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -271,6 +273,7 @@ app.MapCgtEndpoints();
 app.MapSynonymEndpoints();
 app.MapDeviceEndpoints();
 app.MapIpKitEndpoints();
+app.MapGamificationEndpoints();
 
 if (args.Contains("--seed"))
 {

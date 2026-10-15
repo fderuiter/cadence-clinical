@@ -4,6 +4,7 @@ using Cadence.Apps.Execution.Domain.Coding;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Devices;
 using Cadence.Apps.Execution.Domain.Forms;
+using Cadence.Apps.Execution.Domain.Gamification;
 using Cadence.Apps.Execution.Domain.Observations;
 using Cadence.Apps.Execution.Domain.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -33,9 +34,9 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 /// @req:PRD-CEC-002
 /// @req:PRD-SCM-005
 /// @req:PRD-SCM-006
-/// @req:SRS-EDC-001
-/// @req:SRS-EDC-002
-/// @req:SRS-EDC-004
+/// @req:PRD-SRS-EDC-001
+/// @req:PRD-SRS-EDC-002
+/// @req:PRD-SRS-EDC-004
 /// </summary>
 public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> options) : DbContext(options)
 {
@@ -91,6 +92,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<BulkLabRangeImportJob> BulkLabRangeImportJobs => Set<BulkLabRangeImportJob>();
 
+    public DbSet<ParticipantGamificationProgress> GamificationProgresses => Set<ParticipantGamificationProgress>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -120,6 +123,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new IpKitReconciliationCertificateConfiguration());
         modelBuilder.ApplyConfiguration(new LabReferenceRangeConfiguration());
         modelBuilder.ApplyConfiguration(new BulkLabRangeImportJobConfiguration());
+        modelBuilder.ApplyConfiguration(new ParticipantGamificationProgressConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
     }

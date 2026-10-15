@@ -34,6 +34,7 @@ public static class NotificationTemplateEndpoints
             ["edc_query_raised"] = "edc_query_raised.html.liquid",
             ["etmf_expiry_alert"] = "etmf_expiry_alert.html.liquid",
             ["missing_diary_alert"] = "missing_diary_alert.html.liquid",
+            ["engagement_nudge"] = "engagement_nudge.html.liquid",
             ["protocol_amendment"] = "protocol_amendment.html.liquid",
             ["reconsent_required"] = "reconsent_required.html.liquid",
             ["sae_reconciliation"] = "sae_reconciliation.html.liquid",

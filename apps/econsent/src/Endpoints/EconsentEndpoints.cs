@@ -339,7 +339,7 @@ public static class EconsentEndpoints
         else
         {
             template.IsPublished = true;
-            if (request?.RequiresReconsent.HasValue == true)
+            if (request?.RequiresReconsent is true)
             {
                 template.RequiresReconsent = request.RequiresReconsent.Value;
             }

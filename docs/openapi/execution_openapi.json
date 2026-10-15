@@ -3549,6 +3549,94 @@
           }
         }
       }
+    },
+    "/api/v1/gamification/progress": {
+      "get": {
+        "tags": [
+          "Gamification"
+        ],
+        "operationId": "GetGamificationProgress",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_GamificationProgressResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/gamification/process-submission": {
+      "post": {
+        "tags": [
+          "Gamification"
+        ],
+        "operationId": "ProcessSubmissionGamification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_ProcessGamificationSubmissionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_GamificationProgressResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6275,6 +6363,86 @@
           }
         }
       },
+      "Execution_GamificationProgressResponse": {
+        "required": [
+          "subject_id",
+          "study_id",
+          "current_streak",
+          "longest_streak",
+          "total_submissions",
+          "on_time_submissions",
+          "last_submission_date",
+          "milestones_achieved",
+          "total_bonus_earned",
+          "updated_at"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "current_streak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "longest_streak": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_submissions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "on_time_submissions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "last_submission_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "milestones_achieved": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "total_bonus_earned": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Execution_HttpValidationProblemDetails": {
         "type": "object",
         "properties": {
@@ -7419,6 +7587,49 @@
           }
         }
       },
+      "Execution_ProcessGamificationSubmissionRequest": {
+        "required": [
+          "subject_id",
+          "study_id",
+          "instrument_id",
+          "sequence_number",
+          "device_timestamp",
+          "is_on_time"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "instrument_id": {
+            "type": "string"
+          },
+          "sequence_number": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "device_timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "is_on_time": {
+            "type": "boolean"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Execution_ProtocolVersionPayload": {
         "required": [
           "study_id",
@@ -8437,6 +8648,9 @@
     },
     {
       "name": "IP Kit Reconciliation"
+    },
+    {
+      "name": "Gamification"
     }
   ]
 }

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9f9f9; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px; }
+        .header { font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #10b981; }
+        .meta { color: #666; font-size: 12px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .content { font-size: 14px; line-height: 1.5; color: #444; margin-bottom: 20px; }
+        .badge-streak { display: inline-block; background-color: #10b981; color: #ffffff; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+        .footer { font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">🎉 {{ payload.title | default: 'Participant Engagement & Streak Milestone' }}</div>
+        <div class="meta">
+            <strong>Study ID:</strong> {{ study_id }}<br>
+            <strong>Event ID:</strong> {{ event_id }}<br>
+            <strong>Timestamp (UTC):</strong> {{ timestamp_utc }}
+        </div>
+        <div class="content">
+            <p>Dear Participant ({{ payload.subject_id }}),</p>
+            <p>{{ payload.message }}</p>
+            <div style="margin: 16px 0; padding: 12px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px;">
+                <p style="margin: 0; font-size: 14px;"><strong>🔥 Current Active Streak:</strong> <span class="badge-streak">{{ payload.current_streak }} Days</span></p>
+                {% if payload.milestone_type %}
+                <p style="margin: 6px 0 0 0; font-size: 13px; color: #15803d;"><strong>🏆 Milestone Achieved:</strong> {{ payload.milestone_type }}</p>
+                {% endif %}
+                {% if payload.bonus_amount %}
+                <p style="margin: 6px 0 0 0; font-size: 13px; color: #15803d;"><strong>💳 Wallet Stipend Credit:</strong> ${{ payload.bonus_amount }} USD</p>
+                {% endif %}
+            </div>
+            <p>Thank you for your continued dedication and accurate on-time survey completions!</p>
+            {% if portal_url %}
+            <p><a href="{{ portal_url }}" style="color: #2563eb; text-decoration: none; font-weight: bold;">Click here to access your Participant Portal & Wallet</a></p>
+            {% endif %}
+        </div>
+        <div class="footer">
+            <p>This is an automated participant engagement message from {{ brand_name | default: 'Cadence Clinical Platform' }}.<br>
+            21 CFR Part 11 and IRB/IEC compliant non-coercive participant retention tracking.</p>
+        </div>
+    </div>
+</body>
+</html>

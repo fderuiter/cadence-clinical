@@ -508,6 +508,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2813: Standardize MassTransit EF Core Transactional Outbox Across Core Services](adr/2026-10-07-standardize-masstransit-ef-core-transactional-outbox-across-core-services.md) | Current | - Status: Accepted |
 | [ADR-2813: Synchronous Batch Assignment and Multi Role Delegation Sign Off Architecture](adr/2026-10-07-synchronous-batch-assignment-and-multi-role-delegation-sign-off-architecture.md) | Current | - Status: Accepted |
 | [ADR-2815: Bulk Laboratory Reference Range Import & Persistent Audit Store](adr/2026-10-12-bulk-laboratory-reference-range-import-persistent-audit-store.md) | Current | - Status: Accepted |
+| [ADR-2550: Event-Driven Participant Gamification, Compliance Streak Tracking, and Milestone Stipends](adr/2026-10-15-event-driven-participant-gamification-and-compliance-streak-tracking.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

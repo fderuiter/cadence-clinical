@@ -85,4 +85,6 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `DELETE` | `/api/v1/execution/subjects/{subjectId}/demographics` | DeleteSubjectDemographics |  |
 | `PATCH` | `/api/v1/execution/subjects/{subjectId}/state` | UpdateSubjectState |  |
 | `POST` | `/api/v1/execution/webhooks/etmf` | EtmfCompletenessWebhook |  |
+| `POST` | `/api/v1/gamification/process-submission` | ProcessSubmissionGamification |  |
+| `GET` | `/api/v1/gamification/progress` | GetGamificationProgress |  |
 | `GET` | `/healthz` | ExecutionHealthCheck | Execution engine health probe. |

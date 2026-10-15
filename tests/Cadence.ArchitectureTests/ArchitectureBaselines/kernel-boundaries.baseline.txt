@@ -62,6 +62,7 @@ K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Devices.DeviceInven
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Devices.DeviceQuarantineRecord.SiteId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Devices.DeviceQuarantineRecord.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Forms.PublishedFormVersionRegistry.StudyId
+K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Gamification.ParticipantGamificationProgress.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.BulkLabRangeImportJob.SiteId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.BulkLabRangeImportJob.StudyId
 K-MOD-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ClinicalObservation.LabSiteId
@@ -262,6 +263,9 @@ K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Forms.FormSubmi
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Forms.FormSubmissionCreateRequest.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Forms.FormSubmissionResponse.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Forms.FormSubmissionResponse.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Gamification.GamificationProgressResponse.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Gamification.ProcessGamificationSubmissionRequest.SiteId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Gamification.ProcessGamificationSubmissionRequest.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Observations.BulkLabRangeDryRunRequest.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Observations.BulkLabRangeDryRunRequest.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Observations.BulkLabRangeImportCommitRequest.SiteId
@@ -322,6 +326,7 @@ K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Devices.DeviceInvent
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Devices.DeviceQuarantineRecord.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Devices.DeviceQuarantineRecord.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Forms.PublishedFormVersionRegistry.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Gamification.ParticipantGamificationProgress.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.BulkLabRangeImportJob.SiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.BulkLabRangeImportJob.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Domain.Observations.ClinicalObservation.LabSiteId
@@ -490,11 +495,15 @@ K-XS-1|Cadence.Contracts|Cadence.Contracts.ClinicalQueryRaised.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.ClinicalQueryRaised.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EConsentCompleted.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EConsentCompleted.StudyId
+K-XS-1|Cadence.Contracts|Cadence.Contracts.EProSubmissionCompleted.SiteId
+K-XS-1|Cadence.Contracts|Cadence.Contracts.EProSubmissionCompleted.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EconsentReconsentRequired.StudyId
+K-XS-1|Cadence.Contracts|Cadence.Contracts.EngagementNudgeTriggered.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EtmfDocumentFilingRequested.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EtmfDocumentFilingRequested.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.Grade3ToxicityDetected.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.Grade3ToxicityDetected.StudyId
+K-XS-1|Cadence.Contracts|Cadence.Contracts.ParticipantStreakMilestoneAchieved.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.PublishAmendmentRequestDto.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.SubjectSummaryDto.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.SiteId

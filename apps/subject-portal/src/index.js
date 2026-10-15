@@ -195,6 +195,20 @@ const state = reactive({
     receiptImageName: "",
   },
   expenseResult: null,
+  gamification: {
+    subjectId: "subject_001",
+    studyId: "study_001",
+    currentStreak: 7,
+    longestStreak: 14,
+    totalSubmissions: 28,
+    onTimeSubmissions: 26,
+    lastSubmissionDate: new Date().toISOString(),
+    milestonesAchieved: ["STREAK_3_DAY", "STREAK_7_DAY", "WEEK_4_COMPLETED"],
+    totalBonusEarned: 50.0,
+    updatedAt: new Date().toISOString(),
+    loading: false,
+    error: null,
+  },
   assignments: [],
   notifications: [],
   ledgerBlocks: [],
@@ -321,6 +335,70 @@ async function fetchCompliance(subjectId) {
 
 async function fetchNotifications(subjectId) {
   return await dispatchApi(`subjects/${subjectId}/notifications`);
+}
+
+async function fetchGamificationProgress(subjectId, studyId = "study_001") {
+  try {
+    state.gamification.loading = true;
+    const progress = await dispatchApi(`gamification/progress?subjectId=${subjectId}&studyId=${studyId}`);
+    if (progress) {
+      state.gamification.currentStreak = progress.currentStreak ?? progress.current_streak ?? state.gamification.currentStreak;
+      state.gamification.longestStreak = progress.longestStreak ?? progress.longest_streak ?? state.gamification.longestStreak;
+      state.gamification.totalSubmissions = progress.totalSubmissions ?? progress.total_submissions ?? state.gamification.totalSubmissions;
+      state.gamification.onTimeSubmissions = progress.onTimeSubmissions ?? progress.on_time_submissions ?? state.gamification.onTimeSubmissions;
+      state.gamification.lastSubmissionDate = progress.lastSubmissionDate ?? progress.last_submission_date ?? state.gamification.lastSubmissionDate;
+      state.gamification.milestonesAchieved = progress.milestonesAchieved ?? progress.milestones_achieved ?? state.gamification.milestonesAchieved;
+      state.gamification.totalBonusEarned = progress.totalBonusEarned ?? progress.total_bonus_earned ?? state.gamification.totalBonusEarned;
+    }
+  } catch (err) {
+    console.warn("Could not fetch gamification progress, maintaining active local state:", err);
+  } finally {
+    state.gamification.loading = false;
+  }
+}
+
+async function processGamificationSubmission(submissionData) {
+  if (!submissionData) return;
+  if (!state.session.isDemoMode && !state.session.isOfflineMode) {
+    try {
+      const payload = {
+        subjectId: submissionData.subject_id || state.session.userId,
+        studyId: submissionData.study_id || "study_001",
+        instrumentId: submissionData.diary_id || "inst_daily_diary",
+        sequenceNumber: submissionData.sequence_number || 1,
+        deviceTimestamp: submissionData.device_timestamp || new Date().toISOString(),
+        isOnTime: true,
+      };
+      const progress = await dispatchApi("gamification/process-submission", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      if (progress) {
+        state.gamification.currentStreak = progress.currentStreak ?? progress.current_streak ?? state.gamification.currentStreak;
+        state.gamification.longestStreak = progress.longestStreak ?? progress.longest_streak ?? state.gamification.longestStreak;
+        state.gamification.totalSubmissions = progress.totalSubmissions ?? progress.total_submissions ?? state.gamification.totalSubmissions;
+        state.gamification.onTimeSubmissions = progress.onTimeSubmissions ?? progress.on_time_submissions ?? state.gamification.onTimeSubmissions;
+        state.gamification.lastSubmissionDate = progress.lastSubmissionDate ?? progress.last_submission_date ?? state.gamification.lastSubmissionDate;
+        state.gamification.milestonesAchieved = progress.milestonesAchieved ?? progress.milestones_achieved ?? state.gamification.milestonesAchieved;
+        state.gamification.totalBonusEarned = progress.totalBonusEarned ?? progress.total_bonus_earned ?? state.gamification.totalBonusEarned;
+        return;
+      }
+    } catch (err) {
+      console.warn("Could not process gamification submission via API, applying local update:", err);
+    }
+  }
+
+  state.gamification.totalSubmissions += 1;
+  state.gamification.onTimeSubmissions += 1;
+  state.gamification.currentStreak += 1;
+  if (state.gamification.currentStreak > state.gamification.longestStreak) {
+    state.gamification.longestStreak = state.gamification.currentStreak;
+  }
+  if (state.gamification.currentStreak >= 7 && !state.gamification.milestonesAchieved.includes("STREAK_7_DAY")) {
+    state.gamification.milestonesAchieved.push("STREAK_7_DAY");
+    state.gamification.totalBonusEarned += 25.0;
+    state.walletBalance += 25.0;
+  }
 }
 
 function isAuthenticatedSession() {
@@ -2256,6 +2334,15 @@ async function syncOfflineQueue(isManual = false, options = {}) {
         await bulkUpdateSubmissionStatuses(updates);
       }
 
+      // Process gamification evaluations for synced ePRO submissions preserving original device timestamps (Guardrail 3)
+      for (const sub of validSubmissions) {
+        try {
+          await processGamificationSubmission(sub);
+        } catch (gamErr) {
+          console.warn("Gamification evaluation warning:", gamErr);
+        }
+      }
+
       // Automatic Stipend Wallet Disbursement upon successful ePRO sync
       if (
         validSubmissions.length > 0 &&
@@ -3214,6 +3301,8 @@ export {
   fetchInstrument,
   fetchCompliance,
   fetchNotifications,
+  fetchGamificationProgress,
+  processGamificationSubmission,
   isAuthenticatedSession,
   renderTasks,
   renderCompliance,

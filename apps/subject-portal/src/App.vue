@@ -487,6 +487,91 @@
             </p>
           </div>
 
+          <!-- Participant Gamification & Adherence Streaks Banner -->
+          <div class="card gamification-streak-card" style="margin-bottom: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; border-radius: 12px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+              <div>
+                <h3 style="margin: 0 0 4px 0; font-size: 20px; color: #38bdf8;">🔥 Adherence Streak &amp; Milestones</h3>
+                <p style="margin: 0; font-size: 13px; color: #94a3b8;">Maintain daily ePRO questionnaire completion to unlock milestone stipend bonuses.</p>
+              </div>
+              <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <div style="background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+                  <div style="font-size: 22px; font-weight: 800; color: #f97316;">🔥 {{ state.gamification?.currentStreak || 0 }} Days</div>
+                  <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #cbd5e1;">Active Streak</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+                  <div style="font-size: 22px; font-weight: 800; color: #eab308;">🏆 {{ state.gamification?.longestStreak || 0 }} Days</div>
+                  <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #cbd5e1;">Longest Streak</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.08); padding: 8px 16px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+                  <div style="font-size: 22px; font-weight: 800; color: #22c55e;">${{ (state.gamification?.totalBonusEarned || 0).toFixed(2) }}</div>
+                  <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #cbd5e1;">Bonus Earned</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Interactive Trial Milestone Map -->
+            <div style="margin-top: 20px;">
+              <h4 style="margin: 0 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8;">Trial Milestone Roadmap</h4>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                <div class="milestone-badge-item" :style="{ background: (state.gamification?.milestonesAchieved || []).includes('STREAK_3_DAY') ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.04)', border: (state.gamification?.milestonesAchieved || []).includes('STREAK_3_DAY') ? '1px solid #22c55e' : '1px solid rgba(255,255,255,0.1)', padding: '12px', borderRadius: '8px' }">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 18px;">🔥</span>
+                    <span class="status-pill" :class="(state.gamification?.milestonesAchieved || []).includes('STREAK_3_DAY') ? 'completed' : 'pending'">
+                      {{ (state.gamification?.milestonesAchieved || []).includes('STREAK_3_DAY') ? 'Unlocked' : 'In Progress' }}
+                    </span>
+                  </div>
+                  <div style="font-weight: 700; margin-top: 6px; font-size: 14px; color: #f8fafc;">3-Day Streak</div>
+                  <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Keep up momentum</div>
+                </div>
+
+                <div class="milestone-badge-item" :style="{ background: (state.gamification?.milestonesAchieved || []).includes('STREAK_7_DAY') ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.04)', border: (state.gamification?.milestonesAchieved || []).includes('STREAK_7_DAY') ? '1px solid #22c55e' : '1px solid rgba(255,255,255,0.1)', padding: '12px', borderRadius: '8px' }">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 18px;">🏆</span>
+                    <span class="status-pill" :class="(state.gamification?.milestonesAchieved || []).includes('STREAK_7_DAY') ? 'completed' : 'pending'">
+                      {{ (state.gamification?.milestonesAchieved || []).includes('STREAK_7_DAY') ? 'Unlocked +$25' : 'In Progress' }}
+                    </span>
+                  </div>
+                  <div style="font-weight: 700; margin-top: 6px; font-size: 14px; color: #f8fafc;">7-Day Milestone</div>
+                  <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">$25 stipend bonus</div>
+                </div>
+
+                <div class="milestone-badge-item" :style="{ background: (state.gamification?.milestonesAchieved || []).includes('STREAK_14_DAY') ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.04)', border: (state.gamification?.milestonesAchieved || []).includes('STREAK_14_DAY') ? '1px solid #22c55e' : '1px solid rgba(255,255,255,0.1)', padding: '12px', borderRadius: '8px' }">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 18px;">⭐</span>
+                    <span class="status-pill" :class="(state.gamification?.milestonesAchieved || []).includes('STREAK_14_DAY') ? 'completed' : 'pending'">
+                      {{ (state.gamification?.milestonesAchieved || []).includes('STREAK_14_DAY') ? 'Unlocked +$25' : 'In Progress' }}
+                    </span>
+                  </div>
+                  <div style="font-weight: 700; margin-top: 6px; font-size: 14px; color: #f8fafc;">14-Day Champion</div>
+                  <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">$25 stipend bonus</div>
+                </div>
+
+                <div class="milestone-badge-item" :style="{ background: (state.gamification?.milestonesAchieved || []).includes('STREAK_30_DAY') ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.04)', border: (state.gamification?.milestonesAchieved || []).includes('STREAK_30_DAY') ? '1px solid #22c55e' : '1px solid rgba(255,255,255,0.1)', padding: '12px', borderRadius: '8px' }">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 18px;">👑</span>
+                    <span class="status-pill" :class="(state.gamification?.milestonesAchieved || []).includes('STREAK_30_DAY') ? 'completed' : 'pending'">
+                      {{ (state.gamification?.milestonesAchieved || []).includes('STREAK_30_DAY') ? 'Unlocked +$25' : 'In Progress' }}
+                    </span>
+                  </div>
+                  <div style="font-weight: 700; margin-top: 6px; font-size: 14px; color: #f8fafc;">30-Day Legend</div>
+                  <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">$25 stipend bonus</div>
+                </div>
+
+                <div class="milestone-badge-item" :style="{ background: (state.gamification?.milestonesAchieved || []).includes('WEEK_4_COMPLETED') ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.04)', border: (state.gamification?.milestonesAchieved || []).includes('WEEK_4_COMPLETED') ? '1px solid #22c55e' : '1px solid rgba(255,255,255,0.1)', padding: '12px', borderRadius: '8px' }">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 18px;">🎉</span>
+                    <span class="status-pill" :class="(state.gamification?.milestonesAchieved || []).includes('WEEK_4_COMPLETED') ? 'completed' : 'pending'">
+                      {{ (state.gamification?.milestonesAchieved || []).includes('WEEK_4_COMPLETED') ? 'Unlocked +$25' : 'In Progress' }}
+                    </span>
+                  </div>
+                  <div style="font-weight: 700; margin-top: 6px; font-size: 14px; color: #f8fafc;">Week 4 Completion</div>
+                  <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">$25 stipend bonus</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Compliance Loading Placeholder -->
           <div
             id="compliance-loading"

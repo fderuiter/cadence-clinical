@@ -30,6 +30,7 @@ Generated from the EF Core model of `Cadence.Apps.Execution.Infrastructure.Persi
 | [`edc.ip_kit_reconciliation_batches`](#edcip_kit_reconciliation_batches) | `IpKitReconciliationBatch` | 15 |
 | [`edc.ip_kit_reconciliation_certificates`](#edcip_kit_reconciliation_certificates) | `IpKitReconciliationCertificate` | 15 |
 | [`edc.lab_reference_ranges`](#edclab_reference_ranges) | `LabReferenceRange` | 22 |
+| [`edc.participant_gamification_progresses`](#edcparticipant_gamification_progresses) | `ParticipantGamificationProgress` | 12 |
 | [`edc.published_form_version_registries`](#edcpublished_form_version_registries) | `PublishedFormVersionRegistry` | 10 |
 | [`edc.site_compliance_caches`](#edcsite_compliance_caches) | `SiteComplianceCache` | 12 |
 | [`edc.staged_adverse_event_reviews`](#edcstaged_adverse_event_reviews) | `StagedAdverseEventReview` | 29 |
@@ -830,6 +831,29 @@ Indexes:
 
 - `IX_lab_reference_ranges_StudyId_IsActive`: (`StudyId`, `IsActive`)
 - `IX_lab_reference_ranges_StudyId_TestCode_Source_SiteId_IsActive`: (`StudyId`, `TestCode`, `Source`, `SiteId`, `IsActive`)
+
+## edc.participant_gamification_progresses
+
+Entity: `ParticipantGamificationProgress`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `text` | no |  | PK |
+| `CurrentStreak` | `integer` | no |  |  |
+| `LastSubmissionDate` | `timestamp with time zone` | yes |  |  |
+| `LongestStreak` | `integer` | no |  |  |
+| `MilestonesAchievedJson` | `text` | no |  |  |
+| `OnTimeSubmissions` | `integer` | no |  |  |
+| `StudyId` | `character varying(255)` | no |  |  |
+| `SubjectId` | `character varying(255)` | no |  |  |
+| `TotalBonusEarned` | `numeric(18,4)` | no |  |  |
+| `TotalSubmissions` | `integer` | no |  |  |
+| `UpdatedAt` | `timestamp with time zone` | no |  |  |
+| `VersionIndex` | `integer` | no |  |  |
+
+Indexes:
+
+- `IX_participant_gamification_progresses_SubjectId_StudyId`: unique (`SubjectId`, `StudyId`)
 
 ## edc.published_form_version_registries
 
