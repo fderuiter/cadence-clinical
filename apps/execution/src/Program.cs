@@ -263,6 +263,7 @@ app.MapSubjectEndpoints();
 app.MapSiteComplianceEndpoints();
 app.MapObservationEndpoints();
 app.MapFormEndpoints();
+app.MapOfflineSyncEndpoints();
 app.MapQueryEndpoints();
 app.MapLabToxicityEndpoints();
 app.MapLabRangeEndpoints();

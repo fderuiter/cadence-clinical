@@ -5,10 +5,12 @@ export interface PendingDelta {
   deltaId: string;
   entityType: string;
   entityId: string;
-  action: "CREATE" | "UPDATE" | "SUBMIT";
+  action: "CREATE" | "UPDATE" | "SUBMIT" | "APPROVE" | string;
   payload: Record<string, any>;
   clientTimestampUtc: string;
   reasonForChange: string;
+  sigToken?: string;
+  sig_token?: string;
 }
 
 export class IndexedDBManager {
@@ -246,7 +248,13 @@ export class ClientSyncEngine {
 
       // Group deltas into batches of 50 items
       const batchSize = 50;
-      const deltasToSync = allDeltas.slice(0, batchSize);
+      const deltasToSync = allDeltas.slice(0, batchSize).map((d) => {
+        const token = d.sig_token || d.sigToken || d.payload?.sig_token || d.payload?.sigToken;
+        return {
+          ...d,
+          sig_token: token || undefined,
+        };
+      });
 
       const clientBatchId = `batch_${Date.now()}`;
       const response = await fetch("/api/v1/offline/sync-batch", {
@@ -261,6 +269,25 @@ export class ClientSyncEngine {
           deltas: deltasToSync,
         }),
       });
+
+      if (response.status === 401) {
+        const data = await response.json().catch(() => ({}));
+        syncStore.setStatus("ERROR");
+        this.isSyncing = false;
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("reauthentication-required", {
+              detail: {
+                message:
+                  data.detail ||
+                  data.message ||
+                  "21 CFR Part 11 mandate: Re-authentication is required for queued electronic signatures.",
+              },
+            })
+          );
+        }
+        return;
+      }
 
       if (response.status === 409) {
         // Conflict detected!

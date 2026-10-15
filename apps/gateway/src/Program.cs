@@ -137,6 +137,7 @@ var routes = new[]
     new RouteConfig { RouteId = "execution-obs-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/observations/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-forms-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/forms/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-queries-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/queries/{**catch-all}" } },
+    new RouteConfig { RouteId = "execution-offline-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/offline/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-generic-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/execution/{**catch-all}" } },
     new RouteConfig { RouteId = "etmf-route", ClusterId = "etmf-cluster", Match = new RouteMatch { Path = "/api/v1/etmf/{**catch-all}" } },
     new RouteConfig { RouteId = "interop-route", ClusterId = "interop-cluster", Match = new RouteMatch { Path = "/api/v1/interop/{**catch-all}" } },

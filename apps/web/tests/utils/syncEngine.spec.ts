@@ -301,4 +301,78 @@ describe("ClientSyncEngine and Conflict Resolution Sync Queue", () => {
 
     dispatchSpy.mockRestore();
   });
+
+  it("attaches sig_token when queueing signature-gated deltas and flushes them in batch request", async () => {
+    const delta: Omit<PendingDelta, "deltaId"> = {
+      entityType: "FormSubmission",
+      entityId: "SUBJ-001-VS",
+      action: "APPROVE",
+      payload: { signingReason: "PI Approval" },
+      clientTimestampUtc: new Date().toISOString(),
+      reasonForChange: "PI eCRF Sign-off",
+      sigToken: "mock-sig-token-jwt-12345",
+    };
+
+    await syncEngine.queueDelta(delta);
+    expect(syncStore.pendingCount).toBe(1);
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "SUCCESS", processed_count: 1 }),
+    });
+
+    await syncEngine.flushQueue();
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe("/api/v1/offline/sync-batch");
+    const body = JSON.parse(options.body);
+    expect(body.deltas).toHaveLength(1);
+    expect(body.deltas[0].action).toBe("APPROVE");
+    expect(body.deltas[0].sig_token).toBe("mock-sig-token-jwt-12345");
+  });
+
+  it("dispatches reauthentication-required event and preserves items when batch sync returns 401 REAUTHENTICATION_REQUIRED", async () => {
+    const delta: Omit<PendingDelta, "deltaId"> = {
+      entityType: "FormSubmission",
+      entityId: "SUBJ-001-VS",
+      action: "APPROVE",
+      payload: { signingReason: "PI Approval" },
+      clientTimestampUtc: new Date().toISOString(),
+      reasonForChange: "PI eCRF Sign-off",
+      sigToken: "expired-sig-token",
+    };
+
+    await syncEngine.queueDelta(delta);
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        detail: "REAUTHENTICATION_REQUIRED",
+        error: "REAUTHENTICATION_REQUIRED",
+        message: "21 CFR Part 11 mandate: Re-authentication is required.",
+      }),
+    });
+
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+
+    await syncEngine.flushQueue();
+
+    expect(syncStore.status).toBe("ERROR");
+    expect(syncStore.pendingCount).toBe(1);
+
+    expect(dispatchSpy).toHaveBeenCalled();
+    const event = dispatchSpy.mock.calls.find(
+      (call) => call[0] && call[0].type === "reauthentication-required"
+    )?.[0] as CustomEvent;
+    expect(event).toBeDefined();
+
+    const remaining = await syncEngine.dbManager.getDeltas();
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].sigToken).toBe("expired-sig-token");
+
+    dispatchSpy.mockRestore();
+  });
 });
