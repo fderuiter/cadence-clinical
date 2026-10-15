@@ -22,31 +22,47 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
   });
 
   describe("Clinical Store Key Resolution & Fallback Removal", () => {
-    it("strictly resolves getStorageKey to clinical_${persona}_${baseKey} even if unscoped key exists", () => {
-      window.localStorage.setItem(
-        "subjects",
-        JSON.stringify([{ id: "UNSCOPED-1" }])
-      );
-      window.localStorage.setItem(
-        "clinical_site_crc_subjects",
-        JSON.stringify([{ id: "SCOPED-CRC-1" }])
-      );
+    function signInAs(userId: string, tenantId: string) {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.user = { id: userId, tenantId } as never;
+      return authStore;
+    }
+
+    it("resolves getStorageKey under the signed-in tenant, user and persona", () => {
+      signInAs("user-a", "tenant-a");
 
       const resolvedKey = getStorageKey("subjects", "site_crc");
-      expect(resolvedKey).toBe("clinical_site_crc_subjects");
+      expect(resolvedKey).toBe(
+        "cadence_user:tenant-a:user-a:clinical:site_crc:subjects"
+      );
     });
 
-    it("strictly reads from persona-scoped key and returns null if persona key is missing even if unscoped key exists", () => {
+    it("has no storage key, and reads nothing, without a signed-in tenant and user (#5369)", () => {
+      expect(getStorageKey("subjects", "site_crc")).toBeNull();
+
+      const authStore = signInAs("user-a", "");
+      expect(getStorageKey("subjects", "site_crc")).toBeNull();
+      authStore.user = { id: "", tenantId: "tenant-a" } as never;
+      expect(getStorageKey("subjects", "site_crc")).toBeNull();
+    });
+
+    it("strictly reads from the scoped key and returns null if it is missing even if unscoped keys exist", () => {
+      signInAs("user-a", "tenant-a");
       window.localStorage.setItem(
         "formValues",
         JSON.stringify({ field1: "unscoped_value" })
       );
+      window.localStorage.setItem(
+        "clinical_auditor_formValues",
+        JSON.stringify({ field1: "persona_only_value" })
+      );
 
-      // Does not fall back to unscoped baseKey or migrate it
+      // Does not fall back to an unscoped or persona-only key or migrate it
       const val = readStorageItem("formValues", "auditor");
       expect(val).toBeNull();
       expect(
-        window.localStorage.getItem("clinical_auditor_formValues")
+        window.localStorage.getItem(getStorageKey("formValues", "auditor")!)
       ).toBeNull();
     });
 
@@ -65,7 +81,7 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
 
       // Save persistent fields (which writes under clinical_site_crc_*)
       window.localStorage.setItem(
-        getStorageKey("formValues", "site_crc"),
+        getStorageKey("formValues", "site_crc")!,
         JSON.stringify(clinicalStore.formValues)
       );
 
@@ -140,7 +156,7 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
   });
 
   describe("Bootstrap Legacy Unscoped Key Purging", () => {
-    it("automatically purges legacy unscoped keys upon user sign-in while preserving persona-scoped keys", () => {
+    it("automatically purges legacy unscoped keys upon user sign-in while preserving persona-scoped onboarding keys", () => {
       // Seed legacy unscoped keys
       window.localStorage.setItem(
         "subjects",
@@ -158,10 +174,7 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
       );
 
       // Seed valid persona-scoped key
-      window.localStorage.setItem(
-        "clinical_site_crc_subjects",
-        JSON.stringify([{ id: "VALID-CRC-1" }])
-      );
+      window.localStorage.setItem("onboarding_site_crc_disabled", "true");
 
       // Run bootstrap purge routine
       purgeLegacyUnscopedKeys();
@@ -180,12 +193,9 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
       ).toBeNull();
 
       // Valid persona-scoped key must remain intact
-      expect(
-        window.localStorage.getItem("clinical_site_crc_subjects")
-      ).not.toBeNull();
-      expect(
-        JSON.parse(window.localStorage.getItem("clinical_site_crc_subjects")!)
-      ).toEqual([{ id: "VALID-CRC-1" }]);
+      expect(window.localStorage.getItem("onboarding_site_crc_disabled")).toBe(
+        "true"
+      );
     });
   });
 });

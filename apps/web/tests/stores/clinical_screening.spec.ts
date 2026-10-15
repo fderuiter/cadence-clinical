@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
-import { useClinicalStore } from "../../src/stores/clinical";
+import { getStorageKey, useClinicalStore } from "../../src/stores/clinical";
 import { useAuthStore } from "../../src/stores/auth";
 import { useToastStore } from "../../src/stores/toasts.js";
 
@@ -72,6 +72,8 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
 
   it("scopes clinical store localStorage keys by active persona and rehydrates state on persona switch", async () => {
     const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.user = { id: "user-a", tenantId: "tenant-a" } as never;
     authStore.rawRoles = ["Sponsor Admin", "CRA", "Monitor"];
     authStore.currentPersona = "super_admin";
 
@@ -86,8 +88,11 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
     );
 
     // Verify localStorage has persona-scoped keys for super_admin
-    const saFormValuesKey = "clinical_super_admin_formValues";
-    const saLedgerKey = "clinical_super_admin_ledgerBlocks";
+    const saFormValuesKey = getStorageKey("formValues", "super_admin")!;
+    const saLedgerKey = getStorageKey("ledgerBlocks", "super_admin")!;
+    expect(saFormValuesKey).toBe(
+      "cadence_user:tenant-a:user-a:clinical:super_admin:formValues"
+    );
     expect(window.localStorage.getItem(saFormValuesKey)).not.toBeNull();
     expect(window.localStorage.getItem(saLedgerKey)).not.toBeNull();
 
@@ -112,7 +117,7 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
       "CRA Monitor Updated Pulse"
     );
 
-    const craFormValuesKey = "clinical_cra_monitor_formValues";
+    const craFormValuesKey = getStorageKey("formValues", "cra_monitor")!;
     expect(window.localStorage.getItem(craFormValuesKey)).not.toBeNull();
     const craFormValues = JSON.parse(
       window.localStorage.getItem(craFormValuesKey)!
@@ -133,7 +138,7 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
     ).toBe(false);
   });
 
-  it("automatically migrates un-scoped legacy localStorage entries to persona-scoped storage on load", () => {
+  it("never reads or migrates unscoped legacy entries, whose owner can't be established (#5369)", () => {
     const legacyFormValues = {
       pulse: "115",
       vssbp: "135",
@@ -141,20 +146,17 @@ describe("Clinical Store & Auth Store - Subject Screening & CRC Gating Specifica
     window.localStorage.setItem("formValues", JSON.stringify(legacyFormValues));
 
     const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.user = { id: "user-a", tenantId: "tenant-a" } as never;
     authStore.currentPersona = "super_admin";
 
     const clinicalStore = useClinicalStore();
     clinicalStore.loadPersonaState("super_admin");
 
-    expect(clinicalStore.formValues.pulse).toBe("115");
-    expect(clinicalStore.formValues.vssbp).toBe("135");
-
-    const scopedItem = window.localStorage.getItem(
-      "clinical_super_admin_formValues"
-    );
-    expect(scopedItem).not.toBeNull();
-    expect(JSON.parse(scopedItem!)).toEqual(
-      expect.objectContaining({ pulse: "115", vssbp: "135" })
-    );
+    expect(clinicalStore.formValues.pulse).not.toBe("115");
+    expect(clinicalStore.formValues.vssbp).not.toBe("135");
+    expect(
+      window.localStorage.getItem(getStorageKey("formValues", "super_admin")!)
+    ).toBeNull();
   });
 });

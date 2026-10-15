@@ -21,6 +21,7 @@ function keycloakWith(roles, overrides = {}) {
       email: "testuser@example.com",
       given_name: "Test",
       family_name: "User",
+      tenant_id: "tenant-1",
       exp: 2000000000,
       realm_access: { roles },
     },
@@ -108,6 +109,7 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         firstName: "Test",
         lastName: "User",
         id: "user-uuid-9999",
+        tenantId: "tenant-1",
       });
       expect(authStore.userId).toBe("user-uuid-9999");
       expect(authStore.normalizedRoles).toEqual([
@@ -412,6 +414,7 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         firstName: "Frans",
         lastName: "de Ruiter",
         id: "fderuiter-id-12345",
+        tenantId: "demo",
       });
       expect(authStore.currentPersona).toBe("super_admin");
 

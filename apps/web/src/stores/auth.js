@@ -4,6 +4,10 @@ import { isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
 import { useClinicalStore } from "./clinical.ts";
 import { useOnboardingStore } from "./onboarding.js";
+import {
+  purgeUserScopedStorage,
+  storageScopeOf,
+} from "../utils/userScopedStorage.js";
 
 /**
  * Seeding Gap Documentation Resolved:
@@ -17,6 +21,7 @@ export const DEMO_IDENTITY = Object.freeze({
   firstName: "Frans",
   lastName: "de Ruiter",
   id: "fderuiter-id-12345",
+  tenantId: "demo",
 });
 
 export const DEMO_ROLES = Object.freeze([
@@ -150,7 +155,8 @@ function purgeLegacyAuthStorage() {
 
 /**
  * Purges legacy unscoped local storage keys on sign-in/bootstrap to prevent state contamination.
- * Valid persona-scoped keys (e.g., clinical_${persona}_*, onboarding_${persona}_*) are preserved.
+ * Onboarding keys scoped to a persona (`onboarding_${persona}_*`) are preserved. Clinical values are
+ * account-scoped and handled by `purgeUserScopedStorage` (#5369).
  */
 export function purgeLegacyUnscopedKeys() {
   if (typeof window === "undefined" || !window.localStorage) return;
@@ -221,6 +227,7 @@ export function personasForRoles(rawRoles) {
  * @property {string} firstName
  * @property {string} lastName
  * @property {string} id - `sub` claim
+ * @property {string} tenantId - `tenant_id` claim; blank when the token has none
  */
 
 function emptyAuthState() {
@@ -293,6 +300,7 @@ export const useAuthStore = defineStore("auth", {
         firstName: claims.given_name || "",
         lastName: claims.family_name || "",
         id: claims.sub || "",
+        tenantId: claims.tenant_id || "",
       };
       this.rawRoles = Array.isArray(claims.realm_access?.roles)
         ? [...claims.realm_access.roles]
@@ -304,6 +312,9 @@ export const useAuthStore = defineStore("auth", {
         this.currentPersona = entitled[0]?.key || null;
       }
       purgeLegacyUnscopedKeys();
+      // Another account's (or an unattributable) clinical draft never survives
+      // this account signing in (#5369).
+      purgeUserScopedStorage(storageScopeOf(this));
       if (this.currentPersona) {
         rehydrateStoresForPersona(this.currentPersona);
       }
@@ -327,6 +338,7 @@ export const useAuthStore = defineStore("auth", {
       this.rawRoles = [...DEMO_ROLES];
       this.currentPersona = personasForRoles(this.rawRoles)[0]?.key || null;
       purgeLegacyUnscopedKeys();
+      purgeUserScopedStorage(storageScopeOf(this));
       if (this.currentPersona) {
         rehydrateStoresForPersona(this.currentPersona);
       }
@@ -345,12 +357,21 @@ export const useAuthStore = defineStore("auth", {
       }
       await keycloak.login(options);
     },
-    /** Clears the local session and ends the Keycloak SSO session. */
+    /**
+     * Clears the local session, every account's browser drafts and the
+     * in-memory clinical state, then ends the Keycloak SSO session.
+     */
     async logout(options = {}) {
       const keycloak = getKeycloakClient();
       this.authError = null;
       this.clearAuth();
       purgeLegacyAuthStorage();
+      purgeUserScopedStorage(null);
+      try {
+        useClinicalStore().$reset();
+      } catch {
+        // Pinia or store not ready
+      }
       if (keycloak) {
         await keycloak.logout(options);
       }
