@@ -245,7 +245,7 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.AdvanceStateAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(BlindFor(http.User, r)), e => e.ToProblemResult());
+        return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
     /// <summary>
@@ -307,7 +307,7 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.UpdateDemographicsAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(BlindFor(http.User, r)), e => e.ToProblemResult());
+        return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
     /// <summary>
@@ -332,15 +332,8 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.DeleteDemographicsAsync(subjectId, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(BlindFor(http.User, r)), e => e.ToProblemResult());
+        return result.Match(Results.Ok, e => e.ToProblemResult());
     }
-
-    /// <summary>
-    /// <paramref name="response"/> without its treatment group unless <paramref name="user"/> is unblinded, so a
-    /// state change or demographics edit cannot reveal the arm that subject detail withholds (#4943).
-    /// </summary>
-    private static SubjectResponse BlindFor(ClaimsPrincipal user, SubjectResponse response) =>
-        IsUnblindedCaller(user) ? response : response with { TreatmentGroup = null };
 
     /// <summary>Whether <paramref name="user"/> carries the gateway-signed unblinded-access claim.</summary>
     private static bool IsUnblindedCaller(ClaimsPrincipal user) =>

@@ -259,18 +259,21 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
     .AllowAnonymous();
 
 // Route-group registrations
-app.MapSubjectEndpoints();
-app.MapSiteComplianceEndpoints();
-app.MapObservationEndpoints();
-app.MapFormEndpoints();
-app.MapQueryEndpoints();
-app.MapLabToxicityEndpoints();
-app.MapLabRangeEndpoints();
-app.MapCecEndpoints();
-app.MapCgtEndpoints();
-app.MapSynonymEndpoints();
-app.MapDeviceEndpoints();
-app.MapIpKitEndpoints();
+var executionApi = app.MapGroup("")
+    .AddEndpointFilter<Cadence.Apps.Execution.Endpoints.Filters.BlindingResponseFilter>();
+
+executionApi.MapSubjectEndpoints();
+executionApi.MapSiteComplianceEndpoints();
+executionApi.MapObservationEndpoints();
+executionApi.MapFormEndpoints();
+executionApi.MapQueryEndpoints();
+executionApi.MapLabToxicityEndpoints();
+executionApi.MapLabRangeEndpoints();
+executionApi.MapCecEndpoints();
+executionApi.MapCgtEndpoints();
+executionApi.MapSynonymEndpoints();
+executionApi.MapDeviceEndpoints();
+executionApi.MapIpKitEndpoints();
 
 if (args.Contains("--seed"))
 {

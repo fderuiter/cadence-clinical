@@ -388,8 +388,8 @@ public class CadenceSecurityUnitTests
 
         var maskedDict = FieldMasker.MaskPayload(result, investigator) as IDictionary<string, object?>;
         maskedDict.Should().NotBeNull();
-        maskedDict!["UnblindedAuditRationale"].Should().Be("MASKED");
-        maskedDict!["DecisionRationale"].Should().Be("Assigned to arm 'ARM-A' via Bayesian Response-Adaptive Randomization in stratum 'STRATUM-1' under Adaptive Phase.");
+        maskedDict!["unblinded_audit_rationale"].Should().Be("MASKED");
+        maskedDict!["decision_rationale"].Should().Be("Assigned to arm 'ARM-A' via Bayesian Response-Adaptive Randomization in stratum 'STRATUM-1' under Adaptive Phase.");
 
         var statistician = new Principal
         {
@@ -400,7 +400,7 @@ public class CadenceSecurityUnitTests
 
         var statDict = FieldMasker.MaskPayload(result, statistician) as IDictionary<string, object?>;
         statDict.Should().NotBeNull();
-        statDict!["UnblindedAuditRationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
+        statDict!["unblinded_audit_rationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
 
         var idmc = new Principal
         {
@@ -411,7 +411,7 @@ public class CadenceSecurityUnitTests
 
         var idmcDict = FieldMasker.MaskPayload(result, idmc) as IDictionary<string, object?>;
         idmcDict.Should().NotBeNull();
-        idmcDict!["UnblindedAuditRationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
+        idmcDict!["unblinded_audit_rationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
 
         var emergency = new Principal
         {
@@ -422,7 +422,7 @@ public class CadenceSecurityUnitTests
 
         var emDict = FieldMasker.MaskPayload(result, emergency) as IDictionary<string, object?>;
         emDict.Should().NotBeNull();
-        emDict!["UnblindedAuditRationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
+        emDict!["unblinded_audit_rationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
     }
 
     [Fact]

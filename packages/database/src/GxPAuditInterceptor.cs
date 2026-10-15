@@ -5,6 +5,7 @@ using System.Threading;
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Kernel.Time;
+using Cadence.Security.Blinding;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -70,8 +71,9 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
         {
             string entityName = entry.Metadata.ClrType.Name;
             string entityId = BuildEntityId(entry);
-            string changesJson = JsonSerializer.Serialize(
-                entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue));
+            var rawChanges = entry.Properties.ToDictionary(p => p.Metadata.Name, p => p.CurrentValue);
+            var maskedChanges = FieldMasker.MaskPayload(rawChanges, null);
+            string changesJson = JsonSerializer.Serialize(maskedChanges);
 
             AuditAction? action = TakeAction(actions, entityName, entityId);
             await chain.AppendAsync(new AuditLogEntryDraft(
@@ -89,6 +91,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
         // audit events: they join the same entity-name chain with version index 0.
         foreach (AuditAction action in actions)
         {
+            string? maskedActionChangesJson = MaskChangesJson(action.ChangesJson);
             await chain.AppendAsync(new AuditLogEntryDraft(
                 action.EntityName,
                 action.EntityId,
@@ -97,10 +100,29 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 action.UserId,
                 action.ReasonForChange,
                 0,
-                action.ChangesJson), cancellationToken).ConfigureAwait(false);
+                maskedActionChangesJson), cancellationToken).ConfigureAwait(false);
         }
 
         return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string? MaskChangesJson(string? changesJson)
+    {
+        if (string.IsNullOrWhiteSpace(changesJson)) return changesJson;
+        try
+        {
+            var dict = JsonSerializer.Deserialize<Dictionary<string, object?>>(changesJson);
+            if (dict is not null)
+            {
+                var masked = FieldMasker.MaskPayload(dict, null);
+                return JsonSerializer.Serialize(masked);
+            }
+        }
+        catch
+        {
+            // Not a JSON dictionary, return original
+        }
+        return changesJson;
     }
 
     public override ValueTask<int> SavedChangesAsync(

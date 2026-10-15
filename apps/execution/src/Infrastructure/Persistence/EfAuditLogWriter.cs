@@ -2,6 +2,7 @@ using System.Text.Json;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Database;
+using Cadence.Security.Blinding;
 
 namespace Cadence.Apps.Execution.Infrastructure.Persistence;
 
@@ -31,8 +32,16 @@ public sealed class EfAuditLogWriter(ExecutionDbContext dbContext) : IAuditLogWr
     }
 
     private static string? BuildChangesJson(
-        IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues) =>
-        oldValues is null && newValues is null
-            ? null
-            : JsonSerializer.Serialize(new { old = oldValues, @new = newValues });
+        IReadOnlyDictionary<string, object?>? oldValues, IReadOnlyDictionary<string, object?>? newValues)
+    {
+        if (oldValues is null && newValues is null)
+        {
+            return null;
+        }
+
+        var maskedOld = oldValues is not null ? FieldMasker.MaskPayload(oldValues, null) : null;
+        var maskedNew = newValues is not null ? FieldMasker.MaskPayload(newValues, null) : null;
+
+        return JsonSerializer.Serialize(new { old = maskedOld, @new = maskedNew });
+    }
 }

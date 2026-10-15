@@ -19,6 +19,7 @@ public static class FieldMasker
     {
         "treatment_arm",
         "treatment_arm_id",
+        "treatment_group",
         "randomization_seed",
         "seed",
         "encrypted_allocation",
@@ -50,6 +51,7 @@ public static class FieldMasker
         ["dob"] = val => val != null ? "MASKED" : val,
         ["treatment_arm_id"] = val => val != null ? "BLINDED" : val,
         ["treatment_arm"] = val => val != null ? "BLINDED" : val,
+        ["treatment_group"] = val => val != null ? "BLINDED" : val,
         ["administered_drug_code"] = val => val != null ? "Obfuscated Kit" : val,
         ["drug_code"] = val => val != null ? "Obfuscated Kit" : val,
         ["changed_reason_for_blinded_field"] = val => val != null ? "Obfuscated" : val,
@@ -66,9 +68,10 @@ public static class FieldMasker
     public static object? MaskPayload(object? payload, Principal? principal)
     {
         if (payload == null) return null;
-        if (principal is { UnblindedAccess: true }) return payload;
 
         var unmaskedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool isUnblinded = principal is { UnblindedAccess: true };
+
         if (principal != null)
         {
             foreach (var r in principal.Roles)
@@ -82,10 +85,34 @@ public static class FieldMasker
             }
         }
 
-        return RecursiveMask(payload, unmaskedFields);
+        return RecursiveMask(payload, unmaskedFields, isUnblinded);
     }
 
-    private static object? RecursiveMask(object? target, HashSet<string> unmaskedFields)
+    private static string ToSnakeCase(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < input.Length; i++)
+        {
+            char c = input[i];
+            if (char.IsUpper(c))
+            {
+                if (i > 0 && input[i - 1] != '_' && (char.IsLower(input[i - 1]) || (i + 1 < input.Length && char.IsLower(input[i + 1]))))
+                {
+                    sb.Append('_');
+                }
+                sb.Append(char.ToLowerInvariant(c));
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+        return sb.ToString();
+    }
+
+    private static object? RecursiveMask(object? target, HashSet<string> unmaskedFields, bool isUnblinded = false)
     {
         if (target == null) return null;
 
@@ -103,14 +130,40 @@ public static class FieldMasker
             {
                 string keyStr = entry.Key?.ToString() ?? "";
                 string keyLower = keyStr.ToLowerInvariant();
+                string keySnake = ToSnakeCase(keyStr);
 
-                if (MASKING_RULES.TryGetValue(keyLower, out var maskFunc) && !unmaskedFields.Contains(keyLower))
+                if (!isUnblinded &&
+                    (MASKING_RULES.TryGetValue(keySnake, out var maskFunc) || MASKING_RULES.TryGetValue(keyLower, out maskFunc))
+                    && !unmaskedFields.Contains(keySnake) && !unmaskedFields.Contains(keyLower))
                 {
-                    result[keyStr] = maskFunc(entry.Value);
+                    result[keySnake] = maskFunc(entry.Value);
                 }
                 else
                 {
-                    result[keyStr] = RecursiveMask(entry.Value, unmaskedFields);
+                    result[keySnake] = RecursiveMask(entry.Value, unmaskedFields, isUnblinded);
+                }
+            }
+            return result;
+        }
+
+        if (target is IEnumerable<KeyValuePair<string, object?>> kvpEnumerable)
+        {
+            var result = new Dictionary<string, object?>();
+            foreach (var kvp in kvpEnumerable)
+            {
+                string keyStr = kvp.Key ?? "";
+                string keyLower = keyStr.ToLowerInvariant();
+                string keySnake = ToSnakeCase(keyStr);
+
+                if (!isUnblinded &&
+                    (MASKING_RULES.TryGetValue(keySnake, out var maskFunc) || MASKING_RULES.TryGetValue(keyLower, out maskFunc))
+                    && !unmaskedFields.Contains(keySnake) && !unmaskedFields.Contains(keyLower))
+                {
+                    result[keySnake] = maskFunc(kvp.Value);
+                }
+                else
+                {
+                    result[keySnake] = RecursiveMask(kvp.Value, unmaskedFields, isUnblinded);
                 }
             }
             return result;
@@ -121,7 +174,7 @@ public static class FieldMasker
             var list = new List<object?>();
             foreach (var item in enumerable)
             {
-                list.Add(RecursiveMask(item, unmaskedFields));
+                list.Add(RecursiveMask(item, unmaskedFields, isUnblinded));
             }
             return list;
         }
@@ -133,27 +186,40 @@ public static class FieldMasker
         foreach (var prop in props)
         {
             if (!prop.CanRead) continue;
-            string propName = prop.Name;
-            string propLower = propName.ToLowerInvariant();
-            var jsonAttr = prop.GetCustomAttribute<JsonPropertyNameAttribute>();
-            string jsonNameLower = jsonAttr?.Name.ToLowerInvariant() ?? propLower;
+            if (prop.Name == "EqualityContract") continue;
 
             object? val = prop.GetValue(target);
+            if (val is Type) continue;
+
+            string propName = prop.Name;
+            string propLower = propName.ToLowerInvariant();
+            string propSnake = ToSnakeCase(propName);
+            var jsonAttr = prop.GetCustomAttribute<JsonPropertyNameAttribute>();
+            string jsonName = jsonAttr?.Name ?? propName;
+            string jsonNameLower = jsonName.ToLowerInvariant();
+            string jsonNameSnake = ToSnakeCase(jsonName);
 
             var blindAttr = prop.GetCustomAttribute<BlindedFieldAttribute>();
-            bool isUnmasked = unmaskedFields.Contains(propLower) || unmaskedFields.Contains(jsonNameLower);
+            bool isUnmasked = isUnblinded
+                || unmaskedFields.Contains(propLower) || unmaskedFields.Contains(propSnake)
+                || unmaskedFields.Contains(jsonNameLower) || unmaskedFields.Contains(jsonNameSnake);
+
+            string dictKey = jsonNameSnake;
 
             if (blindAttr != null && !isUnmasked)
             {
-                maskedDict[propName] = val != null ? blindAttr.MaskedValue : null;
+                maskedDict[dictKey] = val != null ? blindAttr.MaskedValue : null;
             }
-            else if ((MASKING_RULES.TryGetValue(jsonNameLower, out var maskFunc) || MASKING_RULES.TryGetValue(propLower, out maskFunc)) && !isUnmasked)
+            else if (!isUnmasked && (MASKING_RULES.TryGetValue(jsonNameSnake, out var maskFunc)
+                || MASKING_RULES.TryGetValue(jsonNameLower, out maskFunc)
+                || MASKING_RULES.TryGetValue(propSnake, out maskFunc)
+                || MASKING_RULES.TryGetValue(propLower, out maskFunc)))
             {
-                maskedDict[propName] = maskFunc(val);
+                maskedDict[dictKey] = maskFunc(val);
             }
             else
             {
-                maskedDict[propName] = RecursiveMask(val, unmaskedFields);
+                maskedDict[dictKey] = RecursiveMask(val, unmaskedFields, isUnblinded);
             }
         }
 
