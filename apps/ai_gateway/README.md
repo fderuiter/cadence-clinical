@@ -13,6 +13,7 @@ Placeholder for the medical coding and AI proxy service. It currently maps only 
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)).
 - `GET /api/v1/ai/status` (anonymous status payload).
+- `POST /api/v1/ai/intent/route` (signed-in callers): a rule-based router that maps a command-palette prompt such as "log an AE for subject 101" to a screen and action, filtered by the caller's roles from verified claims. It calls no model.
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/ai/**` here (default upstream `http://localhost:8017`, `AI_GATEWAY_SERVICE_URL`). Compose publishes host port 8017 (container port 8080).
 

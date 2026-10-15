@@ -85,6 +85,7 @@ import { hasRequiredRole } from "../router";
 import { isScreenAvailable } from "../router/availability";
 import { useFocusTrap } from "../composables/useFocusTrap";
 import { useEscapeClose } from "../composables/useEscapeClose";
+import { useWebCopilot } from "../composables/useWebCopilot";
 
 const props = defineProps({
   isOpen: {
@@ -681,6 +682,41 @@ const allRegistryItems = computed(() => {
   ];
 });
 
+const {
+  recommendations: aiRecommendations,
+  fetchIntentDebounced,
+  clearRecommendations,
+} = useWebCopilot();
+
+const aiCopilotItems = computed(() => {
+  if (!authStore.isAuthenticated) {
+    return [];
+  }
+  return (aiRecommendations.value || [])
+    .filter((rec) => {
+      if (rec.roles && rec.roles.length > 0) {
+        if (!hasRequiredRole(authStore.normalizedRoles || [], rec.roles)) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .map((rec) => ({
+      id: rec.id || `ai-${rec.targetRoute}`,
+      name: rec.name,
+      description: rec.description,
+      icon: rec.icon || "🤖",
+      category: rec.category || "[AI Copilot]",
+      path: rec.targetRoute,
+      roles: rec.roles || [],
+      action: () => {
+        if (rec.targetRoute) {
+          router.push(rec.targetRoute);
+        }
+      },
+    }));
+});
+
 const allowedDestinations = computed(() => {
   if (!authStore.isAuthenticated) {
     return [];
@@ -704,7 +740,7 @@ const filteredDestinations = computed(() => {
   if (!q) {
     return allowedDestinations.value;
   }
-  return allowedDestinations.value.filter((dest) => {
+  const staticMatches = allowedDestinations.value.filter((dest) => {
     return (
       dest.name.toLowerCase().includes(q) ||
       (dest.description && dest.description.toLowerCase().includes(q)) ||
@@ -712,10 +748,22 @@ const filteredDestinations = computed(() => {
       (dest.category && dest.category.toLowerCase().includes(q))
     );
   });
+
+  const aiItems = aiCopilotItems.value.filter(
+    (aiItem) => !staticMatches.some((s) => s.id === aiItem.id)
+  );
+
+  return [...aiItems, ...staticMatches];
 });
 
-watch(query, () => {
+watch(query, (newQuery) => {
   selectedIndex.value = 0;
+  const q = newQuery.trim();
+  if (q) {
+    fetchIntentDebounced(q);
+  } else {
+    clearRecommendations();
+  }
 });
 
 watch(
@@ -723,6 +771,7 @@ watch(
   (newVal) => {
     if (newVal) {
       query.value = "";
+      clearRecommendations();
       selectedIndex.value = 0;
       nextTick(() => {
         if (inputRef.value) {

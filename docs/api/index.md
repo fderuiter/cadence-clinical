@@ -6,7 +6,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 
 | Service | Operations |
 | ------- | ---------- |
-| [ai_gateway](ai_gateway.md) | 2 |
+| [ai_gateway](ai_gateway.md) | 3 |
 | [ctms](ctms.md) | 9 |
 | [designer](designer.md) | 6 |
 | [econsent](econsent.md) | 6 |
