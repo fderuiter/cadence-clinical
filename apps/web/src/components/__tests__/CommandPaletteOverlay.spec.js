@@ -250,7 +250,8 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
         {
           id: "ai-intent-log-ae-101",
           name: "Log Adverse Event for Subject SUBJ-101",
-          description: "Directly navigate to eCRF data entry for subject SUBJ-101",
+          description:
+            "Directly navigate to eCRF data entry for subject SUBJ-101",
           category: "[AI Copilot]",
           icon: "🩺",
           targetRoute: "/ecrf?subjectId=SUBJ-101&action=log_ae",
@@ -290,7 +291,9 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     });
 
     expect(aiItem).toBeDefined();
-    expect(aiItem.find(".command-name").text()).toBe("Log Adverse Event for Subject SUBJ-101");
+    expect(aiItem.find(".command-name").text()).toBe(
+      "Log Adverse Event for Subject SUBJ-101"
+    );
   });
 
   it("enforces role restrictions on AI Copilot recommendations", async () => {
@@ -383,13 +386,17 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     expect(aiItem).toBeDefined();
     await aiItem.trigger("click");
 
-    expect(routerPushSpy).toHaveBeenCalledWith("/ecrf?subjectId=SUBJ-101&action=log_ae");
+    expect(routerPushSpy).toHaveBeenCalledWith(
+      "/ecrf?subjectId=SUBJ-101&action=log_ae"
+    );
     expect(wrapper.emitted("close")).toBeTruthy();
   });
 
   it("falls back to static substring filtering without UI errors when AI Gateway fails", async () => {
     const { apiClient } = await import("../../api/apiClient");
-    vi.spyOn(apiClient, "post").mockRejectedValueOnce(new Error("Network Error 500"));
+    vi.spyOn(apiClient, "post").mockRejectedValueOnce(
+      new Error("Network Error 500")
+    );
 
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;

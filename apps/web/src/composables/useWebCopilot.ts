@@ -2,7 +2,7 @@
  * Vue 3 composable for Command Palette AI Copilot intent routing.
  * @req:PRD-SYS-051
  */
-import { ref, type Ref } from "vue";
+import { ref } from "vue";
 import { apiClient } from "../api/apiClient";
 
 export interface IntentRecommendation {
