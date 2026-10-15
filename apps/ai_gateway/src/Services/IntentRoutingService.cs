@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using Cadence.Contracts;
+using Cadence.Security.Rbac;
 
 namespace Cadence.Apps.AiGateway.Services;
 
@@ -68,12 +69,12 @@ public static class RuleBasedIntentRouter
                 Id: hasSubject ? $"intent-log-ae-{subjectId.ToLowerInvariant()}" : "intent-log-ae",
                 Name: name,
                 Description: description,
-                Category: "[AI Copilot]",
+                Category: "[Suggested]",
                 Icon: "🩺",
                 TargetRoute: targetRoute,
                 Action: "log_ae",
                 Confidence: 1.0,
-                Roles: new[] { "site_investigator", "crc", "data_manager", "sponsor_admin", "cra", "monitor" }
+                Roles: new[] { "investigator", "principal_investigator", "crc", "sponsor_dm", "cra", "monitor" }
             ));
         }
 
@@ -125,12 +126,12 @@ public static class RuleBasedIntentRouter
                 Id: hasSite ? $"intent-ticket-deviation-{siteId.ToLowerInvariant()}" : "intent-ticket-deviation",
                 Name: name,
                 Description: description,
-                Category: "[AI Copilot]",
+                Category: "[Suggested]",
                 Icon: "🎫",
                 TargetRoute: $"/tickets?{string.Join("&", queryParams)}",
                 Action: "create_ticket",
                 Confidence: 1.0,
-                Roles: new[] { "cra", "monitor", "site_investigator", "crc", "sponsor_admin", "data_manager" }
+                Roles: new[] { "cra", "monitor", "investigator", "principal_investigator", "crc", "sponsor_dm" }
             ));
         }
 
@@ -161,12 +162,12 @@ public static class RuleBasedIntentRouter
                 Id: hasSubject ? $"intent-ecrf-{subjectId.ToLowerInvariant()}" : "intent-ecrf",
                 Name: name,
                 Description: description,
-                Category: "[AI Copilot]",
+                Category: "[Suggested]",
                 Icon: "🩺",
                 TargetRoute: targetRoute,
                 Action: "open_ecrf",
                 Confidence: 1.0,
-                Roles: new[] { "site_investigator", "crc", "data_manager", "sponsor_admin", "cra", "monitor" }
+                Roles: new[] { "investigator", "principal_investigator", "crc", "sponsor_dm", "cra", "monitor" }
             ));
         }
 
@@ -177,12 +178,12 @@ public static class RuleBasedIntentRouter
                 Id: "intent-etmf-search",
                 Name: "Open eTMF Document Repository",
                 Description: "Search regulatory binder documents, inspect artifact zones, and view filings",
-                Category: "[AI Copilot]",
+                Category: "[Suggested]",
                 Icon: "📁",
                 TargetRoute: "/etmf",
                 Action: "open_etmf",
                 Confidence: 1.0,
-                Roles: new[] { "cra", "monitor", "auditor", "tmf_auditor", "sponsor_admin" }
+                Roles: new[] { "cra", "monitor", "auditor", "sponsor_dm" }
             ));
         }
 
@@ -193,12 +194,12 @@ public static class RuleBasedIntentRouter
                 Id: "intent-labs",
                 Name: "Central Lab Governance & Certificates",
                 Description: "Inspect central lab ranges, missing certificates, and lab alerts",
-                Category: "[AI Copilot]",
+                Category: "[Suggested]",
                 Icon: "🧪",
                 TargetRoute: "/labs",
                 Action: "open_labs",
                 Confidence: 1.0,
-                Roles: new[] { "site_investigator", "crc", "data_manager", "cra", "monitor", "sponsor_designer", "sponsor_admin", "super_admin" }
+                Roles: new[] { "investigator", "principal_investigator", "crc", "sponsor_dm", "cra", "monitor", "sponsor_designer", "sysadmin" }
             ));
         }
 
@@ -209,12 +210,12 @@ public static class RuleBasedIntentRouter
                 Id: "intent-ctms",
                 Name: "CTMS Site Monitoring & Milestones",
                 Description: "View trial milestones, site visit logs, and operational CRA metrics",
-                Category: "[AI Copilot]",
+                Category: "[Suggested]",
                 Icon: "📊",
                 TargetRoute: "/ctms",
                 Action: "open_ctms",
                 Confidence: 1.0,
-                Roles: new[] { "cra", "monitor", "sponsor_admin" }
+                Roles: new[] { "cra", "monitor", "sponsor_dm" }
             ));
         }
 
@@ -225,12 +226,12 @@ public static class RuleBasedIntentRouter
                 Id: "intent-audit",
                 Name: "Cryptographic Ledger & Audit Trail",
                 Description: "Inspect 21 CFR Part 11 audit trails and cryptographic block verification",
-                Category: "[AI Copilot]",
+                Category: "[Suggested]",
                 Icon: "🔒",
                 TargetRoute: "/audit",
                 Action: "open_audit",
                 Confidence: 1.0,
-                Roles: new[] { "auditor", "tmf_auditor", "sponsor_admin" }
+                Roles: new[] { "auditor", "sponsor_dm" }
             ));
         }
 
@@ -241,7 +242,7 @@ public static class RuleBasedIntentRouter
                 Id: "intent-knowledge",
                 Name: "Knowledge & SOP Guidance Hub",
                 Description: "Search operational guidance, clinical regulatory compliance, and study SOPs",
-                Category: "[AI Copilot]",
+                Category: "[Suggested]",
                 Icon: "📚",
                 TargetRoute: "/knowledge",
                 Action: "open_knowledge",
@@ -270,6 +271,15 @@ public static class RuleBasedIntentRouter
         return trimmed.ToUpperInvariant();
     }
 
+    /// <summary>
+    /// Returns true when a recommendation needs no role or the caller holds one of its roles.
+    /// Both sides go through <see cref="RoleNormalization.NormalizeRole"/>, so gateway claims
+    /// (canonical names such as <c>investigator</c> or <c>sponsor_dm</c>) and legacy aliases
+    /// (<c>Site Investigator</c>, <c>data_manager</c>) compare equal.
+    /// </summary>
+    /// <param name="userRoles">Roles from the caller's verified claims.</param>
+    /// <param name="requiredRoles">Roles that may see the recommendation; empty means any authenticated user.</param>
+    /// <returns>Whether the recommendation is shown to the caller.</returns>
     public static bool IsRoleAllowed(IReadOnlyList<string> userRoles, IReadOnlyList<string> requiredRoles)
     {
         if (requiredRoles == null || requiredRoles.Count == 0)
@@ -282,15 +292,9 @@ public static class RuleBasedIntentRouter
             return false;
         }
 
-        var normalizedUserRoles = userRoles
-            .Select(r => r.Trim().ToLowerInvariant().Replace(" ", "_"))
-            .ToHashSet();
+        var normalizedUserRoles = RoleNormalization.GetNormalizedRoles(userRoles).ToHashSet(StringComparer.Ordinal);
 
-        return requiredRoles.Any(req =>
-        {
-            var normalizedReq = req.Trim().ToLowerInvariant().Replace(" ", "_");
-            return normalizedUserRoles.Contains(normalizedReq);
-        });
+        return requiredRoles.Any(req => normalizedUserRoles.Contains(RoleNormalization.NormalizeRole(req)));
     }
 }
 

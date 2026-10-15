@@ -29,7 +29,7 @@ describe("useWebCopilot composable", () => {
         name: "Log Adverse Event for Subject SUBJ-101",
         description:
           "Directly navigate to eCRF data entry for subject SUBJ-101",
-        category: "[AI Copilot]",
+        category: "[Suggested]",
         icon: "🩺",
         targetRoute: "/ecrf?subjectId=SUBJ-101&action=log_ae",
         action: "log_ae",

@@ -2,11 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Claims;
 
+using Cadence.Apps.AiGateway.Endpoints;
 using Cadence.Apps.AiGateway.Services;
 using Cadence.Contracts;
 
 using FluentAssertions;
+
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.Logging;
 
 using Xunit;
 
@@ -33,7 +38,7 @@ public class AiGatewayIntentTests
         aeRec!.Name.Should().Contain("Log Adverse Event");
         aeRec.Name.Should().Contain("SUBJ-101");
         aeRec.TargetRoute.Should().Be("/ecrf?subjectId=SUBJ-101&action=log_ae");
-        aeRec.Category.Should().Be("[AI Copilot]");
+        aeRec.Category.Should().Be("[Suggested]");
         aeRec.Confidence.Should().Be(1.0);
     }
 
@@ -70,7 +75,7 @@ public class AiGatewayIntentTests
         ticketRec.Name.Should().Contain("102");
         ticketRec.TargetRoute.Should().Contain("siteId=102");
         ticketRec.TargetRoute.Should().Contain("reason=missing_lab_cert");
-        ticketRec.Category.Should().Be("[AI Copilot]");
+        ticketRec.Category.Should().Be("[Suggested]");
         ticketRec.Confidence.Should().Be(1.0);
     }
 
@@ -119,5 +124,89 @@ public class AiGatewayIntentTests
 
         // 100 iterations should take well under 300ms
         stopwatch.ElapsedMilliseconds.Should().BeLessThan(300);
+    }
+
+    [Theory]
+    [InlineData("investigator")]
+    [InlineData("principal_investigator")]
+    [InlineData("crc")]
+    [InlineData("sponsor_dm")]
+    public void ClassifyIntent_CanonicalGatewayRoles_SeeAdverseEventSuggestion(string canonicalRole)
+    {
+        // The gateway signs roles already passed through RoleNormalization, so these are the names
+        // the endpoint receives in practice.
+        var response = RuleBasedIntentRouter.ClassifyIntent("log adverse event for subject 101", new[] { canonicalRole });
+
+        response.Recommendations.Should().Contain(r => r.Action == "log_ae");
+    }
+
+    [Theory]
+    [InlineData("Site Investigator")]
+    [InlineData("data_manager")]
+    [InlineData("sponsor_admin")]
+    public void IsRoleAllowed_LegacyAliases_MatchTheirCanonicalRole(string alias)
+    {
+        RuleBasedIntentRouter.IsRoleAllowed(new[] { alias }, new[] { "investigator", "sponsor_dm" }).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ClassifyIntent_SubjectRole_GetsNoRoleRestrictedSuggestions()
+    {
+        var response = RuleBasedIntentRouter.ClassifyIntent("log adverse event for subject 101", new[] { "subject" });
+
+        response.Recommendations.Should().NotContain(r => r.Action == "log_ae");
+    }
+
+    [Fact]
+    public void RouteIntent_LogsQueryLengthButNotQueryText()
+    {
+        var loggerFactory = new CapturingLoggerFactory();
+        var user = new ClaimsPrincipal(new ClaimsIdentity(
+            new[] { new Claim(ClaimTypes.NameIdentifier, "user-1"), new Claim(ClaimTypes.Role, "investigator") },
+            authenticationType: "test"));
+        const string query = "log adverse event for subject 101 born 1970-01-01";
+
+        var result = IntentEndpoints.RouteIntentAsync(new IntentRouteRequest(query), user, loggerFactory);
+
+        result.Should().BeOfType<Ok<IntentRouteResponse>>()
+            .Which.Value!.Recommendations.Should().Contain(r => r.Action == "log_ae");
+        loggerFactory.Messages.Should().ContainSingle()
+            .Which.Should().Contain(query.Length.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            .And.NotContain("1970-01-01")
+            .And.NotContain("subject 101");
+    }
+
+    [Fact]
+    public void RouteIntent_UnauthenticatedCaller_IsRejected()
+    {
+        var result = IntentEndpoints.RouteIntentAsync(
+            new IntentRouteRequest("log adverse event"), new ClaimsPrincipal(new ClaimsIdentity()), new CapturingLoggerFactory());
+
+        result.Should().BeOfType<UnauthorizedHttpResult>();
+    }
+
+    private sealed class CapturingLoggerFactory : ILoggerFactory, ILogger
+    {
+        public List<string> Messages { get; } = new();
+
+        public void AddProvider(ILoggerProvider provider)
+        {
+            // Not needed: every logger writes to Messages.
+        }
+
+        public ILogger CreateLogger(string categoryName) => this;
+
+        public void Dispose()
+        {
+            // Nothing to release.
+        }
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => Messages.Add(formatter(state, exception));
     }
 }

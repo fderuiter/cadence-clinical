@@ -19,11 +19,11 @@ public sealed record IntentRouteRequest(
 /// <param name="Id">Unique identifier of the intent recommendation.</param>
 /// <param name="Name">Short title or name of the action/destination.</param>
 /// <param name="Description">Detailed description of what selecting this item achieves.</param>
-/// <param name="Category">Category label badge (e.g. "[AI Copilot]").</param>
+/// <param name="Category">Category label badge (e.g. "[Suggested]").</param>
 /// <param name="Icon">Visual icon or symbol representing the action.</param>
 /// <param name="TargetRoute">Target router navigation path with optional query parameters.</param>
 /// <param name="Action">Optional modal or client action identifier.</param>
-/// <param name="Confidence">Confidence score between 0.0 and 1.0.</param>
+/// <param name="Confidence">Match score between 0.0 and 1.0; the rule-based router always returns 1.0 for a pattern match.</param>
 /// <param name="Roles">List of user roles authorized to view or execute this intent.</param>
 public sealed record IntentRecommendation(
     string Id,

@@ -63,7 +63,7 @@
         "tags": [
           "IntentEndpoints"
         ],
-        "summary": "Classify natural language prompt queries into structured clinical intent actions.",
+        "summary": "Match a command-palette query against fixed patterns and return the navigation targets the caller\u0027s roles allow.",
         "operationId": "RouteAiIntent",
         "requestBody": {
           "content": {

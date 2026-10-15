@@ -15,7 +15,9 @@ using Microsoft.Extensions.Logging;
 namespace Cadence.Apps.AiGateway.Endpoints;
 
 /// <summary>
-/// Minimal API endpoints for AI Gateway intent classification and natural language route navigation.
+/// Minimal API endpoints for the command palette's deterministic navigation router. Requests need an
+/// authenticated caller; each recommendation is filtered by the caller's verified role claims. No model
+/// is called and nothing is written.
 /// </summary>
 public static class IntentEndpoints
 {
@@ -30,7 +32,7 @@ public static class IntentEndpoints
 
         group.MapPost("/route", RouteIntentAsync)
             .WithName("RouteAiIntent")
-            .WithSummary("Classify natural language prompt queries into structured clinical intent actions.")
+            .WithSummary("Match a command-palette query against fixed patterns and return the navigation targets the caller's roles allow.")
             .Produces<IntentRouteResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
@@ -38,7 +40,7 @@ public static class IntentEndpoints
         return app;
     }
 
-    private static IResult RouteIntentAsync(
+    internal static IResult RouteIntentAsync(
         IntentRouteRequest request,
         ClaimsPrincipal user,
         ILoggerFactory loggerFactory)
@@ -73,10 +75,11 @@ public static class IntentEndpoints
 
         var response = RuleBasedIntentRouter.ClassifyIntent(request.Query, userRoles, request.Context);
 
+        // The query is free text a user may fill with participant details, so only its length is logged.
         logger.LogInformation(
-            "GxP Intent Routing: User {UserId} query '{Query}' resolved {Count} intent recommendations.",
+            "Intent routing: user {UserId} sent a {QueryLength}-character query that matched {Count} navigation recommendations.",
             userId,
-            request.Query,
+            request.Query.Length,
             response.Recommendations.Count);
 
         return TypedResults.Ok(response);

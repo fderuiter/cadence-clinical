@@ -242,7 +242,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     expect(wrapper.emitted("close")).toBeTruthy();
   });
 
-  it("invokes AI Gateway intent endpoint and displays [AI Copilot] recommendations", async () => {
+  it("invokes AI Gateway intent endpoint and displays [Suggested] recommendations", async () => {
     const { apiClient } = await import("../../api/apiClient");
     vi.spyOn(apiClient, "post").mockResolvedValue({
       query: "log adverse event for subject 101",
@@ -252,7 +252,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
           name: "Log Adverse Event for Subject SUBJ-101",
           description:
             "Directly navigate to eCRF data entry for subject SUBJ-101",
-          category: "[AI Copilot]",
+          category: "[Suggested]",
           icon: "🩺",
           targetRoute: "/ecrf?subjectId=SUBJ-101&action=log_ae",
           action: "log_ae",
@@ -287,7 +287,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     });
 
     const aiItem = wrapper.findAll(".command-item").find((el) => {
-      return el.find(".command-badge").text() === "[AI Copilot]";
+      return el.find(".command-badge").text() === "[Suggested]";
     });
 
     expect(aiItem).toBeDefined();
@@ -296,7 +296,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     );
   });
 
-  it("enforces role restrictions on AI Copilot recommendations", async () => {
+  it("enforces role restrictions on suggested routes", async () => {
     const { apiClient } = await import("../../api/apiClient");
     vi.spyOn(apiClient, "post").mockResolvedValue({
       query: "check site status",
@@ -305,7 +305,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
           id: "ai-intent-ctms",
           name: "CTMS Site Monitoring",
           description: "View site visit logs",
-          category: "[AI Copilot]",
+          category: "[Suggested]",
           icon: "📊",
           targetRoute: "/ctms",
           confidence: 0.9,
@@ -334,13 +334,13 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     await nextTick();
 
     const aiItem = wrapper.findAll(".command-item").find((el) => {
-      return el.find(".command-badge").text() === "[AI Copilot]";
+      return el.find(".command-badge").text() === "[Suggested]";
     });
 
     expect(aiItem).toBeUndefined();
   });
 
-  it("navigates to target route when AI Copilot recommendation is selected", async () => {
+  it("navigates to target route when suggested route is selected", async () => {
     const { apiClient } = await import("../../api/apiClient");
     vi.spyOn(apiClient, "post").mockResolvedValue({
       query: "log adverse event for subject 101",
@@ -349,7 +349,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
           id: "ai-intent-log-ae-101",
           name: "Log Adverse Event for Subject SUBJ-101",
           description: "Directly navigate to eCRF",
-          category: "[AI Copilot]",
+          category: "[Suggested]",
           icon: "🩺",
           targetRoute: "/ecrf?subjectId=SUBJ-101&action=log_ae",
           confidence: 0.98,
@@ -380,7 +380,7 @@ describe("CommandPaletteOverlay.vue - Searchable Command Palette Overlay", () =>
     await nextTick();
 
     const aiItem = wrapper.findAll(".command-item").find((el) => {
-      return el.find(".command-badge").text() === "[AI Copilot]";
+      return el.find(".command-badge").text() === "[Suggested]";
     });
 
     expect(aiItem).toBeDefined();

@@ -706,7 +706,7 @@ const aiCopilotItems = computed(() => {
       name: rec.name,
       description: rec.description,
       icon: rec.icon || "🤖",
-      category: rec.category || "[AI Copilot]",
+      category: rec.category || "[Suggested]",
       path: rec.targetRoute,
       roles: rec.roles || [],
       action: () => {

@@ -1,5 +1,5 @@
 /**
- * Vue 3 composable for Command Palette AI Copilot intent routing.
+ * Vue 3 composable for command palette navigation suggestions from the rule-based intent router.
  */
 import { ref } from "vue";
 import { apiClient } from "../api/apiClient";
@@ -56,7 +56,7 @@ export function useWebCopilot() {
           id: r.id || r.Id,
           name: r.name || r.Name,
           description: r.description || r.Description,
-          category: r.category || r.Category || "[AI Copilot]",
+          category: r.category || r.Category || "[Suggested]",
           icon: r.icon || r.Icon || "🤖",
           targetRoute: r.targetRoute || r.TargetRoute,
           action: r.action || r.Action,
