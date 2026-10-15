@@ -207,6 +207,10 @@ K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.IngestDocumentRequest.SiteI
 K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.IngestDocumentRequest.StudyId
 K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.StageDocumentQCRequest.SiteId
 K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.StageDocumentQCRequest.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Adaptive.AdaptiveCohortTransitionRequest.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Adaptive.AdaptiveCohortTransitionResponse.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Adaptive.AdaptiveDoseEscalationService.StudyAdaptiveState.StudyId
+K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Adaptive.AdaptiveDoseEscalationStateResponse.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApheresisCreateRequest.CollectionSiteId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApheresisCreateRequest.StudyId
 K-XS-1|Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtBarcodeVerifyResponse.SiteId

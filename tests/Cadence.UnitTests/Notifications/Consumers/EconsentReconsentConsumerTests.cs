@@ -8,9 +8,9 @@ using Cadence.Apps.Notifications.Infrastructure;
 using Cadence.Apps.Notifications.Infrastructure.Consumers;
 using Cadence.Apps.Notifications.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Templating;
 using Cadence.Testing;
 using Cadence.Testing.Time;
-using Cadence.Templating;
 
 using FluentAssertions;
 

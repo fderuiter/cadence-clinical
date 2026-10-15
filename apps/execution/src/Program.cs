@@ -1,6 +1,7 @@
 using System;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Adaptive;
 using Cadence.Apps.Execution.Application.Cec;
 using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Application.Coding;
@@ -206,6 +207,7 @@ builder.Services.AddScoped<ICgtApplicationService, CgtApplicationService>();
 builder.Services.AddScoped<ISynonymImportService, SynonymImportService>();
 builder.Services.AddScoped<IDeviceApplicationService, DeviceApplicationService>();
 builder.Services.AddScoped<IIpKitApplicationService, IpKitApplicationService>();
+builder.Services.AddScoped<IAdaptiveDoseEscalationService, AdaptiveDoseEscalationService>();
 
 // Every FluentValidation AbstractValidator<T> in this assembly (MIG-SUBJ-009: SubjectCreateRequestValidator,
 // SubjectConsentRequestValidator, SubjectStateUpdateRequestValidator, EtmfCompletenessWebhookPayloadValidator
@@ -271,6 +273,7 @@ app.MapCgtEndpoints();
 app.MapSynonymEndpoints();
 app.MapDeviceEndpoints();
 app.MapIpKitEndpoints();
+app.MapAdaptiveDoseEscalationEndpoints();
 
 if (args.Contains("--seed"))
 {

@@ -434,4 +434,102 @@ export const executionApi = {
     }
     return res.json();
   },
+
+  /** Retrieves real-time adaptive dose escalation state (GET /api/v1/execution/rtsm/adaptive/dose-escalation/{studyId}). */
+  async getAdaptiveDoseEscalation(
+    studyId: string
+  ): Promise<AdaptiveDoseEscalationState> {
+    const res = await fetch(
+      `/api/v1/execution/rtsm/adaptive/dose-escalation/${encodeURIComponent(studyId)}`
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Failed to load adaptive dose escalation state" }));
+      throw new Error(err.detail || err.title || "Failed to load adaptive dose escalation state");
+    }
+    return res.json();
+  },
+
+  /** Submits cohort transition authorization (POST /api/v1/execution/rtsm/adaptive/cohort-transition). */
+  async submitCohortTransition(
+    payload: CohortTransitionPayload
+  ): Promise<CohortTransitionResponse> {
+    const res = await fetch("/api/v1/execution/rtsm/adaptive/cohort-transition", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Failed to submit cohort transition" }));
+      const errorObj: any = new Error(err.detail || err.title || "Failed to submit cohort transition");
+      errorObj.status = res.status;
+      errorObj.code = err.code || err.type;
+      throw errorObj;
+    }
+    return res.json();
+  },
 };
+
+export interface DoseLevelSummary {
+  dose_level_index: number;
+  dose_name: string;
+  dose_value: number;
+  total_enrolled: number;
+  total_dlts: number;
+  observed_dlt_rate: number;
+  posterior_dlt_rate?: number | null;
+  is_eliminated_for_safety: boolean;
+  overdose_probability?: number | null;
+}
+
+export interface RarArm {
+  arm_id: string;
+  arm_name: string;
+  is_control: boolean;
+  status: string;
+  enrolled_count: number;
+  response_count: number;
+  posterior_mean: number;
+  allocation_probability: number;
+  superiority_vs_control_prob?: number | null;
+}
+
+export interface AdaptiveDoseEscalationState {
+  study_id: string;
+  design_type: string;
+  target_toxicity_rate: number;
+  lambda_e: number;
+  lambda_d: number;
+  active_cohort_number: number;
+  current_dose_level_index: number;
+  current_dose_name: string;
+  recommendation_action: string;
+  recommended_dose_level_index?: number | null;
+  recommended_dose_name?: string | null;
+  rationale: string;
+  is_active: boolean;
+  dose_summaries: DoseLevelSummary[];
+  rar_arms: RarArm[];
+}
+
+export interface CohortTransitionPayload {
+  study_id: string;
+  cohort_number: number;
+  decision_action: string;
+  target_dose_level_index: number;
+  override_reason?: string | null;
+  electronic_signature?: string | null;
+}
+
+export interface CohortTransitionResponse {
+  study_id: string;
+  cohort_number: number;
+  previous_dose_level_index: number;
+  new_dose_level_index: number;
+  action_executed: string;
+  is_override: boolean;
+  override_reason?: string | null;
+  authorized_by: string;
+  signature_timestamp: string;
+  audit_entry_id: string;
+  updated_state: AdaptiveDoseEscalationState;
+}

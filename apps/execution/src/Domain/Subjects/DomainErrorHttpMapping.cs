@@ -60,6 +60,7 @@ public static class DomainErrorHttpMapping
         ["INVALID_HMAC_SIGNATURE"] = StatusCodes.Status400BadRequest,
         ["TRIAL_LOCKED"] = StatusCodes.Status423Locked,
         ["CONCURRENCY_CONFLICT"] = StatusCodes.Status409Conflict,
+        ["OVERRIDE_RATIONALE_REQUIRED"] = StatusCodes.Status422UnprocessableEntity,
     };
 
     /// <summary>

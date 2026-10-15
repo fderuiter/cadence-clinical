@@ -2347,7 +2347,24 @@
             🔍 Launch Bulk Kit Reconciliation Drawer
           </button>
         </div>
-        <AdaptiveDoseEscalationConsole :study-id="studyId" />
+        <AdaptiveDoseEscalationConsole
+          :study-id="studyId"
+          :design-type="adaptiveState?.design_type || 'BOIN'"
+          :target-toxicity-rate="adaptiveState?.target_toxicity_rate ?? 0.25"
+          :lambda-e="adaptiveState?.lambda_e ?? 0.197"
+          :lambda-d="adaptiveState?.lambda_d ?? 0.298"
+          :active-cohort-number="adaptiveState?.active_cohort_number ?? 1"
+          :current-dose-level-index="adaptiveState?.current_dose_level_index ?? 1"
+          :current-dose-name="adaptiveState?.current_dose_name || 'Dose 1'"
+          :recommendation-action="adaptiveState?.recommendation_action || 'STAY'"
+          :recommended-dose-level-index="adaptiveState?.recommended_dose_level_index"
+          :recommended-dose-name="adaptiveState?.recommended_dose_name"
+          :rationale="adaptiveState?.rationale || ''"
+          :is-active="adaptiveState?.is_active ?? true"
+          :dose-summaries="adaptiveState?.dose_summaries || []"
+          :rar-arms="adaptiveState?.rar_arms || []"
+          @transition-cohort="handleCohortTransition"
+        />
         <CellGeneTherapyCocConsole />
         <BulkIpKitReconciliationDrawer
           :is-open="isIpKitReconciliationDrawerOpen"
@@ -2375,12 +2392,60 @@ import { isDemoBuild } from "../utils/demoMode.js";
 import apiClient from "../services/api";
 import { getBaseUrl } from "../api/apiClient";
 import { useToastStore } from "../stores/toasts.js";
+import { executionApi } from "../api/executionApi";
 
 // Active session store/router setup
 const store = useClinicalStore();
 const route = useRoute();
 const demoBuild = isDemoBuild();
+const toastStore = useToastStore();
 const isIpKitReconciliationDrawerOpen = ref(false);
+
+const adaptiveState = ref(null);
+const isLoadingAdaptive = ref(false);
+
+async function fetchAdaptiveState() {
+  if (!studyId.value) return;
+  isLoadingAdaptive.value = true;
+  try {
+    adaptiveState.value = await executionApi.getAdaptiveDoseEscalation(studyId.value);
+  } catch (err) {
+    console.error("Failed to load adaptive dose escalation state:", err);
+  } finally {
+    isLoadingAdaptive.value = false;
+  }
+}
+
+async function handleCohortTransition(payload) {
+  try {
+    const res = await executionApi.submitCohortTransition(payload);
+    if (res && res.updated_state) {
+      adaptiveState.value = res.updated_state;
+    } else {
+      await fetchAdaptiveState();
+    }
+    toastStore.addToast({
+      title: "Cohort Transition Authorized",
+      message: `Successfully executed ${payload.decision_action} to dose level #${payload.target_dose_level_index}. Audit ID: ${res?.audit_entry_id || 'N/A'}`,
+      type: "success",
+    });
+  } catch (err) {
+    console.error("Cohort transition failed:", err);
+    if (err.code === "OVERRIDE_RATIONALE_REQUIRED" || err.status === 422) {
+      toastStore.addToast({
+        title: "Override Rationale Required",
+        message: "Safety Committee override justification is required when overriding BoinEngine recommendation.",
+        type: "error",
+      });
+    } else {
+      toastStore.addToast({
+        title: "Transition Authorization Failed",
+        message: err.message || "An error occurred during cohort transition sign-off.",
+        type: "error",
+      });
+    }
+  }
+}
 
 // Scope comes from the route; apply it before the first render so the site activation panel sees it.
 if (route && route.query) {
@@ -2400,6 +2465,12 @@ const activeTab = ref(
     ? "startup"
     : "operations"
 );
+
+watch([studyId, activeTab], ([newStudy, tab]) => {
+  if (tab === "rtsm" && newStudy) {
+    fetchAdaptiveState();
+  }
+}, { immediate: true });
 
 // Core Operations state
 const milestones = ref([]);

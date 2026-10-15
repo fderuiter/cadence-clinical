@@ -1,4 +1,5 @@
 using System;
+
 using Cadence.Core.Domain;
 
 namespace Cadence.Apps.Execution.Domain.Supply;

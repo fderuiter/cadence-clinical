@@ -401,3 +401,94 @@ describe("executionApi: adding participants and changing their state", () => {
     });
   });
 });
+
+describe("executionApi adaptive dose escalation", () => {
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("retrieves adaptive dose escalation state by study ID", async () => {
+    const mockState = {
+      study_id: "STUDY-BOIN-101",
+      design_type: "BOIN",
+      target_toxicity_rate: 0.25,
+      lambda_e: 0.197,
+      lambda_d: 0.298,
+      active_cohort_number: 1,
+      current_dose_level_index: 1,
+      current_dose_name: "Dose 2 (20 mg)",
+      recommendation_action: "ESCALATE",
+      recommended_dose_level_index: 2,
+      recommended_dose_name: "Dose 3 (40 mg)",
+      rationale: "Empirical DLT rate 0/3 is below lower boundary lambda_e (0.197). Escalate to next dose level.",
+      is_active: true,
+      dose_summaries: [],
+      rar_arms: [],
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, mockState));
+
+    const result = await executionApi.getAdaptiveDoseEscalation("STUDY-BOIN-101");
+    expect(result).toEqual(mockState);
+    expect(fetchSpy).toHaveBeenCalledWith("/api/v1/execution/rtsm/adaptive/dose-escalation/STUDY-BOIN-101");
+  });
+
+  it("submits cohort transition payload and returns updated state", async () => {
+    const payload = {
+      study_id: "STUDY-BOIN-101",
+      cohort_number: 1,
+      decision_action: "ESCALATE",
+      target_dose_level_index: 2,
+      electronic_signature: "Dr. Jane Smith",
+    };
+    const mockResponse = {
+      study_id: "STUDY-BOIN-101",
+      cohort_number: 2,
+      previous_dose_level_index: 1,
+      new_dose_level_index: 2,
+      action_executed: "ESCALATE",
+      is_override: false,
+      authorized_by: "Dr. Jane Smith",
+      signature_timestamp: new Date().toISOString(),
+      audit_entry_id: "AUDIT-12345",
+      updated_state: {},
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, mockResponse));
+
+    const result = await executionApi.submitCohortTransition(payload);
+    expect(result).toEqual(mockResponse);
+    const [url, opts] = fetchSpy.mock.calls[0];
+    expect(url).toBe("/api/v1/execution/rtsm/adaptive/cohort-transition");
+    expect(opts.method).toBe("POST");
+    expect(JSON.parse(opts.body)).toEqual(payload);
+  });
+
+  it("throws error with 422 status and OVERRIDE_RATIONALE_REQUIRED code on unprocessable transition", async () => {
+    const payload = {
+      study_id: "STUDY-BOIN-101",
+      cohort_number: 1,
+      decision_action: "STAY",
+      target_dose_level_index: 1,
+      electronic_signature: "Dr. Jane Smith",
+    };
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(422, {
+        type: "OVERRIDE_RATIONALE_REQUIRED",
+        code: "OVERRIDE_RATIONALE_REQUIRED",
+        title: "Override rationale required",
+        detail: "Safety Committee override justification is required when overriding BoinEngine recommendation.",
+      })
+    );
+
+    await expect(executionApi.submitCohortTransition(payload)).rejects.toMatchObject({
+      status: 422,
+      code: "OVERRIDE_RATIONALE_REQUIRED",
+    });
+  });
+});
