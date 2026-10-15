@@ -7,6 +7,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Bitemporal;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Serialization;
 using Cadence.Kernel.Trust;
 using Cadence.Testing;
@@ -200,7 +201,6 @@ public class KernelIdentifierTests
         var attestationId = AttestationId.New();
 
         var now = FakeClock.DefaultStart;
-        var period = TemporalPeriod.CreateCurrent(now, now);
 
         // Act
         var tenant = new Tenant(tenantId, "TEN-01", "Acme Health", "usr_admin", "Tenant provisioned");
@@ -210,7 +210,8 @@ public class KernelIdentifierTests
         var site = new Site(siteId, tenantId, orgId, "SITE-101", "Memorial Hospital", "US", "usr_admin", "Site qualified");
         var studySite = new StudySite(studySiteId, tenantId, studyId, siteId, "Selected", "usr_admin", "Site selected");
         var participant = Participant.Register(participantId, tenantId);
-        var observation = new Observation(obsId, tenantId, studyId, participantId, "VITAL_SIGNS", "120/80", period, "usr_crc", "Blood pressure entered");
+        var observation = Observation.Record(
+            obsId, tenantId, EnrollmentId.New(), participantId, studyId, ConceptRef.New(), "120/80", now, "Blood pressure entered", "usr_crc", now).Value!;
         var target = new AttestationTarget(AttestationTarget.ProtocolVersionKind, Guid.CreateVersion7(), ContentHash.Compute("{}"));
         var attestation = Attestation.Sign(
             attestationId, tenantId, Actor.Person("usr_pi"), AttestationMeaning.Approved, target, now, "pwd+otp", now, "Signature completed").Value!;

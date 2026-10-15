@@ -142,9 +142,6 @@ public class BitemporalTests
     public void BitemporalQueryExtensionsAsOfPointInTimeStateReconstruction()
     {
         // Arrange
-        var tenantId = TenantId.New();
-        var studyId = StudyId.New();
-        var participantId = ParticipantId.New();
 
         // Clinical timeline:
         // T_event: 2026-09-01 09:00:00 (Observation valid time)
@@ -163,30 +160,12 @@ public class BitemporalTests
         var obsId2 = ObservationId.New();
 
         // Record 1: Original reading recorded at tEntry, superseded at tCorrection
-        var record1 = new Observation(
-            obsId1,
-            tenantId,
-            studyId,
-            participantId,
-            "SystolicBP",
-            "140",
-            new TemporalPeriod(tEvent, null, tEntry, tCorrection),
-            "crc_user_1",
-            "Initial entry");
+        var record1 = new RecordedFact(obsId1, "140", new TemporalPeriod(tEvent, null, tEntry, tCorrection));
 
         // Record 2: Corrected reading recorded at tCorrection, currently open-ended
-        var record2 = new Observation(
-            obsId2,
-            tenantId,
-            studyId,
-            participantId,
-            "SystolicBP",
-            "120",
-            TemporalPeriod.CreateCurrent(tEvent, tCorrection),
-            "investigator_1",
-            "Correction of transcription error");
+        var record2 = new RecordedFact(obsId2, "120", TemporalPeriod.CreateCurrent(tEvent, tCorrection));
 
-        var repository = new List<Observation> { record1, record2 };
+        var repository = new List<RecordedFact> { record1, record2 };
 
         // Act & Assert 1: Query before entry (T_event, T_entry - 1s) => zero records known to system
         var knownBeforeEntry = repository.AsOf(tEvent, tEntry.AddSeconds(-1)).ToList();
@@ -222,4 +201,7 @@ public class BitemporalTests
         queryableCurrent.Should().ContainSingle();
         queryableCurrent[0].Value.Should().Be("120");
     }
+
+    /// <summary>A bitemporal row as a table of superseding facts stores it: one value per recorded period.</summary>
+    private sealed record RecordedFact(ObservationId Id, string Value, TemporalPeriod Period) : IBitemporalEntity;
 }

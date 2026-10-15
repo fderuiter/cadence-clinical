@@ -1,6 +1,6 @@
 # Kernel API host
 
-The Clinical Kernel's HTTP host ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). It serves the kernel's read endpoints for the Clinical Canvas: navigation, dry-run authorization with explanations, the command catalogue, search, protocol versions, lineage and the activity stream. It is the only process that registers kernel persistence (K-XS-2); product services never reference it.
+The Clinical Kernel's HTTP host ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). It serves the kernel's read endpoints for the Clinical Canvas: navigation, dry-run authorization with explanations, the command catalogue, search, protocol versions, lineage and the activity stream. It is the only process that registers kernel persistence (K-XS-2); product services never reference it. Since ADR-2620 it also hosts the command pipeline for observation writes.
 
 **Status:** the endpoints are mapped, documented and tested, and each read runs in the kernel tenant found from the tenant code the gateway signs. Authorization decisions come from the caller's grants, roles and delegations, and so does what the caller may see (ADR-2457): an object is visible when a grant in effect covers it, and masked in place otherwise, so a caller with no grant sees every object masked. Blinding and the IdentityVault (#4782) are not decided yet.
 
@@ -36,6 +36,17 @@ All reads are `GET`, need the gateway-signed caller identity, run in the caller'
 | `nodes/{nodeRef}/dependents?depth=&edge_kind=&valid_at=&known_at=`         | Impact: what depends on the object, grouped by kind with counts.                                                                                                                                                                                                                             |
 | `protocol-versions/{versionRef}/impact?depth=&valid_at=&known_at=`         | Amendment impact (K-PROT-2): the dependents of the version it amends, the elements it changes and its Schedule of Activities directives (`schedule`, ADR-2475). A hidden amendment is refused with 403; a first version is a 400.                                                            |
 | `activity?scope=&family=&actor=&from=&before=&limit=`                      | The activity stream (ADR-2485): what happened in the scope (the tenant when absent), newest first, `family` repeats, `limit` 1 to 200 (default 50), `before` takes the previous page's `next` cursor. A hidden scope is refused with 403; an entry about a hidden object is masked in place. |
+
+### Observation writes (ADR-2620)
+
+The host also runs the kernel command pipeline (`AddKernelCommandPipeline`), so a write commits its state, audit chain link, event and outbox row in one PostgreSQL transaction. Each write needs an `Idempotency-Key` header and takes its reason for change only from the gateway-signed identity (`X-Change-Reason`, ADR-2495; `SignedChangeReason`). Each is authorized against the observation's enrollment.
+
+| Route (`/api/v1/kernel/…`)            | Does                                                                                                                                                      |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST observations`                   | Records an observation (`observation.record`): enrollment, concept, value, observed-at. 201.                                                              |
+| `POST observations/{ref}/corrections` | Corrects the value (`observation.correct`) with the expected version. 409 `K.Observation.VersionStale`, 423 `K.Observation.Locked`, 422 without a reason. |
+| `POST observations/{ref}/lock`        | Locks the observation (`observation.lock`); no correction commits after it.                                                                               |
+| `GET observations/{ref}`              | The value, version, lock, every revision and the kernel audit entries about it. 403 when the caller may not see its enrollment.                           |
 
 Also `GET /healthz`, `/healthz/live`, `/healthz/ready` and `GET /api/v1/kernel/status` (anonymous). OpenAPI and the Scalar reference are mapped in Development only; the exported document is [docs/openapi/kernel_openapi.json](../../docs/openapi/kernel_openapi.json).
 

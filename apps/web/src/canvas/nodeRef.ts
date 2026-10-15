@@ -21,6 +21,7 @@ export const NODE_KINDS = [
   "enrollment",
   "protocol_version",
   "observation",
+  "observation_lock",
   "attestation",
   "artifact",
   "artifact_version",

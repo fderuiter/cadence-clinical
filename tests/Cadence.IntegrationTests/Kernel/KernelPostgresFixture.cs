@@ -14,6 +14,7 @@ using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Application.Validation;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Identity;
 using Cadence.Kernel.Knowledge;
@@ -183,6 +184,9 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>The effectivity read port, as applications get it.</summary>
     public IEffectivityReader Effectivity => Scope().GetRequiredService<IEffectivityReader>();
 
+    /// <summary>The observation read port, as the kernel host gets it (ADR-2620).</summary>
+    public IObservationRecords ObservationRecords => Scope().GetRequiredService<IObservationRecords>();
+
     /// <summary>The tenant code directory, as a host gets it.</summary>
     public ITenantDirectory TenantDirectory => Scope().GetRequiredService<ITenantDirectory>();
 
@@ -340,7 +344,7 @@ public sealed class TestEventPublisher : IKernelEventPublisher
             await Task.Delay(Delay, cancellationToken).ConfigureAwait(false);
         }
 
-        if (Fail?.Invoke(envelope) == true)
+        if (Fail is { } fail && fail(envelope))
         {
             throw new InvalidOperationException($"Subscriber rejected {envelope.Type}.");
         }
