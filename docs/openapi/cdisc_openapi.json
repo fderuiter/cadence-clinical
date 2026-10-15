@@ -58,57 +58,6 @@
         }
       }
     },
-    "/api/ai/intent/route": {
-      "post": {
-        "tags": [
-          "IntentEndpoints"
-        ],
-        "summary": "Classify natural language prompt queries into structured clinical intent actions.",
-        "operationId": "RouteAiIntent",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AiGateway_IntentRouteRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiGateway_IntentRouteResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiGateway_ProblemDetails"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/AiGateway_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/ai/intent/route": {
       "post": {
         "tags": [

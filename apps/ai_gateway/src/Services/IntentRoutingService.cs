@@ -9,7 +9,6 @@ namespace Cadence.Apps.AiGateway.Services;
 
 /// <summary>
 /// Rule-based intent router that classifies natural language prompt queries into structured clinical intent actions.
-/// @req:PRD-SYS-051
 /// </summary>
 public static class RuleBasedIntentRouter
 {
@@ -297,7 +296,6 @@ public static class RuleBasedIntentRouter
 
 /// <summary>
 /// Service facade providing intent routing classification.
-/// @req:PRD-SYS-051
 /// </summary>
 public static class IntentRoutingService
 {

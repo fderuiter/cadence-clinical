@@ -15,13 +15,10 @@ namespace Cadence.UnitTests.AiGateway;
 
 /// <summary>
 /// Unit tests for AI Gateway Intent Classification and Navigation Endpoint.
-/// @req:PRD-SYS-051
 /// </summary>
 public class AiGatewayIntentTests
 {
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ClassifyIntent_Scenario1_LogAdverseEventForSubject_ReturnsEcrfActionWithSubject()
     {
         var roles = new[] { "site_investigator", "crc" };
@@ -42,8 +39,6 @@ public class AiGatewayIntentTests
     }
 
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ClassifyIntent_LogAdverseEventWithoutSubject_DoesNotFabricateDefaultSubject()
     {
         var roles = new[] { "site_investigator", "crc" };
@@ -61,8 +56,6 @@ public class AiGatewayIntentTests
     }
 
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ClassifyIntent_Scenario2_CreateProtocolDeviation_ReturnsTicketActionWithSite()
     {
         var roles = new[] { "cra", "monitor" };
@@ -83,8 +76,6 @@ public class AiGatewayIntentTests
     }
 
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ClassifyIntent_ProtocolDeviationWithoutSite_DoesNotFabricateDefaultSite()
     {
         var roles = new[] { "cra", "monitor" };
@@ -101,8 +92,6 @@ public class AiGatewayIntentTests
     }
 
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ClassifyIntent_FiltersSuggestions_BasedOnUserRoles()
     {
         var ctmsQuery = "view site monitoring visits ctms";
@@ -117,8 +106,6 @@ public class AiGatewayIntentTests
     }
 
     [Fact]
-    [Trait("Category", "GxP_OQ")]
-    [GxPRequirement("PRD-SYS-051")]
     public void ClassifyIntent_Performance_CompletesUnder300ms()
     {
         var roles = new[] { "site_investigator", "crc", "cra", "sponsor_admin" };

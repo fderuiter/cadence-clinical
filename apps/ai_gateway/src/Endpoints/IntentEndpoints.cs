@@ -16,7 +16,6 @@ namespace Cadence.Apps.AiGateway.Endpoints;
 
 /// <summary>
 /// Minimal API endpoints for AI Gateway intent classification and natural language route navigation.
-/// @req:PRD-SYS-051
 /// </summary>
 public static class IntentEndpoints
 {
@@ -27,15 +26,7 @@ public static class IntentEndpoints
     /// <returns>The updated route builder.</returns>
     public static IEndpointRouteBuilder MapIntentEndpoints(this IEndpointRouteBuilder app)
     {
-        var groupAi = app.MapGroup("/api/ai/intent").RequireAuthorization();
         var groupV1Ai = app.MapGroup("/api/v1/ai/intent").RequireAuthorization();
-
-        groupAi.MapPost("/route", RouteIntentAsync)
-            .WithName("RouteAiIntent")
-            .WithSummary("Classify natural language prompt queries into structured clinical intent actions.")
-            .Produces<IntentRouteResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         groupV1Ai.MapPost("/route", RouteIntentAsync)
             .WithName("RouteV1AiIntent")
