@@ -49,6 +49,35 @@ export function resolveRelativePath(path) {
   return path;
 }
 
+function isNumericValue(v) {
+  if (v === null || v === undefined) return false;
+  if (typeof v === "number") return !isNaN(v);
+  if (typeof v === "string") {
+    const trimmed = v.trim();
+    return trimmed !== "" && !isNaN(Number(trimmed));
+  }
+  return false;
+}
+
+function toNumericValue(v) {
+  return typeof v === "number" ? v : Number(v);
+}
+
+function compareEqual(a, b) {
+  const aNull = a === null || a === undefined;
+  const bNull = b === null || b === undefined;
+  if (aNull && bNull) return true;
+  if (aNull || bNull) return false;
+
+  if (isNumericValue(a) && isNumericValue(b)) {
+    return toNumericValue(a) === toNumericValue(b);
+  }
+  if (typeof a === "boolean" || typeof b === "boolean") {
+    return typeof a === "boolean" && typeof b === "boolean" && a === b;
+  }
+  return String(a) === String(b);
+}
+
 /**
  * Deterministically evaluates an ExpressionNode AST against the given data context.
  *
@@ -67,7 +96,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
   // Normalize fields between Style A and Style B
   const type = node.node_type || node.type || "";
   const valAttr = node.value;
-  const rawChildren = node.children || node.operands || [];
+  const rawChildren = node.children || node.operands || node.args || [];
   const fieldRef = node.field_ref;
 
   // 1. LITERAL / CONSTANT
@@ -106,122 +135,269 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     return null;
   }
 
-  // 3. OPERATOR / LOGICAL / COMPARISON
-  if (type === "OPERATOR" || type === "logical" || type === "comparison") {
-    const operator = (
+  // 3. OPERATOR / LOGICAL / COMPARISON / FUNCTION
+  if (
+    type === "OPERATOR" ||
+    type === "logical" ||
+    type === "comparison" ||
+    type === "FUNCTION" ||
+    type === "function"
+  ) {
+    const name = (
       typeof valAttr === "string" ? valAttr : node.operator || ""
     ).toLowerCase();
 
-    // Logical operators
-    if (operator === "not") {
+    // Logical operators (Kleene logic)
+    if (name === "not" || name === "!") {
+      if (rawChildren.length < 1) return null;
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
-      return !childVal;
+      if (typeof childVal === "boolean") {
+        return !childVal;
+      }
+      return null;
     }
 
-    if (operator === "and") {
-      // Kleene 3-valued logic: if any operand is false, return false.
-      // Otherwise if any is null, return null. Else return true.
-      let hasNull = false;
+    if (name === "and" || name === "&&") {
+      let hasUnknown = false;
       for (const child of rawChildren) {
         const childVal = evaluateAST(child, context, currentIndices);
-        if (childVal === false) return false;
-        if (childVal === null || childVal === undefined) {
-          hasNull = true;
+        if (typeof childVal === "boolean") {
+          if (childVal === false) return false;
+        } else {
+          hasUnknown = true;
         }
       }
-      return hasNull ? null : true;
+      return hasUnknown ? null : true;
     }
 
-    if (operator === "or") {
-      // Kleene 3-valued logic: if any operand is true, return true.
-      // Otherwise if any is null, return null. Else return false.
-      let hasNull = false;
+    if (name === "or" || name === "||") {
+      let hasUnknown = false;
       for (const child of rawChildren) {
         const childVal = evaluateAST(child, context, currentIndices);
-        if (childVal === true) return true;
-        if (childVal === null || childVal === undefined) {
-          hasNull = true;
+        if (typeof childVal === "boolean") {
+          if (childVal === true) return true;
+        } else {
+          hasUnknown = true;
         }
       }
-      return hasNull ? null : false;
+      return hasUnknown ? null : false;
     }
 
-    // Arithmetic and Comparison operators
-    if (rawChildren.length < 2) return null;
-    const leftVal = evaluateAST(rawChildren[0], context, currentIndices);
-    const rightVal = evaluateAST(rawChildren[1], context, currentIndices);
-
-    // Null safety for arithmetic
-    if (["+", "-", "*", "/"].includes(operator)) {
-      if (
-        leftVal === null ||
-        leftVal === undefined ||
-        rightVal === null ||
-        rightVal === undefined
-      ) {
+    if (name === "xor") {
+      if (rawChildren.length < 2) return null;
+      const leftVal = evaluateAST(rawChildren[0], context, currentIndices);
+      const rightVal = evaluateAST(rawChildren[1], context, currentIndices);
+      if (typeof leftVal !== "boolean" || typeof rightVal !== "boolean") {
         return null;
       }
-      const lNum = parseFloat(leftVal);
-      const rNum = parseFloat(rightVal);
-      if (isNaN(lNum) || isNaN(rNum)) return null;
+      return leftVal !== rightVal;
+    }
 
-      if (operator === "+") return lNum + rNum;
-      if (operator === "-") return lNum - rNum;
-      if (operator === "*") return lNum * rNum;
-      if (operator === "/") {
+    // Arithmetic operators
+    if (["+", "-", "*", "/"].includes(name)) {
+      if (rawChildren.length < 2) return null;
+      const leftVal = evaluateAST(rawChildren[0], context, currentIndices);
+      const rightVal = evaluateAST(rawChildren[1], context, currentIndices);
+
+      if (!isNumericValue(leftVal) || !isNumericValue(rightVal)) {
+        return null;
+      }
+      const lNum = toNumericValue(leftVal);
+      const rNum = toNumericValue(rightVal);
+
+      if (name === "+") return lNum + rNum;
+      if (name === "-") return lNum - rNum;
+      if (name === "*") return lNum * rNum;
+      if (name === "/") {
         if (rNum === 0) return null; // Safe division by zero
         return lNum / rNum;
       }
     }
 
-    // Comparison Operators (null-safe)
-    if (["==", "!=", "<", "<=", ">", ">="].includes(operator)) {
-      // Direct equality/inequality is null-safe
-      if (operator === "==") {
-        const l = leftVal === undefined ? null : leftVal;
-        const r = rightVal === undefined ? null : rightVal;
-        return l === r;
-      }
-      if (operator === "!=") {
-        const l = leftVal === undefined ? null : leftVal;
-        const r = rightVal === undefined ? null : rightVal;
-        return l !== r;
-      }
+    // Comparison operators (null-safe and coercion-enabled)
+    if (["==", "!=", "<", "<=", ">", ">="].includes(name)) {
+      if (rawChildren.length < 2) return null;
+      const leftVal = evaluateAST(rawChildren[0], context, currentIndices);
+      const rightVal = evaluateAST(rawChildren[1], context, currentIndices);
 
-      // Ordered comparison with nulls always returns false
-      if (
-        leftVal === null ||
-        leftVal === undefined ||
-        rightVal === null ||
-        rightVal === undefined
-      ) {
+      const leftNull = leftVal === null || leftVal === undefined;
+      const rightNull = rightVal === null || rightVal === undefined;
+
+      if (leftNull && rightNull) {
+        if (name === "==") return true;
+        if (name === "!=") return false;
+        return false;
+      }
+      if (leftNull || rightNull) {
+        if (name === "==") return false;
+        if (name === "!=") return true;
         return false;
       }
 
-      const lNum = parseFloat(leftVal);
-      const rNum = parseFloat(rightVal);
+      if (isNumericValue(leftVal) && isNumericValue(rightVal)) {
+        const l = toNumericValue(leftVal);
+        const r = toNumericValue(rightVal);
+        if (name === "==") return l === r;
+        if (name === "!=") return l !== r;
+        if (name === "<") return l < r;
+        if (name === "<=") return l <= r;
+        if (name === ">") return l > r;
+        if (name === ">=") return l >= r;
+      }
 
-      // Fallback to string comparison if not both numeric
-      const useNumeric = !isNaN(lNum) && !isNaN(rNum);
-      const l = useNumeric ? lNum : String(leftVal);
-      const r = useNumeric ? rNum : String(rightVal);
+      if (typeof leftVal === "boolean" || typeof rightVal === "boolean") {
+        if (typeof leftVal === "boolean" && typeof rightVal === "boolean") {
+          if (name === "==") return leftVal === rightVal;
+          if (name === "!=") return leftVal !== rightVal;
+          return false;
+        }
+        if (name === "==") return false;
+        if (name === "!=") return true;
+        return false;
+      }
 
-      if (operator === "<") return l < r;
-      if (operator === "<=") return l <= r;
-      if (operator === ">") return l > r;
-      if (operator === ">=") return l >= r;
+      const lStr = String(leftVal);
+      const rStr = String(rightVal);
+      if (name === "==") return lStr === rStr;
+      if (name === "!=") return lStr !== rStr;
+      if (name === "<") return lStr < rStr;
+      if (name === "<=") return lStr <= rStr;
+      if (name === ">") return lStr > rStr;
+      if (name === ">=") return lStr >= rStr;
     }
 
-    return null;
-  }
+    // In / Not In
+    if (name === "in" || name === "not_in") {
+      if (rawChildren.length < 2) return false;
+      const targetVal = evaluateAST(rawChildren[0], context, currentIndices);
+      let options = [];
+      if (rawChildren.length === 2) {
+        const secondVal = evaluateAST(rawChildren[1], context, currentIndices);
+        if (Array.isArray(secondVal)) {
+          options = secondVal;
+        } else {
+          options = [secondVal];
+        }
+      } else {
+        options = rawChildren
+          .slice(1)
+          .map((c) => evaluateAST(c, context, currentIndices));
+      }
 
-  // 4. FUNCTION
-  if (type === "FUNCTION" || type === "function") {
-    const funcName = (
-      typeof valAttr === "string" ? valAttr : node.operator || ""
-    ).toLowerCase();
+      let found = false;
+      for (const opt of options) {
+        if (compareEqual(targetVal, opt)) {
+          found = true;
+          break;
+        }
+      }
+      return name === "in" ? found : !found;
+    }
 
-    if (funcName === "is_empty" || funcName === "empty") {
+    // Between
+    if (name === "between") {
+      if (rawChildren.length < 3) return false;
+      const val = evaluateAST(rawChildren[0], context, currentIndices);
+      const min = evaluateAST(rawChildren[1], context, currentIndices);
+      const max = evaluateAST(rawChildren[2], context, currentIndices);
+
+      if (!isNumericValue(val) || !isNumericValue(min) || !isNumericValue(max)) {
+        return false;
+      }
+      const nVal = toNumericValue(val);
+      const nMin = toNumericValue(min);
+      const nMax = toNumericValue(max);
+      return nVal >= nMin && nVal <= nMax;
+    }
+
+    // Regex match
+    if (name === "regex_match") {
+      if (rawChildren.length < 2) return false;
+      const val = evaluateAST(rawChildren[0], context, currentIndices);
+      const pattern = evaluateAST(rawChildren[1], context, currentIndices);
+
+      if (val === null || val === undefined || pattern === null || pattern === undefined) {
+        return false;
+      }
+      try {
+        const regex = new RegExp(String(pattern));
+        return regex.test(String(val));
+      } catch {
+        return false;
+      }
+    }
+
+    // Contains
+    if (name === "contains") {
+      if (rawChildren.length < 2) return false;
+      const container = evaluateAST(rawChildren[0], context, currentIndices);
+      const item = evaluateAST(rawChildren[1], context, currentIndices);
+
+      if (container === null || container === undefined || item === null || item === undefined) {
+        return false;
+      }
+      if (Array.isArray(container)) {
+        return container.some((elem) => compareEqual(elem, item));
+      }
+      return String(container).includes(String(item));
+    }
+
+    // Starts with / Ends with
+    if (name === "starts_with") {
+      if (rawChildren.length < 2) return false;
+      const str = evaluateAST(rawChildren[0], context, currentIndices);
+      const prefix = evaluateAST(rawChildren[1], context, currentIndices);
+      if (str === null || str === undefined || prefix === null || prefix === undefined) {
+        return false;
+      }
+      return String(str).startsWith(String(prefix));
+    }
+
+    if (name === "ends_with") {
+      if (rawChildren.length < 2) return false;
+      const str = evaluateAST(rawChildren[0], context, currentIndices);
+      const suffix = evaluateAST(rawChildren[1], context, currentIndices);
+      if (str === null || str === undefined || suffix === null || suffix === undefined) {
+        return false;
+      }
+      return String(str).endsWith(String(suffix));
+    }
+
+    // String manipulation: lower, upper, trim
+    if (name === "lower") {
+      if (rawChildren.length < 1) return null;
+      const str = evaluateAST(rawChildren[0], context, currentIndices);
+      if (str === null || str === undefined) return null;
+      return String(str).toLowerCase();
+    }
+
+    if (name === "upper") {
+      if (rawChildren.length < 1) return null;
+      const str = evaluateAST(rawChildren[0], context, currentIndices);
+      if (str === null || str === undefined) return null;
+      return String(str).toUpperCase();
+    }
+
+    if (name === "trim") {
+      if (rawChildren.length < 1) return null;
+      const str = evaluateAST(rawChildren[0], context, currentIndices);
+      if (str === null || str === undefined) return null;
+      return String(str).trim();
+    }
+
+    // Coalesce
+    if (name === "coalesce") {
+      for (const child of rawChildren) {
+        const val = evaluateAST(child, context, currentIndices);
+        if (val !== null && val !== undefined) {
+          return val;
+        }
+      }
+      return null;
+    }
+
+    // Null/empty functions
+    if (name === "is_empty" || name === "empty") {
       if (rawChildren.length !== 1) return null;
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
       return (
@@ -231,7 +407,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       );
     }
 
-    if (funcName === "is_not_empty") {
+    if (name === "is_not_empty") {
       if (rawChildren.length !== 1) return null;
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
       return (
@@ -241,7 +417,8 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       );
     }
 
-    if (funcName === "indexed-repeat") {
+    // Indexed repeat
+    if (name === "indexed-repeat") {
       if (rawChildren.length !== 3) return null;
       const targetFieldNode = rawChildren[0];
       const repeatGroupNode = rawChildren[1];
@@ -266,18 +443,19 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       return context[indexedPath] !== undefined ? context[indexedPath] : null;
     }
 
-    if (["sum", "avg", "min", "max", "count"].includes(funcName)) {
+    // Aggregates
+    if (["sum", "avg", "min", "max", "count"].includes(name)) {
       const vals = rawChildren
         .map((c) => evaluateAST(c, context, currentIndices))
         .filter((v) => v !== null && v !== undefined && v !== "");
-      if (funcName === "count") return vals.length;
+      if (name === "count") return vals.length;
       const nums = vals.map((v) => parseFloat(v)).filter((n) => !isNaN(n));
       if (nums.length === 0) return null;
-      if (funcName === "sum") return nums.reduce((acc, curr) => acc + curr, 0);
-      if (funcName === "avg")
+      if (name === "sum") return nums.reduce((acc, curr) => acc + curr, 0);
+      if (name === "avg")
         return nums.reduce((acc, curr) => acc + curr, 0) / nums.length;
-      if (funcName === "min") return Math.min(...nums);
-      if (funcName === "max") return Math.max(...nums);
+      if (name === "min") return Math.min(...nums);
+      if (name === "max") return Math.max(...nums);
     }
 
     return null;

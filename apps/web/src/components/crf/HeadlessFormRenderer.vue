@@ -256,14 +256,10 @@ const evaluateRules = () => {
       isViolated = res === true;
     } else if (check.is_violation_when === "false") {
       isViolated = res === false;
+    } else if (check.type === "constraint" || check.rule_type === "constraint") {
+      isViolated = res === false;
     } else {
-      // Auto-detect based on operator if condition represents error condition or validity check
-      const op = (expr.operator || expr.value || "").toLowerCase();
-      if (["+", ">", ">=", "!=", "not", "is_empty", "empty"].includes(op)) {
-        isViolated = res === true;
-      } else {
-        isViolated = res === false;
-      }
+      isViolated = res === true;
     }
 
     if (isViolated) {
