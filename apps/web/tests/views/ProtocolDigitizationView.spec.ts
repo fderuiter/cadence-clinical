@@ -333,4 +333,97 @@ describe("ProtocolDigitizationView.vue - AI Protocol Ingestion & Synthesis Speci
     expect(wrapper.vm.unmappedConceptTokens.length).toBe(0);
     expect(wrapper.vm.resolvedConceptMappings.length).toBe(1);
   });
+
+  it("switches between document upload and guided wizard mode while preserving uploaded file state", async () => {
+    const wrapper = mount(ProtocolDigitizationView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          "router-link": true,
+        },
+      },
+    });
+
+    // Select file in upload mode
+    const file = new File(["Protocol text"], "oncology_protocol.pdf", {
+      type: "application/pdf",
+    });
+    wrapper.vm.selectedFile = file;
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("oncology_protocol.pdf");
+
+    // Switch to Wizard mode
+    const wizardTabBtn = wrapper.find(".btn-mode-wizard");
+    expect(wizardTabBtn.exists()).toBe(true);
+    await wizardTabBtn.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.step1Mode).toBe("wizard");
+    expect(wrapper.text()).toContain("Guided Therapeutic Area Protocol Wizard");
+
+    // Switch back to Upload mode
+    const uploadTabBtn = wrapper.find(".btn-mode-upload");
+    await uploadTabBtn.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    // Verify uploaded file input state was preserved
+    expect(wrapper.vm.selectedFile).not.toBeNull();
+    expect(wrapper.vm.selectedFile?.name).toBe("oncology_protocol.pdf");
+  });
+
+  it("synthesizes USDM protocol via wizard, populates rawExtractionData, and advances directly to Step 3", async () => {
+    const wrapper = mount(ProtocolDigitizationView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          "router-link": true,
+        },
+      },
+    });
+
+    wrapper.vm.step1Mode = "wizard";
+    await wrapper.vm.$nextTick();
+
+    const sampleUSDM = {
+      protocol_id: "CDNC-WIZARD-001",
+      study_title: "Wizard Generated Trial",
+      phase: "PHASE_II",
+      therapeutic_area: "Oncology",
+      confidence_score: 1.0,
+      arms: [
+        { name: "Arm 1", arm_type: "EXPERIMENTAL", target_sample_size: 100 },
+      ],
+      epochs: [
+        { name: "Treatment", epoch_type: "TREATMENT", sequence_index: 1 },
+      ],
+      visits: [
+        {
+          visit_name: "Baseline",
+          epoch_name: "Treatment",
+          target_day: 1,
+          window_lower_days: 0,
+          window_upper_days: 0,
+          is_mandatory: true,
+        },
+      ],
+      activities: [
+        {
+          activity_name: "Vitals",
+          cdash_domain: "VS",
+          biomedical_concept_code: "C25298",
+          assigned_visit_names: ["Baseline"],
+        },
+      ],
+      criteria: [],
+    };
+
+    wrapper.vm.handleWizardSynthesize(sampleUSDM);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.vm.rawExtractionData).toEqual(sampleUSDM);
+    expect(wrapper.vm.currentStep).toBe(3);
+    expect(wrapper.text()).toContain("CDNC-WIZARD-001");
+    expect(wrapper.text()).toContain("Wizard Generated Trial");
+  });
 });
