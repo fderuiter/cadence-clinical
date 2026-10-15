@@ -141,28 +141,16 @@ public sealed class FormSubmissionApplicationService(
             resolvedProtocolVersion = suppliedVersion;
         }
 
-        if (formVersionRegistryRepository is not null)
+        var schemaError = await ValidateFormSchemaAsync(
+            studyCode.Value,
+            resolvedProtocolVersion,
+            formId.Value,
+            request.FormHash,
+            cancellationToken).ConfigureAwait(false);
+
+        if (schemaError is not null)
         {
-            var registeredForms = await formVersionRegistryRepository
-                .ListByStudyAndVersionAsync(studyCode.Value, resolvedProtocolVersion, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (registeredForms.Count > 0)
-            {
-                var registered = registeredForms.FirstOrDefault(r => string.Equals(r.FormId, formId.Value, StringComparison.OrdinalIgnoreCase));
-                if (registered is null)
-                {
-                    return FormErrors.ProtocolVersionSchemaMismatch(
-                        $"Form '{formId.Value}' is not registered for study '{studyCode.Value}' and protocol version '{resolvedProtocolVersion}'.");
-                }
-
-                if (!string.IsNullOrWhiteSpace(request.FormHash) &&
-                    !string.Equals(request.FormHash.Trim(), registered.FormHash.Trim(), StringComparison.OrdinalIgnoreCase))
-                {
-                    return FormErrors.ProtocolVersionSchemaMismatch(
-                        $"Submitted form hash '{request.FormHash}' does not match registered form hash '{registered.FormHash}'.");
-                }
-            }
+            return schemaError;
         }
 
         var initResult = FormSubmission.Initialize(
@@ -257,9 +245,16 @@ public sealed class FormSubmissionApplicationService(
         return Result<IReadOnlyList<FormSubmissionResponse>>.Success(list.Select(MapToResponse).ToList());
     }
 
+    public Task<Result<FormSubmissionResponse>> UpdatePayloadAsync(
+        string id,
+        string newPayload,
+        CancellationToken cancellationToken) =>
+        UpdatePayloadAsync(id, newPayload, null, cancellationToken);
+
     public async Task<Result<FormSubmissionResponse>> UpdatePayloadAsync(
         string id,
         string newPayload,
+        string? formHash,
         CancellationToken cancellationToken)
     {
         if (!FormSubmissionId.TryParse(id, out var submissionId))
@@ -271,6 +266,18 @@ public sealed class FormSubmissionApplicationService(
         if (submission is null)
         {
             return FormErrors.NotFound(id);
+        }
+
+        var schemaError = await ValidateFormSchemaAsync(
+            submission.StudyId.Value,
+            submission.ProtocolVersion,
+            submission.FormId.Value,
+            formHash,
+            cancellationToken).ConfigureAwait(false);
+
+        if (schemaError is not null)
+        {
+            return schemaError;
         }
 
         var updateResult = submission.UpdatePayload(newPayload, auditContextAccessor.ChangeReason);
@@ -835,6 +842,41 @@ public sealed class FormSubmissionApplicationService(
         }
 
         return extracted.Value!;
+    }
+
+    private async Task<DomainError?> ValidateFormSchemaAsync(
+        string studyId,
+        string? protocolVersion,
+        string formId,
+        string? formHash,
+        CancellationToken cancellationToken)
+    {
+        if (formVersionRegistryRepository is not null)
+        {
+            string version = string.IsNullOrWhiteSpace(protocolVersion) ? "1.0.0" : protocolVersion;
+            var registeredForms = await formVersionRegistryRepository
+                .ListByStudyAndVersionAsync(studyId, version, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (registeredForms.Count > 0)
+            {
+                var registered = registeredForms.FirstOrDefault(r => string.Equals(r.FormId, formId, StringComparison.OrdinalIgnoreCase));
+                if (registered is null)
+                {
+                    return FormErrors.ProtocolVersionSchemaMismatch(
+                        $"Form '{formId}' is not registered for study '{studyId}' and protocol version '{version}'.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(formHash) &&
+                    !string.Equals(formHash.Trim(), registered.FormHash.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return FormErrors.ProtocolVersionSchemaMismatch(
+                        $"Submitted form hash '{formHash}' does not match registered form hash '{registered.FormHash}'.");
+                }
+            }
+        }
+
+        return null;
     }
 
     private static FormSubmissionResponse MapToResponse(FormSubmission f) =>

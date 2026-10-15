@@ -289,4 +289,173 @@ public sealed class FormSubmissionProtocolVersionTests
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be("PROTOCOL_VERSION_SCHEMA_MISMATCH");
     }
+
+    [Fact]
+    public async Task UpdatePayloadAsync_WhenFormVersionRegistryHasMatchingFormAndHash_Succeeds()
+    {
+        // Arrange
+        await SeedSubjectAsync("SUBJ-200", "STUDY-001", "2.0.0");
+        var registry = new PublishedFormVersionRegistry(
+            Guid.NewGuid(), "TENANT-01", "STUDY-001", "PV-200", "2.0.0", "FORM-VS", "EXPECTED_HASH_123", "<xml/>", "{}", DateTimeOffset.UnixEpoch);
+        await _registryRepo.AddOrUpdateAsync(registry, CancellationToken.None);
+
+        var service = CreateService();
+        var createRes = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-200",
+            FormId: "FORM-VS",
+            SiteId: "SITE-01",
+            VisitId: "VISIT-01",
+            ProtocolVersion: "2.0.0",
+            Payload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}",
+            FormHash: "EXPECTED_HASH_123"), CancellationToken.None);
+
+        createRes.IsSuccess.Should().BeTrue();
+        string submissionId = createRes.Value!.Id;
+
+        // Act
+        var updateResult = await service.UpdatePayloadAsync(
+            submissionId,
+            "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 125}",
+            "EXPECTED_HASH_123",
+            CancellationToken.None);
+
+        // Assert
+        updateResult.IsSuccess.Should().BeTrue();
+        updateResult.Value!.Payload.Should().Contain("125");
+    }
+
+    [Fact]
+    public async Task UpdatePayloadAsync_WhenFormVersionRegistryHasMatchingForm_AndFormHashOmitted_Succeeds()
+    {
+        // Arrange
+        await SeedSubjectAsync("SUBJ-200", "STUDY-001", "2.0.0");
+        var registry = new PublishedFormVersionRegistry(
+            Guid.NewGuid(), "TENANT-01", "STUDY-001", "PV-200", "2.0.0", "FORM-VS", "EXPECTED_HASH_123", "<xml/>", "{}", DateTimeOffset.UnixEpoch);
+        await _registryRepo.AddOrUpdateAsync(registry, CancellationToken.None);
+
+        var service = CreateService();
+        var createRes = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-200",
+            FormId: "FORM-VS",
+            SiteId: "SITE-01",
+            VisitId: "VISIT-01",
+            ProtocolVersion: "2.0.0",
+            Payload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}",
+            FormHash: "EXPECTED_HASH_123"), CancellationToken.None);
+
+        createRes.IsSuccess.Should().BeTrue();
+        string submissionId = createRes.Value!.Id;
+
+        // Act - omit form hash during update
+        var updateResult = await service.UpdatePayloadAsync(
+            submissionId,
+            "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 130}",
+            CancellationToken.None);
+
+        // Assert
+        updateResult.IsSuccess.Should().BeTrue();
+        updateResult.Value!.Payload.Should().Contain("130");
+    }
+
+    [Fact]
+    public async Task UpdatePayloadAsync_WhenFormVersionRegistryHasForm_ButHashMismatches_FailsWithSchemaMismatch()
+    {
+        // Arrange
+        await SeedSubjectAsync("SUBJ-200", "STUDY-001", "2.0.0");
+        var registry = new PublishedFormVersionRegistry(
+            Guid.NewGuid(), "TENANT-01", "STUDY-001", "PV-200", "2.0.0", "FORM-VS", "EXPECTED_HASH_123", "<xml/>", "{}", DateTimeOffset.UnixEpoch);
+        await _registryRepo.AddOrUpdateAsync(registry, CancellationToken.None);
+
+        var service = CreateService();
+        var createRes = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-200",
+            FormId: "FORM-VS",
+            SiteId: "SITE-01",
+            VisitId: "VISIT-01",
+            ProtocolVersion: "2.0.0",
+            Payload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}",
+            FormHash: "EXPECTED_HASH_123"), CancellationToken.None);
+
+        createRes.IsSuccess.Should().BeTrue();
+        string submissionId = createRes.Value!.Id;
+
+        // Act - provide mismatched form hash
+        var updateResult = await service.UpdatePayloadAsync(
+            submissionId,
+            "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 135}",
+            "WRONG_HASH_999",
+            CancellationToken.None);
+
+        // Assert
+        updateResult.IsFailure.Should().BeTrue();
+        updateResult.Error!.Code.Should().Be("PROTOCOL_VERSION_SCHEMA_MISMATCH");
+    }
+
+    [Fact]
+    public async Task UpdatePayloadAsync_WhenFormVersionRegistryExists_ButFormIdNotRegistered_FailsWithSchemaMismatch()
+    {
+        // Arrange
+        await SeedSubjectAsync("SUBJ-200", "STUDY-001", "2.0.0");
+
+        var service = CreateService();
+        // Create form submission before registry has forms
+        var createRes = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-200",
+            FormId: "UNREGISTERED-FORM",
+            SiteId: "SITE-01",
+            VisitId: "VISIT-01",
+            ProtocolVersion: "2.0.0",
+            Payload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}"), CancellationToken.None);
+
+        createRes.IsSuccess.Should().BeTrue();
+        string submissionId = createRes.Value!.Id;
+
+        // Now populate registry with a DIFFERENT form
+        var registry = new PublishedFormVersionRegistry(
+            Guid.NewGuid(), "TENANT-01", "STUDY-001", "PV-200", "2.0.0", "REGISTERED-FORM-ONLY", "HASH_123", "<xml/>", "{}", DateTimeOffset.UnixEpoch);
+        await _registryRepo.AddOrUpdateAsync(registry, CancellationToken.None);
+
+        // Act - attempt payload update for unregistered form
+        var updateResult = await service.UpdatePayloadAsync(
+            submissionId,
+            "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 140}",
+            CancellationToken.None);
+
+        // Assert
+        updateResult.IsFailure.Should().BeTrue();
+        updateResult.Error!.Code.Should().Be("PROTOCOL_VERSION_SCHEMA_MISMATCH");
+    }
+
+    [Fact]
+    public async Task UpdatePayloadAsync_WhenFormVersionRegistryIsEmpty_Succeeds()
+    {
+        // Arrange
+        await SeedSubjectAsync("SUBJ-200", "STUDY-001", "2.0.0");
+        var service = CreateService();
+
+        var createRes = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-200",
+            FormId: "FORM-VS",
+            SiteId: "SITE-01",
+            VisitId: "VISIT-01",
+            ProtocolVersion: "2.0.0",
+            Payload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}"), CancellationToken.None);
+
+        createRes.IsSuccess.Should().BeTrue();
+        string submissionId = createRes.Value!.Id;
+
+        // Act
+        var updateResult = await service.UpdatePayloadAsync(
+            submissionId,
+            "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 125}",
+            CancellationToken.None);
+
+        // Assert
+        updateResult.IsSuccess.Should().BeTrue();
+    }
 }
