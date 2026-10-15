@@ -17,6 +17,8 @@ builder.Services.AddCadenceSecurity();
 // Device tokens are stored only as keyed hashes; FIELD_LOOKUP_HASH_KEY is required and validated at startup (#4770).
 builder.Services.AddCadenceLookupHashing();
 builder.Services.AddSingleton<DeviceTokenHasher>();
+// SCE lock tokens and run signatures are keyed by CADENCE_SCE_SIGNING_KEY, required and validated at startup (#5382).
+builder.Services.AddSceSigning();
 builder.Services.AddSingleton<ILockfileValidatorService, LockfileValidatorService>();
 builder.Services.AddSingleton<ISceDockerEngineDriver, SceDockerEngineDriver>();
 builder.AddCadencePostgresDbContext<InteropDbContext>();

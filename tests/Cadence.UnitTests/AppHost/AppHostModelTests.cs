@@ -80,7 +80,7 @@ public sealed class AppHostModelTests
         (await EnvironmentNamesAsync(projects["execution"])).Should().Contain("DemographicsEncryption__KeyBase64");
         (await EnvironmentNamesAsync(projects["econsent"])).Should().Contain("FIELD_ENCRYPTION_KEY");
         (await EnvironmentNamesAsync(projects["payments"])).Should().Contain("FIELD_ENCRYPTION_KEY");
-        (await EnvironmentNamesAsync(projects["interop"])).Should().Contain("FIELD_LOOKUP_HASH_KEY");
+        (await EnvironmentNamesAsync(projects["interop"])).Should().Contain(["FIELD_LOOKUP_HASH_KEY", "CADENCE_SCE_SIGNING_KEY"]);
     }
 
     [Fact]

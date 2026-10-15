@@ -2,49 +2,64 @@ using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+using Cadence.Kernel.Time;
 
 using Microsoft.IdentityModel.Tokens;
 
 namespace Cadence.Security.Authentication;
 
 /// <summary>
-/// Centralized 21 CFR Part 11 signature token verifier and single-use consumer.
-/// @req:PRD-SYS-053
+/// Verifies an e-signature step-up token (<c>X-Sig-Token</c>) and consumes it, so each token signs at most once
+/// (21 CFR 11.200(a)(1)).
+/// <para>
+/// <b>Acceptance window.</b> A token is accepted only while <c>iat - ClockSkew &lt;= now &lt; exp + ClockSkew</c>,
+/// measured on the injected <see cref="IClock"/>, and only if it was issued for at most
+/// <see cref="SigTokenClaims.Lifetime"/> (60 seconds). <see cref="ClockSkew"/> (5 seconds) absorbs clock drift
+/// between the gateway that issues and the service that verifies, so a token is usable for at most 70 seconds of
+/// verifier time.
+/// </para>
+/// <para>
+/// <b>Single use.</b> The token's <c>jti</c> is recorded in the registered <see cref="ISigTokenUseStore"/>, kept until
+/// <c>exp + ClockSkew</c>, the end of the window. A record forgotten any earlier would let the token be replayed in
+/// the skew after expiry. How far "single" reaches depends on the store: process memory by default, a database table
+/// where a host registers one (ADR-2515).
+/// </para>
+/// @req:SRS-SYS-005
 /// </summary>
-public class SigTokenVerifier
+public class SigTokenVerifier(ISigTokenUseStore useStore, IClock? clock = null)
 {
     /// <summary>The error code every rejection carries (contract §3.1).</summary>
     public const string ReauthenticationRequired = "REAUTHENTICATION_REQUIRED";
 
-    private readonly ReplayCache _replayCache;
-    private readonly JwtSecurityTokenHandler _tokenHandler;
+    /// <summary>Allowed drift between the issuing gateway's clock and the verifier's.</summary>
+    public static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(5);
 
-    public SigTokenVerifier(ReplayCache? replayCache = null)
-    {
-        _replayCache = replayCache ?? new ReplayCache();
-        _tokenHandler = new JwtSecurityTokenHandler();
-    }
+    private readonly ISigTokenUseStore _useStore = useStore ?? throw new ArgumentNullException(nameof(useStore));
+    private readonly IClock _clock = clock ?? SystemClock.Instance;
+    private readonly JwtSecurityTokenHandler _tokenHandler = new();
 
-    /// <summary>
-    /// Verifies and single-use consumes an e-signature JWT re-authentication token.
-    /// Throws UnauthorizedAccessException on any validation, binding, or replay failure.
-    /// </summary>
-    public JwtSecurityToken VerifyAndConsumeSigToken(string? sigToken, string expectedUserId, byte[]? secret = null)
+    /// <summary>A verifier with its own process-local store, for tests and single-instance tools.</summary>
+    public SigTokenVerifier(IClock? clock = null)
+        : this(new ReplayCache(clock), clock)
     {
-        var jwtToken = Validate(sigToken, expectedUserId, secret is { Length: > 0 } ? secret : SecretFromEnvironment());
-        Consume(sigToken!, jwtToken);
-        return jwtToken;
     }
 
     /// <summary>
     /// Verifies a v3 token for <paramref name="expectedUserId"/> that is bound to exactly <paramref name="binding"/>,
-    /// then consumes it. Contract steps 1 to 6: presence, HS256 signature, 60-second lifetime, signer, action and
-    /// semantic action (and batch when the endpoint names one), single use. Auditor tokens are refused. Nothing
-    /// is consumed unless every check passes. Throws <see cref="UnauthorizedAccessException"/>
-    /// ("REAUTHENTICATION_REQUIRED") on any failure.
+    /// then consumes it. Contract steps 1 to 6: presence, HS256 signature, lifetime and acceptance window, signer,
+    /// action and semantic action (and batch when the endpoint names one), single use. Auditor tokens are refused.
+    /// Nothing is consumed unless every other check passes. Throws <see cref="UnauthorizedAccessException"/>
+    /// (<see cref="ReauthenticationRequired"/>) on any failure.
     /// </summary>
-    public JwtSecurityToken VerifyAndConsumeSigToken(string? sigToken, string expectedUserId, SigTokenBinding binding, byte[] secret)
+    public async Task<JwtSecurityToken> VerifyAndConsumeAsync(
+        string? sigToken,
+        string expectedUserId,
+        SigTokenBinding binding,
+        byte[] secret,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(binding);
         ArgumentNullException.ThrowIfNull(secret);
@@ -58,25 +73,29 @@ public class SigTokenVerifier
             && string.Equals(Claim(SigTokenClaims.Action), binding.Action, StringComparison.Ordinal)
             && string.Equals(Claim(SigTokenClaims.SemanticAction), binding.SemanticAction, StringComparison.Ordinal)
             && (binding.BatchId is null || string.Equals(Claim(SigTokenClaims.BatchId), binding.BatchId, StringComparison.Ordinal))
-            && jwtToken.IssuedAt != DateTime.MinValue
-            && jwtToken.ValidTo - jwtToken.IssuedAt <= SigTokenClaims.Lifetime
             && SigTokenIssuer.MayObtainSignatureToken(jwtToken.Claims.Where(c => c.Type == SigTokenClaims.Roles).Select(c => c.Value));
         if (!bound)
         {
             throw new UnauthorizedAccessException(ReauthenticationRequired);
         }
 
-        Consume(sigToken!, jwtToken);
+        var retainUntil = new DateTimeOffset(jwtToken.ValidTo, TimeSpan.Zero) + ClockSkew;
+        if (!await _useStore.TryRecordFirstUseAsync(jwtToken.Id, retainUntil, cancellationToken).ConfigureAwait(false))
+        {
+            throw new UnauthorizedAccessException(ReauthenticationRequired);
+        }
+
         return jwtToken;
     }
 
     private JwtSecurityToken Validate(string? sigToken, string expectedUserId, byte[] secret)
     {
-        if (string.IsNullOrWhiteSpace(sigToken) || secret.Length == 0)
+        if (string.IsNullOrWhiteSpace(sigToken) || secret.Length == 0 || string.IsNullOrEmpty(expectedUserId))
         {
             throw new UnauthorizedAccessException(ReauthenticationRequired);
         }
 
+        // Lifetime is checked below against the injected clock, not the handler's wall clock.
         var validationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
@@ -84,9 +103,7 @@ public class SigTokenVerifier
             ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
             ValidateIssuer = false,
             ValidateAudience = false,
-            ValidateLifetime = true,
-            RequireExpirationTime = true,
-            ClockSkew = TimeSpan.FromSeconds(5)
+            ValidateLifetime = false,
         };
 
         SecurityToken validatedToken;
@@ -100,14 +117,16 @@ public class SigTokenVerifier
             throw new UnauthorizedAccessException(ReauthenticationRequired, ex);
         }
 
-        if (validatedToken is not JwtSecurityToken jwtToken)
+        if (validatedToken is not JwtSecurityToken jwtToken
+            || string.IsNullOrWhiteSpace(jwtToken.Id)
+            || !WithinAcceptanceWindow(jwtToken))
         {
             throw new UnauthorizedAccessException(ReauthenticationRequired);
         }
 
         // Signer identity binding (sub claim)
         string sub = jwtToken.Subject ?? claimsPrincipal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
-        if (string.IsNullOrEmpty(expectedUserId) || !string.Equals(sub, expectedUserId, StringComparison.Ordinal))
+        if (!string.Equals(sub, expectedUserId, StringComparison.Ordinal))
         {
             throw new UnauthorizedAccessException(ReauthenticationRequired);
         }
@@ -115,24 +134,22 @@ public class SigTokenVerifier
         return jwtToken;
     }
 
-    // Single-use consumption (replay prevention)
-    private void Consume(string sigToken, JwtSecurityToken jwtToken)
+    private bool WithinAcceptanceWindow(JwtSecurityToken token)
     {
-        double exp = new DateTimeOffset(jwtToken.ValidTo).ToUnixTimeSeconds();
-        if (!_replayCache.Consume(sigToken, jwtToken.Id, exp))
+        if (token.IssuedAt == DateTime.MinValue || token.ValidTo == DateTime.MinValue)
         {
-            throw new UnauthorizedAccessException(ReauthenticationRequired);
-        }
-    }
-
-    private static byte[] SecretFromEnvironment()
-    {
-        string? gatewaySecret = Environment.GetEnvironmentVariable("GATEWAY_SECRET");
-        if (string.IsNullOrWhiteSpace(gatewaySecret))
-        {
-            throw new InvalidOperationException("GATEWAY_SECRET is not configured; e-signature tokens cannot be verified.");
+            return false;
         }
 
-        return Encoding.UTF8.GetBytes(gatewaySecret);
+        var issuedAt = new DateTimeOffset(token.IssuedAt, TimeSpan.Zero);
+        var expires = new DateTimeOffset(token.ValidTo, TimeSpan.Zero);
+        var notBefore = token.ValidFrom == DateTime.MinValue ? issuedAt : new DateTimeOffset(token.ValidFrom, TimeSpan.Zero);
+        var now = _clock.UtcNow;
+
+        return expires > issuedAt
+            && expires - issuedAt <= SigTokenClaims.Lifetime
+            && now >= issuedAt - ClockSkew
+            && now >= notBefore - ClockSkew
+            && now < expires + ClockSkew;
     }
 }

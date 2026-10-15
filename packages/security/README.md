@@ -22,7 +22,11 @@ signatures and audit digests shared by every Cadence service.
 
 - **Authentication:** `GatewayAuthenticationHandler` (the `CadenceGateway` scheme: verifies the
   gateway's HMAC-signed identity headers, fail-closed), `GatewayIdentity`, `GatewayHeaders`,
-  `CadenceClaimTypes`, `HmacSigner`, `SigTokenVerifier` + `ReplayCache` (single-use e-signature tokens),
+  `CadenceClaimTypes`, `HmacSigner`, `SigTokenVerifier` (`VerifyAndConsumeAsync`, acceptance window
+  `iat - 5s <= now < exp + 5s`) with `ISigTokenUseStore` for single use: `ReplayCache` is the process-local default,
+  and a host with a database replaces it with a durable store, as Execution does
+  ([ADR-2515](../../docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
+  `RequireElectronicSignature(...)` applies it to a route and `HttpContext.VerifiedSigToken()` reads the verified token;
   `AuditorWriteGuardMiddleware`, and `ChangeReasonHeader`, the one codec for `X-Change-Reason`: plain
   printable ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8 for any other text. Every reader decodes the
   header with it, so the audit trail stores what the user typed
@@ -65,14 +69,14 @@ This is byte-for-byte `canonicalSerialize` in `packages/ui/signing.js`, so signa
 Protects individual secret columns at rest (#4770, see
 [ADR-2494](../../docs/adr/2026-09-30-field-level-encryption-and-keyed-lookup-hashes-for-secrets-at-rest.md)).
 
-| Type | Use |
-| --- | --- |
-| `IFieldEncryptor` / `AesGcmFieldEncryptor` | AES-256-GCM encryption of a value that must be read back. Stored as `enc:v1:<keyId>:<base64(nonce, ciphertext, tag)>`; the purpose string (`<service>.<table>.<column>`) and key id are authenticated, so values cannot be moved between columns. Randomised, so not searchable. |
-| `ILookupHasher` / `HmacLookupHasher` | HMAC-SHA256 "blind index" (64 lowercase hex characters) for a value that only needs to be matched, never read back. |
-| `EncryptedStringConverter`, `PropertyBuilder<string?>.IsEncrypted(...)` | EF Core mapping for an encrypted column; sizes the column with `AesGcmFieldEncryptor.GetMaxStoredLength`. |
-| `IFieldEncryptingDbContext`, `FieldEncryptionModelCacheKeyFactory` | A DbContext with encrypted columns implements the interface and replaces `IModelCacheKeyFactory` in `OnConfiguring`, so models built with different keys are never shared. |
-| `DesignTimeFieldEncryptor` | For `IDesignTimeDbContextFactory` only: builds the model, refuses to encrypt or decrypt. |
-| `FieldDecryptionException` | Thrown on wrong key, wrong purpose, tampering or a non-encrypted value. Reads fail loudly. |
+| Type                                                                    | Use                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IFieldEncryptor` / `AesGcmFieldEncryptor`                              | AES-256-GCM encryption of a value that must be read back. Stored as `enc:v1:<keyId>:<base64(nonce, ciphertext, tag)>`; the purpose string (`<service>.<table>.<column>`) and key id are authenticated, so values cannot be moved between columns. Randomised, so not searchable. |
+| `ILookupHasher` / `HmacLookupHasher`                                    | HMAC-SHA256 "blind index" (64 lowercase hex characters) for a value that only needs to be matched, never read back.                                                                                                                                                              |
+| `EncryptedStringConverter`, `PropertyBuilder<string?>.IsEncrypted(...)` | EF Core mapping for an encrypted column; sizes the column with `AesGcmFieldEncryptor.GetMaxStoredLength`.                                                                                                                                                                        |
+| `IFieldEncryptingDbContext`, `FieldEncryptionModelCacheKeyFactory`      | A DbContext with encrypted columns implements the interface and replaces `IModelCacheKeyFactory` in `OnConfiguring`, so models built with different keys are never shared.                                                                                                       |
+| `DesignTimeFieldEncryptor`                                              | For `IDesignTimeDbContextFactory` only: builds the model, refuses to encrypt or decrypt.                                                                                                                                                                                         |
+| `FieldDecryptionException`                                              | Thrown on wrong key, wrong purpose, tampering or a non-encrypted value. Reads fail loudly.                                                                                                                                                                                       |
 
 Registration (fail closed: a missing or invalid key stops the host at startup; there are no default keys):
 

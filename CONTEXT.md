@@ -840,7 +840,7 @@ _Avoid_: Allowing unapproved site data capture or soft unblocking warnings
 
 ### Principal Investigator Electronic DOA Log
 
-A 21 CFR Part 11 compliant site task delegation log where the Principal Investigator electronically signs delegated site duties and staff role authorizations using signature step-up tokens (`execution.doa.signoff`), generating immutable audit ledger seals and certified watermarked PDF exports.
+A 21 CFR Part 11 compliant site task delegation log where the Principal Investigator electronically signs delegated site duties and staff role authorizations. The sign-off (`/api/v1/training/delegations/bulk-signoff`) needs the `delegation_log:sign` permission and a single-use step-up token bound to `knowledge.delegation.sign_off` and the exact delegation ids; the signer is the verified caller and the seal is keyed (ADR-2515).
 _Avoid_: Unsigned database role flags, unsealed delegation tables
 
 ### DIA Reference Model v3.2.0

@@ -11,6 +11,7 @@ using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Options;
 
 namespace Cadence.Testing.Security;
 
@@ -26,6 +27,9 @@ public static class TestSecurityContext
 
     /// <summary>Test-only execution demographics key (32 zero bytes); a valid AES-256 key for startup validation.</summary>
     public const string DemographicsKeyBase64 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="; // pragma: allowlist secret
+
+    /// <summary>Test-only SCE lock-token signing key (base64 of 32 ASCII bytes) for the interop host (#5382).</summary>
+    public const string SceSigningKeyBase64 = "Y2FkZW5jZS10ZXN0LXNjZS1zaWduaW5nLWtleS0wMDE="; // pragma: allowlist secret
 
     /// <summary>
     /// The tenant code test identities carry, as a sign-in token names one. There is no fallback tenant (#5038), so a
@@ -52,7 +56,8 @@ public static class TestSecurityContext
 
     /// <summary>
     /// A fresh e-signature step-up token for <paramref name="userId"/>, bound to <paramref name="action"/> and
-    /// <paramref name="semanticAction"/>, as the gateway issues after re-authentication.
+    /// <paramref name="semanticAction"/> (and to <paramref name="batchId"/> when one is given), as the gateway issues
+    /// after re-authentication.
     /// </summary>
     public static string CreateSigToken(
         string userId,
@@ -60,11 +65,19 @@ public static class TestSecurityContext
         string semanticAction,
         IReadOnlyList<string>? roles = null,
         DateTimeOffset? issuedAt = null,
-        string secret = GatewaySecret) =>
+        string secret = GatewaySecret,
+        string? batchId = null) =>
         SigTokenIssuer.Issue(
-            new SigTokenGrant(userId, userId, roles ?? [], action, semanticAction),
+            new SigTokenGrant(userId, userId, roles ?? [], action, semanticAction, batchId),
             issuedAt ?? SystemClock.Instance.UtcNow,
             GatewayIdentity.EncodeSecret(secret));
+
+    /// <summary>
+    /// Gateway authentication options holding <paramref name="secret"/>, as the host binds them, for application
+    /// services that key signature manifests with the gateway secret.
+    /// </summary>
+    public static IOptionsMonitor<GatewayAuthenticationOptions> GatewayOptions(string? secret = GatewaySecret) =>
+        new FixedOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = secret });
 
     /// <summary>An authenticated principal carrying <c>sub</c> and role claims, as the gateway scheme emits.</summary>
     public static ClaimsPrincipal CreatePrincipal(string userId, params string[] roles)
@@ -106,6 +119,16 @@ public static class TestSecurityContext
     }
 }
 
+/// <summary>An options monitor that returns one fixed value for every name.</summary>
+internal sealed class FixedOptionsMonitor<T>(T value) : IOptionsMonitor<T>
+{
+    public T CurrentValue => value;
+
+    public T Get(string? name) => value;
+
+    public IDisposable? OnChange(Action<T, string?> listener) => null;
+}
+
 /// <summary>
 /// <see cref="WebApplicationFactory{TEntryPoint}"/> helpers for hosts that run gateway-signature authentication.
 /// </summary>
@@ -128,4 +151,8 @@ public static class SignedClientExtensions
     /// <summary>Supplies the test demographics encryption key so the execution host's startup validation passes.</summary>
     public static IWebHostBuilder UseTestDemographicsKey(this IWebHostBuilder builder) =>
         builder.UseSetting("DemographicsEncryption:KeyBase64", TestSecurityContext.DemographicsKeyBase64);
+
+    /// <summary>Supplies the test SCE signing key (<c>CADENCE_SCE_SIGNING_KEY</c>) so the interop host's startup validation passes.</summary>
+    public static IWebHostBuilder UseTestSceSigningKey(this IWebHostBuilder builder) =>
+        builder.UseSetting("CADENCE_SCE_SIGNING_KEY", TestSecurityContext.SceSigningKeyBase64);
 }

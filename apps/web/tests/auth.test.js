@@ -324,7 +324,10 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
   describe("Stores call the API instead of fabricating data", () => {
     it("submits batch signatures to the API and stores the server response", async () => {
       const response = { signature_id: "sig-1", signed_forms_count: 2 };
-      const post = vi.spyOn(apiClient, "post").mockResolvedValue(response);
+      const post = vi
+        .spyOn(apiClient, "post")
+        .mockResolvedValueOnce({ sig_token: "step-up-token" })
+        .mockResolvedValueOnce(response);
       const signatureStore = useSignatureStore();
 
       const res = await signatureStore.submitBatchSignature({
@@ -335,10 +338,25 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         meaning: "APPROVED",
       });
 
-      expect(post).toHaveBeenCalledWith(
-        "/api/v1/execution/signatures/batch-sign-off",
-        expect.objectContaining({ target_ids: ["FORM-01", "FORM-02"] }),
-        { changeReason: "APPROVED" }
+      // The password only buys a step-up token bound to these forms (ADR-2515).
+      expect(post).toHaveBeenNthCalledWith(
+        1,
+        "/api/v1/auth/signature-verification",
+        expect.objectContaining({
+          password: "my-password", // pragma: allowlist secret
+          action: "/api/v1/execution/batch-sign-off",
+          semantic_action: "execution.form.approve",
+          batch_id: expect.stringMatching(/^[0-9a-f]{64}$/),
+        })
+      );
+      expect(post).toHaveBeenNthCalledWith(
+        2,
+        "/api/v1/execution/batch-sign-off",
+        expect.not.objectContaining({ password: expect.anything() }),
+        {
+          changeReason: "APPROVED",
+          headers: { "X-Sig-Token": "step-up-token" },
+        }
       );
       expect(res).toEqual(response);
       expect(window.localStorage.getItem("lastSignatureResult")).toBeNull();

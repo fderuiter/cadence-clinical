@@ -70,7 +70,7 @@ public class FieldProtectionHostWiringTests
     public void InteropHost_WithKey_ResolvesDeviceTokenHasher()
     {
         using var interop = new WebApplicationFactory<Cadence.Apps.Interop.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys());
+            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestSceSigningKey());
 
         var hasher = interop.Services.GetRequiredService<DeviceTokenHasher>();
 
@@ -93,7 +93,7 @@ public class FieldProtectionHostWiringTests
         using var econsent = new WebApplicationFactory<Cadence.Apps.Econsent.Program>()
             .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys());
         using var interop = new WebApplicationFactory<Cadence.Apps.Interop.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys());
+            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestSceSigningKey());
 
         AssertRejectsMissingKey<FieldEncryptionOptions>(payments.Services, new FieldEncryptionOptions(), new FieldEncryptionOptions { KeyBase64 = " " });
         AssertRejectsMissingKey<FieldEncryptionOptions>(econsent.Services, new FieldEncryptionOptions(), new FieldEncryptionOptions { KeyBase64 = " " });

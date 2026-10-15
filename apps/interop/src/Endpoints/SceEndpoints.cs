@@ -11,7 +11,11 @@ using System.Threading.Tasks;
 using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -101,8 +105,7 @@ public record IssueLockTokenRequestDto(
     [property: JsonPropertyName("milestone")] string Milestone,
     [property: JsonPropertyName("issued_to")] string IssuedTo,
     [property: JsonPropertyName("reason")] string Reason,
-    [property: JsonPropertyName("expires_in_hours")] double ExpiresInHours = 24.0,
-    [property: JsonPropertyName("authorized_roles")] List<string>? AuthorizedRoles = null
+    [property: JsonPropertyName("expires_in_hours")] double ExpiresInHours = 24.0
 );
 
 public record DatabaseLockAuthTokenDto(
@@ -219,8 +222,28 @@ public record VerifyManifestResponseDto(
 
 #endregion
 
+/// <summary>
+/// The statistical computing environment. Every route needs an <c>sce_*</c> permission from the permission matrix,
+/// and identity and roles come only from the verified gateway principal (#5382). An unblinded run needs
+/// <c>sce_run:execute_unblinded</c> and a database-lock token issued to the caller and signed with
+/// <c>CADENCE_SCE_SIGNING_KEY</c>; unblinded runs are visible only with <c>sce_run:read_unblinded</c>.
+/// @req:PRD-CDR-006
+/// </summary>
 public static class SceEndpoints
 {
+    /// <summary>Permission to run an unblinded analysis with a lock token.</summary>
+    public const string ExecuteUnblindedPermission = "sce_run:execute_unblinded";
+
+    /// <summary>Permission to see unblinded runs and their artifacts.</summary>
+    public const string ReadUnblindedPermission = "sce_run:read_unblinded";
+
+    /// <summary>The roles a lock token authorizes: exactly those the matrix lets run unblinded analyses.</summary>
+    public static IReadOnlyList<string> UnblindedExecutorRoles { get; } = PermissionMatrix.ROLE_PERMISSIONS
+        .Where(r => r.Value.TryGetValue("sce_run", out var actions) && actions.Contains("execute_unblinded"))
+        .Select(r => r.Key)
+        .Order(StringComparer.Ordinal)
+        .ToList();
+
     public static IEndpointRouteBuilder MapSceEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/v1/interop/sce");
@@ -236,12 +259,12 @@ public static class SceEndpoints
 
             var dtos = programs.Select(ToProgramDto).ToList();
             return Results.Ok(new ProgramListResponseDto(study_id, dtos.Count, dtos));
-        });
+        }).RequirePermission("sce_program:read");
 
         // 2. Create / register statistical program
         group.MapPost("/programs", async (CreateProgramRequestDto req, InteropDbContext db, IClock clock, HttpContext httpContext) =>
         {
-            string userId = GetUserId(httpContext);
+            string userId = Caller(httpContext).UserId;
             string codeHash = ComputeSha256(req.SourceCode ?? "");
             string lockDigest = ComputeSha256(req.LockfileContent ?? "");
 
@@ -269,7 +292,7 @@ public static class SceEndpoints
 
             var dto = ToProgramDto(entity);
             return Results.Created($"/api/v1/interop/sce/programs/{entity.Id}", new ProgramResponseDto(dto));
-        });
+        }).RequirePermission("sce_program:create");
 
         // 3. Get statistical program by ID
         group.MapGet("/programs/{program_id}", async (string program_id, InteropDbContext db) =>
@@ -284,7 +307,7 @@ public static class SceEndpoints
             }
 
             return Results.Ok(new ProgramResponseDto(ToProgramDto(program)));
-        });
+        }).RequirePermission("sce_program:read");
 
         // 4. Validate package lockfile
         group.MapPost("/validate-lockfile", (ValidateLockfileRequestDto req, ILockfileValidatorService validator) =>
@@ -304,34 +327,47 @@ public static class SceEndpoints
             );
 
             return Results.Ok(new ValidateLockfileResponseDto(schemaResult));
-        });
+        }).RequirePermission("sce_program:read");
 
         // 5. List active database lock tokens
-        group.MapGet("/lock-tokens", async (string study_id, InteropDbContext db, IClock clock) =>
+        group.MapGet("/lock-tokens", async (string study_id, InteropDbContext db, IClock clock, HttpContext httpContext) =>
         {
+            var caller = Caller(httpContext);
             var now = clock.UtcNow;
-            var tokens = await db.DatabaseLockAuthTokens
+            var query = db.DatabaseLockAuthTokens
                 .AsNoTracking()
-                .Where(t => t.StudyId == study_id && !t.IsRevoked && t.ExpiresAt > now)
-                .OrderByDescending(t => t.IssuedAt)
-                .ToListAsync();
+                .Where(t => t.StudyId == study_id && !t.IsRevoked && t.ExpiresAt > now);
+            // Only an issuer sees every token; a recipient sees the tokens issued to them.
+            if (!PermissionMatrix.HasPermission(caller, "sce_lock_token:issue"))
+            {
+                query = query.Where(t => t.IssuedTo == caller.UserId);
+            }
+
+            var tokens = await query.OrderByDescending(t => t.IssuedAt).ToListAsync();
 
             var dtos = tokens.Select(ToLockTokenDto).ToList();
             return Results.Ok(new LockTokenListResponseDto(study_id, dtos.Count, dtos));
-        });
+        }).RequirePermission("sce_lock_token:read");
 
         // 6. Issue database lock token
-        group.MapPost("/lock-tokens", async (IssueLockTokenRequestDto req, InteropDbContext db, IClock clock, HttpContext httpContext) =>
+        group.MapPost("/lock-tokens", async (IssueLockTokenRequestDto req, InteropDbContext db, IClock clock, SceTokenSigner signer, HttpContext httpContext) =>
         {
-            string userId = GetUserId(httpContext);
-            string userRole = GetUserRole(httpContext);
-            var now = clock.UtcNow;
-            var expiresAt = now.AddHours(req.ExpiresInHours <= 0 ? 24 : req.ExpiresInHours);
-            string tokenId = "DBLOCK-AUTH-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
-            var roles = req.AuthorizedRoles ?? new List<string> { userRole, "UNBLINDED_STATISTICIAN", "IDMC_MEMBER" };
+            var caller = Caller(httpContext);
+            string userId = caller.UserId;
+            string userRole = RolesOf(caller);
+            if (string.IsNullOrWhiteSpace(req.StudyId) || string.IsNullOrWhiteSpace(req.LockId) || string.IsNullOrWhiteSpace(req.IssuedTo))
+            {
+                return Results.BadRequest(new { error = "study_id, lock_id and issued_to are required." });
+            }
 
-            string claimsPayload = $"{tokenId}|{req.StudyId}|{req.LockId}|{req.IssuedTo}|{expiresAt:O}";
-            string sigHash = ComputeHmac(claimsPayload, "CADENCE_SCE_SIGNING_KEY");
+            var now = clock.UtcNow;
+            // Whole seconds, so the signed expiry survives the database's microsecond precision unchanged.
+            var expiresAt = DateTimeOffset.FromUnixTimeSeconds(now.AddHours(req.ExpiresInHours <= 0 ? 24 : req.ExpiresInHours).ToUnixTimeSeconds());
+            string tokenId = "DBLOCK-AUTH-" + Guid.NewGuid().ToString("N")[..12].ToUpperInvariant();
+            // The authorized roles are fixed by the permission matrix, never chosen by the request.
+            var roles = UnblindedExecutorRoles.ToList();
+
+            string sigHash = signer.Sign(LockTokenPayload(tokenId, req.StudyId, req.LockId, req.IssuedTo, expiresAt));
 
             var tokenEntity = new DatabaseLockAuthToken
             {
@@ -370,13 +406,14 @@ public static class SceEndpoints
             await db.SaveChangesAsync();
 
             return Results.Created($"/api/v1/interop/sce/lock-tokens", new LockTokenResponseDto(ToLockTokenDto(tokenEntity)));
-        });
+        }).RequirePermission("sce_lock_token:issue");
 
         // 7. Revoke database lock token
         group.MapPost("/lock-tokens/{token_id}/revoke", async (string token_id, string? reason, InteropDbContext db, IClock clock, HttpContext httpContext) =>
         {
-            string userId = GetUserId(httpContext);
-            string userRole = GetUserRole(httpContext);
+            var caller = Caller(httpContext);
+            string userId = caller.UserId;
+            string userRole = RolesOf(caller);
             string revocationReason = string.IsNullOrWhiteSpace(reason) ? "Revocation" : reason;
 
             var token = await db.DatabaseLockAuthTokens
@@ -416,13 +453,14 @@ public static class SceEndpoints
                 ["revoked_at"] = now.ToString("O"),
                 ["reason"] = revocationReason
             });
-        });
+        }).RequirePermission("sce_lock_token:revoke");
 
         // 8. Execute statistical program in sandbox
-        group.MapPost("/execute", async (ExecuteProgramRequestDto req, InteropDbContext db, ISceDockerEngineDriver driver, ILockfileValidatorService lockfileValidator, IClock clock, HttpContext httpContext) =>
+        group.MapPost("/execute", async (ExecuteProgramRequestDto req, InteropDbContext db, ISceDockerEngineDriver driver, ILockfileValidatorService lockfileValidator, IClock clock, SceTokenSigner signer, HttpContext httpContext) =>
         {
-            string userId = GetUserId(httpContext);
-            string userRole = GetUserRole(httpContext);
+            var caller = Caller(httpContext);
+            string userId = caller.UserId;
+            string userRole = RolesOf(caller);
             var now = clock.UtcNow;
 
             var program = await db.StatisticalPrograms
@@ -438,6 +476,11 @@ public static class SceEndpoints
             DatabaseLockAuthToken? lockToken = null;
             if (req.IsUnblinded)
             {
+                if (!PermissionMatrix.HasPermission(caller, ExecuteUnblindedPermission))
+                {
+                    return Results.Json(new { error = "UNBLINDED_ACCESS_DENIED", details = "The caller may not run unblinded analyses." }, statusCode: 403);
+                }
+
                 if (string.IsNullOrWhiteSpace(req.DatabaseLockTokenId))
                 {
                     return Results.Json(new { error = "UNBLINDED_ACCESS_DENIED", details = "Unblinded analysis requires an active database lock authorization token ID." }, statusCode: 403);
@@ -450,6 +493,19 @@ public static class SceEndpoints
                 if (lockToken == null || lockToken.IsRevoked || lockToken.ExpiresAt <= now)
                 {
                     return Results.Json(new { error = "UNBLINDED_ACCESS_DENIED", details = "Provided database lock token is invalid, expired, or revoked." }, statusCode: 403);
+                }
+
+                // The token must carry this key's signature over its claims, be issued to this caller, and authorize
+                // one of the caller's verified roles.
+                var authorizedRoles = JsonSerializer.Deserialize<List<string>>(lockToken.AuthorizedRolesJson) ?? [];
+                bool genuine = signer.Verify(
+                    LockTokenPayload(lockToken.TokenId, lockToken.StudyId, lockToken.LockId, lockToken.IssuedTo, lockToken.ExpiresAt),
+                    lockToken.SignatureHash);
+                if (!genuine
+                    || !string.Equals(lockToken.IssuedTo, userId, StringComparison.Ordinal)
+                    || !caller.Roles.Intersect(authorizedRoles, StringComparer.OrdinalIgnoreCase).Any())
+                {
+                    return Results.Json(new { error = "UNBLINDED_ACCESS_DENIED", details = "The database lock token was not issued to this caller or is not genuine." }, statusCode: 403);
                 }
             }
 
@@ -503,7 +559,7 @@ public static class SceEndpoints
 
             if (isSuccess)
             {
-                string hmacSig = ComputeHmac($"{userId}|{runId}|{execEnd:O}", "CADENCE_SCE_SIGNING_KEY");
+                string hmacSig = signer.Sign($"{userId}|{runId}|{execEnd:O}");
                 sigBlockDto = new ElectronicSignatureBlockDto(
                     SignerId: userId,
                     SignerRole: userRole,
@@ -614,14 +670,18 @@ public static class SceEndpoints
             await db.SaveChangesAsync();
 
             return Results.Ok(new ExecuteProgramResponseDto(manifestDto));
-        });
+        }).RequirePermission("sce_run:execute");
 
         // 9. List historical execution runs for a study
-        group.MapGet("/runs", async (string study_id, string? program_id, string? snapshot_id, InteropDbContext db) =>
+        group.MapGet("/runs", async (string study_id, string? program_id, string? snapshot_id, InteropDbContext db, HttpContext httpContext) =>
         {
             var query = db.ExecutionRunRecords
                 .AsNoTracking()
                 .Where(r => r.StudyId == study_id);
+            if (!PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission))
+            {
+                query = query.Where(r => !r.IsUnblindedRun);
+            }
 
             if (!string.IsNullOrWhiteSpace(program_id))
             {
@@ -636,31 +696,33 @@ public static class SceEndpoints
             var manifests = runs.Select(ToManifestDto).ToList();
 
             return Results.Ok(new ExecutionRunListResponseDto(study_id, manifests.Count, manifests));
-        });
+        }).RequirePermission("sce_run:read");
 
         // 10. Get execution run by ID
-        group.MapGet("/runs/{run_id}", async (string run_id, InteropDbContext db) =>
+        group.MapGet("/runs/{run_id}", async (string run_id, InteropDbContext db, HttpContext httpContext) =>
         {
             var run = await db.ExecutionRunRecords
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.RunId == run_id || r.Id == run_id);
 
-            if (run == null)
+            // An unblinded run does not exist for a caller who may not read it.
+            if (run == null || (run.IsUnblindedRun && !PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission)))
             {
                 return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
             }
 
             return Results.Ok(new ExecutionRunDetailResponseDto(ToManifestDto(run)));
-        });
+        }).RequirePermission("sce_run:read");
 
         // 11. Verify execution run manifest seal
-        group.MapPost("/runs/{run_id}/verify", async (string run_id, InteropDbContext db, IClock clock) =>
+        group.MapPost("/runs/{run_id}/verify", async (string run_id, InteropDbContext db, IClock clock, HttpContext httpContext) =>
         {
             var run = await db.ExecutionRunRecords
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.RunId == run_id || r.Id == run_id);
 
-            if (run == null)
+            // An unblinded run does not exist for a caller who may not read it.
+            if (run == null || (run.IsUnblindedRun && !PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission)))
             {
                 return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
             }
@@ -696,16 +758,17 @@ public static class SceEndpoints
             };
 
             return Results.Ok(new VerifyManifestResponseDto(verificationResult));
-        });
+        }).RequirePermission("sce_run:read");
 
         // 12. Get generated artifact content & preview
-        group.MapGet("/runs/{run_id}/artifacts/{artifact_id}", async (string run_id, string artifact_id, InteropDbContext db) =>
+        group.MapGet("/runs/{run_id}/artifacts/{artifact_id}", async (string run_id, string artifact_id, InteropDbContext db, HttpContext httpContext) =>
         {
             var run = await db.ExecutionRunRecords
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.RunId == run_id || r.Id == run_id);
 
-            if (run == null)
+            // An unblinded run does not exist for a caller who may not read it.
+            if (run == null || (run.IsUnblindedRun && !PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission)))
             {
                 return Results.NotFound(new { error = $"Execution run '{run_id}' not found." });
             }
@@ -730,7 +793,7 @@ public static class SceEndpoints
                 ["sha256_digest"] = artifact.Sha256Digest,
                 ["content_preview"] = artifact.ContentPreview
             });
-        });
+        }).RequirePermission("sce_run:read");
 
         return routes;
     }
@@ -817,32 +880,21 @@ public static class SceEndpoints
         );
     }
 
-    private static string GetUserId(HttpContext context)
-    {
-        return context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? context.User.FindFirst("sub")?.Value
-            ?? "user:biostatistician";
-    }
+    /// <summary>The verified gateway principal. Every route requires a permission, so one is always present.</summary>
+    private static Principal Caller(HttpContext context) =>
+        context.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal
+        ?? throw new InvalidOperationException("SCE routes require a verified gateway principal.");
 
-    private static string GetUserRole(HttpContext context)
-    {
-        return context.User.FindFirst(ClaimTypes.Role)?.Value
-            ?? "UNBLINDED_STATISTICIAN";
-    }
+    private static string RolesOf(Principal principal) => string.Join(",", principal.Roles);
+
+    /// <summary>The signed claims of a lock token. The expiry is in whole Unix seconds.</summary>
+    private static string LockTokenPayload(string tokenId, string studyId, string lockId, string issuedTo, DateTimeOffset expiresAt) =>
+        $"{tokenId}|{studyId}|{lockId}|{issuedTo}|{expiresAt.ToUnixTimeSeconds()}";
 
     private static string ComputeSha256(string raw)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(raw);
         byte[] hash = SHA256.HashData(bytes);
-        return Convert.ToHexStringLower(hash);
-    }
-
-    private static string ComputeHmac(string raw, string key)
-    {
-        byte[] keyBytes = Encoding.UTF8.GetBytes(key);
-        byte[] rawBytes = Encoding.UTF8.GetBytes(raw);
-        using var hmac = new HMACSHA256(keyBytes);
-        byte[] hash = hmac.ComputeHash(rawBytes);
         return Convert.ToHexStringLower(hash);
     }
 

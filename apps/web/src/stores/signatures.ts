@@ -1,6 +1,11 @@
 import { defineStore } from "pinia";
 import { apiClient } from "../api/apiClient";
 import { isDemoBuild } from "../utils/demoMode.js";
+import {
+  BATCH_SIGN_OFF_ACTION,
+  BATCH_SIGN_OFF_SEMANTIC_ACTION,
+  executionBatchBindingId,
+} from "../utils/signatureBinding";
 import { useAuthStore } from "./auth.js";
 
 export interface BatchSignPayload {
@@ -97,23 +102,41 @@ export const useSignatureStore = defineStore("signatures", {
           return mockResponse;
         }
 
-        const printedName = payload.printedName || "Principal Investigator";
-        const requestPayload = {
-          study_id: payload.studyId,
-          subject_id: payload.subjectId,
-          target_type: payload.targetType || "FORM",
-          target_ids: payload.formIds,
-          target_form_ids: payload.formIds,
-          signing_reason: payload.meaning,
-          password: payload.password,
-          printed_name: printedName,
-        };
+        // The password only obtains a step-up token bound to these targets; it never reaches the service (ADR-2515).
+        const targetType = payload.targetType || "FORM";
+        const batchId = await executionBatchBindingId(
+          payload.studyId,
+          targetType,
+          payload.formIds,
+          payload.meaning
+        );
+        const verification = (await apiClient.post(
+          "/api/v1/auth/signature-verification",
+          {
+            username: authStore.identity?.username || "",
+            password: payload.password,
+            action: BATCH_SIGN_OFF_ACTION,
+            semantic_action: BATCH_SIGN_OFF_SEMANTIC_ACTION,
+            batch_id: batchId,
+          }
+        )) as { sig_token?: string } | null;
+        if (!verification?.sig_token) {
+          throw Object.assign(new Error("REAUTHENTICATION_REQUIRED"), {
+            status: 401,
+          });
+        }
 
         const response = (await apiClient.post(
-          "/api/v1/execution/signatures/batch-sign-off",
-          requestPayload,
+          BATCH_SIGN_OFF_ACTION,
+          {
+            study_id: payload.studyId,
+            target_type: targetType,
+            target_ids: payload.formIds,
+            signing_reason: payload.meaning,
+          },
           {
             changeReason: payload.meaning,
+            headers: { "X-Sig-Token": verification.sig_token },
           }
         )) as BatchSignResponse;
 

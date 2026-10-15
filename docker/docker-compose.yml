@@ -263,6 +263,8 @@ services:
       <<: *db-env
       # Local-only HMAC key for device-token lookup hashes (#4770); generate a real one with `openssl rand -base64 32`.
       FIELD_LOOKUP_HASH_KEY: bG9jYWwtZGV2LW9ubHktbG9va3VwLWhhc2gta2V5MDA= # pragma: allowlist secret
+      # Local-only HMAC key for SCE database-lock tokens and run signatures (#5382); generate a real one the same way.
+      CADENCE_SCE_SIGNING_KEY: bG9jYWwtZGV2LW9ubHktc2NlLXNpZ25pbmcta2V5LTE= # pragma: allowlist secret
     depends_on: *db-depends
 
   quality:

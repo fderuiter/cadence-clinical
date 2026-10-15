@@ -4,10 +4,12 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
 
@@ -79,15 +81,15 @@ public class SignatureTokenTests
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("SRS-SYS-005")]
-    public void Verify_AcceptsABoundTokenOnce()
+    public async Task Verify_AcceptsABoundTokenOnce()
     {
         var verifier = new SigTokenVerifier();
         string token = Issue("pi-01", ["Site Investigator"]);
 
-        verifier.VerifyAndConsumeSigToken(token, "pi-01", Binding, Secret).Subject.Should().Be("pi-01");
-        Action replay = () => verifier.VerifyAndConsumeSigToken(token, "pi-01", Binding, Secret);
+        (await verifier.VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken)).Subject.Should().Be("pi-01");
+        Func<Task> replay = () => verifier.VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken);
 
-        replay.Should().Throw<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
+        await replay.Should().ThrowAsync<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
     }
 
     public static TheoryData<string, SigTokenBinding> Mismatches => new()
@@ -107,15 +109,15 @@ public class SignatureTokenTests
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("SRS-SYS-005")]
     [MemberData(nameof(Mismatches))]
-    public void Verify_WithAnotherSignerActionOrBatch_IsRejectedWithoutConsumingTheToken(string expectedUser, SigTokenBinding binding)
+    public async Task Verify_WithAnotherSignerActionOrBatch_IsRejectedWithoutConsumingTheToken(string expectedUser, SigTokenBinding binding)
     {
         var verifier = new SigTokenVerifier();
         string token = Issue("pi-01", ["Site Investigator"]);
 
-        Action misuse = () => verifier.VerifyAndConsumeSigToken(token, expectedUser, binding, Secret);
+        Func<Task> misuse = () => verifier.VerifyAndConsumeAsync(token, expectedUser, binding, Secret, TestContext.Current.CancellationToken);
 
-        misuse.Should().Throw<UnauthorizedAccessException>();
-        verifier.VerifyAndConsumeSigToken(token, "pi-01", Binding, Secret).Should().NotBeNull();
+        await misuse.Should().ThrowAsync<UnauthorizedAccessException>();
+        (await verifier.VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken)).Should().NotBeNull();
     }
 
     /// <summary>
@@ -125,13 +127,13 @@ public class SignatureTokenTests
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("SRS-SYS-005")]
-    public void Verify_ExpiredToken_IsRejected()
+    public async Task Verify_ExpiredToken_IsRejected()
     {
         string token = Issue("pi-01", ["Site Investigator"], SystemClock.Instance.UtcNow.AddSeconds(-70));
 
-        Action verify = () => new SigTokenVerifier().VerifyAndConsumeSigToken(token, "pi-01", Binding, Secret);
+        Func<Task> verify = () => new SigTokenVerifier().VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken);
 
-        verify.Should().Throw<UnauthorizedAccessException>();
+        await verify.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     /// <summary>
@@ -141,14 +143,14 @@ public class SignatureTokenTests
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("SRS-SYS-005")]
-    public void Verify_TokenSignedWithAnotherSecret_IsRejected()
+    public async Task Verify_TokenSignedWithAnotherSecret_IsRejected()
     {
         string token = Issue("pi-01", ["Site Investigator"]);
 
-        Action verify = () => new SigTokenVerifier().VerifyAndConsumeSigToken(
-            token, "pi-01", Binding, Encoding.UTF8.GetBytes("a-different-secret-that-is-long-enough-0123"));
+        Func<Task> verify = () => new SigTokenVerifier().VerifyAndConsumeAsync(
+            token, "pi-01", Binding, Encoding.UTF8.GetBytes("a-different-secret-that-is-long-enough-0123"), TestContext.Current.CancellationToken);
 
-        verify.Should().Throw<UnauthorizedAccessException>();
+        await verify.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     /// <summary>
@@ -159,18 +161,96 @@ public class SignatureTokenTests
     [Fact]
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("SRS-SYS-005")]
-    public void Verify_TokensOutsideTheV3Contract_AreRejected()
+    public async Task Verify_TokensOutsideTheV3Contract_AreRejected()
     {
         var now = SystemClock.Instance.UtcNow.UtcDateTime;
         var verifier = new SigTokenVerifier();
 
-        verifier.Invoking(v => v.VerifyAndConsumeSigToken(Build(now, now.AddSeconds(60), version: null), "pi-01", Binding, Secret))
-            .Should().Throw<UnauthorizedAccessException>("a token without sig_ver predates v3");
-        verifier.Invoking(v => v.VerifyAndConsumeSigToken(Build(now, now.AddMinutes(10)), "pi-01", Binding, Secret))
-            .Should().Throw<UnauthorizedAccessException>("the lifetime is capped at 60 seconds");
-        verifier.Invoking(v => v.VerifyAndConsumeSigToken(Build(now, now.AddSeconds(60), role: "auditor"), "pi-01", Binding, Secret))
-            .Should().Throw<UnauthorizedAccessException>("auditors cannot sign");
-        verifier.VerifyAndConsumeSigToken(Build(now, now.AddSeconds(60)), "pi-01", Binding, Secret).Should().NotBeNull();
+        await verifier.Awaiting(v => v.VerifyAndConsumeAsync(Build(now, now.AddSeconds(60), version: null), "pi-01", Binding, Secret, TestContext.Current.CancellationToken))
+            .Should().ThrowAsync<UnauthorizedAccessException>("a token without sig_ver predates v3");
+        await verifier.Awaiting(v => v.VerifyAndConsumeAsync(Build(now, now.AddMinutes(10)), "pi-01", Binding, Secret, TestContext.Current.CancellationToken))
+            .Should().ThrowAsync<UnauthorizedAccessException>("the lifetime is capped at 60 seconds");
+        await verifier.Awaiting(v => v.VerifyAndConsumeAsync(Build(now, now.AddSeconds(60), role: "auditor"), "pi-01", Binding, Secret, TestContext.Current.CancellationToken))
+            .Should().ThrowAsync<UnauthorizedAccessException>("auditors cannot sign");
+        (await verifier.VerifyAndConsumeAsync(Build(now, now.AddSeconds(60)), "pi-01", Binding, Secret, TestContext.Current.CancellationToken)).Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// The acceptance window, on the verifier's clock: from <c>iat - 5 s</c> until just before <c>exp + 5 s</c>.
+    /// A token issued slightly ahead of the verifier's clock is accepted; one further ahead, or past
+    /// <c>exp + 5 s</c>, is not.
+    /// @req:SRS-SYS-005
+    /// </summary>
+    [Theory]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    [InlineData(-5, true)]
+    [InlineData(-6, false)]
+    [InlineData(0, true)]
+    [InlineData(64, true)]
+    [InlineData(65, false)]
+    public async Task Verify_AcceptsATokenOnlyWithinItsWindow(int secondsAfterIssue, bool accepted)
+    {
+        var clock = new FakeClock();
+        var verifier = new SigTokenVerifier(clock);
+        string token = Issue("pi-01", ["Site Investigator"], clock.UtcNow.AddSeconds(-secondsAfterIssue));
+
+        Func<Task> verify = () => verifier.VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken);
+
+        if (accepted)
+        {
+            await verify.Should().NotThrowAsync();
+        }
+        else
+        {
+            await verify.Should().ThrowAsync<UnauthorizedAccessException>();
+        }
+    }
+
+    /// <summary>
+    /// A token used in the skew after its expiry cannot be used again in that skew. Before #5311 the replay cache
+    /// forgot a use at <c>exp</c> while the verifier still accepted the token until <c>exp + 5 s</c>, so a second
+    /// use in those five seconds succeeded.
+    /// @req:SRS-SYS-005
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task Verify_ReplayInTheSkewAfterExpiry_IsRejected()
+    {
+        var clock = new FakeClock();
+        var verifier = new SigTokenVerifier(clock);
+        string token = Issue("pi-01", ["Site Investigator"], clock.UtcNow);
+        clock.Advance(TimeSpan.FromSeconds(61));
+
+        await verifier.VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken);
+        clock.Advance(TimeSpan.FromSeconds(2));
+        Func<Task> replay = () => verifier.VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken);
+
+        await replay.Should().ThrowAsync<UnauthorizedAccessException>();
+    }
+
+    /// <summary>
+    /// Single use is as wide as the store: two verifiers sharing one store accept a token once between them, while a
+    /// verifier with its own process-local store (a second instance, or a restarted one) would accept it again. That
+    /// is why a multi-instance host registers a durable store (ADR-2515).
+    /// @req:SRS-SYS-005
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task Verify_SingleUseSpansExactlyTheSharedStore()
+    {
+        var clock = new FakeClock();
+        var shared = new ReplayCache(clock);
+        string token = Issue("pi-01", ["Site Investigator"], clock.UtcNow);
+
+        await new SigTokenVerifier(shared, clock).VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken);
+        Func<Task> sameStore = () => new SigTokenVerifier(shared, clock).VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken);
+        Func<Task> ownStore = () => new SigTokenVerifier(clock).VerifyAndConsumeAsync(token, "pi-01", Binding, Secret, TestContext.Current.CancellationToken);
+
+        await sameStore.Should().ThrowAsync<UnauthorizedAccessException>();
+        await ownStore.Should().NotThrowAsync("a process-local store knows nothing of another instance's uses");
     }
 
     private static string Issue(string subject, IReadOnlyList<string> roles, DateTimeOffset? issuedAt = null) =>

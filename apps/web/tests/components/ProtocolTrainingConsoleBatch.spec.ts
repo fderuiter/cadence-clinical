@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import ProtocolTrainingConsole from "../../src/components/clinical/ProtocolTrainingConsole.vue";
+import { soaClient } from "../../src/api/soaClient";
 import { trainingApi } from "../../src/api/training";
+import { delegationBatchBindingId } from "../../src/utils/signatureBinding";
 
 describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Features", () => {
   const mockAssignment = {
@@ -188,6 +190,9 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
     vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue(
       mockBulkSignResponse
     );
+    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
+      sig_token: "step-up-token",
+    });
 
     const wrapper = mount(ProtocolTrainingConsole);
     await vi.runOnlyPendingTimersAsync();
@@ -225,20 +230,29 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & Bulk Sign-Off Feature
       .find((btn) => btn.text().includes("Confirm & Execute Signature"));
     await executeBtn!.trigger("click");
 
-    expect(trainingApi.bulkSignOffDelegations).toHaveBeenCalledWith({
-      delegation_ids: ["del-01", "del-02"],
-      study_id: "CARDIO-2026",
-      site_id: "SITE-101",
-      signature_payload: {
-        signer_name: "Dr. Eleanor Vance",
-        signer_role: "Principal Investigator",
-        meaning:
-          "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2).",
-        password: "SecurePassword123!",
-        reason_for_change:
-          "21 CFR Part 11 Principal Investigator bulk delegation sign-off",
+    // The password only buys a step-up token bound to these ids; the signer is the signed-in user (ADR-2515).
+    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        password: "SecurePassword123!", // pragma: allowlist secret
+        action: "/api/v1/training/delegations/bulk-signoff",
+        semanticAction: "knowledge.delegation.sign_off",
+        batchId: await delegationBatchBindingId(["del-01", "del-02"]),
+      })
+    );
+    expect(trainingApi.bulkSignOffDelegations).toHaveBeenCalledWith(
+      {
+        delegation_ids: ["del-01", "del-02"],
+        study_id: "CARDIO-2026",
+        site_id: "SITE-101",
+        signature_payload: {
+          meaning:
+            "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2).",
+          reason_for_change:
+            "21 CFR Part 11 Principal Investigator bulk delegation sign-off",
+        },
       },
-    });
+      "step-up-token"
+    );
 
     await wrapper.vm.$nextTick();
     expect(wrapper.text()).toContain(

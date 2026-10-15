@@ -291,6 +291,8 @@ export const soaClient = {
     if (!semantic) {
       if (action.includes("capture-consent")) {
         semantic = "econsent.consent.capture";
+      } else if (action.includes("/api/v1/execution/batch-sign-off")) {
+        semantic = "execution.form.approve";
       } else if (action.includes("sign-off")) {
         semantic = "etmf.document.sign_off";
       } else if (action.includes("chair-adjudicate")) {

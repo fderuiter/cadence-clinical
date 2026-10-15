@@ -43,10 +43,12 @@ public interface IFormSubmissionApplicationService
 
     /// <summary>
     /// Executes a Principal Investigator batch electronic sign-off across multiple form, visit, or subject targets.
+    /// <paramref name="verifiedSigToken"/> is the step-up token the endpoint verified and consumed; it must name
+    /// <paramref name="signer"/> and be bound to <see cref="BatchSignOffRequest.BatchBindingId"/>, or nothing is signed.
     /// </summary>
     Task<Result<BatchSignOffResponse>> BatchSignOffAsync(
         BatchSignOffRequest request,
         AuthenticatedCaller? signer,
-        string? sigToken,
+        System.IdentityModel.Tokens.Jwt.JwtSecurityToken? verifiedSigToken,
         CancellationToken cancellationToken);
 }

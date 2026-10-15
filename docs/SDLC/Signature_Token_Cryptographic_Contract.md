@@ -55,8 +55,8 @@ The client then repeats the signature-gated request with the `X-Sig-Token` heade
 
 Signature-gated endpoints today:
 
-| Endpoint | `semantic_action` | `action` |
-| :------- | :---------------- | :------- |
+| Endpoint                                                                                  | `semantic_action`        | `action`                               |
+| :---------------------------------------------------------------------------------------- | :----------------------- | :------------------------------------- |
 | `POST /api/v1/execution/forms/{id}/approve` (and the legacy `/api/v1/forms/{id}/approve`) | `execution.form.approve` | `/api/v1/execution/forms/{id}/approve` |
 
 ---
@@ -65,7 +65,7 @@ Signature-gated endpoints today:
 
 Downstream microservices (via `GatewayAuthMiddleware` or specific verification components) MUST enforce the following validation pipeline upon receiving a signature-gated mutation.
 
-This verification is centralized in `SigTokenVerifier.VerifyAndConsumeSigToken(token, userId, SigTokenBinding, secret)` in `packages/security` (`Cadence.Security.Authentication`). Endpoints apply it with `RequireElectronicSignature(semanticAction, resolveAction)`, which runs before the handler and answers `401` on any failure, so no write happens. Services add any domain-specific rules on top (such as local action gating in eConsent):
+This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(token, userId, SigTokenBinding, secret)` in `packages/security` (`Cadence.Security.Authentication`). Endpoints apply it with `RequireElectronicSignature(semanticAction, resolveAction)`, or `RequireElectronicSignature(resolveBinding)` when the binding (for example a `batch_id`) comes from the request body. The filter runs before the handler and answers `401` on any failure, so no write happens; the handler reads the verified token with `HttpContext.VerifiedSigToken()`. Services add any domain-specific rules on top (such as local action gating in eConsent):
 
 1. **Header Presence:** Extract `X-Sig-Token` from the HTTP request headers. If absent, reject with `401 Unauthorized` and payload:
    ```json
@@ -76,13 +76,14 @@ This verification is centralized in `SigTokenVerifier.VerifyAndConsumeSigToken(t
    }
    ```
 2. **Signature Verification:** Decode and verify the HS256 signature using the shared `GATEWAY_SECRET`. Any JWTError (such as altered token, invalid signature, or wrong secret) must trigger a `401 Unauthorized` rejection.
-3. **Temporal Validity:** Verify that `exp > time.time()`. Tokens older than 60 seconds from issuance must be rejected.
+3. **Temporal Validity (acceptance window):** on the injected `IClock`, accept only while `iat - 5s <= now < exp + 5s` (and `now >= nbf - 5s`), and only if `exp - iat <= 60s`. The 5 seconds (`SigTokenVerifier.ClockSkew`) absorbs clock drift between the issuing gateway and the verifying service, so a token is usable for at most 70 seconds of verifier time (ADR-2515).
 4. **Signer Identity Binding:** Extract `sub` from the signature token. Verify that it matches the authenticated user ID (`X-User-Id` header injected by the Gateway). Mismatches must be rejected.
 5. **Action/Endpoint Binding:** Retrieve `action` and `semantic_action` from the token. Verify that the incoming request matches the semantic action + concrete target resource/path. This prevents a token generated for form "A" approval from being maliciously re-routed to approve form "B" or authorize unblinding.
 6. **Single-Use Verification (Replay Prevention):**
    - Extract the unique `jti` claim.
-   - Query the distributed or in-memory `ReplayPreventionCache`. If `jti` is found, reject the request as a replay attack.
-   - If `jti` is not found, record the `jti` alongside its `exp` timestamp in the cache to automatically prune it post-expiration.
+   - Only after every other check passes, record it with `ISigTokenUseStore.TryRecordFirstUseAsync(jti, exp + 5s)`. A second use, including a concurrent one, is rejected.
+   - The record is kept until `exp + 5s`, the end of the acceptance window, never only until `exp`; otherwise the token could be replayed in the skew after expiry.
+   - Single use reaches exactly as far as the store is shared. Execution uses `PostgresSigTokenUseStore` (`execution.consumed_signature_tokens`, primary key on the token id), which holds across instances and restarts. Other services use the process-local `ReplayCache` until they fold into the single host (#5315): within one process only (ADR-2515).
 
 ---
 
@@ -131,7 +132,11 @@ To prevent target swapping or interception attacks, the single-use `X-Sig-Token`
 
 ### 6.4 Single-Use Replay Prevention (`jti`)
 
-The `jti` UUID claim is verified against active in-memory single-use caches at both the Gateway layer and the downstream Execution service level. Once verified, the token is recorded in the replay cache and any replay attempts are rejected.
+The Execution service records the `jti` in `execution.consumed_signature_tokens` (section 3, step 6), so a replay is rejected on any Execution instance and after a restart. Both batch routes, `/api/v1/execution/batch-sign-off` and its `/api/v1/execution/signatures/batch-sign-off` alias, are bound to the action `/api/v1/execution/batch-sign-off` and the semantic action `execution.form.approve`, and a request without a token is rejected before any write. The service also checks that the token's `sub` is the caller and its `batch_id` is the request's, and keys every manifest HMAC with `GATEWAY_SECRET`; with no secret it refuses to sign rather than writing a placeholder.
+
+### 6.4.1 Delegation-log sign-off
+
+`/api/v1/training/delegations/bulk-signoff` (knowledge) follows the same contract with the semantic action `knowledge.delegation.sign_off` and `batch_id` = lower-case hex SHA-256 of the trimmed delegation ids, sorted ordinally and joined with `,`. The route also requires the `delegation_log:sign` permission (principal investigator, authorized ER physician, lead investigator). The signer is the verified caller, an unknown id fails the request with `404`, and the seal is an HMAC keyed with `GATEWAY_SECRET`.
 
 ### 6.5 Individual Record Manifestation & Version Binding
 

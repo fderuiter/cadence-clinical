@@ -924,7 +924,13 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { soaClient } from "../../api/soaClient";
 import { trainingApi } from "../../api/training";
+import {
+  DELEGATION_SIGN_OFF_ACTION,
+  DELEGATION_SIGN_OFF_SEMANTIC_ACTION,
+  delegationBatchBindingId,
+} from "../../utils/signatureBinding";
 import { useAuthStore } from "../../stores/auth";
 
 const authStore = useAuthStore();
@@ -1258,19 +1264,28 @@ async function handleExecuteBulkSignOff() {
   if (selectedDelegationIds.value.length === 0) return;
   submittingBulkSign.value = true;
   try {
-    const res = await trainingApi.bulkSignOffDelegations({
-      delegation_ids: selectedDelegationIds.value,
-      study_id: activeCurriculum.value?.study_id || "CARDIO-2026",
-      site_id: "SITE-101",
-      signature_payload: {
-        signer_name: bulkSignForm.value.signerName,
-        signer_role: bulkSignForm.value.signerRole,
-        meaning:
-          "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2).",
-        password: bulkSignForm.value.password,
-        reason_for_change: bulkSignForm.value.reasonForChange,
-      },
+    const delegationIds = [...selectedDelegationIds.value];
+    const verification = await soaClient.verifySignature({
+      username: authStore.identity?.username || "",
+      password: bulkSignForm.value.password,
+      action: DELEGATION_SIGN_OFF_ACTION,
+      semanticAction: DELEGATION_SIGN_OFF_SEMANTIC_ACTION,
+      batchId: await delegationBatchBindingId(delegationIds),
     });
+    bulkSignForm.value.password = "";
+    const res = await trainingApi.bulkSignOffDelegations(
+      {
+        delegation_ids: delegationIds,
+        study_id: activeCurriculum.value?.study_id || "CARDIO-2026",
+        site_id: "SITE-101",
+        signature_payload: {
+          meaning:
+            "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2).",
+          reason_for_change: bulkSignForm.value.reasonForChange,
+        },
+      },
+      verification.sig_token
+    );
     bulkSignResult.value = res;
     showBulkSignModal.value = false;
     selectedDelegationIds.value = [];
