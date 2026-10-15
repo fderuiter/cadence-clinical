@@ -134,6 +134,7 @@ var routes = new[]
 {
     new RouteConfig { RouteId = "designer-route", ClusterId = "designer-cluster", Match = new RouteMatch { Path = "/api/v1/studies/{**catch-all}" } },
     new RouteConfig { RouteId = "designer-protocols-route", ClusterId = "designer-cluster", Match = new RouteMatch { Path = "/api/v1/protocols/{**catch-all}" } },
+    new RouteConfig { RouteId = "designer-generic-route", ClusterId = "designer-cluster", Match = new RouteMatch { Path = "/api/v1/designer/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-obs-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/observations/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-forms-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/forms/{**catch-all}" } },
     new RouteConfig { RouteId = "execution-queries-route", ClusterId = "execution-cluster", Match = new RouteMatch { Path = "/api/v1/queries/{**catch-all}" } },

@@ -23,6 +23,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "Returns Knowledge base operational status.");
 
 app.MapTrainingEndpoints();
+app.MapRweEndpoints();
 
 await app.RunAsync();
 

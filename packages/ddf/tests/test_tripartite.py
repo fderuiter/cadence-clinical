@@ -26,6 +26,7 @@ from packages.ddf.tripartite import (
     VariableDefinition,
     WidgetType,
     execute_patient_migration,
+    generate_protocol_synthetic_control_arm,
     generate_synthetic_payloads,
 )
 from packages.engine_core.rules.evaluator import RuleEvaluator
@@ -237,3 +238,34 @@ def test_patient_migration_matrix_directives() -> None:
     assert "_archived_OLD_DEPRECATED_VAL" in result["patient_data"]
     assert result["patient_data"]["_archived_OLD_DEPRECATED_VAL"] == "legacy_val"
     assert result["is_compliant"] is False  # Raised query for missing retrospective field
+
+
+def test_generate_protocol_synthetic_control_arm() -> None:
+    """Verifies generating full protocol-level synthetic control arms beyond eCRF form boundary testing.
+
+    @req:PRD-SYS-051
+    """
+    arm = generate_protocol_synthetic_control_arm(
+        protocol_id="PROT-ONCO-202",
+        rwe_cohort_profile_id="RWE-NSCLC-01",
+        target_sample_size=100,
+        caliper=0.20,
+        seed=123,
+    )
+
+    assert arm.protocol_id == "PROT-ONCO-202"
+    assert arm.arm_id == "ARM-PROT-ONCO-202-CONTROL"
+    assert arm.target_sample_size == 100
+    assert arm.matched_sample_size == 100
+    assert arm.match_rate_percentage == 100.0
+    assert len(arm.synthetic_patient_profiles) == 100
+
+    first_pat = arm.synthetic_patient_profiles[0]
+    assert first_pat.patient_id == "SYNTH-PAT-00001"
+    assert first_pat.is_matched is True
+    assert "DM" in first_pat.domain_observations
+    assert "VS" in first_pat.domain_observations
+    assert "LB" in first_pat.domain_observations
+    assert "AE" in first_pat.domain_observations
+    assert "Age_SMD" in arm.covariate_balance
+

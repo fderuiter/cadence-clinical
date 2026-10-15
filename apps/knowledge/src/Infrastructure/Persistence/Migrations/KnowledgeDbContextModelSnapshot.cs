@@ -524,6 +524,121 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.ToTable("protocol_knowledge_chunks", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.RweCohortProfile", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("BaselineDemographicsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CohortCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Indication")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("TherapeuticArea")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("TotalPatientCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("VersionIndex")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CohortCode")
+                        .IsUnique();
+
+                    b.ToTable("rwe_cohort_profiles", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.RwePatientRecord", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<double>("Age")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("BiomarkerValue")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Bmi")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("CohortProfileId")
+                        .IsRequired()
+                        .HasMaxLength(36)
+                        .HasColumnType("character varying(36)");
+
+                    b.Property<string>("ComorbiditiesJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<double>("DiastolicBp")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("PatientIdentifier")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Sex")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<double>("SystolicBp")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CohortProfileId");
+
+                    b.HasIndex("CohortProfileId", "PatientIdentifier")
+                        .IsUnique();
+
+                    b.ToTable("rwe_patient_records", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Apps.Knowledge.Domain.TrainingAssignment", b =>
                 {
                     b.Property<string>("Id")

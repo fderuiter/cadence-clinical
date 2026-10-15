@@ -129,3 +129,37 @@ public class ProtocolKnowledgeChunkConfiguration : IEntityTypeConfiguration<Prot
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
 }
+
+public class RweCohortProfileConfiguration : IEntityTypeConfiguration<RweCohortProfile>
+{
+    public void Configure(EntityTypeBuilder<RweCohortProfile> builder)
+    {
+        builder.ToTable("rwe_cohort_profiles");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.CohortCode).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.CohortCode).IsUnique();
+        builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.TherapeuticArea).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Indication).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}
+
+public class RwePatientRecordConfiguration : IEntityTypeConfiguration<RwePatientRecord>
+{
+    public void Configure(EntityTypeBuilder<RwePatientRecord> builder)
+    {
+        builder.ToTable("rwe_patient_records");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.CohortProfileId).HasMaxLength(36).IsRequired();
+        builder.HasIndex(x => x.CohortProfileId);
+        builder.Property(x => x.PatientIdentifier).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => new { x.CohortProfileId, x.PatientIdentifier }).IsUnique();
+        builder.Property(x => x.Sex).HasMaxLength(10).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+    }
+}
+

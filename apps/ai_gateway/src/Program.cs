@@ -1,3 +1,4 @@
+using Cadence.Apps.AiGateway.Endpoints;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -16,6 +17,8 @@ app.MapCadenceHealthAndStatusEndpoints(
     "ai",
     "AI Gateway medical coding proxy health probe.",
     "Returns AI Gateway operational status.");
+
+app.MapSyntheticControlEndpoints();
 
 await app.RunAsync();
 

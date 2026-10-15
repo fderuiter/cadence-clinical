@@ -17,11 +17,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
 builder.Services.AddCadenceRules();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();
 app.UseCadenceSecurity();
 app.MapRuleBatchEndpoints();
+app.MapCohortFeasibilityEndpoints();
 
 app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Designer", primaryDatastore = "PostgreSQL", compiler = "Cadence.Ddf" }))
     .WithName("DesignerHealthCheck")

@@ -24,6 +24,8 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
     public DbSet<DelegationRecord> DelegationRecords => Set<DelegationRecord>();
     public DbSet<OrgAuditLog> OrgAuditLogs => Set<OrgAuditLog>();
     public DbSet<TrainingCertificate> TrainingCertificates => Set<TrainingCertificate>();
+    public DbSet<RweCohortProfile> RweCohortProfiles => Set<RweCohortProfile>();
+    public DbSet<RwePatientRecord> RwePatientRecords => Set<RwePatientRecord>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -36,6 +38,8 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
         modelBuilder.ApplyConfiguration(new KnowledgeArticleAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new ContextualHelpMappingConfiguration());
         modelBuilder.ApplyConfiguration(new ProtocolKnowledgeChunkConfiguration());
+        modelBuilder.ApplyConfiguration(new RweCohortProfileConfiguration());
+        modelBuilder.ApplyConfiguration(new RwePatientRecordConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
     }
 }
