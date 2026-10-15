@@ -46,7 +46,8 @@ public sealed class FormSubmissionApplicationService(
     IAutoQueryDispatchService? autoQueryDispatchService = null,
     IConfiguration? configuration = null,
     IPublishedFormVersionRegistryRepository? formVersionRegistryRepository = null,
-    IClock? clock = null) : IFormSubmissionApplicationService
+    IClock? clock = null,
+    IAuditLogWriter? auditLogWriter = null) : IFormSubmissionApplicationService
 {
     private readonly IClock _clock = clock ?? SystemClock.Instance;
     private static readonly Dictionary<string, (string Domain, string TestCode, string TestName, string? Unit)> FieldMapping = new(StringComparer.OrdinalIgnoreCase)
@@ -486,10 +487,47 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.NotFound(id);
         }
 
+        var previousStatus = submission.Status;
+        var previousManifest = submission.SignatureManifest;
+
         var unlockResult = submission.Unlock(auditContextAccessor.UserId, reason);
         if (unlockResult.IsFailure)
         {
             return unlockResult.Error!;
+        }
+
+        if (auditLogWriter is not null)
+        {
+            var oldValues = new Dictionary<string, object?>
+            {
+                ["status"] = previousStatus.ToString(),
+                ["signature_manifest"] = previousManifest is not null ? new Dictionary<string, object?>
+                {
+                    ["signer_id"] = previousManifest.SignerId,
+                    ["signer_name"] = previousManifest.SignerName,
+                    ["signer_role"] = previousManifest.SignerRole,
+                    ["signing_reason"] = previousManifest.SigningReason,
+                    ["payload_hash"] = previousManifest.PayloadHash,
+                    ["hmac_signature"] = previousManifest.HmacSignature,
+                    ["signed_at"] = previousManifest.SignedAt
+                } : null
+            };
+
+            var newValues = new Dictionary<string, object?>
+            {
+                ["status"] = submission.Status.ToString(),
+                ["signature_manifest"] = null
+            };
+
+            await auditLogWriter.WriteAsync(
+                nameof(FormSubmission),
+                submission.Id.ToString(),
+                "REVOKE_SIGNATURE",
+                auditContextAccessor.UserId,
+                reason,
+                oldValues,
+                newValues,
+                cancellationToken).ConfigureAwait(false);
         }
 
         await formSubmissionRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

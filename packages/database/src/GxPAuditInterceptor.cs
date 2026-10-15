@@ -82,7 +82,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 action?.UserId ?? currentUser,
                 action?.ReasonForChange ?? entry.Entity.ReasonForChange,
                 entry.Entity.VersionIndex,
-                changesJson), cancellationToken).ConfigureAwait(false);
+                action?.ChangesJson ?? changesJson), cancellationToken).ConfigureAwait(false);
         }
 
         // Actions with no changed entity (a blocked attempt, an activation that changes no row) are still

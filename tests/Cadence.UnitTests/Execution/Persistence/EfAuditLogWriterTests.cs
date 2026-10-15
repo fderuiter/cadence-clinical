@@ -1,13 +1,27 @@
+using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Forms;
+using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
+using Cadence.Security;
+using Cadence.Security.Authentication;
 using Cadence.Testing;
+using Cadence.Testing.Security;
+using Cadence.Testing.Time;
+using Cadence.TestSupport.Execution.Fakes;
+using Cadence.UnitTests.Fixtures.Execution;
 
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
+
+using Polly;
 
 using Xunit;
 
@@ -178,6 +192,92 @@ public class EfAuditLogWriterTests
         var results = AuditLogChainVerifier.Verify(entries);
 
         results.Should().HaveCount(2).And.OnlyContain(r => r.Valid);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task FormSubmissionUnlock_CommitsRevokeSignatureAuditEntry_AndTheChainVerifies()
+    {
+        string db = Guid.NewGuid().ToString();
+        string formIdStr;
+
+        await using (var context = CreateContext(db))
+        {
+            var formRepo = new FormSubmissionRepository(context, ResiliencePipeline.Empty);
+            var obsRepo = new ObservationRepository(context, ResiliencePipeline.Empty);
+            var ucum = new UcumNormalizationService();
+            var audit = new FakeCurrentAuditContextAccessor("pi-investigator-01", "Initial form submission");
+            var auditLogWriter = new EfAuditLogWriter(context);
+
+            var service = new FormSubmissionApplicationService(
+                formRepo,
+                obsRepo,
+                ucum,
+                audit,
+                auditLogWriter: auditLogWriter);
+
+            var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+            var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+                StudyId: "STUDY-001",
+                SubjectId: "SUBJ-001",
+                FormId: "FORM-VS",
+                Payload: payload), Ct);
+
+            formIdStr = createResult.Value!.Id;
+            await service.CompleteAsync(formIdStr, Ct);
+
+            Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
+            var validHash = FormSubmissionApplicationService.ComputePayloadHash(payload)!;
+            var validHmac = Cadence.Security.Authentication.HmacSigner.ComputeSignature(validHash, TestSecurityContext.GatewaySecret);
+
+            var piCaller = new AuthenticatedCaller("pi-user-01", ["PRINCIPAL_INVESTIGATOR"]);
+            var approveResult = await service.ApproveAsync(formIdStr, FormSubmissionApproveRequest.Create(
+                SignerId: "pi-user-01",
+                SignerRole: "PRINCIPAL_INVESTIGATOR",
+                SigningReason: "I attest that I have reviewed and approved these clinical data.",
+                SignedAt: FakeClock.DefaultStart.UtcDateTime,
+                PayloadHash: validHash,
+                HmacSignature: validHmac),
+                piCaller,
+                Ct);
+
+            approveResult.IsSuccess.Should().BeTrue();
+        }
+
+        await using (var context = CreateContext(db))
+        {
+            var formRepo = new FormSubmissionRepository(context, ResiliencePipeline.Empty);
+            var obsRepo = new ObservationRepository(context, ResiliencePipeline.Empty);
+            var ucum = new UcumNormalizationService();
+            var audit = new FakeCurrentAuditContextAccessor("pi-investigator-01", "Unlock rationale for correction");
+            var auditLogWriter = new EfAuditLogWriter(context);
+
+            var service = new FormSubmissionApplicationService(
+                formRepo,
+                obsRepo,
+                ucum,
+                audit,
+                auditLogWriter: auditLogWriter);
+
+            var unlockResult = await service.UnlockAsync(formIdStr, "Unlock rationale for correction", Ct);
+            unlockResult.IsSuccess.Should().BeTrue();
+        }
+
+        await using var verifyContext = CreateContext(db);
+        var entries = await verifyContext.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
+
+        entries.Should().Contain(e => e.EntityName == nameof(FormSubmission) && e.EntityId == formIdStr && e.Action == "REVOKE_SIGNATURE");
+        var revokeEntry = entries.Single(e => e.Action == "REVOKE_SIGNATURE");
+        revokeEntry.UserId.Should().Be("pi-investigator-01");
+        revokeEntry.ReasonForChange.Should().Be("Unlock rationale for correction");
+        revokeEntry.Action.Should().Be("REVOKE_SIGNATURE");
+        revokeEntry.ChangesJson.Should().Contain("pi-user-01");
+        revokeEntry.ChangesJson.Should().Contain("PRINCIPAL_INVESTIGATOR");
+
+        var chainResults = AuditLogChainVerifier.Verify(entries);
+        chainResults.Should().ContainSingle(r => r.EntityName == nameof(FormSubmission))
+            .Which.Valid.Should().BeTrue();
     }
 
     private static List<AuditLogEntry> BuildChain(string entityName, int length)

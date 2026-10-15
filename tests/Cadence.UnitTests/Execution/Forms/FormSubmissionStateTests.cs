@@ -463,4 +463,120 @@ public sealed class FormSubmissionStateTests
             Environment.SetEnvironmentVariable("GATEWAY_SECRET", previousSecret);
         }
     }
+
+    /// <summary>
+    /// Validates that unlocking an approved form stages a REVOKE_SIGNATURE audit event with complete SignatureManifest snapshot.
+    /// @req:PRD-SYS-053
+    /// @req:SRS-EDC-003
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task FormApplicationService_UnlockAsync_StagesRevokeSignatureAuditAction_WithSignatureManifestSnapshot()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi-investigator-01", "Unlock request");
+        var recordingWriter = new RecordingAuditLogWriter();
+
+        var service = new FormSubmissionApplicationService(
+            formRepo,
+            obsRepo,
+            ucum,
+            audit,
+            auditLogWriter: recordingWriter);
+
+        var payload = "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}";
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: payload), CancellationToken.None);
+
+        var formId = createResult.Value!.Id;
+        await service.CompleteAsync(formId, CancellationToken.None);
+
+        Environment.SetEnvironmentVariable("GATEWAY_SECRET", TestSecurityContext.GatewaySecret);
+        var validHash = ComputeHash(payload);
+        var validHmac = HmacSigner.ComputeSignature(validHash, TestSecurityContext.GatewaySecret);
+
+        var approveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
+            SignerId: "pi-user-01",
+            SignerRole: "PRINCIPAL_INVESTIGATOR",
+            SigningReason: "I attest that I have reviewed and approved these clinical data.",
+            SignedAt: FakeClock.DefaultStart.UtcDateTime,
+            PayloadHash: validHash,
+            HmacSignature: validHmac),
+            PrincipalInvestigator,
+            CancellationToken.None);
+
+        approveResult.IsSuccess.Should().BeTrue();
+
+        const string unlockReason = "Lab value discrepancy correction requested by Sponsor";
+        var unlockResult = await service.UnlockAsync(formId, unlockReason, CancellationToken.None);
+
+        unlockResult.IsSuccess.Should().BeTrue();
+        unlockResult.Value!.Status.Should().Be(FormSubmissionStatus.Draft);
+
+        recordingWriter.Calls.Should().HaveCount(1);
+        var call = recordingWriter.Calls[0];
+        call.EntityName.Should().Be(nameof(FormSubmission));
+        call.RecordId.Should().Be(formId);
+        call.Action.Should().Be("REVOKE_SIGNATURE");
+        call.UserId.Should().Be("pi-investigator-01");
+        call.ChangeReason.Should().Be(unlockReason);
+
+        call.OldValues.Should().NotBeNull();
+        call.OldValues!["status"].Should().Be("Approved");
+        call.OldValues!["signature_manifest"].Should().BeOfType<Dictionary<string, object?>>();
+
+        var manifestSnap = (Dictionary<string, object?>)call.OldValues!["signature_manifest"]!;
+        manifestSnap["signer_id"].Should().Be("pi-user-01");
+        manifestSnap["signer_role"].Should().Be("PRINCIPAL_INVESTIGATOR");
+        manifestSnap["signing_reason"].Should().Be("I attest that I have reviewed and approved these clinical data.");
+        manifestSnap["payload_hash"].Should().Be(validHash);
+        manifestSnap["hmac_signature"].Should().Be(validHmac);
+
+        call.NewValues.Should().NotBeNull();
+        call.NewValues!["status"].Should().Be("Draft");
+        call.NewValues!["signature_manifest"].Should().BeNull();
+    }
+
+    /// <summary>
+    /// Validates that attempting to unlock a form that is not approved fails and does not stage any audit action.
+    /// @req:PRD-SYS-053
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-SYS-053")]
+    public async Task FormApplicationService_UnlockAsync_WhenUnlockFails_DoesNotStageAuditAction()
+    {
+        var formRepo = new InMemoryFormSubmissionRepository();
+        var obsRepo = new InMemoryObservationRepository();
+        var ucum = new UcumNormalizationService();
+        var audit = new FakeCurrentAuditContextAccessor("pi-investigator-01", "Unlock request");
+        var recordingWriter = new RecordingAuditLogWriter();
+
+        var service = new FormSubmissionApplicationService(
+            formRepo,
+            obsRepo,
+            ucum,
+            audit,
+            auditLogWriter: recordingWriter);
+
+        var createResult = await service.CreateAsync(new FormSubmissionCreateRequest(
+            StudyId: "STUDY-001",
+            SubjectId: "SUBJ-001",
+            FormId: "FORM-VS",
+            Payload: "{\"observation_date\": \"2026-01-01T08:00:00Z\", \"vssbp\": 120}"), CancellationToken.None);
+
+        var formId = createResult.Value!.Id;
+
+        // Form is Draft, not Approved -> unlock must fail
+        var unlockResult = await service.UnlockAsync(formId, "Correction needed", CancellationToken.None);
+
+        unlockResult.IsFailure.Should().BeTrue();
+        unlockResult.Error!.Code.Should().Be("FORM_NOT_APPROVED");
+
+        recordingWriter.Calls.Should().BeEmpty();
+    }
 }
