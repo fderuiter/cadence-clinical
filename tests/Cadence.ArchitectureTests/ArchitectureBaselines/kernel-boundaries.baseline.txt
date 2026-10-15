@@ -188,6 +188,7 @@ K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.SiteId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.StudyId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Endpoints.CaptureConsentRequest.SiteId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Endpoints.CaptureConsentRequest.StudyId
+K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Endpoints.PublishTemplateRequest.StudyId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.SiteId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.StudyId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfAuditLog
@@ -489,6 +490,7 @@ K-XS-1|Cadence.Contracts|Cadence.Contracts.ClinicalQueryRaised.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.ClinicalQueryRaised.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EConsentCompleted.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EConsentCompleted.StudyId
+K-XS-1|Cadence.Contracts|Cadence.Contracts.EconsentReconsentRequired.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EtmfDocumentFilingRequested.SiteId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.EtmfDocumentFilingRequested.StudyId
 K-XS-1|Cadence.Contracts|Cadence.Contracts.Grade3ToxicityDetected.SiteId

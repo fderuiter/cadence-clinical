@@ -5,6 +5,8 @@ using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
 using Cadence.Telemetry;
 
+using MassTransit;
+
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,6 +16,19 @@ builder.Services.AddCadenceSecurity();
 // Signer e-mail addresses are encrypted at rest; FIELD_ENCRYPTION_KEY is required and validated at startup (#4770).
 builder.Services.AddCadenceFieldEncryption();
 builder.AddCadencePostgresDbContext<EconsentDbContext>();
+
+builder.Services.AddMassTransit(x =>
+{
+    x.AddEntityFrameworkOutbox<EconsentDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+    x.UsingInMemory((context, cfg) =>
+    {
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();

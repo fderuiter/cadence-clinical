@@ -993,6 +993,31 @@
               </small>
             </div>
 
+            <div
+              v-if="newAmendment.requires_reconsent"
+              class="form-group notification-channels-config"
+              style="margin-top: 12px; padding: 12px; background-color: #f8fafc; border: 1px solid var(--border); border-radius: 6px;"
+            >
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: var(--primary);">
+                Automated Re-Consent Notification Channels:
+              </label>
+              <div style="display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap;">
+                <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                  <input type="checkbox" value="SMS" v-model="newAmendment.notification_channels" />
+                  SMS Alerts
+                </label>
+                <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                  <input type="checkbox" value="Mobile Push" v-model="newAmendment.notification_channels" />
+                  Mobile Push
+                </label>
+                <label style="font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                  <input type="checkbox" value="Email" v-model="newAmendment.notification_channels" />
+                  Email
+                </label>
+              </div>
+            </div>
+
             <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label class="form-label"
@@ -1418,6 +1443,7 @@ const wizardImpactData = ref(null);
 const newAmendment = ref({
   amendment_type: "major",
   requires_reconsent: true,
+  notification_channels: ["SMS", "Mobile Push", "Email"],
   change_reason:
     "Protocol Amendment 2.0 introducing optional PK visit and updating dosing cohort safety rules",
   target_version: "2.0.0",
@@ -1863,6 +1889,8 @@ async function submitCreateAmendment() {
       description: newAmendment.value.change_reason,
       baseline_snapshot: { version: selectedBaseVersion.value },
       amended_snapshot: { version: newAmendment.value.target_version },
+      requires_reconsent: newAmendment.value.requires_reconsent,
+      channels: newAmendment.value.notification_channels,
     };
 
     await apiClient.post("/api/v1/execution/amendments/publish", payload);
@@ -1872,7 +1900,9 @@ async function submitCreateAmendment() {
 
     notificationBanner.value = {
       type: "success",
-      message: `Protocol Amendment v${newAmendment.value.target_version} published successfully! Target schema rules applied.`,
+      message: newAmendment.value.requires_reconsent
+        ? `Protocol Amendment v${newAmendment.value.target_version} published! Multi-channel (${(newAmendment.value.notification_channels || []).join(", ")}) notifications dispatched for re-consent.`
+        : `Protocol Amendment v${newAmendment.value.target_version} published successfully! Target schema rules applied.`,
     };
 
     closeWizard();
