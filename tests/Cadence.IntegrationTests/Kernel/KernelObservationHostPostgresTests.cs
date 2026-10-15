@@ -1,7 +1,10 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading;
@@ -22,6 +25,9 @@ using Cadence.Testing.Security;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 
@@ -59,7 +65,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        var (code, enrollment) = await SeedAsync(grant: true, ct);
+        var (code, _, enrollment) = await SeedAsync(grant: true, ct);
         using var crc = Client(code, Crc);
 
         var recorded = await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, "observations", "Initial entry", new
@@ -102,7 +108,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        var (code, enrollment) = await SeedAsync(grant: true, ct);
+        var (code, _, enrollment) = await SeedAsync(grant: true, ct);
         using var crc = Client(code, Crc);
         using var stranger = Client(code, Stranger);
         var recorded = await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, "observations", "Initial entry", new
@@ -126,11 +132,57 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         read.Version.Should().Be(1);
     }
 
+    /// <summary>
+    /// The browser-to-database check (ADR-2620): Chromium opens the real ObservationView on the Vite dev server, the
+    /// user corrects the value and gives a reason, and the screen shows the correction as saved with the reason in the
+    /// audit trail. The test then reads the revision and the kernel audit entry from PostgreSQL. Keycloak and the
+    /// gateway are replaced by a signing proxy on port 8000 that signs the coordinator's identity onto each request,
+    /// as the gateway does; the reason travels from the browser's own header. Opt in with <c>CADENCE_TEST_BROWSER=1</c>
+    /// (needs Node, pnpm and a Chromium); otherwise skipped.
+    /// </summary>
+    [Fact(DisplayName = "BrowserCorrection_ReachesTheDatabaseWithItsReason")]
+    public async Task BrowserCorrectionReachesTheDatabaseWithItsReason()
+    {
+        fixture.SkipIfUnavailable();
+        Assert.SkipUnless(Environment.GetEnvironmentVariable("CADENCE_TEST_BROWSER") == "1", "Set CADENCE_TEST_BROWSER=1 to run the browser check.");
+        var ct = TestContext.Current.CancellationToken;
+        var (code, tenant, enrollment) = await SeedAsync(grant: true, ct);
+        using var crc = Client(code, Crc);
+        var recorded = await SendAsync<KernelObservationStateResponse>(crc, HttpMethod.Post, "observations", "Initial entry", new
+        {
+            enrollment_ref = NodeRef.For(enrollment).ToString(),
+            concept = $"{ConceptId.New()}@1",
+            value = "182",
+            observed_at = SystemClock.Instance.UtcNow.AddHours(-1),
+        }, HttpStatusCode.Created, ct);
+        var observation = NodeRef.Parse(recorded.Ref).Unversioned();
+        const string Detail = "source reads 128 – transcription slip";
+
+        await using (var proxy = await SigningProxy.StartAsync(crc, ct))
+        {
+            var (exitCode, output) = await RunBrowserCheckAsync(observation.ToString(), Detail, ct);
+            exitCode.Should().Be(0, output);
+            output.Should().Contain("1 passed", "the browser spec must run, not skip");
+        }
+
+        await using var db = fixture.CreateContext(tenant);
+        var key = ObservationId.FromGuid(observation.Id).ToString();
+        var audit = await db.AuditEntries.AsNoTracking()
+            .Where(a => a.AggregateId == key && a.AggregateType == nameof(Observation) && a.Action == "Updated")
+            .ToListAsync(ct);
+        audit.Should().ContainSingle().Which.ReasonForChange.Should().Be($"Typographical Error: {Detail}");
+        audit[0].ActorId.Should().Be(Crc);
+        var revisions = await db.ObservationRevisions.AsNoTracking().Where(r => r.ObservationId == ObservationId.FromGuid(observation.Id))
+            .OrderBy(r => r.Number).Select(r => new { r.Number, r.Value, r.ReasonForChange }).ToListAsync(ct);
+        revisions.Select(r => (r.Number, r.Value, r.ReasonForChange)).Should()
+            .Equal((1, "182", "Initial entry"), (2, "128", $"Typographical Error: {Detail}"));
+    }
+
     private static object Correction(EnrollmentId enrollment, string value, long expectedVersion) =>
         new { enrollment_ref = NodeRef.For(enrollment).ToString(), value, expected_version = expectedVersion };
 
     /// <summary>A tenant with a study, a study site and one screened participant; the coordinator granted at the site.</summary>
-    private async Task<(string Code, EnrollmentId Enrollment)> SeedAsync(bool grant, CancellationToken ct)
+    private async Task<(string Code, TenantId Tenant, EnrollmentId Enrollment)> SeedAsync(bool grant, CancellationToken ct)
     {
         var code = $"T-OBS-{Guid.NewGuid():N}"[..16];
         var tenant = TenantId.New();
@@ -163,7 +215,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         }
 
         Tick();
-        return (code, enrollment.EnrollmentId);
+        return (code, tenant, enrollment.EnrollmentId);
     }
 
     private HttpClient Client(string tenantCode, string userId)
@@ -206,6 +258,111 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         }
 
         return request;
+    }
+
+    /// <summary>Runs the Playwright half of the browser check (apps/web/playwright.correction-check.config.ts).</summary>
+    private static async Task<(int ExitCode, string Output)> RunBrowserCheckAsync(string observationRef, string detail, CancellationToken ct)
+    {
+        var web = Path.Combine(RepositoryRoot(), "apps", "web");
+        var start = new ProcessStartInfo("pnpm", "exec playwright test --config playwright.correction-check.config.ts")
+        {
+            WorkingDirectory = web,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        start.Environment["OBSERVATION_REF"] = observationRef;
+        start.Environment["CORRECTION_DETAIL"] = detail;
+        if (File.Exists(PreinstalledChromium) && Environment.GetEnvironmentVariable("PLAYWRIGHT_CHROMIUM_PATH") is null)
+        {
+            start.Environment["PLAYWRIGHT_CHROMIUM_PATH"] = PreinstalledChromium;
+        }
+
+        using var process = Process.Start(start)!;
+        var stdout = process.StandardOutput.ReadToEndAsync(ct);
+        var stderr = process.StandardError.ReadToEndAsync(ct);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromMinutes(5));
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            process.Kill(entireProcessTree: true);
+            throw;
+        }
+
+        return (process.ExitCode, await stdout + await stderr);
+    }
+
+    private const string PreinstalledChromium = "/opt/pw-browsers/chromium";
+
+    private static string RepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Cadence.sln")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        throw new InvalidOperationException("Cadence.sln not found above the test output directory.");
+    }
+
+    /// <summary>
+    /// Stands in for Keycloak and the gateway in the browser check: listens where the Vite dev server proxies
+    /// <c>/api</c> (port 8000) and forwards each request to the kernel host through a client that signs the
+    /// coordinator's identity, carrying the browser's own reason and idempotency key.
+    /// </summary>
+    private sealed class SigningProxy : IAsyncDisposable
+    {
+        private static readonly string[] ForwardedHeaders = [GatewayHeaders.ChangeReason, KernelObservationEndpoints.IdempotencyKeyHeader];
+
+        private readonly WebApplication _app;
+
+        private SigningProxy(WebApplication app) => _app = app;
+
+        public static async Task<SigningProxy> StartAsync(HttpClient signed, CancellationToken ct)
+        {
+            var builder = WebApplication.CreateSlimBuilder();
+            builder.WebHost.UseUrls("http://localhost:8000");
+            var app = builder.Build();
+            app.Map("/api/{**path}", async (HttpContext context) =>
+            {
+                using var forward = new HttpRequestMessage(
+                    new HttpMethod(context.Request.Method),
+                    new Uri($"{context.Request.Path}{context.Request.QueryString}", UriKind.Relative));
+                if (context.Request.ContentLength > 0 || context.Request.Headers.ContainsKey("Transfer-Encoding"))
+                {
+                    using var body = new MemoryStream();
+                    await context.Request.Body.CopyToAsync(body, context.RequestAborted);
+                    forward.Content = new ByteArrayContent(body.ToArray());
+                    forward.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(context.Request.ContentType ?? "application/json");
+                }
+
+                foreach (var name in ForwardedHeaders)
+                {
+                    if (context.Request.Headers.TryGetValue(name, out var value))
+                    {
+                        forward.Headers.TryAddWithoutValidation(name, value.ToString());
+                    }
+                }
+
+                using var response = await signed.SendAsync(forward, context.RequestAborted);
+                context.Response.StatusCode = (int)response.StatusCode;
+                context.Response.ContentType = response.Content.Headers.ContentType?.ToString();
+                await response.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
+            });
+            await app.StartAsync(ct);
+            return new SigningProxy(app);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _app.StopAsync();
+            await _app.DisposeAsync();
+        }
     }
 
     private DateTimeOffset Tick() => fixture.Clock.Advance(TimeSpan.FromSeconds(1));

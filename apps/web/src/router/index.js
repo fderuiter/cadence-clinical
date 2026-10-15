@@ -57,6 +57,7 @@ const routes = [
       const fallback = routes.find(
         (route) =>
           route.name !== "study" &&
+          route.name !== "observation" &&
           AVAILABLE_SCREENS.has(route.name) &&
           (!route.meta?.requiresRole?.length ||
             hasRequiredRole(roles, route.meta.requiresRole))
@@ -146,6 +147,18 @@ const routes = [
         "site_investigator",
         "crc",
       ],
+    },
+  },
+  {
+    // One kernel observation and its correction (ADR-2620). Opened from a link to the observation, so it never
+    // serves as a landing screen.
+    path: "/observations/:observationRef",
+    name: "observation",
+    component: () => import("../views/ObservationView.vue"),
+    props: true,
+    meta: {
+      requiresAuth: true,
+      requiresRole: ["site_investigator", "crc", "data_manager"],
     },
   },
   {

@@ -231,6 +231,90 @@ describe("kernelApi (ADR-2540)", () => {
   );
 });
 
+describe("kernelApi observations (ADR-2620)", () => {
+  const OBSERVATION = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
+  const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d71";
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("reads the observation without its version suffix", async () => {
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, { ref: OBSERVATION }));
+
+    await kernelApi.getObservation(`${OBSERVATION}@2`);
+
+    const request = fetchSpy.mock.calls.at(-1)[0];
+    expect(request.method).toBe("GET");
+    expect(new URL(request.url).pathname).toBe(
+      `/api/v1/kernel/observations/${encodeURIComponent(OBSERVATION)}`
+    );
+  });
+
+  it("sends a correction with the expected version, the encoded reason and the idempotency key", async () => {
+    const state = { ref: `${OBSERVATION}@2`, value: "128", version: 2 };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, state));
+
+    const result = await kernelApi.correctObservation({
+      observationRef: `${OBSERVATION}@1`,
+      enrollmentRef: ENROLLMENT,
+      value: "128",
+      expectedVersion: 1,
+      reason: "Transcription error – source reads 128",
+      idempotencyKey: "key-1",
+    });
+
+    expect(result).toEqual(state);
+    const request = fetchSpy.mock.calls.at(-1)[0];
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).pathname).toBe(
+      `/api/v1/kernel/observations/${encodeURIComponent(OBSERVATION)}/corrections`
+    );
+    expect(request.headers.get("Idempotency-Key")).toBe("key-1");
+    expect(request.headers.get("X-Change-Reason")).toBe(
+      "UTF-8''Transcription%20error%20%E2%80%93%20source%20reads%20128"
+    );
+    expect(await request.json()).toEqual({
+      enrollment_ref: ENROLLMENT,
+      value: "128",
+      expected_version: 1,
+    });
+  });
+
+  it.each([409, 423])(
+    "rejects a refused correction (%i) with its status",
+    async (status) => {
+      fetchSpy.mockResolvedValueOnce(
+        jsonResponse(
+          status,
+          { title: "K.Observation", detail: "refused", code: "K.Observation" },
+          "application/problem+json"
+        )
+      );
+
+      const error = await kernelApi
+        .correctObservation({
+          observationRef: OBSERVATION,
+          enrollmentRef: ENROLLMENT,
+          value: "128",
+          expectedVersion: 1,
+          reason: "Transcription error",
+          idempotencyKey: "key-2",
+        })
+        .catch((e) => e);
+
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.status).toBe(status);
+    }
+  );
+});
+
 describe("isMasked", () => {
   it("is true only when the kernel names a mask reason", () => {
     expect(isMasked({ kind: "study_site", ref: null, mask: "Blinded" })).toBe(

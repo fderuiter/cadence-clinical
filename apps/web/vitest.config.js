@@ -11,7 +11,13 @@ export default mergeConfig(
       // Tests opt into a demo build with vi.stubEnv("VITE_DEMO_MODE", "true"); undo it after each test.
       unstubEnvs: true,
       setupFiles: [fileURLToPath(new URL("./tests/setup.js", import.meta.url))],
-      exclude: ["**/node_modules/**", "**/dist/**", "**/tests/e2e/**"],
+      // Playwright specs (tests/e2e, and tests/browser for the browser-to-database check) are not Vitest tests.
+      exclude: [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/tests/e2e/**",
+        "**/tests/browser/**",
+      ],
       coverage: {
         provider: "v8",
         reporter: ["text", "json", "html"],
