@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -117,10 +118,16 @@ public class ParallelBatchRuleValidatorTests
         initialReport.IsAsync.Should().BeTrue();
         initialReport.JobId.Should().StartWith("job_");
 
-        // Wait brief time for async background task completion
-        await Task.Delay(100, Ct);
-
+        // The job finishes on a background task; poll for it rather than assume a fixed delay is enough
+        // when the whole suite is running.
+        var waited = Stopwatch.StartNew();
         var finalReport = jobStore.GetJob(initialReport.JobId);
+        while (finalReport?.Status != "Completed" && waited.Elapsed < TimeSpan.FromSeconds(10))
+        {
+            await Task.Delay(20, Ct);
+            finalReport = jobStore.GetJob(initialReport.JobId);
+        }
+
         finalReport.Should().NotBeNull();
         finalReport!.Status.Should().Be("Completed");
         finalReport.Timing.RecordsEvaluated.Should().Be(15);
