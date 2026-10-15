@@ -30,6 +30,9 @@ internal static class InsertOnlySql
         // Evidence: an artifact version names its bytes by hash and never changes (spec §8.3).
         "artifact_versions",
 
+        // Evidence: an observation revision is never overwritten; a correction appends the next one (K-FACT-1, ADR-2620).
+        "observation_revisions",
+
         // Authority: a role never changes once defined, so grants under it keep their meaning (spec §9.3).
         "roles",
 

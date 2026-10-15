@@ -343,6 +343,74 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/observations/{observationRef}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** An observation with its revisions, its lock and its kernel audit entries. */
+    get: operations["KernelGetObservation"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/observations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Records an observation for the participant of an enrollment (observation.record). */
+    post: operations["KernelRecordObservation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/observations/{observationRef}/corrections": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Corrects an observation's value with the signed reason for change (observation.correct). */
+    post: operations["KernelCorrectObservation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/observations/{observationRef}/lock": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Locks an observation so no correction commits after it (observation.lock). */
+    post: operations["KernelLockObservation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -554,6 +622,12 @@ export interface components {
       met: boolean;
       evidence: string[];
     };
+    Kernel_KernelCorrectObservationRequest: {
+      enrollment_ref: string;
+      value: null | string;
+      /** Format: int64 */
+      expected_version: number | string;
+    };
     Kernel_KernelDecisionResponse: {
       capability: string;
       verb_class: string;
@@ -631,6 +705,9 @@ export interface components {
       edges: components["schemas"]["Kernel_KernelLineageEdgeResponse"][];
       truncated: boolean;
     };
+    Kernel_KernelLockObservationRequest: {
+      enrollment_ref: string;
+    };
     Kernel_KernelNextActionResponse: {
       description: string;
       capability: null | string;
@@ -644,6 +721,34 @@ export interface components {
       status: null | string;
       mask: null | string;
     };
+    Kernel_KernelObservationLockResponse: {
+      observation_ref: string;
+      /** Format: date-time */
+      locked_at: string;
+      locked_by: string;
+    };
+    Kernel_KernelObservationResponse: {
+      ref: string;
+      enrollment_ref: string;
+      concept: string;
+      value: string;
+      /** Format: date-time */
+      observed_at: string;
+      /** Format: int64 */
+      version: number | string;
+      locked: null | components["schemas"]["Kernel_ObservationLockView"];
+      revisions: components["schemas"]["Kernel_ObservationRevisionView"][];
+      audit: components["schemas"]["Kernel_ObservationAuditView"][];
+    };
+    Kernel_KernelObservationStateResponse: {
+      ref: string;
+      enrollment_ref: string;
+      value: string;
+      /** Format: int64 */
+      version: number | string;
+      /** Format: int32 */
+      revision: number | string;
+    };
     Kernel_KernelProtocolVersionResponse: {
       ref: null | string;
       study: null | string;
@@ -656,6 +761,15 @@ export interface components {
       approval_attestation: null | string;
       withdrawal_reason: null | string;
       mask: null | string;
+    };
+    Kernel_KernelRecordObservationRequest: {
+      /** Format: uuid */
+      observation_id: null | string;
+      enrollment_ref: string;
+      concept: string;
+      value: null | string;
+      /** Format: date-time */
+      observed_at: string;
     };
     Kernel_KernelScheduleOfActivitiesResponse: {
       version: string;
@@ -788,6 +902,35 @@ export interface components {
       text: string;
     };
     Kernel_ObjectiveLevel: number;
+    Kernel_ObservationAuditView: {
+      /** Format: int64 */
+      sequence: number | string;
+      /** Format: date-time */
+      recorded_at: string;
+      actor_id: string;
+      action: string;
+      subject: string;
+      /** Format: int64 */
+      version: null | number | string;
+      reason_for_change: string;
+    };
+    Kernel_ObservationLockView: {
+      /** Format: date-time */
+      locked_at: string;
+      locked_by: string;
+      reason_for_change: string;
+    };
+    Kernel_ObservationRevisionView: {
+      /** Format: int32 */
+      number: number | string;
+      value: string;
+      reason_for_change: string;
+      recorded_by: string;
+      /** Format: date-time */
+      recorded_at: string;
+      /** Format: date-time */
+      recorded_until: null | string;
+    };
     Kernel_PlannedActivity: {
       id: string;
       name: string;
@@ -1788,6 +1931,266 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetObservation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        observationRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelObservationResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelRecordObservation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_KernelRecordObservationRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelObservationStateResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelCorrectObservation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        observationRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_KernelCorrectObservationRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelObservationStateResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Locked */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelLockObservation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        observationRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_KernelLockObservationRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelObservationLockResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

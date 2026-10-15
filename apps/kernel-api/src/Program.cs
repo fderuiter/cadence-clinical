@@ -55,8 +55,13 @@ builder.Services
 
     // Simulation engine and persistence inputs (ADR-2480)
     .AddKernelSimulationInputs()
-    .AddKernelSimulation();
+    .AddKernelSimulation()
+
+    // Writes: the kernel command pipeline (ADR-2449). Observation reads and writes are the first module writes it serves
+    // (ADR-2620); every write is authorized by the authority evaluator above and commits state, audit and outbox together.
+    .AddKernelCommandPipeline();
 builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
+builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
 
 // A reader sees what its grants in effect cover (ADR-2457); everything else is masked in place (ADR-2471). Blinding and
 // the IdentityVault (#4782) are not decided here yet.
@@ -76,7 +81,7 @@ app.MapCadenceHealthAndStatusEndpoints(
     "kernel",
     "Clinical Kernel API health probe.",
     "Returns the Clinical Kernel API's operational status.");
-app.MapKernelApi().MapKernelReads();
+app.MapKernelApi().MapKernelReads().MapKernelObservations();
 
 await app.RunAsync();
 

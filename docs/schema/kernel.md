@@ -31,6 +31,9 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.library_items`](#kernellibrary_items) | `LibraryItem` | 16 |
 | [`kernel.lineage_edges`](#kernellineage_edges) | `LineageEdgeRecord` | 12 |
 | [`kernel.lineage_nodes`](#kernellineage_nodes) | `LineageNodeRecord` | 7 |
+| [`kernel.observation_locks`](#kernelobservation_locks) | `ObservationLock` | 9 |
+| [`kernel.observation_revisions`](#kernelobservation_revisions) | `ObservationRevision` | 8 |
+| [`kernel.observations`](#kernelobservations) | `Observation` | 14 |
 | [`kernel.organizations`](#kernelorganizations) | `Organization` | 10 |
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
@@ -741,6 +744,97 @@ Foreign keys:
 Indexes:
 
 - `IX_lineage_nodes_tenant_id_derived`: (`tenant_id`, `derived`)
+
+## kernel.observation_locks
+
+Entity: `ObservationLock`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `locked_at` | `timestamp with time zone` | no |  |  |
+| `observation_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_observation_locks_observations_tenant_id_observation_id`: (`tenant_id`, `observation_id`) references `kernel.observations` (`tenant_id`, `id`), on delete restrict
+- `FK_observation_locks_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `IX_observation_locks_tenant_id_observation_id`: unique (`tenant_id`, `observation_id`)
+
+## kernel.observation_revisions
+
+Entity: `ObservationRevision`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `number` | `integer` | no |  |  |
+| `observation_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `recorded_at` | `timestamp with time zone` | no |  |  |
+| `recorded_by` | `character varying(255)` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `value` | `character varying(4000)` | no |  |  |
+
+Foreign keys:
+
+- `FK_observation_revisions_observations_tenant_id_observation_id`: (`tenant_id`, `observation_id`) references `kernel.observations` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_observation_revisions_tenant_id_observation_id_number`: unique (`tenant_id`, `observation_id`, `number`)
+
+Check constraints:
+
+- `ck_observation_revisions_number`: `number > 0`
+
+## kernel.observations
+
+Entity: `Observation`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `concept_id` | `uuid` | no |  |  |
+| `concept_version` | `integer` | no |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `enrollment_id` | `uuid` | no |  |  |
+| `observed_at` | `timestamp with time zone` | no |  |  |
+| `participant_id` | `uuid` | no |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `revision` | `integer` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `value` | `character varying(4000)` | no |  |  |
+| `version_index` | `bigint` | no |  |  |
+
+Foreign keys:
+
+- `FK_observations_enrollments_tenant_id_enrollment_id`: (`tenant_id`, `enrollment_id`) references `kernel.enrollments` (`tenant_id`, `id`), on delete restrict
+- `FK_observations_participants_tenant_id_participant_id`: (`tenant_id`, `participant_id`) references `kernel.participants` (`tenant_id`, `id`), on delete restrict
+- `FK_observations_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_observations_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `AK_observations_tenant_id_id`: unique constraint (`tenant_id`, `id`)
+- `IX_observations_tenant_id_enrollment_id`: (`tenant_id`, `enrollment_id`)
+- `IX_observations_tenant_id_participant_id_concept_id`: (`tenant_id`, `participant_id`, `concept_id`)
+- `IX_observations_tenant_id_study_id`: (`tenant_id`, `study_id`)
+
+Check constraints:
+
+- `ck_observations_revision`: `revision > 0`
 
 ## kernel.organizations
 

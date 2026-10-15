@@ -43,6 +43,8 @@ namespace Cadence.Kernel.Serialization;
 [JsonSerializable(typeof(ObservationId?))]
 [JsonSerializable(typeof(List<ObservationId>))]
 [JsonSerializable(typeof(ObservationId[]))]
+[JsonSerializable(typeof(ObservationLockId))]
+[JsonSerializable(typeof(ObservationLockId?))]
 [JsonSerializable(typeof(AttestationId))]
 [JsonSerializable(typeof(AttestationId?))]
 [JsonSerializable(typeof(List<AttestationId>))]
