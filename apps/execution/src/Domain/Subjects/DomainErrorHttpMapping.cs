@@ -57,7 +57,6 @@ public static class DomainErrorHttpMapping
         ["ACTIVE_QUERY_EXISTS"] = StatusCodes.Status409Conflict,
         ["UNAUTHORIZED_QUERY_ROLE"] = StatusCodes.Status403Forbidden,
         ["UNAUTHORIZED_SIGNER_ROLE"] = StatusCodes.Status403Forbidden,
-        ["INVALID_HMAC_SIGNATURE"] = StatusCodes.Status400BadRequest,
         ["TRIAL_LOCKED"] = StatusCodes.Status423Locked,
         ["CONCURRENCY_CONFLICT"] = StatusCodes.Status409Conflict,
     };

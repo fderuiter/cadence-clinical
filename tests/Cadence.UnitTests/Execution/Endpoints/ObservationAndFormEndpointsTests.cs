@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,6 +15,7 @@ using Cadence.Apps.Execution.Infrastructure.EditChecks;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Kernel.Trust;
 using Cadence.Security;
+using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
@@ -359,17 +361,13 @@ public sealed class ObservationAndFormEndpointsTests
         await formRepo.AddAsync(form, CancellationToken.None);
 
         var payloadHash = JsonCanonicalization.Sha256Hex(payload);
-        var hmacSignature = HmacSigner.ComputeSignature(payloadHash, TestSecurityContext.GatewaySecret);
 
         var request = FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
-            SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: payloadHash,
-            HmacSignature: hmacSignature);
+            PayloadHash: payloadHash);
 
-        var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("pi-user-01", "Principal Investigator") };
+        var httpContext = ApprovalContext("pi-user-01", "Principal Investigator", form.Id.ToString(), payloadHash);
         var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
 
         result.Should().BeOfType<Ok<FormSubmissionResponse>>();
@@ -403,17 +401,13 @@ public sealed class ObservationAndFormEndpointsTests
         await formRepo.AddAsync(form, CancellationToken.None);
 
         var payloadHash = JsonCanonicalization.Sha256Hex(payload);
-        var hmacSignature = HmacSigner.ComputeSignature(payloadHash, TestSecurityContext.GatewaySecret);
 
         var request = FormSubmissionApproveRequest.Create(
             SignerId: "user-01",
-            SignerRole: "unauthorized_role",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: payloadHash,
-            HmacSignature: hmacSignature);
+            PayloadHash: payloadHash);
 
-        var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("user-01", "unauthorized_role") };
+        var httpContext = ApprovalContext("user-01", "unauthorized_role", form.Id.ToString(), payloadHash);
         var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
 
         result.Should().BeOfType<ProblemHttpResult>();
@@ -422,11 +416,11 @@ public sealed class ObservationAndFormEndpointsTests
     }
 
     /// <summary>
-    /// Validates that FormEndpoints.ApproveFormSubmissionAsync returns 400 Bad Request when HMAC signature is invalid.
+    /// Validates that FormEndpoints.ApproveFormSubmissionAsync signs nothing without a verified step-up token (#5403).
     /// @req:SRS-EDC-003
     /// </summary>
     [Fact]
-    public async Task ApproveFormSubmission_Handler_WithInvalidHmac_ReturnsBadRequest()
+    public async Task ApproveFormSubmission_Handler_WithoutAVerifiedToken_ReturnsUnauthorized()
     {
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
@@ -448,20 +442,16 @@ public sealed class ObservationAndFormEndpointsTests
 
         var request = FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
-            SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: payloadHash,
-            HmacSignature: "invalid-hmac-signature");
+            PayloadHash: payloadHash);
 
         var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal("pi-user-01", "Principal Investigator") };
         var result = await FormEndpoints.ApproveFormSubmissionAsync(form.Id.ToString(), request, httpContext, svc, CancellationToken.None);
 
         result.Should().BeOfType<ProblemHttpResult>();
         var problem = (ProblemHttpResult)result;
-        problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        problem.ProblemDetails.Detail.Should().Contain("Signature manifest HMAC signature verification failed.");
-        problem.ProblemDetails.Extensions["code"]?.ToString().Should().Be("INVALID_HMAC_SIGNATURE");
+        problem.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        form.Status.Should().Be(FormSubmissionStatus.Completed);
     }
 
     /// <summary>
@@ -505,5 +495,14 @@ public sealed class ObservationAndFormEndpointsTests
         ok.StatusCode.Should().Be(StatusCodes.Status200OK);
         ok.Value!.Status.Should().Be(FormSubmissionStatus.Draft);
         ok.Value!.IsReadonly.Should().BeFalse();
+    }
+
+    /// <summary>A request context as the e-signature filter leaves it: the caller, and the token it verified and consumed.</summary>
+    private static DefaultHttpContext ApprovalContext(string userId, string role, string formId, string payloadHash)
+    {
+        var httpContext = new DefaultHttpContext { User = TestSecurityContext.CreatePrincipal(userId, role) };
+        httpContext.Items[ElectronicSignatureEndpointFilter.VerifiedTokenItemKey] = new JwtSecurityTokenHandler().ReadJwtToken(
+            TestSecurityContext.CreateSigToken(userId, FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction, batchId: payloadHash));
+        return httpContext;
     }
 }

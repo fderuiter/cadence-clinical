@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,6 +8,7 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Domain.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Normalization;
 using Cadence.Kernel.Trust;
 using Cadence.Security;
@@ -31,6 +33,11 @@ namespace Cadence.UnitTests.Execution.Forms;
 public sealed class FormSubmissionStateTests
 {
     private static readonly AuthenticatedCaller PrincipalInvestigator = new("pi-user-01", ["PRINCIPAL_INVESTIGATOR"]);
+
+    /// <summary>A step-up token for <paramref name="userId"/>, bound to one form's approval and one payload hash (#5403).</summary>
+    private static JwtSecurityToken SigToken(string userId, string formId, string payloadHash) =>
+        new JwtSecurityTokenHandler().ReadJwtToken(TestSecurityContext.CreateSigToken(
+            userId, FormEndpoints.ApproveAction(formId), FormEndpoints.ApproveSemanticAction, batchId: payloadHash));
 
     /// <summary>The payload hash a signer computes: SHA-256 of the RFC 8785 canonical payload (ADR-2513).</summary>
     private static string ComputeHash(string payload) => JsonCanonicalization.Sha256Hex(payload);
@@ -199,38 +206,39 @@ public sealed class FormSubmissionStateTests
         await service.CompleteAsync(formId, CancellationToken.None);
 
         // Attempt approve with mismatched hash
+        const string wrongHash = "0000000000000000000000000000000000000000000000000000000000000000";
         var badApproveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
-            SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: "0000000000000000000000000000000000000000000000000000000000000000"),
+            PayloadHash: wrongHash),
             PrincipalInvestigator,
+            SigToken("pi-user-01", formId, wrongHash),
             CancellationToken.None);
 
         badApproveResult.IsFailure.Should().BeTrue();
         badApproveResult.Error!.Code.Should().Be("INVALID_PAYLOAD_HASH");
 
-        // Attempt approve with correct hash and valid HMAC
+        // Approve with the correct hash and a step-up token bound to it: the server seals the manifest.
         var validHash = ComputeHash(payload);
-        var validHmac = HmacSigner.ComputeSignature(validHash, TestSecurityContext.GatewaySecret);
         var goodApproveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
-            SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: validHash,
-            HmacSignature: validHmac),
+            PayloadHash: validHash),
             PrincipalInvestigator,
+            SigToken("pi-user-01", formId, validHash),
             CancellationToken.None);
 
         goodApproveResult.IsSuccess.Should().BeTrue();
+        var stored = (await formRepo.GetForUpdateAsync(FormSubmissionId.Parse(formId), CancellationToken.None))!.SignatureManifest!;
+        stored.HmacSignature.Should().Be(HmacSigner.ComputeSignature(validHash, TestSecurityContext.GatewaySecret));
+        stored.SignerId.Should().Be("pi-user-01");
+        stored.SignerRole.Should().Be("PRINCIPAL_INVESTIGATOR");
         goodApproveResult.Value!.Status.Should().Be(FormSubmissionStatus.Approved);
         goodApproveResult.Value!.IsReadonly.Should().BeTrue();
     }
 
     [Fact]
-    public async Task FormApplicationService_Approve_WithInvalidHmac_ReturnsInvalidHmacSignatureError()
+    public async Task FormApplicationService_Approve_WithoutATokenForThisSignerAndContent_SignsNothing()
     {
         var formRepo = new InMemoryFormSubmissionRepository();
         var obsRepo = new InMemoryObservationRepository();
@@ -256,19 +264,27 @@ public sealed class FormSubmissionStateTests
 
         var validHash = ComputeHash(payload);
 
-        // Attempt approve with missing/invalid HMAC
-        var badApproveResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
+        var request = FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
-            SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: validHash,
-            HmacSignature: "invalid-hmac-signature"),
-            PrincipalInvestigator,
-            CancellationToken.None);
+            PayloadHash: validHash);
 
-        badApproveResult.IsFailure.Should().BeTrue();
-        badApproveResult.Error!.Code.Should().Be("INVALID_HMAC_SIGNATURE");
+        // No token, a token issued to someone else, and a token bound to other content each sign nothing.
+        JwtSecurityToken?[] refused =
+        [
+            null,
+            SigToken("pi-user-02", formId, validHash),
+            SigToken("pi-user-01", formId, ComputeHash("{\"vssbp\": 999}")),
+        ];
+        foreach (var token in refused)
+        {
+            var result = await service.ApproveAsync(formId, request, PrincipalInvestigator, token, CancellationToken.None);
+            result.IsFailure.Should().BeTrue();
+            result.Error!.Code.Should().Be("REAUTHENTICATION_REQUIRED");
+        }
+
+        (await formRepo.GetForUpdateAsync(FormSubmissionId.Parse(formId), CancellationToken.None))!.Status
+            .Should().Be(FormSubmissionStatus.Completed);
     }
 
     /// <summary>
@@ -330,11 +346,10 @@ public sealed class FormSubmissionStateTests
         // Attempt approve with unauthorized role (e.g., patient, data_entry_clerk)
         var unauthorizedResult = await service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "clerk-01",
-            SignerRole: "data_entry_clerk",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: FakeClock.DefaultStart.UtcDateTime,
             PayloadHash: ComputeHash(payload)),
             new AuthenticatedCaller("clerk-01", ["data_entry_clerk"]),
+            SigToken("clerk-01", formId, ComputeHash(payload)),
             CancellationToken.None);
 
         unauthorizedResult.IsFailure.Should().BeTrue();
@@ -342,7 +357,7 @@ public sealed class FormSubmissionStateTests
 
         // Attempt approve with null manifest
         var nullManifestRequest = new FormSubmissionApproveRequest("PI approval and sign-off.", null!);
-        var nullManifestResult = await service.ApproveAsync(formId, nullManifestRequest, PrincipalInvestigator, CancellationToken.None);
+        var nullManifestResult = await service.ApproveAsync(formId, nullManifestRequest, PrincipalInvestigator, null, CancellationToken.None);
         nullManifestResult.IsFailure.Should().BeTrue();
         nullManifestResult.Error!.Code.Should().Be("SIGNATURE_MANIFEST_REQUIRED");
     }
@@ -382,12 +397,10 @@ public sealed class FormSubmissionStateTests
 
         var action = () => service.ApproveAsync(formId, FormSubmissionApproveRequest.Create(
             SignerId: "pi-user-01",
-            SignerRole: "PRINCIPAL_INVESTIGATOR",
             SigningReason: "I attest that I have reviewed and approved these clinical data.",
-            SignedAt: FakeClock.DefaultStart.UtcDateTime,
-            PayloadHash: ComputeHash(payload),
-            HmacSignature: "any-hmac"),
+            PayloadHash: ComputeHash(payload)),
             PrincipalInvestigator,
+            SigToken("pi-user-01", formId, ComputeHash(payload)),
             CancellationToken.None);
 
         await action.Should().ThrowAsync<InvalidOperationException>()

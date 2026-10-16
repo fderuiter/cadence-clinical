@@ -12306,6 +12306,31 @@
           }
         }
       },
+      "Execution_ApprovalAttestation": {
+        "required": [
+          "signer_id",
+          "signer_name",
+          "payload_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "signer_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "payload_hash": {
+            "type": "string"
+          }
+        }
+      },
       "Execution_BatchQueryRequest": {
         "required": [
           "query_ids"
@@ -14850,7 +14875,7 @@
             "type": "string"
           },
           "signature_manifest": {
-            "$ref": "#/components/schemas/Execution_SignatureManifest"
+            "$ref": "#/components/schemas/Execution_ApprovalAttestation"
           }
         }
       },
