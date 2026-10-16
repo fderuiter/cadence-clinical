@@ -83,7 +83,9 @@ These tests currently use it:
   sets it to `/opt/pw-browsers/chromium` when that file exists. Without the opt-in it is skipped.
 - `tests/Cadence.IntegrationTests/Database/` (`ThrowawayPostgresDatabase`): every service's migrations applied the way a deployed
   service applies them, into one shared database, checking that each service's tables and migration history
-  land in its own schema (ADR-2247).
+  land in its own schema (ADR-2247). `ThrowawayPostgresDatabase` creates a throwaway `NOSUPERUSER NOBYPASSRLS` role that
+  owns the database, and its connection string logs in as that role, so the execution and interop hosts under test
+  never run with superuser privileges. The server connection string only creates and drops the database and the role.
 - `tests/Cadence.E2ETests/E2E/` (`ExecutionE2EFactory`): write paths that enroll a subject. Read and routing tests run on
   the in-memory provider when no database is configured. Tests that write call
   `factory.SkipUnlessPostgres()`.

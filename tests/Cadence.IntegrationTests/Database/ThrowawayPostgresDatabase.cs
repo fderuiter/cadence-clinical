@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,6 +21,11 @@ namespace Cadence.IntegrationTests.Database;
 /// </list>
 /// With neither set, <see cref="ConnectionString"/> is null and tests call <see cref="SkipIfUnavailable"/>.
 /// No migrations are applied; that is left to the tests.
+/// <para>
+/// <see cref="ConnectionString"/> connects as a throwaway application role that owns the database and is
+/// <c>NOSUPERUSER NOBYPASSRLS</c>, so a service under test never runs with privileges it would not have in a
+/// deployment. The server connection string is used only to create and drop the database and the role.
+/// </para>
 /// </summary>
 public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
 {
@@ -29,6 +35,7 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
     private PostgreSqlContainer? _container;
     private string? _adminConnectionString;
     private string? _databaseName;
+    private string? _roleName;
 
     public string? ConnectionString { get; private set; }
 
@@ -39,17 +46,33 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
         if (Environment.GetEnvironmentVariable("CADENCE_TEST_POSTGRES") is { Length: > 0 } server)
         {
             _adminConnectionString = server;
-            _databaseName = $"cadence_it_{Guid.NewGuid():N}";
-            await ExecuteAsync(server, $"CREATE DATABASE \"{_databaseName}\"").ConfigureAwait(false);
-            ConnectionString = new NpgsqlConnectionStringBuilder(server) { Database = _databaseName }.ConnectionString;
         }
         else if (Environment.GetEnvironmentVariable("CADENCE_TEST_DOCKER") == "1")
         {
             _container = new PostgreSqlBuilder().WithImage("postgres:16-alpine").Build();
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
             await _container.StartAsync(cts.Token).ConfigureAwait(false);
-            ConnectionString = _container.GetConnectionString();
+            _adminConnectionString = _container.GetConnectionString();
         }
+        else
+        {
+            return;
+        }
+
+        string suffix = Guid.NewGuid().ToString("N");
+        string password = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(24));
+        _roleName = $"cadence_it_app_{suffix}";
+        _databaseName = $"cadence_it_{suffix}";
+        await ExecuteAsync(
+            _adminConnectionString,
+            $"CREATE ROLE \"{_roleName}\" LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD '{password}'").ConfigureAwait(false);
+        await ExecuteAsync(_adminConnectionString, $"CREATE DATABASE \"{_databaseName}\" OWNER \"{_roleName}\"").ConfigureAwait(false);
+        ConnectionString = new NpgsqlConnectionStringBuilder(_adminConnectionString)
+        {
+            Database = _databaseName,
+            Username = _roleName,
+            Password = password,
+        }.ConnectionString;
     }
 
     public async ValueTask DisposeAsync()
@@ -58,6 +81,7 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
         {
             NpgsqlConnection.ClearAllPools();
             await ExecuteAsync(_adminConnectionString, $"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)").ConfigureAwait(false);
+            await ExecuteAsync(_adminConnectionString, $"DROP ROLE IF EXISTS \"{_roleName}\"").ConfigureAwait(false);
         }
 
         if (_container is not null)
