@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Toxicity;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -31,7 +32,9 @@ public static class LabToxicityEndpoints
             .WithSummary("List Staged Ae Review Queue")
             .WithDescription("Retrieve laboratory Grade 3/4 toxicity triggers staged for Investigator review.")
             .Produces<IReadOnlyList<StagedAdverseEventReviewResponse>>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("lab_toxicity_review:read");
 
         group.MapPost("/review/{review_id}/action", ExecuteReviewActionAsync)
             .WithName("ActionStagedAeReview")
@@ -39,14 +42,18 @@ public static class LabToxicityEndpoints
             .WithDescription("Perform Investigator workflow action on a staged Grade 3/4 AE (Confirm, Dismiss, Escalate).")
             .Produces<StagedAdverseEventActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .AddEndpointFilter<ChangeReasonHeaderFilter>()
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("lab_toxicity_review:review");
 
         group.MapPost("/evaluate", EvaluateToxicityAsync)
             .WithName("EvaluateLabToxicityEndpoint")
             .WithSummary("Evaluate Lab Toxicity Endpoint")
             .WithDescription("Evaluate CTCAE v5.0 Grade, Hy's Law criteria, and delta checks for a single lab observation.")
             .Produces<LabToxicityEvaluateResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("lab_range:alert");
 
         return app;
     }

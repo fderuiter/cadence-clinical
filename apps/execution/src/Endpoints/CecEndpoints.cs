@@ -8,6 +8,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Core.Domain;
 using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -40,12 +41,16 @@ public static class CecEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("cec_adjudication:adjudicate")
             .RequireElectronicSignature(ChairAdjudicateSemanticAction, ChairAdjudicateActionFor);
 
         group.MapGet("/{id}", GetDossierByIdAsync)
             .WithName("GetCecDossierById")
             .Produces<CecDossier>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("cec_adjudication:read");
 
         return routes;
     }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -22,6 +23,13 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static class ObservationEndpoints
 {
+    // Route permissions (ADR-2516). Site staff record observations; monitors and data managers verify them (the
+    // service also checks the verifier's role).
+    private const string ReadData = "ecrf_data_entry:read";
+    private const string EnterData = "ecrf_data_entry:create";
+    private const string VerifySource = "sdv:update";
+    private const string FlagSource = "sdv:flag";
+
     public static IEndpointRouteBuilder MapObservationEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/execution/observations")
@@ -30,16 +38,23 @@ public static class ObservationEndpoints
         group.MapPost("/", CreateObservationAsync)
             .WithName("CreateClinicalObservation")
             .Produces<ObservationResponse>(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(EnterData);
 
         group.MapGet("/{id}", GetObservationByIdAsync)
             .WithName("GetObservationById")
             .Produces<ObservationResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(ReadData);
 
         group.MapGet("/subject/{studyId}/{subjectId}", ListObservationsBySubjectAsync)
             .WithName("ListObservationsBySubject")
-            .Produces<IReadOnlyList<ObservationResponse>>(StatusCodes.Status200OK);
+            .Produces<IReadOnlyList<ObservationResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ReadData)
+            .RequireStudyScope("studyId");
 
         // SDV is refused (403) unless the caller holds a verification role, and carries a reason for change.
         group.MapPost("/{id}/sdv", VerifyObservationSdvAsync)
@@ -48,6 +63,7 @@ public static class ObservationEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .RequirePermission(VerifySource)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/sdv/flag", FlagObservationSdvAsync)
@@ -56,16 +72,17 @@ public static class ObservationEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .RequirePermission(FlagSource)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         // Undocumented alias for legacy Python router compatibility
         var legacyGroup = app.MapGroup("/api/v1/observations")
             .ExcludeFromDescription();
 
-        legacyGroup.MapPost("/", CreateObservationAsync);
-        legacyGroup.MapGet("/{id}", GetObservationByIdAsync);
-        legacyGroup.MapPatch("/{id}/sdv", VerifyObservationSdvAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
-        legacyGroup.MapPost("/{id}/sdv", VerifyObservationSdvAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/", CreateObservationAsync).RequirePermission(EnterData);
+        legacyGroup.MapGet("/{id}", GetObservationByIdAsync).RequirePermission(ReadData);
+        legacyGroup.MapPatch("/{id}/sdv", VerifyObservationSdvAsync).RequirePermission(VerifySource).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/{id}/sdv", VerifyObservationSdvAsync).RequirePermission(VerifySource).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
     }

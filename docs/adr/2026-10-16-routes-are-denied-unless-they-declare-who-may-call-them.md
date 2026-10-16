@@ -98,6 +98,10 @@ service ever filled in assigned studies, so the check could not deny anyone.
     site) stay in application code.
   - Every identity provider configuration must issue `study_ids` for users of study-scoped routes. The local realm
     (`docker/cadence-realm.json`) maps the attribute and gives demo users `*`.
+  - Execution adds two roles that only a non-person caller or a committee member holds: `etmf_service` (the eTMF
+    service account posting site completeness to `POST /api/v1/execution/webhooks/etmf`) and `cec_chair` (the
+    clinical endpoint committee chair who signs final adjudications). The identity provider must issue them; the
+    local realm does not yet, so those two routes refuse every demo user.
 
 ## 6. Implementation & Verification
 

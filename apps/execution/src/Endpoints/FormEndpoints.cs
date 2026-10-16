@@ -9,6 +9,7 @@ using Cadence.Apps.Execution.Application.Forms;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -41,6 +42,14 @@ public static class FormEndpoints
     /// </summary>
     public const string BatchSignOffAction = "/api/v1/execution/batch-sign-off";
 
+    // Route permissions (ADR-2516). Site staff enter and correct form data; only an investigator signs (the service
+    // also checks the signer's role); unlocking a signed form for correction is a data-management action.
+    private const string ReadData = "ecrf_data_entry:read";
+    private const string EnterData = "ecrf_data_entry:create";
+    private const string UpdateData = "ecrf_data_entry:update";
+    private const string SignForm = "ecrf_form:sign";
+    private const string UnlockForm = "ecrf_form:unlock";
+
     public static IEndpointRouteBuilder MapFormEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/execution/forms")
@@ -49,30 +58,41 @@ public static class FormEndpoints
         group.MapPost("/", CreateFormSubmissionAsync)
             .WithName("CreateFormSubmission")
             .Produces<FormSubmissionResponse>(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(EnterData);
 
         group.MapGet("/{id}", GetFormSubmissionByIdAsync)
             .WithName("GetFormSubmissionById")
             .Produces<FormSubmissionResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(ReadData);
 
         group.MapGet("/subject/{studyId}/{subjectId}", ListFormSubmissionsBySubjectAsync)
             .WithName("ListFormSubmissionsBySubject")
-            .Produces<IReadOnlyList<FormSubmissionResponse>>(StatusCodes.Status200OK);
+            .Produces<IReadOnlyList<FormSubmissionResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ReadData)
+            .RequireStudyScope("studyId");
 
         group.MapPut("/{id}", UpdateFormPayloadAsync)
             .WithName("UpdateFormPayload")
             .Produces<FormSubmissionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status423Locked)
+            .RequirePermission(UpdateData)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/complete", CompleteFormSubmissionAsync)
             .WithName("CompleteFormSubmission")
             .Produces<FormSubmissionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(UpdateData);
 
         group.MapPost("/{id}/approve", ApproveFormSubmissionAsync)
             .WithName("ApproveFormSubmission")
@@ -80,6 +100,7 @@ public static class FormEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(SignForm)
             .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
 
         group.MapPost("/{id}/unlock", UnlockFormSubmissionAsync)
@@ -87,6 +108,8 @@ public static class FormEndpoints
             .Produces<FormSubmissionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(UnlockForm)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         app.MapPost("/api/v1/execution/batch-sign-off", BatchSignOffAsync)
@@ -97,10 +120,12 @@ public static class FormEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status423Locked)
+            .RequirePermission(SignForm)
             .RequireElectronicSignature(BatchSignOffBinding);
 
         app.MapPost("/api/v1/execution/signatures/batch-sign-off", BatchSignOffAsync)
             .ExcludeFromDescription()
+            .RequirePermission(SignForm)
             .RequireElectronicSignature(BatchSignOffBinding);
 
         // Undocumented alias for legacy Python router compatibility. The gateway proxies it, so every alias carries the
@@ -108,13 +133,14 @@ public static class FormEndpoints
         var legacyGroup = app.MapGroup("/api/v1/forms")
             .ExcludeFromDescription();
 
-        legacyGroup.MapPost("/", CreateFormSubmissionAsync);
-        legacyGroup.MapGet("/{id}", GetFormSubmissionByIdAsync);
-        legacyGroup.MapPut("/{id}", UpdateFormPayloadAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
-        legacyGroup.MapPost("/{id}/complete", CompleteFormSubmissionAsync);
+        legacyGroup.MapPost("/", CreateFormSubmissionAsync).RequirePermission(EnterData);
+        legacyGroup.MapGet("/{id}", GetFormSubmissionByIdAsync).RequirePermission(ReadData);
+        legacyGroup.MapPut("/{id}", UpdateFormPayloadAsync).RequirePermission(UpdateData).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/{id}/complete", CompleteFormSubmissionAsync).RequirePermission(UpdateData);
         legacyGroup.MapPost("/{id}/approve", ApproveFormSubmissionAsync)
+            .RequirePermission(SignForm)
             .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
-        legacyGroup.MapPost("/{id}/unlock", UnlockFormSubmissionAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/{id}/unlock", UnlockFormSubmissionAsync).RequirePermission(UnlockForm).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
     }

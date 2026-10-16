@@ -23,21 +23,26 @@ public sealed class LegacyAliasChangeReasonTests(ExecutionApiFactory factory) : 
 {
     private const string Id = "00000000-0000-0000-0000-000000000001";
 
-    public static TheoryData<string, string, string> ChangingRoutes => new()
+    private const string Investigator = "Site Investigator";
+    private const string DataManager = "Data Manager";
+    private const string Cra = "CRA";
+
+    /// <summary>Each changing route, with the role of a caller the route admits (ADR-2516), so the request reaches the reason check.</summary>
+    public static TheoryData<string, string, string, string> ChangingRoutes => new()
     {
-        { "PUT", $"/api/v1/forms/{Id}", """{"payload":"{}"}""" },
-        { "PUT", $"/api/v1/execution/forms/{Id}", """{"payload":"{}"}""" },
-        { "POST", $"/api/v1/forms/{Id}/unlock", """{"reason":"Late lab result"}""" },
-        { "POST", $"/api/v1/execution/forms/{Id}/unlock", """{"reason":"Late lab result"}""" },
-        { "POST", $"/api/v1/queries/{Id}/reopen", """{"reason":"Needs re-check"}""" },
-        { "POST", $"/api/v1/execution/queries/{Id}/reopen", """{"reason":"Needs re-check"}""" },
-        { "POST", $"/api/v1/queries/{Id}/cancel", """{"reason":"Raised in error"}""" },
-        { "POST", $"/api/v1/execution/queries/{Id}/cancel", """{"reason":"Raised in error"}""" },
-        { "POST", $"/api/v1/queries/{Id}/respond", """{"response":"Confirmed with source"}""" },
-        { "POST", $"/api/v1/execution/queries/{Id}/respond", """{"response":"Confirmed with source"}""" },
-        { "POST", $"/api/v1/execution/queries/{Id}/answer", """{"response":"Confirmed with source"}""" },
-        { "POST", $"/api/v1/queries/{Id}/close", """{"resolver":"cra-01"}""" },
-        { "POST", $"/api/v1/execution/queries/{Id}/close", """{"resolver":"cra-01"}""" },
+        { "PUT", $"/api/v1/forms/{Id}", """{"payload":"{}"}""", Investigator },
+        { "PUT", $"/api/v1/execution/forms/{Id}", """{"payload":"{}"}""", Investigator },
+        { "POST", $"/api/v1/forms/{Id}/unlock", """{"reason":"Late lab result"}""", DataManager },
+        { "POST", $"/api/v1/execution/forms/{Id}/unlock", """{"reason":"Late lab result"}""", DataManager },
+        { "POST", $"/api/v1/queries/{Id}/reopen", """{"reason":"Needs re-check"}""", Cra },
+        { "POST", $"/api/v1/execution/queries/{Id}/reopen", """{"reason":"Needs re-check"}""", Cra },
+        { "POST", $"/api/v1/queries/{Id}/cancel", """{"reason":"Raised in error"}""", Cra },
+        { "POST", $"/api/v1/execution/queries/{Id}/cancel", """{"reason":"Raised in error"}""", Cra },
+        { "POST", $"/api/v1/queries/{Id}/respond", """{"response":"Confirmed with source"}""", Investigator },
+        { "POST", $"/api/v1/execution/queries/{Id}/respond", """{"response":"Confirmed with source"}""", Investigator },
+        { "POST", $"/api/v1/execution/queries/{Id}/answer", """{"response":"Confirmed with source"}""", Investigator },
+        { "POST", $"/api/v1/queries/{Id}/close", """{"resolver":"cra-01"}""", Cra },
+        { "POST", $"/api/v1/execution/queries/{Id}/close", """{"resolver":"cra-01"}""", Cra },
     };
 
     /// <summary>A change through an alias or its documented route without a reason is refused before anything is read or written.</summary>
@@ -45,9 +50,9 @@ public sealed class LegacyAliasChangeReasonTests(ExecutionApiFactory factory) : 
     [Trait("Category", "GxP_OQ")]
     [GxPRequirement("PRD-SYS-001")]
     [MemberData(nameof(ChangingRoutes))]
-    public async Task ChangingRoute_WithoutAChangeReason_Returns400(string method, string path, string body)
+    public async Task ChangingRoute_WithoutAChangeReason_Returns400(string method, string path, string body, string role)
     {
-        using var client = factory.CreateSignedClient(TestSecurityContext.Identity("pi-01", "Site Investigator"));
+        using var client = factory.CreateSignedClient(TestSecurityContext.Identity("caller-01", role));
         using var request = new HttpRequestMessage(new HttpMethod(method), new Uri(path, UriKind.Relative))
         {
             Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json"),

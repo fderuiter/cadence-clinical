@@ -15,6 +15,7 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints;
 using Cadence.Core.Domain;
 using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 
@@ -61,7 +62,10 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     private readonly SubjectEndpointsTestFactory _factory = new();
     private readonly HttpClient _client;
 
-    public SubjectEndpointsRoutingTests() => _client = _factory.CreateClient();
+    // Every request is signed as a site coordinator, the role that may change a participant's record, so both the
+    // route permission (ADR-2516) and the handlers' role checks (#4943) pass; role coverage lives in
+    // SubjectRouteAuthorityTests.
+    public SubjectEndpointsRoutingTests() => _client = _factory.CreateSignedClient(TestSecurityContext.Identity("crc-001", "crc"));
 
     public void Dispose()
     {
@@ -727,10 +731,12 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
             Host.CreateDefaultBuilder()
                 .ConfigureWebHost(webHost => webHost
                     .UseTestServer()
+                    .UseTestGatewaySecret()
                     .ConfigureServices(services =>
                     {
                         services.AddRouting();
                         services.AddOpenApi();
+                        services.AddCadenceSecurity();
                         services.ConfigureHttpJsonOptions(ApplyExecutionJsonConventions);
                         services.AddSingleton<ISubjectApplicationService>(Service);
                         services.AddSingleton<IValidator<SubjectCreateRequest>, SubjectCreateRequestValidator>();
@@ -739,19 +745,12 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
                     })
                     .Configure(app =>
                     {
-                        // Every request runs as an authenticated site coordinator, as the gateway scheme would
-                        // sign it, so the role checks in the handlers (#4943) pass; role coverage lives in
-                        // SubjectRouteAuthorityTests.
-                        app.Use((context, next) =>
-                        {
-                            context.User = SiteCoordinator();
-                            return next(context);
-                        });
                         app.UseRouting();
+                        app.UseCadenceSecurity();
                         app.UseEndpoints(endpoints =>
                         {
                             endpoints.MapSubjectEndpoints();
-                            endpoints.MapOpenApi();
+                            endpoints.MapOpenApi().AllowAnonymous();
                         });
                     }));
     }

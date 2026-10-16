@@ -298,9 +298,9 @@ public static partial class PermissionMatrix
         };
 
         // subject
+        // A participant reaches only their own ePRO/eCOA; site eCRF data entry is site work (ADR-2516).
         _rolePermissions[RoleNormalization.ROLE_SUBJECT] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["ecrf_data_entry"] = ["create", "update"],
             ["ecoa_schedule"] = ["read"],
             ["ecoa_diary"] = ["read"],
             ["ecoa_submission"] = ["create", "read"]

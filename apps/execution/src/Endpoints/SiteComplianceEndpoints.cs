@@ -5,6 +5,7 @@ using Cadence.Apps.Execution.Application;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -51,18 +52,27 @@ public static class SiteComplianceEndpoints
             .WithName("EtmfCompletenessWebhook")
             .Produces<OperationEnvelopeResponse>(StatusCodes.Status200OK)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            // Called service to service by eTMF, signed as its service account holding the etmf_service role.
+            .RequirePermission("site_compliance:etmf_sync")
             .AddEndpointFilter<ValidationFilter<EtmfCompletenessWebhookPayload>>();
 
         app.MapPost("/api/v1/execution/sites/{siteId}/activate", ActivateSiteAsync)
             .WithTags("SiteCompliance")
             .WithName("ActivateSite")
             .Produces<OperationEnvelopeResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("site_compliance:activate")
+            .RequireSiteScope("siteId");
 
         app.MapGet("/api/v1/execution/sites/{siteId}/compliance-status", GetSiteComplianceStatusAsync)
             .WithTags("SiteCompliance")
             .WithName("GetSiteComplianceStatus")
-            .Produces<ComplianceStatusResponse>(StatusCodes.Status200OK); // always 200 per §1.2 -- never 404
+            .Produces<ComplianceStatusResponse>(StatusCodes.Status200OK) // always 200 per §1.2 -- never 404
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("site_compliance:read")
+            .RequireSiteScope("siteId");
 
         return app;
     }

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.TestSupport.Execution;
@@ -43,7 +44,8 @@ public sealed class ChangeReasonEncodingTests(ExecutionPostgresApiFactory factor
     public async Task EtmfComplianceUpdate_StoresTheTypedReasonInTheAuditEntry()
     {
         factory.SkipIfUnavailable();
-        var caller = TestSecurityContext.Identity($"etmf-{_run}", "Integration");
+        // eTMF calls the webhook as its signed service account (ADR-2516).
+        var caller = TestSecurityContext.Identity($"etmf-{_run}", PermissionMatrix.EtmfServiceRole);
         using var client = factory.CreateSignedClient(caller);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/execution/webhooks/etmf")
         {
@@ -82,7 +84,7 @@ public sealed class ChangeReasonEncodingTests(ExecutionPostgresApiFactory factor
             await db.SaveChangesAsync(Ct);
         }
 
-        var caller = TestSecurityContext.Identity($"coordinator-{_run}", "Site Coordinator");
+        var caller = TestSecurityContext.Identity($"coordinator-{_run}", "crc");
         using var client = factory.CreateSignedClient(caller);
         using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/execution/subjects/{subject}/state")
         {
@@ -102,7 +104,7 @@ public sealed class ChangeReasonEncodingTests(ExecutionPostgresApiFactory factor
     public async Task MalformedEncodedReason_IsRefusedAndNothingIsAudited()
     {
         factory.SkipIfUnavailable();
-        var caller = TestSecurityContext.Identity($"malformed-{_run}", "Site Coordinator");
+        var caller = TestSecurityContext.Identity($"malformed-{_run}", "crc");
         using var client = factory.CreateSignedClient(caller);
         using var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/execution/subjects/SUBJ-NONE-{_run}/state")
         {

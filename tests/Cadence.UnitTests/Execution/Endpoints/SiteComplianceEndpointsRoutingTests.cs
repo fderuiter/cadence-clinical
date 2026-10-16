@@ -20,6 +20,8 @@ using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Core.Domain;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
@@ -59,12 +61,22 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
 
     private readonly SiteComplianceEndpointsTestFactory _factory = new();
     private readonly HttpClient _client;
+    private readonly HttpClient _etmf;
 
-    public SiteComplianceEndpointsRoutingTests() => _client = _factory.CreateClient();
+    /// <summary>
+    /// Site activation and status are called by sponsor operations; the eTMF webhook by the eTMF service's signed
+    /// account (ADR-2516).
+    /// </summary>
+    public SiteComplianceEndpointsRoutingTests()
+    {
+        _client = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-ops", "Data Manager"));
+        _etmf = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole));
+    }
 
     public void Dispose()
     {
         _client.Dispose();
+        _etmf.Dispose();
         _factory.Dispose();
     }
 
@@ -77,7 +89,7 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     {
         var payload = new EtmfCompletenessWebhookPayload("STUDY-001", "SITE-001", "SITE_ACTIVATION", true, null);
 
-        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/webhooks/etmf", payload);
+        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/webhooks/etmf", payload, _etmf);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         _factory.Service.ApplyEtmfWebhookAsyncCalls.Should().Be(1);
@@ -90,7 +102,7 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     {
         // Neither study_id nor milestone supplied -- fails EtmfCompletenessWebhookPayloadValidator's two
         // NotEmpty() rules. ValidationFilter<T> must short-circuit before ApplyEtmfWebhookAsync is reached.
-        var response = await SendRawJsonAsync(HttpMethod.Post, "/api/v1/execution/webhooks/etmf", "{}");
+        var response = await SendRawJsonAsync(HttpMethod.Post, "/api/v1/execution/webhooks/etmf", "{}", _etmf);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         _factory.Service.ApplyEtmfWebhookAsyncCalls.Should().Be(0);
@@ -238,14 +250,14 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
         document.RootElement.GetProperty("detail").GetString().Should().Be(expectedDetail);
     }
 
-    private Task<HttpResponseMessage> SendJsonAsync<TBody>(HttpMethod method, string uri, TBody body)
+    private Task<HttpResponseMessage> SendJsonAsync<TBody>(HttpMethod method, string uri, TBody body, HttpClient? client = null)
         where TBody : notnull =>
-        _client.SendAsync(
+        (client ?? _client).SendAsync(
             new HttpRequestMessage(method, uri) { Content = JsonContent.Create(body, options: JsonOptions) },
             TestContext.Current.CancellationToken);
 
-    private Task<HttpResponseMessage> SendRawJsonAsync(HttpMethod method, string uri, string rawJson) =>
-        _client.SendAsync(
+    private Task<HttpResponseMessage> SendRawJsonAsync(HttpMethod method, string uri, string rawJson, HttpClient? client = null) =>
+        (client ?? _client).SendAsync(
             new HttpRequestMessage(method, uri) { Content = new StringContent(rawJson, Encoding.UTF8, "application/json") },
             TestContext.Current.CancellationToken);
 
@@ -324,10 +336,12 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
             Host.CreateDefaultBuilder()
                 .ConfigureWebHost(webHost => webHost
                     .UseTestServer()
+                    .UseTestGatewaySecret()
                     .ConfigureServices(services =>
                     {
                         services.AddRouting();
                         services.AddOpenApi();
+                        services.AddCadenceSecurity();
                         services.ConfigureHttpJsonOptions(ApplyExecutionJsonConventions);
                         services.AddSingleton<ISiteComplianceApplicationService>(Service);
                         services.AddSingleton<IValidator<EtmfCompletenessWebhookPayload>, EtmfCompletenessWebhookPayloadValidator>();
@@ -335,10 +349,11 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
                     .Configure(app =>
                     {
                         app.UseRouting();
+                        app.UseCadenceSecurity();
                         app.UseEndpoints(endpoints =>
                         {
                             endpoints.MapSiteComplianceEndpoints();
-                            endpoints.MapOpenApi();
+                            endpoints.MapOpenApi().AllowAnonymous();
                         });
                     }));
 
@@ -445,8 +460,8 @@ public sealed class ExecutionProgramStartupTests : IDisposable
     {
         // AC #4, exercised through the REAL ISiteComplianceApplicationService/ISiteComplianceRepository/
         // ExecutionDbContext -- not a fake -- proving the eTMF webhook route's full DI graph actually
-        // persists a new SiteComplianceCache row end to end.
-        using var client = _factory.CreateSignedClient();
+        // persists a new SiteComplianceCache row end to end. eTMF calls it as its signed service account.
+        using var client = _factory.CreateSignedClient(TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole));
         var payload = new EtmfCompletenessWebhookPayload("STUDY-E2E", "SITE-E2E", "SITE_ACTIVATION", true, null);
 
         var response = await client.PostAsJsonAsync("/api/v1/execution/webhooks/etmf", payload,
@@ -466,7 +481,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         // eTMF. Missing expected documents.'" -- exercised end to end: no SiteComplianceCache row exists yet
         // for this (study, site) pair, which is itself "not compliant" per
         // SiteComplianceApplicationService.ActivateSiteAsync's own `gate is not { IsComplete: true }` check.
-        using var client = _factory.CreateSignedClient();
+        using var client = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-ops", "Data Manager"));
         var request = new SiteActivationRequest("STUDY-E2E-BLOCKED");
 
         var response = await client.PostAsJsonAsync("/api/v1/execution/sites/SITE-E2E-BLOCKED/activate", request,
@@ -485,7 +500,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         // .../compliance-status is called, then the response is 200 (never 404) with is_complete: false,
         // missing_documents: []" -- exercised end to end against a genuinely empty ExecutionDbContext table
         // (no prior webhook/activation call for this study/site pair in this test).
-        using var client = _factory.CreateSignedClient();
+        using var client = _factory.CreateSignedClient(TestSecurityContext.Identity("sponsor-ops", "Data Manager"));
 
         var response = await client.GetAsync(
             "/api/v1/execution/sites/SITE-NEVER-SEEN/compliance-status?study_id=STUDY-NEVER-SEEN",
