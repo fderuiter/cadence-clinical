@@ -8,12 +8,12 @@ requests see [CONTRIBUTING.md](../CONTRIBUTING.md); for every setting see
 
 ## 1. Prerequisites
 
-| Tool | Version | Notes |
-| --- | --- | --- |
-| .NET SDK | 10.0 (pinned in [`global.json`](../global.json)) | `dotnet --version` |
-| Node.js + pnpm | Node 20+, pnpm from `package.json` | Frontend workspace and the `pnpm cadence` shortcut |
-| Docker | Recent Docker Engine or Desktop | Compose stack and Testcontainers |
-| PowerShell (optional) | 7+ | `scripts/manage_migrations.ps1` (a `.sh` variant exists) |
+| Tool                  | Version                                                                                                                       | Notes                                                    |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| .NET SDK              | 10.0 (pinned in [`global.json`](../global.json))                                                                              | `dotnet --version`                                       |
+| Node.js + pnpm        | Node 22.13+ (`engines`), pnpm from the `packageManager` pin via `corepack enable` (ADR-2508); `pnpm cadence doctor` checks it | Frontend workspace and the `pnpm cadence` shortcut       |
+| Docker                | Recent Docker Engine or Desktop                                                                                               | Compose stack and Testcontainers                         |
+| PowerShell (optional) | 7+                                                                                                                            | `scripts/manage_migrations.ps1` (a `.sh` variant exists) |
 
 The fastest way to install and check all of these is the setup wizard:
 
@@ -132,19 +132,19 @@ The host ports are the defaults the gateway routes to (`apps/gateway/src/Program
 services started with `dotnet run` and the compose stack alike. Inside compose, every .NET service listens on
 8080 in its own container.
 
-| Service | Host port | Database schema | Service | Host port | Database schema |
-| --- | --- | --- | --- | --- | --- |
-| front proxy (nginx) → gateway | 8000 | none | eisf | 8010 | `eisf` |
-| designer | 8001 | none | econsent | 8011 | `econsent` |
-| execution | 8002 | `edc` | org | 8012 | `org` |
-| etmf | 8003 | `etmf` | fileshare | 8013 | `fileshare` |
-| interop | 8004 | `interop` | imaging | 8014 | `imaging` |
-| quality | 8005 | `quality` | knowledge | 8015 | `knowledge` |
-| notifications | 8006 | `notifications` | payments | 8016 | `payments` |
-| ctms | 8007 | `ctms` | ai_gateway | 8017 | none |
-| safety | 8008 | `safety` | Keycloak | 8080 | (own store) |
-| tickets | 8009 | `tickets` | web / subject portal | 5173 / 5174 | none |
-| kernel (`apps/kernel-api`) | 8018 | `kernel` | | | |
+| Service                       | Host port | Database schema | Service              | Host port   | Database schema |
+| ----------------------------- | --------- | --------------- | -------------------- | ----------- | --------------- |
+| front proxy (nginx) → gateway | 8000      | none            | eisf                 | 8010        | `eisf`          |
+| designer                      | 8001      | none            | econsent             | 8011        | `econsent`      |
+| execution                     | 8002      | `edc`           | org                  | 8012        | `org`           |
+| etmf                          | 8003      | `etmf`          | fileshare            | 8013        | `fileshare`     |
+| interop                       | 8004      | `interop`       | imaging              | 8014        | `imaging`       |
+| quality                       | 8005      | `quality`       | knowledge            | 8015        | `knowledge`     |
+| notifications                 | 8006      | `notifications` | payments             | 8016        | `payments`      |
+| ctms                          | 8007      | `ctms`          | ai_gateway           | 8017        | none            |
+| safety                        | 8008      | `safety`        | Keycloak             | 8080        | (own store)     |
+| tickets                       | 8009      | `tickets`       | web / subject portal | 5173 / 5174 | none            |
+| kernel (`apps/kernel-api`)    | 8018      | `kernel`        |                      |             |                 |
 
 PostgreSQL listens on 5432 (database `cadence`). What each service does and how mature it is:
 [ARCHITECTURE.md §3](../ARCHITECTURE.md#3-running-services-today). Check for port clashes with
@@ -154,13 +154,13 @@ Each service answers `/healthz/live` and `/healthz/ready` without a token.
 
 ## 5. Database tasks
 
-| Task | Command |
-| --- | --- |
-| Add a migration | `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` |
-| Idempotent SQL script for review | `pwsh scripts/manage_migrations.ps1 script <service>` |
-| Reset local databases | `pnpm cadence db reset` |
-| Seed local databases | `pnpm cadence db seed` |
-| Database status | `pnpm cadence db status` |
+| Task                             | Command                                                            |
+| -------------------------------- | ------------------------------------------------------------------ |
+| Add a migration                  | `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` |
+| Idempotent SQL script for review | `pwsh scripts/manage_migrations.ps1 script <service>`              |
+| Reset local databases            | `pnpm cadence db reset`                                            |
+| Seed local databases             | `pnpm cadence db seed`                                             |
+| Database status                  | `pnpm cadence db status`                                           |
 
 ## 6. Quality gates and GxP sync
 

@@ -1,8 +1,11 @@
 using System;
 using System.CommandLine;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
+
+using Cadence.Cli.Services;
 
 using Spectre.Console;
 
@@ -47,7 +50,10 @@ public static class DoctorCommand
         bool cpm = File.Exists("Directory.Packages.props");
         AnsiConsole.MarkupLine($"  Central Package Management: {(cpm ? "[green]Enforced[/]" : "[red]Missing[/]")}");
 
-        // 3. PostgreSQL connectivity
+        // 3. pnpm against the packageManager pin (#5331)
+        bool pnpmOk = CheckPnpm();
+
+        // 4. PostgreSQL connectivity
         try
         {
             using var client = new TcpClient();
@@ -63,6 +69,44 @@ public static class DoctorCommand
             AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable[/]");
         }
 
-        return 0;
+        return pnpmOk ? 0 : 1;
+    }
+
+    private static bool CheckPnpm()
+    {
+        string? pinned = File.Exists("package.json") ? PnpmPin.PinnedVersion(File.ReadAllText("package.json")) : null;
+        string? installed = null;
+        try
+        {
+            var psi = new ProcessStartInfo("pnpm", "--version") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            using var p = Process.Start(psi);
+            if (p is not null)
+            {
+                string output = p.StandardOutput.ReadToEnd().Trim();
+                p.StandardError.ReadToEnd();
+                p.WaitForExit();
+                installed = p.ExitCode == 0 ? output : null;
+            }
+        }
+        catch (Win32Exception)
+        {
+            // pnpm is not on the PATH; reported as unusable below.
+        }
+
+        switch (PnpmPin.Compare(pinned, installed))
+        {
+            case PnpmPinStatus.Matches:
+                AnsiConsole.MarkupLine($"  pnpm: [green]{installed} (matches packageManager)[/]");
+                return true;
+            case PnpmPinStatus.Mismatch:
+                AnsiConsole.MarkupLine($"  pnpm: [red]{installed}, but package.json pins {pinned}[/] (run 'corepack enable' so pnpm follows the pin)");
+                return false;
+            case PnpmPinStatus.Unusable:
+                AnsiConsole.MarkupLine($"  pnpm: [red]missing or crashes[/] (package.json pins {pinned}; run 'corepack enable')");
+                return false;
+            default:
+                AnsiConsole.MarkupLine("  pnpm: [red]package.json declares no packageManager pin[/]");
+                return false;
+        }
     }
 }

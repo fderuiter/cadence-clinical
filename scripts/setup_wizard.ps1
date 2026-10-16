@@ -32,6 +32,9 @@ $FailedStages = New-Object System.Collections.Generic.List[string]
 function Write-Ok($msg)     { Write-Host "  [OK] $msg" -ForegroundColor Green }
 function Write-Info($msg)   { Write-Host "  [INFO] $msg" -ForegroundColor DarkYellow }
 function Write-Failed($msg) { $FailedStages.Add($msg); Write-Info $msg }
+# A failure that breaks every later command (for example pnpm): reported in red and makes the wizard exit non-zero.
+$script:BlockingFailure = $false
+function Write-Blocking($msg) { $FailedStages.Add($msg); $script:BlockingFailure = $true; Write-Host "  [ERROR] $msg" -ForegroundColor Red }
 
 Write-Host "`n================================================================================" -ForegroundColor Cyan
 Write-Host "   CADENCE CLINICAL PLATFORM — FULL-STACK DEVELOPER SETUP WIZARD                 " -ForegroundColor Cyan
@@ -81,16 +84,23 @@ else {
         & corepack enable 2>$null | Out-Null
     }
     if (Get-Command pnpm -ErrorAction SilentlyContinue) {
-        & pnpm install --frozen-lockfile
-        if ($LASTEXITCODE -eq 0) {
-            Write-Ok "pnpm workspace dependencies installed."
+        # package.json pins pnpm with packageManager (#5331); corepack runs exactly that version.
+        $pnpmVersion = & pnpm --version 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Blocking "pnpm is on the PATH but crashes. Run 'corepack enable' so pnpm follows the packageManager pin in package.json."
         }
         else {
-            Write-Failed "pnpm install failed — see output above. Continuing with remaining stages."
+            & pnpm install --frozen-lockfile
+            if ($LASTEXITCODE -eq 0) {
+                Write-Ok "pnpm ${pnpmVersion}: workspace dependencies installed."
+            }
+            else {
+                Write-Blocking "pnpm install failed — see output above. Every 'pnpm cadence' command needs it."
+            }
         }
     }
     else {
-        Write-Info "pnpm not found even after 'corepack enable'; install it manually (npm i -g pnpm)."
+        Write-Blocking "pnpm not found even after 'corepack enable'; enable corepack (Node 22+) so pnpm follows the packageManager pin."
     }
 }
 
@@ -163,3 +173,5 @@ else {
     }
     Write-Host "================================================================================`n" -ForegroundColor Yellow
 }
+
+if ($script:BlockingFailure) { exit 1 }
