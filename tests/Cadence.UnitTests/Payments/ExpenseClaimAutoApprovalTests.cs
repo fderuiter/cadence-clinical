@@ -23,7 +23,8 @@ namespace Cadence.UnitTests.Payments;
 public class ExpenseClaimAutoApprovalTests
 {
     // The site coordinator submitting for the participant, as the gateway signs them (#5361).
-    private static readonly ClaimsPrincipal SiteCoordinator = TestSecurityContext.CreatePrincipal("crc-1", "crc");
+    private static readonly ClaimsPrincipal SiteCoordinator = TestSecurityContext.CreateScopedPrincipal(
+        "crc-1", TestSecurityContext.AllStudies, ["SITE-101"], "crc");
 
     private static string NewTempDbPath() => Path.Combine(Path.GetTempPath(), $"payments-ocr-test-{Guid.NewGuid():N}.db");
 

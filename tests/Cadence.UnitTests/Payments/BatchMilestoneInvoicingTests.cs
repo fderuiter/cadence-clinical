@@ -296,7 +296,8 @@ public sealed class BatchMilestoneInvoicingTests : IDisposable
 public static class PaymentEndpointsTestInvoker
 {
     /// <summary>The finance officer compiling invoices, as the gateway signs them (#5361).</summary>
-    public static ClaimsPrincipal FinanceOfficer { get; } = TestSecurityContext.CreatePrincipal("finance-1", "Grants Manager");
+    public static ClaimsPrincipal FinanceOfficer { get; } = TestSecurityContext.CreateScopedPrincipal(
+        "finance-1", TestSecurityContext.AllStudies, [], "Grants Manager");
 
     public static async Task<BatchBillingCompilationResponse> InvokeBatchCompileAsync(
         BatchBillingCycleCompilationRequest request, PaymentsDbContext db, IClock clock)

@@ -106,6 +106,20 @@ public static class TestSecurityContext
     }
 
     /// <summary>
+    /// An authenticated principal that also carries the signed study and site assignments (<c>study_ids</c>,
+    /// <c>site_id</c>), as the gateway scheme emits them, for handlers that check scope from the claims (ADR-2516).
+    /// </summary>
+    public static ClaimsPrincipal CreateScopedPrincipal(
+        string userId, IReadOnlyList<string> studyIds, IReadOnlyList<string> siteIds, params string[] roles)
+    {
+        var principal = CreatePrincipal(userId, roles);
+        var identity = (ClaimsIdentity)principal.Identity!;
+        identity.AddClaims(studyIds.Select(study => new Claim(CadenceClaimTypes.StudyIds, study)));
+        identity.AddClaims(siteIds.Select(site => new Claim(CadenceClaimTypes.SiteId, site)));
+        return principal;
+    }
+
+    /// <summary>
     /// Signs each outgoing request as <paramref name="identity"/>, carrying over the request's own
     /// <c>X-Change-Reason</c> and <c>X-Sig-Token</c> headers into the signature exactly as the gateway does.
     /// </summary>

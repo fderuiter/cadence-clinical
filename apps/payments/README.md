@@ -76,6 +76,20 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   holds no Payments permission; site staff submit W-9s and expense claims for the participant. Self-service needs that
   binding first.
 - `GET /participant/wallets/subject/{subjectId}` no longer opens a wallet when none exists; it answers `404`.
+- **Study and site scope (#5401, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).**
+  Every handler reaches only the studies in the caller's signed `study_ids` and, for a site-scoped role (CRC,
+  investigators, monitors) or a caller with site assignments, only their signed sites (`PaymentsCaller.Reaches` and
+  `InScope`, the same rules as `StudyAccessEvaluator` and `SiteAccessEvaluator`). Scope fails closed: a caller with no
+  study, or a site-scoped role with no site, reaches nothing.
+  - Lists (wallets, claims, invoices, stipend rules) are narrowed in the query. Transactions and disbursements carry no
+    site, so they are narrowed through their wallet. The audit log shows a restricted caller only the rows about the
+    wallets, claims, stipend rules, invoices and remittances they reach, and no batch-level rows.
+  - A wallet, claim, invoice or remittance outside scope answers `404` on every read and write by id, the same answer
+    as a missing row.
+  - A write that names a study or site (visit-verified event, expense claim, compile, stipend rule, direct
+    disbursement) answers `403` outside scope and writes nothing. An existing wallet keeps its own site: naming the
+    caller's site in the body does not reach another site's participant. Batch compile refuses a named site outside
+    scope and narrows discovered sites to the caller's.
 
 ## Persistence
 
@@ -109,6 +123,7 @@ refuses to encrypt or decrypt.
 
 - `tests/Cadence.UnitTests/Payments/ContractCalculationsTests.cs` and `PayableLedgerTests.cs`: the ledger, pinned to the Python reference's amounts and digests.
 - `tests/Cadence.UnitTests/Payments/PaymentsCallerAuthorizationTests.cs`: the host over SQLite; a caller without a write route's role gets `403` and no row changes, and audit rows record the signed caller.
+- `tests/Cadence.IntegrationTests/Payments/PaymentsStudySiteScopeTests.cs`: the host on PostgreSQL as the application role; a CRC at one site gets `404` or `403` on another site's participants and never sees them in lists, a caller outside the study sees none of its rows, nothing is written, and in-scope flows still complete. Needs `CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1`.
 - `tests/Cadence.UnitTests/Payments/PaymentDecimalCalculationTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Payments"`.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
