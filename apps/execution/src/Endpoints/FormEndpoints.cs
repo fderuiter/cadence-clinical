@@ -31,8 +31,7 @@ public static class FormEndpoints
     public const string ApproveSemanticAction = "execution.form.approve";
 
     /// <summary>
-    /// The concrete action a PI approval's e-signature token must carry: the canonical approval path of that
-    /// submission, whichever route alias the request came in on.
+    /// The concrete action a PI approval's e-signature token must carry: the approval path of that submission.
     /// </summary>
     public static string ApproveAction(string submissionId) => $"/api/v1/execution/forms/{submissionId}/approve";
 
@@ -101,7 +100,7 @@ public static class FormEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission(SignForm)
-            .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
+            .RequireElectronicSignature(ApproveBinding);
 
         group.MapPost("/{id}/unlock", UnlockFormSubmissionAsync)
             .WithName("UnlockFormSubmission")
@@ -137,9 +136,7 @@ public static class FormEndpoints
         legacyGroup.MapGet("/{id}", GetFormSubmissionByIdAsync).RequirePermission(ReadData);
         legacyGroup.MapPut("/{id}", UpdateFormPayloadAsync).RequirePermission(UpdateData).AddEndpointFilter<ChangeReasonHeaderFilter>();
         legacyGroup.MapPost("/{id}/complete", CompleteFormSubmissionAsync).RequirePermission(UpdateData);
-        legacyGroup.MapPost("/{id}/approve", ApproveFormSubmissionAsync)
-            .RequirePermission(SignForm)
-            .RequireElectronicSignature(ApproveSemanticAction, ApproveActionFor);
+        // Signing has one route, the documented one above (#5403): the legacy alias does not sign.
         legacyGroup.MapPost("/{id}/unlock", UnlockFormSubmissionAsync).RequirePermission(UnlockForm).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
@@ -201,7 +198,7 @@ public static class FormEndpoints
         IFormSubmissionApplicationService svc,
         CancellationToken ct)
     {
-        var result = await svc.ApproveAsync(id, request, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);
+        var result = await svc.ApproveAsync(id, request, httpContext.User.ToAuthenticatedCaller(), httpContext.VerifiedSigToken(), ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
@@ -210,8 +207,17 @@ public static class FormEndpoints
             ? new SigTokenBinding(BatchSignOffAction, ApproveSemanticAction, request.BatchBindingId())
             : null;
 
-    private static string ApproveActionFor(HttpContext httpContext) =>
-        ApproveAction(httpContext.Request.RouteValues["id"]?.ToString() ?? string.Empty);
+    /// <summary>
+    /// A PI approval's token is bound to the form's canonical approval path and, as its batch id, to the payload hash the
+    /// signer attests to, so a token for one form or one version of its content signs nothing else (#5403).
+    /// </summary>
+    private static SigTokenBinding? ApproveBinding(EndpointFilterInvocationContext context) =>
+        context.Arguments.OfType<FormSubmissionApproveRequest>().FirstOrDefault()?.SignatureManifest?.PayloadHash is { Length: > 0 } payloadHash
+            ? new SigTokenBinding(
+                ApproveAction(context.HttpContext.Request.RouteValues["id"]?.ToString() ?? string.Empty),
+                ApproveSemanticAction,
+                payloadHash.Trim().ToLowerInvariant())
+            : null;
 
     public static async Task<IResult> UnlockFormSubmissionAsync(
         string id,

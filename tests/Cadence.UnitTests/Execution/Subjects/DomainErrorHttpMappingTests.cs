@@ -174,7 +174,6 @@ public class DomainErrorHttpMappingTests
     [InlineData("Form.FormReadonly", "FORM_LOCKED", StatusCodes.Status423Locked)]
     [InlineData("Form.TrialLocked", "TRIAL_LOCKED", StatusCodes.Status423Locked)]
     [InlineData("Form.UnauthorizedSignerRole", "UNAUTHORIZED_SIGNER_ROLE", StatusCodes.Status403Forbidden)]
-    [InlineData("Form.InvalidHmacSignature", "INVALID_HMAC_SIGNATURE", StatusCodes.Status400BadRequest)]
     [InlineData("Observation.NotFound", "OBSERVATION_NOT_FOUND", StatusCodes.Status404NotFound)]
     [InlineData("Query.NotFound", "QUERY_NOT_FOUND", StatusCodes.Status404NotFound)]
     [InlineData("Query.ActiveQueryAlreadyExists", "ACTIVE_QUERY_EXISTS", StatusCodes.Status409Conflict)]
@@ -214,7 +213,6 @@ public class DomainErrorHttpMappingTests
         "Form.FormReadonly" => FormErrors.FormReadonly(FormSubmissionId.New()),
         "Form.TrialLocked" => FormErrors.TrialLocked("The trial is locked."),
         "Form.UnauthorizedSignerRole" => FormErrors.UnauthorizedSignerRole("CRA"),
-        "Form.InvalidHmacSignature" => FormErrors.InvalidHmacSignature(),
         "Observation.NotFound" => ObservationErrors.NotFound("OBS-1"),
         "Query.NotFound" => QueryErrors.NotFound("QRY-1"),
         "Query.ActiveQueryAlreadyExists" => QueryErrors.ActiveQueryAlreadyExists("SUBJ-001/VS/SYSBP"),

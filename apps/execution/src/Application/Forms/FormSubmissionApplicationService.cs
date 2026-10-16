@@ -362,6 +362,7 @@ public sealed class FormSubmissionApplicationService(
         string id,
         FormSubmissionApproveRequest request,
         AuthenticatedCaller? signer,
+        JwtSecurityToken? verifiedSigToken,
         CancellationToken cancellationToken)
     {
         if (!FormSubmissionId.TryParse(id, out var submissionId))
@@ -375,33 +376,28 @@ public sealed class FormSubmissionApplicationService(
             return FormErrors.NotFound(id);
         }
 
-        var manifest = request.SignatureManifest;
-        if (manifest is null)
+        var attestation = request.SignatureManifest;
+        if (attestation is null)
         {
             return FormErrors.SignatureRequired();
         }
 
-        // Validate signing reason against allowed set
-        string signingReason = !string.IsNullOrWhiteSpace(request.SigningReason)
-            ? request.SigningReason.Trim()
-            : manifest.SigningReason?.Trim() ?? string.Empty;
-
+        string signingReason = request.SigningReason?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(signingReason) || !FormSubmission.ValidSigningReasons.Contains(signingReason))
         {
             return FormErrors.InvalidSigningReason(signingReason);
         }
 
-        // The signer is the authenticated caller. The manifest may restate their id but cannot name
-        // someone else, and its role field is ignored: the investigator role must come from the caller's
-        // signed roles.
+        // The signer is the authenticated caller. The attestation may restate their id but cannot name someone else,
+        // and the investigator role comes from the caller's signed roles.
         if (signer is null)
         {
             return FormErrors.UnauthorizedSignerRole(string.Empty);
         }
 
-        if (!string.IsNullOrWhiteSpace(manifest.SignerId) && !string.Equals(manifest.SignerId, signer.UserId, StringComparison.Ordinal))
+        if (!string.IsNullOrWhiteSpace(attestation.SignerId) && !string.Equals(attestation.SignerId, signer.UserId, StringComparison.Ordinal))
         {
-            return FormErrors.SignerIdentityMismatch(manifest.SignerId);
+            return FormErrors.SignerIdentityMismatch(attestation.SignerId);
         }
 
         string? signerRole = signer.FirstRoleMatching(IsAuthorizedInvestigatorRole);
@@ -413,28 +409,33 @@ public sealed class FormSubmissionApplicationService(
         // The signer's hash covers the form content, not the text the database returns: both sides hash the
         // RFC 8785 canonical form, so key order, whitespace and number spelling do not matter (#5023).
         string? computedHash = ComputePayloadHash(submission.Payload ?? "{}");
-
         if (computedHash is null ||
-            string.IsNullOrWhiteSpace(manifest.PayloadHash) ||
-            !string.Equals(manifest.PayloadHash.Trim(), computedHash, StringComparison.OrdinalIgnoreCase))
+            string.IsNullOrWhiteSpace(attestation.PayloadHash) ||
+            !string.Equals(attestation.PayloadHash.Trim(), computedHash, StringComparison.OrdinalIgnoreCase))
         {
             return FormErrors.InvalidPayloadHash();
         }
 
-        string secret = GatewaySecret();
-        if (!Cadence.Security.HmacSigner.VerifySignature(computedHash, secret, manifest.HmacSignature ?? string.Empty))
+        // Nothing is signed without the step-up token the endpoint verified and consumed for this signer, this form and
+        // this content (#5403). The endpoint filter already refused anything else; this keeps the guarantee on the
+        // service itself.
+        if (verifiedSigToken is null
+            || !string.Equals(verifiedSigToken.Subject, signer.UserId, StringComparison.Ordinal)
+            || !string.Equals(verifiedSigToken.Claims.FirstOrDefault(c => c.Type == SigTokenClaims.BatchId)?.Value, computedHash, StringComparison.OrdinalIgnoreCase))
         {
-            return FormErrors.InvalidHmacSignature();
+            return DomainError.Unauthorized(SigTokenVerifier.ReauthenticationRequired, "21 CFR Part 11 mandate: Re-authentication is required.");
         }
 
-        var normalizedManifest = manifest with
-        {
-            SignerId = signer.UserId,
-            SignerName = string.IsNullOrWhiteSpace(manifest.SignerName) ? signer.UserId : manifest.SignerName,
-            SignerRole = signerRole,
-            SigningReason = signingReason,
-        };
-        var approveResult = submission.Approve(normalizedManifest);
+        // The server seals the manifest with its own key and its own clock; no client holds the key or picks the time.
+        var manifest = SignatureManifest.Create(
+            signer.UserId,
+            signerRole,
+            signingReason,
+            _clock.UtcNow.UtcDateTime,
+            computedHash,
+            string.IsNullOrWhiteSpace(attestation.SignerName) ? signer.UserId : attestation.SignerName.Trim(),
+            Cadence.Security.HmacSigner.ComputeSignature(computedHash, GatewaySecret()));
+        var approveResult = submission.Approve(manifest);
         if (approveResult.IsFailure)
         {
             return approveResult.Error!;

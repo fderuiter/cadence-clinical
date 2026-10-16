@@ -31,12 +31,15 @@ public interface IFormSubmissionApplicationService
 
     /// <summary>
     /// Applies the Principal Investigator signature. The signer is always <paramref name="signer"/>, the
-    /// authenticated caller; a manifest naming anyone else is rejected.
+    /// authenticated caller; an attestation naming anyone else is rejected. <paramref name="verifiedSigToken"/> is the
+    /// step-up token the endpoint verified and consumed; it must name <paramref name="signer"/> and be bound to the
+    /// form's payload hash, or nothing is signed. The server seals the manifest (#5403).
     /// </summary>
     Task<Result<FormSubmissionResponse>> ApproveAsync(
         string id,
         FormSubmissionApproveRequest request,
         AuthenticatedCaller? signer,
+        System.IdentityModel.Tokens.Jwt.JwtSecurityToken? verifiedSigToken,
         CancellationToken cancellationToken);
 
     Task<Result<FormSubmissionResponse>> UnlockAsync(string id, string reason, CancellationToken cancellationToken);

@@ -1549,6 +1549,11 @@ export interface components {
       service: null | string;
       engine: null | string;
     };
+    Execution_ApprovalAttestation: {
+      signer_id: null | string;
+      signer_name: null | string;
+      payload_hash: string;
+    };
     Execution_BatchQueryRequest: {
       query_ids: string[];
       reason?: null | string;
@@ -2156,7 +2161,7 @@ export interface components {
     };
     Execution_FormSubmissionApproveRequest: {
       signing_reason: string;
-      signature_manifest: components["schemas"]["Execution_SignatureManifest"];
+      signature_manifest: components["schemas"]["Execution_ApprovalAttestation"];
     };
     Execution_FormSubmissionCreateRequest: {
       study_id: string;

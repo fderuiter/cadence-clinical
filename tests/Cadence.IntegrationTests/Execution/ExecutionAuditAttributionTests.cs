@@ -129,7 +129,8 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
         await AuditedAsync(investigator, c => c.PostAsync($"/api/v1/execution/forms/{form}/complete", content: null, Ct));
         var signer = investigator with
         {
-            SigToken = TestSecurityContext.CreateSigToken(investigator.UserId, FormEndpoints.ApproveAction(form), FormEndpoints.ApproveSemanticAction),
+            SigToken = TestSecurityContext.CreateSigToken(
+                investigator.UserId, FormEndpoints.ApproveAction(form), FormEndpoints.ApproveSemanticAction, batchId: JsonCanonicalization.Sha256Hex(payload)),
         };
         await AuditedAsync(signer, c => c.PostAsJsonAsync(
             $"/api/v1/execution/forms/{form}/approve",
@@ -140,11 +141,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
                 {
                     signer_id = investigator.UserId,
                     signer_name = "Dr Audit",
-                    signer_role = "Site Investigator",
-                    signing_reason = "PI approval and sign-off.",
                     payload_hash = JsonCanonicalization.Sha256Hex(payload),
-                    hmac_signature = Cadence.Security.HmacSigner.ComputeSignature(JsonCanonicalization.Sha256Hex(payload), TestSecurityContext.GatewaySecret),
-                    signed_at = FakeClock.DefaultStart.UtcDateTime,
                 },
             },
             Ct));
