@@ -7,7 +7,7 @@ This guide establishes the standardized issue structure, developer readiness bad
 > sub-issues: kernel [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719), security and GxP
 > defects [#4759](https://github.com/fderuiter/cadence-clinical/issues/4759), and hygiene
 > [#4760](https://github.com/fderuiter/cadence-clinical/issues/4760). Issue bodies use the sections
-> *Problem*, *Evidence* (`file:line` at a commit), *Acceptance criteria*, *Spec/ADR refs* and *Depends on*.
+> _Problem_, _Evidence_ (`file:line` at a commit), _Acceptance criteria_, _Spec/ADR refs_ and _Depends on_.
 > Labels: one type (`type: bug`, `type: feature`, `tech-debt`, `documentation`), one or more areas, and a
 > `priority: …`. The work streams and readiness badges below are the earlier scheme.
 
@@ -90,7 +90,7 @@ All Pull Requests (PRs) must satisfy the Definition of Done before merging into 
 - [ ] Unit & integration tests added/updated in `tests/` (`dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`).
 - [ ] Build, format and quality gates clean (`dotnet build Cadence.sln`, `dotnet format Cadence.sln --verify-no-changes`, `pnpm cadence check`).
 - [ ] GxP audit fields preserved/updated (`created_by`, `reason_for_change`, versioning) if models modified.
-- [ ] Traceability docs or ADR updated if architectural/contract changes introduced (`pnpm cadence gxp sync`).
+- [ ] Requirement tags validated with `pnpm cadence gxp sync`, with no generated RTM or IQ/OQ/PQ report committed; ADR updated if architectural/contract changes introduced.
 - [ ] Documentation affected by the change updated in the same PR (README, ARCHITECTURE.md, CONTEXT.md, ENVIRONMENT_VARIABLES.md).
 ```
 

@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format action-pinning check verify ci test sync-gxp gxp-sync rtm adr docs ports db-reset db-reset-offline db-seed db-status
+.PHONY: help setup wizard doctor build dev fix lint-paths typecheck lint format action-pinning check verify ci test sync-gxp gxp-sync gxp-snapshot rtm adr docs ports db-reset db-reset-offline db-seed db-status
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -77,12 +77,15 @@ test: $(CADENCE_CLI) ## Run backend unit tests with coverage
 
 ##@ GxP Compliance
 
-sync-gxp: $(CADENCE_CLI) ## Run tests → regenerate RTM docs → stage docs/SDLC/ (dotnet cadence gxp sync)
+sync-gxp: $(CADENCE_CLI) ## Run tests and validate requirement tags on a branch; writes a preview, never docs/SDLC/ (cadence gxp sync)
 	$(CADENCE_CLI) gxp sync
+
+gxp-snapshot: $(CADENCE_CLI) ## Integration owner only: run tests, write and stage the docs/SDLC/ snapshot (ADR-2532)
+	CADENCE_GXP_SNAPSHOT=1 $(CADENCE_CLI) gxp snapshot
 
 gxp-sync: sync-gxp ## Alias for sync-gxp
 
-rtm: $(CADENCE_CLI) ## Validate that checked-in RTM docs are up to date (dotnet cadence gxp validate)
+rtm: $(CADENCE_CLI) ## Validate requirement tags and the RTM integrity stamps (cadence gxp validate)
 	$(CADENCE_CLI) gxp validate
 
 ##@ Architecture & Documentation

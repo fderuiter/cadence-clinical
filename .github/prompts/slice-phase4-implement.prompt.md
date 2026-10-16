@@ -81,7 +81,7 @@ Once all sub-agents in the batch report back, integrate **one ticket at a time**
 
 After a batch is fully integrated and green, append one `### Implementation Sign-Off: MIG-XXX-NNN — [title]` entry per ticket to `docs/migration/slices/[slice_name]/04_implementation_signoff.md`, following the exact structure of the existing entries in that file (Status, Target Files Modified, Build Output, Tests Executed with exact counts, Formatting, Golden Master Parity, Notes on any divergence, Git Commit Message Recommendation). Commit this doc update together with the merge commits.
 
-If any ticket touched files under `tests/`, run `pnpm cadence gxp sync` and confirm `docs/SDLC/Requirements_Traceability_Matrix.md` updates cleanly with zero unmapped requirements before moving on.
+If any ticket touched files under `tests/`, run `pnpm cadence gxp sync` and confirm it passes with no unknown requirement IDs or failing tagged tests before moving on. Review the preview in `TestResults/gxp/preview/`; do not commit `docs/SDLC/Requirements_Traceability_Matrix.md` or `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`, which only the integration owner's snapshot updates (ADR-2532).
 
 ## Step 6: Loop Until Backlog Exhausted
 

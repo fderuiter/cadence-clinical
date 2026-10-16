@@ -602,16 +602,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Compliance Reports
+        # A feature branch validates its requirement tags and results and writes a preview; it never changes the
+        # committed snapshot (ADR-2532). Snapshot PRs from the integration owner set CADENCE_GXP_SNAPSHOT=1.
         run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
 
-      - name: Assert No Documentation Git Diff
-        run: |
-          echo "==== Comparing freshly generated reports against checked-in files (evidence block excluded) ===="
-          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp diff || {
-            echo "::error::GxP compliance documentation is out of sync with the current system state!"
-            echo "::error::Please run 'dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync' locally, and commit/push the updated files in 'docs/SDLC/'."
-            exit 1
-          }
+      - name: Check GxP Snapshot Policy
+        run: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- check gxp-snapshot
 
   classify:
     name: Classify Change

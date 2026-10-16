@@ -513,6 +513,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2515: Step-Up Tokens Are Single Use Across Instances and Restarts](adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md) | Current | - Status: Accepted |
 | [ADR-2516: Routes Are Denied Unless They Declare Who May Call Them](adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md) | Current | - Status: Accepted |
 | [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](adr/2026-10-15-every-mapped-test-is-mandatory-evidence.md) | Current | - Status: Accepted |
+| [ADR-2532: Feature Branches Never Commit the GxP Snapshot](adr/2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md) | Current | Accepted |
 | [ADR-2508: Pin pnpm and Node with packageManager and engines](adr/2026-10-16-pin-pnpm-and-node-with-packagemanager-and-engines.md) | Current | - Status: Accepted |
 ## Developing and running
 
@@ -581,8 +582,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [SDLC documentation suite](SDLC/SDLC_Documentation_Suite.md) | Baseline | Overview of the SDLC document set |
 | [Product requirements (PRD)](SDLC/01_Product_Requirements_Document_PRD.md) | Baseline | `PRD-…` requirement IDs used by tests and the RTM |
 | [Software requirements (SRS)](SRS.md) | Baseline | `SRS-…` and `Trace-…` requirement IDs |
-| [Requirements traceability matrix](SDLC/Requirements_Traceability_Matrix.md) | Generated | Requirement ↔ test mapping (`pnpm cadence gxp sync`) |
-| [IQ/OQ/PQ execution report](SDLC/IQ_OQ_PQ_Execution_Report.md) | Generated | Qualification evidence from the last sync |
+| [Requirements traceability matrix](SDLC/Requirements_Traceability_Matrix.md) | Generated | Requirement ↔ test mapping (snapshot from `pnpm cadence gxp snapshot`) |
+| [IQ/OQ/PQ execution report](SDLC/IQ_OQ_PQ_Execution_Report.md) | Generated | Qualification evidence from the last snapshot |
 | [Technical design (TDD)](SDLC/02_Technical_Design_Document_TDD.md) | Baseline | Superseded by the kernel spec and ARCHITECTURE.md |
 | [API and integration specification](SDLC/03_API_Integration_Specification.md) | Baseline | Planned integration contracts |
 | [Data standards and interoperability](SDLC/04_Data_Standards_Interoperability_Blueprint.md) | Baseline | CDISC, FHIR and coding dictionaries |

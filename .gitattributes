@@ -1,5 +1,3 @@
-# Deterministic GxP verification artifacts and security baselines ensure clean standard merging without union corruptions
-
 # Binary Assets
 *.docx binary
 *.pdf binary
@@ -7,11 +5,8 @@
 *.jpg binary
 *.ico binary
 
-# Custom Git Merge Driver Mappings for Metadata and Documentation
-.secrets.baseline merge=custom-metadata-driver
-*.secrets.baseline merge=custom-metadata-driver
-*.md merge=custom-metadata-driver
-.cadence/snapshots/*.tar.gz merge=custom-metadata-driver
+# No custom merge drivers (ADR-2532): GitHub ignores them when it decides whether a PR can merge, and the
+# generated GxP reports are kept conflict-free by never committing them on feature branches. Never use merge=union.
 
 # Checksum-verified standards seed content: never normalise line endings (Seed/manifest.json pins each file's SHA-256)
 packages/kernel/src/Cadence.Standards/Seed/*.json -text

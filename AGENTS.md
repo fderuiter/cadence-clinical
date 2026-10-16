@@ -43,44 +43,44 @@ clinical truth (K-TRUTH-1).
 
 ## Technical stack
 
-| Concern | Technology |
-| --- | --- |
-| Language and runtime | C# 14 / .NET 10 (`net10.0`, SDK pinned in `global.json`) |
-| Web APIs | ASP.NET Core 10 Minimal APIs, `TypedResults`, endpoint filters (`IEndpointFilter`) |
-| Data modelling | `record` types, primary constructors, FluentValidation, `System.Text.Json` source generation |
-| Persistence | EF Core 10 + Npgsql on PostgreSQL 16+, GxP audit `SaveChangesInterceptor` |
-| Messaging | MassTransit with the EF Core transactional outbox (`apps/execution`) |
-| HTTP clients | `IHttpClientFactory` typed clients with Polly resilience pipelines |
-| Identity | Keycloak OIDC at the gateway; HMAC-signed caller identity to services (`packages/security`) |
-| Style and analysis | `.editorconfig`, `dotnet format`, NetAnalyzers, SonarAnalyzer, BannedApiAnalyzers; warnings are errors |
-| Dependencies | Central Package Management: `Directory.Packages.props`, `Directory.Build.props` |
-| Tests | xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers |
-| Clinical standards | CDISC USDM v3/v4, ODM, CDASH, SDTM/ADaM (Dataset-JSON) |
-| CLI | `packages/cli` (System.CommandLine + Spectre.Console, Native AOT), run with `pnpm cadence <command>` |
-| Frontend | Vue 3 + Vite (`apps/web`, `apps/subject-portal`, `packages/ui`) |
+| Concern              | Technology                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------ |
+| Language and runtime | C# 14 / .NET 10 (`net10.0`, SDK pinned in `global.json`)                                               |
+| Web APIs             | ASP.NET Core 10 Minimal APIs, `TypedResults`, endpoint filters (`IEndpointFilter`)                     |
+| Data modelling       | `record` types, primary constructors, FluentValidation, `System.Text.Json` source generation           |
+| Persistence          | EF Core 10 + Npgsql on PostgreSQL 16+, GxP audit `SaveChangesInterceptor`                              |
+| Messaging            | MassTransit with the EF Core transactional outbox (`apps/execution`)                                   |
+| HTTP clients         | `IHttpClientFactory` typed clients with Polly resilience pipelines                                     |
+| Identity             | Keycloak OIDC at the gateway; HMAC-signed caller identity to services (`packages/security`)            |
+| Style and analysis   | `.editorconfig`, `dotnet format`, NetAnalyzers, SonarAnalyzer, BannedApiAnalyzers; warnings are errors |
+| Dependencies         | Central Package Management: `Directory.Packages.props`, `Directory.Build.props`                        |
+| Tests                | xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers                                                |
+| Clinical standards   | CDISC USDM v3/v4, ODM, CDASH, SDTM/ADaM (Dataset-JSON)                                                 |
+| CLI                  | `packages/cli` (System.CommandLine + Spectre.Console, Native AOT), run with `pnpm cadence <command>`   |
+| Frontend             | Vue 3 + Vite (`apps/web`, `apps/subject-portal`, `packages/ui`)                                        |
 
 Neo4j is retired (ADR-2245); do not add Neo4j code.
 
 ## Where code goes
 
-| Code | Directory |
-| --- | --- |
-| Kernel (IDs, value objects, `IClock`, domain, persistence) | `packages/kernel/` |
-| Kernel specification and migration inventories | `docs/kernel/` |
-| Data capture / EDC | `apps/execution/` |
-| Other product services (until dispositioned under #4787) | `apps/<service>/` |
-| OIDC gateway | `apps/gateway/` |
-| Shared domain utilities | `packages/engine_core/`, `packages/core-models/` |
-| Cross-service contracts | `packages/contracts/` |
-| Security, signing, gateway authentication | `packages/security/` |
-| Database helpers, audit interceptor | `packages/database/` |
-| Health checks and telemetry | `packages/telemetry/` |
-| Test fakes and helpers | `packages/testing/` |
-| Tests | `tests/<Project>/` (`Cadence.UnitTests`, `Cadence.IntegrationTests`, `Cadence.ArchitectureTests`, `Cadence.E2ETests`; shared fakes in `Cadence.TestSupport`) |
-| Developer CLI and wizards | `packages/cli/`, `scripts/` |
-| Git hooks | `.githooks/` |
-| Architecture decision records | `docs/adr/` |
-| GxP/SDLC documents | `docs/SDLC/` (RTM and IQ/OQ/PQ report are generated; never edit them by hand) |
+| Code                                                       | Directory                                                                                                                                                    |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Kernel (IDs, value objects, `IClock`, domain, persistence) | `packages/kernel/`                                                                                                                                           |
+| Kernel specification and migration inventories             | `docs/kernel/`                                                                                                                                               |
+| Data capture / EDC                                         | `apps/execution/`                                                                                                                                            |
+| Other product services (until dispositioned under #4787)   | `apps/<service>/`                                                                                                                                            |
+| OIDC gateway                                               | `apps/gateway/`                                                                                                                                              |
+| Shared domain utilities                                    | `packages/engine_core/`, `packages/core-models/`                                                                                                             |
+| Cross-service contracts                                    | `packages/contracts/`                                                                                                                                        |
+| Security, signing, gateway authentication                  | `packages/security/`                                                                                                                                         |
+| Database helpers, audit interceptor                        | `packages/database/`                                                                                                                                         |
+| Health checks and telemetry                                | `packages/telemetry/`                                                                                                                                        |
+| Test fakes and helpers                                     | `packages/testing/`                                                                                                                                          |
+| Tests                                                      | `tests/<Project>/` (`Cadence.UnitTests`, `Cadence.IntegrationTests`, `Cadence.ArchitectureTests`, `Cadence.E2ETests`; shared fakes in `Cadence.TestSupport`) |
+| Developer CLI and wizards                                  | `packages/cli/`, `scripts/`                                                                                                                                  |
+| Git hooks                                                  | `.githooks/`                                                                                                                                                 |
+| Architecture decision records                              | `docs/adr/`                                                                                                                                                  |
+| GxP/SDLC documents                                         | `docs/SDLC/` (RTM and IQ/OQ/PQ report are generated; never edit them by hand)                                                                                |
 
 ---
 
@@ -153,14 +153,16 @@ No MVC controllers. Group routes with `MapGroup("/api/v1/…")`, return `TypedRe
 
 A test that verifies a regulatory or system requirement declares the requirement ID on the test method,
 with a `[GxPRequirement]` attribute (`Cadence.Testing`) or an `@req:` line in its XML doc comment. One form
-is enough. `dotnet cadence gxp sync` turns these into the Requirements Traceability Matrix, and
+is enough. These tags feed the Requirements Traceability Matrix, and
 [docs/TESTING.md](docs/TESTING.md) has the full rules. The ones agents most often get wrong:
 
 - Tag only the requirement the test's assertions prove. Most tests need no tag.
 - Look the ID up in `docs/SDLC/01_Product_Requirements_Document_PRD.md` before using it. PRD-SYS-001 is
   audit fields and audit entries; PRD-SYS-053 is the agent lifecycle hooks and never belongs on a product test.
 - Tags on a class do not count, and an unknown ID fails `dotnet cadence check rtm`.
-- After adding, removing or moving a tag, run `dotnet cadence gxp sync` so the RTM lists the test.
+- After adding, removing or moving a tag, run `pnpm cadence gxp sync` to validate the tags and results. It
+  writes a preview to `TestResults/gxp/preview/` and nothing under `docs/SDLC`; never commit the RTM or the
+  IQ/OQ/PQ report on a feature branch (ADR-2532).
 
 ```csharp
 /// <summary>
@@ -216,16 +218,16 @@ Some packages still contain Python files as a behavioural reference for C# ports
 untested; [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) lists each one and what it
 needs before it can be deleted (#4789). Follow [docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md). Equivalents:
 
-| Python | .NET 10 |
-| --- | --- |
-| `pydantic.BaseModel` | `record` with primary constructor and `System.Text.Json` source generation |
-| FastAPI `APIRouter` / `Depends` / middleware | `MapGroup` / DI / `IEndpointFilter` |
-| SQLAlchemy / SQLModel session | EF Core `DbContext` with `IEntityTypeConfiguration<T>` |
-| `.where(col.is_(True))` | `.Where(x => x.IsActive)` |
-| `httpx.AsyncClient` | `IHttpClientFactory` typed client |
-| `pytest` / `pytest-asyncio` | xUnit v3 `[Fact]`/`[Theory]` with async `Task` tests |
-| `pytest-archon` | ArchUnitNET |
-| Ruff | `dotnet format` + analyzers |
+| Python                                       | .NET 10                                                                    |
+| -------------------------------------------- | -------------------------------------------------------------------------- |
+| `pydantic.BaseModel`                         | `record` with primary constructor and `System.Text.Json` source generation |
+| FastAPI `APIRouter` / `Depends` / middleware | `MapGroup` / DI / `IEndpointFilter`                                        |
+| SQLAlchemy / SQLModel session                | EF Core `DbContext` with `IEntityTypeConfiguration<T>`                     |
+| `.where(col.is_(True))`                      | `.Where(x => x.IsActive)`                                                  |
+| `httpx.AsyncClient`                          | `IHttpClientFactory` typed client                                          |
+| `pytest` / `pytest-asyncio`                  | xUnit v3 `[Fact]`/`[Theory]` with async `Task` tests                       |
+| `pytest-archon`                              | ArchUnitNET                                                                |
+| Ruff                                         | `dotnet format` + analyzers                                                |
 
 Never re-add Python code, Python tooling or compatibility shims.
 
@@ -245,7 +247,8 @@ Never re-add Python code, Python tooling or compatibility shims.
 Every pull request updates the documentation its change affects, in the same PR: the service or
 package README, `ARCHITECTURE.md`, `CONTEXT.md`, `docs/ENVIRONMENT_VARIABLES.md` for new settings, an
 ADR for a new decision, and the [documentation index](docs/DOCUMENTATION_INDEX.md) for new documents.
-Regenerated GxP documents come from `pnpm cadence gxp sync`, never hand edits.
+The generated RTM and IQ/OQ/PQ report come only from the integration owner's `pnpm cadence gxp snapshot`,
+never from hand edits or a feature branch.
 
 ---
 
@@ -254,30 +257,43 @@ Regenerated GxP documents come from `pnpm cadence gxp sync`, never hand edits.
 The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` or
 `dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`.
 
-| Task | Command |
-| --- | --- |
-| Build | `dotnet build Cadence.sln` |
-| Unit tests | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` |
-| Unit tests without integration | `pnpm cadence test --fast` (filters `Category!=Integration`) |
-| Integration tests only | `pnpm cadence test --integration` (`tests/Cadence.IntegrationTests`, needs PostgreSQL) |
-| Architecture tests | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| Formatting | `dotnet format Cadence.sln --verify-no-changes` |
-| Action pinning check | `python3 scripts/check-action-pinning.py` |
-| All quality gates (pre-commit) | `pnpm cadence check` |
-| Whole CI workflow locally (before merging; Actions is off until 2027) | `CADENCE_TEST_POSTGRES=<connection string> TERM=dumb pnpm cadence ci` (about 20 minutes; `TERM=dumb` or `script -qc "…" /dev/null` is needed in an agent shell, [docs/CI.md](docs/CI.md)) |
-| One gate | `pnpm cadence check <gate>` (for example `adrs`, `markdown`, `readmes`, `arch-drift`) |
-| PHI/PII scan | `pnpm cadence check deid`; mark a line that is not PHI with a `deid-ignore` comment, and drop stale `.deid-baseline.txt` entries with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` ([CONTRIBUTING.md §6](CONTRIBUTING.md#6-repository-hygiene)) |
-| Auto-fix | `pnpm cadence fix` |
-| Diagnostics | `pnpm cadence doctor --auto-fix` |
-| Traceability matrix | `pnpm cadence gxp sync` (validate only: `pnpm cadence gxp validate`) |
-| Onboarding wizard | `pnpm cadence wizard onboarding` or `make wizard` |
-| Database reset / seed / status | `pnpm cadence db reset`, `db seed`, `db status` |
-| Migrations | `pwsh scripts/manage_migrations.ps1 add <service> <name>` |
+| Task                                                                  | Command                                                                                                                                                                                                                                                |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Build                                                                 | `dotnet build Cadence.sln`                                                                                                                                                                                                                             |
+| Unit tests                                                            | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                                                                                                                                                                                         |
+| Unit tests without integration                                        | `pnpm cadence test --fast` (filters `Category!=Integration`)                                                                                                                                                                                           |
+| Integration tests only                                                | `pnpm cadence test --integration` (`tests/Cadence.IntegrationTests`, needs PostgreSQL)                                                                                                                                                                 |
+| Architecture tests                                                    | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`                                                                                                                                                                         |
+| Formatting                                                            | `dotnet format Cadence.sln --verify-no-changes`                                                                                                                                                                                                        |
+| Action pinning check                                                  | `python3 scripts/check-action-pinning.py`                                                                                                                                                                                                              |
+| All quality gates (pre-commit)                                        | `pnpm cadence check`                                                                                                                                                                                                                                   |
+| Whole CI workflow locally (before merging; Actions is off until 2027) | `CADENCE_TEST_POSTGRES=<connection string> TERM=dumb pnpm cadence ci` (about 20 minutes; `TERM=dumb` or `script -qc "…" /dev/null` is needed in an agent shell, [docs/CI.md](docs/CI.md))                                                              |
+| One gate                                                              | `pnpm cadence check <gate>` (for example `adrs`, `markdown`, `readmes`, `arch-drift`)                                                                                                                                                                  |
+| PHI/PII scan                                                          | `pnpm cadence check deid`; mark a line that is not PHI with a `deid-ignore` comment, and drop stale `.deid-baseline.txt` entries with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` ([CONTRIBUTING.md §6](CONTRIBUTING.md#6-repository-hygiene)) |
+| Auto-fix                                                              | `pnpm cadence fix`                                                                                                                                                                                                                                     |
+| Diagnostics                                                           | `pnpm cadence doctor --auto-fix`                                                                                                                                                                                                                       |
+| Traceability validation (branch)                                      | `pnpm cadence gxp sync` (no tests: `pnpm cadence gxp validate`)                                                                                                                                                                                        |
+| GxP snapshot (integration owner only)                                 | `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot`                                                                                                                                                                                                     |
+| Onboarding wizard                                                     | `pnpm cadence wizard onboarding` or `make wizard`                                                                                                                                                                                                      |
+| Database reset / seed / status                                        | `pnpm cadence db reset`, `db seed`, `db status`                                                                                                                                                                                                        |
+| Migrations                                                            | `pwsh scripts/manage_migrations.ps1 add <service> <name>`                                                                                                                                                                                              |
 
 The generated reference for every command is [docs/cli.md](docs/cli.md).
 
 ## GxP compliance sync
 
-`pnpm cadence gxp sync` runs the tests, reads the `@req:` tags and test results, regenerates
-`docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`, and
-stages them. Run it whenever you add or change requirement-tagged tests.
+`pnpm cadence gxp sync` validates a branch: it runs the tests, reads the `@req:` tags and test results, writes
+a preview of the RTM and IQ/OQ/PQ report to `TestResults/gxp/preview/` (gitignored), and fails on unknown
+requirement IDs, failing tagged tests and skipped database tests. It writes and stages nothing under
+`docs/SDLC`. Run it whenever you add or change requirement-tagged tests (`--dry-run` checks the tags and
+integrity stamps without running tests).
+
+`docs/SDLC/Requirements_Traceability_Matrix.md`, `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` and
+`docs/SDLC/runs/` are a snapshot, not feature-branch merge currency (ADR-2532):
+
+- Never commit them on a feature branch and never resolve a conflict in them by hand. The `gxp-snapshot`
+  gate (pre-commit, `pnpm cadence check`, CI) refuses such changes.
+- On a conflict in them, or if your branch already changed them, take `main`'s copy and do not regenerate on the
+  branch: `git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs`.
+- Only the integration owner refreshes them, on the integrated candidate against PostgreSQL:
+  `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` writes and stages them, and `--commit` also commits.

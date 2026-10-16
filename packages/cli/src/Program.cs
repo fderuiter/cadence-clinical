@@ -78,8 +78,9 @@ public static class Program
         AddCommand(root, "run-gating-pipeline", "Runs the full gating pipeline", () => GatingPipelineService.RunGatingPipeline());
 
         var gxp = AddBranch(root, "gxp", "GxP requirement traceability");
-        AddCommand(gxp, "sync", "Executes test suites and regenerates RTM compliance docs", GxPSyncCommand.Configure);
-        AddCommand(gxp, "validate", "Validates RTM compliance matrix against design requirements", Services.GxPComplianceService.ValidateCompliance);
+        AddCommand(gxp, "sync", "Runs the tests and validates requirement tags and results on a branch; writes a preview, never docs/SDLC", GxPSyncCommand.Configure);
+        AddCommand(gxp, "snapshot", "Integration owner only: runs the tests and writes and stages the RTM and IQ/OQ/PQ snapshot", GxPSnapshotCommand.Configure);
+        AddCommand(gxp, "validate", "Validates requirement tags and integrity stamps without running tests", Services.GxPComplianceService.ValidateCompliance);
         AddCommand(gxp, "diff", "Compares the regenerated RTM and IQ/OQ/PQ report with the committed copies, ignoring the evidence block",
             () => Services.GxpDocsDiffService.Compare(Services.QualityGateOrchestrator.FindRepoRoot()));
         AddCommand(gxp, "verify", "Not implemented yet: verifies electronic signatures on signed GxP reports", () => VerifyGxPSignaturesService.VerifySignatures());

@@ -168,7 +168,7 @@ Each service answers `/healthz/live` and `/healthz/ready` without a token.
 dotnet format Cadence.sln --verify-no-changes
 pnpm cadence check               # all pre-commit gates; `pnpm cadence check <gate>` for one
 pnpm cadence fix                 # auto-fix formatting, schemas, ADR index
-pnpm cadence gxp sync            # after changing requirement-tagged tests
+pnpm cadence gxp sync            # after changing requirement-tagged tests; validates, never commit docs/SDLC output
 ```
 
 ## 7. Documentation site

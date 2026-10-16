@@ -391,7 +391,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2279: Unified Database Management and Pre-Boot Migrations](2026-07-22-unified-database-management-and-pre-boot-migrations.md) (2026-07-22)
 - [ADR-2283: Targeted Integration with Path Isolation](2026-07-23-targeted-integration-path-isolation.md) (2026-07-23)
 - [ADR-2284: Code Formatting and Style Standardization](2026-07-24-code-formatting-and-style-standardization.md) (2026-07-24)
-- [ADR-2287: Minimizing Merge Friction for Baseline and SDLC Verification Artifacts](2026-07-24-minimizing-merge-friction-for-baselines-and-reports.md) (2026-07-24) _(Amended by [ADR-2531](2026-10-15-every-mapped-test-is-mandatory-evidence.md))_
+- [ADR-2287: Minimizing Merge Friction for Baseline and SDLC Verification Artifacts](2026-07-24-minimizing-merge-friction-for-baselines-and-reports.md) (2026-07-24) _(Amended by [ADR-2531](2026-10-15-every-mapped-test-is-mandatory-evidence.md) and [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md))_
 - [ADR-104: PostgreSQL-Native Parallel Testing and Unified CI Caching](2026-07-27-postgres-parallel-testing-ci-caching.md) (2026-07-27)
 - [ADR-2290: Programmatic Multi-Database Reset CLI Tool with Safety Guardrails](2026-07-27-multi-database-reset-cli-tool.md) (2026-07-27)
 - [ADR-2292: Unified Python-based Documentation Validator](2026-07-27-unified-python-markdown-validator.md) (2026-07-27)
@@ -528,7 +528,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)
 - [ADR-2530: Measure Web Coverage over All Source with a Ratchet Floor](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) (2026-09-30)
-- [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](2026-10-15-every-mapped-test-is-mandatory-evidence.md) (2026-10-15)
+- [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](2026-10-15-every-mapped-test-is-mandatory-evidence.md) (2026-10-15) _(Amended by [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md))_
+- [ADR-2532: Feature Branches Never Commit the GxP Snapshot](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md) (2026-10-16)
 - [ADR-2591: Synchronous In-Process DSUR Compilation and Cryptographic Signing Engine](2026-09-30-synchronous-in-process-dsur-compilation-and-cryptographic-signing-engine.md) (2026-09-30)
 - [ADR-2592: Dual Ecosystem Vulnerability Auditor and CEC Chair Adjudications Persistence](2026-09-30-dual-ecosystem-vulnerability-auditor-and-cec-chair-adjudications-persistence.md) (2026-09-30)
 - [ADR-2802: CTMS Visit Letter PDF Compilation and Automated Dispatch Pipeline](2026-10-01-ctms-visit-letter-pdf-compilation-and-automated-dispatch-pipeline.md) (2026-10-01)
