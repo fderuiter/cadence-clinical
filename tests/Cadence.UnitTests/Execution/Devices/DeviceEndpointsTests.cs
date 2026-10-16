@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Devices;
 using Cadence.Apps.Execution.Endpoints;
+using Cadence.Security.DependencyInjection;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
 using Microsoft.AspNetCore.Builder;
@@ -40,14 +42,17 @@ public sealed class DeviceEndpointsTests : IDisposable
             .ConfigureWebHostDefaults(webHost =>
             {
                 webHost.UseTestServer();
+                webHost.UseTestGatewaySecret();
                 webHost.ConfigureServices(services =>
                 {
                     services.AddRouting();
+                    services.AddCadenceSecurity();
                     services.AddSingleton(_deviceService);
                 });
                 webHost.Configure(app =>
                 {
                     app.UseRouting();
+                    app.UseCadenceSecurity();
                     app.UseEndpoints(endpoints =>
                     {
                         endpoints.MapDeviceEndpoints();
@@ -56,7 +61,15 @@ public sealed class DeviceEndpointsTests : IDisposable
             })
             .Start();
 
-        _client = _host.GetTestServer().CreateClient();
+        // The site pharmacist registers, dispenses and reports on devices, so it holds every route these tests call.
+        var server = _host.GetTestServer();
+        _client = new HttpClient(new TestSecurityContext.GatewaySigningHandler(TestSecurityContext.Identity("pharmacist-01", "Pharmacist"))
+        {
+            InnerHandler = server.CreateHandler(),
+        })
+        {
+            BaseAddress = server.BaseAddress,
+        };
     }
 
     public void Dispose()

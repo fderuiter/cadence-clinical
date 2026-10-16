@@ -13,6 +13,7 @@ using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -41,22 +42,32 @@ public static class StartupGreenlightEndpoints
 
         startup.MapGet("/sites/{siteId}/greenlight", GetSiteGreenlightAsync)
             .WithName("EvaluateSiteGreenlight")
+            .RequirePermission(ReadPermission)
+            .RequireSiteScope("siteId")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Evaluates 6-facet greenlight readiness for a single trial site.")
             .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status200OK);
 
         startup.MapPost("/sites/{siteId}/greenlight/certify", CertifySiteGreenlightAsync)
             .WithName("CertifySiteGreenlight")
+            .RequirePermission(CertifyPermission)
+            .RequireSiteScope("siteId")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Certifies greenlight activation for a single trial site, issuing an HMAC-SHA256 token.")
             .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         startup.MapGet("/matrix", GetCountryMatrixAsync)
             .WithName("GetCountryGreenlightMatrix")
+            .RequirePermission(ReadPermission)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Displays country-level matrix showing 6-facet greenlight readiness for all sites in a selected country.")
             .Produces<List<SiteGreenlightGateResponseDto>>(StatusCodes.Status200OK);
 
         startup.MapPost("/matrix/batch-certify", BatchCertifyCountrySitesAsync)
             .WithName("BatchCertifyCountrySites")
+            .RequirePermission(CertifyPermission)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Batch-certifies all selected 100% compliant sites in a target country with a single e-signature.")
             .Produces<BatchCertifyResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
@@ -64,28 +75,55 @@ public static class StartupGreenlightEndpoints
         return group;
     }
 
-    public static async Task<Ok<SiteGreenlightGateResponseDto>> GetSiteGreenlightAsync(
+    private static string Signer(HttpContext httpContext) =>
+        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted greenlight request has no signed caller.");
+
+    // Greenlight tokens are sealed with the gateway secret; there is no fallback secret (ADR-2256).
+    private static string TokenSecret(IConfiguration config) =>
+        config["GATEWAY_SECRET"] is { Length: > 0 } secret
+            ? secret
+            : throw new InvalidOperationException("GATEWAY_SECRET is not configured; greenlight tokens cannot be sealed.");
+
+    private static ProblemHttpResult OutsideStudy() =>
+        TypedResults.Problem(
+            title: "Outside your studies",
+            detail: "You are not assigned to this study.",
+            statusCode: StatusCodes.Status403Forbidden);
+
+    public static async Task<Results<Ok<SiteGreenlightGateResponseDto>, ProblemHttpResult>> GetSiteGreenlightAsync(
         string siteId,
-        [FromQuery] string studyId,
-        [FromQuery] string? countryCode,
+        [FromQuery(Name = "study_id")] string studyId,
+        [FromQuery(Name = "country_code")] string? countryCode,
         CtmsDbContext db,
+        HttpContext httpContext,
         CancellationToken ct)
     {
+        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        {
+            return OutsideStudy();
+        }
+
         countryCode = (countryCode ?? "US").ToUpperInvariant();
         var gate = await GetOrCreateGateAsync(db, studyId, siteId, countryCode, ct);
         return TypedResults.Ok(ToResponseDto(gate));
     }
 
-    public static async Task<Results<Ok<SiteGreenlightGateResponseDto>, BadRequest<ProblemDetails>>> CertifySiteGreenlightAsync(
+    public static async Task<Results<Ok<SiteGreenlightGateResponseDto>, BadRequest<ProblemDetails>, ProblemHttpResult>> CertifySiteGreenlightAsync(
         string siteId,
-        [FromQuery] string studyId,
-        [FromQuery] string? countryCode,
+        [FromQuery(Name = "study_id")] string studyId,
+        [FromQuery(Name = "country_code")] string? countryCode,
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
+        HttpContext httpContext,
         [FromServices] IClock clock,
         IConfiguration config,
         CancellationToken ct)
     {
+        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        {
+            return OutsideStudy();
+        }
+
         countryCode = (countryCode ?? "US").ToUpperInvariant();
         var gate = await GetOrCreateGateAsync(db, studyId, siteId, countryCode, ct);
 
@@ -99,8 +137,8 @@ public static class StartupGreenlightEndpoints
             });
         }
 
-        string signer = "Startup Manager";
-        string secret = config["GATEWAY_SECRET"] ?? "internal-gateway-secret-12345";
+        string signer = Signer(httpContext);
+        string secret = TokenSecret(config);
         DateTimeOffset now = clock.UtcNow;
         long issuedAt = now.ToUnixTimeSeconds();
         long expiresAt = issuedAt + (86400 * 365);
@@ -118,7 +156,7 @@ public static class StartupGreenlightEndpoints
         {
             Timestamp = now,
             UserId = signer,
-            UserRole = "Site Startup Manager",
+            UserRole = CallerScope.Roles(httpContext),
             Action = "GREENLIGHT_CERTIFIED",
             Details = $"Greenlight activation certified for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode})"
         };
@@ -129,14 +167,19 @@ public static class StartupGreenlightEndpoints
         return TypedResults.Ok(ToResponseDto(gate));
     }
 
-    public static async Task<Ok<List<SiteGreenlightGateResponseDto>>> GetCountryMatrixAsync(
-        [FromQuery] string studyId,
-        [FromQuery] string countryCode,
+    public static async Task<Results<Ok<List<SiteGreenlightGateResponseDto>>, ProblemHttpResult>> GetCountryMatrixAsync(
+        [FromQuery(Name = "study_id")] string studyId,
+        [FromQuery(Name = "country_code")] string countryCode,
         CtmsDbContext db,
+        HttpContext httpContext,
         CancellationToken ct)
     {
         countryCode = (countryCode ?? "US").ToUpperInvariant();
         studyId = string.IsNullOrWhiteSpace(studyId) ? "PROTOCOL-2026-01" : studyId;
+        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        {
+            return OutsideStudy();
+        }
 
         var gates = await db.CtmsSiteGreenlightGates
             .AsNoTracking()
@@ -154,10 +197,11 @@ public static class StartupGreenlightEndpoints
         return TypedResults.Ok(responseDtos);
     }
 
-    public static async Task<Results<Ok<BatchCertifyResponseDto>, BadRequest<ProblemDetails>>> BatchCertifyCountrySitesAsync(
+    public static async Task<Results<Ok<BatchCertifyResponseDto>, BadRequest<ProblemDetails>, ProblemHttpResult>> BatchCertifyCountrySitesAsync(
         [FromBody] BatchCertifyRequestDto request,
         [FromHeader(Name = "X-Change-Reason")] string? changeReasonHeader,
         CtmsDbContext db,
+        HttpContext httpContext,
         [FromServices] IClock clock,
         IConfiguration config,
         CancellationToken ct)
@@ -174,6 +218,21 @@ public static class StartupGreenlightEndpoints
 
         string countryCode = (request.CountryCode ?? "US").ToUpperInvariant();
         string studyId = string.IsNullOrWhiteSpace(request.StudyId) ? "PROTOCOL-2026-01" : request.StudyId;
+        if (!CallerScope.CanAccessStudy(httpContext, studyId))
+        {
+            return OutsideStudy();
+        }
+
+        var outsideSites = request.SiteIds
+            .Where(site => !SiteAccessEvaluator.CanAccessSite(CallerScope.Principal(httpContext), site))
+            .ToList();
+        if (outsideSites.Count > 0)
+        {
+            return TypedResults.Problem(
+                title: "Outside your sites",
+                detail: $"You are not assigned to: {string.Join(", ", outsideSites)}. Nothing was certified.",
+                statusCode: StatusCodes.Status403Forbidden);
+        }
 
         var gates = await db.CtmsSiteGreenlightGates
             .Where(g => g.StudyId == studyId && g.CountryCode == countryCode && request.SiteIds.Contains(g.SiteId))
@@ -199,9 +258,10 @@ public static class StartupGreenlightEndpoints
             });
         }
 
-        string signer = !string.IsNullOrWhiteSpace(request.SignerName) ? request.SignerName : "Startup Manager";
-        string role = !string.IsNullOrWhiteSpace(request.SignerRole) ? request.SignerRole : "VP of Clinical Operations";
-        string secret = config["GATEWAY_SECRET"] ?? "internal-gateway-secret-12345";
+        // The signer is the signed caller, never a name or title in the request body (ADR-2516).
+        string signer = Signer(httpContext);
+        string role = CallerScope.Roles(httpContext);
+        string secret = TokenSecret(config);
         DateTimeOffset now = clock.UtcNow;
         long issuedAt = now.ToUnixTimeSeconds();
         long expiresAt = issuedAt + (86400 * 365);
@@ -448,8 +508,6 @@ public record BatchCertifyRequestDto(
     [property: JsonPropertyName("study_id")] string StudyId,
     [property: JsonPropertyName("country_code")] string CountryCode,
     [property: JsonPropertyName("site_ids")] List<string> SiteIds,
-    [property: JsonPropertyName("signer_name")] string? SignerName,
-    [property: JsonPropertyName("signer_role")] string? SignerRole,
     [property: JsonPropertyName("meaning")] string? Meaning
 );
 

@@ -199,7 +199,6 @@ describe("BatchDicomDropzoneModal.vue", () => {
       "/api/v1/imaging/studies/batch",
       expect.objectContaining({
         method: "POST",
-        headers: { "X-Operator-Identity": "crc.coordinator@site.org" },
       })
     );
 

@@ -24,6 +24,8 @@ Electronic trial master file scaffold. It holds the TMF document, expected-docum
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
+eTMF routes need an `etmf_document` or `etmf_taxonomy` permission (`PermissionMatrix.Etmf.cs`). Exporting a binder needs `etmf_document:export` (sponsor data management, CRAs, monitors, auditors) and a `study_id` the caller is assigned to; document and export-job lists are narrowed to the caller's studies, and a document or job outside them answers `404`. Audit entries record the signed caller and roles ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+
 ## Persistence
 
 `AddCadencePostgresDbContext<EtmfDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `etmf` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.

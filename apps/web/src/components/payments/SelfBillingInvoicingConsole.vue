@@ -846,26 +846,10 @@
             Applying this digital signature binds the remittance advice
             statement to 21 CFR Part 11 cryptographic sealing.
           </p>
-          <div class="form-group">
-            <label for="sign-name">Full Signer Name *</label>
-            <input
-              id="sign-name"
-              v-model="signForm.signerName"
-              type="text"
-              placeholder="e.g. Dr. Eleanor Vance"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label for="sign-role">Signer Role *</label>
-            <input
-              id="sign-role"
-              v-model="signForm.signerRole"
-              type="text"
-              placeholder="e.g. Director of Clinical Grants"
-              required
-            />
-          </div>
+          <p class="text-xs text-muted">
+            You sign as your signed-in account and role. The user who approved
+            the invoice cannot also sign its remittance.
+          </p>
           <div class="form-group">
             <label for="sign-reason">Signature Reason</label>
             <input
@@ -887,7 +871,7 @@
           <button
             type="button"
             class="btn btn-success"
-            :disabled="isSubmitting || !signForm.signerName"
+            :disabled="isSubmitting"
             @click="submitSignRemittance"
           >
             {{ isSubmitting ? "Signing..." : "Sign &amp; Seal Statement" }}
@@ -1144,9 +1128,8 @@ const batchCompileForm = ref({
   siteIdsInput: "",
 });
 
+// The signer is the signed-in caller (#5361); the form carries only the reason.
 const signForm = ref({
-  signerName: "",
-  signerRole: "Grants Lead",
   signatureReason: "Authorized Self-Billing Remittance Disbursement Statement",
 });
 
@@ -1326,7 +1309,7 @@ function openSignModal(invoiceId: string) {
 }
 
 async function submitSignRemittance() {
-  if (!signingInvoiceId.value || !signForm.value.signerName) return;
+  if (!signingInvoiceId.value) return;
 
   isSubmitting.value = true;
   try {
@@ -1336,8 +1319,6 @@ async function submitSignRemittance() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          signer_name: signForm.value.signerName,
-          signer_role: signForm.value.signerRole,
           signature_reason: signForm.value.signatureReason,
         }),
       }

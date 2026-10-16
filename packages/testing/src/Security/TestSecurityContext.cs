@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -37,15 +38,26 @@ public static class TestSecurityContext
     /// </summary>
     public const string TenantCode = "tenant-test";
 
+    /// <summary>
+    /// The study assignment test identities carry: every study (ADR-2516). Study scope fails closed, so a test of a caller
+    /// outside a study says so with <c>identity with { StudyIds = ["OTHER"] }</c> or <c>[]</c>.
+    /// </summary>
+    public static IReadOnlyList<string> AllStudies { get; } = [StudyAccessEvaluator.AllStudies];
+
     /// <summary>The identity signed onto requests when a test does not name one.</summary>
     public static GatewayIdentity DefaultIdentity { get; } = new(
         UserId: "test-user",
         Roles: ["Data Manager", "CRA", "Site Investigator"],
         SiteIds: [],
-        TenantId: TenantCode);
+        TenantId: TenantCode,
+        StudyIds: AllStudies);
 
-    /// <summary>An identity for <paramref name="userId"/> with <paramref name="roles"/> in <see cref="TenantCode"/>.</summary>
-    public static GatewayIdentity Identity(string userId, params string[] roles) => new(userId, roles, [], TenantId: TenantCode);
+    /// <summary>
+    /// An identity for <paramref name="userId"/> with <paramref name="roles"/> in <see cref="TenantCode"/>, assigned to
+    /// every study.
+    /// </summary>
+    public static GatewayIdentity Identity(string userId, params string[] roles) =>
+        new(userId, roles, [], TenantId: TenantCode, StudyIds: AllStudies);
 
     /// <summary>Signed gateway headers for <paramref name="identity"/>, issued now unless a time is given.</summary>
     public static IReadOnlyDictionary<string, string> CreateHmacHeaders(

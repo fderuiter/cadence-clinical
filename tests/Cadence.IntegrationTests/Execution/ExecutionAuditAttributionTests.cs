@@ -11,6 +11,7 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Kernel.Trust;
 using Cadence.Security;
 using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
@@ -46,7 +47,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
     public async Task SubjectWrites_AreEachAuditedAgainstTheCaller()
     {
         factory.SkipIfUnavailable();
-        var coordinator = Caller("coordinator", "Site Coordinator");
+        var coordinator = Caller("coordinator", "crc");
         string subject = $"SUBJ-{_run}";
 
         await AuditedAsync(coordinator, c => c.PostAsJsonAsync(
@@ -76,8 +77,9 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
     public async Task SiteComplianceWrites_AreEachAuditedAgainstTheCaller()
     {
         factory.SkipIfUnavailable();
-        var etmf = Caller("etmf-integration", "Integration");
-        var manager = Caller("site-manager", "Study Manager");
+        // eTMF posts completeness as its signed service account; sponsor operations activate the site (ADR-2516).
+        var etmf = Caller("etmf-integration", PermissionMatrix.EtmfServiceRole);
+        var manager = Caller("site-manager", "Data Manager");
         string site = $"SITE-{_run}";
 
         await AuditedAsync(etmf, c => c.PostAsJsonAsync(
@@ -98,7 +100,7 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
     public async Task ObservationWrites_AreEachAuditedAgainstTheCaller()
     {
         factory.SkipIfUnavailable();
-        var coordinator = Caller("obs-coordinator", "Site Coordinator");
+        var coordinator = Caller("obs-coordinator", "crc");
         var monitor = Caller("obs-monitor", "CRA");
         object observation = new { subject_id = $"SUBJ-{_run}", domain = "VS", test_code = "SYSBP", test_name = "Systolic BP", study_id = Study, value = 120, unit = "mmHg", observation_date = "2026-01-01T08:00:00Z" };
 
@@ -146,7 +148,9 @@ public sealed class ExecutionAuditAttributionTests(ExecutionPostgresApiFactory f
                 },
             },
             Ct));
-        await AuditedAsync(investigator, c => c.PostAsJsonAsync($"/api/v1/execution/forms/{form}/unlock", new { reason = "Late lab result" }, Ct));
+        // Unlocking a signed form for correction is the data manager's action, not the signer's (ADR-2516).
+        var dataManager = Caller("form-dm", "Data Manager");
+        await AuditedAsync(dataManager, c => c.PostAsJsonAsync($"/api/v1/execution/forms/{form}/unlock", new { reason = "Late lab result" }, Ct));
 
         await ShouldHaveNoAnonymousEntriesAsync();
     }

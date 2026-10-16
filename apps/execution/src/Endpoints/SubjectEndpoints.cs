@@ -8,6 +8,7 @@ using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -99,6 +100,7 @@ public static partial class SubjectEndpoints
             .Produces<SubjectResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("subject_enrollment:create")
             .AddEndpointFilter<ValidationFilter<SubjectCreateRequest>>();
 
         group.MapPost("/{subjectId}/consent", RecordSubjectConsentAsync)
@@ -107,6 +109,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("subject_enrollment:update")
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>();
 
         // Legacy dual-route compatibility alias (`01_spec.md` §3 trap table): the legacy router declared
@@ -124,6 +127,7 @@ public static partial class SubjectEndpoints
         // legacy accidental-dual-registration quirk existing callers may still depend on.
         group.MapPost("/{subjectId}/consents", RecordSubjectConsentAsync)
             .WithName("RecordSubjectConsentAlias")
+            .RequirePermission("subject_enrollment:update")
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>()
             .ExcludeFromDescription();
 
@@ -134,6 +138,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission("subject_enrollment:update")
             .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
@@ -141,12 +146,16 @@ public static partial class SubjectEndpoints
             .WithName("ListSubjects")
             .WithSummary("Lists one page of a study's subjects in enrollment order.")
             .Produces<SubjectListResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("subject_enrollment:read");
 
         group.MapGet("/{subjectId}", GetSubjectDetailAsync)
             .WithName("GetSubjectDetail")
             .Produces<SubjectDetailResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("subject_enrollment:read");
 
         group.MapPut("/{subjectId}/demographics", UpdateSubjectDemographicsAsync)
             .WithName("UpdateSubjectDemographics")
@@ -154,11 +163,13 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission("subject_enrollment:update")
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapDelete("/{subjectId}/demographics", DeleteSubjectDemographicsAsync)
             .WithName("DeleteSubjectDemographics")
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("subject_enrollment:update")
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;

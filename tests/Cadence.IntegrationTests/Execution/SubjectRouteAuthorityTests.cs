@@ -38,6 +38,10 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
 
     private readonly string _run = Guid.NewGuid().ToString("N")[..8];
 
+    /// <summary>
+    /// These roles hold no <c>subject_enrollment</c> write permission, so the route refuses them before the handler's
+    /// own <c>SubjectAuthority</c> check is reached (ADR-2516).
+    /// </summary>
     [Theory]
     [InlineData("CRA")]
     [InlineData("Monitor")]
@@ -68,7 +72,6 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         foreach (var response in new[] { create, consent, state, update, delete })
         {
             response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync(Ct));
-            (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("UNAUTHORIZED_SUBJECT_ROLE");
         }
 
         var stored = await ReadSubjectAsync(subject);
@@ -82,7 +85,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Screening);
-        using var client = factory.CreateSignedClient(Caller("crc", "Site Coordinator"));
+        using var client = factory.CreateSignedClient(Caller("crc", "crc"));
 
         var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "WITHDRAWN" }, Ct);
 
@@ -106,7 +109,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller("crc-bypass", "Site Coordinator"));
+        using var client = factory.CreateSignedClient(Caller("crc-bypass", "crc"));
 
         var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = target }, Ct);
 
@@ -117,11 +120,10 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
     }
 
+    /// <summary>Site roles may change a participant's state, but the handler refuses them an unblinding.</summary>
     [Theory]
-    [InlineData("Site Coordinator")]
+    [InlineData("crc")]
     [InlineData("Site Investigator")]
-    [InlineData("Data Manager")]
-    [InlineData("Emergency Unblinder")]
     [InlineData("Lead Investigator")]
     public async Task Unblinding_WithoutUnblindingAuthority_Returns403_AndTheParticipantStaysBlinded(string role)
     {
@@ -133,6 +135,25 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
 
         state.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await state.Content.ReadAsStringAsync(Ct)).Should().Contain("UNAUTHORIZED_UNBLIND_ROLE");
+        (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
+    }
+
+    /// <summary>
+    /// A data manager and the RTSM emergency unblinder may not change a participant's state through this route at all,
+    /// so the route refuses them before the handler (ADR-2516).
+    /// </summary>
+    [Theory]
+    [InlineData("Data Manager")]
+    [InlineData("Emergency Unblinder")]
+    public async Task Unblinding_ByARoleWithoutTheRoutePermission_Returns403_AndTheParticipantStaysBlinded(string role)
+    {
+        factory.SkipIfUnavailable();
+        string subject = await SeedAsync(SubjectState.Randomized);
+        using var client = factory.CreateSignedClient(Caller($"no-route-{role}", role));
+
+        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+
+        state.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
     }
 
@@ -207,7 +228,7 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller("crc-active", "Site Coordinator"));
+        using var client = factory.CreateSignedClient(Caller("crc-active", "crc"));
 
         var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "ACTIVE" }, Ct);
 

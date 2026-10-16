@@ -1310,8 +1310,6 @@ async function executeBatchCertification() {
         study_id: activeStudyId.value,
         country_code: activeCountry.value,
         site_ids: selectedIds,
-        signer_name: batchSigForm.name,
-        signer_role: batchSigForm.role,
         meaning: batchSigForm.changeReason,
       }),
     });

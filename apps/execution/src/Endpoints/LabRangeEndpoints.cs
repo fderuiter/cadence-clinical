@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -23,6 +24,13 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static class LabRangeEndpoints
 {
+    // Route permissions (ADR-2516). Reference ranges are maintained under lab_range; a bulk import replaces a study's
+    // reference data, so previewing and committing one is a sponsor data-management operation (lab_range_import).
+    private const string ReadRanges = "lab_range:read";
+    private const string ImportPreview = "lab_range_import:preview";
+    private const string ImportCommit = "lab_range_import:commit";
+    private const string ImportHistory = "lab_range_import:read";
+
     public static RouteGroupBuilder MapLabRangeEndpoints(this IEndpointRouteBuilder routes)
     {
         var rangesGroup = routes.MapGroup("/api/v1/execution/lab-ranges")
@@ -31,34 +39,44 @@ public static class LabRangeEndpoints
         rangesGroup.MapGet("/", GetReferenceRangesAsync)
             .WithName("GetReferenceRanges")
             .WithSummary("Get reference ranges for study/site")
-            .Produces<IReadOnlyList<LabReferenceRangeResponse>>(StatusCodes.Status200OK);
+            .Produces<IReadOnlyList<LabReferenceRangeResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ReadRanges);
 
         rangesGroup.MapGet("/{id:guid}", GetReferenceRangeByIdAsync)
             .WithName("GetReferenceRangeById")
             .WithSummary("Get reference range by ID")
             .Produces<LabReferenceRangeResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ReadRanges);
 
         rangesGroup.MapPost("/", CreateReferenceRangeAsync)
             .WithName("CreateReferenceRange")
             .WithSummary("Create laboratory reference range")
             .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .Produces<LabReferenceRangeResponse>(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("lab_range:create");
 
         rangesGroup.MapPut("/{id:guid}", UpdateReferenceRangeAsync)
             .WithName("UpdateReferenceRange")
             .WithSummary("Update laboratory reference range")
             .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .Produces<LabReferenceRangeResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("lab_range:update");
 
         rangesGroup.MapDelete("/{id:guid}", DeleteReferenceRangeAsync)
             .WithName("DeleteReferenceRange")
             .WithSummary("Deactivate laboratory reference range")
             .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .Produces<object>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("lab_range:delete");
 
         var labsGroup = routes.MapGroup("/api/v1/execution/labs")
             .WithTags("Laboratory Import & Catalog");
@@ -68,7 +86,9 @@ public static class LabRangeEndpoints
             .WithSummary("Pre-flight validation preview for bulk lab range CSV/XLSX file")
             .DisableAntiforgery()
             .Produces<BulkLabRangeDryRunResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ImportPreview);
 
         labsGroup.MapPost("/import/commit", CommitImportAsync)
             .WithName("CommitLabRangeImport")
@@ -76,28 +96,38 @@ public static class LabRangeEndpoints
             .DisableAntiforgery()
             .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .Produces<BulkLabRangeImportJobResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ImportCommit);
 
         labsGroup.MapGet("/batch-status", GetBatchStatusAsync)
             .WithName("GetLabBatchStatus")
             .WithSummary("Retrieve batch status history for bulk lab range imports")
-            .Produces<IReadOnlyList<BulkLabRangeImportJobResponse>>(StatusCodes.Status200OK);
+            .Produces<IReadOnlyList<BulkLabRangeImportJobResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ImportHistory);
 
         labsGroup.MapGet("/batch-status/{id:guid}", GetBatchStatusByIdAsync)
             .WithName("GetLabBatchStatusById")
             .WithSummary("Get lab batch import job status by ID")
             .Produces<BulkLabRangeImportJobResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ImportHistory);
 
         labsGroup.MapPost("/convert-unit", ConvertUnit)
             .WithName("ConvertLabUnit")
             .WithSummary("Convert clinical laboratory unit via UCUM SI formulas")
-            .Produces<UnitConversionResponse>(StatusCodes.Status200OK);
+            .Produces<UnitConversionResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ReadRanges);
 
         labsGroup.MapGet("/loinc-catalog", GetLoincCatalog)
             .WithName("GetLoincCatalog")
             .WithSummary("Retrieve standardized LOINC catalog mappings")
-            .Produces<LoincCatalogResponse>(StatusCodes.Status200OK);
+            .Produces<LoincCatalogResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ReadRanges);
 
         return rangesGroup;
     }

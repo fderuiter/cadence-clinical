@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Queries;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -21,6 +22,13 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static class QueryEndpoints
 {
+    // Route permissions (ADR-2516). Monitors and data managers raise queries and site staff answer them; closing,
+    // reopening and cancelling one is the CRA's or data manager's decision (the service also checks the role).
+    private const string ReadQueries = "query_lifecycle:read";
+    private const string RaiseQuery = "query_lifecycle:create";
+    private const string AnswerQuery = "query_lifecycle:update";
+    private const string ManageQuery = "query_lifecycle:manage";
+
     public static IEndpointRouteBuilder MapQueryEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/execution/queries")
@@ -30,27 +38,36 @@ public static class QueryEndpoints
             .WithName("CreateClinicalQuery")
             .Produces<ClinicalQueryResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequirePermission(RaiseQuery);
 
         group.MapGet("/{id}", GetQueryByIdAsync)
             .WithName("GetClinicalQueryById")
             .Produces<ClinicalQueryResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(ReadQueries);
 
         group.MapGet("/", ListQueriesAsync)
             .WithName("ListClinicalQueries")
-            .Produces<IReadOnlyList<ClinicalQueryResponse>>(StatusCodes.Status200OK);
+            .Produces<IReadOnlyList<ClinicalQueryResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ReadQueries);
 
         group.MapPost("/{id}/respond", AnswerQueryAsync)
             .WithName("RespondClinicalQuery")
             .Produces<ClinicalQueryResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(AnswerQuery)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/answer", AnswerQueryAsync)
             .WithName("AnswerClinicalQuery")
             .ExcludeFromDescription()
+            .RequirePermission(AnswerQuery)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/close", CloseQueryAsync)
@@ -59,6 +76,7 @@ public static class QueryEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ManageQuery)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/reopen", ReopenQueryAsync)
@@ -67,6 +85,7 @@ public static class QueryEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ManageQuery)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/cancel", CancelQueryAsync)
@@ -75,6 +94,7 @@ public static class QueryEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(ManageQuery)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/batch-close", BatchCloseQueryAsync)
@@ -83,6 +103,7 @@ public static class QueryEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(ManageQuery)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/batch-cancel", BatchCancelQueryAsync)
@@ -91,6 +112,7 @@ public static class QueryEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(ManageQuery)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/batch-respond", BatchRespondQueryAsync)
@@ -98,6 +120,8 @@ public static class QueryEndpoints
             .Produces<BatchQueryResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission(AnswerQuery)
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         // Undocumented alias for legacy Python router compatibility. The gateway proxies it, so every alias carries the
@@ -105,16 +129,16 @@ public static class QueryEndpoints
         var legacyGroup = app.MapGroup("/api/v1/queries")
             .ExcludeFromDescription();
 
-        legacyGroup.MapPost("/", CreateQueryAsync);
-        legacyGroup.MapGet("/{id}", GetQueryByIdAsync);
-        legacyGroup.MapGet("/", ListQueriesAsync);
-        legacyGroup.MapPost("/{id}/respond", AnswerQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
-        legacyGroup.MapPost("/{id}/close", CloseQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
-        legacyGroup.MapPost("/{id}/reopen", ReopenQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
-        legacyGroup.MapPost("/{id}/cancel", CancelQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
-        legacyGroup.MapPost("/batch-close", BatchCloseQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
-        legacyGroup.MapPost("/batch-cancel", BatchCancelQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
-        legacyGroup.MapPost("/batch-respond", BatchRespondQueryAsync).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/", CreateQueryAsync).RequirePermission(RaiseQuery);
+        legacyGroup.MapGet("/{id}", GetQueryByIdAsync).RequirePermission(ReadQueries);
+        legacyGroup.MapGet("/", ListQueriesAsync).RequirePermission(ReadQueries);
+        legacyGroup.MapPost("/{id}/respond", AnswerQueryAsync).RequirePermission(AnswerQuery).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/{id}/close", CloseQueryAsync).RequirePermission(ManageQuery).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/{id}/reopen", ReopenQueryAsync).RequirePermission(ManageQuery).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/{id}/cancel", CancelQueryAsync).RequirePermission(ManageQuery).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/batch-close", BatchCloseQueryAsync).RequirePermission(ManageQuery).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/batch-cancel", BatchCancelQueryAsync).RequirePermission(ManageQuery).AddEndpointFilter<ChangeReasonHeaderFilter>();
+        legacyGroup.MapPost("/batch-respond", BatchRespondQueryAsync).RequirePermission(AnswerQuery).AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         return app;
     }

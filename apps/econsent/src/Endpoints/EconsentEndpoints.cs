@@ -9,6 +9,8 @@ using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Contracts;
 using Cadence.Security.Authentication;
+using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using MassTransit;
 
@@ -82,14 +84,20 @@ public static class EconsentEndpoints
 
         group.MapPost("/{template_id}/versions/{version_index}/publish", PublishTemplateVersionedAsync)
             .WithName("PublishTemplateVersioned")
+            .RequirePermission("econsent_template:publish")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<PublishTemplateResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/{template_id}/publish", PublishTemplateAsync)
             .WithName("PublishTemplate")
+            .RequirePermission("econsent_template:publish")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<PublishTemplateResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/{template_id}/versions/{version_index}/capture-consent", CaptureConsentAsync)
             .WithName("CaptureConsentVersioned")
+            .RequirePermission("econsent_consent:capture")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<CaptureConsentResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -97,6 +105,8 @@ public static class EconsentEndpoints
 
         group.MapPost("/{template_id}/capture-consent", CaptureConsentLegacyAsync)
             .WithName("CaptureConsentLegacy")
+            .RequirePermission("econsent_consent:capture")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<CaptureConsentResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -104,6 +114,15 @@ public static class EconsentEndpoints
 
         return app;
     }
+
+    private static string Caller(HttpContext httpContext) =>
+        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted eConsent request has no signed caller.");
+
+    private static IResult OutsideStudy() =>
+        TypedResults.Problem(
+            title: "Outside your studies",
+            detail: "You are not assigned to this study.",
+            statusCode: StatusCodes.Status403Forbidden);
 
     private static string CaptureConsentActionFor(HttpContext httpContext)
     {
@@ -123,20 +142,22 @@ public static class EconsentEndpoints
         int version_index,
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        return await ProcessCaptureConsentAsync(template_id, version_index, request, dbContext, timeProvider, cancellationToken);
+        return await ProcessCaptureConsentAsync(template_id, version_index, request, dbContext, httpContext, timeProvider, cancellationToken);
     }
 
     private static async Task<IResult> CaptureConsentLegacyAsync(
         string template_id,
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        return await ProcessCaptureConsentAsync(template_id, 1, request, dbContext, timeProvider, cancellationToken);
+        return await ProcessCaptureConsentAsync(template_id, 1, request, dbContext, httpContext, timeProvider, cancellationToken);
     }
 
     public static async Task<IResult> ProcessCaptureConsentAsync(
@@ -144,6 +165,7 @@ public static class EconsentEndpoints
         int versionIndex,
         CaptureConsentRequest request,
         EconsentDbContext dbContext,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -186,6 +208,14 @@ public static class EconsentEndpoints
         {
             return TypedResults.ValidationProblem(errors);
         }
+
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        {
+            return OutsideStudy();
+        }
+
+        // The participant or representative signs; the record is attributed to the signed-in staff member who captured it.
+        string capturedBy = Caller(httpContext);
 
         DateTimeOffset now = timeProvider.GetUtcNow();
         string subjectPseudonym = request.SubjectPseudonym!;
@@ -238,7 +268,7 @@ public static class EconsentEndpoints
             ServerTimestamp = now,
             DeviceTimestamp = request.DeviceTimestamp ?? now,
             CreatedAt = now,
-            CreatedBy = signerName,
+            CreatedBy = capturedBy,
             ReasonForChange = meaning,
             SignatureManifestJson = signatureManifestJson
         };
@@ -256,7 +286,7 @@ public static class EconsentEndpoints
             SignedAt = now,
             DigestSha256 = digestHash,
             SignatureBindingSha256 = bindingSha256,
-            CreatedBy = signerName,
+            CreatedBy = capturedBy,
             ReasonForChange = meaning
         };
 
@@ -285,10 +315,11 @@ public static class EconsentEndpoints
         PublishTemplateRequest? request,
         EconsentDbContext dbContext,
         IPublishEndpoint publishEndpoint,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        return await ProcessPublishTemplateAsync(template_id, version_index, request, dbContext, publishEndpoint, timeProvider, cancellationToken);
+        return await ProcessPublishTemplateAsync(template_id, version_index, request, dbContext, publishEndpoint, httpContext, timeProvider, cancellationToken);
     }
 
     private static async Task<IResult> PublishTemplateAsync(
@@ -296,10 +327,11 @@ public static class EconsentEndpoints
         PublishTemplateRequest? request,
         EconsentDbContext dbContext,
         IPublishEndpoint publishEndpoint,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
-        return await ProcessPublishTemplateAsync(template_id, 1, request, dbContext, publishEndpoint, timeProvider, cancellationToken);
+        return await ProcessPublishTemplateAsync(template_id, 1, request, dbContext, publishEndpoint, httpContext, timeProvider, cancellationToken);
     }
 
     public static async Task<IResult> ProcessPublishTemplateAsync(
@@ -308,6 +340,7 @@ public static class EconsentEndpoints
         PublishTemplateRequest? request,
         EconsentDbContext dbContext,
         IPublishEndpoint publishEndpoint,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -318,20 +351,36 @@ public static class EconsentEndpoints
             ?? await dbContext.ConsentTemplates
                 .FirstOrDefaultAsync(t => t.TemplateId == templateId, cancellationToken);
 
+        // A new template names its study; an existing one may only be published, or moved, within the caller's studies.
+        string? targetStudy = !string.IsNullOrWhiteSpace(request?.StudyId) ? request.StudyId : template?.StudyId;
+        if (string.IsNullOrWhiteSpace(targetStudy))
+        {
+            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["study_id"] = ["StudyId is required to publish a new template."]
+            });
+        }
+
+        if (!CallerScope.CanAccessStudy(httpContext, targetStudy)
+            || (template is not null && !CallerScope.CanAccessStudy(httpContext, template.StudyId)))
+        {
+            return OutsideStudy();
+        }
+
         if (template is null)
         {
             template = new ConsentTemplate
             {
                 Id = Guid.NewGuid().ToString(),
                 TemplateId = templateId,
-                StudyId = !string.IsNullOrWhiteSpace(request?.StudyId) ? request.StudyId : "STUDY-101",
+                StudyId = targetStudy,
                 TemplateName = $"Consent Template {templateId}",
                 ProtocolVersion = !string.IsNullOrWhiteSpace(request?.ProtocolVersion) ? request.ProtocolVersion : $"v{versionIndex}.0",
                 IsPublished = true,
                 RequiresReconsent = request?.RequiresReconsent ?? true,
                 VersionIndex = versionIndex,
                 CreatedAt = now,
-                CreatedBy = "svc:econsent",
+                CreatedBy = Caller(httpContext),
                 ReasonForChange = request?.ChangeSummary ?? request?.ChangeReason ?? "Publishing template"
             };
             dbContext.ConsentTemplates.Add(template);

@@ -42,6 +42,12 @@ public sealed class PermissionPolicyProvider(IOptions<AuthorizationOptions> opti
             throw new InvalidOperationException($"Permission policy '{policyName}' must name a permission as 'resource:action'.");
         }
 
+        if (!PermissionMatrix.IsDefined(permission))
+        {
+            // A permission no role holds is a typo or a missing grant; it fails loudly instead of denying everyone.
+            throw new InvalidOperationException($"No role holds the permission '{permission}' in the permission matrix (ADR-2516).");
+        }
+
         return new AuthorizationPolicyBuilder(GatewayAuthenticationHandler.SchemeName)
             .RequireAuthenticatedUser()
             .AddRequirements(new PermissionRequirement(permission))

@@ -125,6 +125,22 @@ public class CadenceSecurityUnitTests
         StudyAccessEvaluator.CanAccessStudy(wildcardMonitor, "STUDY-B").Should().BeTrue();
     }
 
+    /// <summary>Study scope fails closed: no assignment or no study id is a denial, whatever the role (ADR-2516).</summary>
+    [Theory]
+    [InlineData("sysadmin")]
+    [InlineData("sponsor_dm")]
+    [InlineData("investigator")]
+    public void StudyAccessEvaluator_FailsClosed(string role)
+    {
+        var unassigned = new Principal { UserId = "user-1", Roles = [role] };
+        var assigned = unassigned with { AssignedStudies = ["STUDY-A"] };
+
+        StudyAccessEvaluator.CanAccessStudy(unassigned, "STUDY-A").Should().BeFalse();
+        StudyAccessEvaluator.CanAccessStudy(assigned, null).Should().BeFalse();
+        StudyAccessEvaluator.CanAccessStudy(assigned, " ").Should().BeFalse();
+        StudyAccessEvaluator.CanAccessStudy(null, "STUDY-A").Should().BeFalse();
+    }
+
     [Fact]
     public async Task AuditorPersona_RestrictedToReadOnlyAccess()
     {

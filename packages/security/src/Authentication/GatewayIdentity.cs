@@ -17,6 +17,7 @@ public static class GatewayHeaders
     public const string UserId = "X-User-Id";
     public const string Roles = "X-User-Roles";
     public const string SiteId = "X-Site-Id";
+    public const string StudyIds = "X-Study-Ids";
     public const string SponsorId = "X-Sponsor-Id";
     public const string UnblindedAccess = "X-Unblinded-Access";
     public const string TenantId = "X-Tenant-Id";
@@ -31,7 +32,7 @@ public static class GatewayHeaders
     /// </summary>
     public static IReadOnlyList<string> GatewayAsserted { get; } =
     [
-        UserId, Roles, SiteId, SponsorId, UnblindedAccess, TenantId, Timestamp, Signature,
+        UserId, Roles, SiteId, StudyIds, SponsorId, UnblindedAccess, TenantId, Timestamp, Signature,
         "X-User-Role", "X-User-Site", "X-Reason-For-Change",
     ];
 }
@@ -48,7 +49,8 @@ public sealed record GatewayIdentity(
     bool UnblindedAccess = false,
     string? TenantId = null,
     string? ChangeReason = null,
-    string? SigToken = null)
+    string? SigToken = null,
+    IReadOnlyList<string>? StudyIds = null)
 {
     // ChangeReason is the decoded text the user typed, never its header encoding (see ChangeReasonHeader).
     // TenantId is the tenant code the sign-in token names, or null when it names none: there is no fallback tenant
@@ -57,6 +59,9 @@ public sealed record GatewayIdentity(
     internal string RolesHeader => string.Join(',', Roles);
 
     internal string SiteIdsHeader => string.Join(',', SiteIds);
+
+    // The studies the caller is assigned to, or "*" for every study (ADR-2516). Study scope fails closed without one.
+    internal string StudyIdsHeader => string.Join(',', StudyIds ?? []);
 
     /// <summary>
     /// Produces the full set of signed identity headers for this identity at <paramref name="issuedAt"/>.
@@ -73,6 +78,7 @@ public sealed record GatewayIdentity(
             secret: secret,
             changeReason: NullIfBlank(ChangeReason),
             siteId: NullIfBlank(SiteIdsHeader),
+            studyIds: NullIfBlank(StudyIdsHeader),
             sponsorId: NullIfBlank(SponsorId),
             unblindedAccess: UnblindedAccess,
             tenantId: NullIfBlank(TenantId),
@@ -89,6 +95,7 @@ public sealed record GatewayIdentity(
 
         AddIfPresent(headers, GatewayHeaders.TenantId, TenantId);
         AddIfPresent(headers, GatewayHeaders.SiteId, SiteIdsHeader);
+        AddIfPresent(headers, GatewayHeaders.StudyIds, StudyIdsHeader);
         AddIfPresent(headers, GatewayHeaders.SponsorId, SponsorId);
         // The signature covers the reason as typed; the header carries it in its ASCII wire form (ADR-2495).
         if (NullIfBlank(ChangeReason) is { } changeReason)

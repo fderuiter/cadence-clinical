@@ -143,30 +143,42 @@ public static class TrainingEndpoints
 
         group.MapGet("/curricula", ListCurriculaAsync)
             .WithName("ListCurricula")
+            .RequirePermission("training_log:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<TrainingCurriculumDto>>(StatusCodes.Status200OK);
 
         group.MapGet("/curricula/{curriculum_id}", GetCurriculumAsync)
             .WithName("GetCurriculum")
+            .RequirePermission("training_log:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<TrainingCurriculumDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/curricula/batch-assign", BatchAssignCurriculumAsync)
             .WithName("BatchAssignCurriculum")
+            .RequirePermission("training_curriculum:assign")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<BatchAssignmentResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapGet("/assignments", ListAssignmentsAsync)
             .WithName("ListAssignments")
+            .RequirePermission("training_log:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<TrainingAssignmentDto>>(StatusCodes.Status200OK);
 
         group.MapGet("/assignments/{assignment_id}", GetAssignmentDetailAsync)
             .WithName("GetAssignmentDetail")
+            .RequirePermission("training_log:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<TrainingAssignmentDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/delegations", ListDelegationsAsync)
             .WithName("ListDelegations")
+            .RequirePermission("delegation_log:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<DelegationSummaryDto>>(StatusCodes.Status200OK);
 
         group.MapPost("/delegations/bulk-signoff", BulkSignOffDelegationsAsync)
@@ -182,14 +194,26 @@ public static class TrainingEndpoints
         return app;
     }
 
+    private static IResult OutsideStudy() =>
+        TypedResults.Problem(
+            title: "Outside your studies",
+            detail: "You are not assigned to this study.",
+            statusCode: StatusCodes.Status403Forbidden);
+
     private static async Task<IResult> ListCurriculaAsync(
         string? study_id,
         string? protocol_version,
         KnowledgeDbContext dbContext,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
+        var studies = CallerScope.StudyFilter(httpContext);
         var query = dbContext.TrainingCurricula.AsNoTracking().Where(c => c.IsActive);
+        if (studies != null)
+        {
+            query = query.Where(c => studies.Contains(c.StudyId));
+        }
         if (!string.IsNullOrEmpty(study_id))
         {
             query = query.Where(c => c.StudyId == study_id);
@@ -200,7 +224,7 @@ public static class TrainingEndpoints
         }
 
         var list = await query.ToListAsync(cancellationToken);
-        if (list.Count == 0)
+        if (list.Count == 0 && CallerScope.CanAccessStudy(httpContext, study_id ?? "CARDIO-2026"))
         {
             // Seed a default curriculum if DB is empty for demo/testing
             var defaultCurriculum = new TrainingCurriculum
@@ -226,10 +250,16 @@ public static class TrainingEndpoints
     private static async Task<IResult> GetCurriculumAsync(
         string curriculum_id,
         KnowledgeDbContext dbContext,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var c = await dbContext.TrainingCurricula.AsNoTracking().FirstOrDefaultAsync(x => x.Id == curriculum_id, cancellationToken);
+        if (c != null && !CallerScope.CanAccessStudy(httpContext, c.StudyId))
+        {
+            return TypedResults.Problem($"Curriculum '{curriculum_id}' not found.", statusCode: StatusCodes.Status404NotFound);
+        }
+
         if (c == null)
         {
             var fallback = new TrainingCurriculumDto(
@@ -250,6 +280,7 @@ public static class TrainingEndpoints
     private static async Task<IResult> BatchAssignCurriculumAsync(
         BatchAssignCurriculumRequest request,
         KnowledgeDbContext dbContext,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
@@ -257,6 +288,15 @@ public static class TrainingEndpoints
         {
             return TypedResults.Problem("Curriculum ID is required.", statusCode: StatusCodes.Status400BadRequest);
         }
+
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        {
+            return OutsideStudy();
+        }
+
+        string actorId = CallerScope.UserId(httpContext)
+            ?? throw new InvalidOperationException("An admitted training request has no signed caller.");
+        string actorRole = CallerScope.Roles(httpContext);
 
         var now = timeProvider.GetUtcNow();
         var siteIds = request.SiteIds != null && request.SiteIds.Count > 0
@@ -341,7 +381,7 @@ public static class TrainingEndpoints
                 BatchTransactionId = batchTxId,
                 TimeSpentSeconds = 0,
                 CreatedAt = now,
-                CreatedBy = "Study Administrator",
+                CreatedBy = actorId,
                 ReasonForChange = request.ReasonForChange ?? "Batch curriculum assignment"
             };
 
@@ -354,8 +394,8 @@ public static class TrainingEndpoints
         {
             Id = Guid.NewGuid().ToString(),
             Timestamp = now,
-            ActorId = "study_admin_01",
-            ActorRole = "Study Administrator",
+            ActorId = actorId,
+            ActorRole = actorRole,
             Action = "training.curriculum.batch_assign",
             BatchTransactionId = batchTxId,
             Details = $"Batch curriculum assignment for {request.CurriculumId} created {createdAssignments.Count} assignments across {siteIds.Count} sites. {skippedItems.Count} items skipped.",
@@ -389,9 +429,12 @@ public static class TrainingEndpoints
         string? user_id,
         string? status,
         KnowledgeDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        var studies = CallerScope.StudyFilter(httpContext);
         var query = dbContext.TrainingAssignments.AsNoTracking();
+        if (studies != null) query = query.Where(a => studies.Contains(a.StudyId));
         if (!string.IsNullOrEmpty(study_id)) query = query.Where(a => a.StudyId == study_id);
         if (!string.IsNullOrEmpty(site_id)) query = query.Where(a => a.SiteId == site_id);
         if (!string.IsNullOrEmpty(user_id)) query = query.Where(a => a.UserId == user_id);
@@ -408,10 +451,16 @@ public static class TrainingEndpoints
     private static async Task<IResult> GetAssignmentDetailAsync(
         string assignment_id,
         KnowledgeDbContext dbContext,
+        HttpContext httpContext,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
     {
         var asn = await dbContext.TrainingAssignments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == assignment_id, cancellationToken);
+        if (asn != null && !CallerScope.CanAccessStudy(httpContext, asn.StudyId))
+        {
+            return TypedResults.Problem($"Assignment '{assignment_id}' not found.", statusCode: StatusCodes.Status404NotFound);
+        }
+
         if (asn == null)
         {
             var fallback = new TrainingAssignmentDto(
@@ -431,9 +480,12 @@ public static class TrainingEndpoints
         string? site_id,
         string? status,
         KnowledgeDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        var studies = CallerScope.StudyFilter(httpContext);
         var query = dbContext.DelegationRecords.AsNoTracking();
+        if (studies != null) query = query.Where(d => studies.Contains(d.StudyId));
         if (!string.IsNullOrEmpty(study_id)) query = query.Where(d => d.StudyId == study_id);
         if (!string.IsNullOrEmpty(site_id)) query = query.Where(d => d.SiteId == site_id);
         if (!string.IsNullOrEmpty(status)) query = query.Where(d => d.Status == status);
@@ -501,6 +553,11 @@ public static class TrainingEndpoints
             return TypedResults.Problem(
                 $"No delegation record exists for: {string.Join(", ", missing)}. Nothing was signed.",
                 statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (records.Exists(r => !StudyAccessEvaluator.CanAccessStudy(signer, r.StudyId)))
+        {
+            return OutsideStudy();
         }
 
         var now = timeProvider.GetUtcNow();

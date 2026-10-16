@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Devices;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -29,21 +30,27 @@ public static class DeviceEndpoints
             .WithSummary("Parse UDI Barcode")
             .WithDescription("Parses and validates GS1-128, GS1-DataMatrix, and HIBCC barcode strings into structured UDI attributes.")
             .Produces<ParsedUdiResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:read");
 
         group.MapPost("/inventory", RegisterInventoryAsync)
             .WithName("RegisterDeviceInventory")
             .WithSummary("Register Device Inventory")
             .WithDescription("Registers serialized investigational medical device items in RTSM.")
             .Produces<IReadOnlyList<DeviceInventoryResponse>>(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:register");
 
         group.MapGet("/inventory", ListInventoryAsync)
             .WithName("ListDeviceInventory")
             .WithSummary("List Device Inventory")
             .WithDescription("Retrieves investigational medical device inventory matching query filters.")
             .Produces<IReadOnlyList<DeviceInventoryResponse>>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:read");
 
         group.MapPost("/dispense", DispenseDeviceAsync)
             .WithName("DispenseDevice")
@@ -52,46 +59,62 @@ public static class DeviceEndpoints
             .Produces<DeviceDispensationResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:dispense");
 
         group.MapPost("/deficiencies", LogDeficiencyAsync)
             .WithName("LogDeviceDeficiency")
             .WithSummary("Log Device Deficiency")
             .WithDescription("Logs a device deficiency/malfunction and triggers automated quarantine + safety cases.")
             .Produces<DeviceDeficiencyResponse>(StatusCodes.Status201Created)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:report_deficiency");
 
         group.MapGet("/deficiencies", ListDeficienciesAsync)
             .WithName("ListDeviceDeficiencies")
             .WithSummary("List Device Deficiencies")
-            .Produces<IReadOnlyList<DeviceDeficiencyResponse>>(StatusCodes.Status200OK);
+            .Produces<IReadOnlyList<DeviceDeficiencyResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:read");
 
         group.MapGet("/deficiencies/{deficiency_id}", GetDeficiencyByIdAsync)
             .WithName("GetDeviceDeficiencyById")
             .WithSummary("Get Device Deficiency")
             .Produces<DeviceDeficiencyResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:read");
 
         group.MapPost("/quarantine", InitiateQuarantineAsync)
             .WithName("InitiateDeviceQuarantine")
             .WithSummary("Initiate Quarantine")
-            .Produces<DeviceQuarantineResponse>(StatusCodes.Status201Created);
+            .Produces<DeviceQuarantineResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:quarantine");
 
         group.MapGet("/quarantine", ListQuarantinesAsync)
             .WithName("ListDeviceQuarantines")
             .WithSummary("List Device Quarantines")
-            .Produces<IReadOnlyList<DeviceQuarantineResponse>>(StatusCodes.Status200OK);
+            .Produces<IReadOnlyList<DeviceQuarantineResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:read");
 
         group.MapPost("/quarantine/release", ReleaseQuarantineAsync)
             .WithName("ReleaseDeviceQuarantine")
             .WithSummary("Release Quarantine")
             .Produces<DeviceQuarantineResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:release");
 
         group.MapGet("/investigation-summary", GetInvestigationSummaryAsync)
             .WithName("GetDeviceInvestigationSummary")
             .WithSummary("Get Investigation Summary")
-            .Produces<DeviceInvestigationSummaryResponse>(StatusCodes.Status200OK);
+            .Produces<DeviceInvestigationSummaryResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("device_accountability:read");
 
         return routes;
     }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -294,6 +295,9 @@ public sealed class BatchMilestoneInvoicingTests : IDisposable
 
 public static class PaymentEndpointsTestInvoker
 {
+    /// <summary>The finance officer compiling invoices, as the gateway signs them (#5361).</summary>
+    public static ClaimsPrincipal FinanceOfficer { get; } = TestSecurityContext.CreatePrincipal("finance-1", "Grants Manager");
+
     public static async Task<BatchBillingCompilationResponse> InvokeBatchCompileAsync(
         BatchBillingCycleCompilationRequest request, PaymentsDbContext db, IClock clock)
     {
@@ -303,7 +307,7 @@ public static class PaymentEndpointsTestInvoker
 
         method.Should().NotBeNull("BatchCompileBillingCycles method should exist on PaymentEndpoints");
 
-        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock })!;
+        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock, FinanceOfficer })!;
         var result = await task;
 
         var createdResult = result as Created<BatchBillingCompilationResponse>;
@@ -320,7 +324,7 @@ public static class PaymentEndpointsTestInvoker
 
         method.Should().NotBeNull("CompileBillingCycle method should exist on PaymentEndpoints");
 
-        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock })!;
+        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock, FinanceOfficer })!;
         var result = await task;
 
         var createdResult = result as Created<SelfBillingInvoiceResponse>;

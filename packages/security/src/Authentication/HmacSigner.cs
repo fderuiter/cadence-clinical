@@ -59,6 +59,7 @@ public static class HmacSigner
         byte[] secret,
         string? changeReason = null,
         string? siteId = null,
+        string? studyIds = null,
         string? sponsorId = null,
         bool unblindedAccess = false,
         string? tenantId = null,
@@ -71,6 +72,7 @@ public static class HmacSigner
             ["timestamp"] = timestamp ?? "",
             ["user_id"] = userId ?? "",
             ["site_id"] = siteId ?? "",
+            ["study_ids"] = studyIds ?? "",
             ["sponsor_id"] = sponsorId ?? "",
             ["unblinded_access"] = unblindedAccess,
             ["tenant_id"] = tenantId ?? ""
@@ -90,7 +92,7 @@ public static class HmacSigner
     /// <summary>
     /// Verifies a gateway identity signature against the one canonical payload
     /// <see cref="GenerateGatewaySignature"/> produces. There are deliberately no fallback payload shapes: every
-    /// signed field must match exactly, so a caller cannot drop a scope field (site, sponsor, tenant, unblinded
+    /// signed field must match exactly, so a caller cannot drop a scope field (site, study, sponsor, tenant, unblinded
     /// access) and still pass verification.
     /// </summary>
     public static bool VerifyGatewaySignature(
@@ -101,6 +103,7 @@ public static class HmacSigner
         byte[] secret,
         string? changeReason = null,
         string? siteId = null,
+        string? studyIds = null,
         string? sponsorId = null,
         bool unblindedAccess = false,
         string? tenantId = null,
@@ -112,7 +115,7 @@ public static class HmacSigner
         }
 
         string expected = GenerateGatewaySignature(
-            userId, roles, timestamp, secret, changeReason, siteId, sponsorId, unblindedAccess, tenantId, sigToken);
+            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken);
 
         return FixedTimeEqualsHex(expected, signature);
     }

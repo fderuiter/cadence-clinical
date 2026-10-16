@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Supply;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +16,8 @@ public static class IpKitEndpoints
 {
     public static IEndpointRouteBuilder MapIpKitEndpoints(this IEndpointRouteBuilder routes)
     {
+        // Route permissions (ADR-2516): kit scans, reconciliation and inventory are blinded supply data, so only the
+        // pharmacist (rtsm_supply) reaches them; seeding a site's kit inventory is a sponsor operation.
         var group = routes.MapGroup("/api/v1/execution/rtsm/kits")
             .WithTags("IP Kit Reconciliation");
 
@@ -25,7 +28,8 @@ public static class IpKitEndpoints
         {
             var result = await service.ValidateScannedBarcodeAsync(request, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequirePermission("rtsm_supply:read");
 
         group.MapPost("/reconcile-batch", async (
             IpKitBatchReconciliationRequest request,
@@ -41,7 +45,8 @@ public static class IpKitEndpoints
             {
                 return Results.BadRequest(new { detail = ex.Message });
             }
-        });
+        })
+        .RequirePermission("rtsm_supply:write");
 
         group.MapGet("/certificates/{certificateId}", async (
             string certificateId,
@@ -54,7 +59,8 @@ public static class IpKitEndpoints
                 return Results.NotFound(new { detail = $"Certificate '{certificateId}' not found." });
             }
             return Results.Ok(result);
-        });
+        })
+        .RequirePermission("rtsm_supply:read");
 
         group.MapGet("/inventory/{studyId}/{siteId}", async (
             string studyId,
@@ -64,7 +70,10 @@ public static class IpKitEndpoints
         {
             var result = await service.GetSiteInventoryAsync(studyId, siteId, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequirePermission("rtsm_supply:read")
+        .RequireStudyScope("studyId")
+        .RequireSiteScope("siteId");
 
         group.MapPost("/seed-inventory", async (
             SeedInventoryRequest request,
@@ -73,7 +82,8 @@ public static class IpKitEndpoints
         {
             var result = await service.SeedSiteInventoryAsync(request.StudyId, request.SiteId, request.Kits, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequirePermission("ip_kit_inventory:seed");
 
         return routes;
     }

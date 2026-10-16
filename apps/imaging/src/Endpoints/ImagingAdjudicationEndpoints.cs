@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -40,7 +42,6 @@ public record ChairAdjudicateImagingRequest(
     double FinalConsensusSldMm,
     string BindingReader,
     string AdjudicationRationale,
-    string SignerId,
     string SignerName,
     string SignatureMeaning);
 
@@ -68,16 +69,22 @@ public static class ImagingAdjudicationEndpoints
 
         group.MapPost("/", SubmitOrEvaluateSessionAsync)
             .WithName("SubmitOrEvaluateAdjudicationSession")
+            .RequirePermission("imaging_adjudication:submit")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<AdjudicationSessionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapGet("/{sessionId}", GetSessionByIdAsync)
             .WithName("GetImagingAdjudicationSession")
+            .RequirePermission("imaging_adjudication:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<ImagingAdjudicationSession>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/{sessionId}/chair-adjudicate", ChairAdjudicateSessionAsync)
             .WithName("ChairAdjudicateImagingSession")
+            .RequirePermission("imaging_adjudication:adjudicate")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<AdjudicationSessionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -86,14 +93,29 @@ public static class ImagingAdjudicationEndpoints
         return routes;
     }
 
+    private static string Caller(HttpContext httpContext) =>
+        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted adjudication request has no signed caller.");
+
+    private static IResult OutsideStudy() =>
+        TypedResults.Problem(
+            title: "Outside your studies",
+            detail: "You are not assigned to this study.",
+            statusCode: StatusCodes.Status403Forbidden);
+
     private static async Task<IResult> SubmitOrEvaluateSessionAsync(
         SubmitAdjudicationSessionRequest request,
         ImagingDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         if (request == null)
         {
             return TypedResults.BadRequest(new { code = "INVALID_REQUEST", message = "Request body is required." });
+        }
+
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        {
+            return OutsideStudy();
         }
 
         DateTimeOffset now = SystemClock.Instance.UtcNow;
@@ -154,7 +176,7 @@ public static class ImagingAdjudicationEndpoints
             BindingReader = isDiscordant ? null : "CONCORDANT_READERS",
             SessionDigest = sessionDigest,
             CreatedAt = now,
-            CreatedBy = "svc:imaging-adjudication",
+            CreatedBy = Caller(httpContext),
             UpdatedAt = now
         };
 
@@ -180,13 +202,14 @@ public static class ImagingAdjudicationEndpoints
     private static async Task<IResult> GetSessionByIdAsync(
         string sessionId,
         ImagingDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var session = await dbContext.ImagingAdjudicationSessions
             .FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (session == null)
+        if (session == null || !CallerScope.CanAccessStudy(httpContext, session.StudyId))
         {
             return TypedResults.NotFound(new { code = "SESSION_NOT_FOUND", message = $"Adjudication session '{sessionId}' not found." });
         }
@@ -198,6 +221,7 @@ public static class ImagingAdjudicationEndpoints
         string sessionId,
         ChairAdjudicateImagingRequest request,
         ImagingDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var session = await dbContext.ImagingAdjudicationSessions
@@ -208,6 +232,14 @@ public static class ImagingAdjudicationEndpoints
         {
             return TypedResults.NotFound(new { code = "SESSION_NOT_FOUND", message = $"Adjudication session '{sessionId}' not found." });
         }
+
+        if (!CallerScope.CanAccessStudy(httpContext, session.StudyId))
+        {
+            return OutsideStudy();
+        }
+
+        // The chair who signs is the signed caller, never a name in the request body (ADR-2516).
+        string signerId = Caller(httpContext);
 
         if (session.WorkflowStatus is "FINALIZED_BY_CHAIR" or "FINALIZED_CONCORDANT")
         {
@@ -221,7 +253,7 @@ public static class ImagingAdjudicationEndpoints
 
         var signatureManifest = new
         {
-            SignerId = request.SignerId,
+            SignerId = signerId,
             SignerName = request.SignerName,
             SignerRole = "CEC_CHAIR",
             SigningReason = request.SignatureMeaning,
@@ -229,7 +261,7 @@ public static class ImagingAdjudicationEndpoints
             PayloadHash = payloadHash
         };
 
-        session.AdjudicatorId = request.SignerId;
+        session.AdjudicatorId = signerId;
         session.AdjudicatorName = request.SignerName;
         session.WorkflowStatus = "FINALIZED_BY_CHAIR";
         session.FinalConsensusResponse = request.FinalConsensusResponse;
@@ -238,7 +270,7 @@ public static class ImagingAdjudicationEndpoints
         session.AdjudicationRationale = request.AdjudicationRationale;
         session.ElectronicSignatureJson = JsonSerializer.Serialize(signatureManifest);
         session.LockedAt = now;
-        session.LockedBy = request.SignerId;
+        session.LockedBy = signerId;
         session.UpdatedAt = now;
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

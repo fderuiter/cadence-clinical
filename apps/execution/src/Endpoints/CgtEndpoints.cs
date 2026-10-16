@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Domain.Cgt.Errors;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -15,6 +16,8 @@ public static class CgtEndpoints
 {
     public static IEndpointRouteBuilder MapCgtEndpoints(this IEndpointRouteBuilder routes)
     {
+        // Route permissions (ADR-2516): site and pharmacy staff record the chain of custody; sponsor, monitoring and
+        // audit roles read it.
         var group = routes.MapGroup("/api/v1/execution/rtsm/cgt")
             .WithTags("CGT");
 
@@ -32,7 +35,8 @@ public static class CgtEndpoints
             {
                 return Results.BadRequest(new { detail = ex.Message });
             }
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:write");
 
         group.MapPost("/milestone", async (
             CgtMilestoneCreateRequest request,
@@ -48,7 +52,8 @@ public static class CgtEndpoints
             {
                 return Results.NotFound(new { detail = ex.Message });
             }
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:write");
 
         group.MapPost("/manufacturing-bind", async (
             CgtManufacturingBindRequest request,
@@ -64,7 +69,8 @@ public static class CgtEndpoints
             {
                 return Results.NotFound(new { detail = ex.Message });
             }
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:write");
 
         group.MapPost("/bedside-verify", async (
             CgtBedsideVerificationRequest request,
@@ -84,7 +90,8 @@ public static class CgtEndpoints
             {
                 return Results.BadRequest(new { detail = ex.Message });
             }
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:write");
 
         group.MapPost("/infuse", async (
             CgtInfusionExecuteRequest request,
@@ -104,7 +111,8 @@ public static class CgtEndpoints
             {
                 return Results.BadRequest(new { detail = ex.Message });
             }
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:write");
 
         group.MapPost("/returns", async (
             CgtVialReturnReconciliationRequest request,
@@ -113,7 +121,8 @@ public static class CgtEndpoints
         {
             var result = await service.LogVialReturnAsync(request, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:write");
 
         group.MapPost("/destruction-certificate", async (
             CgtDestructionCertificateCreateRequest request,
@@ -129,7 +138,8 @@ public static class CgtEndpoints
             {
                 return Results.UnprocessableEntity(new { detail = ex.Message });
             }
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:write");
 
         group.MapPost("/verify-barcode", (
             CgtBarcodeVerifyRequest request,
@@ -137,7 +147,8 @@ public static class CgtEndpoints
         {
             var result = service.VerifyBarcode(request);
             return Results.Ok(result);
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:read");
 
         group.MapGet("/chain-of-custody/{studyId}/{subjectId}", async (
             string studyId,
@@ -147,7 +158,9 @@ public static class CgtEndpoints
         {
             var result = await service.GetFullTraceabilityAsync(studyId, subjectId, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:read")
+        .RequireStudyScope("studyId");
 
         group.MapGet("/certificates/{studyId}", async (
             string studyId,
@@ -156,7 +169,9 @@ public static class CgtEndpoints
         {
             var result = await service.ListDestructionCertificatesAsync(studyId, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:read")
+        .RequireStudyScope("studyId");
 
         group.MapGet("/reconciliations/{studyId}", async (
             string studyId,
@@ -165,7 +180,9 @@ public static class CgtEndpoints
         {
             var result = await service.ListVialReconciliationsAsync(studyId, ct);
             return Results.Ok(result);
-        });
+        })
+        .RequirePermission("cgt_chain_of_custody:read")
+        .RequireStudyScope("studyId");
 
         return routes;
     }

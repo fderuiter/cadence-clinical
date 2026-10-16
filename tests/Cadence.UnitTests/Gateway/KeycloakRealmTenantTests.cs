@@ -29,11 +29,26 @@ public sealed class KeycloakRealmTenantTests
         var web = Realm().GetProperty("clients").EnumerateArray().Single(c => c.GetProperty("clientId").GetString() == "cadence-web");
 
         var tenant = web.GetProperty("protocolMappers").EnumerateArray()
-            .Single(m => m.GetProperty("protocolMapper").GetString() == "oidc-usermodel-attribute-mapper").GetProperty("config");
+            .Single(m => m.GetProperty("name").GetString() == "tenant").GetProperty("config");
 
         tenant.GetProperty("user.attribute").GetString().Should().Be("tenant_id");
         tenant.GetProperty("claim.name").GetString().Should().Be("tenant_id");
         tenant.GetProperty("access.token.claim").GetString().Should().Be("true");
+    }
+
+    /// <summary>The web client carries the caller's study assignments, which study-scoped routes need (ADR-2516).</summary>
+    [Fact]
+    public void WebClient_MapsTheStudyAssignmentsIntoTheAccessToken()
+    {
+        var web = Realm().GetProperty("clients").EnumerateArray().Single(c => c.GetProperty("clientId").GetString() == "cadence-web");
+
+        var studies = web.GetProperty("protocolMappers").EnumerateArray()
+            .Single(m => m.GetProperty("name").GetString() == "study assignments").GetProperty("config");
+
+        studies.GetProperty("user.attribute").GetString().Should().Be("study_ids");
+        studies.GetProperty("claim.name").GetString().Should().Be("study_ids");
+        studies.GetProperty("multivalued").GetString().Should().Be("true");
+        studies.GetProperty("access.token.claim").GetString().Should().Be("true");
     }
 
     [Fact]

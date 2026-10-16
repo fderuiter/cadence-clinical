@@ -32,7 +32,7 @@ public sealed class ExecutionCallerAuthorityTests(ExecutionPostgresApiFactory fa
     public async Task Sdv_BySiteCoordinator_Returns403_AndTheObservationStaysUnverified()
     {
         factory.SkipIfUnavailable();
-        var coordinator = Caller("sdv-coordinator", "Site Coordinator");
+        var coordinator = Caller("sdv-coordinator", "crc");
         string observation = await CreateObservationAsync(coordinator);
 
         using var client = factory.CreateSignedClient(coordinator);
@@ -50,7 +50,7 @@ public sealed class ExecutionCallerAuthorityTests(ExecutionPostgresApiFactory fa
     {
         factory.SkipIfUnavailable();
         var monitor = Caller("sdv-monitor", "CRA");
-        string observation = await CreateObservationAsync(Caller("sdv-crc", "Site Coordinator"));
+        string observation = await CreateObservationAsync(Caller("sdv-crc", "crc"));
 
         using var client = factory.CreateSignedClient(monitor);
         var verify = await client.PostAsync($"/api/v1/execution/observations/{observation}/sdv", content: null, Ct);
@@ -64,7 +64,7 @@ public sealed class ExecutionCallerAuthorityTests(ExecutionPostgresApiFactory fa
     public async Task Sdv_WithoutReasonForChange_Returns400()
     {
         factory.SkipIfUnavailable();
-        string observation = await CreateObservationAsync(Caller("sdv-crc2", "Site Coordinator"));
+        string observation = await CreateObservationAsync(Caller("sdv-crc2", "crc"));
         var monitor = Caller("sdv-monitor2", "CRA") with { ChangeReason = null };
 
         using var client = factory.CreateSignedClient(monitor);

@@ -2744,6 +2744,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_HttpValidationProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   ActivateSite: {
@@ -2779,6 +2788,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   GetSiteComplianceStatus: {
@@ -2802,6 +2820,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_ComplianceStatusResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
     };
@@ -2892,6 +2919,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -3078,6 +3114,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_SubjectDetailResponse"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {
@@ -3195,6 +3240,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   GetObservationById: {
@@ -3217,6 +3271,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_ObservationResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -3251,6 +3314,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_ObservationResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
     };
@@ -3388,6 +3460,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   GetFormSubmissionById: {
@@ -3408,6 +3489,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_FormSubmissionResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -3447,6 +3537,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -3495,6 +3594,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_FormSubmissionResponse"][];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   CompleteFormSubmission: {
@@ -3519,6 +3627,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -3633,6 +3750,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {
@@ -3667,6 +3793,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_ClinicalQueryResponse"][];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   CreateClinicalQuery: {
@@ -3693,6 +3828,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -3729,6 +3873,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_ClinicalQueryResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -3768,6 +3921,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -4074,6 +4236,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {
@@ -4105,6 +4276,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_StagedAdverseEventReviewResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Unprocessable Entity */
@@ -4142,6 +4322,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_StagedAdverseEventActionResponse"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Unprocessable Entity */
       422: {
         headers: {
@@ -4173,6 +4362,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_LabToxicityEvaluateResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Unprocessable Entity */
@@ -4209,6 +4407,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_LabReferenceRangeResponse"][];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   CreateReferenceRange: {
@@ -4242,6 +4449,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   GetReferenceRangeById: {
@@ -4262,6 +4478,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_LabReferenceRangeResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -4299,6 +4524,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_LabReferenceRangeResponse"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {
@@ -4328,6 +4562,15 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -4368,6 +4611,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   CommitLabRangeImport: {
@@ -4390,6 +4642,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -4420,6 +4681,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_BulkLabRangeImportJobResponse"][];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   GetLabBatchStatusById: {
@@ -4440,6 +4710,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_BulkLabRangeImportJobResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -4475,6 +4754,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_UnitConversionResponse"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   GetLoincCatalog: {
@@ -4493,6 +4781,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_LoincCatalogResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
     };
@@ -4539,6 +4836,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Not Found */
       404: {
         headers: {
@@ -4577,6 +4883,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_CecDossier"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -4710,6 +5025,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_ParsedUdiResponse"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Unprocessable Entity */
       422: {
         headers: {
@@ -4746,6 +5070,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_DeviceInventoryResponse"][];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
       /** @description Unprocessable Entity */
       422: {
         headers: {
@@ -4777,6 +5110,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_DeviceInventoryResponse"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Unprocessable Entity */
@@ -4814,6 +5156,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };
@@ -4863,6 +5214,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_DeviceDeficiencyResponse"][];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   LogDeviceDeficiency: {
@@ -4885,6 +5245,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_DeviceDeficiencyResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Unprocessable Entity */
@@ -4916,6 +5285,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_DeviceDeficiencyResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -4951,6 +5329,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_DeviceQuarantineResponse"][];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   InitiateDeviceQuarantine: {
@@ -4975,6 +5362,15 @@ export interface operations {
           "application/json": components["schemas"]["Execution_DeviceQuarantineResponse"];
         };
       };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
     };
   };
   ReleaseDeviceQuarantine: {
@@ -4997,6 +5393,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_DeviceQuarantineResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
       /** @description Not Found */
@@ -5028,6 +5433,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_DeviceInvestigationSummaryResponse"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
     };

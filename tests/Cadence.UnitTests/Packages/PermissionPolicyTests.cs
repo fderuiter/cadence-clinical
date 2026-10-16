@@ -4,8 +4,10 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
+using Cadence.Testing;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -42,7 +44,11 @@ public sealed class PermissionPolicyTests : IAsyncLifetime
         _app = builder.Build();
         _app.UseCadenceSecurity();
         _app.MapGet(Probe, () => TypedResults.Ok()).RequirePermission("study_design:create");
-        _app.MapGet("/signed-in", () => TypedResults.Ok());
+        _app.MapGet("/signed-in", () => TypedResults.Ok()).RequireSignedInCaller("test route");
+        _app.MapGet("/undeclared", () => TypedResults.Ok());
+        _app.MapGet("/studies/{studyId}/probe", () => TypedResults.Ok())
+            .RequirePermission("study_design:read")
+            .RequireStudyScope("studyId");
         await _app.StartAsync(Ct);
     }
 
@@ -89,14 +95,116 @@ public sealed class PermissionPolicyTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    /// <summary>A route that declares no authorization is denied to every signed caller (ADR-2516).</summary>
+    [Theory]
+    [InlineData("Subject")]
+    [InlineData("sysadmin")]
+    [Trait("Category", "GxP_OQ")]
+    public async Task RoutesThatDeclareNothing_AreDeniedByDefault(string role)
+    {
+        using var client = Client(role);
+
+        var response = await client.GetAsync("/undeclared", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     [Fact]
-    public async Task RoutesWithoutAPermission_KeepTheAuthenticatedCallerFallback()
+    public async Task RoutesThatDeclareNothing_ChallengeAnUnsignedCaller()
+    {
+        using var client = _app!.GetTestClient();
+
+        var response = await client.GetAsync("/undeclared", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>A path that matches no route still answers 404 to a signed caller and 401 to an unsigned one.</summary>
+    [Fact]
+    public async Task PathsThatMatchNoRoute_AnswerNotFoundOnlyAfterAuthentication()
+    {
+        using var signed = Client("sysadmin");
+        using var unsigned = _app!.GetTestClient();
+
+        var signedResponse = await signed.GetAsync("/no-such-route", Ct);
+        var unsignedResponse = await unsigned.GetAsync("/no-such-route", Ct);
+
+        signedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        unsignedResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task RequireSignedInCaller_AdmitsAnySignedCaller()
     {
         using var client = Client("Subject");
 
         var response = await client.GetAsync("/signed-in", Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    /// <summary>Study scope reads the study from the route and admits only a caller assigned to it (ADR-2516).</summary>
+    [Theory]
+    [InlineData("STUDY-A", HttpStatusCode.OK)]
+    [InlineData("*", HttpStatusCode.OK)]
+    [InlineData("STUDY-B", HttpStatusCode.Forbidden)]
+    [InlineData(null, HttpStatusCode.Forbidden)]
+    [Trait("Category", "GxP_OQ")]
+    public async Task StudyScope_AdmitsOnlyCallersAssignedToTheRouteStudy(string? assignment, HttpStatusCode expected)
+    {
+        var identity = TestSecurityContext.Identity($"user-{Guid.NewGuid():N}", "Sponsor Designer")
+            with
+        { StudyIds = assignment is null ? [] : [assignment] };
+        using var client = _app!.GetTestClient();
+        foreach (var header in TestSecurityContext.CreateHmacHeaders(identity))
+        {
+            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+        }
+
+        var response = await client.GetAsync("/studies/STUDY-A/probe?study_id=STUDY-B", Ct);
+
+        response.StatusCode.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task StudyScope_IgnoresAStudyIdInAnUnsignedHeader()
+    {
+        var identity = TestSecurityContext.Identity($"user-{Guid.NewGuid():N}", "Sponsor Designer") with { StudyIds = ["STUDY-B"] };
+        using var client = _app!.GetTestClient();
+        foreach (var header in TestSecurityContext.CreateHmacHeaders(identity))
+        {
+            client.DefaultRequestHeaders.Add(header.Key, header.Value);
+        }
+
+        client.DefaultRequestHeaders.Add("X-Study-Id", "STUDY-B");
+        var response = await client.GetAsync("/studies/STUDY-A/probe", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task AStudyAssignmentThatWasNotSigned_IsRejected()
+    {
+        var identity = TestSecurityContext.Identity($"user-{Guid.NewGuid():N}", "Sponsor Designer") with { StudyIds = ["STUDY-B"] };
+        using var client = _app!.GetTestClient();
+        foreach (var header in TestSecurityContext.CreateHmacHeaders(identity))
+        {
+            client.DefaultRequestHeaders.Add(header.Key, header.Key == GatewayHeaders.StudyIds ? "STUDY-A" : header.Value);
+        }
+
+        var response = await client.GetAsync("/studies/STUDY-A/probe", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task APermissionNoRoleHolds_IsRefused()
+    {
+        var provider = new PermissionPolicyProvider(Options.Create(new AuthorizationOptions()));
+
+        var act = () => provider.GetPolicyAsync(PermissionPolicyProvider.PolicyName("study_design:fly"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Theory]

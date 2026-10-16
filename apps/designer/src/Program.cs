@@ -31,7 +31,8 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
 var api = app.MapGroup("/api/v1/studies");
 api.MapGet("/", () => TypedResults.Ok(Array.Empty<string>()))
     .WithName("ListStudies")
-    .WithSummary("Lists active CDISC USDM study protocol definitions.");
+    .WithSummary("Lists active CDISC USDM study protocol definitions.")
+    .RequirePermission("study_design:read");
 
 var protocols = app.MapGroup("/api/v1/protocols");
 protocols.MapPost("/compile", Results<Ok<DDFCompilationResult>, ProblemHttpResult> (CompileProtocolRequest request) =>

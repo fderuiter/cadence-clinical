@@ -31,6 +31,12 @@ public static class RoleNormalization
     public const string ROLE_EXTERNAL_MONITOR = "external_monitor";
     public const string ROLE_REVIEWER = "protocol_reviewer";
 
+    /// <summary>
+    /// Sponsor or CRO finance staff: compile, approve and settle site invoices and pay participants (Payments, #5361).
+    /// The local realm's "Grants Manager" maps here.
+    /// </summary>
+    public const string ROLE_FINANCE_OFFICER = "finance_officer";
+
     // RTSM roles
     public const string ROLE_PHARMACIST = "pharmacist";
     public const string ROLE_UNBLINDED_STATISTICIAN = "unblinded_statistician";
@@ -122,6 +128,10 @@ public static class RoleNormalization
         ["lead-investigator"] = ROLE_LEAD_INVESTIGATOR,
         ["leadinvestigator"] = ROLE_LEAD_INVESTIGATOR,
         ["investigator_user"] = ROLE_INVESTIGATOR,
+        // A sub-investigator holds the investigator's permissions but never the PI's delegation-log signature.
+        ["sub_investigator"] = ROLE_INVESTIGATOR,
+        ["sub investigator"] = ROLE_INVESTIGATOR,
+        ["sub-investigator"] = ROLE_INVESTIGATOR,
         ["crc"] = ROLE_CRC,
         ["site crc"] = ROLE_CRC,
         ["site_crc"] = ROLE_CRC,
@@ -131,6 +141,9 @@ public static class RoleNormalization
         ["study_coordinator"] = ROLE_CRC,
         ["study-coordinator"] = ROLE_CRC,
         ["coordinator"] = ROLE_CRC,
+        ["site coordinator"] = ROLE_CRC,
+        ["site_coordinator"] = ROLE_CRC,
+        ["site-coordinator"] = ROLE_CRC,
         ["cra"] = ROLE_CRA_CANONICAL,
         ["clinical research associate"] = ROLE_CRA_CANONICAL,
         ["monitor"] = "monitor",
@@ -143,6 +156,14 @@ public static class RoleNormalization
         ["auditor"] = ROLE_AUDITOR_CANONICAL,
         ["inspector"] = ROLE_AUDITOR_CANONICAL,
         ["regulatory_inspector"] = ROLE_AUDITOR_CANONICAL,
+        ["finance_officer"] = ROLE_FINANCE_OFFICER,
+        ["finance officer"] = ROLE_FINANCE_OFFICER,
+        ["finance-officer"] = ROLE_FINANCE_OFFICER,
+        ["financeofficer"] = ROLE_FINANCE_OFFICER,
+        ["grants manager"] = ROLE_FINANCE_OFFICER,
+        ["grants_manager"] = ROLE_FINANCE_OFFICER,
+        ["grants-manager"] = ROLE_FINANCE_OFFICER,
+        ["grantsmanager"] = ROLE_FINANCE_OFFICER,
     };
 
     /// <summary>

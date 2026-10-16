@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -14,10 +15,13 @@ using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Apps.Etmf.Workers;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -126,7 +130,7 @@ public class EtmfExportTests
         var queue = new EtmfExportQueue();
         var request = new ExportDocumentsRequest("STUDY-01", ["DOC-201"], IsFullBinder: false);
 
-        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, new Microsoft.AspNetCore.Http.DefaultHttpContext(), ct);
+        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, Caller("STUDY-01"), ct);
 
         result.Should().BeOfType<FileContentHttpResult>();
         var fileResult = (FileContentHttpResult)result;
@@ -147,7 +151,7 @@ public class EtmfExportTests
         var queue = new EtmfExportQueue();
         var request = new ExportDocumentsRequest("STUDY-01", null, IsFullBinder: true);
 
-        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, new Microsoft.AspNetCore.Http.DefaultHttpContext(), ct);
+        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, Caller("STUDY-01"), ct);
 
         result.GetType().IsGenericType.Should().BeTrue();
         result.GetType().GetGenericTypeDefinition().Should().Be(typeof(Accepted<>));
@@ -213,5 +217,62 @@ public class EtmfExportTests
         updatedJob.ProcessedDocuments.Should().Be(1);
         updatedJob.DownloadUrl.Should().Be("/api/v1/etmf/export-jobs/JOB-100/download");
         updatedJob.ExpiresAt.Should().Be(_clock.UtcNow.AddHours(24));
+    }
+
+    /// <summary>A request signed by a CRA assigned to <paramref name="studies"/>.</summary>
+    private static DefaultHttpContext Caller(params string[] studies)
+    {
+        var context = new DefaultHttpContext();
+        context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "cra-1",
+            Roles = ["cra"],
+            AssignedStudies = studies,
+        };
+        return context;
+    }
+
+    /// <summary>An export of a study the caller is not assigned to is refused, and queues nothing (#5361).</summary>
+    [Fact]
+    public async Task ExportDocuments_ForAStudyOutsideTheCallersStudies_IsRefusedAndQueuesNothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<EtmfDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var dbContext = new EtmfDbContext(options);
+        var queue = new EtmfExportQueue();
+
+        var result = await EtmfIntelligenceEndpoints.ExportDocuments(
+            new ExportDocumentsRequest("STUDY-01", null, IsFullBinder: true), dbContext, queue, _clock, Caller("STUDY-99"), ct);
+
+        result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        (await dbContext.TmfExportJobs.CountAsync(ct)).Should().Be(0);
+    }
+
+    /// <summary>A caller sees only documents and export jobs in the studies it is assigned to (#5361).</summary>
+    [Fact]
+    public async Task DocumentAndExportJobLists_AreNarrowedToTheCallersStudies()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<EtmfDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var dbContext = new EtmfDbContext(options);
+        dbContext.TmfDocuments.Add(new TmfDocument("DOC-A") { StudyId = "STUDY-A", Filename = "a.pdf", MimeType = "application/pdf", Status = "APPROVED" });
+        dbContext.TmfDocuments.Add(new TmfDocument("DOC-B") { StudyId = "STUDY-B", Filename = "b.pdf", MimeType = "application/pdf", Status = "APPROVED" });
+        dbContext.TmfExportJobs.Add(new TmfExportJob("JOB-A") { StudyId = "STUDY-A", RequestedBy = "u", Status = "COMPLETED", CreatedAt = _clock.UtcNow.UtcDateTime });
+        dbContext.TmfExportJobs.Add(new TmfExportJob("JOB-B") { StudyId = "STUDY-B", RequestedBy = "u", Status = "COMPLETED", CreatedAt = _clock.UtcNow.UtcDateTime });
+        await dbContext.SaveChangesAsync(ct);
+
+        var documents = await EtmfIntelligenceEndpoints.GetDocuments(null, null, dbContext, Caller("STUDY-A"), ct);
+        var other = await EtmfIntelligenceEndpoints.GetDocumentById("DOC-B", dbContext, Caller("STUDY-A"), ct);
+        var download = await EtmfIntelligenceEndpoints.DownloadExportJob("JOB-B", dbContext, _clock, Caller("STUDY-A"), ct);
+        var unassigned = await EtmfIntelligenceEndpoints.GetDocuments(null, null, dbContext, Caller(), ct);
+
+        documents.Should().BeOfType<Ok<List<TmfDocument>>>().Which.Value!.Select(d => d.Id).Should().Equal("DOC-A");
+        other.GetType().Name.Should().StartWith("NotFound");
+        download.GetType().Name.Should().StartWith("NotFound");
+        unassigned.Should().BeOfType<Ok<List<TmfDocument>>>().Which.Value.Should().BeEmpty();
     }
 }

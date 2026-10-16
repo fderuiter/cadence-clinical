@@ -24,6 +24,8 @@ Electronic consent scaffold. It holds the consent persistence model (documents, 
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
+Publishing a template needs `econsent_template:publish` (sponsor data management and study build) and capturing consent needs `econsent_consent:capture` (site coordinators and investigators). Both refuse a study the caller is not assigned to, and a new template must name its study. Records are attributed to the signed staff member who captured them (`PermissionMatrix.Econsent.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+
 ## Persistence
 
 `AddCadencePostgresDbContext<EconsentDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `econsent` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
@@ -35,8 +37,8 @@ Electronic consent scaffold. It holds the consent persistence model (documents, 
 
 ## Configuration and secrets at rest
 
-| Setting | Purpose |
-| --- | --- |
+| Setting                | Purpose                                                                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FIELD_ENCRYPTION_KEY` | **Required.** Base64 AES-256 key (`openssl rand -base64 32`) that encrypts signer e-mail addresses. The service refuses to start without a valid key; there is no default. |
 
 Consent signatures (`consent_signatures`, #4770):

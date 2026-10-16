@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
@@ -64,6 +65,8 @@ public static class KernelSimulationEndpoints
         SimulateProtocolRequest request,
         HttpContext context,
         ISimulationEngine simulationEngine,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (request is null)
@@ -74,6 +77,7 @@ public static class KernelSimulationEndpoints
         var tenant = KernelRequestTenant.Get(context);
 
         SimulationCandidate candidate;
+        NodeRef versionNode;
         if (!string.IsNullOrWhiteSpace(request.StoredVersionRef))
         {
             if (!NodeRef.TryParse(request.StoredVersionRef, out var storedNode) || storedNode.Kind != NodeKinds.ProtocolVersion)
@@ -81,6 +85,7 @@ public static class KernelSimulationEndpoints
                 return KernelProblems.InvalidNodeRef(request.StoredVersionRef);
             }
             candidate = SimulationCandidate.StoredProtocolVersion(ProtocolVersionId.FromGuid(storedNode.Id));
+            versionNode = storedNode;
         }
         else if (!string.IsNullOrWhiteSpace(request.BaseVersionRef) && request.CandidateContent is not null)
         {
@@ -89,10 +94,18 @@ public static class KernelSimulationEndpoints
                 return KernelProblems.InvalidNodeRef(request.BaseVersionRef);
             }
             candidate = SimulationCandidate.UnsavedProtocolVersion(ProtocolVersionId.FromGuid(baseNode.Id), request.CandidateContent);
+            versionNode = baseNode;
         }
         else
         {
             return KernelProblems.BadRequest("Missing candidate specification", "Must specify StoredVersionRef or (BaseVersionRef and CandidateContent).");
+        }
+
+        // The simulation reads the stored version, so the caller must be able to see it (ADR-2457, ADR-2516).
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [versionNode], cancellationToken).ConfigureAwait(false);
+        if (masks.For(versionNode) is { } mask)
+        {
+            return KernelProblems.NotVisible($"You can't see this protocol version ({mask}), so it can't be simulated.");
         }
 
         var simRequest = new SimulationRequest(candidate, request.ValidAt, request.KnownAt);

@@ -14,6 +14,8 @@ using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Apps.Etmf.Workers;
 using Cadence.Kernel.Time;
+using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -29,21 +31,40 @@ public static class EtmfIntelligenceEndpoints
     {
         var group = routes.MapGroup("/api/v1/etmf");
 
-        group.MapPost("/intelligence/classify", ClassifyDocument);
-        group.MapPost("/intelligence/stage-qc", StageQcDocument);
-        group.MapGet("/intelligence/qc-queue", GetQcQueue);
-        group.MapPost("/intelligence/qc-review/{doc_id}", ReviewQcDocument);
+        // Every route names its permission (ADR-2510, ADR-2516). A study id in a body or on a stored document is checked
+        // against the caller's signed study assignments, and lists are narrowed to them (#5361).
+        group.MapPost("/intelligence/classify", ClassifyDocument).RequirePermission("etmf_document:tag");
+        group.MapPost("/intelligence/stage-qc", StageQcDocument).RequirePermission("etmf_document:create");
+        group.MapGet("/intelligence/qc-queue", GetQcQueue).RequirePermission("etmf_document:read");
+        group.MapPost("/intelligence/qc-review/{doc_id}", ReviewQcDocument).RequirePermission("etmf_document:transition_clinical_qc");
 
-        group.MapGet("/documents", GetDocuments);
-        group.MapGet("/documents/{document_id}", GetDocumentById);
-        group.MapPost("/documents/export", ExportDocuments);
-        group.MapGet("/export-jobs/{job_id}", GetExportJob);
-        group.MapGet("/export-jobs/{job_id}/download", DownloadExportJob);
-        group.MapGet("/export-jobs", ListExportJobs);
+        group.MapGet("/documents", GetDocuments).RequirePermission("etmf_document:read");
+        group.MapGet("/documents/{document_id}", GetDocumentById).RequirePermission("etmf_document:read");
+        group.MapPost("/documents/export", ExportDocuments).RequirePermission("etmf_document:export");
+        group.MapGet("/export-jobs/{job_id}", GetExportJob).RequirePermission("etmf_document:export");
+        group.MapGet("/export-jobs/{job_id}/download", DownloadExportJob).RequirePermission("etmf_document:export");
+        group.MapGet("/export-jobs", ListExportJobs).RequirePermission("etmf_document:export");
 
-        group.MapPost("/ingest", IngestDocument);
-        group.MapGet("/taxonomy", GetTaxonomy);
+        group.MapPost("/ingest", IngestDocument).RequirePermission("etmf_document:create");
+        group.MapGet("/taxonomy", GetTaxonomy).RequirePermission("etmf_taxonomy:read");
     }
+
+    /// <summary>The signed caller's user id; the gateway scheme always sets one on an admitted request.</summary>
+    private static string Caller(HttpContext httpContext) =>
+        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted eTMF request has no signed caller.");
+
+    /// <summary>Narrows documents to the studies the caller is assigned to.</summary>
+    private static IQueryable<TmfDocument> InCallerStudies(IQueryable<TmfDocument> documents, HttpContext httpContext)
+    {
+        var studies = CallerScope.StudyFilter(httpContext);
+        return studies == null ? documents : documents.Where(d => studies.Contains(d.StudyId));
+    }
+
+    private static IResult OutsideStudy() =>
+        TypedResults.Problem(
+            title: "Outside your studies",
+            detail: "You are not assigned to this study.",
+            statusCode: StatusCodes.Status403Forbidden);
 
     public static Task<IResult> ClassifyDocument(
         [FromBody] ClassifyRequest request,
@@ -72,6 +93,11 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.BadRequest(new { error = "21 CFR Part 11 requires a reason_for_change of at least 10 characters." });
         }
 
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        {
+            return OutsideStudy();
+        }
+
         var now = clock.UtcNow;
         var docId = "DOC-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
 
@@ -83,7 +109,7 @@ public static class EtmfIntelligenceEndpoints
             hint: request.ArtifactHint,
             now: now);
 
-        var user = httpContext.User?.Identity?.Name ?? "site.coordinator";
+        var user = Caller(httpContext);
 
         var doc = new TmfDocument(docId)
         {
@@ -116,7 +142,7 @@ public static class EtmfIntelligenceEndpoints
         {
             Timestamp = now,
             UserId = user,
-            UserRole = "Site Coordinator",
+            UserRole = CallerScope.Roles(httpContext),
             Action = "STAGE_QC",
             DocumentId = docId,
             Details = $"Staged document {request.Filename} for CRA QC in study {request.StudyId}.",
@@ -146,9 +172,10 @@ public static class EtmfIntelligenceEndpoints
         [FromQuery] string? study_id,
         [FromServices] EtmfDbContext dbContext,
         [FromServices] IClock clock,
+        HttpContext httpContext,
         CancellationToken ct)
     {
-        var query = dbContext.TmfDocuments.AsNoTracking().Where(d => d.Status == "TECHNICAL_QC");
+        var query = InCallerStudies(dbContext.TmfDocuments.AsNoTracking(), httpContext).Where(d => d.Status == "TECHNICAL_QC");
         if (!string.IsNullOrWhiteSpace(study_id))
         {
             query = query.Where(d => d.StudyId == study_id);
@@ -218,8 +245,14 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.NotFound(new { error = $"Document with ID '{doc_id}' not found." });
         }
 
+        if (!CallerScope.CanAccessStudy(httpContext, doc.StudyId))
+        {
+            return OutsideStudy();
+        }
+
         var now = clock.UtcNow;
-        var user = httpContext.User?.Identity?.Name ?? "cra.user";
+        var user = Caller(httpContext);
+        var roles = CallerScope.Roles(httpContext);
         var oldStatus = doc.Status;
 
         var decision = request.Decision.ToUpperInvariant();
@@ -259,7 +292,7 @@ public static class EtmfIntelligenceEndpoints
             FromStatus = oldStatus,
             ToStatus = doc.Status,
             ActorId = user,
-            ActorRole = "CRA",
+            ActorRole = roles,
             ReasonForChange = request.ReasonForChange,
             Timestamp = now
         };
@@ -269,7 +302,7 @@ public static class EtmfIntelligenceEndpoints
         {
             Timestamp = now,
             UserId = user,
-            UserRole = "CRA",
+            UserRole = roles,
             Action = $"QC_REVIEW_{decision}",
             DocumentId = doc_id,
             Details = $"CRA QC Review decision: {decision}. Reason: {request.ReasonForChange}",
@@ -286,9 +319,10 @@ public static class EtmfIntelligenceEndpoints
         [FromQuery] string? study_id,
         [FromQuery] int? zone,
         [FromServices] EtmfDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken ct)
     {
-        var query = dbContext.TmfDocuments.AsNoTracking();
+        var query = InCallerStudies(dbContext.TmfDocuments.AsNoTracking(), httpContext);
         if (!string.IsNullOrWhiteSpace(study_id))
         {
             query = query.Where(d => d.StudyId == study_id);
@@ -305,10 +339,12 @@ public static class EtmfIntelligenceEndpoints
     public static async Task<IResult> GetDocumentById(
         [FromRoute] string document_id,
         [FromServices] EtmfDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken ct)
     {
         var doc = await dbContext.TmfDocuments.AsNoTracking().FirstOrDefaultAsync(d => d.Id == document_id, ct);
-        if (doc == null)
+        // A document in a study the caller is not assigned to is answered as missing, so its id reveals nothing.
+        if (doc == null || !CallerScope.CanAccessStudy(httpContext, doc.StudyId))
         {
             return TypedResults.NotFound(new { error = $"Document '{document_id}' not found." });
         }
@@ -322,13 +358,23 @@ public static class EtmfIntelligenceEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(request.StudyId))
+        {
+            return TypedResults.BadRequest(new { error = "study_id is required: every document is filed in a study." });
+        }
+
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        {
+            return OutsideStudy();
+        }
+
         var now = clock.UtcNow;
-        var user = httpContext.User?.Identity?.Name ?? "crc.user";
+        var user = Caller(httpContext);
         var docId = "DOC-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
 
         var doc = new TmfDocument(docId)
         {
-            StudyId = request.StudyId ?? "STUDY-USDM-001",
+            StudyId = request.StudyId,
             SiteId = request.SiteId,
             Filename = request.Filename,
             Content = request.Content ?? string.Empty,
@@ -503,12 +549,18 @@ public static class EtmfIntelligenceEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var query = dbContext.TmfDocuments.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(request.StudyId))
+        // An export is one study's binder, and the caller must be assigned to that study.
+        if (string.IsNullOrWhiteSpace(request.StudyId))
         {
-            query = query.Where(d => d.StudyId == request.StudyId);
+            return TypedResults.BadRequest(new { error = "study_id is required: an export is one study's binder." });
         }
+
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        {
+            return OutsideStudy();
+        }
+
+        var query = dbContext.TmfDocuments.AsNoTracking().Where(d => d.StudyId == request.StudyId);
 
         if (request.DocumentIds != null && request.DocumentIds.Count > 0)
         {
@@ -534,7 +586,7 @@ public static class EtmfIntelligenceEndpoints
             .ToListAsync(ct);
 
         int count = matchingDocs.Count;
-        var studyId = request.StudyId ?? "STUDY-USDM-001";
+        var studyId = request.StudyId;
 
         // Requirement 2:
         // If count <= 50 and IsFullBinder == false -> stream ZIP synchronously (200 OK)
@@ -555,7 +607,7 @@ public static class EtmfIntelligenceEndpoints
         else
         {
             var jobId = "JOB-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-            var user = httpContext.User?.Identity?.Name ?? "crc.user";
+            var user = Caller(httpContext);
             var now = clock.UtcNow;
 
             var job = new TmfExportJob(jobId)
@@ -599,10 +651,11 @@ public static class EtmfIntelligenceEndpoints
     public static async Task<IResult> GetExportJob(
         [FromRoute] string job_id,
         [FromServices] EtmfDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken ct)
     {
         var job = await dbContext.TmfExportJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == job_id, ct);
-        if (job == null)
+        if (job == null || !CallerScope.CanAccessStudy(httpContext, job.StudyId))
         {
             return TypedResults.NotFound(new { error = $"Export job '{job_id}' not found." });
         }
@@ -626,10 +679,11 @@ public static class EtmfIntelligenceEndpoints
         [FromRoute] string job_id,
         [FromServices] EtmfDbContext dbContext,
         [FromServices] IClock clock,
+        HttpContext httpContext,
         CancellationToken ct)
     {
         var job = await dbContext.TmfExportJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == job_id, ct);
-        if (job == null)
+        if (job == null || !CallerScope.CanAccessStudy(httpContext, job.StudyId))
         {
             return TypedResults.NotFound(new { error = $"Export job '{job_id}' not found." });
         }
@@ -666,9 +720,11 @@ public static class EtmfIntelligenceEndpoints
     public static async Task<IResult> ListExportJobs(
         [FromQuery] string? study_id,
         [FromServices] EtmfDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken ct)
     {
-        var query = dbContext.TmfExportJobs.AsNoTracking();
+        var studies = CallerScope.StudyFilter(httpContext);
+        var query = dbContext.TmfExportJobs.AsNoTracking().Where(j => studies == null || studies.Contains(j.StudyId));
         if (!string.IsNullOrWhiteSpace(study_id))
         {
             query = query.Where(j => j.StudyId == study_id);

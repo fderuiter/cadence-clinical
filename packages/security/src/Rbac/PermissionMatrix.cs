@@ -8,7 +8,7 @@ namespace Cadence.Security.Rbac;
 /// Platform RBAC permission matrix mapping canonical roles to allowed resource-action sets.
 /// @req:PRD-SYS-053
 /// </summary>
-public static class PermissionMatrix
+public static partial class PermissionMatrix
 {
     private static readonly Dictionary<string, Dictionary<string, HashSet<string>>> _rolePermissions =
         new(StringComparer.OrdinalIgnoreCase);
@@ -298,9 +298,9 @@ public static class PermissionMatrix
         };
 
         // subject
+        // A participant reaches only their own ePRO/eCOA; site eCRF data entry is site work (ADR-2516).
         _rolePermissions[RoleNormalization.ROLE_SUBJECT] = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["ecrf_data_entry"] = ["create", "update"],
             ["ecoa_schedule"] = ["read"],
             ["ecoa_diary"] = ["read"],
             ["ecoa_submission"] = ["create", "read"]
@@ -384,6 +384,9 @@ public static class PermissionMatrix
             ["medical_coding"] = ["create", "read", "update"]
         };
 
+        // Module permission catalogs (PermissionMatrix.<Module>.cs), before the investigator is cloned into the PI roles.
+        AddModuleGrants();
+
         // Derived PI / ER Physician / Lead Investigator
         var piBase = ClonePermissions(_rolePermissions[RoleNormalization.ROLE_INVESTIGATOR]);
         piBase["rtsm_unblind"] = ["write"];
@@ -394,6 +397,88 @@ public static class PermissionMatrix
         _rolePermissions[RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR] = ClonePermissions(piBase);
         _rolePermissions[RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN] = ClonePermissions(piBase);
         _rolePermissions[RoleNormalization.ROLE_LEAD_INVESTIGATOR] = ClonePermissions(piBase);
+    }
+
+    /// <summary>
+    /// Grants <paramref name="role"/> the <paramref name="actions"/> on <paramref name="resource"/>, adding to what it
+    /// already holds. Module catalogs call this from their part of <see cref="AddModuleGrants"/>.
+    /// </summary>
+    private static void Grant(string role, string resource, params string[] actions)
+    {
+        if (!_rolePermissions.TryGetValue(role, out var permissions))
+        {
+            permissions = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            _rolePermissions[role] = permissions;
+        }
+
+        if (!permissions.TryGetValue(resource, out var granted))
+        {
+            granted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            permissions[resource] = granted;
+        }
+
+        granted.UnionWith(actions);
+    }
+
+    private static void AddModuleGrants()
+    {
+        AddExecutionGrants();
+        AddPaymentsGrants();
+        AddInteropGrants();
+        AddEtmfGrants();
+        AddImagingGrants();
+        AddEconsentGrants();
+        AddKnowledgeGrants();
+        AddCtmsGrants();
+    }
+
+    private static partial void AddExecutionGrants();
+
+    private static partial void AddPaymentsGrants();
+
+    private static partial void AddInteropGrants();
+
+    private static partial void AddEtmfGrants();
+
+    private static partial void AddImagingGrants();
+
+    private static partial void AddEconsentGrants();
+
+    private static partial void AddKnowledgeGrants();
+
+    private static partial void AddCtmsGrants();
+
+    /// <summary>
+    /// True when at least one role holds <paramref name="permission"/> (<c>resource:action</c>). A route permission no
+    /// role holds is a typo or a missing grant, so <see cref="PermissionPolicyProvider"/> refuses it (ADR-2516).
+    /// </summary>
+    public static bool IsDefined(string permission)
+    {
+        if (!TrySplit(permission, out string resource, out string action))
+        {
+            return false;
+        }
+
+        return _rolePermissions.Values.Any(perms => perms.TryGetValue(resource, out var actions) && actions.Contains(action));
+    }
+
+    private static bool TrySplit(string? permission, out string resource, out string action)
+    {
+        resource = action = string.Empty;
+        if (string.IsNullOrWhiteSpace(permission))
+        {
+            return false;
+        }
+
+        int colonIndex = permission.IndexOf(':', StringComparison.Ordinal);
+        if (colonIndex <= 0 || colonIndex >= permission.Length - 1)
+        {
+            return false;
+        }
+
+        resource = permission[..colonIndex].Trim();
+        action = permission[(colonIndex + 1)..].Trim();
+        return true;
     }
 
     private static Dictionary<string, HashSet<string>> ClonePermissions(Dictionary<string, HashSet<string>> source)
@@ -411,13 +496,7 @@ public static class PermissionMatrix
     /// </summary>
     public static bool HasPermission(Principal? principal, string permission)
     {
-        if (principal == null || string.IsNullOrWhiteSpace(permission)) return false;
-
-        int colonIndex = permission.IndexOf(':');
-        if (colonIndex <= 0 || colonIndex >= permission.Length - 1) return false;
-
-        string resource = permission[..colonIndex].Trim();
-        string action = permission[(colonIndex + 1)..].Trim();
+        if (principal == null || !TrySplit(permission, out string resource, out string action)) return false;
 
         var rolesToCheck = new List<string>(principal.Roles);
         foreach (string r in principal.RawRoles)

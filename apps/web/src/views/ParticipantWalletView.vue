@@ -1429,7 +1429,6 @@ async function triggerVisitVerified() {
           subject_id: visitEventForm.value.subject_id,
           visit_code: visitEventForm.value.visit_code,
           event_id: `EVT-${Date.now()}`,
-          verified_by: "coordinator_alice",
         }),
       }
     );
