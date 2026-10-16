@@ -130,6 +130,7 @@ public class CadenceSecurityUnitTests
     [InlineData("sysadmin")]
     [InlineData("sponsor_dm")]
     [InlineData("investigator")]
+    [GxPRequirement("PRD-SYS-192")]
     public void StudyAccessEvaluator_FailsClosed(string role)
     {
         var unassigned = new Principal { UserId = "user-1", Roles = [role] };

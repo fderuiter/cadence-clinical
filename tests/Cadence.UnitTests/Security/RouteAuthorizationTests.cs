@@ -56,6 +56,7 @@ public sealed class RouteAuthorizationTests
     [Theory]
     [MemberData(nameof(Hosts))]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-192")]
     public async Task EveryRoute_DeclaresWhoMayCallIt(string host)
     {
         await using var booted = ServiceHosts.All[host](null);
@@ -69,6 +70,7 @@ public sealed class RouteAuthorizationTests
     [Theory]
     [MemberData(nameof(Hosts))]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-192")]
     public async Task ACallerWithoutTheRoutePermission_IsRefusedBeforeTheHandlerRuns(string host)
     {
         await using var booted = ServiceHosts.All[host](ProbeResultHandler.Register);
@@ -101,6 +103,7 @@ public sealed class RouteAuthorizationTests
     [Theory]
     [MemberData(nameof(Hosts))]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-192")]
     public async Task ACallerHoldingTheRoutePermission_IsAdmitted(string host)
     {
         await using var booted = ServiceHosts.All[host](ProbeResultHandler.Register);
@@ -121,6 +124,7 @@ public sealed class RouteAuthorizationTests
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-192")]
     public async Task EveryListedSignedInCallerRoute_StillExists()
     {
         var stale = new List<string>();

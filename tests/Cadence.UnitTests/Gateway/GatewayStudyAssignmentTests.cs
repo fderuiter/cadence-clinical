@@ -20,6 +20,7 @@ namespace Cadence.UnitTests.Gateway;
 public sealed class GatewayStudyAssignmentTests
 {
     [Fact]
+    [GxPRequirement("PRD-SYS-192")]
     public void TheStudyAssignmentsInTheToken_AreForwardedAndSigned()
     {
         var context = ContextFor(new Claim(CadenceClaimTypes.Subject, "user-1"),
