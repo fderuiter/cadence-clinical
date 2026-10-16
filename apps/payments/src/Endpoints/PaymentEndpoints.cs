@@ -482,6 +482,17 @@ public static class PaymentEndpoints
     private static IResult NoSignedCaller() =>
         Results.Problem(statusCode: StatusCodes.Status401Unauthorized, detail: "The request carries no signed caller.");
 
+    // A write that names a study or site the caller is not assigned to (ADR-2516, #5401). Reads and writes by id answer
+    // 404 instead, the same as a missing row, so ids outside the caller's scope cannot be probed.
+    private static IResult OutsideScope() =>
+        Results.Problem(statusCode: StatusCodes.Status403Forbidden, detail: "The caller is not assigned to this study or site.");
+
+    private static bool Reaches(PaymentsCaller caller, ParticipantWallet? wallet) =>
+        wallet is not null && caller.Reaches(wallet.StudyId, wallet.SiteId);
+
+    private static bool Reaches(PaymentsCaller caller, SelfBillingInvoice? invoice) =>
+        invoice is not null && caller.Reaches(invoice.StudyId, invoice.SiteId);
+
     private static WalletResponse MapWalletToResponse(ParticipantWallet wallet) => new(
         Id: wallet.Id,
         SubjectId: wallet.SubjectId,
@@ -506,21 +517,31 @@ public static class PaymentEndpoints
         UpdatedAt: wallet.UpdatedAt
     );
 
-    private static async Task<IResult> ListWallets(PaymentsDbContext dbContext)
+    private static async Task<IResult> ListWallets(PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
-        var wallets = await dbContext.ParticipantWallets
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
+        var wallets = await caller.InScope(dbContext.ParticipantWallets, w => w.StudyId, w => w.SiteId)
             .OrderByDescending(w => w.UpdatedAt)
             .ToListAsync();
 
         return Results.Ok(wallets.Select(MapWalletToResponse));
     }
 
-    private static async Task<IResult> GetWalletById(string walletId, PaymentsDbContext dbContext)
+    private static async Task<IResult> GetWalletById(string walletId, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
-        if (wallet == null)
+        if (wallet == null || !Reaches(caller, wallet))
         {
             return Results.NotFound(new { detail = $"Participant wallet with ID '{walletId}' not found." });
         }
@@ -528,9 +549,14 @@ public static class PaymentEndpoints
         return Results.Ok(MapWalletToResponse(wallet));
     }
 
-    private static async Task<IResult> GetSubjectWallet(string subjectId, PaymentsDbContext dbContext)
+    private static async Task<IResult> GetSubjectWallet(string subjectId, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
-        var wallet = await dbContext.ParticipantWallets
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
+        var wallet = await caller.InScope(dbContext.ParticipantWallets, w => w.StudyId, w => w.SiteId)
             .FirstOrDefaultAsync(w => w.SubjectId == subjectId);
 
         // A read creates nothing (read-only roles call it): a wallet is opened by a verified visit, an expense claim or
@@ -543,12 +569,17 @@ public static class PaymentEndpoints
         return Results.Ok(MapWalletToResponse(wallet));
     }
 
-    private static async Task<IResult> GetTax1099Status(string walletId, PaymentsDbContext dbContext)
+    private static async Task<IResult> GetTax1099Status(string walletId, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
-        if (wallet == null)
+        if (wallet == null || !Reaches(caller, wallet))
         {
             return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
         }
@@ -582,12 +613,17 @@ public static class PaymentEndpoints
         });
     }
 
-    private static async Task<IResult> GetBalanceInquiry(string walletId, PaymentsDbContext dbContext)
+    private static async Task<IResult> GetBalanceInquiry(string walletId, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
-        if (wallet == null)
+        if (wallet == null || !Reaches(caller, wallet))
         {
             return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
         }
@@ -619,7 +655,7 @@ public static class PaymentEndpoints
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
-        if (wallet == null)
+        if (wallet == null || !Reaches(caller, wallet))
         {
             return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
         }
@@ -663,7 +699,7 @@ public static class PaymentEndpoints
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
-        if (wallet == null)
+        if (wallet == null || !Reaches(caller, wallet))
         {
             return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
         }
@@ -713,7 +749,7 @@ public static class PaymentEndpoints
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
-        if (wallet == null)
+        if (wallet == null || !Reaches(caller, wallet))
         {
             return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
         }
@@ -757,7 +793,7 @@ public static class PaymentEndpoints
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.Id == walletId);
 
-        if (wallet == null)
+        if (wallet == null || !Reaches(caller, wallet))
         {
             return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
         }
@@ -836,9 +872,14 @@ public static class PaymentEndpoints
         return Results.Ok(disbursement);
     }
 
-    private static async Task<IResult> ListStipendRules(PaymentsDbContext dbContext, string? studyId = null)
+    private static async Task<IResult> ListStipendRules(PaymentsDbContext dbContext, ClaimsPrincipal user, string? studyId = null)
     {
-        var query = dbContext.ParticipantStipendRules.AsQueryable();
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
+        var query = caller.InStudyScope(dbContext.ParticipantStipendRules, r => r.StudyId);
         if (!string.IsNullOrWhiteSpace(studyId))
         {
             query = query.Where(r => r.StudyId == studyId);
@@ -846,7 +887,7 @@ public static class PaymentEndpoints
 
         var rules = await query.Where(r => r.IsActive).ToListAsync();
 
-        if (rules.Count == 0 && (string.IsNullOrWhiteSpace(studyId) || studyId == "STUDY-DCT-001"))
+        if (rules.Count == 0 && (string.IsNullOrWhiteSpace(studyId) || studyId == "STUDY-DCT-001") && caller.ReachesStudy("STUDY-DCT-001"))
         {
             // Demonstration rules the service seeds itself on first read, so they carry its system identity.
             DateTimeOffset now = SystemClock.Instance.UtcNow;
@@ -872,6 +913,11 @@ public static class PaymentEndpoints
         if (PaymentsCaller.From(user) is not { } caller)
         {
             return NoSignedCaller();
+        }
+
+        if (!caller.ReachesStudy(request.StudyId))
+        {
+            return OutsideScope();
         }
 
         if (request.AntiCoercionCap.HasValue && request.Amount > request.AntiCoercionCap.Value)
@@ -974,6 +1020,13 @@ public static class PaymentEndpoints
             return Results.BadRequest(new { detail = "subject_id and visit_code are required." });
         }
 
+        // Only staff of the named study and site may credit a stipend there, and an existing wallet stays at its own
+        // site: a body naming the caller's site does not reach another site's participant (#5401).
+        if (!caller.Reaches(request.StudyId, request.SiteId))
+        {
+            return OutsideScope();
+        }
+
         string eventId = request.EventId ?? $"EVT-{Guid.NewGuid():N}";
         DateTimeOffset now = SystemClock.Instance.UtcNow;
 
@@ -985,6 +1038,10 @@ public static class PaymentEndpoints
         {
             var existingWallet = await dbContext.ParticipantWallets
                 .FirstOrDefaultAsync(w => w.Id == existingTx.WalletId);
+            if (existingWallet != null && !Reaches(caller, existingWallet))
+            {
+                return OutsideScope();
+            }
 
             return Results.Ok(new VisitVerificationResponseDto(
                 Status: "ALREADY_PROCESSED",
@@ -1005,6 +1062,10 @@ public static class PaymentEndpoints
         {
             var existingWallet = await dbContext.ParticipantWallets
                 .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId && w.StudyId == request.StudyId);
+            if (existingWallet != null && !Reaches(caller, existingWallet))
+            {
+                return OutsideScope();
+            }
 
             return Results.Ok(new VisitVerificationResponseDto(
                 Status: "ALREADY_PROCESSED",
@@ -1039,6 +1100,11 @@ public static class PaymentEndpoints
         // 3. Get or create participant wallet
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId && w.StudyId == request.StudyId);
+
+        if (wallet != null && !Reaches(caller, wallet))
+        {
+            return OutsideScope();
+        }
 
         if (wallet == null)
         {
@@ -1275,9 +1341,14 @@ public static class PaymentEndpoints
         ));
     }
 
-    private static async Task<IResult> ListExpenseClaims(PaymentsDbContext dbContext, string? status = null, string? subjectId = null)
+    private static async Task<IResult> ListExpenseClaims(PaymentsDbContext dbContext, ClaimsPrincipal user, string? status = null, string? subjectId = null)
     {
-        var query = dbContext.ParticipantExpenseClaims.AsQueryable();
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
+        var query = caller.InScope(dbContext.ParticipantExpenseClaims, c => c.StudyId, c => c.SiteId);
 
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -1308,10 +1379,20 @@ public static class PaymentEndpoints
             return Results.BadRequest(new { detail = "subject_id and positive gross_amount are required." });
         }
 
+        if (!caller.Reaches(request.StudyId, request.SiteId))
+        {
+            return OutsideScope();
+        }
+
         DateTimeOffset now = SystemClock.Instance.UtcNow;
 
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId && w.StudyId == request.StudyId);
+
+        if (wallet != null && !Reaches(caller, wallet))
+        {
+            return OutsideScope();
+        }
 
         if (wallet == null)
         {
@@ -1715,7 +1796,7 @@ public static class PaymentEndpoints
         var claim = await dbContext.ParticipantExpenseClaims
             .FirstOrDefaultAsync(c => c.Id == claimId);
 
-        if (claim == null)
+        if (claim == null || !caller.Reaches(claim.StudyId, claim.SiteId))
         {
             return Results.NotFound(new { detail = $"Expense claim '{claimId}' not found." });
         }
@@ -1816,9 +1897,20 @@ public static class PaymentEndpoints
         return Results.Ok(claim);
     }
 
-    private static async Task<IResult> ListTransactions(PaymentsDbContext dbContext, string? subjectId = null, string? walletId = null)
+    private static async Task<IResult> ListTransactions(PaymentsDbContext dbContext, ClaimsPrincipal user, string? subjectId = null, string? walletId = null)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
+        // These rows carry no site, so they are scoped through their wallet.
         var query = dbContext.ParticipantTransactions.AsQueryable();
+        if (!caller.IsUnrestricted)
+        {
+            var walletIds = caller.InScope(dbContext.ParticipantWallets, w => w.StudyId, w => w.SiteId).Select(w => w.Id);
+            query = query.Where(t => walletIds.Contains(t.WalletId));
+        }
 
         if (!string.IsNullOrWhiteSpace(subjectId))
         {
@@ -1837,9 +1929,20 @@ public static class PaymentEndpoints
         return Results.Ok(txs);
     }
 
-    private static async Task<IResult> ListDisbursements(PaymentsDbContext dbContext, string? subjectId = null, string? walletId = null)
+    private static async Task<IResult> ListDisbursements(PaymentsDbContext dbContext, ClaimsPrincipal user, string? subjectId = null, string? walletId = null)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
+        // These rows carry no site, so they are scoped through their wallet.
         var query = dbContext.ParticipantDisbursements.AsQueryable();
+        if (!caller.IsUnrestricted)
+        {
+            var walletIds = caller.InScope(dbContext.ParticipantWallets, w => w.StudyId, w => w.SiteId).Select(w => w.Id);
+            query = query.Where(d => walletIds.Contains(d.WalletId));
+        }
 
         if (!string.IsNullOrWhiteSpace(subjectId))
         {
@@ -1880,6 +1983,10 @@ public static class PaymentEndpoints
         {
             var existingWallet = await dbContext.ParticipantWallets
                 .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId);
+            if (existingWallet != null && !Reaches(caller, existingWallet))
+            {
+                return OutsideScope();
+            }
 
             decimal currentBal = existingWallet?.CurrentBalance ?? 0m;
             string walletId = existingWallet?.Id ?? Guid.NewGuid().ToString();
@@ -1902,6 +2009,13 @@ public static class PaymentEndpoints
         var wallet = await dbContext.ParticipantWallets
             .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId);
 
+        string walletStudyId = wallet?.StudyId ?? request.StudyId ?? "STUDY-DCT-001";
+        string walletSiteId = wallet?.SiteId ?? request.SiteId ?? "SITE-101";
+        if (!caller.Reaches(walletStudyId, walletSiteId))
+        {
+            return OutsideScope();
+        }
+
         DateTimeOffset now = SystemClock.Instance.UtcNow;
 
         if (wallet == null)
@@ -1910,8 +2024,8 @@ public static class PaymentEndpoints
             {
                 Id = Guid.NewGuid().ToString(),
                 SubjectId = request.SubjectId,
-                StudyId = request.StudyId ?? "STUDY-DCT-001",
-                SiteId = request.SiteId ?? "SITE-101",
+                StudyId = walletStudyId,
+                SiteId = walletSiteId,
                 CurrentBalance = 0m,
                 LifetimeStipends = 0m,
                 LifetimeReimbursements = 0m,
@@ -1977,9 +2091,28 @@ public static class PaymentEndpoints
         ));
     }
 
-    private static async Task<IResult> GetAuditLogs(PaymentsDbContext dbContext, string? subjectId = null)
+    private static async Task<IResult> GetAuditLogs(PaymentsDbContext dbContext, ClaimsPrincipal user, string? subjectId = null)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var query = dbContext.PaymentAuditLogs.AsQueryable();
+
+        // Audit rows carry no study or site of their own: a caller limited to some studies or sites sees the rows about
+        // the wallets, claims, stipend rules, invoices and remittances they reach, and no batch-level rows.
+        if (!caller.IsUnrestricted)
+        {
+            var walletIds = caller.InScope(dbContext.ParticipantWallets, w => w.StudyId, w => w.SiteId).Select(w => w.Id);
+            var claimIds = caller.InScope(dbContext.ParticipantExpenseClaims, c => c.StudyId, c => c.SiteId).Select(c => c.Id);
+            var invoiceIds = caller.InScope(dbContext.SelfBillingInvoices, i => i.StudyId, i => i.SiteId).Select(i => i.Id);
+            var remittanceIds = caller.InScope(dbContext.RemittanceAdvices, r => r.StudyId, r => r.SiteId).Select(r => r.Id);
+            var ruleIds = caller.InStudyScope(dbContext.ParticipantStipendRules, r => r.StudyId).Select(r => r.Id);
+            query = query.Where(l =>
+                walletIds.Contains(l.EntityId) || claimIds.Contains(l.EntityId) || invoiceIds.Contains(l.EntityId)
+                || remittanceIds.Contains(l.EntityId) || ruleIds.Contains(l.EntityId));
+        }
 
         if (!string.IsNullOrWhiteSpace(subjectId))
         {
@@ -2075,6 +2208,7 @@ public static class PaymentEndpoints
 
     private static async Task<IResult> ListInvoices(
         PaymentsDbContext dbContext,
+        ClaimsPrincipal user,
         string? study_id = null,
         string? site_id = null,
         string? billing_cycle = null,
@@ -2082,7 +2216,12 @@ public static class PaymentEndpoints
         string? erp_sync_status = null,
         string? batch_execution_id = null)
     {
-        var query = dbContext.SelfBillingInvoices.AsNoTracking().AsQueryable();
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
+        var query = caller.InScope(dbContext.SelfBillingInvoices.AsNoTracking(), i => i.StudyId, i => i.SiteId);
 
         if (!string.IsNullOrWhiteSpace(study_id))
         {
@@ -2171,12 +2310,17 @@ public static class PaymentEndpoints
         return Results.Ok(responses);
     }
 
-    private static async Task<IResult> GetInvoiceById(string id, PaymentsDbContext dbContext)
+    private static async Task<IResult> GetInvoiceById(string id, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var inv = await dbContext.SelfBillingInvoices.AsNoTracking()
             .FirstOrDefaultAsync(i => i.Id == id);
 
-        if (inv == null)
+        if (inv == null || !Reaches(caller, inv))
         {
             return Results.NotFound(new { detail = $"Self-billing invoice with ID '{id}' not found." });
         }
@@ -2377,6 +2521,11 @@ public static class PaymentEndpoints
             return Results.BadRequest(new { detail = "Both 'study_id' and 'site_id' are required for single site invoice compilation." });
         }
 
+        if (!caller.Reaches(request.StudyId, request.SiteId))
+        {
+            return OutsideScope();
+        }
+
         // Compiling with auto_approve also approves, so the caller must hold the approval permission too.
         if (request.AutoApprove && !caller.Holds("payments_invoice:approve"))
         {
@@ -2426,6 +2575,13 @@ public static class PaymentEndpoints
             return Results.BadRequest(new { detail = "Study Protocol ID ('study_id') is required for batch compilation." });
         }
 
+        // A named site outside the caller's scope refuses the whole batch; discovered sites are narrowed to theirs.
+        if (!caller.ReachesStudy(request.StudyId)
+            || (request.SiteIds is { Count: > 0 } named && named.Any(site => !caller.Reaches(request.StudyId, site))))
+        {
+            return OutsideScope();
+        }
+
         // Compiling with auto_approve also approves, so the caller must hold the approval permission too.
         if (request.AutoApprove && !caller.Holds("payments_invoice:approve"))
         {
@@ -2455,7 +2611,7 @@ public static class PaymentEndpoints
                 .Select(p => p.SiteId)
                 .ToListAsync();
 
-            targetSiteIds = contractSites.Concat(payableSites).Distinct().OrderBy(s => s).ToList();
+            targetSiteIds = contractSites.Concat(payableSites).Distinct().Where(site => caller.Reaches(request.StudyId, site)).OrderBy(s => s).ToList();
         }
 
         var siteResults = new List<SiteBatchCompilationResult>();
@@ -2611,7 +2767,7 @@ public static class PaymentEndpoints
         }
 
         var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
-        if (inv == null)
+        if (inv == null || !Reaches(caller, inv))
         {
             return Results.NotFound(new { detail = $"Invoice with ID '{id}' not found." });
         }
@@ -2654,7 +2810,7 @@ public static class PaymentEndpoints
         }
 
         var remittance = await dbContext.RemittanceAdvices.FirstOrDefaultAsync(r => r.InvoiceId == id || r.Id == id);
-        if (remittance == null)
+        if (remittance == null || !caller.Reaches(remittance.StudyId, remittance.SiteId))
         {
             return Results.NotFound(new { detail = $"Remittance advice statement for invoice '{id}' not found." });
         }
@@ -2719,12 +2875,17 @@ public static class PaymentEndpoints
         ));
     }
 
-    private static async Task<IResult> DownloadRemittancePdf(string id, PaymentsDbContext dbContext)
+    private static async Task<IResult> DownloadRemittancePdf(string id, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
+        if (PaymentsCaller.From(user) is not { } caller)
+        {
+            return NoSignedCaller();
+        }
+
         var remittance = await dbContext.RemittanceAdvices.AsNoTracking()
             .FirstOrDefaultAsync(r => r.InvoiceId == id || r.Id == id);
 
-        if (remittance == null)
+        if (remittance == null || !caller.Reaches(remittance.StudyId, remittance.SiteId))
         {
             return Results.NotFound(new { detail = $"Remittance statement for invoice '{id}' not found." });
         }
@@ -2742,7 +2903,7 @@ public static class PaymentEndpoints
         }
 
         var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
-        if (inv == null)
+        if (inv == null || !Reaches(caller, inv))
         {
             return Results.NotFound(new { detail = $"Invoice with ID '{id}' not found." });
         }
@@ -2788,7 +2949,7 @@ public static class PaymentEndpoints
         }
 
         var inv = await dbContext.SelfBillingInvoices.FirstOrDefaultAsync(i => i.Id == id);
-        if (inv == null)
+        if (inv == null || !Reaches(caller, inv))
         {
             return Results.NotFound(new { detail = $"Invoice with ID '{id}' not found." });
         }

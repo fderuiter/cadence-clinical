@@ -200,7 +200,7 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
             await seed.SaveChangesAsync(Ct);
         }
 
-        using var client = Client("crc-7", "Clinical Research Coordinator");
+        using var client = SiteClient("crc-7", "SITE-1", "Clinical Research Coordinator");
         using var response = await client.PostAsync(
             "/api/v1/payments/participant/events/visit-verified",
             new StringContent(
@@ -239,7 +239,7 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
     public async Task ExpenseReview_RecordsTheSignedReviewer()
     {
         await SeedAsync();
-        using var client = Client("pi-3", "principal investigator");
+        using var client = SiteClient("pi-3", "SITE-1", "principal investigator");
 
         using var response = await client.PostAsJsonAsync(
             $"/api/v1/payments/participant/expenses/{ClaimId}/review", new { status = "REJECTED", reviewNotes = "No receipt" }, Ct);
@@ -256,6 +256,9 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
 
     private HttpClient Client(string userId, params string[] roles) =>
         _factory.CreateSignedClient(TestSecurityContext.Identity(userId, roles));
+
+    private HttpClient SiteClient(string userId, string site, params string[] roles) =>
+        _factory.CreateSignedClient(TestSecurityContext.Identity(userId, roles) with { SiteIds = [site] });
 
     private PaymentsDbContext OpenDb() =>
         _factory.Services.CreateScope().ServiceProvider.GetRequiredService<PaymentsDbContext>();
