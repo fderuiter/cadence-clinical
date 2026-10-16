@@ -242,6 +242,14 @@ public static class QualityGateOrchestrator
             allPassed = false;
         }
 
+        // 22c. GxP snapshot guard (ADR-2532)
+        AnsiConsole.MarkupLine("\nChecking that this branch does not change the generated GxP snapshots...");
+        if (GxpSnapshotGuardService.Check(FindRepoRoot(), preCommit) != 0)
+        {
+            AnsiConsole.MarkupLine("[red]Gate (gxp-snapshot) failed![/]");
+            allPassed = false;
+        }
+
         if (!allPassed)
         {
             AnsiConsole.MarkupLine("\n[bold red]One or more quality gate checks failed.[/]");
@@ -283,6 +291,7 @@ public static class QualityGateOrchestrator
             "validate-vulnerabilities" or "vulnerabilities" => VulnerabilityAuditorService.AuditVulnerabilities() == 0,
             "validate-dependencies" or "dependencies" => DependencyValidatorService.ValidateDependencies() == 0,
             "gxp-rtm-validate" or "rtm" => GxpRtmValidatorService.ValidateGxpRtm(),
+            "gxp-snapshot-guard" or "gxp-snapshot" => GxpSnapshotGuardService.Check(FindRepoRoot(), preCommit) == 0,
             _ => ReportUnknownGate(gateName)
         };
 

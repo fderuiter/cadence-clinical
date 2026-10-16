@@ -7,6 +7,8 @@
 - **Requirements:** PRD-SYS-053 (development guardrails: the quality gates and generated GxP reports must report
   the truth about a change), 21 CFR 11.10(a), issues #5324 and #5325
 - **Amends:** [ADR-2287](2026-07-24-minimizing-merge-friction-for-baselines-and-reports.md)
+- **Amended by:** [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md): only the integration owner
+  regenerates the documents, with `gxp snapshot`; branches validate with `gxp sync` and commit neither document.
 
 ---
 

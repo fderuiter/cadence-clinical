@@ -51,16 +51,19 @@ jobs:
 
       # Delete the committed copies first so a sync that exits 0 without
       # writing them fails the verify step instead of archiving stale reports.
+      # A release is a snapshot (ADR-2532): only `gxp snapshot` writes docs/SDLC.
       - name: Generate GxP Reports
+        env:
+          CADENCE_GXP_SNAPSHOT: "1"
         run: |
           rm -f docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md
-          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp sync
+          dotnet run --project packages/cli/src/Cadence.Cli.csproj -- gxp snapshot
 
       - name: Verify and Stage Generated Reports
         run: |
           for report in Requirements_Traceability_Matrix.md IQ_OQ_PQ_Execution_Report.md; do
             if [ ! -s "docs/SDLC/$report" ]; then
-              echo "::error::gxp sync did not generate docs/SDLC/$report"
+              echo "::error::gxp snapshot did not generate docs/SDLC/$report"
               exit 1
             fi
             cp "docs/SDLC/$report" tmp_etmf/

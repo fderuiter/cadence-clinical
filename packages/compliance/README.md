@@ -5,7 +5,7 @@ Part 11 support library: audit digest calculation and hash-chain verification, e
 ## Project
 
 - Project: `packages/compliance/src/Cadence.Compliance.csproj` (assembly `Cadence.Compliance`, namespace `Cadence.Compliance`).
-- Main types: `AuditDigestCalculator`, `AuditChainVerifier`, `ComplianceAuditLogRecord`, `ESignatureVerifier`, `GxPSigner`, `Pkcs7Signer`, `PhiRedactorService`, `ProtocolRagService`, `RtmGeneratorService`, and the exceptions `TamperDetectedException` and `UnapprovedAIRecordException`.
+- Main types: `AuditDigestCalculator`, `AuditChainVerifier`, `ComplianceAuditLogRecord`, `ESignatureVerifier`, `GxPSigner`, `Pkcs7Signer`, `GxpSnapshotPolicy`, `PhiRedactorService`, `ProtocolRagService`, `RtmGeneratorService`, and the exceptions `TamperDetectedException` and `UnapprovedAIRecordException`.
 - No Python reference sources remain; `ESignatureVerifierTests` pins the verifier to the deleted `services/esignature_verifier.py` (#4789).
 
 ## Signature verification
@@ -29,6 +29,11 @@ SHA-256 integrity stamp marked as an unsigned working copy, and `GxPSigner.Verif
 hand edits. `GxPSigner.SignGxpMarkdown` (RSA-PSS with an embedded certificate) remains for signing a release copy
 with a named person's certificate; without one it falls back to a throwaway self-signed key, which is only useful
 in tests. [docs/TESTING.md](../../docs/TESTING.md) has the workflow.
+
+`GxpSnapshotPolicy` (ADR-2532) names the snapshot paths (the two documents and `docs/SDLC/runs/`), the preview
+directory `TestResults/gxp/preview` that `gxp sync` writes on a feature branch, and `CADENCE_GXP_SNAPSHOT`, which turns
+on snapshot mode. `GenerateRtm(requireCurrentSnapshot: …)` checks that the committed RTM's test mapping matches the
+tags only in snapshot mode, so a branch with new or moved tags passes `check rtm` without committing a new snapshot.
 
 ## Key dependencies
 

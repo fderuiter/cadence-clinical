@@ -3,7 +3,9 @@
 ## Status
 
 Accepted. Amended by [ADR-2531](2026-10-15-every-mapped-test-is-mandatory-evidence.md): the reports now carry an
-evidence block naming the tested revision, which CI's comparison leaves out.
+evidence block naming the tested revision, which CI's comparison leaves out. Amended by
+[ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md): feature branches no longer commit the RTM or
+IQ/OQ/PQ report, and the custom merge driver mapping is removed.
 
 ## Context
 

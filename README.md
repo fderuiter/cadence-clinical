@@ -113,14 +113,14 @@ pnpm cadence <command>
 # same as: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>
 ```
 
-| Task                                          | Command                               |
-| --------------------------------------------- | ------------------------------------- |
-| All pre-commit quality gates                  | `pnpm cadence check`                  |
-| One gate (e.g. `adrs`, `markdown`, `readmes`) | `pnpm cadence check <gate>`           |
-| Auto-fix formatting, schemas, ADR index       | `pnpm cadence fix`                    |
-| Environment diagnostics                       | `pnpm cadence doctor --auto-fix`      |
-| Regenerate the traceability matrix            | `pnpm cadence gxp sync`               |
-| New ADR                                       | `pnpm cadence scaffold adr "<title>"` |
+| Task                                          | Command                                         |
+| --------------------------------------------- | ----------------------------------------------- |
+| All pre-commit quality gates                  | `pnpm cadence check`                            |
+| One gate (e.g. `adrs`, `markdown`, `readmes`) | `pnpm cadence check <gate>`                     |
+| Auto-fix formatting, schemas, ADR index       | `pnpm cadence fix`                              |
+| Environment diagnostics                       | `pnpm cadence doctor --auto-fix`                |
+| Validate requirement tags and test results    | `pnpm cadence gxp sync` (writes a preview only) |
+| New ADR                                       | `pnpm cadence scaffold adr "<title>"`           |
 
 The full, generated command reference is [docs/cli.md](docs/cli.md).
 

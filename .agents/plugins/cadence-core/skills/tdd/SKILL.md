@@ -13,14 +13,14 @@ TDD in Cadence follows a strict, rapid red → green → refactor loop anchored 
 
 ## Antigravity Tool Execution Matrix
 
-| Phase | Antigravity Tool | Invocation Pattern | Objective |
-| :--- | :--- | :--- | :--- |
-| **Seam Discovery** | `find_by_name` / `view_file` | Read target service and test suite via `AbsolutePath` | Inspect existing domain seams and test doubles |
-| **Red (Failing Test)** | `replace_file_content` / `write_to_file` | Author new test case with `[GxPRequirement]` and `/// @req:` | Add failing test case testing public interface |
-| **Test Execution** | `run_command` | `CommandLine="dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Execute sub-second unit test verification |
-| **Green (Implementation)**| `replace_file_content` | Target: production code, single contiguous edit | Write minimal production code to pass test |
-| **Quality Sentinel** | `run_command` | `CommandLine="dotnet cadence fix --all && dotnet cadence check"` | Format, verify layer boundaries, and run 21 quality gates |
-| **Compliance Sync** | `run_command` | `CommandLine="dotnet cadence gxp sync"` | Regenerate and stage GxP Traceability Matrix |
+| Phase                      | Antigravity Tool                         | Invocation Pattern                                                                                                    | Objective                                                                  |
+| :------------------------- | :--------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- |
+| **Seam Discovery**         | `find_by_name` / `view_file`             | Read target service and test suite via `AbsolutePath`                                                                 | Inspect existing domain seams and test doubles                             |
+| **Red (Failing Test)**     | `replace_file_content` / `write_to_file` | Author new test case with `[GxPRequirement]` and `/// @req:`                                                          | Add failing test case testing public interface                             |
+| **Test Execution**         | `run_command`                            | `CommandLine="dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Execute sub-second unit test verification                                  |
+| **Green (Implementation)** | `replace_file_content`                   | Target: production code, single contiguous edit                                                                       | Write minimal production code to pass test                                 |
+| **Quality Sentinel**       | `run_command`                            | `CommandLine="dotnet cadence fix --all && dotnet cadence check"`                                                      | Format, verify layer boundaries, and run 21 quality gates                  |
+| **Compliance Sync**        | `run_command`                            | `CommandLine="pnpm cadence gxp sync"`                                                                                 | Validate requirement tags and results (preview only; never commit the RTM) |
 
 ---
 
@@ -67,14 +67,17 @@ public async Task RegisterSubject_WithValidPayload_PersistsAuditTrailAndAdvances
 ## The TDD Execution Loop
 
 ### 1. Seam Agreement
+
 Agree on the public interface boundary before authoring tests:
+
 - Ask: "What is the public interface and which seams are we testing?"
 - Never test internal/private methods or reach into ORM internals directly.
 - If the interface seam is ambiguous, invoke `ask_question` to confirm the boundary.
 
 ### 2. Red: Author Failing Test (MANDATORY TOOL: `replace_file_content` / `write_to_file`)
+
 - Use `replace_file_content` or `write_to_file` to author a minimal failing test at the agreed seam.
-- Include the `[GxPRequirement("PRD-SYS-xxx")]` attribute and `/// @req:PRD-SYS-xxx` doc comment.
+- Include the `[GxPRequirement("PRD-SYS-xxx")]` attribute and `/// @req:PRD-SYS-XXX` doc comment.
 - Execute with sub-second fast test runner via `run_command`:
   ```bash
   dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
@@ -82,6 +85,7 @@ Agree on the public interface boundary before authoring tests:
 - Confirm the test fails for the expected reason (red).
 
 ### 3. Green: Minimal Implementation (MANDATORY TOOL: `replace_file_content`)
+
 - Use `replace_file_content` for surgical edits (never full-file overwrite) to write only enough production code to make the test pass.
 - Adhere strictly to Cadence conventions:
   - File-scoped namespaces (`namespace Cadence.<Service>.<Layer>;`).
@@ -94,6 +98,7 @@ Agree on the public interface boundary before authoring tests:
 - Confirm the test passes (green).
 
 ### 4. Refactor & Lint (MANDATORY TOOL: `run_command`)
+
 - Clean up the implementation without altering public behavior.
 - Format and auto-fix code styling:
   ```bash
@@ -101,9 +106,11 @@ Agree on the public interface boundary before authoring tests:
   ```
 
 ### 5. Compliance Sync (MANDATORY TOOL: `run_command`)
+
 When the slice is complete and all tests pass:
+
 ```bash
-dotnet cadence gxp sync
+pnpm cadence gxp sync
 ```
 
-
+It writes a preview to `TestResults/gxp/preview/` and nothing under `docs/SDLC`. Never commit the generated RTM or IQ/OQ/PQ report on a feature branch (ADR-2532).

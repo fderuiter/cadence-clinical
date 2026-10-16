@@ -11,7 +11,7 @@ What changes, why, and how. Link the issue this closes (for example `Closes #123
 - [ ] **Issue linked:** the body closes or references its issue (`Closes #123`).
 - [ ] **Kernel alignment:** new domain concepts follow `docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md`, or the PR says why they don't.
 - [ ] **ADR:** architectural decisions have an ADR (`pnpm cadence scaffold adr "<title>"`), indexed in `docs/adr/index.md`.
-- [ ] **Traceability:** tests for regulatory requirements carry `[GxPRequirement("PRD-SYS-xxx")]` and `@req:` tags, and the RTM is regenerated (`pnpm cadence gxp sync`) when they change.
+- [ ] **Traceability:** tests for regulatory requirements carry `[GxPRequirement("PRD-SYS-xxx")]` and `@req:` tags, `pnpm cadence gxp sync` passes when they change, and this PR does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` (ADR-2532).
 
 ### Code Quality
 

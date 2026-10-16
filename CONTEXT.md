@@ -245,7 +245,7 @@ _Avoid_: `WHERE tenant_id = …` as the only protection, schema-per-tenant `sear
 
 ### Two-Tier Regulatory Traceability Standard
 
-A 21 CFR Part 11 qualification lifecycle standard in `Cadence.Compliance.RtmGeneratorService` that classifies the 226 canonical requirements in `Requirements_Traceability_Matrix.md` into two formal verification tiers: `Qualified` (empirically validated by passing xUnit tests with `[GxPRequirement]` attributes) and `Planned` (formally scheduled for future sprint milestones, e.g. `[Status: Planned - Sprint 2/3]`), deprecating legacy Python `Trace-1..34` aliases and allowing `dotnet cadence gxp sync` to pass in strict mode.
+A 21 CFR Part 11 qualification lifecycle standard in `Cadence.Compliance.RtmGeneratorService` that classifies the 226 canonical requirements in `Requirements_Traceability_Matrix.md` into two formal verification tiers: `Qualified` (empirically validated by passing xUnit tests with `[GxPRequirement]` attributes) and `Planned` (formally scheduled for future sprint milestones, e.g. `[Status: Planned - Sprint 2/3]`), deprecating legacy Python `Trace-1..34` aliases and allowing `pnpm cadence gxp sync` to pass in strict mode.
 
 ### Universal Zero-Tolerance Clean Architecture Sentinel
 
@@ -294,7 +294,7 @@ A transactional concurrency control pattern implemented via `pg_advisory_xact_lo
 
 ### Native GxP Traceability Pipeline
 
-A continuous regulatory compliance engine that unifies requirement mapping under 21 CFR Part 11 across modern .NET 10 test assemblies (xUnit `[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments), ingesting Visual Studio TRX execution logs into a single deterministic Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`) via `dotnet cadence gxp sync`.
+A continuous regulatory compliance engine that unifies requirement mapping under 21 CFR Part 11 across modern .NET 10 test assemblies (xUnit `[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments), ingesting Visual Studio TRX execution logs into a single deterministic Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`). A feature branch validates with `pnpm cadence gxp sync`, which writes only a preview; the committed matrix is a snapshot that the integration owner takes with `pnpm cadence gxp snapshot` (ADR-2532).
 
 ### Unified Pre-Commit Sentinel Gate
 
@@ -919,8 +919,8 @@ _Avoid_: Single HTTP status code assertions without audit trail verification
 
 ### 100% GxP RTM Synchronization
 
-A continuous compliance assurance protocol that regenerates the Requirements Traceability Matrix and IQ/OQ/PQ report from test results and the requirement IDs tests declare (`[GxPRequirement]` or `@req:`), via `pnpm cadence gxp sync`. A requirement counts as qualified only when a test declaring it ran and passed ([docs/TESTING.md](docs/TESTING.md)).
-_Avoid_: Manual untracked Markdown table edits, partial requirement coverage
+A continuous compliance assurance protocol that generates the Requirements Traceability Matrix and IQ/OQ/PQ report from test results and the requirement IDs tests declare (`[GxPRequirement]` or `@req:`). `pnpm cadence gxp sync` validates a feature branch and writes a preview to `TestResults/gxp/preview/`; only the integration owner's `pnpm cadence gxp snapshot` writes the committed documents in `docs/SDLC` (ADR-2532). A requirement counts as qualified only when a test declaring it ran and passed ([docs/TESTING.md](docs/TESTING.md)).
+_Avoid_: Manual untracked Markdown table edits, partial requirement coverage, committing the generated RTM or IQ/OQ/PQ report on a feature branch, hand-resolving conflicts in them
 
 ### Model Tiering Matrix
 

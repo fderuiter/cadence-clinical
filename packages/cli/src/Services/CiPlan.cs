@@ -373,19 +373,33 @@ public static class CiPlan
             new("compliance", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
             new("compliance", "Generate Compliance Reports")
             {
-                InProcess = repoRoot => RtmGeneratorService.GenerateRtm(
-                    draft: false, validateOnly: false, reportPath: Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir), repoRoot: repoRoot,
-                    honorDraftEnvironment: false, evidence: RtmEvidenceContext.Capture(repoRoot, "pnpm cadence ci", SystemClock.Instance)),
-                InProcessDisplay = $"generate the RTM and IQ/OQ/PQ report from {RtmGeneratorService.DefaultResultsDir} (what 'gxp sync' does after its test run; nothing is staged)",
+                // A feature branch writes a preview and validates its tags and results; only snapshot mode writes
+                // docs/SDLC (ADR-2532). Unknown requirement IDs and failing tagged tests fail both.
+                InProcess = repoRoot =>
+                {
+                    bool snapshot = GxpSnapshotPolicy.IsSnapshotMode();
+                    string outputDir = snapshot ? "docs/SDLC" : GxpSnapshotPolicy.PreviewDir;
+                    string results = Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir);
+                    int generated = RtmGeneratorService.GenerateRtm(
+                        outputDir: outputDir, draft: false, validateOnly: false, reportPath: results, repoRoot: repoRoot,
+                        honorDraftEnvironment: false, evidence: RtmEvidenceContext.Capture(repoRoot, "pnpm cadence ci", SystemClock.Instance));
+                    return generated != 0
+                        ? generated
+                        : RtmGeneratorService.GenerateRtm(
+                            outputDir: outputDir, validateOnly: true, reportPath: results, repoRoot: repoRoot, honorDraftEnvironment: false,
+                            requireCurrentSnapshot: snapshot);
+                },
+                InProcessDisplay = $"generate the RTM and IQ/OQ/PQ report from {RtmGeneratorService.DefaultResultsDir} into {GxpSnapshotPolicy.PreviewDir} " +
+                    $"(docs/SDLC with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1) and validate tags and results; nothing is staged",
                 InProcessCiText = $"dotnet run --project {Cli} -- gxp sync",
             },
-            new("compliance", "Assert No Documentation Git Diff")
+            new("compliance", "Check GxP Snapshot Policy")
             {
-                // The evidence block (revision, time, database, runner) changes on every run, so the documents are
-                // compared without it. A match is put back to the committed copy so the run leaves no change behind.
-                InProcess = repoRoot => GxpDocsDiffService.Compare(repoRoot, restoreWhenEquivalent: true),
-                InProcessDisplay = "compare the regenerated RTM and IQ/OQ/PQ report with the committed copies, ignoring the evidence block",
-                InProcessCiText = $"dotnet run --project {Cli} -- gxp diff",
+                // A feature branch must not change the snapshot. In snapshot mode the regenerated documents are compared
+                // with the snapshot instead, ignoring the evidence block, and a match is put back to the staged copy.
+                InProcess = repoRoot => GxpSnapshotGuardService.Check(repoRoot, preCommit: false),
+                InProcessDisplay = $"refuse branch changes to the generated GxP snapshot ({GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1: compare the regenerated documents with it)",
+                InProcessCiText = $"dotnet run --project {Cli} -- check gxp-snapshot",
             },
         ])
         {

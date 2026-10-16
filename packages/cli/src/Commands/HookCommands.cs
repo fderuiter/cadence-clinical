@@ -80,15 +80,19 @@ public static class HookCommands
         return 0;
     }
 
-    /// <summary>Stop: refuses to finish while the traceability matrix is out of date with the requirement tags.</summary>
+    /// <summary>
+    /// Stop: refuses to finish while a test declares an unknown requirement ID or a generated document's integrity stamp
+    /// is broken. A feature branch's tags may differ from the committed snapshot (ADR-2532); only snapshot mode requires
+    /// the snapshot to be current.
+    /// </summary>
     public static int Stop(TextWriter error)
     {
-        if (RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true) == 0)
+        if (RtmGeneratorService.GenerateRtm(draft: true, validateOnly: true, requireCurrentSnapshot: GxpSnapshotPolicy.IsSnapshotMode()) == 0)
         {
             return 0;
         }
 
-        error.WriteLine("The traceability matrix does not match the requirement tags in tests/. Run `pnpm cadence gxp sync` before finishing.");
+        error.WriteLine("Requirement tags or the generated GxP documents are invalid (see above). Fix the tags, run `pnpm cadence gxp sync`, and never edit the generated documents.");
         return Blocked;
     }
 }

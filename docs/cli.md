@@ -20,22 +20,23 @@ pnpm cadence gxp sync --dry-run
 
 Some commands also have a `make` target. The Makefile publishes the CLI to `./bin/cadence` the first time and reuses that binary afterwards. Delete `./bin` to pick up CLI changes.
 
-| `make` target                            | Runs                                      |
-| ---------------------------------------- | ----------------------------------------- |
-| `make doctor`                            | `cadence doctor --auto-fix`               |
-| `make ports`                             | `cadence check-ports`                     |
-| `make dev`                               | `cadence dev`                             |
-| `make fix`                               | `cadence fix`                             |
-| `make check`                             | `cadence check`                           |
-| `make test`                              | `cadence test`                            |
-| `make verify`                            | `cadence check`, then `cadence test`      |
-| `make ci`                                | `cadence ci`                              |
-| `make sync-gxp`, `make gxp-sync`         | `cadence gxp sync`                        |
-| `make rtm`                               | `cadence gxp validate`                    |
-| `make adr TITLE="..."`                   | `cadence scaffold adr "<title>"`          |
-| `make db-reset`, `make db-reset-offline` | `cadence db reset`                        |
-| `make db-seed`                           | `cadence db seed` (not implemented yet)   |
-| `make db-status`                         | `cadence db status` (not implemented yet) |
+| `make` target                            | Runs                                          |
+| ---------------------------------------- | --------------------------------------------- |
+| `make doctor`                            | `cadence doctor --auto-fix`                   |
+| `make ports`                             | `cadence check-ports`                         |
+| `make dev`                               | `cadence dev`                                 |
+| `make fix`                               | `cadence fix`                                 |
+| `make check`                             | `cadence check`                               |
+| `make test`                              | `cadence test`                                |
+| `make verify`                            | `cadence check`, then `cadence test`          |
+| `make ci`                                | `cadence ci`                                  |
+| `make sync-gxp`, `make gxp-sync`         | `cadence gxp sync`                            |
+| `make rtm`                               | `cadence gxp validate`                        |
+| `make gxp-snapshot`                      | `CADENCE_GXP_SNAPSHOT=1 cadence gxp snapshot` |
+| `make adr TITLE="..."`                   | `cadence scaffold adr "<title>"`              |
+| `make db-reset`, `make db-reset-offline` | `cadence db reset`                            |
+| `make db-seed`                           | `cadence db seed` (not implemented yet)       |
+| `make db-status`                         | `cadence db status` (not implemented yet)     |
 
 `make wizard` runs `scripts/setup_wizard.sh` directly. That is the same script as `cadence wizard onboarding`.
 
@@ -73,17 +74,23 @@ pnpm cadence check <gate> <files>  # one gate, limited to these files
 pnpm cadence check --pre-commit    # what the pre-commit hook runs
 ```
 
-| Argument       | Description                                                                                                                                                                                                                             |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`       | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                        |
-| `[files]`      | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).                                                                                                               |
-| `--pre-commit` | Quick variants for the pre-commit hook: the two format gates are skipped (the hook formats the staged files itself), and the `openapi` gate checks `docs/api` against the committed specs instead of exporting specs from the services. |
+| Argument       | Description                                                                                                                                                                                                                                                                                                    |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`       | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                                                                                               |
+| `[files]`      | Files to check. Only some gates use them (duplication, sanitizer, markdown, security, deid, path-patterns, query-linter).                                                                                                                                                                                      |
+| `--pre-commit` | Quick variants for the pre-commit hook: the two format gates are skipped (the hook formats the staged files itself), the `openapi` gate checks `docs/api` against the committed specs instead of exporting specs from the services, and the `gxp-snapshot` gate checks the staged files instead of the branch. |
 
 With no gate, all 22 gates run in order. A failing gate does not stop the run. The command exits `1` if any gate failed.
 
 An unknown gate name prints an error and exits `1`. Extra alias accepted:
 
 - `prettier-check` always passes. It runs nothing.
+
+The `gxp-snapshot` gate (also `gxp-snapshot-guard`, ADR-2532) fails when the generated RTM, the IQ/OQ/PQ report or
+anything under `docs/SDLC/runs/` is changed: the staged files with `--pre-commit`, otherwise everything the branch changed
+since its merge base with `origin/main`, uncommitted changes included. With `CADENCE_GXP_SNAPSHOT=1` it admits them, and
+outside the pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed them restores `main`'s copy
+with `git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs`.
 
 The `deid` gate scans the given files, or every file git tracks, with the full de-identification detector
 (`packages/deid`). Tests, docs, scripts and generated folders are skipped. A line containing `deid-ignore` is skipped. Findings print as
@@ -145,9 +152,12 @@ Where it differs from CI:
 - **The docs build leaves the reports alone.** `pnpm docs:build` regenerates the RTM and IQ/OQ/PQ report as drafts;
   `cadence ci` puts back the committed copies of both after the step, pass or fail, so the compliance job compares its
   own regenerated reports with what is committed.
-- **The tests run once.** The .NET test step writes its TRX files to `TestResults/gxp`, and the compliance job builds
-  the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`, which would run every test again. Nothing is
-  staged; `Assert No Documentation Git Diff` (`cadence gxp diff`) then fails if the regenerated reports differ from the
+- **The tests run once.** The .NET test step writes its TRX files to `TestResults/gxp`, and the compliance job's
+  `Generate Compliance Reports` step builds the RTM and IQ/OQ/PQ report from them instead of running `gxp sync`, which
+  would run every test again. It writes them to `TestResults/gxp/preview/` (to `docs/SDLC` only with
+  `CADENCE_GXP_SNAPSHOT=1`), stages nothing, and fails on unknown requirement IDs and failing tagged tests.
+  `Check GxP Snapshot Policy` (`cadence check gxp-snapshot`) then fails if the branch changed the committed reports. With
+  `CADENCE_GXP_SNAPSHOT=1` it runs `cadence gxp diff` instead, which fails if the regenerated reports differ from the
   committed ones outside their evidence block, and puts the committed copies back when they match.
 - **Tools are not installed for you.** Hadolint, ShellCheck and detect-secrets run when they are on `PATH` and are
   reported as skipped, with the install command, when they are not.
@@ -217,31 +227,55 @@ These commands always exit `0`: `compliance-utility`, `clean-test-dbs` and `chec
 
 ### `cadence gxp`
 
-GxP compliance documents. `docs/SDLC/` must only be changed through these commands.
+GxP compliance documents. The RTM, the IQ/OQ/PQ report and `docs/SDLC/runs/` are a snapshot that only
+`cadence gxp snapshot` writes, run by the integration owner on the integrated candidate (ADR-2532). A feature branch
+validates with `cadence gxp sync` and never commits the snapshot; the `gxp-snapshot` gate of `cadence check` enforces
+this.
 
 #### `cadence gxp sync`
 
+Validates a feature branch. It writes and stages nothing under `docs/SDLC`.
+
 1. Runs `dotnet test Cadence.sln --no-restore --configuration Release`, writing one TRX file per test project and the
    database fixtures' environment records (`CADENCE_TEST_EVIDENCE_DIR`) into `TestResults/gxp/`.
-2. Regenerates `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` (see `generate-rtm`),
+2. Generates a preview of the RTM and IQ/OQ/PQ report (see `generate-rtm`) in `TestResults/gxp/preview/` (gitignored),
    with an evidence block naming the tested revision, the generation time, the database and the runner.
-3. Stops without staging if a test failed or a database test in the integration or E2E results did not execute.
-4. Otherwise stages those files and `docs/SDLC/runs` with `git add`.
+3. Fails if a test failed, a test declares an unknown requirement ID, a document's integrity stamp is broken, or a
+   database test in the integration or E2E results did not execute.
 
-| Option      | Description                                                                                                            |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `--dry-run` | Skips the tests, writes nothing and stages nothing. Fails if a mapped test failed in the existing `report_dotnet.trx`. |
-| `--commit`  | After staging, runs `git commit -m "docs(rtm): sync GxP compliance docs with current test state"`.                     |
+| Option      | Description                                                                                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run` | Runs no tests and writes nothing. Validates the requirement tags and integrity stamps, and with `CADENCE_GXP_SNAPSHOT=1` also that the committed RTM's test mapping matches the tags in `tests/`. |
+
+#### `cadence gxp snapshot`
+
+The integration owner's only command for writing the snapshot. Run it on the integrated candidate against PostgreSQL:
+`CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot`.
+
+1. Runs the tests as `cadence gxp sync` does.
+2. Regenerates `docs/SDLC/Requirements_Traceability_Matrix.md`, `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` and
+   `docs/SDLC/runs/`.
+3. Fails, without staging, on the same errors as `cadence gxp sync`, and also when the RTM's test mapping does not
+   match the tags in `tests/`.
+4. Otherwise stages those files with `git add`. Commit them with `CADENCE_GXP_SNAPSHOT=1` set, so the pre-commit
+   `gxp-snapshot` gate admits them.
+
+| Option     | Description                                                                                                                             |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `--commit` | After staging, runs `git commit -m "docs(rtm): take the GxP snapshot from the integrated candidate"` with `CADENCE_GXP_SNAPSHOT=1` set. |
 
 #### `cadence gxp validate`
 
-Same as `cadence gxp sync --dry-run`. It does not compare the checked-in documents with freshly generated ones.
+Same as `cadence gxp sync --dry-run`: no tests run and nothing is written. Unknown requirement IDs and broken integrity
+stamps fail it. It requires the committed RTM's test mapping to be current only with `CADENCE_GXP_SNAPSHOT=1`, and it
+does not compare the checked-in documents with freshly generated ones.
 
 #### `cadence gxp diff`
 
 Compares the RTM and IQ/OQ/PQ report in the working tree with the copies in the git index, leaving out the evidence
 block and the integrity stamp, which change on every run. Exits `1` and prints the differing lines when the results or
-the test mapping differ. CI's `Assert No Documentation Git Diff` step runs it after regenerating the reports.
+the test mapping differ. The `gxp-snapshot` gate runs it in snapshot mode (`CADENCE_GXP_SNAPSHOT=1`) outside the
+pre-commit hook, as CI's `Check GxP Snapshot Policy` step does after regenerating the reports.
 
 #### `cadence gxp verify`
 
@@ -322,12 +356,12 @@ Not implemented yet.
 
 Agent lifecycle hooks (PRD-SYS-053). `.agents/hooks.json` runs them from the published binary (`make build` writes `bin/cadence`). Each hook reads the runtime's JSON payload on standard input, exits `0` to allow the step, and exits `2` with the reason on standard error to block it. The banner is not printed.
 
-| Command                       | Phase           | What it does                                                                                                                                                                                                                                                            |
-| ----------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cadence hook pre-tool`       | `PreToolUse`    | Blocks `--no-verify`, force-pushing or deleting `main`/`master`, `git filter-branch`/`filter-repo`, `rm -rf` of `/`, `~` or the repository, `git clean -x`, and any write to the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/`. An unreadable payload is blocked. |
-| `cadence hook post-write`     | `PostToolUse`   | Runs the query-style lint on the edited `.cs` files and blocks on `== true`/`== false` comparisons.                                                                                                                                                                     |
-| `cadence hook pre-invocation` | `PreInvocation` | Prints the GxP working rules from `AGENTS.md`.                                                                                                                                                                                                                          |
-| `cadence hook stop`           | `Stop`          | Blocks finishing while the traceability matrix is out of date with the requirement tags; run `cadence gxp sync`.                                                                                                                                                        |
+| Command                       | Phase           | What it does                                                                                                                                                                                                                                                             |
+| ----------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cadence hook pre-tool`       | `PreToolUse`    | Blocks `--no-verify`, force-pushing or deleting `main`/`master`, `git filter-branch`/`filter-repo`, `rm -rf` of `/`, `~` or the repository, `git clean -x`, and any write to the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/`. An unreadable payload is blocked.  |
+| `cadence hook post-write`     | `PostToolUse`   | Runs the query-style lint on the edited `.cs` files and blocks on `== true`/`== false` comparisons.                                                                                                                                                                      |
+| `cadence hook pre-invocation` | `PreInvocation` | Prints the GxP working rules from `AGENTS.md`.                                                                                                                                                                                                                           |
+| `cadence hook stop`           | `Stop`          | Blocks finishing while a test declares an unknown requirement ID or a generated document's integrity stamp is broken; with `CADENCE_GXP_SNAPSHOT=1` also while the RTM's test mapping is out of date with the requirement tags. Fix the tags and run `cadence gxp sync`. |
 
 ### `cadence wizard`
 

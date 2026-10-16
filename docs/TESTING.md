@@ -40,13 +40,13 @@ Two opt-ins are checked in order, by every fixture below:
 
 Once either is set, a fixture that cannot reach or start the server fails its tests; it never turns them into skips.
 A run that skips database tests is not evidence: `cadence ci` fails when any test in `Cadence.IntegrationTests` or
-`Cadence.E2ETests` was skipped or did not execute (unless `--allow-skip` is given), and `gxp sync` refuses to stage
-documents from such a run. The only exemption is the opt-in lineage benchmark, named in
+`Cadence.E2ETests` was skipped or did not execute (unless `--allow-skip` is given), and `gxp sync` and `gxp snapshot`
+fail on such a run. The only exemption is the opt-in lineage benchmark, named in
 `DatabaseTestEvidence.OptInTests`.
 
 The kernel fixture checks that its application role is neither a superuser nor `BYPASSRLS` before any test runs, since
-a pass under such a role says nothing about Row-Level Security. When `CADENCE_TEST_EVIDENCE_DIR` is set (`gxp sync` and
-`cadence ci` set it to `TestResults/gxp`), it records the server version and source, the installed extensions, the latest
+a pass under such a role says nothing about Row-Level Security. When `CADENCE_TEST_EVIDENCE_DIR` is set (`gxp sync`,
+`gxp snapshot` and `cadence ci` set it to `TestResults/gxp`), it records the server version and source, the installed extensions, the latest
 kernel migration and the role's attributes in `kernel.database.txt`, which the RTM and IQ/OQ/PQ report print.
 
 Where Docker is not available, for example in a cloud agent session, a local server works:
@@ -194,7 +194,7 @@ Rules:
 - **Tags on a class do not count.** `@req:` in a class summary is documentation only. It never marks
   every test in the file as verifying that requirement.
 - **Use IDs that exist.** A test that declares an ID no requirement document defines fails
-  `dotnet cadence check` (the `rtm` gate), `dotnet cadence gxp validate`, and the
+  `pnpm cadence check` (the `rtm` gate), `pnpm cadence gxp validate`, and the
   `RepositoryTests_DeclareOnlyRequirementIdsThatExist` unit test. Add the requirement first, then tag the
   test.
 - **An alias and its parent qualify separately.** An `SRS-*` or `Trace-*` entry that points at a `PRD-*`
@@ -205,14 +205,31 @@ Rules:
 
 ## How the RTM decides a requirement's state
 
-`dotnet cadence gxp sync` runs `dotnet test Cadence.sln` and writes one TRX file per test project into
-`TestResults/gxp/` (gitignored). It then regenerates `docs/SDLC/Requirements_Traceability_Matrix.md`
-and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` from those results and stages them. If any test fails, the
-documents are still regenerated so the failures are visible, but nothing is staged and the command exits
-non-zero.
+`pnpm cadence gxp sync` runs `dotnet test Cadence.sln` and writes one TRX file per test project into
+`TestResults/gxp/` (gitignored). It then generates a preview of the RTM and the IQ/OQ/PQ report from those results
+in `TestResults/gxp/preview/` (also gitignored) and fails on unknown requirement IDs, failing tagged tests and
+skipped database tests. It writes and stages nothing under `docs/SDLC`. If any test fails, the preview is still
+generated so the failures are visible, and the command exits non-zero.
 
-Both documents cover requirement-tagged tests only, so adding an untagged test does not change them and parallel
-branches do not conflict on them (ADR-2287).
+`docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` are a snapshot of the
+integrated candidate, not something a feature branch commits (ADR-2532). Only the integration owner refreshes them,
+against PostgreSQL, with `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot`. That command runs the same tests and
+checks, writes both documents and `docs/SDLC/runs/`, stages them, and with `--commit` commits them with
+`CADENCE_GXP_SNAPSHOT=1` set.
+
+### The snapshot on a feature branch
+
+- Never commit the RTM, the IQ/OQ/PQ report or `docs/SDLC/runs/` on a feature branch, and never edit them or resolve
+  a conflict in them by hand.
+- On a merge or rebase conflict in them, take `main`'s copy and do not regenerate them on the branch:
+  `git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs`.
+  The same command restores them on a branch that already changed them.
+- The `gxp-snapshot` gate enforces this. The pre-commit hook runs it on the staged files, and `pnpm cadence check`
+  and CI run it on everything the branch changed since its merge base with `origin/main`. It admits the documents
+  only when `CADENCE_GXP_SNAPSHOT=1`; outside the pre-commit hook it then compares the regenerated documents with the
+  snapshot (`gxp diff`).
+- No custom merge driver or `merge=union` is used for them: GitHub ignores custom drivers, and union merges corrupt
+  Markdown tables.
 
 Tests are found by scanning `tests/` for `[Fact]` and `[Theory]` methods and matched to TRX results by
 their fully qualified name. Theory cases are merged: a single failing case fails the test.
@@ -236,10 +253,10 @@ of the RTM lists each alias with its own tests.
 
 Both documents open with an evidence block: the tested revision (`HEAD`, and whether the working tree had other
 changes), the generation time, the database the fixtures recorded and the runner. Commit the code first and then run
-`gxp sync`, so the recorded revision is exactly what was tested. CI's docs comparison (`cadence gxp diff`) leaves the
-evidence block and the integrity stamp out, since they change on every run. Without any TRX
-results, generation stops with an error unless you run `dotnet cadence generate-rtm --draft` or set
-`RTM_DRAFT=true`. A draft is marked **DRAFT ONLY** and every test shows as **UNVERIFIED**. `gxp sync` ignores
+`gxp snapshot`, so the recorded revision is exactly what was tested. The snapshot-mode docs comparison
+(`cadence gxp diff`) leaves the evidence block and the integrity stamp out, since they change on every run. Without any
+TRX results, generation stops with an error unless you run `pnpm cadence generate-rtm --draft` or set
+`RTM_DRAFT=true`. A draft is marked **DRAFT ONLY** and every test shows as **UNVERIFIED**. `gxp sync` and `gxp snapshot` ignore
 `RTM_DRAFT`, so a variable left set in a shell or CI job can't turn documents built from real results into
 drafts.
 
@@ -247,15 +264,18 @@ Set `RTM_STRICT_ALL=true` to make validation fail while any requirement is not q
 
 ### Keeping the RTM current
 
-`dotnet cadence check rtm` validates without running any tests. It fails when:
+`pnpm cadence check rtm` validates without running any tests, as do `pnpm cadence gxp validate` and the agent Stop
+hook. They fail when:
 
 - a test declares a requirement ID that no requirement document defines, or
-- the checked-in RTM lists different tests for a requirement than the tags in `tests/` declare. That happens
-  when a PR adds, removes or moves a tag without re-running `gxp sync`. The error names each test that is
-  missing from the RTM or no longer declares the requirement, or
-- the RTM or the IQ/OQ/PQ report no longer matches its integrity stamp, because it was edited by hand.
+- the RTM or the IQ/OQ/PQ report no longer matches its integrity stamp, because it was edited by hand, or
+- with `CADENCE_GXP_SNAPSHOT=1` only, the checked-in RTM lists different tests for a requirement than the tags in
+  `tests/` declare. The error names each test that is missing from the RTM or no longer declares the requirement.
 
-`gxp sync` ends both documents with an **integrity stamp**: the SHA-256 of the document body, marked as an
+On a feature branch the checked-in RTM is `main`'s snapshot, so a new or moved tag is expected to differ from it until
+the integration owner takes the next snapshot.
+
+`gxp snapshot` ends both documents (and `gxp sync` its preview) with an **integrity stamp**: the SHA-256 of the document body, marked as an
 unsigned working copy. It replaces the self-signed signature the documents used to carry, which came from a new
 throwaway key on every run and so changed the files every time. The same tests and results now give byte-identical
 documents, and CI's docs diff can pass. The stamp is not an electronic signature. A release copy of the validation
@@ -263,13 +283,13 @@ package is signed by a named person with `GxPSigner.SignGxpMarkdown` and their o
 does this yet.
 
 `check rtm` does not compare test results; only a full `gxp sync` produces those. The check is part of CI's static
-analysis job, not the pre-commit hook, because fixing it means running the whole suite. If you change a tag,
-run `gxp sync` before you open the PR.
+analysis job, not the pre-commit hook. If you change a tag, run `gxp sync` before you open the PR, and do not commit
+anything it generates.
 
 Run `gxp sync` with `CADENCE_TEST_POSTGRES` set, so the database-backed tests produce real results instead
 of skips:
 
 ```bash
 export CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres"
-dotnet cadence gxp sync
+pnpm cadence gxp sync
 ```
