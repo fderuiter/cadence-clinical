@@ -34,6 +34,11 @@ if command -v python3 >/dev/null 2>&1 && [ -f "scripts/check-action-pinning.py" 
 fi
 
 if command -v pnpm >/dev/null 2>&1; then
+    # A pnpm that cannot start is not a formatting failure (#5331).
+    if ! pnpm --version >/dev/null 2>&1; then
+        echo "::error:: pnpm is installed but cannot run. Run 'corepack enable' so pnpm follows the packageManager pin in package.json."
+        exit 1
+    fi
     mapfile -t staged_prettier < <(git diff --cached --name-only --diff-filter=ACMR -- '*.js' '*.jsx' '*.ts' '*.tsx' '*.vue' '*.json' '*.css' '*.md' '*.yaml' '*.yml')
     if [ "${#staged_prettier[@]}" -gt 0 ]; then
         if ! pnpm exec prettier --check "${staged_prettier[@]}"; then

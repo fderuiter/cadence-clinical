@@ -49,16 +49,19 @@ fi
 # Formatting
 if [[ -t 1 ]] && command -v tput >/dev/null 2>&1 && [[ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ]]; then
   BOLD=$(tput bold); DIM=$(tput dim); RESET=$(tput sgr0)
-  GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); CYAN=$(tput setaf 6)
+  GREEN=$(tput setaf 2); YELLOW=$(tput setaf 3); CYAN=$(tput setaf 6); RED=$(tput setaf 1)
 else
-  BOLD=""; DIM=""; RESET=""; GREEN=""; YELLOW=""; CYAN=""
+  BOLD=""; DIM=""; RESET=""; GREEN=""; YELLOW=""; CYAN=""; RED=""
 fi
 
 ok()   { printf '  %s[OK] %s%s\n' "$GREEN" "$1" "$RESET"; }
 info() { printf '  %s[INFO] %s%s\n' "$YELLOW" "$1" "$RESET"; }
 
 FAILED_STAGES=()
+BLOCKING_FAILURE=0
 warn_failed() { FAILED_STAGES+=("$1"); info "$1"; }
+# A failure that breaks every later command (for example pnpm): reported in red and makes the wizard exit non-zero.
+fail_blocking() { FAILED_STAGES+=("$1"); BLOCKING_FAILURE=1; printf '  %s[ERROR] %s%s\n' "$RED" "$1" "$RESET" >&2; }
 
 stage() {
   _STAGE_INDEX=$(( _STAGE_INDEX + 1 ))
@@ -122,13 +125,16 @@ else
     corepack enable >/dev/null 2>&1 || true
   fi
   if command -v pnpm >/dev/null 2>&1; then
-    if pnpm install --frozen-lockfile; then
-      ok "pnpm workspace dependencies installed."
+    # package.json pins pnpm with packageManager (#5331); corepack runs exactly that version.
+    if ! PNPM_VERSION=$(pnpm --version 2>/dev/null); then
+      fail_blocking "pnpm is on the PATH but crashes. Run 'corepack enable' so pnpm follows the packageManager pin in package.json."
+    elif pnpm install --frozen-lockfile; then
+      ok "pnpm ${PNPM_VERSION}: workspace dependencies installed."
     else
-      warn_failed "pnpm install failed — see output above. Continuing with remaining stages."
+      fail_blocking "pnpm install failed — see output above. Every 'pnpm cadence' command needs it."
     fi
   else
-    info "pnpm not found even after 'corepack enable'; install it manually (npm i -g pnpm)."
+    fail_blocking "pnpm not found even after 'corepack enable'; enable corepack (Node 22+) so pnpm follows the packageManager pin."
   fi
 fi
 
@@ -197,3 +203,5 @@ else
   done
   printf '%s%s================================================================================%s\n\n' "$BOLD" "$YELLOW" "$RESET"
 fi
+
+exit "$BLOCKING_FAILURE"

@@ -513,6 +513,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2515: Step-Up Tokens Are Single Use Across Instances and Restarts](adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md) | Current | - Status: Accepted |
 | [ADR-2516: Routes Are Denied Unless They Declare Who May Call Them](adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md) | Current | - Status: Accepted |
 | [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](adr/2026-10-15-every-mapped-test-is-mandatory-evidence.md) | Current | - Status: Accepted |
+| [ADR-2508: Pin pnpm and Node with packageManager and engines](adr/2026-10-16-pin-pnpm-and-node-with-packagemanager-and-engines.md) | Current | - Status: Accepted |
 ## Developing and running
 
 | Document | Status | What it is |

@@ -53,9 +53,10 @@ Checks the local environment. It reports:
 
 - the .NET SDK version (from `dotnet --version`)
 - whether `Directory.Packages.props` exists in the current directory
+- whether the pnpm on the `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
 - whether PostgreSQL answers on `127.0.0.1:5432`
 
-It always exits `0`.
+It exits `1` when pnpm is missing, crashes or differs from the pin, and `0` otherwise.
 
 | Option           | Description                                                                          |
 | ---------------- | ------------------------------------------------------------------------------------ |
