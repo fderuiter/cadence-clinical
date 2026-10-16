@@ -132,7 +132,9 @@ public class PortedPackagesUnitTests
     [Fact]
     public void Compliance_RtmGeneratorService_SyncsInProcessWithoutPython()
     {
-        int exitCode = RtmGeneratorService.GenerateRtm(outputDir: "docs/SDLC", reportPath: "TestResults/no-such-report", draft: true, validateOnly: true);
+        // Branch validation: a branch that adds tagged tests is not expected to carry a refreshed snapshot (ADR-2532).
+        int exitCode = RtmGeneratorService.GenerateRtm(
+            outputDir: "docs/SDLC", reportPath: "TestResults/no-such-report", draft: true, validateOnly: true, requireCurrentSnapshot: false);
         exitCode.Should().Be(0);
     }
 
