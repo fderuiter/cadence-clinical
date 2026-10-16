@@ -48,7 +48,8 @@ service ever filled in assigned studies, so the check could not deny anyone.
 
 - **Overview:**
   - The fallback policy requires an authenticated gateway caller **and** an `UndeclaredEndpointRequirement` that never
-    succeeds. An undeclared route answers `401` to an unsigned caller and `403` to every signed one.
+    succeeds. An undeclared route answers `401` to an unsigned caller and `403` to every signed one. A path that matches no
+    route reaches no operation, so it still answers `404` once the caller is authenticated.
   - A route declares one of:
     - `RequirePermission("resource:action")`: the caller's signed roles hold the permission in `PermissionMatrix`.
       `PermissionPolicyProvider` refuses a permission that no role holds, so a typo fails at startup or first use.
@@ -97,7 +98,8 @@ service ever filled in assigned studies, so the check could not deny anyone.
   - Role permissions remain role-based until #4781; row-level rules that depend on the request (for example a subject's
     site) stay in application code.
   - Every identity provider configuration must issue `study_ids` for users of study-scoped routes. The local realm
-    (`docker/cadence-realm.json`) maps the attribute and gives demo users `*`.
+    (`docker/cadence-realm.json`) maps the attribute and gives demo users `*`, and gives the site-scoped demo users
+    (`crc.site101`, `cra.monitor`) the site `SITE-101`.
   - Execution adds two roles that only a non-person caller or a committee member holds: `etmf_service` (the eTMF
     service account posting site completeness to `POST /api/v1/execution/webhooks/etmf`) and `cec_chair` (the
     clinical endpoint committee chair who signs final adjudications). The identity provider must issue them; the

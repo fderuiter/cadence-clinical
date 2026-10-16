@@ -24,6 +24,8 @@ Knowledge base scaffold. It holds the article, article version, category, contex
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
+Training reads need `training_log:read` and are narrowed to the caller's studies; rolling a curriculum out needs `training_curriculum:assign` (sysadmin, sponsor data management) and a study the caller is assigned to; the delegation log needs `delegation_log:read`, and its sign-off refuses records outside the signer's studies. The assigning actor is the signed caller (`PermissionMatrix.Knowledge.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+
 ## Persistence
 
 `AddCadencePostgresDbContext<KnowledgeDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `knowledge` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.

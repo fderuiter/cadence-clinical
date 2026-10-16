@@ -38,6 +38,13 @@ signatures and audit digests shared by every Cadence service.
   `RequirePermission("resource:action")` on a route requires that permission in `PermissionMatrix`; the
   `PermissionPolicyProvider` registered by `AddCadenceSecurity()` builds the policy and a caller without it
   gets `403` ([ADR-2510](../../docs/adr/2026-09-30-endpoint-permissions-from-the-permission-matrix.md)).
+  Routes are denied by default: the fallback policy refuses any route that declares neither a permission,
+  `RequireSignedInCaller(reason)` (any signed caller, with the reason kept on the endpoint) nor `AllowAnonymous()`.
+  Module permissions live in `PermissionMatrix.<Module>.cs`, and a permission no role holds is refused.
+  `RequireStudyScope(routeParameter)` and `RequireSiteScope(routeParameter)` admit a caller only for the study or
+  site the route names; study assignments arrive signed in `X-Study-Ids` from the sign-in token's `study_ids` claim.
+  Handlers check scope the route cannot name (a body field, a stored record, a list) through `CallerScope`, which
+  fails closed ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
   used by `Cadence.Deid` for redaction manifests and de-identification certificates.

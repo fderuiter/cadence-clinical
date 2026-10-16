@@ -197,7 +197,11 @@
         }
       ],
       "realmRoles": ["Site Investigator"],
-      "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
+      "attributes": {
+        "tenant_id": ["cadence-local"],
+        "study_ids": ["*"],
+        "site_id": ["SITE-101"]
+      }
     },
     {
       "username": "cra.monitor",
@@ -213,7 +217,11 @@
         }
       ],
       "realmRoles": ["CRA", "Monitor", "Sponsor Admin"],
-      "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
+      "attributes": {
+        "tenant_id": ["cadence-local"],
+        "study_ids": ["*"],
+        "site_id": ["SITE-101"]
+      }
     },
     {
       "username": "dm.lead",

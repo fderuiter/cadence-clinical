@@ -135,6 +135,10 @@ after a grant permits, and a denial names what to obtain, or what to renew and w
 A **work queue** is a versioned definition keyed by one capability, never a role name. A person's queue holds
 the items a registered source reports as due that the evaluator permits them to act on now, so it follows their
 grants and delegations. Read without a scope, it is the portfolio queue across the tenant's studies (ADR-2486).
+Until the kernel's grants decide every module's routes (#4781), a module route names a **route permission**
+(`resource:action` in the permission matrix) and a route that declares none is denied. A caller's **study
+assignments** are the study ids the sign-in token names in `study_ids` (`*` for all), signed by the gateway; study
+scope admits only those studies and fails closed when there are none (ADR-2516).
 _Avoid_: role strings as authority, delegation tables separate from grants, queues per role
 
 ### AutomationAgent and Proposal

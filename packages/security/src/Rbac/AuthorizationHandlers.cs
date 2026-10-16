@@ -108,6 +108,13 @@ public sealed class UndeclaredEndpointAuthorizationHandler : AuthorizationHandle
 {
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, UndeclaredEndpointRequirement requirement)
     {
+        // A request that matched no route reaches no operation; after authentication it gets the routing 404.
+        if (context.Resource is HttpContext { } httpContext && httpContext.GetEndpoint() is null)
+        {
+            context.Succeed(requirement);
+            return Task.CompletedTask;
+        }
+
         context.Fail(new AuthorizationFailureReason(this, "The endpoint declares no authorization, so it is denied by default (ADR-2516)."));
         return Task.CompletedTask;
     }

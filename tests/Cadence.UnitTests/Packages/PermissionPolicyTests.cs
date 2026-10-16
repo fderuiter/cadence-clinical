@@ -119,6 +119,20 @@ public sealed class PermissionPolicyTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    /// <summary>A path that matches no route still answers 404 to a signed caller and 401 to an unsigned one.</summary>
+    [Fact]
+    public async Task PathsThatMatchNoRoute_AnswerNotFoundOnlyAfterAuthentication()
+    {
+        using var signed = Client("sysadmin");
+        using var unsigned = _app!.GetTestClient();
+
+        var signedResponse = await signed.GetAsync("/no-such-route", Ct);
+        var unsignedResponse = await unsigned.GetAsync("/no-such-route", Ct);
+
+        signedResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        unsignedResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     [Fact]
     public async Task RequireSignedInCaller_AdmitsAnySignedCaller()
     {

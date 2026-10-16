@@ -24,6 +24,8 @@ Medical imaging scaffold. It holds the imaging study/series/instance envelope, d
 
 `Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route not marked anonymous requires the gateway-signed caller identity. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
 
+Uploads need `imaging_study:upload` and a `studyId` the caller is assigned to; reads need `imaging_study:read` and answer `404` outside the caller's studies. Adjudication needs `imaging_adjudication:submit`, `read` or `adjudicate` (the medical monitor chairs). The certificate operator and the chair's signature are the signed caller; the `X-Operator-Identity` header and a body `SignerId` are no longer accepted (`PermissionMatrix.Imaging.cs`) ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).
+
 ## Persistence
 
 `AddCadencePostgresDbContext<ImagingDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `imaging` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
