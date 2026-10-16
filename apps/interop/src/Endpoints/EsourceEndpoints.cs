@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -37,72 +39,98 @@ public static class EsourceEndpoints
         // Hospital EHR Endpoint Configuration
         group.MapGet("/endpoints", ListEhrEndpointsAsync)
             .WithName("ListEhrEndpoints")
+            .RequirePermission("esource_endpoint:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrEndpointListResponse>(StatusCodes.Status200OK);
 
         group.MapPost("/endpoints", RegisterEhrEndpointAsync)
             .WithName("RegisterEhrEndpoint")
+            .RequirePermission("esource_endpoint:configure")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrEndpointRecord>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         // SMART Backend Services Assertion Endpoints
         group.MapPost("/smart/assertion", GenerateClientAssertionAsync)
             .WithName("GenerateClientAssertion")
+            .RequirePermission("esource_endpoint:configure")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<SmartAssertionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapPost("/smart/verify", VerifyClientAssertionAsync)
             .WithName("VerifyClientAssertion")
+            .RequirePermission("esource_endpoint:configure")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<SmartVerifyResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         // Polling & Ingestion
         group.MapPost("/poll", PollHospitalEhrAsync)
             .WithName("PollHospitalEhr")
+            .RequirePermission("esource_candidate:ingest")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrPollResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapPost("/ingest", IngestFhirBundleAsync)
             .WithName("IngestFhirBundle")
+            .RequirePermission("esource_candidate:ingest")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<FhirBundleIngestResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         // Candidates for Drawer
         group.MapGet("/candidates", ListCandidatesAsync)
             .WithName("ListCandidates")
+            .RequirePermission("esource_candidate:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrCandidateListResponse>(StatusCodes.Status200OK);
 
         group.MapGet("/candidates/{candidate_id}", GetCandidateByIdAsync)
             .WithName("GetCandidate")
+            .RequirePermission("esource_candidate:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrCandidateItemDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         // Reconciliation 1-Click Actions
         group.MapPost("/reconcile/accept", AcceptCandidateAsync)
             .WithName("AcceptCandidate")
+            .RequirePermission("esource_candidate:reconcile")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapPost("/reconcile/batch-accept", BatchAcceptCandidatesAsync)
             .WithName("BatchAcceptCandidates")
+            .RequirePermission("esource_candidate:reconcile")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapPost("/reconcile/reject", RejectCandidateAsync)
             .WithName("RejectCandidate")
+            .RequirePermission("esource_candidate:reconcile")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapPost("/reconcile/batch-reject", BatchRejectCandidatesAsync)
             .WithName("BatchRejectCandidates")
+            .RequirePermission("esource_candidate:reconcile")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
         group.MapPost("/reconcile/query", RaiseClinicalQueryAsync)
             .WithName("RaiseClinicalQuery")
+            .RequirePermission("esource_candidate:query")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status400BadRequest);
@@ -110,6 +138,8 @@ public static class EsourceEndpoints
         // Provenance & Audit Trail
         group.MapGet("/provenance/{candidate_id}", GetProvenanceAuditAsync)
             .WithName("GetProvenanceAudit")
+            .RequirePermission("esource_candidate:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrProvenanceResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
@@ -271,6 +301,11 @@ public static class EsourceEndpoints
             return Results.Problem("StudyId and SubjectId are required for polling.", statusCode: StatusCodes.Status400BadRequest);
         }
 
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        {
+            return OutsideStudy();
+        }
+
         var endpoint = await db.EhrEndpointRecords.FirstOrDefaultAsync(e => e.Id == request.EndpointId, ct).ConfigureAwait(false);
         if (endpoint != null)
         {
@@ -316,11 +351,17 @@ public static class EsourceEndpoints
         FhirBundleIngestRequest request,
         InteropDbContext db,
         IClock clock,
+        HttpContext httpContext,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.StudyId) || string.IsNullOrWhiteSpace(request.SubjectId))
         {
             return Results.Problem("StudyId and SubjectId are required.", statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        {
+            return OutsideStudy();
         }
 
         var candidates = SeedDefaultCandidates(request.StudyId, request.SiteId ?? "SITE-01", request.SubjectId, request.EhrSystemId ?? "EHR-HOSPITAL-IMPORT", clock.UtcNow);
@@ -355,9 +396,10 @@ public static class EsourceEndpoints
         int limit,
         InteropDbContext db,
         IClock clock,
+        HttpContext httpContext,
         CancellationToken ct)
     {
-        var query = db.EhrReconciliationCandidateRecords.AsNoTracking();
+        var query = InCallerStudies(db.EhrReconciliationCandidateRecords.AsNoTracking(), httpContext);
 
         if (!string.IsNullOrWhiteSpace(study_id))
         {
@@ -390,9 +432,9 @@ public static class EsourceEndpoints
             .ConfigureAwait(false);
 
         // If no records in database yet for this query, seed sample candidate data so drawer works seamlessly
-        if (total == 0)
+        var seedStudy = study_id ?? "STUDY-101";
+        if (total == 0 && CallerScope.CanAccessStudy(httpContext, seedStudy))
         {
-            var seedStudy = study_id ?? "STUDY-101";
             var seedSite = site_id ?? "SITE-01";
             var seedSubject = subject_id ?? "PAT-001";
             var seeded = SeedDefaultCandidates(seedStudy, seedSite, seedSubject, "EPIC-HEALTH-SYSTEM", clock.UtcNow);
@@ -413,10 +455,11 @@ public static class EsourceEndpoints
     public static async Task<IResult> GetCandidateByIdAsync(
         string candidate_id,
         InteropDbContext db,
+        HttpContext httpContext,
         CancellationToken ct)
     {
         var item = await db.EhrReconciliationCandidateRecords.AsNoTracking().FirstOrDefaultAsync(c => c.Id == candidate_id, ct).ConfigureAwait(false);
-        if (item == null)
+        if (item == null || !CallerScope.CanAccessStudy(httpContext, item.StudyId))
         {
             return Results.Problem($"Candidate record '{candidate_id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
@@ -439,6 +482,11 @@ public static class EsourceEndpoints
         if (item == null)
         {
             return Results.Problem($"Candidate record '{request.CandidateId}' not found.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (!CallerScope.CanAccessStudy(httpContext, item.StudyId))
+        {
+            return OutsideStudy();
         }
 
         var callerUser = GetCallerUser(httpContext);
@@ -504,6 +552,11 @@ public static class EsourceEndpoints
         if (item == null)
         {
             return Results.Problem($"Candidate record '{request.CandidateId}' not found.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (!CallerScope.CanAccessStudy(httpContext, item.StudyId))
+        {
+            return OutsideStudy();
         }
 
         var callerUser = GetCallerUser(httpContext);
@@ -584,6 +637,15 @@ public static class EsourceEndpoints
                     await transaction.RollbackAsync(ct).ConfigureAwait(false);
                 }
                 return Results.Problem($"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}", statusCode: StatusCodes.Status404NotFound);
+            }
+
+            if (items.Exists(i => !CallerScope.CanAccessStudy(httpContext, i.StudyId)))
+            {
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
+                }
+                return OutsideStudy();
             }
 
             var callerUser = GetCallerUser(httpContext);
@@ -693,6 +755,15 @@ public static class EsourceEndpoints
                 return Results.Problem($"Batch operation aborted. Candidate record(s) not found: {string.Join(", ", missingIds)}", statusCode: StatusCodes.Status404NotFound);
             }
 
+            if (items.Exists(i => !CallerScope.CanAccessStudy(httpContext, i.StudyId)))
+            {
+                if (transaction != null)
+                {
+                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
+                }
+                return OutsideStudy();
+            }
+
             var callerUser = GetCallerUser(httpContext);
             var callerRole = GetCallerRole(httpContext);
             var now = clock.UtcNow;
@@ -773,6 +844,11 @@ public static class EsourceEndpoints
             return Results.Problem($"Candidate record '{request.CandidateId}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
 
+        if (!CallerScope.CanAccessStudy(httpContext, item.StudyId))
+        {
+            return OutsideStudy();
+        }
+
         var callerUser = GetCallerUser(httpContext);
         var callerRole = GetCallerRole(httpContext);
         var now = clock.UtcNow;
@@ -822,10 +898,11 @@ public static class EsourceEndpoints
     public static async Task<IResult> GetProvenanceAuditAsync(
         string candidate_id,
         InteropDbContext db,
+        HttpContext httpContext,
         CancellationToken ct)
     {
         var item = await db.EhrReconciliationCandidateRecords.AsNoTracking().FirstOrDefaultAsync(c => c.Id == candidate_id, ct).ConfigureAwait(false);
-        if (item == null)
+        if (item == null || !CallerScope.CanAccessStudy(httpContext, item.StudyId))
         {
             return Results.Problem($"Candidate record '{candidate_id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
@@ -929,17 +1006,24 @@ public static class EsourceEndpoints
         }
     }
 
-    private static string GetCallerUser(HttpContext httpContext)
-    {
-        return httpContext.User?.Identity?.Name
-            ?? httpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? "CRC Coordinator";
-    }
+    // The signed caller (ADR-2516); the permission policy has already refused any request without one.
+    private static string GetCallerUser(HttpContext httpContext) =>
+        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted eSource request has no signed caller.");
 
-    private static string GetCallerRole(HttpContext httpContext)
+    private static string GetCallerRole(HttpContext httpContext) => CallerScope.Roles(httpContext);
+
+    private static IResult OutsideStudy() =>
+        Results.Problem(
+            title: "Outside your studies",
+            detail: "You are not assigned to this study.",
+            statusCode: StatusCodes.Status403Forbidden);
+
+    private static IQueryable<EhrReconciliationCandidateRecord> InCallerStudies(
+        IQueryable<EhrReconciliationCandidateRecord> candidates,
+        HttpContext httpContext)
     {
-        return httpContext.User?.FindFirst(ClaimTypes.Role)?.Value
-            ?? "Clinical Research Coordinator";
+        var studies = CallerScope.StudyFilter(httpContext);
+        return studies == null ? candidates : candidates.Where(c => studies.Contains(c.StudyId));
     }
 
     private static List<EhrReconciliationCandidateRecord> SeedDefaultCandidates(string studyId, string siteId, string subjectId, string ehrSys, DateTimeOffset now)

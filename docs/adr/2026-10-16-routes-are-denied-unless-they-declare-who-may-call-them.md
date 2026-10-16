@@ -65,6 +65,12 @@ service ever filled in assigned studies, so the check could not deny anyone.
     no assignment is a denial. The gateway signs the caller's assignments as `X-Study-Ids` from the sign-in token's
     `study_ids` claim, inside the same HMAC as the rest of the identity, so a client cannot add one.
   - `RequireSiteScope(routeParameter)` applies `SiteAccessEvaluator` to the site a route names, the same way.
+  - **Scope the route cannot name is checked in the handler.** When the study is in a body, a query or a stored
+    record, or a list must be narrowed, the handler asks `CallerScope` (`packages/security/src/Rbac/CallerScope.cs`),
+    which reads the same signed principal. A write outside the caller's studies returns `403` and writes nothing; a
+    read of one record outside them returns `404`; a list returns only the caller's studies. The actor on an audit
+    record, certificate or signature is the signed caller, never a body field, an unsigned header or a literal role
+    name.
   - Scope narrows a permission and never replaces one: a route with only a scope policy fails the route test.
 - **Pros:**
   - ✅ No route is open by omission, from the first commit.
@@ -97,7 +103,7 @@ service ever filled in assigned studies, so the check could not deny anyone.
 
 - **Affected code:**
   - `packages/security/src/DependencyInjection/CadenceSecurityServiceCollectionExtensions.cs`
-  - `packages/security/src/Rbac/AuthorizationHandlers.cs`, `EndpointAuthorizationMetadata.cs`,
+  - `packages/security/src/Rbac/AuthorizationHandlers.cs`, `EndpointAuthorizationMetadata.cs`, `CallerScope.cs`,
     `StudyAccessEvaluator.cs`, `PermissionMatrix*.cs`, `PermissionPolicyProvider.cs`
   - `packages/security/src/Authentication/GatewayIdentity.cs`, `GatewayAuthenticationHandler.cs`, `HmacSigner.cs`
   - `apps/gateway/src/GatewayIdentityForwarding.cs`, `docker/cadence-realm.json`

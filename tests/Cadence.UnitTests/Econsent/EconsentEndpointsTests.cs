@@ -10,6 +10,7 @@ using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Contracts;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 
@@ -133,7 +134,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: SystemClock.Instance.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ValidationProblem>();
         var valProblem = (ValidationProblem)result;
@@ -166,7 +167,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: SystemClock.Instance.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 2, request, context, TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-001", 2, request, context, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<CaptureConsentResponse>>();
 
@@ -203,7 +204,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: SystemClock.Instance.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, context, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<CaptureConsentResponse>>();
         var okResult = (Ok<CaptureConsentResponse>)result;
@@ -235,7 +236,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Channels: new[] { "SMS", "Mobile Push", "Email" });
 
         var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
-            "tpl-reconsent-01", 1, request, context, publishEndpoint, TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-reconsent-01", 1, request, context, publishEndpoint, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<PublishTemplateResponse>>();
         var okResult = (Ok<PublishTemplateResponse>)result;
@@ -274,7 +275,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Channels: null);
 
         var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
-            "tpl-minor-01", 1, request, context, publishEndpoint, TimeProvider.System, TestContext.Current.CancellationToken);
+            "tpl-minor-01", 1, request, context, publishEndpoint, Caller(), TimeProvider.System, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<PublishTemplateResponse>>();
         var okResult = (Ok<PublishTemplateResponse>)result;
@@ -288,6 +289,50 @@ public sealed class EconsentEndpointsTests : IDisposable
         await publishEndpoint.DidNotReceive().Publish(
             Arg.Any<EconsentReconsentRequired>(),
             Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>A consent captured for a study the caller is not assigned to is refused and stores nothing (#5361).</summary>
+    [Fact]
+    public async Task ProcessCaptureConsentAsync_ForAStudyOutsideTheCallersStudies_IsRefusedAndStoresNothing()
+    {
+        using var context = CreateContext();
+        var request = new CaptureConsentRequest(
+            "SUBJ-1", "STUDY-1", "SITE-1", "Signer", null, "Subject", "I agree", null, "v1.0", "digest123", "sigdata123", null);
+
+        var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
+            "tpl-001", 1, request, context, Caller("STUDY-2"), TimeProvider.System, TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        (await context.SubjectConsents.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        (await context.ConsentSignatures.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    /// <summary>Publishing a template of a study the caller is not assigned to is refused and announces nothing (#5361).</summary>
+    [Fact]
+    public async Task ProcessPublishTemplateAsync_ForAStudyOutsideTheCallersStudies_IsRefusedAndPublishesNothing()
+    {
+        using var context = CreateContext();
+        var publishEndpoint = Substitute.For<IPublishEndpoint>();
+        var request = new PublishTemplateRequest("STUDY-101", "v2.0", "Change", "Amendment", true, null);
+
+        var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
+            "tpl-outside", 1, request, context, publishEndpoint, Caller("STUDY-2"), TimeProvider.System, TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        (await context.ConsentTemplates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        await publishEndpoint.DidNotReceiveWithAnyArgs().Publish(default(EconsentReconsentRequired)!, TestContext.Current.CancellationToken);
+    }
+
+    private static DefaultHttpContext Caller(params string[] studies)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "crc-1",
+            Roles = ["crc"],
+            AssignedStudies = studies.Length == 0 ? ["*"] : studies,
+        };
+        return httpContext;
     }
 
     private EconsentDbContext CreateContext() =>

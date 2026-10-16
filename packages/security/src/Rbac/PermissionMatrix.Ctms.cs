@@ -8,7 +8,7 @@ public static partial class PermissionMatrix
         // Site start-up greenlight: sponsor operations certify a site ready to screen; monitors and site staff read it.
         foreach (string role in new[] { RoleNormalization.ROLE_SYSADMIN, RoleNormalization.ROLE_SPONSOR_DM })
         {
-            Grant(role, "ctms_site_greenlight", "read", "certify");
+            Grant(role, "ctms_greenlight", "read", "certify");
         }
 
         foreach (string role in new[]
@@ -17,7 +17,7 @@ public static partial class PermissionMatrix
             RoleNormalization.ROLE_AUDITOR_CANONICAL,
         })
         {
-            Grant(role, "ctms_site_greenlight", "read");
+            Grant(role, "ctms_greenlight", "read");
         }
     }
 }

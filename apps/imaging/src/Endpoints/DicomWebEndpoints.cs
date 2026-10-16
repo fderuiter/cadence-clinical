@@ -9,6 +9,8 @@ using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Apps.Imaging.Services;
 using Cadence.Deid;
+using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -26,12 +28,16 @@ public static class DicomWebEndpoints
 
         group.MapPost("/studies", StoreInstancesAsync)
             .WithName("StowRsStoreInstances")
+            .RequirePermission("imaging_study:upload")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<IngestionResult>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .DisableAntiforgery();
 
         group.MapPost("/studies/batch", StoreBatchInstancesAsync)
             .WithName("BatchIngestStudyFolder")
+            .RequirePermission("imaging_study:upload")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<BatchIngestionResult>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
@@ -39,21 +45,37 @@ public static class DicomWebEndpoints
 
         group.MapGet("/studies/{studyUid}", GetStudyByUidAsync)
             .WithName("WadoRsGetStudy")
+            .RequirePermission("imaging_study:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<ImagingStudyEnvelope>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/studies/{studyUid}/series/{seriesUid}/instances/{instanceUid}/frames/{frameList}", GetInstanceFramesAsync)
             .WithName("WadoRsGetInstanceFrames")
+            .RequirePermission("imaging_study:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/certificates/{certificateId}", GetCertificateByIdAsync)
             .WithName("GetDeidCertificate")
+            .RequirePermission("imaging_study:read")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<CertificateResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         return routes;
     }
+
+    // The operator recorded on a de-identification certificate is the signed caller, never a request header (ADR-2516).
+    private static string OperatorIdentity(HttpContext httpContext) =>
+        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted imaging upload has no signed caller.");
+
+    private static IResult OutsideStudy() =>
+        TypedResults.Problem(
+            title: "Outside your studies",
+            detail: "You are not assigned to this study.",
+            statusCode: StatusCodes.Status403Forbidden);
 
     public static async Task<IResult> StoreInstancesAsync(
         HttpRequest request,
@@ -63,7 +85,6 @@ public static class DicomWebEndpoints
         string subjectId = request.Query["subjectId"].ToString();
         string siteId = request.Query["siteId"].ToString();
         string studyId = request.Query["studyId"].ToString();
-        string operatorIdentity = request.Headers["X-Operator-Identity"].ToString();
 
         byte[] payloadBytes;
 
@@ -86,6 +107,11 @@ public static class DicomWebEndpoints
             return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Request payload cannot be empty." });
         }
 
+        if (!CallerScope.CanAccessStudy(request.HttpContext, studyId))
+        {
+            return OutsideStudy();
+        }
+
         try
         {
             var result = await ingestionService.IngestInstanceAsync(
@@ -93,7 +119,7 @@ public static class DicomWebEndpoints
                 subjectId: subjectId,
                 siteId: siteId,
                 studyId: studyId,
-                operatorIdentity: string.IsNullOrWhiteSpace(operatorIdentity) ? "cadence.imaging.pipeline" : operatorIdentity,
+                operatorIdentity: OperatorIdentity(request.HttpContext),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
@@ -121,7 +147,6 @@ public static class DicomWebEndpoints
         string siteId = request.Query["siteId"].ToString();
         string studyId = request.Query["studyId"].ToString();
         string timepointName = request.Query["timepointName"].ToString();
-        string operatorIdentity = request.Headers["X-Operator-Identity"].ToString();
 
         var batchFiles = new System.Collections.Generic.List<BatchFileItem>();
 
@@ -169,13 +194,18 @@ public static class DicomWebEndpoints
             return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Batch payload cannot be empty." });
         }
 
+        if (!CallerScope.CanAccessStudy(request.HttpContext, studyId))
+        {
+            return OutsideStudy();
+        }
+
         var batchRequest = new BatchIngestionRequest(
             Files: batchFiles,
             SubjectId: subjectId,
             SiteId: siteId,
             StudyId: studyId,
             TimepointName: timepointName,
-            OperatorIdentity: string.IsNullOrWhiteSpace(operatorIdentity) ? "cadence.imaging.pipeline" : operatorIdentity);
+            OperatorIdentity: OperatorIdentity(request.HttpContext));
 
         try
         {
@@ -191,13 +221,14 @@ public static class DicomWebEndpoints
     private static async Task<IResult> GetStudyByUidAsync(
         string studyUid,
         ImagingDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var study = await dbContext.ImagingStudyEnvelopes
             .FirstOrDefaultAsync(s => s.StudyInstanceUid == studyUid || s.Id == studyUid, cancellationToken)
             .ConfigureAwait(false);
 
-        if (study == null)
+        if (study == null || !CallerScope.CanAccessStudy(httpContext, study.StudyId))
         {
             return TypedResults.NotFound(new { code = "STUDY_NOT_FOUND", message = $"Study '{studyUid}' not found." });
         }
@@ -211,6 +242,7 @@ public static class DicomWebEndpoints
         string instanceUid,
         string frameList,
         ImagingDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         _ = studyUid;
@@ -221,7 +253,16 @@ public static class DicomWebEndpoints
             .FirstOrDefaultAsync(i => i.SopInstanceUid == instanceUid || i.Id == instanceUid, cancellationToken)
             .ConfigureAwait(false);
 
-        if (instance == null)
+        string? clinicalStudyId = instance == null
+            ? null
+            : await (from series in dbContext.ImagingSeriesEnvelopes
+                     join study in dbContext.ImagingStudyEnvelopes on series.StudyEnvelopeId equals study.Id
+                     where series.Id == instance.SeriesEnvelopeId
+                     select study.StudyId)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+        if (instance == null || !CallerScope.CanAccessStudy(httpContext, clinicalStudyId))
         {
             return TypedResults.NotFound(new { code = "INSTANCE_NOT_FOUND", message = $"Instance '{instanceUid}' not found." });
         }
@@ -235,13 +276,14 @@ public static class DicomWebEndpoints
     private static async Task<IResult> GetCertificateByIdAsync(
         string certificateId,
         ImagingDbContext dbContext,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var cert = await dbContext.DeidentificationCertificates
             .FirstOrDefaultAsync(c => c.Id == certificateId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (cert == null)
+        if (cert == null || !CallerScope.CanAccessStudy(httpContext, cert.StudyId))
         {
             return TypedResults.NotFound(new { code = "CERTIFICATE_NOT_FOUND", message = $"Certificate '{certificateId}' not found." });
         }

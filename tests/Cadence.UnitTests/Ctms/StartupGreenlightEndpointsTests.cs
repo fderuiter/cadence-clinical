@@ -9,11 +9,14 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -52,11 +55,9 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task GetCountryMatrix_ReturnsSixFacetReadinessForAllSites()
     {
         // Act
-        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "DE", _db, TestContext.Current.CancellationToken);
+        var dtos = await MatrixAsync("DE");
 
         // Assert
-        result.Should().NotBeNull();
-        var dtos = result.Value;
         dtos.Should().NotBeNull();
         dtos!.Count.Should().Be(6);
 
@@ -75,7 +76,7 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task BatchCertify_RejectsNonCompliantSites()
     {
         // Arrange: Seed country matrix
-        await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "US", _db, TestContext.Current.CancellationToken);
+        await MatrixAsync("US");
 
         var nonCompliantSite = await _db.CtmsSiteGreenlightGates
             .FirstAsync(g => !g.FacetDoaLog || !g.FacetIpRelease, TestContext.Current.CancellationToken);
@@ -84,14 +85,12 @@ public sealed class StartupGreenlightEndpointsTests
             StudyId: "PROTOCOL-2026-01",
             CountryCode: "US",
             SiteIds: new List<string> { nonCompliantSite.SiteId },
-            SignerName: "Dr. Eleanor Vance",
-            SignerRole: "VP of Regulatory & Clinical Operations",
             Meaning: "Batch certifying greenlight activation"
         );
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "21 CFR Part 11 Batch Certification", _db, _clock, _config, TestContext.Current.CancellationToken);
+            request, "21 CFR Part 11 Batch Certification", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
 
         // Assert
         result.Result.Should().BeOfType<BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>();
@@ -105,8 +104,8 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task BatchCertify_CertifiesCompliantSites_WithIndividualTokensAndAuditLogs()
     {
         // Arrange
-        var matrix = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", "GB", _db, TestContext.Current.CancellationToken);
-        var compliantSiteIds = matrix.Value!
+        var matrix = await MatrixAsync("GB");
+        var compliantSiteIds = matrix
             .Where(s => s.IsCompliant)
             .Select(s => s.SiteId)
             .ToList();
@@ -117,14 +116,12 @@ public sealed class StartupGreenlightEndpointsTests
             StudyId: "PROTOCOL-2026-01",
             CountryCode: "GB",
             SiteIds: compliantSiteIds,
-            SignerName: "Dr. Eleanor Vance",
-            SignerRole: "VP of Regulatory & Clinical Operations",
             Meaning: "21 CFR Part 11 e-signature batch greenlight certification"
         );
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Batch activation approved", _db, _clock, _config, TestContext.Current.CancellationToken);
+            request, "Batch activation approved", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>().Subject;
@@ -145,7 +142,7 @@ public sealed class StartupGreenlightEndpointsTests
             .ToListAsync(TestContext.Current.CancellationToken);
 
         auditLogs.Count.Should().Be(compliantSiteIds.Count);
-        auditLogs.Select(a => a.UserId).Distinct().Single().Should().Be("Dr. Eleanor Vance");
+        auditLogs.Select(a => a.UserId).Distinct().Single().Should().Be("sponsor-dm-1");
     }
 
     /// <summary>
@@ -185,8 +182,6 @@ public sealed class StartupGreenlightEndpointsTests
             StudyId: "PROTOCOL-2026-01",
             CountryCode: "US",
             SiteIds: siteIds,
-            SignerName: "Benchmark Manager",
-            SignerRole: "Global Startup Director",
             Meaning: "Performance test batch certification"
         );
 
@@ -194,7 +189,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Performance test batch certification", _db, _clock, _config, TestContext.Current.CancellationToken);
+            request, "Performance test batch certification", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
 
         sw.Stop();
 
@@ -238,14 +233,12 @@ public sealed class StartupGreenlightEndpointsTests
             StudyId: "PROTOCOL-2026-01",
             CountryCode: "US",
             SiteIds: new List<string> { siteId },
-            SignerName: "Dr. Eleanor Vance",
-            SignerRole: "VP of Regulatory & Clinical Operations",
             Meaning: "Batch certification with explicit GxP override"
         );
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Override batch certification", _db, _clock, _config, TestContext.Current.CancellationToken);
+            request, "Override batch certification", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>().Subject;
@@ -254,5 +247,48 @@ public sealed class StartupGreenlightEndpointsTests
         response.CertifiedCount.Should().Be(1);
         response.CertifiedSites.Single().SiteId.Should().Be(siteId);
         response.CertifiedSites.Single().GreenlightToken.Should().NotBeNullOrEmpty();
+    }
+
+    /// <summary>
+    /// Certifying sites of a study the caller is not assigned to is refused, and a site-scoped caller cannot certify a
+    /// site outside its sites; neither writes a token or an audit entry (#5361).
+    /// </summary>
+    [Fact]
+    public async Task BatchCertify_OutsideTheCallersStudiesOrSites_IsRefusedAndCertifiesNothing()
+    {
+        var matrix = await MatrixAsync("GB");
+        var compliantSiteIds = matrix.Where(s => s.IsCompliant).Select(s => s.SiteId).ToList();
+        var request = new BatchCertifyRequestDto("PROTOCOL-2026-01", "GB", compliantSiteIds, "Certify");
+
+        var otherStudy = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
+            request, "Certify", _db, Caller(["sponsor_dm"], ["PROTOCOL-2027-09"]), _clock, _config, TestContext.Current.CancellationToken);
+        var otherSite = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
+            request, "Certify", _db, Caller(["cra"], ["*"], ["SITE-ELSEWHERE"]), _clock, _config, TestContext.Current.CancellationToken);
+
+        otherStudy.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        otherSite.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        (await _db.CtmsSiteGreenlightGates.CountAsync(g => g.GreenlightToken != null, TestContext.Current.CancellationToken)).Should().Be(0);
+        (await _db.CtmsAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    private async Task<List<SiteGreenlightGateResponseDto>> MatrixAsync(string country)
+    {
+        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync("PROTOCOL-2026-01", country, _db, Caller(), TestContext.Current.CancellationToken);
+        return result.Result.Should().BeOfType<Ok<List<SiteGreenlightGateResponseDto>>>().Subject.Value!;
+    }
+
+    private static DefaultHttpContext Caller() => Caller(["sponsor_dm"], ["*"]);
+
+    private static DefaultHttpContext Caller(string[] roles, string[] studies, string[]? sites = null)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "sponsor-dm-1",
+            Roles = roles,
+            AssignedStudies = studies,
+            AssignedSites = sites ?? [],
+        };
+        return httpContext;
     }
 }

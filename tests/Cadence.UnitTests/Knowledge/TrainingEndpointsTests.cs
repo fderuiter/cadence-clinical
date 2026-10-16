@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Endpoints;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
+using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 
 using FluentAssertions;
 
@@ -54,7 +56,7 @@ public class TrainingEndpointsTests
 
         // Act
         var endpointMethod = typeof(TrainingEndpoints).GetMethod("BatchAssignCurriculumAsync", BindingFlags.NonPublic | BindingFlags.Static);
-        var result = await (Task<IResult>)endpointMethod!.Invoke(null, [request, db, _timeProvider, TestContext.Current.CancellationToken])!;
+        var result = await (Task<IResult>)endpointMethod!.Invoke(null, [request, db, Caller(), _timeProvider, TestContext.Current.CancellationToken])!;
 
         // Assert
         result.Should().BeOfType<ProblemHttpResult>();
@@ -94,7 +96,7 @@ public class TrainingEndpointsTests
 
         // Act
         var endpointMethod = typeof(TrainingEndpoints).GetMethod("BatchAssignCurriculumAsync", BindingFlags.NonPublic | BindingFlags.Static);
-        var result = await (Task<IResult>)endpointMethod!.Invoke(null, [request, db, _timeProvider, TestContext.Current.CancellationToken])!;
+        var result = await (Task<IResult>)endpointMethod!.Invoke(null, [request, db, Caller(), _timeProvider, TestContext.Current.CancellationToken])!;
 
         // Assert
         result.Should().BeOfType<Created<BatchAssignmentResponse>>();
@@ -109,5 +111,38 @@ public class TrainingEndpointsTests
 
         var dbAssignments = await db.TrainingAssignments.ToListAsync(TestContext.Current.CancellationToken);
         dbAssignments.Should().HaveCount(3); // 1 pre-existing + 2 newly assigned
+    }
+
+    /// <summary>Assigning a curriculum in a study the caller is not assigned to is refused and assigns nobody (#5361).</summary>
+    [Fact]
+    public async Task BatchAssign_ForAStudyOutsideTheCallersStudies_IsRefusedAndAssignsNobody()
+    {
+        using var db = CreateDbContext(nameof(BatchAssign_ForAStudyOutsideTheCallersStudies_IsRefusedAndAssignsNobody));
+        var request = new BatchAssignCurriculumRequest(
+            CurriculumId: "curriculum-v3-delta",
+            StudyId: "CARDIO-2026",
+            SiteIds: ["SITE-101"],
+            Roles: ["Clinical Research Coordinator"],
+            TargetPersonnelIds: ["user_1"],
+            ReasonForChange: "Site launch");
+
+        var endpointMethod = typeof(TrainingEndpoints).GetMethod("BatchAssignCurriculumAsync", BindingFlags.NonPublic | BindingFlags.Static);
+        var result = await (Task<IResult>)endpointMethod!.Invoke(null, [request, db, Caller("ONCO-2027"), _timeProvider, TestContext.Current.CancellationToken])!;
+
+        result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        (await db.TrainingAssignments.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        (await db.OrgAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+    }
+
+    private static DefaultHttpContext Caller(params string[] studies)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "sponsor-dm-1",
+            Roles = ["sponsor_dm"],
+            AssignedStudies = studies.Length == 0 ? ["*"] : studies,
+        };
+        return httpContext;
     }
 }

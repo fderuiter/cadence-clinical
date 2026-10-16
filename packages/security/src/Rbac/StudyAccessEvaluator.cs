@@ -25,6 +25,6 @@ public static class StudyAccessEvaluator
         string targetStudy = studyId.Trim();
         return principal.AssignedStudies.Any(s =>
             string.Equals(s.Trim(), AllStudies, StringComparison.Ordinal)
-            || string.Equals(s.Trim(), targetStudy, StringComparison.OrdinalIgnoreCase));
+            || string.Equals(s.Trim(), targetStudy, StringComparison.Ordinal));
     }
 }

@@ -225,7 +225,7 @@
             }
           },
           {
-            "name": "studyId",
+            "name": "study_id",
             "in": "query",
             "required": true,
             "schema": {
@@ -233,7 +233,7 @@
             }
           },
           {
-            "name": "countryCode",
+            "name": "country_code",
             "in": "query",
             "schema": {
               "type": "string"
@@ -247,6 +247,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
                 }
               }
             }
@@ -271,7 +281,7 @@
             }
           },
           {
-            "name": "studyId",
+            "name": "study_id",
             "in": "query",
             "required": true,
             "schema": {
@@ -279,7 +289,7 @@
             }
           },
           {
-            "name": "countryCode",
+            "name": "country_code",
             "in": "query",
             "schema": {
               "type": "string"
@@ -313,6 +323,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -326,7 +346,7 @@
         "operationId": "GetCountryGreenlightMatrix",
         "parameters": [
           {
-            "name": "studyId",
+            "name": "study_id",
             "in": "query",
             "required": true,
             "schema": {
@@ -334,7 +354,7 @@
             }
           },
           {
-            "name": "countryCode",
+            "name": "country_code",
             "in": "query",
             "required": true,
             "schema": {
@@ -352,6 +372,16 @@
                   "items": {
                     "$ref": "#/components/schemas/Ctms_SiteGreenlightGateResponseDto"
                   }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
                 }
               }
             }
@@ -405,6 +435,16 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ctms_ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -438,8 +478,6 @@
           "study_id",
           "country_code",
           "site_ids",
-          "signer_name",
-          "signer_role",
           "meaning"
         ],
         "type": "object",
@@ -455,18 +493,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "signer_name": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "signer_role": {
-            "type": [
-              "null",
-              "string"
-            ]
           },
           "meaning": {
             "type": [

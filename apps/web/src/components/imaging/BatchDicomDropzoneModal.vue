@@ -508,9 +508,7 @@ async function startBatchIngestion() {
 
     const response = await fetch("/api/v1/imaging/studies/batch", {
       method: "POST",
-      headers: {
-        "X-Operator-Identity": "crc.coordinator@site.org", // deid-ignore
-      },
+      // The gateway signs the operator's identity; the imaging service records it on the certificate.
       body: formData,
     });
 

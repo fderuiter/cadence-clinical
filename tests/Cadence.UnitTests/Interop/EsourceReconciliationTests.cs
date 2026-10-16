@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
+using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
@@ -31,7 +33,7 @@ public class EsourceReconciliationTests
         return new InteropDbContext(options);
     }
 
-    private static HttpContext CreateMockHttpContext(string userName = "crc_coordinator_john", string role = "Clinical Research Coordinator")
+    private static HttpContext CreateMockHttpContext(string userName = "crc_coordinator_john", string role = "crc", params string[] studies)
     {
         var context = new DefaultHttpContext();
         var claims = new[]
@@ -41,6 +43,12 @@ public class EsourceReconciliationTests
             new Claim(ClaimTypes.Role, role)
         };
         context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"));
+        context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = userName,
+            Roles = [role],
+            AssignedStudies = studies.Length == 0 ? ["*"] : studies,
+        };
         return context;
     }
 
@@ -156,10 +164,10 @@ public class EsourceReconciliationTests
         var dbName = $"EhrAcceptTest_{Guid.NewGuid():N}";
         using var db = CreateDbContext(dbName);
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        var httpContext = CreateMockHttpContext("crc_sarah", "Clinical Research Coordinator");
+        var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
         // Seed candidate list
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
         var firstCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(c => c.DiscrepancyType == "VALUE_MISMATCH", TestContext.Current.CancellationToken);
 
         var acceptReq = new EhrReconcileAcceptRequest(
@@ -196,9 +204,9 @@ public class EsourceReconciliationTests
         var dbName = $"EhrRejectTest_{Guid.NewGuid():N}";
         using var db = CreateDbContext(dbName);
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        var httpContext = CreateMockHttpContext("crc_sarah", "Clinical Research Coordinator");
+        var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
         var firstCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(TestContext.Current.CancellationToken);
 
         // Test 1: Empty rationale fails
@@ -238,9 +246,9 @@ public class EsourceReconciliationTests
         var dbName = $"EhrQueryTest_{Guid.NewGuid():N}";
         using var db = CreateDbContext(dbName);
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        var httpContext = CreateMockHttpContext("crc_sarah", "Clinical Research Coordinator");
+        var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
         var mismatchCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(c => c.DiscrepancyType == "VALUE_MISMATCH", TestContext.Current.CancellationToken);
 
         var queryReq = new EhrReconcileQueryRequest(
@@ -276,14 +284,14 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var httpContext = CreateMockHttpContext("crc_sarah");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
         var candidate = await db.EhrReconciliationCandidateRecords.FirstAsync(TestContext.Current.CancellationToken);
 
         // Perform an accept action to generate audit log
         await EsourceEndpoints.AcceptCandidateAsync(new EhrReconcileAcceptRequest(candidate.Id, "Verified against source", "Accept"), db, clock, httpContext, TestContext.Current.CancellationToken);
 
         // Act
-        var provResult = await EsourceEndpoints.GetProvenanceAuditAsync(candidate.Id, db, TestContext.Current.CancellationToken);
+        var provResult = await EsourceEndpoints.GetProvenanceAuditAsync(candidate.Id, db, httpContext, TestContext.Current.CancellationToken);
 
         // Assert
         var provObj = provResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrProvenanceResponse>>().Subject.Value;
@@ -303,9 +311,9 @@ public class EsourceReconciliationTests
         var dbName = $"EhrBatchAcceptTest_{Guid.NewGuid():N}";
         using var db = CreateDbContext(dbName);
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        var httpContext = CreateMockHttpContext("crc_sarah", "Clinical Research Coordinator");
+        var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
         var initialCandidates = await db.EhrReconciliationCandidateRecords.Take(2).ToListAsync(TestContext.Current.CancellationToken);
         var idsToAccept = initialCandidates.Select(c => c.Id).ToList();
 
@@ -341,9 +349,9 @@ public class EsourceReconciliationTests
         var dbName = $"EhrBatchRejectTest_{Guid.NewGuid():N}";
         using var db = CreateDbContext(dbName);
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        var httpContext = CreateMockHttpContext("crc_sarah", "Clinical Research Coordinator");
+        var httpContext = CreateMockHttpContext("crc_sarah", "crc");
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
         var initialCandidates = await db.EhrReconciliationCandidateRecords.Take(2).ToListAsync(TestContext.Current.CancellationToken);
         var idsToReject = initialCandidates.Select(c => c.Id).ToList();
 
@@ -408,7 +416,7 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var httpContext = CreateMockHttpContext();
 
-        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, TestContext.Current.CancellationToken);
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, httpContext, TestContext.Current.CancellationToken);
         var validCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(TestContext.Current.CancellationToken);
 
         var mixedIds = new List<string> { validCandidate.Id, "non-existent-candidate-id-999" };
@@ -425,5 +433,52 @@ public class EsourceReconciliationTests
         // Verify valid candidate was NOT committed/changed
         var unchangedCandidate = await db.EhrReconciliationCandidateRecords.FirstAsync(c => c.Id == validCandidate.Id, TestContext.Current.CancellationToken);
         unchangedCandidate.Status.Should().Be("PENDING_REVIEW");
+    }
+
+    /// <summary>
+    /// Candidates of a study the caller is not assigned to are hidden from lists and lookups, and accepting one is
+    /// refused without changing it (#5361).
+    /// </summary>
+    [Fact]
+    public async Task CandidatesOutsideTheCallersStudies_AreHiddenAndCannotBeAccepted()
+    {
+        using var db = CreateDbContext($"EhrStudyScope_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var ct = TestContext.Current.CancellationToken;
+        await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, clock, CreateMockHttpContext(), ct);
+        var candidate = await db.EhrReconciliationCandidateRecords.FirstAsync(ct);
+        var outsider = CreateMockHttpContext("crc_other", "crc", "STUDY-202");
+
+        var list = await EsourceEndpoints.ListCandidatesAsync(null, null, null, "ALL", "ALL", 0, 50, db, clock, outsider, ct);
+        var lookup = await EsourceEndpoints.GetCandidateByIdAsync(candidate.Id, db, outsider, ct);
+        var accept = await EsourceEndpoints.AcceptCandidateAsync(
+            new EhrReconcileAcceptRequest(candidate.Id, "Verified", "Accept"), db, clock, outsider, ct);
+
+        var listed = list.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrCandidateListResponse>>().Subject.Value!;
+        listed.Candidates.Should().NotContain(c => c.StudyId == "STUDY-101");
+        lookup.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(404);
+        accept.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(403);
+        (await db.EhrReconciliationCandidateRecords.SingleAsync(c => c.Id == candidate.Id, ct)).Status.Should().Be("PENDING_REVIEW");
+        (await db.InteropAuditLogs.CountAsync(ct)).Should().Be(0);
+    }
+
+    /// <summary>Polling or ingesting EHR data for a study the caller is not assigned to writes nothing (#5361).</summary>
+    [Fact]
+    public async Task PollAndIngest_ForAStudyOutsideTheCallersStudies_AreRefusedAndWriteNothing()
+    {
+        using var db = CreateDbContext($"EhrIngestScope_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var ct = TestContext.Current.CancellationToken;
+        var outsider = CreateMockHttpContext("crc_other", "crc", "STUDY-202");
+
+        var poll = await EsourceEndpoints.PollHospitalEhrAsync(
+            new EhrPollRequest(EndpointId: "none", StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", PrivateKeyPem: null), db, clock, outsider, ct);
+        var ingest = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest(StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", SubjectPseudonym: null, EhrSystemId: null, RawFhirBundleJson: "{}"),
+            db, clock, outsider, ct);
+
+        poll.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(403);
+        ingest.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(403);
+        (await db.EhrReconciliationCandidateRecords.CountAsync(ct)).Should().Be(0);
     }
 }
